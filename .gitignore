@@ -38,15 +38,43 @@ frontend/.vite/
 
 # --- AI Service (Python) ---
 ai-service/venv/
+ai-service/.venv/
+ai-service/env/
+ai-service/app/venv/
 ai-service/__pycache__/
 ai-service/*.py[cod]
 ai-service/.pytest_cache/
 ai-service/data/
 ai-service/ml_models/*.h5
 ai-service/ml_models/*.pkl
+ai-service/ml_models/*.dat
+ai-service/ml_models/*.pyd
+ai-service/ml_models/*.dll
+
+# --- Mobile (Flutter/React Native) ---
+mobile/.dart_tool/
+mobile/.packages
+mobile/.pub-cache/
+mobile/.pub/
+mobile/build/
+mobile/ios/.generated/
+mobile/android/.gradle/
+mobile/android/app/build/
+mobile/android/local.properties
+mobile/android/GeneratedPluginRegistrant.java
+mobile/ios/Flutter/Generated.xcconfig
+mobile/ios/Flutter/flutter_export_environment.sh
+mobile/ios/Flutter/App.framework
+mobile/ios/Flutter/Flutter.framework
+mobile/ios/Flutter/Flutter.podspec
+mobile/ios/GeneratedPluginRegistrant.h
+mobile/ios/GeneratedPluginRegistrant.m
+mobile/macos/Flutter/ephemeral/
+mobile/windows/flutter/ephemeral/
 
 # Docker & Persistence
 data/
 volumes/
 postgres_data/
 redis_data/
+ai-service/data/
