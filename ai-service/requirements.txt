@@ -1,0 +1,124 @@
+# ========================================
+# FAMS AI SERVICE - REQUIREMENTS
+# ========================================
+# GIẢI THÍCH: File này liệt kê TẤT CẢ thư viện Python cần thiết
+# 
+# CẤU TRÚC:
+# - CORE: Thư viện bắt buộc (luôn cần)
+# - LIGHTWEIGHT AI: Face Recognition cơ bản (nhanh)
+# - FULL AI: Deep Learning đầy đủ (lâu, chỉ khi cần)
+#
+# CÁCH DÙNG:
+# 1. Giai đoạn đầu: Uncomment phần CORE + LIGHTWEIGHT AI
+# 2. Sau khi cần AI mạnh: Uncomment phần FULL AI
+
+# ========================================
+# SECTION 1: CORE DEPENDENCIES (Bắt buộc)
+# ========================================
+# GIẢI THÍCH: Các thư viện này LÀ NỀN TẢNG, không thể thiếu
+
+# Web Framework - Tạo API endpoints
+Flask==3.0.0
+Flask-CORS==4.0.0              # Cho phép Frontend gọi API
+Flask-SQLAlchemy==3.1.1        # Kết nối Database
+Flask-Migrate==4.0.5           # Migration Database
+
+# Database Drivers
+psycopg2-binary==2.9.9         # PostgreSQL driver
+redis==5.0.1                   # Redis driver (cache)
+
+# Basic Data Processing
+numpy==1.26.3                  # Thư viện số học cơ bản
+pandas==2.1.4                  # Xử lý data dạng bảng
+scikit-learn==1.4.0            # Machine Learning cơ bản
+scipy==1.11.4                  # Scientific computing
+
+# API & Validation
+pydantic==2.5.3                # Validate data
+python-dotenv==1.0.0           # Đọc .env file
+marshmallow==3.20.1            # Serialize/Deserialize data
+requests==2.31.0               # HTTP requests
+
+# Security
+python-jose[cryptography]==3.3.0  # JWT tokens
+passlib[bcrypt]==1.7.4            # Password hashing
+python-multipart==0.0.6           # File upload
+
+# Utilities
+loguru==0.7.2                  # Logging đẹp
+prometheus-client==0.19.0      # Metrics
+
+# Production Server
+gunicorn==21.2.0               # WSGI server cho production
+gevent==23.9.1                 # Async support
+
+# ========================================
+# SECTION 2: LIGHTWEIGHT AI (Recommended)
+# ========================================
+# GIẢI THÍCH: Face Recognition CƠ BẢN - Đủ dùng cho hầu hết TH
+# Build time: ~3-5 phút
+# Image size: ~500MB
+
+# Computer Vision
+opencv-python-headless==4.11.0.86  # OpenCV (không GUI)
+Pillow==10.2.0                     # Image processing
+
+# Face Recognition - CÁCH 1: face-recognition library
+# GIẢI THÍCH: Wrapper của dlib, ĐÃ BUILD SẴN, không cần compile
+face-recognition==1.3.0            # ← THAY THẾ dlib!
+
+# Face Detection - CÁCH 2: MediaPipe (Google)
+# GIẢI THÍCH: Nhẹ, nhanh, dễ dùng
+mediapipe==0.10.9
+
+# ONNX Runtime - Chạy AI models
+# GIẢI THÍCH: Chạy models đã train sẵn, không cần TensorFlow/PyTorch
+onnxruntime==1.16.3
+
+# ========================================
+# SECTION 3: FULL AI SETUP (Optional)
+# ========================================
+# GIẢI THÍCH: Deep Learning ĐẦY ĐỦ - CHỈ uncomment khi THẬT SỰ CẦN
+# Build time: 15-30 phút
+# Image size: 3-5GB
+# 
+# KHI NÀO CẦN?
+# - Muốn train models mới
+# - Cần độ chính xác cao hơn
+# - Có GPU để tăng tốc
+
+# Deep Learning Frameworks (Rất nặng!)
+# tensorflow==2.15.0           # Google's ML framework
+# torch==2.1.2                 # PyTorch
+# torchvision==0.16.2          # PyTorch vision
+
+# Advanced Face Recognition
+# insightface==0.7.3           # State-of-the-art face recognition
+# facenet-pytorch==2.5.3       # FaceNet implementation
+# mtcnn==0.1.1                 # Face detection
+
+# Advanced CV
+# opencv-contrib-python==4.9.0.80  # OpenCV with extra modules
+# albumentations==1.3.1             # Data augmentation
+# imgaug==0.4.0                     # Image augmentation
+
+# ========================================
+# SECTION 4: DEVELOPMENT & TESTING
+# ========================================
+# GIẢI THÍCH: Tools để test và debug
+
+# Testing
+pytest==7.4.4
+pytest-cov==4.1.0
+pytest-asyncio==0.23.3
+httpx==0.26.0
+
+# Code Quality
+black==23.12.1                 # Code formatter
+flake8==7.0.0                  # Linter
+isort==5.13.2                  # Import sorter
+mypy==1.8.0                    # Type checker
+
+# Async Support
+aiohttp==3.9.1
+aiofiles==23.2.1

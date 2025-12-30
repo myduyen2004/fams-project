@@ -1,0 +1,52 @@
+# FAMS Project - Root Gitignore
+
+# Environment variables & Sensitive data
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# IDEs & Editors
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+backend_debug.log
+backend_error.log
+frontend_error.log
+ai_error.log
+build_log.txt
+
+# --- Backend (Spring Boot / Maven) ---
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+backend/backend_test_output*.txt
+backend/mvnw
+backend/mvnw.cmd
+
+# --- Frontend (React / Vite / Node) ---
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# --- AI Service (Python) ---
+ai-service/venv/
+ai-service/__pycache__/
+ai-service/*.py[cod]
+ai-service/.pytest_cache/
+ai-service/data/
+ai-service/ml_models/*.h5
+ai-service/ml_models/*.pkl
+
+# Docker & Persistence
+data/
+volumes/
+postgres_data/
+redis_data/
