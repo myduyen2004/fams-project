@@ -1,19 +1,8 @@
+package com.fams.backend.config;
+
 import com.fams.backend.entity.Alert;
 import com.fams.backend.entity.Notification;
 import com.fams.backend.entity.SystemLog;
-import com.fams.backend.entity.User;
-import com.fams.backend.repository.AlertRepository;
-import com.fams.backend.repository.NotificationRepository;
-import com.fams.backend.repository.SystemLogRepository;
-import com.fams.backend.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Component;
-
-import java.time.LocalDateTime;
-
 import com.fams.backend.entity.User;
 import com.fams.backend.repository.AlertRepository;
 import com.fams.backend.repository.NotificationRepository;
