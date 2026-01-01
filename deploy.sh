@@ -24,10 +24,9 @@ if [ ! -f .env ]; then
 fi
 
 # 3. Clean up Docker System (to prevent disk full)
-echo -e "${YELLOW}Step 2: Cleaning up Docker system (Prune)...${NC}"
-docker system prune -a --volumes -f
-# Aggressive cleanup for build cache
-docker builder prune --all -f
+# Standard cleanup (Keeps cache for faster builds)
+# WARNING: If disk is 8GB, this might fail. Upgrade to 20GB for best performance.
+docker system prune -f
 echo "Cleanup complete."
 
 # 4. Build & Start Services Sequentially (to save RAM/Disk)
