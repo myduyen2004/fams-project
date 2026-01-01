@@ -39,15 +39,19 @@ services:
     env_file: .env # Đọc biến môi trường từ file .env
 
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-fams_db}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+      POSTGRES_DB: fams_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      # GIẢI THÍCH: Biến môi trường để config PostgreSQL
 
     ports:
       - "5432:5432"
+      # GIẢI THÍCH: Map port 5432 của container ra host
+      # Format: "host_port:container_port"
 
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # GIẢI THÍCH: Mount volume để data không mất khi restart container
 
     networks:
       - fams-network
@@ -57,11 +61,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      # GIẢI THÍCH: Check xem PostgreSQL đã ready chưa
 
-  # ==================
-  # PostgreSQL AI DB
-  # ==================
-  # GIẢI THÍCH: Database riêng cho AI Service
+      # ==================
+      # PostgreSQL AI DB
+      # ==================
+      # GIẢI THÍCH: Database riêng cho AI Service
   postgres-ai:
     image: postgres:15-alpine
     container_name: fams-postgres-ai
@@ -69,12 +74,13 @@ services:
     env_file: .env
 
     environment:
-      POSTGRES_DB: ${POSTGRES_AI_DB:-fams_ai_db}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+      POSTGRES_DB: fams_ai_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
 
     ports:
       - "5433:5432"
+      # GIẢI THÍCH: Port 5433 trên host map đến 5432 trong container
 
     volumes:
       - postgres_ai_data:/var/lib/postgresql/data
@@ -111,15 +117,17 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+      # GIẢI THÍCH: Ping Redis để check health
 
-  # ==================
-  # Backend Service
-  # ==================
-  # GIẢI THÍCH: Spring Boot API
+      # ==================
+      # Backend Service
+      # ==================
+      # GIẢI THÍCH: Spring Boot API
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      # GIẢI THÍCH: Build image từ Dockerfile trong folder backend
 
     container_name: fams-backend
     restart: unless-stopped
@@ -130,9 +138,9 @@ services:
 
     environment:
       # Database configuration
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-fams_db}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/fams_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres123
 
       # Redis configuration
       SPRING_REDIS_HOST: redis
@@ -152,6 +160,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      # GIẢI THÍCH: Đợi postgres và redis healthy mới start backend
 
     networks:
       - fams-network
@@ -162,11 +171,12 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
+      # GIẢI THÍCH: start_period = thời gian chờ app khởi động
 
-  # ==================
-  # AI Service
-  # ==================
-  # GIẢI THÍCH: Python Flask API cho Face Recognition
+      # ==================
+      # AI Service
+      # ==================
+      # GIẢI THÍCH: Python Flask API cho Face Recognition
   ai-service:
     build:
       context: ./ai-service
@@ -180,8 +190,7 @@ services:
       - "5000:5000"
 
     environment:
-      # Use same postgres credentials but point to postgres-ai host and ai_db
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres123}@postgres-ai:5432/${POSTGRES_AI_DB:-fams_ai_db}
+      DATABASE_URL: postgresql://postgres:postgres123@postgres-ai:5432/fams_ai_db
       REDIS_HOST: redis
       REDIS_PORT: 6379
       BACKEND_API_URL: http://backend:8080/api
@@ -189,6 +198,7 @@ services:
     volumes:
       - ai_models:/app/ml_models
       - ai_faces:/app/data/faces
+      # GIẢI THÍCH: Mount volumes để lưu models và face images
 
     depends_on:
       postgres-ai:
@@ -220,10 +230,12 @@ services:
 
     ports:
       - "3000:80"
+      # GIẢI THÍCH: Nginx chạy trên port 80, map ra 3000 trên host
 
     depends_on:
       - backend
       - ai-service
+      # GIẢI THÍCH: Frontend cần backend và AI service đã chạy
 
     networks:
       - fams-network

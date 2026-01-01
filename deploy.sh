@@ -23,6 +23,12 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
+# 2.1 Check for ai-service/.env
+if [ ! -f ai-service/.env ]; then
+    echo -e "${YELLOW}Notice: ai-service/.env not found. Creating from example...${NC}"
+    cp ai-service/.env.example ai-service/.env
+fi
+
 # 3. Clean up Docker System (to prevent disk full)
 # Standard cleanup (Keeps cache for faster builds)
 # WARNING: If disk is 8GB, this might fail. Upgrade to 20GB for best performance.
@@ -45,11 +51,6 @@ docker compose up -d backend
 echo " -> Building AI Service..."
 docker compose build ai-service
 docker compose up -d ai-service
-
-# 4.4 Frontend (Hosted on Vercel - Skip build on EC2)
-# echo " -> Building Frontend..."
-# docker compose build frontend
-# docker compose up -d frontend
 
 # 5. Final Check
 echo -e "${GREEN}=== Deployment Finished ===${NC}"
