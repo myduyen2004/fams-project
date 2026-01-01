@@ -176,7 +176,6 @@ export const Login: React.FC = () => {
                   setFormData({ ...formData, username: e.target.value })
                 }
                 placeholder="Tài khoản"
-                required
                 disabled={isLoading}
                 className="w-full bg-primary-50 dark:bg-zinc-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 border border-neutral-200 dark:border-zinc-700 rounded-lg py-3.5 pl-4 pr-10 focus:ring-2 focus:ring-fpt-orange focus:border-transparent focus:bg-white dark:focus:bg-zinc-700 transition-all duration-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               />
@@ -195,7 +194,6 @@ export const Login: React.FC = () => {
                   setFormData({ ...formData, password: e.target.value })
                 }
                 placeholder="Mật khẩu"
-                required
                 disabled={isLoading}
                 className="w-full bg-primary-50 dark:bg-zinc-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 border border-neutral-200 dark:border-zinc-700 rounded-lg py-3.5 pl-4 pr-10 focus:ring-2 focus:ring-fpt-orange focus:border-transparent focus:bg-white dark:focus:bg-zinc-700 transition-all duration-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               />

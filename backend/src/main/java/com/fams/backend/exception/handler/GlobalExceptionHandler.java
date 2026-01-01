@@ -45,8 +45,7 @@ public class GlobalExceptionHandler {
         log.error("Unauthorized: {}", ex.getMessage());
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.UNAUTHORIZED.value(),
-                ex.getMessage()
-        );
+                ex.getMessage());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 
@@ -58,8 +57,7 @@ public class GlobalExceptionHandler {
         log.error("Bad request: {}", ex.getMessage());
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
-                ex.getMessage()
-        );
+                ex.getMessage());
         return ResponseEntity.badRequest().body(error);
     }
 
@@ -71,8 +69,7 @@ public class GlobalExceptionHandler {
         log.error("Not found: {}", ex.getMessage());
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.NOT_FOUND.value(),
-                ex.getMessage()
-        );
+                ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 
@@ -82,18 +79,25 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationErrors(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach(error -> {
+        String firstErrorMessage = "Validation failed"; // Default
+
+        for (int i = 0; i < ex.getBindingResult().getAllErrors().size(); i++) {
+            var error = ex.getBindingResult().getAllErrors().get(i);
             String fieldName = ((FieldError) error).getField();
             String errorMessage = error.getDefaultMessage();
             errors.put(fieldName, errorMessage);
-        });
+
+            // Take the first error message as the primary message
+            if (i == 0) {
+                firstErrorMessage = errorMessage;
+            }
+        }
 
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
-                "Validation failed",
+                firstErrorMessage,
                 LocalDateTime.now(),
-                errors
-        );
+                errors);
         return ResponseEntity.badRequest().body(error);
     }
 
@@ -105,8 +109,7 @@ public class GlobalExceptionHandler {
         log.error("Internal server error", ex);
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau"
-        );
+                "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau");
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
 }
