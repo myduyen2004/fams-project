@@ -6,3 +6,4 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Các lệnh tạo bảng hoặc user khác có thể đặt ở đây
 -- Tuy nhiên, dự án này dùng Hibernate ddl-auto=update nên bảng sẽ tự tạo bởi Backend
+
