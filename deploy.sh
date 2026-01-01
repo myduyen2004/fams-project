@@ -14,7 +14,7 @@ echo -e "${GREEN}=== Starting FAMS Deployment ===${NC}"
 
 # 1. Pull Latest Code
 echo -e "${YELLOW}Step 1: Pulling latest code...${NC}"
-git pull origin main
+git pull
 
 # 2. Check for .env file
 if [ ! -f .env ]; then
