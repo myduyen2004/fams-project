@@ -46,10 +46,10 @@ echo " -> Building AI Service..."
 docker compose build ai-service
 docker compose up -d ai-service
 
-# 4.4 Frontend
-echo " -> Building Frontend..."
-docker compose build frontend
-docker compose up -d frontend
+# 4.4 Frontend (Hosted on Vercel - Skip build on EC2)
+# echo " -> Building Frontend..."
+# docker compose build frontend
+# docker compose up -d frontend
 
 # 5. Final Check
 echo -e "${GREEN}=== Deployment Finished ===${NC}"
