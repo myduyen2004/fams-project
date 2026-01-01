@@ -184,7 +184,9 @@ services:
 
     container_name: fams-ai-service
     restart: unless-stopped
-    env_file: .env
+    env_file:
+      - .env
+      - ./ai-service/.env
 
     ports:
       - "5000:5000"
