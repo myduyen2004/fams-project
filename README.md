@@ -52,6 +52,20 @@ fams-project/
 └── docker-compose.yml # Infrastructure orchestration
 ```
 
+## 🗄️ Database Management
+
+### Automated Seeding
+For teamwork convenience, the project uses **Spring Boot DataInitializer**. When the database is empty:
+- A default admin is created: `admin` / `admin123`.
+- Mock dashboard data (Alerts, Logs, Notifications) is automatically inserted.
+- This ensures every team member has the same starting environment.
+
+### Manual SQL Access
+If you need to run custom SQL or check raw data, use:
+```bash
+docker exec -it fams-postgres psql -U postgres -d fams_db
+```
+
 ## 🤝 Contributing
 
 1. Clone the repository.
