@@ -2,6 +2,7 @@ package com.fams.backend.security.jwt;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -66,6 +67,8 @@ public class JwtUtil {
                     .build()
                     .parseClaimsJws(token);
             return true;
+        } catch (SignatureException ex) {
+            System.err.println("Invalid JWT signature");
         } catch (MalformedJwtException ex) {
             System.err.println("Invalid JWT token");
         } catch (ExpiredJwtException ex) {
