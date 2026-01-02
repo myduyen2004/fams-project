@@ -24,6 +24,7 @@ export const UsersPage: React.FC = () => {
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
   const [isActivating, setIsActivating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -51,6 +52,15 @@ export const UsersPage: React.FC = () => {
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+
+  const formatDateTime = (date: any) => {
+    if (!date) return '';
+    if (Array.isArray(date)) {
+      const [year, month, day, hour, minute] = date;
+      return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')} ${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+    }
+    return new Date(date).toLocaleDateString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
 
   const handleSelectUser = (id: number) => {
     setSelectedUsers(prev => 
@@ -143,7 +153,10 @@ export const UsersPage: React.FC = () => {
            </div>
 
            <div className="flex items-center gap-2">
-            <button className="flex items-center gap-2 px-4 py-2 border border-fpt-orange text-fpt-orange rounded-lg text-sm font-medium hover:bg-orange-50 transition-colors">
+            <button 
+              onClick={() => setIsImportModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 border border-fpt-orange text-fpt-orange rounded-lg text-sm font-medium hover:bg-orange-50 transition-colors"
+            >
               <Upload size={18} />
               Import
             </button>
@@ -238,7 +251,7 @@ export const UsersPage: React.FC = () => {
                       {user.faceDataStatus === 'REGISTERED' ? '● Đã đăng ký' : '● Chưa đăng ký'}
                     </span>
                   </td>
-                  <td className="px-4 py-4 text-gray-500 dark:text-gray-500">{user.createdAt}</td>
+                  <td className="px-4 py-4 text-gray-500 dark:text-gray-500">{formatDateTime(user.createdAt)}</td>
                   <td className="px-4 py-4 text-center">
                     <div className="flex items-center justify-center gap-2">
                       <button 
@@ -272,7 +285,8 @@ export const UsersPage: React.FC = () => {
           </div>
         </div>
       </div>
-
+      
+      {isImportModalOpen && <ImportUserModal onClose={() => setIsImportModalOpen(false)} onSuccess={() => { setIsImportModalOpen(false); fetchUsers(); }} />}
       {isAddModalOpen && <AddUserModal onClose={() => setIsAddModalOpen(false)} onSuccess={() => { setIsAddModalOpen(false); fetchUsers(); }} />}
       {isEditModalOpen && selectedUserData && (
         <EditUserModal 
@@ -290,8 +304,6 @@ export const UsersPage: React.FC = () => {
     </AdminLayout>
   );
 };
-
-// --- Modals Components (Reuse existing logic) ---
 
 const AddUserModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = ({ onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -397,6 +409,7 @@ const EditUserModal: React.FC<{ user: UserResponse; onClose: () => void; onSucce
     code: user.code,
     email: user.email,
     dob: ensureStringDate(user.dob),
+    phone: user.phone || '',
     role: user.role as any,
     status: user.status as any
   });
@@ -459,6 +472,10 @@ const EditUserModal: React.FC<{ user: UserResponse; onClose: () => void; onSucce
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Email</label>
               <input required type="email" className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Số điện thoại</label>
+              <input type="text" className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Trạng thái</label>
@@ -535,6 +552,81 @@ const ViewUserModal: React.FC<{ user: UserResponse; onClose: () => void }> = ({ 
               <button onClick={onClose} className="px-6 py-2 bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors">Đóng</button>
            </div>
         </div>
+      </div>
+    </div>
+  );
+};
+
+const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = ({ onClose, onSuccess }) => {
+  const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!file) {
+      toast.error('Vui lòng chọn file');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      await userService.importUsers(formData);
+      
+      toast.success('Import người dùng thành công');
+      onSuccess();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Lỗi khi import người dùng');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-md border border-gray-100 dark:border-zinc-800 overflow-hidden">
+        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800">
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white">Import người dùng</h3>
+          <button onClick={onClose}><X size={20} className="text-gray-400 hover:text-gray-600" /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/10 text-blue-800 dark:text-blue-300 rounded-lg text-sm">
+            <p className="font-semibold mb-1">Hướng dẫn:</p>
+            <ul className="list-disc pl-4 space-y-1">
+              <li>Tải lên file <strong>.xlsx</strong> chứa dữ liệu người dùng.</li>
+              <li>Hoặc file <strong>.zip</strong> chứa file Excel và ảnh đại diện (đặt tên ảnh trùng Mã số).</li>
+            </ul>
+          </div>
+          
+          <div className="border-2 border-dashed border-gray-300 dark:border-zinc-700 rounded-lg p-6 flex flex-col items-center text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors relative">
+             <input required type="file" accept=".xlsx, .xls, .zip" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileChange} />
+             <Upload size={32} className="text-fpt-orange mb-2" />
+             {file ? (
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{file.name}</p>
+             ) : (
+                <>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">Chọn file để tải lên</p>
+                  <p className="text-xs text-gray-500 mt-1">Hỗ trợ .xlsx, .zip</p>
+                </>
+             )}
+          </div>
+
+          <div className="flex justify-end gap-3 mt-6">
+            <button type="button" onClick={onClose} className="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Hủy</button>
+            <button type="submit" disabled={loading} className="px-6 py-2 bg-fpt-orange text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center gap-2">
+               {loading && <Loader2 size={16} className="animate-spin" />} Import ngay
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

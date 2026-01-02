@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { Login } from './pages/auth/Login';
+import { ChangePasswordPage } from './pages/auth/ChangePasswordPage';
 import { Dashboard } from './pages/admin/Dashboard';
 import { RecentAccessPage } from './pages/admin/RecentAccessPage';
 import { AlertsPage } from './pages/admin/AlertsPage';
@@ -26,6 +27,7 @@ function App() {
             </PublicRoute>
           } 
         />
+        <Route path="/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
         <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
         
         {/* Admin Routes */}

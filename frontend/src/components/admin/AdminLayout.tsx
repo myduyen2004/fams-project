@@ -1,6 +1,8 @@
 import React from 'react';
 import { AdminSidebar } from './AdminSidebar';
 import { AdminHeader } from './AdminHeader';
+import { authService } from '../../services/api/authService';
+import { Navigate } from 'react-router-dom';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -8,6 +10,12 @@ interface AdminLayoutProps {
 }
 
 export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, pageTitle }) => {
+  const user = authService.getUser();
+  
+  if (user && user.role !== 'ADMIN' && user.isPasswordChanged === false) {
+    return <Navigate to="/change-password" replace />;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-zinc-950">
       {/* Sidebar */}

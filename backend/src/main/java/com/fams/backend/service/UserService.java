@@ -20,4 +20,6 @@ public interface UserService {
     void activateUsers(java.util.List<Long> ids);
 
     void importUsers(MultipartFile file);
+
+    void changePassword(String username, String newPassword);
 }

@@ -23,11 +23,13 @@ import java.time.format.DateTimeFormatter;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-import java.io.InputStream;
+import java.io.*;
+import java.nio.file.*;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +39,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final com.fams.backend.service.UploadService uploadService;
+    private final com.fams.backend.service.EmailService emailService;
 
     private static final DateTimeFormatter DOB_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter PASSWORD_FORMATTER = DateTimeFormatter.ofPattern("ddMMyyyy");
@@ -137,10 +140,25 @@ public class UserServiceImpl implements UserService {
 
                 user.setPassword(passwordEncoder.encode(rawPassword));
                 user.setStatus(User.UserStatus.ACTIVE);
+                user.setIsPasswordChanged(false);
+
+                // Send email
+                emailService.sendAccountInfo(user.getEmail(), user.getFullName(), user.getUsername(), rawPassword);
             }
         }
         userRepository.saveAll(users);
         log.info("Activated {} users successfully", users.size());
+        log.info("Activated {} users successfully", users.size());
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(String username, String newPassword) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new NotFoundException("User not found: " + username));
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setIsPasswordChanged(true);
+        userRepository.save(user);
     }
 
     private String unaccent(String src) {
@@ -165,7 +183,8 @@ public class UserServiceImpl implements UserService {
         if (!user.getEmail().equals(request.getEmail()) && userRepository.existsByEmail(request.getEmail())) {
             throw new BadRequestException("Email đã tồn tại");
         }
-        if (!user.getCode().equals(request.getCode()) && userRepository.existsByCode(request.getCode())) {
+        if (request.getCode() != null && (user.getCode() == null || !user.getCode().equals(request.getCode()))
+                && userRepository.existsByCode(request.getCode())) {
             throw new BadRequestException("Mã số đã tồn tại");
         }
 
@@ -206,7 +225,85 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void importUsers(MultipartFile file) {
         log.info("Importing users from file: {}", file.getOriginalFilename());
-        try (InputStream is = file.getInputStream(); Workbook workbook = new XSSFWorkbook(is)) {
+        Path tempDir = null;
+        try {
+            // Create temp directory to unzip
+            tempDir = Files.createTempDirectory("user_import_");
+            List<File> imageFiles = new ArrayList<>();
+            File excelFile = null;
+
+            // Unzip file
+            try (ZipInputStream zis = new ZipInputStream(file.getInputStream())) {
+                ZipEntry zipEntry = zis.getNextEntry();
+                while (zipEntry != null) {
+                    File newFile = new File(tempDir.toFile(), zipEntry.getName());
+                    if (zipEntry.isDirectory()) {
+                        if (!newFile.isDirectory() && !newFile.mkdirs()) {
+                            throw new IOException("Failed to create directory " + newFile);
+                        }
+                    } else {
+                        // Fix for Windows-created archives
+                        File parent = newFile.getParentFile();
+                        if (!parent.isDirectory() && !parent.mkdirs()) {
+                            throw new IOException("Failed to create directory " + parent);
+                        }
+
+                        // Write file content
+                        Files.copy(zis, newFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+                        String fileName = newFile.getName().toLowerCase();
+                        if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
+                            excelFile = newFile;
+                        } else if (fileName.endsWith(".jpg") || fileName.endsWith(".png")
+                                || fileName.endsWith(".jpeg")) {
+                            imageFiles.add(newFile);
+                        }
+                    }
+                    zipEntry = zis.getNextEntry();
+                }
+            }
+
+            if (excelFile == null) {
+                // Try parsing as direct Excel upload if not zip or no excel found in zip
+                if (file.getOriginalFilename() != null && (file.getOriginalFilename().endsWith(".xlsx")
+                        || file.getOriginalFilename().endsWith(".xls"))) {
+                    processExcelImport(file.getInputStream(), Collections.emptyMap());
+                    return;
+                }
+                throw new BadRequestException("Không tìm thấy file Excel trong file tải lên");
+            }
+
+            // Map images by filename (without extension) -> User Code
+            Map<String, File> imageMap = new HashMap<>(); // key: code (lowercase), value: file
+            for (File img : imageFiles) {
+                String name = img.getName();
+                String code = name.substring(0, name.lastIndexOf('.')).toLowerCase();
+                imageMap.put(code, img);
+            }
+
+            try (InputStream is = new FileInputStream(excelFile)) {
+                processExcelImport(is, imageMap);
+            }
+
+        } catch (Exception e) {
+            log.error("Failed to import users", e);
+            throw new BadRequestException("Lỗi khi xử lý file import: " + e.getMessage());
+        } finally {
+            // Cleanup temp dir
+            if (tempDir != null) {
+                try (Stream<Path> walk = Files.walk(tempDir)) {
+                    walk.sorted(Comparator.reverseOrder())
+                            .map(Path::toFile)
+                            .forEach(File::delete);
+                } catch (IOException e) {
+                    log.warn("Failed to clean up temp dir: {}", tempDir);
+                }
+            }
+        }
+    }
+
+    private void processExcelImport(InputStream is, Map<String, File> imageMap) throws IOException {
+        try (Workbook workbook = new XSSFWorkbook(is)) {
             Sheet sheet = workbook.getSheetAt(0);
             Iterator<Row> rows = sheet.iterator();
 
@@ -248,6 +345,35 @@ public class UserServiceImpl implements UserService {
                 String username = code.toLowerCase();
                 String rawPassword = dob.format(PASSWORD_FORMATTER);
 
+                String avatarUrl = null;
+                User.FaceDataStatus faceStatus = User.FaceDataStatus.NOT_REGISTERED;
+
+                // Check for image
+                File imageFile = imageMap.get(code.toLowerCase());
+                if (imageFile != null) {
+                    try {
+                        // Create MultipartFile from File for uploadService
+                        // Since uploadService expects MultipartFile, we need a simple adapter or change
+                        // uploadService to accept File/InputStream
+                        // Re-using uploadService.uploadFile(MultipartFile) requires mocking or using
+                        // specific implementation
+                        // EASIER: Read bytes and mock, OR overload uploadService. Let's assume we can't
+                        // easily change uploadService interface right now.
+                        // We will use a MockMultipartFile equivalent or just implement a simple
+                        // anonymous class.
+
+                        // Wait, creating a MultipartFile from File in Spring context is verbose.
+                        // Let's read bytes.
+                        byte[] content = Files.readAllBytes(imageFile.toPath());
+                        MultipartFile multipartFile = new MockMultipartFile(imageFile.getName(), imageFile.getName(),
+                                "image/jpeg", content);
+                        avatarUrl = uploadService.uploadFile(multipartFile);
+                        faceStatus = User.FaceDataStatus.REGISTERED;
+                    } catch (Exception ex) {
+                        log.error("Failed to upload avatar for user {}: {}", code, ex.getMessage());
+                    }
+                }
+
                 User user = User.builder()
                         .fullName(fullName)
                         .code(code)
@@ -257,8 +383,9 @@ public class UserServiceImpl implements UserService {
                         .phone(phone)
                         .dob(dob)
                         .role(mapRole(roleStr))
-                        .status(User.UserStatus.ACTIVE)
-                        .faceDataStatus(User.FaceDataStatus.NOT_REGISTERED)
+                        .status(User.UserStatus.INACTIVE)
+                        .faceDataStatus(faceStatus)
+                        .avatar(avatarUrl)
                         .build();
 
                 usersToSave.add(user);
@@ -269,10 +396,63 @@ public class UserServiceImpl implements UserService {
                 userRepository.saveAll(usersToSave);
                 log.info("Imported {} users successfully", usersToSave.size());
             }
+        }
+    }
 
-        } catch (Exception e) {
-            log.error("Failed to import users", e);
-            throw new BadRequestException("Lỗi khi xử lý file import: " + e.getMessage());
+    // Simple MockMultipartFile implementation to avoid extra dependencies if
+    // spring-test is not available at runtime or strict
+    // We can define it as a static inner class or just use a helper
+    private static class MockMultipartFile implements MultipartFile {
+        private final String name;
+        private final String originalFilename;
+        private final String contentType;
+        private final byte[] content;
+
+        public MockMultipartFile(String name, String originalFilename, String contentType, byte[] content) {
+            this.name = name;
+            this.originalFilename = originalFilename;
+            this.contentType = contentType;
+            this.content = content;
+        }
+
+        @Override
+        public String getName() {
+            return name;
+        }
+
+        @Override
+        public String getOriginalFilename() {
+            return originalFilename;
+        }
+
+        @Override
+        public String getContentType() {
+            return contentType;
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return content == null || content.length == 0;
+        }
+
+        @Override
+        public long getSize() {
+            return content.length;
+        }
+
+        @Override
+        public byte[] getBytes() throws IOException {
+            return content;
+        }
+
+        @Override
+        public InputStream getInputStream() throws IOException {
+            return new ByteArrayInputStream(content);
+        }
+
+        @Override
+        public void transferTo(File dest) throws IOException, IllegalStateException {
+            Files.write(dest.toPath(), content);
         }
     }
 

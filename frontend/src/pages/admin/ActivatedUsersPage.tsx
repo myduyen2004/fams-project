@@ -52,6 +52,15 @@ export const ActivatedUsersPage: React.FC = () => {
     fetchUsers();
   }, [fetchUsers]);
 
+  const formatDateTime = (date: any) => {
+    if (!date) return '';
+    if (Array.isArray(date)) {
+      const [year, month, day, hour, minute] = date;
+      return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')} ${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+    }
+    return new Date(date).toLocaleDateString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
   const handleSelectUser = (id: number) => {
     setSelectedUsers(prev => 
       prev.includes(id) ? prev.filter(uid => uid !== id) : [...prev, id]
@@ -198,12 +207,26 @@ export const ActivatedUsersPage: React.FC = () => {
                   </td>
                   <td className="px-4 py-4 text-gray-600 dark:text-gray-400">{user.code}</td>
                    <td className="px-4 py-4 text-gray-600 dark:text-gray-400">{user.roleName}</td>
-                   <td className="px-4 py-4">
-                     <span className="px-2.5 py-1 bg-green-50 dark:bg-green-900/10 text-green-600 dark:text-green-400 rounded-lg text-xs font-medium">
-                       Hoạt động
-                     </span>
-                   </td>
-                   <td className="px-4 py-4 text-gray-500 dark:text-gray-500">{user.createdAt}</td>
+                   <td className="px-6 py-4 whitespace-nowrap">
+                    {user.status === 'ACTIVE' ? (
+                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                           user.isPasswordChanged 
+                           ? 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400'
+                           : 'bg-blue-100 text-blue-800 dark:bg-blue-800/20 dark:text-blue-400'
+                       }`}>
+                           {user.isPasswordChanged ? 'Đang hoạt động' : 'Đã kích hoạt'}
+                       </span>
+                    ) : user.status === 'LOCKED' ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-800/20 dark:text-red-400">
+                        Đã khóa
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800/20 dark:text-gray-400">
+                        Chưa kích hoạt
+                      </span>
+                    )}
+                  </td>
+                   <td className="px-4 py-4 text-gray-500 dark:text-gray-500">{formatDateTime(user.createdAt)}</td>
                   <td className="px-4 py-4 text-center">
                     <div className="flex items-center justify-center gap-2">
                       <button 
@@ -279,6 +302,12 @@ const EditUserModal: React.FC<{ user: UserResponse; onClose: () => void; onSucce
       const [year, month, day] = d;
       return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     }
+    if (typeof d === 'string' && d.includes('/')) {
+        const parts = d.split('/');
+        if (parts.length === 3) {
+            return `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+    }
     return d || '';
   };
 
@@ -306,7 +335,17 @@ const EditUserModal: React.FC<{ user: UserResponse; onClose: () => void; onSucce
     e.preventDefault();
     try {
       setLoading(true);
-      await userService.updateUser(user.id, formData, avatar || undefined);
+      
+      // Ensure date is in YYYY-MM-DD format before sending
+      let submitDob = formData.dob;
+      if (submitDob && submitDob.includes('/')) {
+         const parts = submitDob.split('/');
+         if (parts.length === 3) {
+             submitDob = `${parts[2]}-${parts[1]}-${parts[0]}`;
+         }
+      }
+
+      await userService.updateUser(user.id, { ...formData, dob: submitDob }, avatar || undefined);
       toast.success('Cập nhật thành công');
       onSuccess();
     } catch (error: any) {
@@ -340,8 +379,15 @@ const EditUserModal: React.FC<{ user: UserResponse; onClose: () => void; onSucce
               <input required type="text" className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none" value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Mã số</label>
-              <input readOnly type="text" className="w-full px-4 py-2 bg-gray-100 dark:bg-zinc-800/50 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm outline-none cursor-not-allowed text-gray-500" value={formData.code} />
+              <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Mã số <span className="text-red-500">*</span></label>
+              <input 
+                readOnly={!!user.code}
+                type="text" 
+                className={`w-full px-4 py-2 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-fpt-orange/20 ${!!user.code ? 'bg-gray-100 dark:bg-zinc-800/50 cursor-not-allowed text-gray-500' : 'bg-gray-50 dark:bg-zinc-800'}`} 
+                value={formData.code || ''} 
+                onChange={e => !user.code && setFormData({...formData, code: e.target.value})}
+                placeholder={!user.code ? "Nhập mã số cho Admin..." : ""}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Ngày sinh</label>
