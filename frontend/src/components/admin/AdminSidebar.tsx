@@ -46,7 +46,8 @@ export const AdminSidebar: React.FC = () => {
       label: 'Quản lý',
       icon: <Settings size={20} />,
       submenu: [
-        { id: 'users', label: 'Người dùng', path: '/admin/users' },
+        { id: 'users', label: 'Tài khoản chưa kích hoạt', path: '/admin/users' },
+        { id: 'activated-users', label: 'Tài khoản đã kích hoạt', path: '/admin/activated-users' },
         { id: 'permissions', label: 'Phân quyền & vai trò', path: '/admin/permissions' }
       ]
     },

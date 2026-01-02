@@ -144,3 +144,9 @@ springdoc:
     path: /swagger-ui.html
     enabled: true
   show-actuator: true
+
+# ---------------- Cloudinary Configuration ----------------
+cloudinary:
+  cloud-name: dqirhvblt
+  api-key: 525798314275663
+  api-secret: eUj9fDz8rz3DkUhGCpXQNF2xKv8

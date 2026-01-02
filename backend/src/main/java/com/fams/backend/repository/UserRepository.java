@@ -2,12 +2,13 @@ package com.fams.backend.repository;
 
 import com.fams.backend.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificationExecutor<User> {
 
     /**
      * Tìm user theo username
@@ -20,6 +21,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
 
     /**
+     * Tìm user theo mã số (MSSV/MSGV/MSNV)
+     */
+    Optional<User> findByCode(String code);
+
+    /**
      * Kiểm tra username đã tồn tại
      */
     boolean existsByUsername(String username);
@@ -28,6 +34,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * Kiểm tra email đã tồn tại
      */
     boolean existsByEmail(String email);
+
+    /**
+     * Kiểm tra mã số đã tồn tại
+     */
+    boolean existsByCode(String code);
 
     /**
      * Đếm số lượng user theo role

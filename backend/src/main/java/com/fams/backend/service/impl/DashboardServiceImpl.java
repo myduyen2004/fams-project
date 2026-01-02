@@ -121,9 +121,7 @@ public class DashboardServiceImpl implements DashboardService {
             case ADMIN:
                 return "Quản trị viên";
             case ACADEMIC_STAFF:
-                return "Nhân viên học vụ";
-            case STUDENT_AFFAIRS_STAFF:
-                return "Nhân viên công tác sinh viên";
+                return "Phòng đào tạo";
             default:
                 return role.name();
         }
