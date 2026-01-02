@@ -66,6 +66,10 @@ public class User {
     @Column(length = 255)
     private String avatar;
 
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    @Builder.Default
+    private Boolean isPasswordChanged = false;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
