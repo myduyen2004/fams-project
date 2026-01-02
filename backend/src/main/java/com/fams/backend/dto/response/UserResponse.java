@@ -26,6 +26,7 @@ public class UserResponse {
     private User.UserStatus status;
     private User.FaceDataStatus faceDataStatus;
     private String avatar;
+    private Boolean isPasswordChanged;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -43,6 +44,7 @@ public class UserResponse {
                 .status(user.getStatus())
                 .faceDataStatus(user.getFaceDataStatus())
                 .avatar(user.getAvatar())
+                .isPasswordChanged(user.getIsPasswordChanged())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();

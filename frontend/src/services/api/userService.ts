@@ -23,6 +23,7 @@ export interface UserResponse {
     status: 'ACTIVE' | 'LOCKED' | 'INACTIVE';
     faceDataStatus: string;
     avatar?: string;
+    isPasswordChanged?: boolean;
     createdAt: string;
     lastLogin: string;
 }
@@ -76,5 +77,13 @@ export const userService = {
 
     deleteUser: async (id: number) => {
         await apiClient.delete(`/users/${id}`);
+    },
+
+    importUsers: async (formData: FormData) => {
+        await apiClient.post('/users/import', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
     }
 };
