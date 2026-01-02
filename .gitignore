@@ -78,3 +78,5 @@ volumes/
 postgres_data/
 redis_data/
 ai-service/data/
+.vercel
+.env*.local
