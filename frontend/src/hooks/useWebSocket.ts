@@ -2,7 +2,14 @@ import { useEffect, useCallback } from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:8080/ws';
+// Derive WS_URL from API_URL to ensure protocol matching (http -> http, https -> https)
+const getWsUrl = () => {
+    if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL;
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+    return `${apiUrl}/ws`;
+};
+
+const WS_URL = getWsUrl();
 
 export const useWebSocket = (topic: string, onMessage: (data: any) => void) => {
     const handleMessage = useCallback((message: any) => {
