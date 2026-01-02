@@ -1,14 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { Bell, Moon, Sun } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Bell, Moon, Sun, User, Settings, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { authService } from '../../services/api/authService';
 
 interface AdminHeaderProps {
   title: string;
 }
 
 export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
+  const navigate = useNavigate();
   const [isDark, setIsDark] = useState(false);
   const [notificationCount, _setNotificationCount] = useState(3);
   const [user, setUser] = useState<{ email: string; fullName: string; avatar?: string } | null>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Load user from localStorage
@@ -27,9 +32,30 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
     setIsDark(isDarkMode);
   }, []);
 
+  // Click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const toggleTheme = () => {
     setIsDark(!isDark);
     document.documentElement.classList.toggle('dark');
+  };
+
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+    navigate('/login');
   };
 
   return (
@@ -62,28 +88,73 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
           )}
         </button>
 
-        {/* User Info */}
-        <div className="flex items-center gap-3 pl-4 border-l border-gray-200 dark:border-zinc-800">
-          {/* Avatar */}
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-fpt-orange to-orange-600 flex items-center justify-center overflow-hidden">
-            {user?.avatar ? (
-              <img src={user.avatar} alt={user.fullName} className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-white font-semibold text-sm">
-                {user?.fullName?.charAt(0).toUpperCase() || 'A'}
-              </span>
-            )}
-          </div>
+        {/* User Info with Dropdown */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setShowDropdown(!showDropdown)}
+            className="flex items-center gap-3 pl-4 border-l border-gray-200 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-800 rounded-lg transition-colors py-1 px-2"
+          >
+            {/* Avatar */}
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-fpt-orange to-orange-600 flex items-center justify-center overflow-hidden">
+              {user?.avatar ? (
+                <img src={user.avatar} alt={user.fullName} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-white font-semibold text-sm">
+                  {user?.fullName?.charAt(0).toUpperCase() || 'A'}
+                </span>
+              )}
+            </div>
 
-          {/* User Text */}
-          <div className="hidden md:block">
-            <p className="text-sm font-medium text-gray-900 dark:text-white">
-              {user?.fullName || 'Admin'}
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {user?.email || 'admin@fpt.edu.vn'}
-            </p>
-          </div>
+            {/* User Text */}
+            <div className="hidden md:block text-left">
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {user?.fullName || 'Admin'}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {user?.email || 'admin@fpt.edu.vn'}
+              </p>
+            </div>
+          </button>
+
+          {/* Dropdown Menu */}
+          {showDropdown && (
+            <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-gray-200 dark:border-zinc-700 py-2 z-50">
+              <button
+                onClick={() => {
+                  navigate('/admin/profile');
+                  setShowDropdown(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors"
+              >
+                <User size={18} />
+                <span>Xem hồ sơ</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  navigate('/admin/settings');
+                  setShowDropdown(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors"
+              >
+                <Settings size={18} />
+                <span>Cài đặt</span>
+              </button>
+
+              <hr className="my-2 border-gray-200 dark:border-zinc-700" />
+
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setShowDropdown(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2 text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              >
+                <LogOut size={18} />
+                <span>Đăng xuất</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>
