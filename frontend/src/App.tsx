@@ -10,6 +10,7 @@ import { SystemLogsPage } from './pages/admin/SystemLogsPage';
 import { UsersPage } from './pages/admin/UsersPage';
 import { ActivatedUsersPage } from './pages/admin/ActivatedUsersPage';
 import { LockedUsersPage } from './pages/admin/LockedUsersPage';
+import { ProfilePage } from './pages/admin/ProfilePage';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { PublicRoute } from './components/common/PublicRoute';
 import { Navigate } from 'react-router-dom';
@@ -92,6 +93,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['ADMIN']}>
               <LockedUsersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/profile"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <ProfilePage />
             </ProtectedRoute>
           }
         />

@@ -76,6 +76,11 @@ public class UserServiceImpl implements UserService {
                         cb.like(cb.lower(root.get("username")), searchLower)));
             }
 
+            // Exclude ADMIN role for ACTIVE status (activated users list)
+            if ("ACTIVE".equalsIgnoreCase(status)) {
+                predicates.add(cb.notEqual(root.get("role"), User.UserRole.ADMIN));
+            }
+
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
