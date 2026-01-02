@@ -13,8 +13,11 @@ NC='\033[0m' # No Color
 echo -e "${GREEN}=== Starting FAMS Deployment ===${NC}"
 
 # 1. Pull Latest Code
-echo -e "${YELLOW}Step 1: Pulling latest code...${NC}"
-git pull
+# 1. Pull Latest Code from Develop
+echo -e "${YELLOW}Step 1: Pulling latest code from develop...${NC}"
+git fetch --all
+git checkout develop
+git pull origin develop
 
 # 2. Check for .env file
 if [ ! -f .env ]; then
