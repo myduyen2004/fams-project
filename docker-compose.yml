@@ -11,27 +11,23 @@ networks:
     driver: bridge
     # Bridge network: Containers trong cùng network có thể giao tiếp qua tên service
 
-# ========================================
-# VOLUMES
-# ========================================
-# GIẢI THÍCH: Named volumes để persist data khi container restart
+    # ========================================
+    # VOLUMES
+    # ========================================
+    # GIẢI THÍCH: Named volumes để persist data khi container restart
 volumes:
-  postgres_data:
-    # Lưu PostgreSQL data
-  postgres_ai_data:
-    # Lưu PostgreSQL AI data
-  redis_data:
-    # Lưu Redis data
-  ai_models:
-    # Lưu ML models
+  postgres_data: # Lưu PostgreSQL data
+  postgres_ai_data: # Lưu PostgreSQL AI data
+  redis_data: # Lưu Redis data
+  ai_models: # Lưu ML models
   ai_faces:
     # Lưu face images
 
-# ========================================
-# SERVICES
-# ========================================
+    # ========================================
+    # SERVICES
+    # ========================================
 services:
-  
+
   # ==================
   # PostgreSQL Main DB
   # ==================
@@ -40,59 +36,60 @@ services:
     image: postgres:15-alpine
     container_name: fams-postgres
     restart: unless-stopped
-    # restart policy: Container tự động restart nếu crash (trừ khi stop thủ công)
-    
+    env_file: .env # Đọc biến môi trường từ file .env
+
     environment:
       POSTGRES_DB: fams_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres123
       # GIẢI THÍCH: Biến môi trường để config PostgreSQL
-      
+
     ports:
       - "5432:5432"
       # GIẢI THÍCH: Map port 5432 của container ra host
       # Format: "host_port:container_port"
-      
+
     volumes:
       - postgres_data:/var/lib/postgresql/data
       # GIẢI THÍCH: Mount volume để data không mất khi restart container
-      
+
     networks:
       - fams-network
-      
+
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 10s
       timeout: 5s
       retries: 5
       # GIẢI THÍCH: Check xem PostgreSQL đã ready chưa
 
-  # ==================
-  # PostgreSQL AI DB
-  # ==================
-  # GIẢI THÍCH: Database riêng cho AI Service
+      # ==================
+      # PostgreSQL AI DB
+      # ==================
+      # GIẢI THÍCH: Database riêng cho AI Service
   postgres-ai:
     image: postgres:15-alpine
     container_name: fams-postgres-ai
     restart: unless-stopped
-    
+    env_file: .env
+
     environment:
       POSTGRES_DB: fams_ai_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres123
-      
+
     ports:
       - "5433:5432"
       # GIẢI THÍCH: Port 5433 trên host map đến 5432 trong container
-      
+
     volumes:
       - postgres_ai_data:/var/lib/postgresql/data
-      
+
     networks:
       - fams-network
-      
+
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -105,109 +102,117 @@ services:
     image: redis:7-alpine
     container_name: fams-redis
     restart: unless-stopped
-    
+
     ports:
       - "6379:6379"
-      
+
     volumes:
       - redis_data:/data
-      
+
     networks:
       - fams-network
-      
+
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 3s
       retries: 5
       # GIẢI THÍCH: Ping Redis để check health
 
-  # ==================
-  # Backend Service
-  # ==================
-  # GIẢI THÍCH: Spring Boot API
+      # ==================
+      # Backend Service
+      # ==================
+      # GIẢI THÍCH: Spring Boot API
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
       # GIẢI THÍCH: Build image từ Dockerfile trong folder backend
-      
+
     container_name: fams-backend
     restart: unless-stopped
-    
+    env_file: .env
+
     ports:
       - "8080:8080"
-      
+
     environment:
       # Database configuration
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/fams_db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres123
-      
+
       # Redis configuration
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
-      
+
       # AI Service URL
       AI_SERVICE_URL: http://ai-service:5000
-      
-      # GIẢI THÍCH: Override application.yml properties với env vars
-      
+
+      # JWT & Mail Configuration (Passed from .env)
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION:-86400000}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
       # GIẢI THÍCH: Đợi postgres và redis healthy mới start backend
-      
+
     networks:
       - fams-network
-      
+
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 60s
       # GIẢI THÍCH: start_period = thời gian chờ app khởi động
 
-  # ==================
-  # AI Service
-  # ==================
-  # GIẢI THÍCH: Python Flask API cho Face Recognition
+      # ==================
+      # AI Service
+      # ==================
+      # GIẢI THÍCH: Python Flask API cho Face Recognition
   ai-service:
     build:
       context: ./ai-service
       dockerfile: Dockerfile
-      
+
     container_name: fams-ai-service
     restart: unless-stopped
-    
+    env_file:
+      - .env
+      - ./ai-service/.env
+
     ports:
       - "5000:5000"
-      
+
     environment:
       DATABASE_URL: postgresql://postgres:postgres123@postgres-ai:5432/fams_ai_db
       REDIS_HOST: redis
       REDIS_PORT: 6379
       BACKEND_API_URL: http://backend:8080/api
-      
+
     volumes:
       - ai_models:/app/ml_models
       - ai_faces:/app/data/faces
       # GIẢI THÍCH: Mount volumes để lưu models và face images
-      
+
     depends_on:
       postgres-ai:
         condition: service_healthy
       redis:
         condition: service_healthy
-      
+
     networks:
       - fams-network
-      
+
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:5000/health" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -221,24 +226,24 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      
+
     container_name: fams-frontend
     restart: unless-stopped
-    
+
     ports:
       - "3000:80"
       # GIẢI THÍCH: Nginx chạy trên port 80, map ra 3000 trên host
-      
+
     depends_on:
       - backend
       - ai-service
       # GIẢI THÍCH: Frontend cần backend và AI service đã chạy
-      
+
     networks:
       - fams-network
-      
+
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost"]
+      test: [ "CMD", "curl", "-f", "http://localhost" ]
       interval: 30s
       timeout: 3s
       retries: 5
