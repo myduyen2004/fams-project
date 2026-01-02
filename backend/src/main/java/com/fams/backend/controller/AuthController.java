@@ -12,7 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Authentication", description = "API xác thực người dùng")
@@ -60,7 +60,7 @@ public class AuthController {
             }
             // Get username directly from Authentication object
             String username = authentication.getName();
-            
+
             userService.changePassword(username, request.getNewPassword());
             return ResponseEntity.ok().build();
         } catch (Exception e) {
