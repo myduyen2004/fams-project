@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { 
-  Search, 
-  Eye,
+  Search,
   Loader2,
   User as UserIcon,
   Unlock,
