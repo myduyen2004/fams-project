@@ -22,7 +22,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .setAllowedOriginPatterns(
                         "http://localhost:3000",
                         "http://localhost:5173",
-                        "http://127.0.0.1:3000")
+                        "http://127.0.0.1:3000",
+                        "https://www.fams-edu.online",
+                        "https://fams-edu.online",
+                        "https://api.fams-edu.online")
                 .withSockJS();
     }
 }
