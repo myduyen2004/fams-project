@@ -63,7 +63,7 @@ EXPOSE 8080
 # GIẢI THÍCH: Docker sẽ định kỳ check xem container có healthy không
 # Nếu fail nhiều lần, Docker sẽ restart container
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:8080/api/actuator/health || exit 1
+  CMD curl -f http://localhost:8080/actuator/health || exit 1
 
 # Run application
 # GIẢI THÍCH:
