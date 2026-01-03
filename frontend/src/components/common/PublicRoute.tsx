@@ -22,6 +22,8 @@ export const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
         return <Navigate to="/lecturer/dashboard" replace />;
       } else if (user.role === 'STUDENT') {
         return <Navigate to="/student/dashboard" replace />;
+      } else if (user.role === 'ACADEMIC_STAFF') {
+        return <Navigate to="/academic-staff/dashboard" replace />;
       }
       return <Navigate to="/admin/dashboard" replace />;
     } catch (e) {

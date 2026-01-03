@@ -44,4 +44,6 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
      * Đếm số lượng user theo role
      */
     long countByRole(User.UserRole role);
+
+    Optional<User> findByIdAndRole(Long id, User.UserRole role);
 }
