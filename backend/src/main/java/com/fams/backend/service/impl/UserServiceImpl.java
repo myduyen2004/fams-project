@@ -51,7 +51,7 @@ public class UserServiceImpl implements UserService {
 
             if (status != null && !status.isEmpty() && !status.equalsIgnoreCase("all")) {
                 try {
-                    User.UserStatus userStatus = User.UserStatus.valueOf(status.toUpperCase());
+                    User.UserStatus userStatus = Enum.valueOf(User.UserStatus.class, status.toUpperCase());
                     predicates.add(cb.equal(root.get("status"), userStatus));
                 } catch (Exception e) {
                     log.error("Invalid status filter: {}", status);
@@ -60,7 +60,7 @@ public class UserServiceImpl implements UserService {
 
             if (role != null && !role.isEmpty() && !role.equalsIgnoreCase("all")) {
                 try {
-                    User.UserRole userRole = User.UserRole.valueOf(role.toUpperCase());
+                    User.UserRole userRole = Enum.valueOf(User.UserRole.class, role.toUpperCase());
                     predicates.add(cb.equal(root.get("role"), userRole));
                 } catch (Exception e) {
                     log.error("Invalid role filter: {}", role);

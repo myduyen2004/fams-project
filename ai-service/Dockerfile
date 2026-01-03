@@ -1,37 +1,65 @@
-# Base image
-FROM python:3.10
+# ========================================
+# STAGE 1: Builder
+# ========================================
+FROM python:3.10-slim AS builder
 
-# ========================================
-# Install system dependencies
-# ========================================
-RUN apt-get update && apt-get install -y \
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     gcc \
     g++ \
+    curl \
+    git \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv (Fast Pip replacement)
+RUN pip install uv
+
+# Create Virtual Environment
+RUN uv venv /venv
+
+# Install Heavy Dependencies (Split for caching & timeout prevention)
+# 1. Scientific Stack
+RUN uv pip install --python /venv numpy==1.26.3 pandas==2.1.4 scikit-learn==1.4.0
+
+# 2. Computer Vision (Heavy download)
+RUN uv pip install --python /venv opencv-python-headless==4.11.0.86 mediapipe==0.10.9
+
+# 3. Face Recognition (Might require compilation)
+RUN uv pip install --python /venv face-recognition==1.3.0
+
+# 4. Install remaining dependencies
+COPY requirements.txt .
+RUN uv pip install --python /venv -r requirements.txt
+
+# ========================================
+# STAGE 2: Runtime
+# ========================================
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install runtime dependencies ONLY
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
-    libxrender-dev \
+    libxrender1 \
     libgomp1 \
-    libgl1 \
-    libglx-mesa0 \
+    libpq5 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
-WORKDIR /app
-
 # Create non-root user
-RUN useradd -m -u 1001 appuser && \
-    chown -R appuser:appuser /app
+RUN useradd -m -u 1001 appuser
 
-# Copy requirements first (for Docker cache)
-COPY requirements.txt .
-
-# Upgrade pip & install dependencies
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+# Copy virtual environment from builder
+COPY --from=builder /venv /venv
 
 # Copy source code
 COPY --chown=appuser:appuser . .
@@ -46,7 +74,8 @@ USER appuser
 
 # Environment
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/venv/bin:$PATH"
 
 EXPOSE 5000
 
