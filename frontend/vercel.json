@@ -1,6 +1,10 @@
 {
     "rewrites": [
         {
+            "source": "/api/:path*",
+            "destination": "https://api.fams-edu.online/api/:path*"
+        },
+        {
             "source": "/(.*)",
             "destination": "/"
         }
