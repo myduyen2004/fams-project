@@ -2,7 +2,7 @@
     "rewrites": [
         {
             "source": "/api/:path*",
-            "destination": "https://api.fams-edu.online/api/:path*"
+            "destination": "http://3.26.2.123:8080/api/:path*"
         },
         {
             "source": "/(.*)",
