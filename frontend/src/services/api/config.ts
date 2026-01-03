@@ -4,9 +4,10 @@
 const isProd = import.meta.env.PROD;
 const envApiUrl = import.meta.env.VITE_API_URL;
 
-// Base URL for API (no trailing slash)
-// If VITE_API_URL is explicitly set (even to ""), use it. Otherwise fallback.
-// In production, we default to empty string to use relative paths (Nginx proxy).
+// Cấu hình URL cho API
+// - Khi chạy LOCAL (npm run dev): Sẽ dùng http://localhost:8080
+// - Khi chạy PRODUCTION (Docker/Server): Dùng '' (đường dẫn tương đối) để đi qua Nginx Proxy
+//   (Điều này giúp fix lỗi Timeout khi gọi trực tiếp domain api.fams-edu.online)
 export const BASE_URL = envApiUrl !== undefined ? envApiUrl : (isProd ? '' : 'http://localhost:8080');
 
 // API Endpoint (BASE_URL + /api)
