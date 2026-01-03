@@ -6,9 +6,9 @@ const envApiUrl = import.meta.env.VITE_API_URL;
 
 // Cấu hình URL cho API
 // - Khi chạy LOCAL (npm run dev): Sẽ dùng http://localhost:8080
-// - Khi chạy PRODUCTION (Docker/Server): Dùng '' (đường dẫn tương đối) để đi qua Nginx Proxy
-//   (Điều này giúp fix lỗi Timeout khi gọi trực tiếp domain api.fams-edu.online)
-export const BASE_URL = envApiUrl !== undefined ? envApiUrl : (isProd ? '' : 'http://localhost:8080');
+// - Khi chạy PRODUCTION (Vercel): Dùng '' (đường dẫn tương đối) để đi qua Vercel Proxy
+//   Vercel sẽ proxy /api/* tới EC2 backend (xem vercel.json)
+export const BASE_URL = isProd ? '' : (envApiUrl || 'http://localhost:8080');
 
 // API Endpoint (BASE_URL + /api)
 export const API_URL = `${BASE_URL}/api`;
