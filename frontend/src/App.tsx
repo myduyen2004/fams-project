@@ -11,6 +11,8 @@ import { UsersPage } from './pages/admin/UsersPage';
 import { ActivatedUsersPage } from './pages/admin/ActivatedUsersPage';
 import { LockedUsersPage } from './pages/admin/LockedUsersPage';
 import { ProfilePage } from './pages/admin/ProfilePage';
+import { AcademicStaffDashboard } from './pages/academic-staff/AcademicStaffDashboard';
+import { ProfilePage as AcademicStaffProfilePage } from './pages/academic-staff/ProfilePage';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { PublicRoute } from './components/common/PublicRoute';
 import { Navigate } from 'react-router-dom';
@@ -101,6 +103,24 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['ADMIN']}>
               <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Academic Staff Routes */}
+        <Route
+          path="/academic-staff/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
+              <AcademicStaffDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/academic-staff/profile"
+          element={
+            <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
+              <AcademicStaffProfilePage />
             </ProtectedRoute>
           }
         />

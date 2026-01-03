@@ -37,8 +37,10 @@ The services will be available at:
 ## 📋 Key Features
 
 - **Real-time Dashboard**: Live updates for online users, access logs, alerts, and system notifications via WebSockets.
+- **Academic Staff Portal**: Dedicated dashboard and profile management for academic staff.
 - **Security**: Stateless JWT-based authentication with fine-grained access control.
-- **Monitoring**: Integrated system logging and alert management.
+- **Robust Logging**: Comprehensive logging for login/logout events across all roles.
+- **Optimized Deployment**: Multi-stage Docker builds and resource-tuned configurations for efficient performance.
 - **Interactive Map**: Real-time visualization of online users across provinces.
 
 ## 📂 Project Structure

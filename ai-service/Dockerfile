@@ -1,37 +1,62 @@
-# Base image
-FROM python:3.10
+# ========================================
+# STAGE 1: Builder
+# ========================================
+FROM python:3.10-alpine AS builder
 
-# ========================================
-# Install system dependencies
-# ========================================
-RUN apt-get update && apt-get install -y \
-    build-essential \
+WORKDIR /app
+
+# Install build dependencies
+RUN apk add --no-cache \
+    build-base \
     cmake \
     gcc \
     g++ \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
-    libgomp1 \
-    libgl1 \
-    libglx-mesa0 \
+    libc-dev \
+    libffi-dev \
+    postgresql-dev \
+    musl-dev \
+    linux-headers \
+    python3-dev \
+    jpeg-dev \
+    zlib-dev \
+    openblas-dev \
+    libstdc++ \
+    libx11 \
+    libxrender \
+    libxext \
+    mesa-gl \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    git
 
-# Set working directory
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir --prefix=/install -r requirements.txt
+
+# ========================================
+# STAGE 2: Runtime
+# ========================================
+FROM python:3.10-alpine
+
 WORKDIR /app
 
+# Install runtime dependencies ONLY (no build tools)
+RUN apk add --no-cache \
+    libstdc++ \
+    libx11 \
+    libxrender \
+    libxext \
+    mesa-gl \
+    libpq \
+    openblas \
+    jpeg \
+    zlib
+
 # Create non-root user
-RUN useradd -m -u 1001 appuser && \
-    chown -R appuser:appuser /app
+RUN adduser -D -u 1001 appuser
 
-# Copy requirements first (for Docker cache)
-COPY requirements.txt .
-
-# Upgrade pip & install dependencies
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+# Copy installed packages from builder
+COPY --from=builder /install /usr/local
 
 # Copy source code
 COPY --chown=appuser:appuser . .
@@ -46,7 +71,8 @@ USER appuser
 
 # Environment
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/usr/local/lib/python3.10/site-packages
 
 EXPOSE 5000
 

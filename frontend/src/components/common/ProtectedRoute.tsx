@@ -43,6 +43,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           return <Navigate to="/lecturer/dashboard" replace />;
         } else if (user.role === 'STUDENT') {
           return <Navigate to="/student/dashboard" replace />;
+        } else if (user.role === 'ACADEMIC_STAFF') {
+          return <Navigate to="/academic-staff/dashboard" replace />;
         }
         return <Navigate to="/login" replace />;
       }
