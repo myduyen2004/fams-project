@@ -255,6 +255,9 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ""
+        VITE_WS_URL: "/ws"
 
     container_name: fams-frontend
     restart: unless-stopped
