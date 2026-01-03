@@ -63,6 +63,13 @@ services:
       retries: 5
       # GIẢI THÍCH: Check xem PostgreSQL đã ready chưa
 
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          memory: 256M
       # ==================
       # PostgreSQL AI DB
       # ==================
@@ -119,6 +126,13 @@ services:
       retries: 5
       # GIẢI THÍCH: Ping Redis để check health
 
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          memory: 64M
       # ==================
       # Backend Service
       # ==================
@@ -173,6 +187,13 @@ services:
       start_period: 60s
       # GIẢI THÍCH: start_period = thời gian chờ app khởi động
 
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 768M
+        reservations:
+          memory: 256M
       # ==================
       # AI Service
       # ==================
@@ -218,6 +239,14 @@ services:
       retries: 5
       start_period: 60s
 
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          memory: 512M
+
   # ==================
   # Frontend Service
   # ==================
@@ -248,3 +277,11 @@ services:
       timeout: 3s
       retries: 5
       start_period: 10s
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          memory: 64M

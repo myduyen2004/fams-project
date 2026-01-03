@@ -44,6 +44,7 @@ public class AuthController {
     @Operation(summary = "Đăng xuất", description = "Đăng xuất khỏi hệ thống")
     public ResponseEntity<Void> logout() {
         log.info("POST /auth/logout");
+        authService.logout();
         return ResponseEntity.ok().build();
     }
 

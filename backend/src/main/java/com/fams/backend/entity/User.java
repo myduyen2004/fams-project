@@ -66,6 +66,14 @@ public class User {
     @Column(length = 255)
     private String avatar;
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    @PrimaryKeyJoinColumn
+    private StudentProfile studentProfile;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    @PrimaryKeyJoinColumn
+    private LecturerProfile lecturerProfile;
+
     @Column(nullable = false, columnDefinition = "boolean default false")
     @Builder.Default
     private Boolean isPasswordChanged = false;
