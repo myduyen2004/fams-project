@@ -34,9 +34,13 @@ export const UserTableRow: React.FC<UserTableRowProps> = React.memo(({
           <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 dark:bg-zinc-800 flex-shrink-0">
             {user.avatar ? (
               <img 
-                src={`${user.avatar}${user.avatar.includes('?') ? '&' : '?'}t=${new Date().getTime()}`} 
+                src={user.avatar.includes('cloudinary.com') 
+                  ? user.avatar.replace('/upload/', '/upload/c_fill,w_100,h_100,q_auto,f_auto/') 
+                  : user.avatar
+                } 
                 alt="avatar" 
-                className="w-full h-full object-cover" 
+                className="w-full h-full object-cover"
+                loading="lazy"
               />
             ) : (
               <UserIcon size={16} className="m-auto text-gray-400" />
