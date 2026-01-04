@@ -54,6 +54,30 @@ fams-project/
 └── docker-compose.yml # Infrastructure orchestration
 ```
 
+## 🗄️ Database Management
+
+### Automated Seeding
+For teamwork convenience, the project uses **Spring Boot DataInitializer**. When the database is empty:
+- A default admin is created: `admin` / `admin123`.
+- Mock dashboard data (Alerts, Logs, Notifications) is automatically inserted.
+- This ensures every team member has the same starting environment.
+
+### Manual SQL Access
+If you need to run custom SQL or check raw data, use:
+```bash
+docker exec -it fams-postgres psql -U postgres -d fams_db
+```
+
+## 🧪 Testing
+
+### Running Unit Tests
+Since the project requires Java 21, the most reliable way to run tests is via Docker to avoid local environment issues:
+
+```bash
+docker run --rm -v "${PWD}/backend:/app" -w /app maven:3.9-eclipse-temurin-21-alpine mvn test -Dtest=AuthServiceTest
+```
+*(Note: Replace `${PWD}` with `%CD%` if using Windows Command Prompt)*
+
 ## 🤝 Contributing
 
 1. Clone the repository.
