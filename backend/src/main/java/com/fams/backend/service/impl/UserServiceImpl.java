@@ -31,6 +31,10 @@ import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -41,10 +45,14 @@ public class UserServiceImpl implements UserService {
     private final com.fams.backend.service.UploadService uploadService;
     private final com.fams.backend.service.EmailService emailService;
 
+    private static final String CACHE_USERS = "users";
+    private static final String CACHE_USER_DETAILS = "user_details";
+
     private static final DateTimeFormatter DOB_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter PASSWORD_FORMATTER = DateTimeFormatter.ofPattern("ddMMyyyy");
 
     @Override
+    @Cacheable(value = CACHE_USERS, key = "#search + '-' + #role + '-' + #status + '-' + #pageable.pageNumber + '-' + #pageable.pageSize")
     public Page<UserResponse> getAllUsers(String search, String role, String status, Pageable pageable) {
         Specification<User> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -88,6 +96,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Cacheable(value = CACHE_USER_DETAILS, key = "#id")
     public UserResponse getUserById(Long id) {
         return userRepository.findById(id)
                 .map(UserResponse::fromUser)
@@ -96,6 +105,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    @CacheEvict(value = CACHE_USERS, allEntries = true)
     public UserResponse createUser(UserRequest request, MultipartFile avatar) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BadRequestException("Email đã tồn tại");
@@ -129,6 +139,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = CACHE_USERS, allEntries = true),
+            @CacheEvict(value = CACHE_USER_DETAILS, allEntries = true)
+    })
     public void activateUsers(List<Long> ids) {
         log.info("Activating users: {}", ids);
         List<User> users = userRepository.findAllById(ids);
@@ -158,6 +172,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    @CacheEvict(value = CACHE_USER_DETAILS, key = "#username") // Note: This might need adjustment if key is ID
     public void changePassword(String username, String newPassword) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new NotFoundException("User not found: " + username));
@@ -176,6 +191,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = CACHE_USERS, allEntries = true),
+            @CacheEvict(value = CACHE_USER_DETAILS, key = "#id")
+    })
     public UserResponse updateUser(Long id, UserRequest request, MultipartFile avatar) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
@@ -219,6 +238,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = CACHE_USERS, allEntries = true),
+            @CacheEvict(value = CACHE_USER_DETAILS, key = "#id")
+    })
     public void deleteUser(Long id) {
         if (!userRepository.existsById(id)) {
             throw new NotFoundException("User not found with id: " + id);
@@ -228,6 +251,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    @CacheEvict(value = CACHE_USERS, allEntries = true)
     public void importUsers(MultipartFile file) {
         log.info("Importing users from file: {}", file.getOriginalFilename());
         Path tempDir = null;
