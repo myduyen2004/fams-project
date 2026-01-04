@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
@@ -30,6 +30,33 @@ const PageLoader = () => (
 );
 
 function App() {
+  // Global listener for ChunkLoadError (caused by new deployments)
+  useEffect(() => {
+    const handleError = (e: ErrorEvent | PromiseRejectionEvent) => {
+      const errorMsg = 'message' in e ? e.message : (e as any).reason?.message;
+      if (typeof errorMsg === 'string' && (
+          errorMsg.includes('Failed to fetch dynamically imported module') || 
+          errorMsg.includes('ChunkLoadError') ||
+          errorMsg.includes('MIME type')
+      )) {
+        console.warn('Asset loading failed, reloading for newest version...', errorMsg);
+        const lastReload = sessionStorage.getItem('last-reload');
+        const now = Date.now();
+        if (!lastReload || now - parseInt(lastReload) > 10000) {
+          sessionStorage.setItem('last-reload', now.toString());
+          window.location.reload();
+        }
+      }
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleError);
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleError);
+    };
+  }, []);
+
   return (
     <BrowserRouter>
       <Toaster position="top-right" />
