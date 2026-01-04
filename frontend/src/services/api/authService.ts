@@ -1,6 +1,5 @@
 import axios, { AxiosError } from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+import { API_URL } from './config';
 
 // ========================================
 // Types
@@ -23,6 +22,7 @@ export interface UserInfo {
   email: string;
   role: string;
   avatar?: string;
+  isPasswordChanged?: boolean;
 }
 
 export interface ApiError {
@@ -96,6 +96,13 @@ export const authService = {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
     }
+  },
+
+  /**
+   * Change Password
+   */
+  changePassword: async (newPassword: string): Promise<void> => {
+    await apiClient.post('/auth/change-password', { newPassword });
   },
 
   /**

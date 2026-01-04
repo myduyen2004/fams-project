@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { API_URL } from './config';
 import {
     DashboardStats,
     RecentAccess,
@@ -6,8 +7,6 @@ import {
     Notification,
     SystemLog
 } from '../../types/dashboard';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 // Get auth token
 const getAuthHeader = () => {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -12,6 +12,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const token = localStorage.getItem('token');
   const userStr = localStorage.getItem('user');
+  const location = useLocation();
 
   // Check if user is authenticated
   if (!token || !userStr) {
@@ -20,6 +21,17 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   try {
     const user = JSON.parse(userStr);
+    
+    // Check if password change required (first login)
+    // Redirect to change-password if user hasn't changed password yet
+    // Exclude Admin role and change-password page itself
+    if (
+      user.isPasswordChanged === false &&
+      user.role !== 'ADMIN' &&
+      location.pathname !== '/change-password'
+    ) {
+      return <Navigate to="/change-password" replace state={{ firstLogin: true }} />;
+    }
     
     // Check if user has required role
     if (allowedRoles && allowedRoles.length > 0) {
@@ -31,6 +43,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           return <Navigate to="/lecturer/dashboard" replace />;
         } else if (user.role === 'STUDENT') {
           return <Navigate to="/student/dashboard" replace />;
+        } else if (user.role === 'ACADEMIC_STAFF') {
+          return <Navigate to="/academic-staff/dashboard" replace />;
         }
         return <Navigate to="/login" replace />;
       }

@@ -12,7 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Authentication", description = "API xác thực người dùng")
@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final com.fams.backend.service.UserService userService;
 
     /**
      * POST /auth/login
@@ -45,6 +46,28 @@ public class AuthController {
         log.info("POST /auth/logout");
         authService.logout();
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/change-password")
+    @Operation(summary = "Đổi mật khẩu", description = "Đổi mật khẩu cho người dùng đã đăng nhập")
+    public ResponseEntity<Void> changePassword(
+            @Valid @RequestBody com.fams.backend.dto.request.ChangePasswordRequest request) {
+        // Get current user ID from SecurityContext
+        try {
+            org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder
+                    .getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return ResponseEntity.status(401).build();
+            }
+            // Get username directly from Authentication object
+            String username = authentication.getName();
+
+            userService.changePassword(username, request.getNewPassword());
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            log.error("Change password error", e);
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     /**

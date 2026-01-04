@@ -1,4 +1,3 @@
-// Dashboard Statistics
 export interface DashboardStats {
     totalStudents: number;
     totalUsers: number;
@@ -7,47 +6,77 @@ export interface DashboardStats {
     totalBehaviors: number;
 }
 
-// Recent Access Log
 export interface RecentAccess {
     id: number;
     email: string;
     role: string;
     accessTime: string;
     location: string;
-    status: 'Đang hoạt động' | 'Trạng thời' | 'Ngừng hoạt động';
+    status: string;
 }
 
-// Alert
 export interface Alert {
     id: number;
     title: string;
     description: string;
+    level: string;
+    isResolved: boolean;
     timestamp: string;
-    level: 'info' | 'warning' | 'error';
 }
 
-// Notification
 export interface Notification {
     id: number;
     title: string;
     description: string;
-    timestamp: string;
     isRead: boolean;
+    timestamp: string;
 }
 
-// System Log
 export interface SystemLog {
     id: number;
     title: string;
     description: string;
+    type: string;
     timestamp: string;
-    type: 'info' | 'success' | 'warning' | 'error';
 }
 
-// Region Stats for Vietnam Map
-export interface RegionStats {
-    region: string;
-    active: number;
-    inactive: number;
-    total: number;
+export interface NotificationResponse {
+    id: number;
+    title: string;
+    timestamp: string;
+}
+
+export interface AcademicStaffDashboardResponse {
+    stats: {
+        totalStudents: number;
+        totalLecturers: number;
+        totalRequests: number;
+    };
+    topStudents: {
+        rank: number;
+        name: string;
+        className: string;
+        email: string;
+        course: string;
+        avgMark: number;
+        gpa: number;
+        attendance: number;
+    }[];
+    requests: {
+        name: string;
+        className: string;
+        type: string;
+        date: string;
+        status: string;
+    }[];
+    notifications: NotificationResponse[];
+    attendanceStats: {
+        present: number;
+        absent: number;
+        date: string;
+    };
+    roomRequests: {
+        room: string;
+        date: string;
+    }[];
 }

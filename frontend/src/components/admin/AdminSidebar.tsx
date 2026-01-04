@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Home, 
@@ -46,7 +46,8 @@ export const AdminSidebar: React.FC = () => {
       label: 'Quản lý',
       icon: <Settings size={20} />,
       submenu: [
-        { id: 'users', label: 'Người dùng', path: '/admin/users' },
+        { id: 'users', label: 'Tài khoản chưa kích hoạt', path: '/admin/users' },
+        { id: 'activated-users', label: 'Tài khoản đã kích hoạt', path: '/admin/activated-users' },
         { id: 'permissions', label: 'Phân quyền & vai trò', path: '/admin/permissions' }
       ]
     },
@@ -97,6 +98,22 @@ export const AdminSidebar: React.FC = () => {
     return location.pathname === path;
   };
 
+  // Check if any submenu item is active
+  const isSubmenuActive = (submenu?: SubMenuItem[]) => {
+    if (!submenu) return false;
+    return submenu.some(subItem => location.pathname === subItem.path);
+  };
+
+  // Auto-expand submenu if current route matches a submenu item
+  useEffect(() => {
+    const activeMenuItem = menuItems.find(item => 
+      item.submenu && isSubmenuActive(item.submenu)
+    );
+    if (activeMenuItem) {
+      setOpenSubmenu(activeMenuItem.id);
+    }
+  }, [location.pathname]);
+
   return (
     <div
       className={`fixed left-0 top-0 h-screen bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-800 transition-all duration-300 z-50 ${
@@ -141,18 +158,18 @@ export const AdminSidebar: React.FC = () => {
               <button
                 onClick={() => handleMenuClick(item)}
                 className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group ${
-                  isActive(item.path)
+                  isActive(item.path) || isSubmenuActive(item.submenu)
                     ? 'bg-fpt-orange text-white'
                     : 'text-gray-700 dark:text-gray-300 hover:bg-fpt-orange hover:text-white'
                 }`}
                 title={!isExpanded ? item.label : ''}
               >
-                <div className={`flex-shrink-0 transition-colors duration-200 ${isActive(item.path) ? 'text-white' : 'text-fpt-orange group-hover:text-white'}`}>
+                <div className={`flex-shrink-0 transition-colors duration-200 ${isActive(item.path) || isSubmenuActive(item.submenu) ? 'text-white font-bold' : 'text-fpt-orange group-hover:text-white'}`}>
                   {item.icon}
                 </div>
                 {isExpanded && (
                   <>
-                    <span className={`flex-1 text-left text-sm font-medium whitespace-nowrap transition-colors duration-200 ${isActive(item.path) ? 'text-white' : 'text-fpt-orange group-hover:text-white'}`}>
+                    <span className={`flex-1 text-left text-sm whitespace-nowrap transition-colors duration-200 ${isActive(item.path) || isSubmenuActive(item.submenu) ? 'text-white font-bold' : 'text-fpt-orange font-medium group-hover:text-white'}`}>
                       {item.label}
                     </span>
                     {item.submenu && (

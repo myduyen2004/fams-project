@@ -1,0 +1,47 @@
+# ========================================
+# TEST/STAGING ENVIRONMENT PROFILE
+# ========================================
+# Team dùng chung Neon database cho testing
+# Database: fams-test trên Neon
+
+spring:
+  # ---------------- Database (Neon Cloud - Test) ----------------
+  datasource:
+    url: jdbc:postgresql://ep-shy-truth-a1qqexjr-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+    username: neondb_owner
+    password: ${DATABASE_PASSWORD_TEST:npg_KH5UoMe0NZYA}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+
+  # ---------------- Redis (Upstash or local) ----------------
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 60000
+
+# ---------------- AI Service ----------------
+ai-service:
+  url: ${AI_SERVICE_URL:http://localhost:5000}
+  timeout: 30000
+
+# ---------------- Logging ----------------
+logging:
+  level:
+    com.fams: INFO
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+    org.hibernate.SQL: WARN
