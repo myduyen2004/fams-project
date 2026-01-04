@@ -39,10 +39,23 @@ export const Login: React.FC = () => {
         },
       });
 
+      // Check if password change required (first login)
+      const { role, isPasswordChanged } = response.user;
+      
+      if (isPasswordChanged === false && role !== "ADMIN") {
+        // First login - force password change
+        navigate("/change-password", { 
+          replace: true,
+          state: { firstLogin: true }
+        });
+        return;
+      }
+
       // Navigate based on role
-      const { role } = response.user;
       if (role === "ADMIN") {
         navigate("/admin/dashboard");
+      } else if (role === "ACADEMIC_STAFF") {
+        navigate("/academic-staff/dashboard");
       } else if (role === "LECTURER") {
         navigate("/lecturer/dashboard");
       } else if (role === "STUDENT") {

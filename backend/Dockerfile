@@ -63,7 +63,7 @@ EXPOSE 8080
 # GIẢI THÍCH: Docker sẽ định kỳ check xem container có healthy không
 # Nếu fail nhiều lần, Docker sẽ restart container
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:8080/api/actuator/health || exit 1
+  CMD curl -f http://localhost:8080/actuator/health || exit 1
 
 # Run application
 # GIẢI THÍCH:
@@ -71,8 +71,8 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
 # - -Xms512m -Xmx1024m: Set min/max heap memory
 # - -Djava.security.egd: Tăng tốc random number generation
 ENTRYPOINT ["java", \
-  "-Xms512m", \
-  "-Xmx1024m", \
+  "-Xms256m", \
+  "-Xmx512m", \
   "-Djava.security.egd=file:/dev/./urandom", \
   "-jar", \
   "app.jar"]

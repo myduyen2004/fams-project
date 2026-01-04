@@ -27,6 +27,7 @@ public class LoginResponse {
         private String email;
         private String role;
         private String avatar;
+        private Boolean isPasswordChanged;
     }
 
     // Helper method để tạo UserInfo từ User entity
@@ -38,6 +39,7 @@ public class LoginResponse {
                 .email(user.getEmail())
                 .role(user.getRole().name())
                 .avatar(user.getAvatar())
+                .isPasswordChanged(user.getIsPasswordChanged())
                 .build();
     }
 }
