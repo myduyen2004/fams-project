@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Moon, Sun, User, Settings, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../../services/api/authService';
+import { ConfirmModal } from '../common/ConfirmModal';
 
 interface AdminHeaderProps {
   title: string;
@@ -13,6 +14,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
   const [notificationCount, _setNotificationCount] = useState(3);
   const [user, setUser] = useState<{ email: string; fullName: string; avatar?: string } | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -30,6 +32,26 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
     // Check if dark mode is enabled
     const isDarkMode = document.documentElement.classList.contains('dark');
     setIsDark(isDarkMode);
+
+    // Listen for profile updates
+    const handleProfileUpdate = (event: any) => {
+      if (event.detail) {
+        setUser(event.detail);
+      } else {
+        // Fallback to reload from localStorage if detail is missing
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          try {
+            setUser(JSON.parse(userStr));
+          } catch (e) {
+            console.error('Failed to parse user data:', e);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('user-profile-updated', handleProfileUpdate);
+    return () => window.removeEventListener('user-profile-updated', handleProfileUpdate);
   }, []);
 
   // Click outside to close dropdown
@@ -97,7 +119,11 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
             {/* Avatar */}
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-fpt-orange to-orange-600 flex items-center justify-center overflow-hidden">
               {user?.avatar ? (
-                <img src={user.avatar} alt={user.fullName} className="w-full h-full object-cover" />
+                <img 
+                  src={`${user.avatar}${user.avatar.includes('?') ? '&' : '?'}t=${new Date().getTime()}`} 
+                  alt={user.fullName} 
+                  className="w-full h-full object-cover" 
+                />
               ) : (
                 <span className="text-white font-semibold text-sm">
                   {user?.fullName?.charAt(0).toUpperCase() || 'A'}
@@ -145,7 +171,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
 
               <button
                 onClick={() => {
-                  handleLogout();
+                  setShowLogoutModal(true);
                   setShowDropdown(false);
                 }}
                 className="w-full flex items-center gap-3 px-4 py-2 text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
@@ -157,6 +183,17 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleLogout}
+        title="Đăng xuất"
+        message="Bạn có chắc chắn muốn đăng xuất khỏi hệ thống FAMS không?"
+        confirmLabel="Đăng xuất ngay"
+        cancelLabel="Ở lại"
+        type="danger"
+      />
     </header>
   );
 };
