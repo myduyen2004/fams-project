@@ -151,14 +151,16 @@ services:
       - "8080:8080"
 
     environment:
-      # Database configuration
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/fams_db
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres123
+      # Spring Profile (dev/test/prod)
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+
+      # Database password for Neon Cloud (only needed for test/prod profiles)
+      DATABASE_PASSWORD_TEST: ${DATABASE_PASSWORD_TEST:-}
+      DATABASE_PASSWORD_PROD: ${DATABASE_PASSWORD_PROD}
 
       # Redis configuration
-      SPRING_REDIS_HOST: redis
-      SPRING_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
 
       # AI Service URL
       AI_SERVICE_URL: http://ai-service:5000
@@ -170,11 +172,9 @@ services:
       MAIL_PASSWORD: ${MAIL_PASSWORD}
 
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
-      # GIẢI THÍCH: Đợi postgres và redis healthy mới start backend
+      # NOTE: No longer depends on postgres - using Neon Cloud!
 
     networks:
       - fams-network

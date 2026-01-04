@@ -1,0 +1,64 @@
+# ========================================
+# PRODUCTION ENVIRONMENT PROFILE
+# ========================================
+# Production database trên Neon Cloud
+# IMPORTANT: Tất cả secrets phải được set qua environment variables!
+
+spring:
+  # ---------------- Database (Neon Cloud - Production) ----------------
+  datasource:
+    url: jdbc:postgresql://ep-ancient-glitter-a1qpw4b8-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+    username: neondb_owner
+    password: ${DATABASE_PASSWORD_PROD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      leak-detection-threshold: 60000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate  # NEVER use update/create in production!
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        generate_statistics: false
+
+  # ---------------- Redis ----------------
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}
+      timeout: 60000
+      jedis:
+        pool:
+          max-active: 10
+          max-idle: 8
+          min-idle: 2
+
+# ---------------- AI Service ----------------
+ai-service:
+  url: ${AI_SERVICE_URL}
+  timeout: 30000
+
+# ---------------- Security ----------------
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:86400000}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+
+# ---------------- Logging (Minimal for production) ----------------
+logging:
+  level:
+    com.fams: INFO
+    org.springframework.web: WARN
+    org.springframework.security: WARN
+    org.hibernate.SQL: ERROR
+  file:
+    name: logs/fams-backend.log
+    max-size: 50MB
+    max-history: 30
