@@ -58,10 +58,11 @@ services:
     restart: unless-stopped
     ports:
       - "8080:8080"
+    env_file: .env
     environment:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-dev}
-      # Do not set SPRING_DATASOURCE_URL here as it overrides Neon Cloud settings in production.
-      # Local developers should use a .env file for overrides if needed.
+      - DB_HOST=postgres
+      - AI_SERVICE_URL=http://ai-service:5000
     networks:
       - fams-network
 
