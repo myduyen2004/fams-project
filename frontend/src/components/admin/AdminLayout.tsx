@@ -12,6 +12,10 @@ interface AdminLayoutProps {
 export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, pageTitle }) => {
   const user = authService.getUser();
   
+  React.useEffect(() => {
+    document.title = `${pageTitle} - FAMS`;
+  }, [pageTitle]);
+
   if (user && user.role !== 'ADMIN' && user.isPasswordChanged === false) {
     return <Navigate to="/change-password" replace />;
   }

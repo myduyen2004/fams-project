@@ -104,4 +104,79 @@ public class EmailServiceImpl implements EmailService {
             log.error("Unexpected error sending email to {}: {}", to, e.getMessage());
         }
     }
+
+    @Async
+    @Override
+    public void sendOtpEmail(String to, String otp) {
+        if (to == null || to.isEmpty()) {
+            log.warn("Cannot send OTP email: Recipient email is empty");
+            return;
+        }
+
+        try {
+            log.info("Sending OTP email to: {}", to);
+            MimeMessage message = javaMailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail, "FAMS System");
+            helper.setTo(to);
+            helper.setSubject("Mã xác thực (OTP) khôi phục mật khẩu FAMS");
+
+            String htmlContent = String.format(
+                    """
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                                <meta charset="UTF-8">
+                                <title>Xác thực OTP</title>
+                                <style>
+                                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+                                    .container { max-width: 600px; margin: 20px auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+                                    .header { background-color: #F26F21; color: #fff; padding: 20px; text-align: center; }
+                                    .header h1 { margin: 0; font-size: 24px; }
+                                    .content { padding: 30px; text-align: center; }
+                                    .otp-box { background-color: #f9f9f9; border: 2px dashed #F26F21; padding: 20px; margin: 20px auto; width: fit-content; }
+                                    .otp-code { font-size: 32px; letter-spacing: 5px; color: #F26F21; font-weight: bold; }
+                                    .footer { background-color: #eee; padding: 15px; text-align: center; font-size: 12px; color: #666; }
+                                    .warning { color: #e11d48; font-size: 13px; margin-top: 20px; }
+                                </style>
+                            </head>
+                            <body>
+                                <div class="container">
+                                    <div class="header">
+                                        <h1>FAMS - Khôi phục mật khẩu</h1>
+                                    </div>
+                                    <div class="content">
+                                        <p>Xin chào,</p>
+                                        <p>Bạn đã yêu cầu khôi phục mật khẩu cho tài khoản FAMS. Mã OTP của bạn là:</p>
+
+                                        <div class="otp-box">
+                                            <span class="otp-code">%s</span>
+                                        </div>
+
+                                        <p>Mã này có hiệu lực trong <strong>10 phút</strong>. Vui lòng không cung cấp mã này cho bất kỳ ai khác.</p>
+
+                                        <p class="warning">Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này.</p>
+                                    </div>
+                                    <div class="footer">
+                                        <p>Đây là email tự động, vui lòng không trả lời email này.</p>
+                                        <p>FPT High School &copy; 2024</p>
+                                    </div>
+                                </div>
+                            </body>
+                            </html>
+                            """,
+                    otp);
+
+            helper.setText(htmlContent, true);
+
+            javaMailSender.send(message);
+            log.info("OTP Email sent successfully to {}", to);
+
+        } catch (MessagingException | UnsupportedEncodingException e) {
+            log.error("Failed to send OTP email to {}: {}", to, e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error sending OTP email to {}: {}", to, e.getMessage());
+        }
+    }
 }

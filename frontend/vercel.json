@@ -5,8 +5,12 @@
             "destination": "http://3.26.2.123:8080/api/:path*"
         },
         {
-            "source": "/(.*)",
-            "destination": "/"
+            "source": "/assets/(.*)",
+            "destination": "/assets/$1"
+        },
+        {
+            "source": "/((?!api/|assets/).*)",
+            "destination": "/index.html"
         }
     ]
 }

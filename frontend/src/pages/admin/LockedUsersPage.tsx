@@ -28,7 +28,8 @@ export const LockedUsersPage: React.FC = () => {
         search,
         status: 'LOCKED',
         page,
-        size: 10
+        size: 10,
+        sort: 'id,asc'
       });
       setUsers(data.content);
       setTotalElements(data.totalElements);
@@ -153,7 +154,7 @@ export const LockedUsersPage: React.FC = () => {
                 <tr>
                   <td colSpan={6} className="py-10 text-center text-gray-400">
                     <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-                    Đang tải tài liệu...
+                    Đang tải dữ liệu...
                   </td>
                 </tr>
               ) : users.length === 0 ? (
@@ -206,9 +207,19 @@ export const LockedUsersPage: React.FC = () => {
             Hiển thị <span className="font-medium text-gray-900 dark:text-white">{page * 10 + 1}</span> đến <span className="font-medium text-gray-900 dark:text-white">{Math.min((page + 1) * 10, totalElements)}</span> trong số <span className="font-medium text-gray-900 dark:text-white">{totalElements}</span> tài khoản bị khóa
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50">Trước</button>
-            <button className="w-8 h-8 flex items-center justify-center bg-red-600 text-white rounded-lg font-medium">{page + 1}</button>
-            <button onClick={() => setPage(p => p + 1)} disabled={(page + 1) * 10 >= totalElements} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50">Sau</button>
+            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50 text-gray-500">Trước</button>
+            {Array.from({ length: Math.ceil(totalElements / 10) }, (_, i) => (
+              <button 
+                key={i}
+                onClick={() => setPage(i)}
+                className={`w-8 h-8 flex items-center justify-center rounded-lg font-medium transition-colors ${
+                  page === i ? 'bg-red-600 text-white' : 'hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-600 dark:text-zinc-400'
+                }`}
+              >
+                {i + 1}
+              </button>
+            ))}
+            <button onClick={() => setPage(p => p + 1)} disabled={(page + 1) * 10 >= totalElements} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50 text-gray-500">Sau</button>
           </div>
         </div>
       </div>

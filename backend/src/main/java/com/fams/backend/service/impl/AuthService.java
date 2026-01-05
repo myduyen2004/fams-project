@@ -11,7 +11,12 @@ import com.fams.backend.repository.AccessLogRepository;
 import com.fams.backend.repository.UserRepository;
 import com.fams.backend.repository.UserSessionRepository;
 import com.fams.backend.security.jwt.JwtUtil;
+import com.fams.backend.dto.request.ForgotPasswordRequest;
+import com.fams.backend.dto.request.ResetPasswordRequest;
+import com.fams.backend.dto.request.VerifyOtpRequest;
+import com.fams.backend.service.EmailService;
 import com.fams.backend.service.GeoLocationService;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -41,6 +46,11 @@ public class AuthService implements UserDetailsService {
     private final AccessLogRepository accessLogRepository;
     private final GeoLocationService geoLocationService;
     private final DashboardBroadcastService dashboardBroadcastService;
+    private final EmailService emailService;
+    private final StringRedisTemplate redisTemplate;
+
+    private static final String OTP_PREFIX = "otp:";
+    private static final long OTP_EXPIRY_MINUTES = 10;
 
     /**
      * Đăng nhập
@@ -235,5 +245,65 @@ public class AuthService implements UserDetailsService {
                 user.getUsername(),
                 user.getPassword(),
                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())));
+    }
+
+    /**
+     * Gửi OTP khôi phục mật khẩu
+     */
+    public void forgotPassword(ForgotPasswordRequest request) {
+        String email = request.getEmail();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BadRequestException("Email không tồn tại trong hệ thống"));
+
+        if (user.getStatus() != User.UserStatus.ACTIVE) {
+            throw new BadRequestException("Tài khoản chưa được kích hoạt hoặc đã bị khóa");
+        }
+
+        // Generate 6-digit OTP
+        String otp = String.format("%06d", new java.util.Random().nextInt(999999));
+
+        // Store in Redis (10 minutes)
+        redisTemplate.opsForValue().set(OTP_PREFIX + email, otp, OTP_EXPIRY_MINUTES,
+                java.util.concurrent.TimeUnit.MINUTES);
+
+        // Send email
+        emailService.sendOtpEmail(email, otp);
+        log.info("OTP sent to email: {}", email);
+    }
+
+    /**
+     * Xác thực OTP
+     */
+    public boolean verifyOtp(VerifyOtpRequest request) {
+        String storedOtp = redisTemplate.opsForValue().get(OTP_PREFIX + request.getEmail());
+        if (storedOtp == null) {
+            throw new BadRequestException("Mã OTP đã hết hạn hoặc không tồn tại");
+        }
+
+        if (!storedOtp.equals(request.getOtp())) {
+            throw new BadRequestException("Mã OTP không chính xác");
+        }
+
+        return true;
+    }
+
+    /**
+     * Đổi mật khẩu mới sau khi xác thực OTP
+     */
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        // Double check OTP
+        verifyOtp(new VerifyOtpRequest(request.getEmail(), request.getOtp()));
+
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new BadRequestException("Email không tồn tại"));
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setIsPasswordChanged(true);
+        userRepository.save(user);
+
+        // Delete OTP after use
+        redisTemplate.delete(OTP_PREFIX + request.getEmail());
+        log.info("Password reset successful for email: {}", request.getEmail());
     }
 }

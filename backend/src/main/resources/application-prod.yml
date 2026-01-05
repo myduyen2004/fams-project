@@ -19,7 +19,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate  # NEVER use update/create in production!
+      ddl-auto: update  # Changed to update to create tables in new database
     show-sql: false
     properties:
       hibernate:

@@ -31,6 +31,10 @@ import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -41,10 +45,14 @@ public class UserServiceImpl implements UserService {
     private final com.fams.backend.service.UploadService uploadService;
     private final com.fams.backend.service.EmailService emailService;
 
+    private static final String CACHE_USERS = "users";
+    private static final String CACHE_USER_DETAILS = "user_details";
+
     private static final DateTimeFormatter DOB_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter PASSWORD_FORMATTER = DateTimeFormatter.ofPattern("ddMMyyyy");
 
     @Override
+    @Cacheable(value = CACHE_USERS, key = "#search + '-' + #role + '-' + #status + '-' + #pageable.pageNumber + '-' + #pageable.pageSize")
     public Page<UserResponse> getAllUsers(String search, String role, String status, Pageable pageable) {
         Specification<User> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -88,6 +96,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Cacheable(value = CACHE_USER_DETAILS, key = "#id")
     public UserResponse getUserById(Long id) {
         return userRepository.findById(id)
                 .map(UserResponse::fromUser)
@@ -96,6 +105,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    @CacheEvict(value = CACHE_USERS, allEntries = true)
     public UserResponse createUser(UserRequest request, MultipartFile avatar) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BadRequestException("Email đã tồn tại");
@@ -129,6 +139,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = CACHE_USERS, allEntries = true),
+            @CacheEvict(value = CACHE_USER_DETAILS, allEntries = true)
+    })
     public void activateUsers(List<Long> ids) {
         log.info("Activating users: {}", ids);
         List<User> users = userRepository.findAllById(ids);
@@ -158,6 +172,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    @CacheEvict(value = CACHE_USER_DETAILS, key = "#username") // Note: This might need adjustment if key is ID
     public void changePassword(String username, String newPassword) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new NotFoundException("User not found: " + username));
@@ -176,6 +191,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = CACHE_USERS, allEntries = true),
+            @CacheEvict(value = CACHE_USER_DETAILS, key = "#id")
+    })
     public UserResponse updateUser(Long id, UserRequest request, MultipartFile avatar) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
@@ -219,6 +238,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = CACHE_USERS, allEntries = true),
+            @CacheEvict(value = CACHE_USER_DETAILS, key = "#id")
+    })
     public void deleteUser(Long id) {
         if (!userRepository.existsById(id)) {
             throw new NotFoundException("User not found with id: " + id);
@@ -228,6 +251,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    @CacheEvict(value = CACHE_USERS, allEntries = true)
     public void importUsers(MultipartFile file) {
         log.info("Importing users from file: {}", file.getOriginalFilename());
         Path tempDir = null;
@@ -313,9 +337,14 @@ public class UserServiceImpl implements UserService {
             Iterator<Row> rows = sheet.iterator();
 
             List<User> usersToSave = new ArrayList<>();
+            List<String> validationErrors = new ArrayList<>();
+            Set<String> seenCodes = new HashSet<>();
+            Set<String> seenEmails = new HashSet<>();
             int rowNumber = 0;
+
             while (rows.hasNext()) {
                 Row currentRow = rows.next();
+                int currentRowNum = rowNumber + 1; // 1-indexed for reporting
 
                 // Skip header
                 if (rowNumber == 0) {
@@ -331,19 +360,52 @@ public class UserServiceImpl implements UserService {
                 String phone = getCellValue(currentRow.getCell(5));
 
                 if (code == null || code.isEmpty() || email == null || email.isEmpty()) {
+                    if (rows.hasNext() || (fullName != null && !fullName.isEmpty())) {
+                        log.warn("Missing required fields at row {}", currentRowNum);
+                    }
+                    rowNumber++;
                     continue;
                 }
 
-                if (userRepository.existsByCode(code) || userRepository.existsByEmail(email)) {
-                    log.warn("User already exists: code={}, email={}", code, email);
+                boolean hasError = false;
+
+                // 1. Check duplicates within the file
+                if (seenCodes.contains(code.toLowerCase())) {
+                    validationErrors
+                            .add("Dòng " + currentRowNum + ": Mã nhân viên '" + code + "' bị trùng lặp trong file.");
+                    hasError = true;
+                }
+                if (seenEmails.contains(email.toLowerCase())) {
+                    validationErrors.add("Dòng " + currentRowNum + ": Email '" + email + "' bị trùng lặp trong file.");
+                    hasError = true;
+                }
+
+                // 2. Check duplicates with Database
+                if (userRepository.existsByCode(code)) {
+                    validationErrors
+                            .add("Dòng " + currentRowNum + ": Mã nhân viên '" + code + "' đã tồn tại trên hệ thống.");
+                    hasError = true;
+                }
+                if (userRepository.existsByEmail(email)) {
+                    validationErrors.add("Dòng " + currentRowNum + ": Email '" + email + "' đã tồn tại trên hệ thống.");
+                    hasError = true;
+                }
+
+                if (hasError) {
+                    rowNumber++;
                     continue;
                 }
+
+                seenCodes.add(code.toLowerCase());
+                seenEmails.add(email.toLowerCase());
 
                 LocalDate dob;
                 try {
                     dob = LocalDate.parse(dobStr, DOB_FORMATTER);
                 } catch (Exception e) {
-                    log.error("Invalid DOB format at row {}: {}", rowNumber, dobStr);
+                    validationErrors.add("Dòng " + currentRowNum
+                            + ": Định dạng ngày sinh không hợp lệ (yêu cầu dd/MM/yyyy): " + dobStr);
+                    rowNumber++;
                     continue;
                 }
 
@@ -357,18 +419,6 @@ public class UserServiceImpl implements UserService {
                 File imageFile = imageMap.get(code.toLowerCase());
                 if (imageFile != null) {
                     try {
-                        // Create MultipartFile from File for uploadService
-                        // Since uploadService expects MultipartFile, we need a simple adapter or change
-                        // uploadService to accept File/InputStream
-                        // Re-using uploadService.uploadFile(MultipartFile) requires mocking or using
-                        // specific implementation
-                        // EASIER: Read bytes and mock, OR overload uploadService. Let's assume we can't
-                        // easily change uploadService interface right now.
-                        // We will use a MockMultipartFile equivalent or just implement a simple
-                        // anonymous class.
-
-                        // Wait, creating a MultipartFile from File in Spring context is verbose.
-                        // Let's read bytes.
                         byte[] content = Files.readAllBytes(imageFile.toPath());
                         MultipartFile multipartFile = new MockMultipartFile(imageFile.getName(), imageFile.getName(),
                                 "image/jpeg", content);
@@ -395,6 +445,10 @@ public class UserServiceImpl implements UserService {
 
                 usersToSave.add(user);
                 rowNumber++;
+            }
+
+            if (!validationErrors.isEmpty()) {
+                throw new BadRequestException("Dữ liệu không hợp lệ:\n" + String.join("\n", validationErrors));
             }
 
             if (!usersToSave.isEmpty()) {

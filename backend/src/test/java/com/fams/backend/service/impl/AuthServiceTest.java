@@ -9,8 +9,10 @@ import com.fams.backend.repository.AccessLogRepository;
 import com.fams.backend.repository.UserRepository;
 import com.fams.backend.repository.UserSessionRepository;
 import com.fams.backend.security.jwt.JwtUtil;
+import com.fams.backend.service.EmailService;
 import com.fams.backend.service.GeoLocationService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -43,6 +45,10 @@ class AuthServiceTest {
     private GeoLocationService geoLocationService;
     @Mock
     private DashboardBroadcastService dashboardBroadcastService;
+    @Mock
+    private EmailService emailService;
+    @Mock
+    private StringRedisTemplate redisTemplate;
     @Mock
     private HttpServletRequest httpRequest;
 

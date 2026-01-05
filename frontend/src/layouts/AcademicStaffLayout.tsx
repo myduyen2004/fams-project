@@ -8,6 +8,10 @@ interface AcademicStaffLayoutProps {
 }
 
 export const AcademicStaffLayout: React.FC<AcademicStaffLayoutProps> = ({ children, pageTitle }) => {
+  React.useEffect(() => {
+    document.title = `${pageTitle} - FAMS`;
+  }, [pageTitle]);
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-zinc-950">
       {/* Sidebar */}

@@ -7,7 +7,10 @@ import com.fams.backend.repository.AccessLogRepository;
 import com.fams.backend.repository.UserRepository;
 import com.fams.backend.repository.UserSessionRepository;
 import com.fams.backend.service.impl.AuthService;
+import com.fams.backend.service.impl.AuthService;
 import com.fams.backend.service.impl.DashboardBroadcastService;
+import com.fams.backend.service.EmailService;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -40,6 +43,12 @@ class LogoutTest {
 
     @Mock
     private DashboardBroadcastService dashboardBroadcastService;
+
+    @Mock
+    private EmailService emailService;
+
+    @Mock
+    private StringRedisTemplate redisTemplate;
 
     @InjectMocks
     private AuthService authService;

@@ -16,6 +16,10 @@ export const ChangePasswordPage: React.FC = () => {
   const user = authService.getUser();
   const isPasswordChangeRequired = user && user.isPasswordChanged === false;
 
+  React.useEffect(() => {
+    document.title = (isFirstLogin || isPasswordChangeRequired) ? "Đổi mật khẩu lần đầu - FAMS" : "Đổi mật khẩu - FAMS";
+  }, [isFirstLogin, isPasswordChangeRequired]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
