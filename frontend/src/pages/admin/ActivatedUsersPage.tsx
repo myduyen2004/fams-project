@@ -37,7 +37,8 @@ export const ActivatedUsersPage: React.FC = () => {
         role: roleFilter === 'all' ? undefined : roleFilter,
         status: 'ACTIVE',
         page,
-        size: 10
+        size: 10,
+        sort: 'id,asc'
       });
       setUsers(data.content);
       setTotalElements(data.totalElements);
@@ -53,12 +54,28 @@ export const ActivatedUsersPage: React.FC = () => {
   }, [fetchUsers]);
 
   const formatDateTime = (date: any) => {
-    if (!date) return '';
-    if (Array.isArray(date)) {
-      const [year, month, day, hour, minute] = date;
-      return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')} ${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+    if (!date) return '---';
+    
+    try {
+      let d: Date;
+      if (Array.isArray(date)) {
+        const [year, month, day, hour = 0, minute = 0, second = 0] = date;
+        d = new Date(year, month - 1, day, hour, minute, second);
+      } else {
+        d = new Date(date);
+      }
+      
+      if (isNaN(d.getTime())) return '---';
+      return d.toLocaleString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return '---';
     }
-    return new Date(date).toLocaleDateString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
   const handleSelectUser = (id: number) => {
@@ -267,9 +284,19 @@ export const ActivatedUsersPage: React.FC = () => {
             Hiển thị <span className="font-medium text-gray-900 dark:text-white">{page * 10 + 1}</span> đến <span className="font-medium text-gray-900 dark:text-white">{Math.min((page + 1) * 10, totalElements)}</span> trong số <span className="font-medium text-gray-900 dark:text-white">{totalElements}</span> người dùng
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50">Trước</button>
-            <button className="w-8 h-8 flex items-center justify-center bg-fpt-orange text-white rounded-lg font-medium">{page + 1}</button>
-            <button onClick={() => setPage(p => p + 1)} disabled={(page + 1) * 10 >= totalElements} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50">Sau</button>
+            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50 text-gray-500">Trước</button>
+            {Array.from({ length: Math.ceil(totalElements / 10) }, (_, i) => (
+              <button 
+                key={i}
+                onClick={() => setPage(i)}
+                className={`w-8 h-8 flex items-center justify-center rounded-lg font-medium transition-colors ${
+                  page === i ? 'bg-fpt-orange text-white' : 'hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-600 dark:text-zinc-400'
+                }`}
+              >
+                {i + 1}
+              </button>
+            ))}
+            <button onClick={() => setPage(p => p + 1)} disabled={(page + 1) * 10 >= totalElements} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50 text-gray-500">Sau</button>
           </div>
         </div>
       </div>
@@ -432,6 +459,24 @@ const EditUserModal: React.FC<{ user: UserResponse; onClose: () => void; onSucce
 };
 
 const ViewUserModal: React.FC<{ user: UserResponse; onClose: () => void }> = ({ user, onClose }) => {
+  const formatDateTime = (date: any) => {
+    if (!date) return '---';
+    try {
+      let d: Date;
+      if (Array.isArray(date)) {
+        const [year, month, day, hour = 0, minute = 0, second = 0] = date;
+        d = new Date(year, month - 1, day, hour, minute, second);
+      } else {
+        d = new Date(date);
+      }
+      if (isNaN(d.getTime())) return '---';
+      return d.toLocaleString('vi-VN', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    } catch (e) { return '---'; }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-lg border border-gray-100 dark:border-zinc-800 overflow-hidden">
@@ -464,6 +509,13 @@ const ViewUserModal: React.FC<{ user: UserResponse; onClose: () => void }> = ({ 
               <div className="col-span-2">
                  <p className="text-gray-500 dark:text-zinc-400">Email</p>
                  <p className="font-medium text-gray-900 dark:text-white">{user.email}</p>
+              </div>
+              <div className="col-span-2 p-3 bg-gray-50 dark:bg-zinc-800/50 rounded-xl border border-gray-100 dark:border-zinc-800">
+                 <p className="text-xs text-gray-500 dark:text-zinc-400 mb-1">Cập nhật lần cuối</p>
+                 <p className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                    {formatDateTime(user.updatedAt || user.createdAt)}
+                 </p>
               </div>
            </div>
            <div className="flex justify-end mt-4">

@@ -25,6 +25,7 @@ export interface UserResponse {
     avatar?: string;
     isPasswordChanged?: boolean;
     createdAt: string;
+    updatedAt: string;
     lastLogin: string;
 }
 
@@ -37,7 +38,7 @@ export interface PageResponse<T> {
 }
 
 export const userService = {
-    getAllUsers: async (params: { search?: string; role?: string; status?: string; page?: number; size?: number }) => {
+    getAllUsers: async (params: { search?: string; role?: string; status?: string; page?: number; size?: number; sort?: string }) => {
         const response = await apiClient.get<PageResponse<UserResponse>>('/users', { params });
         return response.data;
     },

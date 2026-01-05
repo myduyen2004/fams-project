@@ -70,6 +70,33 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/forgot-password")
+    @Operation(summary = "Quên mật khẩu", description = "Gửi mã OTP về email để khôi phục mật khẩu")
+    public ResponseEntity<Void> forgotPassword(
+            @Valid @RequestBody com.fams.backend.dto.request.ForgotPasswordRequest request) {
+        log.info("POST /auth/forgot-password - email: {}", request.getEmail());
+        authService.forgotPassword(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/verify-otp")
+    @Operation(summary = "Xác thực OTP", description = "Xác thực mã OTP được gửi về email")
+    public ResponseEntity<Void> verifyOtp(
+            @Valid @RequestBody com.fams.backend.dto.request.VerifyOtpRequest request) {
+        log.info("POST /auth/verify-otp - email: {}", request.getEmail());
+        authService.verifyOtp(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-password")
+    @Operation(summary = "Đặt lại mật khẩu mới", description = "Reset mật khẩu mới sau khi xác thực OTP")
+    public ResponseEntity<Void> resetPassword(
+            @Valid @RequestBody com.fams.backend.dto.request.ResetPasswordRequest request) {
+        log.info("POST /auth/reset-password - email: {}", request.getEmail());
+        authService.resetPassword(request);
+        return ResponseEntity.ok().build();
+    }
+
     /**
      * GET /auth/me
      * Lấy thông tin user hiện tại (cần JWT token)

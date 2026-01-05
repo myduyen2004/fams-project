@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Moon, Sun, User, Settings, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../../services/api/authService';
+import { ConfirmModal } from './ConfirmModal';
 
 interface CommonHeaderProps {
   title: string;
@@ -19,6 +20,7 @@ export const CommonHeader: React.FC<CommonHeaderProps> = ({
   const [notificationCount, _setNotificationCount] = useState(3);
   const [user, setUser] = useState<{ email: string; fullName: string; avatar?: string; role?: string } | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -164,7 +166,7 @@ export const CommonHeader: React.FC<CommonHeaderProps> = ({
 
               <button
                 onClick={() => {
-                  handleLogout();
+                  setShowLogoutModal(true);
                   setShowDropdown(false);
                 }}
                 className="w-full flex items-center gap-3 px-4 py-2 text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
@@ -176,6 +178,17 @@ export const CommonHeader: React.FC<CommonHeaderProps> = ({
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleLogout}
+        title="Đăng xuất"
+        message="Bạn có chắc chắn muốn đăng xuất khỏi hệ thống FAMS không?"
+        confirmLabel="Đăng xuất ngay"
+        cancelLabel="Ở lại"
+        type="danger"
+      />
     </header>
   );
 };
