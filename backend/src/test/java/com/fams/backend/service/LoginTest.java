@@ -11,8 +11,10 @@ import com.fams.backend.repository.UserSessionRepository;
 import com.fams.backend.security.jwt.JwtUtil;
 import com.fams.backend.service.impl.AuthService;
 import com.fams.backend.service.impl.DashboardBroadcastService;
+import com.fams.backend.service.EmailService;
 import com.fams.backend.service.GeoLocationService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,6 +55,12 @@ class LoginTest {
 
     @Mock
     private DashboardBroadcastService dashboardBroadcastService;
+
+    @Mock
+    private EmailService emailService;
+
+    @Mock
+    private StringRedisTemplate redisTemplate;
 
     @Mock
     private HttpServletRequest httpServletRequest;
