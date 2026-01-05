@@ -337,9 +337,14 @@ public class UserServiceImpl implements UserService {
             Iterator<Row> rows = sheet.iterator();
 
             List<User> usersToSave = new ArrayList<>();
+            List<String> validationErrors = new ArrayList<>();
+            Set<String> seenCodes = new HashSet<>();
+            Set<String> seenEmails = new HashSet<>();
             int rowNumber = 0;
+
             while (rows.hasNext()) {
                 Row currentRow = rows.next();
+                int currentRowNum = rowNumber + 1; // 1-indexed for reporting
 
                 // Skip header
                 if (rowNumber == 0) {
@@ -355,19 +360,52 @@ public class UserServiceImpl implements UserService {
                 String phone = getCellValue(currentRow.getCell(5));
 
                 if (code == null || code.isEmpty() || email == null || email.isEmpty()) {
+                    if (rows.hasNext() || (fullName != null && !fullName.isEmpty())) {
+                        log.warn("Missing required fields at row {}", currentRowNum);
+                    }
+                    rowNumber++;
                     continue;
                 }
 
-                if (userRepository.existsByCode(code) || userRepository.existsByEmail(email)) {
-                    log.warn("User already exists: code={}, email={}", code, email);
+                boolean hasError = false;
+
+                // 1. Check duplicates within the file
+                if (seenCodes.contains(code.toLowerCase())) {
+                    validationErrors
+                            .add("Dòng " + currentRowNum + ": Mã nhân viên '" + code + "' bị trùng lặp trong file.");
+                    hasError = true;
+                }
+                if (seenEmails.contains(email.toLowerCase())) {
+                    validationErrors.add("Dòng " + currentRowNum + ": Email '" + email + "' bị trùng lặp trong file.");
+                    hasError = true;
+                }
+
+                // 2. Check duplicates with Database
+                if (userRepository.existsByCode(code)) {
+                    validationErrors
+                            .add("Dòng " + currentRowNum + ": Mã nhân viên '" + code + "' đã tồn tại trên hệ thống.");
+                    hasError = true;
+                }
+                if (userRepository.existsByEmail(email)) {
+                    validationErrors.add("Dòng " + currentRowNum + ": Email '" + email + "' đã tồn tại trên hệ thống.");
+                    hasError = true;
+                }
+
+                if (hasError) {
+                    rowNumber++;
                     continue;
                 }
+
+                seenCodes.add(code.toLowerCase());
+                seenEmails.add(email.toLowerCase());
 
                 LocalDate dob;
                 try {
                     dob = LocalDate.parse(dobStr, DOB_FORMATTER);
                 } catch (Exception e) {
-                    log.error("Invalid DOB format at row {}: {}", rowNumber, dobStr);
+                    validationErrors.add("Dòng " + currentRowNum
+                            + ": Định dạng ngày sinh không hợp lệ (yêu cầu dd/MM/yyyy): " + dobStr);
+                    rowNumber++;
                     continue;
                 }
 
@@ -381,18 +419,6 @@ public class UserServiceImpl implements UserService {
                 File imageFile = imageMap.get(code.toLowerCase());
                 if (imageFile != null) {
                     try {
-                        // Create MultipartFile from File for uploadService
-                        // Since uploadService expects MultipartFile, we need a simple adapter or change
-                        // uploadService to accept File/InputStream
-                        // Re-using uploadService.uploadFile(MultipartFile) requires mocking or using
-                        // specific implementation
-                        // EASIER: Read bytes and mock, OR overload uploadService. Let's assume we can't
-                        // easily change uploadService interface right now.
-                        // We will use a MockMultipartFile equivalent or just implement a simple
-                        // anonymous class.
-
-                        // Wait, creating a MultipartFile from File in Spring context is verbose.
-                        // Let's read bytes.
                         byte[] content = Files.readAllBytes(imageFile.toPath());
                         MultipartFile multipartFile = new MockMultipartFile(imageFile.getName(), imageFile.getName(),
                                 "image/jpeg", content);
@@ -419,6 +445,10 @@ public class UserServiceImpl implements UserService {
 
                 usersToSave.add(user);
                 rowNumber++;
+            }
+
+            if (!validationErrors.isEmpty()) {
+                throw new BadRequestException("Dữ liệu không hợp lệ:\n" + String.join("\n", validationErrors));
             }
 
             if (!usersToSave.isEmpty()) {
