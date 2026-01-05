@@ -210,6 +210,31 @@ export const EditUserModal: React.FC<{ user: UserResponse; onClose: () => void; 
 
 // --- ViewUserModal ---
 export const ViewUserModal: React.FC<{ user: UserResponse; onClose: () => void }> = ({ user, onClose }) => {
+  const formatDateTime = (date: any) => {
+    if (!date) return '---';
+    
+    try {
+      let d: Date;
+      if (Array.isArray(date)) {
+        const [year, month, day, hour = 0, minute = 0, second = 0] = date;
+        d = new Date(year, month - 1, day, hour, minute, second);
+      } else {
+        d = new Date(date);
+      }
+      
+      if (isNaN(d.getTime())) return '---';
+      return d.toLocaleString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return '---';
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-lg border border-gray-100 dark:border-zinc-800 overflow-hidden">
@@ -237,7 +262,11 @@ export const ViewUserModal: React.FC<{ user: UserResponse; onClose: () => void }
               </div>
               <div>
                  <p className="text-gray-500 dark:text-zinc-400">Ngày sinh</p>
-                 <p className="font-medium text-gray-900 dark:text-white">{user.dob}</p>
+                 <p className="font-medium text-gray-900 dark:text-white">
+                    {Array.isArray(user.dob) 
+                        ? `${String(user.dob[2]).padStart(2, '0')}/${String(user.dob[1]).padStart(2, '0')}/${user.dob[0]}`
+                        : (user.dob || 'Chưa cập nhật')}
+                 </p>
               </div>
               <div className="col-span-2">
                  <p className="text-gray-500 dark:text-zinc-400">Email</p>
@@ -247,6 +276,13 @@ export const ViewUserModal: React.FC<{ user: UserResponse; onClose: () => void }
                  <p className="text-gray-500 dark:text-zinc-400">Khuôn mặt</p>
                  <p className={`font-medium ${user.faceDataStatus === 'REGISTERED' ? 'text-green-600' : 'text-red-500'}`}>
                     {user.faceDataStatus === 'REGISTERED' ? 'Đã đăng ký' : 'Chưa đăng ký'}
+                 </p>
+              </div>
+              <div className="col-span-2 p-3 bg-gray-50 dark:bg-zinc-800/50 rounded-xl border border-gray-100 dark:border-zinc-800">
+                 <p className="text-xs text-gray-500 dark:text-zinc-400 mb-1">Cập nhật lần cuối</p>
+                 <p className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                    {formatDateTime(user.updatedAt || user.createdAt)}
                  </p>
               </div>
            </div>

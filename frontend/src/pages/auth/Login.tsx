@@ -14,6 +14,10 @@ export const Login: React.FC = () => {
     password: "",
   });
 
+  React.useEffect(() => {
+    document.title = "Đăng nhập - FAMS";
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);

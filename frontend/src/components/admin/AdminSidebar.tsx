@@ -127,7 +127,11 @@ export const AdminSidebar: React.FC = () => {
     >
       <div className="flex flex-col h-full">
         {/* Logo Section */}
-        <div className="h-16 flex items-center justify-center border-b border-gray-200 dark:border-zinc-800 px-3">
+        <div 
+          onClick={() => navigate('/admin/dashboard')}
+          className="h-16 flex items-center justify-center border-b border-gray-200 dark:border-zinc-800 px-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors"
+          title="Về trang chủ"
+        >
           {isExpanded ? (
             <img
               src="/assets/images/fams-logo.png"

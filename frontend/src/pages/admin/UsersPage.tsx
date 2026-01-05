@@ -36,7 +36,8 @@ export const UsersPage = () => {
         role: roleFilter === 'all' ? undefined : roleFilter,
         search,
         page,
-        size: 10
+        size: 10,
+        sort: 'id,asc'
       });
       setUsers(data.content);
       setTotalElements(data.totalElements);
@@ -121,10 +122,29 @@ export const UsersPage = () => {
   }, [fetchUsers]);
 
   // Memoized date formatter to avoid re-creating it
-  const formatDateTime = useCallback((dateArray: any) => {
-    if (!dateArray || !Array.isArray(dateArray)) return '---';
-    const [year, month, day, hour, minute] = dateArray;
-    return `${day}/${month}/${year} ${hour}:${String(minute).padStart(2, '0')}`;
+  const formatDateTime = useCallback((date: any) => {
+    if (!date) return '---';
+    
+    try {
+      let d: Date;
+      if (Array.isArray(date)) {
+        const [year, month, day, hour = 0, minute = 0, second = 0] = date;
+        d = new Date(year, month - 1, day, hour, minute, second);
+      } else {
+        d = new Date(date);
+      }
+      
+      if (isNaN(d.getTime())) return '---';
+      return d.toLocaleString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return '---';
+    }
   }, []);
 
   return (
@@ -203,9 +223,19 @@ export const UsersPage = () => {
             Hiển thị <span className="font-medium text-gray-900 dark:text-white">{page * 10 + 1}</span> đến <span className="font-medium text-gray-900 dark:text-white">{Math.min((page + 1) * 10, totalElements)}</span> trong số <span className="font-medium text-gray-900 dark:text-white">{totalElements}</span> người dùng
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50">Trước</button>
-            <button className="w-8 h-8 flex items-center justify-center bg-fpt-orange text-white rounded-lg font-medium">{page + 1}</button>
-            <button onClick={() => setPage(p => p + 1)} disabled={(page + 1) * 10 >= totalElements} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50">Sau</button>
+            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50 text-gray-500">Trước</button>
+            {Array.from({ length: Math.ceil(totalElements / 10) }, (_, i) => (
+              <button 
+                key={i}
+                onClick={() => setPage(i)}
+                className={`w-8 h-8 flex items-center justify-center rounded-lg font-medium transition-colors ${
+                  page === i ? 'bg-fpt-orange text-white' : 'hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-600 dark:text-zinc-400'
+                }`}
+              >
+                {i + 1}
+              </button>
+            ))}
+            <button onClick={() => setPage(p => p + 1)} disabled={(page + 1) * 10 >= totalElements} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50 text-gray-500">Sau</button>
           </div>
         </div>
       </div>
