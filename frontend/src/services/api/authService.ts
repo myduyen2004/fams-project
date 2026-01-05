@@ -9,6 +9,21 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface VerifyOtpRequest {
+  email: string;
+  otp: string;
+}
+
+export interface ResetPasswordRequest {
+  email: string;
+  otp: string;
+  newPassword: string;
+}
+
 export interface LoginResponse {
   token: string;
   type: string;
@@ -140,6 +155,27 @@ export const authService = {
    */
   getToken: (): string | null => {
     return localStorage.getItem('token');
+  },
+
+  /**
+   * Forgot Password - Step 1: Request OTP
+   */
+  forgotPassword: async (email: string): Promise<void> => {
+    await apiClient.post('/auth/forgot-password', { email });
+  },
+
+  /**
+   * Verify OTP - Step 2: Check OTP
+   */
+  verifyOtp: async (email: string, otp: string): Promise<void> => {
+    await apiClient.post('/auth/verify-otp', { email, otp });
+  },
+
+  /**
+   * Reset Password - Step 3: Set new password
+   */
+  resetPassword: async (data: ResetPasswordRequest): Promise<void> => {
+    await apiClient.post('/auth/reset-password', data);
   },
 };
 
