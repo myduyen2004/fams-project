@@ -69,7 +69,7 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     public List<AlertResponse> getAlerts() {
-        List<Alert> alerts = alertRepository.findTop5ByIsResolvedFalseOrderByCreatedAtDesc();
+        List<Alert> alerts = alertRepository.findTop5ByOrderByCreatedAtDesc();
 
         return alerts.stream()
                 .map(alert -> AlertResponse.builder()
@@ -90,9 +90,9 @@ public class DashboardServiceImpl implements DashboardService {
                 .map(notification -> NotificationResponse.builder()
                         .id(notification.getId())
                         .title(notification.getTitle())
-                        .description(notification.getDescription())
+                        .description(notification.getContent())
                         .timestamp(notification.getCreatedAt().format(DATE_TIME_FORMATTER))
-                        .isRead(notification.getIsRead())
+                        .isRead(false) // Default to unread for system notifications
                         .build())
                 .collect(Collectors.toList());
     }

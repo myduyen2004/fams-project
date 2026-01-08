@@ -218,12 +218,13 @@ export const Login: React.FC = () => {
 
             {/* Forgot Password */}
             <div className="flex items-center justify-start">
-              <a
-                href="/forgot-password"
+              <button
+                type="button"
+                onClick={() => navigate('/forgot-password')}
                 className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-fpt-orange dark:hover:text-fpt-orange transition-colors"
               >
                 Quên mật khẩu?
-              </a>
+              </button>
             </div>
 
             {/* Submit Button */}

@@ -3,6 +3,14 @@ package com.fams.backend.service;
 import com.fams.backend.entity.User;
 import com.fams.backend.repository.UserRepository;
 import com.fams.backend.service.impl.AuthService;
+import com.fams.backend.service.EmailService;
+import com.fams.backend.service.impl.DashboardBroadcastService;
+import com.fams.backend.service.GeoLocationService;
+import com.fams.backend.repository.AccessLogRepository;
+import com.fams.backend.repository.UserSessionRepository;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import com.fams.backend.security.jwt.JwtUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -24,6 +32,23 @@ class LoadUserByUsernameTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
+    @Mock
+    private JwtUtil jwtUtil;
+    @Mock
+    private UserSessionRepository userSessionRepository;
+    @Mock
+    private AccessLogRepository accessLogRepository;
+    @Mock
+    private GeoLocationService geoLocationService;
+    @Mock
+    private DashboardBroadcastService dashboardBroadcastService;
+    @Mock
+    private EmailService emailService;
+    @Mock
+    private StringRedisTemplate redisTemplate;
 
     @InjectMocks
     private AuthService authService;
