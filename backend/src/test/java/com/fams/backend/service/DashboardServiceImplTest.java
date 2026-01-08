@@ -97,6 +97,7 @@ class DashboardServiceImplTest {
         notification.setContent("Hello");
         notification.setType(Notification.NotificationType.SYSTEM);
         notification.setStatus(Notification.NotificationStatus.SENT);
+        notification.setCreatedAt(LocalDateTime.now());
 
         when(notificationRepository.findTop5ByOrderByCreatedAtDesc())
                 .thenReturn(Collections.singletonList(notification));
