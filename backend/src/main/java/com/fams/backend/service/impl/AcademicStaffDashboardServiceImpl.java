@@ -21,9 +21,7 @@ import java.util.stream.Collectors;
 public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboardService {
 
         private final UserRepository userRepository;
-        private final AcademicRequestRepository requestRepository;
         private final AttendanceRepository attendanceRepository;
-        private final RoomRequestRepository roomRequestRepository;
         private final NotificationRepository notificationRepository;
         private final StudentProfileRepository studentProfileRepository;
 
@@ -34,10 +32,8 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
                 return AcademicStaffDashboardResponse.builder()
                                 .stats(getStats())
                                 .topStudents(getTopStudents())
-                                .requests(getRequests())
                                 .notifications(getNotifications())
                                 .attendanceStats(getAttendanceStats())
-                                .roomRequests(getRoomRequests())
                                 .build();
         }
 
@@ -45,7 +41,6 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
                 return AcademicStaffDashboardResponse.DashboardStats.builder()
                                 .totalStudents((int) userRepository.countByRole(User.UserRole.STUDENT))
                                 .totalLecturers((int) userRepository.countByRole(User.UserRole.LECTURER))
-                                .totalRequests((int) requestRepository.countByStatus("PENDING"))
                                 .build();
         }
 
@@ -55,8 +50,7 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
                                 .map(profile -> AcademicStaffDashboardResponse.TopStudentDTO.builder()
                                                 .rank(rank.getAndIncrement())
                                                 .name(profile.getUser().getFullName())
-                                                .className(profile.getStudentClass() != null ? profile.getStudentClass()
-                                                                : "N/A")
+                                                .className(profile.getCourse() != null ? profile.getCourse() : "N/A")
                                                 .email(profile.getUser().getEmail())
                                                 .course(profile.getCourse() != null ? profile.getCourse() : "K18")
                                                 .avgMark(profile.getAvgMark() != null ? profile.getAvgMark() : 0.0)
@@ -68,25 +62,6 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
 
         private Integer calculateAttendance(Long studentId) {
                 return 90 + (int) (Math.random() * 10);
-        }
-
-        private List<AcademicStaffDashboardResponse.RequestDTO> getRequests() {
-                return requestRepository.findTop5ByOrderByCreatedAtDesc().stream()
-                                .map(req -> {
-                                        User user = req.getUser();
-                                        String className = "N/A";
-                                        if (user.getStudentProfile() != null) {
-                                                className = user.getStudentProfile().getStudentClass();
-                                        }
-                                        return AcademicStaffDashboardResponse.RequestDTO.builder()
-                                                        .name(user.getFullName())
-                                                        .className(className)
-                                                        .type(req.getType())
-                                                        .date(req.getCreatedAt().format(FORMATTER))
-                                                        .status(req.getStatus().toLowerCase())
-                                                        .build();
-                                })
-                                .collect(Collectors.toList());
         }
 
         private List<NotificationResponse> getNotifications() {
@@ -115,15 +90,5 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
                                                 .format(DateTimeFormatter.ofPattern("EEEE, dd/MM/yyyy",
                                                                 java.util.Locale.forLanguageTag("vi-VN"))))
                                 .build();
-        }
-
-        private List<AcademicStaffDashboardResponse.RoomRequestDTO> getRoomRequests() {
-                return roomRequestRepository.findTop5ByOrderByCreatedAtDesc().stream()
-                                .map(rr -> AcademicStaffDashboardResponse.RoomRequestDTO.builder()
-                                                .room(rr.getRoom() + " " + rr.getSlot() + " - "
-                                                                + rr.getRequester().getFullName())
-                                                .date(rr.getCreatedAt().format(FORMATTER))
-                                                .build())
-                                .collect(Collectors.toList());
         }
 }

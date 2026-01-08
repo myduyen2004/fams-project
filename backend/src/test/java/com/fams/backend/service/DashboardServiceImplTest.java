@@ -80,7 +80,7 @@ class DashboardServiceImplTest {
         alert.setCreatedAt(LocalDateTime.now());
         alert.setLevel(Alert.AlertLevel.ERROR);
 
-        when(alertRepository.findTop5ByIsResolvedFalseOrderByCreatedAtDesc())
+        when(alertRepository.findTop5ByOrderByCreatedAtDesc())
                 .thenReturn(Collections.singletonList(alert));
 
         List<AlertResponse> results = dashboardService.getAlerts();
@@ -94,9 +94,10 @@ class DashboardServiceImplTest {
     void whenGetNotifications_thenReturnMappedList() {
         Notification notification = new Notification();
         notification.setTitle("New Message");
-        notification.setDescription("Hello");
+        notification.setContent("Hello");
+        notification.setType(Notification.NotificationType.SYSTEM);
+        notification.setStatus(Notification.NotificationStatus.SENT);
         notification.setCreatedAt(LocalDateTime.now());
-        notification.setIsRead(false);
 
         when(notificationRepository.findTop5ByOrderByCreatedAtDesc())
                 .thenReturn(Collections.singletonList(notification));

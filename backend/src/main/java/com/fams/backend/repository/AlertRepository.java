@@ -8,7 +8,9 @@ import java.util.List;
 
 @Repository
 public interface AlertRepository extends JpaRepository<Alert, Long> {
-    List<Alert> findByIsResolvedFalseOrderByCreatedAtDesc();
+    List<Alert> findTop5ByOrderByCreatedAtDesc();
 
-    List<Alert> findTop5ByIsResolvedFalseOrderByCreatedAtDesc();
+    List<Alert> findByUserIdOrderByCreatedAtDesc(Long userId);
+
+    List<Alert> findByTypeOrderByCreatedAtDesc(Alert.AlertType type);
 }
