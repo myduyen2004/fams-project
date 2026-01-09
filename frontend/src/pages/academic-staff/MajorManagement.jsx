@@ -1,11 +1,12 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Upload, Filter, Search, Eye, X } from 'lucide-react';
+import { Plus, Upload, Search, Eye, X, Trash2, Pencil } from 'lucide-react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import toast from 'react-hot-toast';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { majorService } from '../../services/api/majorService';
+import { StatusBadge, StatusFilter, Pagination, SelectionActionBar } from '../../components/academic-staff';
 
 
 const MajorTable = ({ majors = [] }) => {
@@ -206,27 +207,183 @@ const MajorCreateModal = ({ isOpen, onClose, onSuccess }) => {
     );
 };
 
+const MajorUpdateModal = ({ isOpen, onClose, onSuccess, major }) => {
+    const [isLoading, setIsLoading] = useState(false);
+
+    const validationSchema = Yup.object({
+        code: Yup.string()
+            .trim()
+            .matches(/^[a-zA-Z0-9-]+$/, 'Mã ngành chỉ được chứa chữ cái, số và dấu gạch ngang')
+            .max(20, 'Mã ngành không được quá 20 ký tự')
+            .required('Mã ngành là bắt buộc'),
+        name: Yup.string()
+            .trim()
+            .min(5, 'Tên ngành phải có ít nhất 5 ký tự')
+            .max(100, 'Tên ngành không được quá 100 ký tự')
+            .required('Tên ngành là bắt buộc'),
+        programDuration: Yup.string().required('Thời gian đào tạo là bắt buộc'),
+        description: Yup.string()
+            .max(500, 'Mô tả không được quá 500 ký tự')
+    });
+
+    const formik = useFormik({
+        initialValues: {
+            code: major?.code || '',
+            name: major?.name || '',
+            programDuration: major?.programDuration || '',
+            description: major?.description || ''
+        },
+        enableReinitialize: true,
+        validationSchema,
+        onSubmit: async (values) => {
+            setIsLoading(true);
+            try {
+                await majorService.updateMajor(major.id, values);
+                toast.success('Cập nhật ngành thành công');
+                onSuccess();
+                onClose();
+            } catch (error) {
+                console.error('Update major error:', error);
+                toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật ngành');
+            } finally {
+                setIsLoading(false);
+            }
+        }
+    });
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-lg rounded-xl bg-white shadow-xl dark:bg-zinc-900">
+                <div className="flex items-center justify-between border-b border-gray-100 p-4 dark:border-zinc-800">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Cập nhật thông tin ngành</h2>
+                    <button onClick={onClose} className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-zinc-800">
+                        <X className="h-5 w-5 text-gray-500 dark:text-zinc-400" />
+                    </button>
+                </div>
+
+                <form onSubmit={formik.handleSubmit} className="p-4 space-y-4">
+                    <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">Mã ngành <span className="text-red-500">*</span></label>
+                        <input
+                            type="text"
+                            name="code"
+                            className={`w-full rounded-lg border p-2.5 text-sm dark:bg-zinc-800 dark:text-white ${formik.touched.code && formik.errors.code ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-fpt-orange focus:ring-fpt-orange dark:border-zinc-700'}`}
+                            placeholder="VD: SE, IA..."
+                            value={formik.values.code}
+                            onChange={formik.handleChange}
+                            onBlur={formik.handleBlur}
+                        />
+                        {formik.touched.code && formik.errors.code && (
+                            <p className="mt-1 text-xs text-red-500">{formik.errors.code}</p>
+                        )}
+                    </div>
+
+                    <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">Tên ngành <span className="text-red-500">*</span></label>
+                        <input
+                            type="text"
+                            name="name"
+                            className={`w-full rounded-lg border p-2.5 text-sm dark:bg-zinc-800 dark:text-white ${formik.touched.name && formik.errors.name ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-fpt-orange focus:ring-fpt-orange dark:border-zinc-700'}`}
+                            placeholder="VD: Kỹ thuật phần mềm"
+                            value={formik.values.name}
+                            onChange={formik.handleChange}
+                            onBlur={formik.handleBlur}
+                        />
+                        {formik.touched.name && formik.errors.name && (
+                            <p className="mt-1 text-xs text-red-500">{formik.errors.name}</p>
+                        )}
+                    </div>
+
+                    <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">Thời gian đào tạo <span className="text-red-500">*</span></label>
+                        <input
+                            type="text"
+                            name="programDuration"
+                            className={`w-full rounded-lg border p-2.5 text-sm dark:bg-zinc-800 dark:text-white ${formik.touched.programDuration && formik.errors.programDuration ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-fpt-orange focus:ring-fpt-orange dark:border-zinc-700'}`}
+                            placeholder="VD: 9 kì"
+                            value={formik.values.programDuration}
+                            onChange={formik.handleChange}
+                            onBlur={formik.handleBlur}
+                        />
+                        {formik.touched.programDuration && formik.errors.programDuration && (
+                            <p className="mt-1 text-xs text-red-500">{formik.errors.programDuration}</p>
+                        )}
+                    </div>
+
+                    <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">Mô tả</label>
+                        <textarea
+                            rows="3"
+                            name="description"
+                            className="w-full rounded-lg border border-gray-300 p-2.5 text-sm focus:border-fpt-orange focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                            value={formik.values.description}
+                            onChange={formik.handleChange}
+                            onBlur={formik.handleBlur}
+                        ></textarea>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100 dark:border-zinc-800">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            disabled={isLoading}
+                            className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 disabled:opacity-50"
+                        >
+                            Hủy
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={isLoading}
+                            className="flex items-center justify-center rounded-lg bg-fpt-orange px-5 py-2.5 text-sm font-medium text-white hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-300 disabled:opacity-50"
+                        >
+                            {isLoading ? 'Đang xử lý...' : 'Cập nhật'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
 // --- Main Page Component ---
 
 export const MajorManagement = () => {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('ACTIVE');
+    const [page, setPage] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedIds, setSelectedIds] = useState([]);
 
+    // Debounce search term
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm);
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
+
     const fetchMajors = useCallback(async () => {
         try {
             setLoading(true);
             const params = {
-                keyword: searchTerm,
-                status: statusFilter // Removed generic ALL check, strictly use validation
+                keyword: debouncedSearchTerm,
+                status: statusFilter, // Removed generic ALL check, strictly use validation
+                page: page,
+                size: 10
             };
             const response = await majorService.getMajors(params);
             setData(response.content || []);
+            setTotalElements(response.totalElements || 0);
             setSelectedIds([]); // Reset selection on fetch
         } catch (error) {
             console.error('Failed to fetch majors:', error);
@@ -234,21 +391,14 @@ export const MajorManagement = () => {
         } finally {
             setLoading(false);
         }
-    }, [searchTerm, statusFilter]);
+    }, [debouncedSearchTerm, statusFilter, page]);
 
     useEffect(() => {
-        const timeoutId = setTimeout(() => {
-            fetchMajors();
-        }, 500); // Debounce search
-        return () => clearTimeout(timeoutId);
+        fetchMajors();
     }, [fetchMajors]);
 
     const handleSearch = (e) => {
         setSearchTerm(e.target.value);
-    };
-
-    const handleFilterChange = (e) => {
-        setStatusFilter(e.target.value);
     };
 
     const handleSelectAll = (e) => {
@@ -286,6 +436,30 @@ export const MajorManagement = () => {
         }
     };
 
+    const handleBulkDelete = async () => {
+        if (selectedIds.length === 0) return;
+
+        if (!window.confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.length} ngành đã chọn? Hành động này không thể hoàn tác.`)) return;
+
+        try {
+            await Promise.all(selectedIds.map(id => majorService.deleteMajor(id)));
+            toast.success('Xóa ngành thành công');
+            setSelectedIds([]);
+            fetchMajors();
+        } catch (error) {
+            console.error('Bulk delete error:', error);
+            toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi xóa ngành');
+        }
+    };
+
+    const activeMajorIds = selectedIds.filter(id => data.find(m => m.id === id)?.status === 'ACTIVE');
+    const inactiveMajorIds = selectedIds.filter(id => data.find(m => m.id === id)?.status === 'INACTIVE');
+
+    // Determine which action to show: if any active selected, assume user wants to deactivate them.
+    // However, if we want to support Update, we should check if exactly 1 active item is selected.
+
+    const showDeactivate = selectedIds.some(id => data.find(m => m.id === id)?.status === 'ACTIVE');
+
     return (
         <AcademicStaffLayout pageTitle="Quản lý ngành">
             <div className="space-y-6">
@@ -322,44 +496,26 @@ export const MajorManagement = () => {
                                     className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-fpt-orange focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                                 />
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-gray-500">Trạng thái:</span>
-                                <select
-                                    value={statusFilter}
-                                    onChange={handleFilterChange}
-                                    className="rounded-lg border border-gray-300 py-2 pl-2 pr-8 text-sm focus:border-fpt-orange focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
-                                >
-                                    <option value="ACTIVE">Đang mở</option>
-                                    <option value="INACTIVE">Ngừng đào tạo</option>
-                                </select>
-                            </div>
+                            <StatusFilter
+                                value={statusFilter}
+                                onChange={setStatusFilter}
+                                isOpen={isFilterOpen}
+                                onToggle={() => setIsFilterOpen(!isFilterOpen)}
+                            />
                         </div>
 
-                        {selectedIds.length > 0 && (
-                            <>
-                                {selectedIds.some(id => data.find(m => m.id === id)?.status === 'ACTIVE') ? (
-                                    <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-lg flex items-center justify-between animate-in fade-in slide-in-from-top-2">
-                                        <span className="text-sm font-medium text-red-600">Đã chọn {selectedIds.length} ngành</span>
-                                        <button
-                                            onClick={() => handleBulkStatusChange('INACTIVE')}
-                                            className="px-4 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
-                                        >
-                                            Ngừng đào tạo
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/20 rounded-lg flex items-center justify-between animate-in fade-in slide-in-from-top-2">
-                                        <span className="text-sm font-medium text-green-600">Đã chọn {selectedIds.length} ngành</span>
-                                        <button
-                                            onClick={() => handleBulkStatusChange('ACTIVE')}
-                                            className="px-4 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
-                                        >
-                                            Mở lại
-                                        </button>
-                                    </div>
-                                )}
-                            </>
-                        )}
+                        <SelectionActionBar
+                            selectedCount={selectedIds.length}
+                            showDeactivate={showDeactivate}
+                            onUpdate={() => setIsUpdateModalOpen(true)}
+                            onDelete={handleBulkDelete}
+                            onStatusChange={handleBulkStatusChange}
+                            canDelete={selectedIds.every(id => {
+                                const item = data.find(m => m.id === id);
+                                return item?.status === 'INACTIVE' && item?.canDelete;
+                            })}
+                            itemLabel="ngành"
+                        />
                     </div>
 
                     <div className="overflow-x-auto">
@@ -378,7 +534,7 @@ export const MajorManagement = () => {
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Tên ngành</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Thời gian đào tạo</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Trạng thái</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-lg">Hành động</th>
+                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-lg">Số chuyên ngành</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
@@ -431,15 +587,8 @@ export const MajorManagement = () => {
                                                     </span>
                                                 )}
                                             </td>
-                                            <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <button
-                                                        onClick={() => navigate(`/academic-staff/majors/${major.id}`)}
-                                                        className="p-2 text-gray-500 hover:text-fpt-orange hover:bg-orange-50 rounded-lg transition-colors dark:text-zinc-400 dark:hover:text-fpt-orange dark:hover:bg-zinc-800"
-                                                    >
-                                                        <Eye className="h-4 w-4" />
-                                                    </button>
-                                                </div>
+                                            <td className="px-4 py-3 text-center font-medium text-gray-700 dark:text-zinc-300">
+                                                {major.numberOfSpecializations}
                                             </td>
                                         </tr>
                                     ))
@@ -448,11 +597,29 @@ export const MajorManagement = () => {
                         </table>
                     </div>
 
+                    {/* Pagination */}
+                    <Pagination
+                        page={page}
+                        totalElements={totalElements}
+                        pageSize={10}
+                        onPageChange={setPage}
+                        itemLabel="ngành"
+                    />
+
                     <MajorCreateModal
                         isOpen={isCreateModalOpen}
                         onClose={() => setIsCreateModalOpen(false)}
                         onSuccess={fetchMajors}
                     />
+
+                    {selectedIds.length === 1 && (
+                        <MajorUpdateModal
+                            isOpen={isUpdateModalOpen}
+                            onClose={() => setIsUpdateModalOpen(false)}
+                            onSuccess={fetchMajors}
+                            major={data.find(m => m.id === selectedIds[0])}
+                        />
+                    )}
                 </div>
             </div>
         </AcademicStaffLayout>

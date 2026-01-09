@@ -1,5 +1,7 @@
 package com.fams.backend.controller;
 
+import com.fams.backend.dto.request.SpecializationRequest;
+import com.fams.backend.dto.response.SpecializationResponse;
 import com.fams.backend.entity.Specialization;
 import com.fams.backend.service.SpecializationService;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +21,7 @@ public class SpecializationController {
     private final SpecializationService specializationService;
 
     @GetMapping("/by-major/{majorId}")
-    public ResponseEntity<Page<Specialization>> getSpecializationsByMajor(
+    public ResponseEntity<Page<SpecializationResponse>> getSpecializationsByMajor(
             @PathVariable Long majorId,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Specialization.SpecializationStatus status,
@@ -38,14 +40,27 @@ public class SpecializationController {
     }
 
     @PutMapping("/{id}/status")
-    public ResponseEntity<Specialization> updateStatus(@PathVariable Long id,
+    public ResponseEntity<SpecializationResponse> updateStatus(@PathVariable Long id,
             @RequestParam Specialization.SpecializationStatus status) {
         return ResponseEntity.ok(specializationService.updateStatus(id, status));
     }
 
     @PostMapping
-    public ResponseEntity<Specialization> createSpecialization(
-            @RequestBody com.fams.backend.dto.SpecializationCreateRequest request) {
+    public ResponseEntity<SpecializationResponse> createSpecialization(
+            @RequestBody SpecializationRequest request) {
         return ResponseEntity.ok(specializationService.createSpecialization(request));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<SpecializationResponse> updateSpecialization(
+            @PathVariable Long id,
+            @RequestBody SpecializationRequest request) {
+        return ResponseEntity.ok(specializationService.updateSpecialization(id, request));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteSpecialization(@PathVariable Long id) {
+        specializationService.deleteSpecialization(id);
+        return ResponseEntity.noContent().build();
     }
 }
