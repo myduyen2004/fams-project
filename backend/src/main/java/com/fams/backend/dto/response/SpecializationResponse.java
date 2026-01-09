@@ -1,6 +1,6 @@
-package com.fams.backend.dto;
+package com.fams.backend.dto.response;
 
-import com.fams.backend.entity.Major;
+import com.fams.backend.entity.Specialization;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,11 +10,12 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class MajorDTO {
+public class SpecializationResponse {
     private Long id;
     private String code;
     private String name;
     private String description;
-    private String programDuration;
-    private Major.MajorStatus status;
+    private Integer totalCredits;
+    private Specialization.SpecializationStatus status;
+    private Boolean canDelete;
 }
