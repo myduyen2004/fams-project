@@ -99,10 +99,10 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Handle Business Logic Exceptions (IllegalArgumentException, RuntimeException)
+     * Handle Business Logic Exceptions (IllegalArgumentException)
      */
-    @ExceptionHandler({ IllegalArgumentException.class, RuntimeException.class })
-    public ResponseEntity<ErrorResponse> handleBusinessExceptions(Exception ex) {
+    @ExceptionHandler({ IllegalArgumentException.class })
+    public ResponseEntity<ErrorResponse> handleBusinessExceptions(IllegalArgumentException ex) {
         log.error("Business error: {}", ex.getMessage());
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),

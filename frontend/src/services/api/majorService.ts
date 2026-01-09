@@ -40,6 +40,19 @@ export const majorService = {
         return response.data;
     },
 
+    updateMajor: async (id: number, majorData: MajorCreateRequest): Promise<Major> => {
+        const response = await axios.put(`${API_URL}/majors/${id}`, majorData, {
+            headers: getAuthHeader()
+        });
+        return response.data;
+    },
+
+    deleteMajor: async (id: number): Promise<void> => {
+        await axios.delete(`${API_URL}/majors/${id}`, {
+            headers: getAuthHeader()
+        });
+    },
+
     updateStatus: async (id: number, status: 'ACTIVE' | 'INACTIVE'): Promise<Major> => {
         const response = await axios.put(`${API_URL}/majors/${id}/status`, null, {
             params: { status },
