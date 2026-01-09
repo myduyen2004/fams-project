@@ -1,6 +1,7 @@
 package com.fams.backend.service;
 
-import com.fams.backend.dto.MajorDTO;
+import com.fams.backend.dto.request.MajorRequest;
+import com.fams.backend.dto.response.MajorResponse;
 import com.fams.backend.entity.Major;
 import com.fams.backend.repository.MajorRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,42 +19,91 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class MajorService {
 
     private final MajorRepository majorRepository;
+    private final com.fams.backend.repository.StudentProfileRepository studentProfileRepository;
 
-    public Page<Major> getMajors(String keyword, Major.MajorStatus status, Pageable pageable) {
-        return majorRepository.searchMajors(keyword, status, pageable);
+    public Page<MajorResponse> getMajors(String keyword, Major.MajorStatus status, Pageable pageable) {
+        Page<Major> majors = majorRepository.searchMajors(keyword, status, pageable);
+        return majors.map(this::convertToResponse);
     }
 
-    public Major createMajor(MajorDTO majorDTO) {
-        if (majorRepository.existsByCode(majorDTO.getCode())) {
-            throw new IllegalArgumentException("Mã ngành đã tồn tại: " + majorDTO.getCode());
+    @Transactional
+    public Major createMajor(MajorRequest request) {
+        if (majorRepository.existsByCode(request.getCode())) {
+            throw new IllegalArgumentException("Mã ngành đã tồn tại: " + request.getCode());
         }
-        if (majorRepository.existsByName(majorDTO.getName())) {
-            throw new IllegalArgumentException("Tên ngành đã tồn tại: " + majorDTO.getName());
+        if (majorRepository.existsByName(request.getName())) {
+            throw new IllegalArgumentException("Tên ngành đã tồn tại: " + request.getName());
         }
 
         Major major = Major.builder()
-                .code(majorDTO.getCode())
-                .name(majorDTO.getName())
-                .description(majorDTO.getDescription())
-                .programDuration(majorDTO.getProgramDuration())
+                .code(request.getCode())
+                .name(request.getName())
+                .description(request.getDescription())
+                .programDuration(request.getProgramDuration())
                 .status(Major.MajorStatus.ACTIVE)
                 .build();
 
         return majorRepository.save(major);
     }
 
-    public Major getMajor(Long id) {
-        return majorRepository.findById(id)
+    @Transactional
+    public Major updateMajor(Long id, MajorRequest request) {
+        Major major = majorRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ngành với mã ngành: " + id));
+
+        if (!major.getCode().equals(request.getCode()) && majorRepository.existsByCode(request.getCode())) {
+            throw new IllegalArgumentException("Mã ngành đã tồn tại: " + request.getCode());
+        }
+        if (!major.getName().equals(request.getName()) && majorRepository.existsByName(request.getName())) {
+            throw new IllegalArgumentException("Tên ngành đã tồn tại: " + request.getName());
+        }
+
+        major.setCode(request.getCode());
+        major.setName(request.getName());
+        major.setDescription(request.getDescription());
+        major.setProgramDuration(request.getProgramDuration());
+
+        return majorRepository.save(major);
     }
 
+    public MajorResponse getMajor(Long id) {
+        Major major = majorRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ngành với mã ngành: " + id));
+        return convertToResponse(major);
+    }
+
+    @Transactional
     public Major updateStatus(Long id, Major.MajorStatus status) {
-        Major major = getMajor(id);
+        Major major = majorRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ngành với mã ngành: " + id));
         major.setStatus(status);
         return majorRepository.save(major);
+    }
+
+    @Transactional
+    public void deleteMajor(Long id) {
+        if (studentProfileRepository.existsByMajorId(id)) {
+            throw new IllegalArgumentException("Không thể xóa ngành này vì đã có sinh viên theo học.");
+        }
+        majorRepository.deleteById(id);
+    }
+
+    private MajorResponse convertToResponse(Major major) {
+        boolean canDelete = !studentProfileRepository.existsByMajorId(major.getId());
+        return MajorResponse.builder()
+                .id(major.getId())
+                .code(major.getCode())
+                .name(major.getName())
+                .description(major.getDescription())
+                .programDuration(major.getProgramDuration())
+                .status(major.getStatus())
+                .canDelete(canDelete)
+                .numberOfSpecializations(major.getSpecializations() != null ? major.getSpecializations().size() : 0)
+                .build();
     }
 
     @Transactional

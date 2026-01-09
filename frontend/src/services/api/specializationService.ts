@@ -30,5 +30,18 @@ export const specializationService = {
             headers: getAuthHeader()
         });
         return response.data;
+    },
+
+    updateSpecialization: async (id: number, data: SpecializationCreateRequest): Promise<Specialization> => {
+        const response = await axios.put(`${API_URL}/specializations/${id}`, data, {
+            headers: getAuthHeader()
+        });
+        return response.data;
+    },
+
+    deleteSpecialization: async (id: number): Promise<void> => {
+        await axios.delete(`${API_URL}/specializations/${id}`, {
+            headers: getAuthHeader()
+        });
     }
 };

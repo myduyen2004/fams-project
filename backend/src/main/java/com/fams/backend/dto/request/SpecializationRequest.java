@@ -1,10 +1,16 @@
-package com.fams.backend.dto;
+package com.fams.backend.dto.request;
 
 import com.fams.backend.entity.Specialization;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
-public class SpecializationCreateRequest {
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class SpecializationRequest {
     private String code;
     private String name;
     private String description;
