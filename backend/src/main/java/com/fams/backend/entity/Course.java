@@ -68,12 +68,18 @@ public class Course {
     // Các chuyên ngành có môn này (One-to-Many với junction table - inverse side)
     @OneToMany(mappedBy = "course")
     @Builder.Default
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private List<SpecializationCourse> specializationCourses = new ArrayList<>();
 
     // Các combo/chuyên ngành hẹp có môn này (One-to-Many với junction table -
     // inverse side)
     @OneToMany(mappedBy = "course")
     @Builder.Default
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private List<SubSpecializationCourse> subSpecializationCourses = new ArrayList<>();
 
     @CreationTimestamp
