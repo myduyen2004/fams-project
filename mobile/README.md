@@ -1,4 +1,4 @@
-# mobile
+# fams_mobile
 
 A new Flutter project.
 
