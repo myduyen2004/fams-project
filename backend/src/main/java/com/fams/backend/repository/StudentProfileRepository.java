@@ -13,4 +13,8 @@ public interface StudentProfileRepository extends JpaRepository<StudentProfile, 
 
     @Query("SELECT s FROM StudentProfile s ORDER BY s.gpa DESC")
     List<StudentProfile> findTop100ByOrderByGpaDesc(Pageable pageable);
+
+    boolean existsByMajorId(Long majorId);
+
+    boolean existsBySpecializationId(Long specializationId);
 }

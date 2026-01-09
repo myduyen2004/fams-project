@@ -1,6 +1,7 @@
 package com.fams.backend.controller;
 
-import com.fams.backend.dto.MajorDTO;
+import com.fams.backend.dto.request.MajorRequest;
+import com.fams.backend.dto.response.MajorResponse;
 import com.fams.backend.entity.Major;
 import com.fams.backend.service.MajorService;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/majors")
@@ -24,7 +24,7 @@ public class MajorController {
     private final MajorService majorService;
 
     @GetMapping
-    public ResponseEntity<Page<Major>> getMajors(
+    public ResponseEntity<Page<MajorResponse>> getMajors(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Major.MajorStatus status,
             @RequestParam(defaultValue = "0") int page,
@@ -42,13 +42,18 @@ public class MajorController {
     }
 
     @PostMapping
-    public ResponseEntity<Major> createMajor(@RequestBody MajorDTO majorDTO) {
-        return ResponseEntity.ok(majorService.createMajor(majorDTO));
+    public ResponseEntity<Major> createMajor(@RequestBody MajorRequest request) {
+        return ResponseEntity.ok(majorService.createMajor(request));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Major> getMajor(@PathVariable Long id) {
+    public ResponseEntity<MajorResponse> getMajor(@PathVariable Long id) {
         return ResponseEntity.ok(majorService.getMajor(id));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Major> updateMajor(@PathVariable Long id, @RequestBody MajorRequest request) {
+        return ResponseEntity.ok(majorService.updateMajor(id, request));
     }
 
     @PutMapping("/{id}/status")
@@ -56,12 +61,19 @@ public class MajorController {
         return ResponseEntity.ok(majorService.updateStatus(id, status));
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteMajor(@PathVariable Long id) {
+        majorService.deleteMajor(id);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping("/import")
-    public ResponseEntity<List<Major>> importMajors(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<String> importMajors(@RequestParam("file") MultipartFile file) {
         try {
-            return ResponseEntity.ok(majorService.importMajors(file));
+            majorService.importMajors(file);
+            return ResponseEntity.ok("Import successfully");
         } catch (IOException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body("Import failed: " + e.getMessage());
         }
     }
 }
