@@ -41,6 +41,10 @@ public class Specialization {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    // Tổng số tín chỉ (Calculated)
+    @org.hibernate.annotations.Formula("(SELECT COALESCE(SUM(c.credits), 0) FROM courses c JOIN specialization_courses sc ON sc.course_id = c.id WHERE sc.specialization_id = id)")
+    private Integer totalCredits;
+
     // Trạng thái của chuyên ngành
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -50,16 +54,25 @@ public class Specialization {
     // Thuộc về ngành nào
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "major_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Major major;
 
     // Một chuyên ngành có nhiều chuyên ngành hẹp (sub-specializations/combo)
     @OneToMany(mappedBy = "specialization", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private List<SubSpecialization> subSpecializations = new ArrayList<>();
 
     // Các môn học của chuyên ngành này (One-to-Many với junction table)
     @OneToMany(mappedBy = "specialization", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private List<SpecializationCourse> specializationCourses = new ArrayList<>();
 
     @CreationTimestamp

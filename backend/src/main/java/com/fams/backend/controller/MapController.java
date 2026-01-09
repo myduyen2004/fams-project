@@ -1,7 +1,6 @@
 package com.fams.backend.controller;
 
 import com.fams.backend.dto.response.OnlineUsersResponse;
-import com.fams.backend.dto.response.ProvinceOnlineData;
 import com.fams.backend.entity.UserSession;
 import com.fams.backend.repository.UserSessionRepository;
 import com.fams.backend.service.MapService;
@@ -11,12 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/map")
