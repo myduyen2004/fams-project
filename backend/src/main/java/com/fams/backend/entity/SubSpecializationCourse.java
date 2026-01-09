@@ -31,11 +31,17 @@ public class SubSpecializationCourse {
     // Chuyên ngành hẹp/combo
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sub_specialization_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private SubSpecialization subSpecialization;
 
     // Môn học
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Course course;
 
     // Loại môn học
