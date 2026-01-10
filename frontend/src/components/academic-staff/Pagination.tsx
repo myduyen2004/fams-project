@@ -1,13 +1,17 @@
+import React from 'react';
+
+interface PaginationProps {
+    page: number;
+    totalElements: number;
+    pageSize?: number;
+    onPageChange: (page: number) => void;
+    itemLabel?: string;
+}
+
 /**
  * Pagination - Reusable pagination controls
- * @param {Object} props
- * @param {number} props.page - Current page (0-indexed)
- * @param {number} props.totalElements - Total number of items
- * @param {number} props.pageSize - Items per page (default: 10)
- * @param {Function} props.onPageChange - Called with new page number
- * @param {string} props.itemLabel - Label for items (e.g., 'ngành', 'chuyên ngành')
  */
-export const Pagination = ({
+export const Pagination: React.FC<PaginationProps> = ({
     page,
     totalElements,
     pageSize = 10,
@@ -42,8 +46,8 @@ export const Pagination = ({
                         key={i}
                         onClick={() => onPageChange(i)}
                         className={`w-8 h-8 flex items-center justify-center rounded-lg font-medium transition-colors ${page === i
-                                ? 'bg-fpt-orange text-white'
-                                : 'hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-600 dark:text-zinc-400'
+                            ? 'bg-fpt-orange text-white'
+                            : 'hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-600 dark:text-zinc-400'
                             }`}
                     >
                         {i + 1}
