@@ -9,6 +9,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/specializations")
@@ -47,5 +51,16 @@ public class SpecializationController {
     public ResponseEntity<Specialization> createSpecialization(
             @RequestBody com.fams.backend.dto.SpecializationCreateRequest request) {
         return ResponseEntity.ok(specializationService.createSpecialization(request));
+    }
+
+    @PostMapping("/import/{majorId}")
+    public ResponseEntity<List<Specialization>> importSpecializations(
+            @PathVariable Long majorId,
+            @RequestParam("file") MultipartFile file) {
+        try {
+            return ResponseEntity.ok(specializationService.importSpecializations(majorId, file));
+        } catch (IOException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 }
