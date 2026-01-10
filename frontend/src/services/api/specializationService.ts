@@ -43,5 +43,17 @@ export const specializationService = {
         await axios.delete(`${API_URL}/specializations/${id}`, {
             headers: getAuthHeader()
         });
+    },
+
+    importSpecializations: async (majorId: number, file: File): Promise<Specialization[]> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await axios.post(`${API_URL}/specializations/import/${majorId}`, formData, {
+            headers: {
+                ...getAuthHeader(),
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
     }
 };
