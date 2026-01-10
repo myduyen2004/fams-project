@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { majorService } from '../../services/api/majorService';
 import { StatusFilter, Pagination, SelectionActionBar } from '../../components/academic-staff';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { Major } from '../../types/major';
 
 // --- Types ---
@@ -323,6 +324,20 @@ export const MajorManagement: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
+    // Confirm Modal states
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'info' as 'info' | 'danger' | 'warning' | 'success',
+        onConfirm: () => { },
+        confirmLabel: 'Xác nhận'
+    });
+
+    const closeConfirmModal = () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+    };
+
     // Debounce search term
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -376,39 +391,77 @@ export const MajorManagement: React.FC = () => {
         }
     };
 
-    const handleBulkStatusChange = async (newStatus: 'ACTIVE' | 'INACTIVE') => {
+    const handleBulkStatusChange = (newStatus: 'ACTIVE' | 'INACTIVE') => {
         if (selectedIds.length === 0) return;
 
-        const confirmMsg = newStatus === 'ACTIVE'
-            ? `Bạn có chắc chắn muốn mở lại ${selectedIds.length} ngành đã chọn?`
-            : `Bạn có chắc chắn muốn ngừng đào tạo ${selectedIds.length} ngành đã chọn?`;
+        const confirmTitle = newStatus === 'ACTIVE' ? 'Mở lại ngành' : 'Ngừng đào tạo ngành';
+        const type = newStatus === 'ACTIVE' ? 'success' : 'danger';
+        const confirmLabel = newStatus === 'ACTIVE' ? 'Mở lại' : 'Ngừng đào tạo';
 
-        if (!window.confirm(confirmMsg)) return;
-
-        try {
-            await Promise.all(selectedIds.map(id => majorService.updateStatus(id, newStatus)));
-            toast.success('Cập nhật trạng thái thành công');
-            fetchMajors();
-        } catch (error) {
-            console.error('Bulk update error:', error);
-            toast.error('Có lỗi xảy ra khi cập nhật trạng thái');
+        let confirmMsg = '';
+        if (selectedIds.length === 1) {
+            const selectedItem = data.find(m => m.id === selectedIds[0]);
+            confirmMsg = newStatus === 'ACTIVE'
+                ? `Bạn có chắc chắn muốn mở lại ngành "${selectedItem?.name}"?`
+                : `Bạn có chắc chắn muốn ngừng đào tạo ngành "${selectedItem?.name}"?`;
+        } else {
+            confirmMsg = newStatus === 'ACTIVE'
+                ? `Bạn có chắc chắn muốn mở lại ${selectedIds.length} ngành đã chọn?`
+                : `Bạn có chắc chắn muốn ngừng đào tạo ${selectedIds.length} ngành đã chọn?`;
         }
+
+        setConfirmModal({
+            isOpen: true,
+            title: confirmTitle,
+            message: confirmMsg,
+            type: type as any,
+            confirmLabel: confirmLabel,
+            onConfirm: async () => {
+                try {
+                    await Promise.all(selectedIds.map(id => majorService.updateStatus(id, newStatus)));
+                    toast.success('Cập nhật trạng thái thành công');
+                    fetchMajors();
+                    closeConfirmModal();
+                } catch (error) {
+                    console.error('Bulk update error:', error);
+                    toast.error('Có lỗi xảy ra khi cập nhật trạng thái');
+                    closeConfirmModal();
+                }
+            }
+        });
     };
 
-    const handleBulkDelete = async () => {
+    const handleBulkDelete = () => {
         if (selectedIds.length === 0) return;
 
-        if (!window.confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.length} ngành đã chọn? Hành động này không thể hoàn tác.`)) return;
-
-        try {
-            await Promise.all(selectedIds.map(id => majorService.deleteMajor(id)));
-            toast.success('Xóa ngành thành công');
-            setSelectedIds([]);
-            fetchMajors();
-        } catch (error: any) {
-            console.error('Bulk delete error:', error);
-            toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi xóa ngành');
+        let confirmMsg = '';
+        if (selectedIds.length === 1) {
+            const selectedItem = data.find(m => m.id === selectedIds[0]);
+            confirmMsg = `Bạn có chắc chắn muốn xóa ngành "${selectedItem?.name}"? Hành động này không thể hoàn tác.`;
+        } else {
+            confirmMsg = `Bạn có chắc chắn muốn xóa ${selectedIds.length} ngành đã chọn? Hành động này không thể hoàn tác.`;
         }
+
+        setConfirmModal({
+            isOpen: true,
+            title: 'Xóa ngành',
+            message: confirmMsg,
+            type: 'danger',
+            confirmLabel: 'Xóa',
+            onConfirm: async () => {
+                try {
+                    await Promise.all(selectedIds.map(id => majorService.deleteMajor(id)));
+                    toast.success('Xóa ngành thành công');
+                    setSelectedIds([]);
+                    fetchMajors();
+                    closeConfirmModal();
+                } catch (error: any) {
+                    console.error('Bulk delete error:', error);
+                    toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi xóa ngành');
+                    closeConfirmModal();
+                }
+            }
+        });
     };
 
     // Determine which action to show: if any active selected, assume user wants to deactivate them.
@@ -576,6 +629,16 @@ export const MajorManagement: React.FC = () => {
                             major={data.find(m => m.id === selectedIds[0])!}
                         />
                     )}
+
+                    <ConfirmModal
+                        isOpen={confirmModal.isOpen}
+                        onClose={closeConfirmModal}
+                        onConfirm={confirmModal.onConfirm}
+                        title={confirmModal.title}
+                        message={confirmModal.message}
+                        type={confirmModal.type}
+                        confirmLabel={confirmModal.confirmLabel}
+                    />
                 </div>
             </div>
         </AcademicStaffLayout>

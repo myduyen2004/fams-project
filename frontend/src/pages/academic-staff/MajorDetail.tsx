@@ -8,6 +8,7 @@ import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { majorService } from '../../services/api/majorService';
 import { specializationService } from '../../services/api/specializationService';
 import { StatusFilter, Pagination, SelectionActionBar, StatusBadge } from '../../components/academic-staff';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { Major } from '../../types/major';
 import { Specialization } from '../../types/specialization';
 
@@ -293,6 +294,20 @@ export const MajorDetail: React.FC = () => {
     const [totalElements, setTotalElements] = useState(0);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
+    // Confirm Modal states
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'info' as 'info' | 'danger' | 'warning' | 'success',
+        onConfirm: () => { },
+        confirmLabel: 'Xác nhận'
+    });
+
+    const closeConfirmModal = () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+    };
+
     // Debounce search term
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -359,43 +374,80 @@ export const MajorDetail: React.FC = () => {
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    const handleBulkDelete = async () => {
+    const handleBulkDelete = () => {
         if (selectedIds.length === 0) return;
-        if (!window.confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.length} chuyên ngành đã chọn? hành động này không thể hoàn tác.`)) return;
 
-        try {
-            setIsDeleting(true);
-            await Promise.all(selectedIds.map(id => specializationService.deleteSpecialization(id)));
-            toast.success('Xóa chuyên ngành thành công');
-            setSelectedIds([]);
-            fetchSpecializations();
-        } catch (error: any) {
-            console.error('Delete error:', error);
-            // toast.error('Không thể xóa chuyên ngành (có thể đang có sinh viên theo học)');
-            // Using error from backend if available
-            toast.error(error.response?.data || error.message || 'Có lỗi xảy ra khi xóa');
-        } finally {
-            setIsDeleting(false);
+        let confirmMsg = '';
+        if (selectedIds.length === 1) {
+            const selectedItem = specializations.find(s => s.id === selectedIds[0]);
+            confirmMsg = `Bạn có chắc chắn muốn xóa chuyên ngành "${selectedItem?.name}"? hành động này không thể hoàn tác.`;
+        } else {
+            confirmMsg = `Bạn có chắc chắn muốn xóa ${selectedIds.length} chuyên ngành đã chọn? hành động này không thể hoàn tác.`;
         }
+
+        setConfirmModal({
+            isOpen: true,
+            title: 'Xóa chuyên ngành',
+            message: confirmMsg,
+            type: 'danger',
+            confirmLabel: 'Xóa',
+            onConfirm: async () => {
+                try {
+                    setIsDeleting(true);
+                    await Promise.all(selectedIds.map(id => specializationService.deleteSpecialization(id)));
+                    toast.success('Xóa chuyên ngành thành công');
+                    setSelectedIds([]);
+                    fetchSpecializations();
+                    closeConfirmModal();
+                } catch (error: any) {
+                    console.error('Delete error:', error);
+                    toast.error(error.response?.data || error.message || 'Có lỗi xảy ra khi xóa');
+                    closeConfirmModal();
+                } finally {
+                    setIsDeleting(false);
+                }
+            }
+        });
     };
 
-    const handleBulkStatusChange = async (newStatus: 'ACTIVE' | 'INACTIVE') => {
+    const handleBulkStatusChange = (newStatus: 'ACTIVE' | 'INACTIVE') => {
         if (selectedIds.length === 0) return;
 
-        const confirmMsg = newStatus === 'ACTIVE'
-            ? `Bạn có chắc chắn muốn mở lại ${selectedIds.length} chuyên ngành đã chọn?`
-            : `Bạn có chắc chắn muốn ngừng đào tạo ${selectedIds.length} chuyên ngành đã chọn?`;
+        const confirmTitle = newStatus === 'ACTIVE' ? 'Mở lại chuyên ngành' : 'Ngừng đào tạo chuyên ngành';
+        const type = newStatus === 'ACTIVE' ? 'success' : 'danger';
+        const confirmLabel = newStatus === 'ACTIVE' ? 'Mở lại' : 'Ngừng đào tạo';
 
-        if (!window.confirm(confirmMsg)) return;
-
-        try {
-            await Promise.all(selectedIds.map(id => specializationService.updateStatus(id, newStatus)));
-            toast.success('Cập nhật trạng thái thành công');
-            fetchData();
-        } catch (error) {
-            console.error('Bulk update error:', error);
-            toast.error('Có lỗi xảy ra khi cập nhật trạng thái');
+        let confirmMsg = '';
+        if (selectedIds.length === 1) {
+            const selectedItem = specializations.find(s => s.id === selectedIds[0]);
+            confirmMsg = newStatus === 'ACTIVE'
+                ? `Bạn có chắc chắn muốn mở lại chuyên ngành "${selectedItem?.name}"?`
+                : `Bạn có chắc chắn muốn ngừng đào tạo chuyên ngành "${selectedItem?.name}"?`;
+        } else {
+            confirmMsg = newStatus === 'ACTIVE'
+                ? `Bạn có chắc chắn muốn mở lại ${selectedIds.length} chuyên ngành đã chọn?`
+                : `Bạn có chắc chắn muốn ngừng đào tạo ${selectedIds.length} chuyên ngành đã chọn?`;
         }
+
+        setConfirmModal({
+            isOpen: true,
+            title: confirmTitle,
+            message: confirmMsg,
+            type: type as any,
+            confirmLabel: confirmLabel,
+            onConfirm: async () => {
+                try {
+                    await Promise.all(selectedIds.map(id => specializationService.updateStatus(id, newStatus)));
+                    toast.success('Cập nhật trạng thái thành công');
+                    fetchData();
+                    closeConfirmModal();
+                } catch (error) {
+                    console.error('Bulk update error:', error);
+                    toast.error('Có lỗi xảy ra khi cập nhật trạng thái');
+                    closeConfirmModal();
+                }
+            }
+        });
     };
 
     if (!major && loading) {
@@ -584,6 +636,16 @@ export const MajorDetail: React.FC = () => {
                             specialization={specializations.find(s => s.id === selectedIds[0])!}
                         />
                     )}
+
+                    <ConfirmModal
+                        isOpen={confirmModal.isOpen}
+                        onClose={closeConfirmModal}
+                        onConfirm={confirmModal.onConfirm}
+                        title={confirmModal.title}
+                        message={confirmModal.message}
+                        type={confirmModal.type}
+                        confirmLabel={confirmModal.confirmLabel}
+                    />
                 </div>
             </div>
         </AcademicStaffLayout>
