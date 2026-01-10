@@ -51,6 +51,7 @@ public class SecurityConfig {
                                                                 "/auth/**", // auth (login/register)
                                                                 "/api/auth/**", // auth with /api prefix
                                                                 "/api/map/**", // map endpoints
+                                                                "/api/v1/semesters/**", // semester endpoints
                                                                 "/api-docs/**",
                                                                 "/swagger-ui/**",
                                                                 "/swagger-ui.html",
@@ -75,12 +76,19 @@ public class SecurityConfig {
 
                 // Dev server React / Vite
                 configuration.setAllowedOriginPatterns(List.of(
+                                // Local dev (Docker nginx on :80 and Vite on :5173/:5174/:3000)
+                                "http://localhost",
+                                "http://localhost:80",
                                 "http://localhost:3000",
                                 "http://localhost:5173",
                                 "http://localhost:5174",
+                                "http://127.0.0.1",
+                                "http://127.0.0.1:80",
                                 "http://127.0.0.1:3000",
                                 "http://127.0.0.1:5173",
                                 "http://127.0.0.1:5174",
+
+                                // Prod domains
                                 "https://www.fams-edu.online",
                                 "https://fams-edu.online",
                                 "https://api.fams-edu.online"));
