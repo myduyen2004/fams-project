@@ -66,6 +66,101 @@ const MajorTable = ({ majors = [] }) => {
     );
 };
 
+// --- ImportMajorModal ---
+const ImportMajorModal = ({ isOpen, onClose, onSuccess }) => {
+    const [file, setFile] = useState(null);
+    const [loading, setLoading] = useState(false);
+
+    const handleFileChange = (e) => {
+        if (e.target.files && e.target.files[0]) {
+            setFile(e.target.files[0]);
+        }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!file) {
+            toast.error('Vui lòng chọn file Excel');
+            return;
+        }
+        setLoading(true);
+        try {
+            await majorService.importMajors(file);
+            toast.success('Import danh sách ngành thành công');
+            onSuccess();
+            onClose();
+            setFile(null);
+        } catch (error) {
+            console.error('Import error:', error);
+            toast.error(error.response?.data?.message || 'Lỗi khi import danh sách ngành');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-xl bg-white shadow-xl dark:bg-zinc-900">
+                <div className="flex items-center justify-between border-b border-gray-100 p-4 dark:border-zinc-800">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Import danh sách ngành</h2>
+                    <button onClick={onClose} className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-zinc-800">
+                        <X className="h-5 w-5 text-gray-500 dark:text-zinc-400" />
+                    </button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="p-4 space-y-4">
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/10 text-blue-800 dark:text-blue-300 rounded-lg text-sm">
+                        <p className="font-semibold mb-1">Hướng dẫn:</p>
+                        <ul className="list-disc pl-4 space-y-1">
+                            <li>Tải lên file <strong>.xlsx</strong> chứa dữ liệu ngành học.</li>
+                            <li>File cần có các cột: code, name, description, programDuration, status.</li>
+                        </ul>
+                    </div>
+
+                    <div className="border-2 border-dashed border-gray-300 dark:border-zinc-700 rounded-lg p-6 flex flex-col items-center text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors relative">
+                        <input
+                            required
+                            type="file"
+                            accept=".xlsx, .xls"
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                            onChange={handleFileChange}
+                        />
+                        <Upload size={32} className="text-fpt-orange mb-2" />
+                        {file ? (
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">{file.name}</p>
+                        ) : (
+                            <>
+                                <p className="text-sm font-medium text-gray-900 dark:text-white">Chọn file để tải lên</p>
+                                <p className="text-xs text-gray-500 mt-1">Hỗ trợ .xlsx, .xls</p>
+                            </>
+                        )}
+                    </div>
+
+                    <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100 dark:border-zinc-800">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            disabled={loading}
+                            className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 disabled:opacity-50"
+                        >
+                            Hủy
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="flex items-center justify-center rounded-lg bg-fpt-orange px-5 py-2.5 text-sm font-medium text-white hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-300 disabled:opacity-50"
+                        >
+                            {loading ? 'Đang import...' : 'Import ngay'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
 const MajorCreateModal = ({ isOpen, onClose, onSuccess }) => {
     const [isLoading, setIsLoading] = useState(false);
 
@@ -451,6 +546,12 @@ export const MajorManagement = () => {
                     <MajorCreateModal
                         isOpen={isCreateModalOpen}
                         onClose={() => setIsCreateModalOpen(false)}
+                        onSuccess={fetchMajors}
+                    />
+
+                    <ImportMajorModal
+                        isOpen={isImportModalOpen}
+                        onClose={() => setIsImportModalOpen(false)}
                         onSuccess={fetchMajors}
                     />
                 </div>
