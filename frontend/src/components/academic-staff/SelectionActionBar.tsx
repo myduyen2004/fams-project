@@ -1,18 +1,21 @@
+import React from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
+
+interface SelectionActionBarProps {
+    selectedCount: number;
+    showDeactivate: boolean;
+    onUpdate?: () => void;
+    onDelete?: () => void;
+    onStatusChange: (status: 'ACTIVE' | 'INACTIVE') => void;
+    canDelete?: boolean;
+    isDeleting?: boolean;
+    itemLabel?: string;
+}
 
 /**
  * SelectionActionBar - Action bar displayed when items are selected
- * @param {Object} props
- * @param {number} props.selectedCount - Number of selected items
- * @param {boolean} props.showDeactivate - Show deactivate (red) or activate (green) bar
- * @param {Function} props.onUpdate - Called when update button clicked (only when 1 item selected)
- * @param {Function} props.onDelete - Called when delete button clicked
- * @param {Function} props.onStatusChange - Called with 'ACTIVE' or 'INACTIVE'
- * @param {boolean} props.canDelete - Whether delete button should be shown
- * @param {boolean} props.isDeleting - Whether deletion is in progress
- * @param {string} props.itemLabel - Label for items (e.g., 'ngành', 'chuyên ngành')
  */
-export const SelectionActionBar = ({
+export const SelectionActionBar: React.FC<SelectionActionBarProps> = ({
     selectedCount,
     showDeactivate,
     onUpdate,
