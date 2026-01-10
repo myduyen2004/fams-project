@@ -19,56 +19,56 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MapServiceImpl implements MapService {
 
-    private final UserSessionRepository userSessionRepository;
-    private static final int ACTIVE_THRESHOLD_MINUTES = 60;
+        private final UserSessionRepository userSessionRepository;
+        private static final int ACTIVE_THRESHOLD_MINUTES = 60;
 
-    @Override
-    @Transactional(readOnly = true)
-    public OnlineUsersResponse getOnlineUsers() {
-        LocalDateTime threshold = LocalDateTime.now().minusMinutes(ACTIVE_THRESHOLD_MINUTES);
-        List<UserSession> activeSessions = userSessionRepository.findActiveSessions(threshold);
+        @Override
+        @Transactional(readOnly = true)
+        public OnlineUsersResponse getOnlineUsers() {
+                LocalDateTime threshold = LocalDateTime.now().minusMinutes(ACTIVE_THRESHOLD_MINUTES);
+                List<UserSession> activeSessions = userSessionRepository.findActiveSessions(threshold);
 
-        Map<String, List<UserSession>> sessionsByProvince = activeSessions.stream()
-                .filter(session -> session.getProvince() != null)
-                .collect(Collectors.groupingBy(UserSession::getProvince));
+                Map<String, List<UserSession>> sessionsByProvince = activeSessions.stream()
+                                .filter(session -> session.getProvince() != null)
+                                .collect(Collectors.groupingBy(UserSession::getProvince));
 
-        List<ProvinceOnlineData> provinceDataList = new ArrayList<>();
+                List<ProvinceOnlineData> provinceDataList = new ArrayList<>();
 
-        for (Map.Entry<String, List<UserSession>> entry : sessionsByProvince.entrySet()) {
-            String province = entry.getKey();
-            List<UserSession> sessions = entry.getValue();
+                for (Map.Entry<String, List<UserSession>> entry : sessionsByProvince.entrySet()) {
+                        String province = entry.getKey();
+                        List<UserSession> sessions = entry.getValue();
 
-            List<String> usernames = sessions.stream()
-                    .map(session -> session.getUser().getFullName())
-                    .distinct()
-                    .collect(Collectors.toList());
+                        List<String> usernames = sessions.stream()
+                                        .map(session -> session.getUser().getFullName())
+                                        .distinct()
+                                        .collect(Collectors.toList());
 
-            Double avgLat = sessions.stream()
-                    .filter(s -> s.getLatitude() != null)
-                    .mapToDouble(s -> s.getLatitude().doubleValue())
-                    .average()
-                    .orElse(0.0);
+                        Double avgLat = sessions.stream()
+                                        .filter(s -> s.getLatitude() != null)
+                                        .mapToDouble(s -> s.getLatitude().doubleValue())
+                                        .average()
+                                        .orElse(0.0);
 
-            Double avgLon = sessions.stream()
-                    .filter(s -> s.getLongitude() != null)
-                    .mapToDouble(s -> s.getLongitude().doubleValue())
-                    .average()
-                    .orElse(0.0);
+                        Double avgLon = sessions.stream()
+                                        .filter(s -> s.getLongitude() != null)
+                                        .mapToDouble(s -> s.getLongitude().doubleValue())
+                                        .average()
+                                        .orElse(0.0);
 
-            ProvinceOnlineData data = ProvinceOnlineData.builder()
-                    .provinceName(province)
-                    .onlineCount(sessions.size())
-                    .latitude(avgLat)
-                    .longitude(avgLon)
-                    .usernames(usernames)
-                    .build();
+                        ProvinceOnlineData data = ProvinceOnlineData.builder()
+                                        .provinceName(province)
+                                        .onlineCount(sessions.size())
+                                        .latitude(avgLat)
+                                        .longitude(avgLon)
+                                        .usernames(usernames)
+                                        .build();
 
-            provinceDataList.add(data);
+                        provinceDataList.add(data);
+                }
+
+                return OnlineUsersResponse.builder()
+                                .totalOnline(activeSessions.size())
+                                .provinces(provinceDataList)
+                                .build();
         }
-
-        return OnlineUsersResponse.builder()
-                .totalOnline(activeSessions.size())
-                .provinces(provinceDataList)
-                .build();
-    }
 }

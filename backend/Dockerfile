@@ -23,7 +23,7 @@ COPY src ./src
 # Build application (skip tests để build nhanh hơn)
 # GIẢI THÍCH: 
 # - clean: Xóa thư mục target cũ
-# - package: Build và tạo file .jar
+# - package: Build và tạo file .jar (dependencies sẽ tự động download)
 # - -DskipTests: Bỏ qua tests khi build
 RUN mvn clean package -DskipTests
 
