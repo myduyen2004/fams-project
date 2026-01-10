@@ -20,7 +20,7 @@ const ProfilePage = lazy(() => import('./pages/admin/ProfilePage').then(m => ({ 
 const AcademicStaffDashboard = lazy(() => import('./pages/academic-staff/AcademicStaffDashboard').then(m => ({ default: m.AcademicStaffDashboard })));
 const AcademicStaffProfilePage = lazy(() => import('./pages/academic-staff/ProfilePage').then(m => ({ default: m.ProfilePage })));
 const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
-
+const ManagerLecturersPage = lazy(() => import('./pages/academic-staff/ManagerLecturersPage').then(m => ({ default: m.ManagerLecturersPage })));
 const PageLoader = () => (
   <div className="flex h-screen w-full items-center justify-center bg-gray-50 dark:bg-zinc-950">
     <div className="flex flex-col items-center gap-2">
@@ -36,9 +36,9 @@ function App() {
     const handleError = (e: ErrorEvent | PromiseRejectionEvent) => {
       const errorMsg = 'message' in e ? e.message : (e as any).reason?.message;
       if (typeof errorMsg === 'string' && (
-          errorMsg.includes('Failed to fetch dynamically imported module') || 
-          errorMsg.includes('ChunkLoadError') ||
-          errorMsg.includes('MIME type')
+        errorMsg.includes('Failed to fetch dynamically imported module') ||
+        errorMsg.includes('ChunkLoadError') ||
+        errorMsg.includes('MIME type')
       )) {
         console.warn('Asset loading failed, reloading for newest version...', errorMsg);
         const lastReload = sessionStorage.getItem('last-reload');
@@ -63,66 +63,66 @@ function App() {
       <Toaster position="top-right" />
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route 
-            path="/login" 
+          <Route
+            path="/login"
             element={
               <PublicRoute>
                 <Login />
               </PublicRoute>
-            } 
+            }
           />
           <Route path="/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
           <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
           <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
-          
+
           {/* Admin Routes */}
-          <Route 
-            path="/admin/dashboard" 
+          <Route
+            path="/admin/dashboard"
             element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
                 <Dashboard />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/admin/recent-access" 
+          <Route
+            path="/admin/recent-access"
             element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
                 <RecentAccessPage />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/admin/alerts" 
+          <Route
+            path="/admin/alerts"
             element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
                 <AlertsPage />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/admin/notifications" 
+          <Route
+            path="/admin/notifications"
             element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
                 <NotificationsPage />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/admin/system-logs" 
+          <Route
+            path="/admin/system-logs"
             element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
                 <SystemLogsPage />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/admin/users" 
+          <Route
+            path="/admin/users"
             element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
                 <UsersPage />
               </ProtectedRoute>
-            } 
+            }
           />
           <Route
             path="/admin/activated-users"
@@ -163,6 +163,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
                 <AcademicStaffProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/academic-staff/lecturers"
+            element={
+              <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
+                <ManagerLecturersPage />
               </ProtectedRoute>
             }
           />
