@@ -50,6 +50,9 @@ public class SubSpecialization {
     // Thuộc về chuyên ngành nào
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "specialization_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Specialization specialization;
 
     // Các môn học của combo này (One-to-Many với junction table)
