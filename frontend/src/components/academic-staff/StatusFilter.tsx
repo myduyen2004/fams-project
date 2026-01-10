@@ -1,15 +1,18 @@
+import React from 'react';
 import { ChevronDown, Check } from 'lucide-react';
+
+interface StatusFilterProps {
+    value: 'ACTIVE' | 'INACTIVE';
+    onChange: (status: 'ACTIVE' | 'INACTIVE') => void;
+    isOpen: boolean;
+    onToggle: () => void;
+}
 
 /**
  * StatusFilter - Dropdown filter for ACTIVE/INACTIVE status
- * @param {Object} props
- * @param {'ACTIVE' | 'INACTIVE'} props.value - Current filter value
- * @param {Function} props.onChange - Callback when value changes
- * @param {boolean} props.isOpen - Whether dropdown is open
- * @param {Function} props.onToggle - Toggle dropdown open/close
  */
-export const StatusFilter = ({ value, onChange, isOpen, onToggle }) => {
-    const getLabel = (status) => {
+export const StatusFilter: React.FC<StatusFilterProps> = ({ value, onChange, isOpen, onToggle }) => {
+    const getLabel = (status: 'ACTIVE' | 'INACTIVE') => {
         return status === 'ACTIVE' ? 'Đang mở' : 'Ngừng đào tạo';
     };
 

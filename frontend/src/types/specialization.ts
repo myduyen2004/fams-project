@@ -6,6 +6,7 @@ export interface Specialization {
     status: 'ACTIVE' | 'INACTIVE';
     majorId: number;
     totalCredits?: number;
+    canDelete?: boolean;
 }
 
 export interface SpecializationSearchParams {
