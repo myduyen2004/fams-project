@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Info, X, AlertCircle } from 'lucide-react';
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -9,7 +9,7 @@ interface ConfirmModalProps {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  type?: 'danger' | 'warning' | 'info';
+  type?: 'danger' | 'warning' | 'info' | 'success';
 }
 
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({
@@ -24,10 +24,50 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
+  const getIcon = () => {
+    switch (type) {
+      case 'danger':
+        return <AlertCircle size={24} />;
+      case 'warning':
+        return <AlertTriangle size={24} />;
+      case 'success':
+        return <CheckCircle size={24} />;
+      default:
+        return <Info size={24} />;
+    }
+  };
+
+  const getStyles = () => {
+    switch (type) {
+      case 'danger':
+        return {
+          iconBg: 'bg-red-50 text-red-600 dark:bg-red-900/20',
+          buttonBg: 'bg-red-600 hover:bg-red-700 shadow-red-500/20'
+        };
+      case 'warning':
+        return {
+          iconBg: 'bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20',
+          buttonBg: 'bg-yellow-600 hover:bg-yellow-700 shadow-yellow-500/20'
+        };
+      case 'success':
+        return {
+          iconBg: 'bg-green-50 text-green-600 dark:bg-green-900/20',
+          buttonBg: 'bg-green-600 hover:bg-green-700 shadow-green-500/20'
+        };
+      default:
+        return {
+          iconBg: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20',
+          buttonBg: 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20'
+        };
+    }
+  };
+
+  const styles = getStyles();
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
       {/* Backdrop with blur */}
-      <div 
+      <div
         className="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm transition-opacity duration-300"
         onClick={onClose}
       />
@@ -37,16 +77,14 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800">
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${
-              type === 'danger' ? 'bg-red-50 text-red-600 dark:bg-red-900/20' : 'bg-orange-50 text-fpt-orange dark:bg-orange-900/20'
-            }`}>
-              <LogOut size={24} />
+            <div className={`p-2 rounded-lg ${styles.iconBg}`}>
+              {getIcon()}
             </div>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white">
               {title}
             </h3>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
           >
@@ -71,9 +109,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           </button>
           <button
             onClick={onConfirm}
-            className={`flex-1 px-4 py-2.5 rounded-xl text-white font-semibold shadow-lg shadow-orange-500/20 active:scale-95 transition-all duration-200 ${
-              type === 'danger' ? 'bg-red-600 hover:bg-red-700 shadow-red-500/20' : 'bg-fpt-orange hover:bg-orange-600'
-            }`}
+            className={`flex-1 px-4 py-2.5 rounded-xl text-white font-semibold shadow-lg active:scale-95 transition-all duration-200 ${styles.buttonBg}`}
           >
             {confirmLabel}
           </button>
