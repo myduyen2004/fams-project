@@ -20,6 +20,7 @@ const ProfilePage = lazy(() => import('./pages/admin/ProfilePage').then(m => ({ 
 const AcademicStaffDashboard = lazy(() => import('./pages/academic-staff/AcademicStaffDashboard').then(m => ({ default: m.AcademicStaffDashboard })));
 const AcademicStaffProfilePage = lazy(() => import('./pages/academic-staff/ProfilePage').then(m => ({ default: m.ProfilePage })));
 const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
+const SemestersPage = lazy(() => import('./pages/academic-staff/SemestersPage').then(m => ({ default: m.SemestersPage })));
 
 const PageLoader = () => (
   <div className="flex h-screen w-full items-center justify-center bg-gray-50 dark:bg-zinc-950">
@@ -166,6 +167,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+            <Route
+              path="/academic-staff/semesters"
+              element={
+                <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
+                  <SemestersPage />
+                </ProtectedRoute>
+              }
+            />
         </Routes>
       </Suspense>
     </BrowserRouter>
