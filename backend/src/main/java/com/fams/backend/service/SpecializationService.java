@@ -42,14 +42,14 @@ public class SpecializationService {
     public SpecializationResponse createSpecialization(
             SpecializationRequest request) {
         if (specializationRepository.findByCode(request.getCode()).isPresent()) {
-            throw new RuntimeException("Mã chuyên ngành đã tồn tại: " + request.getCode());
+            throw new IllegalArgumentException("Mã chuyên ngành đã tồn tại: " + request.getCode());
         }
         if (specializationRepository.existsByName(request.getName())) {
-            throw new RuntimeException("Tên chuyên ngành đã tồn tại: " + request.getName());
+            throw new IllegalArgumentException("Tên chuyên ngành đã tồn tại: " + request.getName());
         }
 
         com.fams.backend.entity.Major major = majorRepository.findById(request.getMajorId())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy ngành"));
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ngành"));
 
         Specialization specialization = Specialization.builder()
                 .code(request.getCode())
@@ -91,7 +91,7 @@ public class SpecializationService {
         specializationRepository.findByCode(request.getCode())
                 .ifPresent(existing -> {
                     if (excludeId == null || !existing.getId().equals(excludeId)) {
-                        throw new RuntimeException("Mã chuyên ngành đã tồn tại: " + request.getCode());
+                        throw new IllegalArgumentException("Mã chuyên ngành đã tồn tại: " + request.getCode());
                     }
                 });
 
@@ -105,7 +105,7 @@ public class SpecializationService {
         // skipping name check for update to avoid complexity or implementing findByName
         // and comparing IDs.
         if (excludeId == null && specializationRepository.existsByName(request.getName())) {
-            throw new RuntimeException("Tên chuyên ngành đã tồn tại: " + request.getName());
+            throw new IllegalArgumentException("Tên chuyên ngành đã tồn tại: " + request.getName());
         }
     }
 
