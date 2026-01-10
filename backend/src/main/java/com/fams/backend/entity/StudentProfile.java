@@ -26,8 +26,6 @@ public class StudentProfile {
     @Column(length = 20)
     private String course;
 
-    private Double avgMark;
-
     private Double gpa;
 
     // Ngành học của sinh viên

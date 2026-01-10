@@ -81,10 +81,17 @@ export const userService = {
     },
 
     importUsers: async (formData: FormData) => {
-        await apiClient.post('/users/import', formData, {
+        const response = await apiClient.post<{ type: 'sync' | 'async', jobId?: string, message: string }>('/users/import', formData, {
             headers: {
                 'Content-Type': 'multipart/form-data'
-            }
+            },
+            timeout: 600000 // 10 minutes for large imports with many images
         });
+        return response;
+    },
+
+    getImportJobStatus: async (jobId: string) => {
+        const response = await apiClient.get(`/users/import-job/${jobId}`);
+        return response.data;
     }
 };

@@ -33,6 +33,18 @@ const PageLoader = () => (
   </div>
 );
 
+const ComingSoon = ({ title }: { title: string }) => (
+  <div className="flex flex-col items-center justify-center p-20 min-h-[400px]">
+    <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/20 rounded-full flex items-center justify-center mb-4">
+      <Loader2 className="w-8 h-8 text-fpt-orange animate-spin" />
+    </div>
+    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{title}</h2>
+    <p className="text-gray-500 dark:text-zinc-400 text-center max-w-md">
+      Tính năng này đang được phát triển. Vui lòng quay lại sau!
+    </p>
+  </div>
+);
+
 function App() {
   // Global listener for ChunkLoadError (caused by new deployments)
   useEffect(() => {
@@ -193,6 +205,22 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Academic Staff Coming Soon Routes */}
+          <Route path="/academic-staff/schedule" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Thời khóa biểu" /></ProtectedRoute>} />
+          <Route path="/academic-staff/majors" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Quản lý chuyên ngành" /></ProtectedRoute>} />
+          <Route path="/academic-staff/classes" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Quản lý lớp học" /></ProtectedRoute>} />
+          <Route path="/academic-staff/accounts" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Quản lý tài khoản" /></ProtectedRoute>} />
+          <Route path="/academic-staff/lecturers" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Quản lý giảng viên" /></ProtectedRoute>} />
+          <Route path="/academic-staff/students" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Quản lý sinh viên" /></ProtectedRoute>} />
+          <Route path="/academic-staff/academic-results" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Kết quả học tập" /></ProtectedRoute>} />
+          <Route path="/academic-staff/requests" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Đơn yêu cầu" /></ProtectedRoute>} />
+          <Route path="/academic-staff/announcements" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Cài đặt thông báo" /></ProtectedRoute>} />
+          <Route path="/academic-staff/attendance" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Cài đặt điểm danh" /></ProtectedRoute>} />
+          <Route path="/academic-staff/rooms" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Quản lý phòng học" /></ProtectedRoute>} />
+          <Route path="/academic-staff/semesters" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Quản lý học kỳ" /></ProtectedRoute>} />
+          <Route path="/academic-staff/alerts" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Cảnh báo hệ thống" /></ProtectedRoute>} />
+          <Route path="/academic-staff/logs" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Nhật ký hệ thống" /></ProtectedRoute>} />
         </Routes>
       </Suspense>
     </BrowserRouter>

@@ -4,11 +4,20 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  // Brand Colors from Design
-  static const Color primaryOrange = Color(0xFFFF8C42);
-  static const Color brandBlue = Color(0xFF2E5AAC);
-  static const Color brandGreen = Color(0xFF5FB759);
-  static const Color brandOrange2 = Color(0xFFFF7F3E);
+  // Brand Colors from User Provided Palette
+  static const Color orange50 = Color(0xFFFEF6EE);
+  static const Color orange100 = Color(0xFFFEECD6);
+  static const Color orange200 = Color(0xFFFBD4AD);
+  static const Color orange300 = Color(0xFFF8B679);
+  static const Color orange400 = Color(0xFFF48D43);
+  static const Color orange500 = Color(0xFFF2782F);
+  static const Color orange600 = Color(0xFFE25314);
+
+  static const Color primaryOrange = orange400;
+  static const Color orangeGradientStart = orange400;
+  static const Color orangeGradientEnd = orange200;
+  static const Color orangeLight = orange50;
+  static const Color glassWhite = Color(0x66FFFFFF); 
 
   // Background Colors
   static const Color backgroundColor = Color(0xFFF5F5F5);

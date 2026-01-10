@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../constants/api_constants.dart';
 
@@ -42,6 +43,15 @@ class ApiService {
         return handler.next(error);
       },
     ));
+
+    // Add LogInterceptor in Debug Mode
+    if (kDebugMode) {
+      _dio.interceptors.add(LogInterceptor(
+        requestBody: true,
+        responseBody: true,
+        logPrint: (obj) => debugPrint(obj.toString()),
+      ));
+    }
   }
 
   /// GET Request
