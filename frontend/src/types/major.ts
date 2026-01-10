@@ -5,6 +5,8 @@ export interface Major {
     description: string;
     programDuration: string;
     status: 'ACTIVE' | 'INACTIVE';
+    numberOfSpecializations?: number;
+    canDelete?: boolean;
 }
 
 export interface MajorCreateRequest {

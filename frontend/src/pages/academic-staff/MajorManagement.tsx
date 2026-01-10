@@ -1,73 +1,32 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Upload, Search, Eye, X, Trash2, Pencil } from 'lucide-react';
+import { Plus, Upload, Search, X } from 'lucide-react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import toast from 'react-hot-toast';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { majorService } from '../../services/api/majorService';
-import { StatusBadge, StatusFilter, Pagination, SelectionActionBar } from '../../components/academic-staff';
+import { StatusFilter, Pagination, SelectionActionBar } from '../../components/academic-staff';
+import { Major } from '../../types/major';
 
+// --- Types ---
 
-const MajorTable = ({ majors = [] }) => {
-    const getStatusBadge = (status) => {
-        switch (status) {
-            case 'ACTIVE':
-                return <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">Đang mở</span>;
-            case 'INACTIVE':
-                return <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900/30 dark:text-red-400">Ngừng đào tạo</span>;
-            default:
-                return <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">Đang mở</span>;
-        }
-    };
+interface MajorCreateModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSuccess: () => void;
+}
 
-    return (
-        <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-gray-500 dark:text-zinc-400">
-                <thead className="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-zinc-800 dark:text-zinc-300">
-                    <tr>
-                        <th className="px-6 py-3">
-                            <input type="checkbox" className="rounded border-gray-300 text-fpt-orange focus:ring-fpt-orange dark:border-zinc-600 dark:bg-zinc-700" />
-                        </th>
-                        <th className="px-6 py-3">Mã ngành</th>
-                        <th className="px-6 py-3">Tên ngành</th>
-                        <th className="px-6 py-3">Thời gian đào tạo</th>
-                        <th className="px-6 py-3">Trạng thái</th>
-                        <th className="px-6 py-3">Hành động</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {majors.map((major) => (
-                        <tr key={major.id} className="border-b bg-white hover:bg-gray-50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800/50">
-                            <td className="px-6 py-4">
-                                <input type="checkbox" className="rounded border-gray-300 text-fpt-orange focus:ring-fpt-orange dark:border-zinc-600 dark:bg-zinc-700" />
-                            </td>
-                            <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{major.code}</td>
-                            <td className="px-6 py-4">{major.name}</td>
-                            <td className="px-6 py-4">{major.programDuration}</td>
-                            <td className="px-6 py-4">{getStatusBadge(major.status)}</td>
-                            <td className="px-6 py-4">
-                                <div className="flex items-center gap-3">
-                                    <button className="text-gray-500 hover:text-fpt-orange dark:text-zinc-400 dark:hover:text-fpt-orange">
-                                        <Eye className="h-4 w-4" />
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+interface MajorUpdateModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSuccess: () => void;
+    major: Major;
+}
 
-            {majors.length === 0 && (
-                <div className="py-10 text-center text-gray-500 dark:text-zinc-400">
-                    Chưa có dữ liệu
-                </div>
-            )}
-        </div>
-    );
-};
+// --- Components ---
 
-const MajorCreateModal = ({ isOpen, onClose, onSuccess }) => {
+const MajorCreateModal: React.FC<MajorCreateModalProps> = ({ isOpen, onClose, onSuccess }) => {
     const [isLoading, setIsLoading] = useState(false);
 
     const validationSchema = Yup.object({
@@ -102,7 +61,7 @@ const MajorCreateModal = ({ isOpen, onClose, onSuccess }) => {
                 onSuccess();
                 onClose();
                 formik.resetForm();
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Create major error:', error);
                 toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi tạo ngành');
             } finally {
@@ -175,7 +134,7 @@ const MajorCreateModal = ({ isOpen, onClose, onSuccess }) => {
                     <div>
                         <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">Mô tả</label>
                         <textarea
-                            rows="3"
+                            rows={3}
                             name="description"
                             className="w-full rounded-lg border border-gray-300 p-2.5 text-sm focus:border-fpt-orange focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                             value={formik.values.description}
@@ -207,7 +166,7 @@ const MajorCreateModal = ({ isOpen, onClose, onSuccess }) => {
     );
 };
 
-const MajorUpdateModal = ({ isOpen, onClose, onSuccess, major }) => {
+const MajorUpdateModal: React.FC<MajorUpdateModalProps> = ({ isOpen, onClose, onSuccess, major }) => {
     const [isLoading, setIsLoading] = useState(false);
 
     const validationSchema = Yup.object({
@@ -242,7 +201,7 @@ const MajorUpdateModal = ({ isOpen, onClose, onSuccess, major }) => {
                 toast.success('Cập nhật ngành thành công');
                 onSuccess();
                 onClose();
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Update major error:', error);
                 toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật ngành');
             } finally {
@@ -315,7 +274,7 @@ const MajorUpdateModal = ({ isOpen, onClose, onSuccess, major }) => {
                     <div>
                         <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">Mô tả</label>
                         <textarea
-                            rows="3"
+                            rows={3}
                             name="description"
                             className="w-full rounded-lg border border-gray-300 p-2.5 text-sm focus:border-fpt-orange focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                             value={formik.values.description}
@@ -338,7 +297,7 @@ const MajorUpdateModal = ({ isOpen, onClose, onSuccess, major }) => {
                             disabled={isLoading}
                             className="flex items-center justify-center rounded-lg bg-fpt-orange px-5 py-2.5 text-sm font-medium text-white hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-300 disabled:opacity-50"
                         >
-                            {isLoading ? 'Đang xử lý...' : 'Cập nhật'}
+                            {isLoading ? 'Cập nhật' : 'Cập nhật'}
                         </button>
                     </div>
                 </form>
@@ -349,20 +308,20 @@ const MajorUpdateModal = ({ isOpen, onClose, onSuccess, major }) => {
 
 // --- Main Page Component ---
 
-export const MajorManagement = () => {
+export const MajorManagement: React.FC = () => {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('ACTIVE');
+    const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
     const [page, setPage] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
-    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-    const [data, setData] = useState([]);
+
+    const [data, setData] = useState<Major[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedIds, setSelectedIds] = useState([]);
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
     // Debounce search term
     useEffect(() => {
@@ -397,11 +356,11 @@ export const MajorManagement = () => {
         fetchMajors();
     }, [fetchMajors]);
 
-    const handleSearch = (e) => {
+    const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(e.target.value);
     };
 
-    const handleSelectAll = (e) => {
+    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.checked) {
             setSelectedIds(data.map(m => m.id));
         } else {
@@ -409,7 +368,7 @@ export const MajorManagement = () => {
         }
     };
 
-    const handleSelectOne = (id) => {
+    const handleSelectOne = (id: number) => {
         if (selectedIds.includes(id)) {
             setSelectedIds(selectedIds.filter(itemId => itemId !== id));
         } else {
@@ -417,7 +376,7 @@ export const MajorManagement = () => {
         }
     };
 
-    const handleBulkStatusChange = async (newStatus) => {
+    const handleBulkStatusChange = async (newStatus: 'ACTIVE' | 'INACTIVE') => {
         if (selectedIds.length === 0) return;
 
         const confirmMsg = newStatus === 'ACTIVE'
@@ -446,14 +405,11 @@ export const MajorManagement = () => {
             toast.success('Xóa ngành thành công');
             setSelectedIds([]);
             fetchMajors();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Bulk delete error:', error);
             toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi xóa ngành');
         }
     };
-
-    const activeMajorIds = selectedIds.filter(id => data.find(m => m.id === id)?.status === 'ACTIVE');
-    const inactiveMajorIds = selectedIds.filter(id => data.find(m => m.id === id)?.status === 'INACTIVE');
 
     // Determine which action to show: if any active selected, assume user wants to deactivate them.
     // However, if we want to support Update, we should check if exactly 1 active item is selected.
@@ -467,8 +423,8 @@ export const MajorManagement = () => {
                     <div></div> {/* Spacer */}
                     <div className="flex gap-3">
                         <button
-                            onClick={() => setIsImportModalOpen(true)}
-                            className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                            onClick={() => toast.success('Tính năng đang phát triển')}
+                            className="flex items-center gap-2 rounded-lg border border-fpt-orange bg-orange-50 px-4 py-2 text-sm font-medium text-fpt-orange hover:bg-orange-100"
                         >
                             <Upload className="h-4 w-4" />
                             Import danh sách ngành
@@ -538,7 +494,7 @@ export const MajorManagement = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
-                                {loading ? (
+                                {loading && data.length === 0 ? (
                                     <tr>
                                         <td colSpan={6} className="py-10 text-center text-gray-400">
                                             <div className="flex justify-center mb-2">
@@ -561,7 +517,7 @@ export const MajorManagement = () => {
                                         <tr
                                             key={major.id}
                                             onClick={() => navigate(`/academic-staff/majors/${major.id}`)}
-                                            className={`border-b transition-colors cursor-pointer ${selectedIds.includes(major.id) ? 'bg-orange-50 dark:bg-orange-900/20' : 'bg-white hover:bg-gray-50 dark:bg-zinc-900 dark:hover:bg-zinc-800/50'} dark:border-zinc-800`}
+                                            className={`border-b transition-colors cursor-pointer ${selectedIds.includes(major.id) ? 'bg-orange-50 dark:bg-orange-900/20' : 'bg-white hover:bg-gray-50 dark:bg-zinc-900 dark:hover:bg-zinc-800/50'} dark:border-zinc-800 ${loading ? 'opacity-50' : ''}`}
                                         >
                                             <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                                                 <input
@@ -617,7 +573,7 @@ export const MajorManagement = () => {
                             isOpen={isUpdateModalOpen}
                             onClose={() => setIsUpdateModalOpen(false)}
                             onSuccess={fetchMajors}
-                            major={data.find(m => m.id === selectedIds[0])}
+                            major={data.find(m => m.id === selectedIds[0])!}
                         />
                     )}
                 </div>
@@ -625,3 +581,5 @@ export const MajorManagement = () => {
         </AcademicStaffLayout>
     );
 };
+
+export default MajorManagement;

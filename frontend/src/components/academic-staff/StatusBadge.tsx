@@ -1,10 +1,14 @@
+import React from 'react';
+
+interface StatusBadgeProps {
+    status: 'ACTIVE' | 'INACTIVE' | string;
+    variant?: 'default' | 'compact' | 'table';
+}
+
 /**
  * StatusBadge - Displays ACTIVE/INACTIVE status with appropriate styling
- * @param {Object} props
- * @param {'ACTIVE' | 'INACTIVE'} props.status - The status to display
- * @param {'default' | 'compact' | 'table'} props.variant - Size variant
  */
-export const StatusBadge = ({ status, variant = 'default' }) => {
+export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, variant = 'default' }) => {
     const baseClasses = 'inline-flex items-center rounded-full font-medium';
 
     const sizeClasses = {
