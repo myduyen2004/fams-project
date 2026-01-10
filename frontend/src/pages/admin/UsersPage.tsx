@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
+import { Pagination } from '../../components/common/Pagination';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { userService, UserResponse } from '../../services/api/userService';
 import toast from 'react-hot-toast';
@@ -36,7 +37,7 @@ export const UsersPage = () => {
         role: roleFilter === 'all' ? undefined : roleFilter,
         search,
         page,
-        size: 10,
+        size: 30,
         sort: 'id,asc'
       });
       setUsers(data.content);
@@ -217,27 +218,13 @@ export const UsersPage = () => {
           </table>
         </div>
 
-        {/* Pagination */}
-        <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-100 dark:border-zinc-800 text-sm text-gray-500">
-          <div>
-            Hiển thị <span className="font-medium text-gray-900 dark:text-white">{page * 10 + 1}</span> đến <span className="font-medium text-gray-900 dark:text-white">{Math.min((page + 1) * 10, totalElements)}</span> trong số <span className="font-medium text-gray-900 dark:text-white">{totalElements}</span> người dùng
-          </div>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50 text-gray-500">Trước</button>
-            {Array.from({ length: Math.ceil(totalElements / 10) }, (_, i) => (
-              <button 
-                key={i}
-                onClick={() => setPage(i)}
-                className={`w-8 h-8 flex items-center justify-center rounded-lg font-medium transition-colors ${
-                  page === i ? 'bg-fpt-orange text-white' : 'hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-600 dark:text-zinc-400'
-                }`}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <button onClick={() => setPage(p => p + 1)} disabled={(page + 1) * 10 >= totalElements} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50 text-gray-500">Sau</button>
-          </div>
-        </div>
+        <Pagination 
+          currentPage={page}
+          totalPages={Math.ceil(totalElements / 30)}
+          totalElements={totalElements}
+          pageSize={30}
+          onPageChange={setPage}
+        />
       </div>
 
       {/* Modals */}

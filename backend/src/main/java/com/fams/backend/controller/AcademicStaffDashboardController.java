@@ -3,6 +3,7 @@ package com.fams.backend.controller;
 import com.fams.backend.dto.response.AcademicStaffDashboardResponse;
 import com.fams.backend.service.AcademicStaffDashboardService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/academic-staff")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
+@Slf4j
 public class AcademicStaffDashboardController {
 
     private final AcademicStaffDashboardService dashboardService;
@@ -21,6 +23,7 @@ public class AcademicStaffDashboardController {
     @GetMapping("/dashboard")
     @PreAuthorize("hasRole('ACADEMIC_STAFF')")
     public ResponseEntity<AcademicStaffDashboardResponse> getDashboardData() {
+        log.info("GET /api/academic-staff/dashboard");
         return ResponseEntity.ok(dashboardService.getDashboardData());
     }
 }

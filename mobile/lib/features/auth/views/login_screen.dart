@@ -1,11 +1,12 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_routes.dart';
 import '../../../core/utils/validators.dart';
+import '../../../shared/widgets/wavy_background.dart';
 import '../controllers/auth_controller.dart';
 
-/// Login Screen
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -35,232 +36,149 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (success) {
-        Get.offAllNamed(AppRoutes.home);
+        final user = _authController.currentUser.value;
+        if (user?.isPasswordChanged == false) {
+          Get.offAllNamed(AppRoutes.changePasswordRequired);
+        } else {
+          Get.offAllNamed(AppRoutes.home);
+        }
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 40),
-
-                // FAMS Logo
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _buildLogoLetter('F', AppColors.brandBlue),
-                    const SizedBox(width: 6),
-                    _buildLogoLetter('A', AppColors.primaryOrange),
-                    const SizedBox(width: 6),
-                    _buildLogoLetter('M', AppColors.brandGreen),
-                    const SizedBox(width: 6),
-                    _buildLogoLetter('S', AppColors.brandBlue),
-                  ],
-                ),
-
-                const SizedBox(height: 40),
-
-                // Title
-                const Text(
-                  'Đăng nhập',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-
-                const SizedBox(height: 32),
-
-                // Username field
-                const Text(
-                  'Tên đăng nhập',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _usernameController,
-                  validator: Validators.username,
-                  decoration: InputDecoration(
-                    hintText: 'Tên tài khoản',
-                    hintStyle: const TextStyle(color: AppColors.textHint),
-                    filled: true,
-                    fillColor: const Color(0xFFF5F5F5),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
-                    ),
-                    suffixIcon: const Icon(
-                      Icons.visibility_outlined,
-                      color: AppColors.textHint,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Password field
-                const Text(
-                  'Mật khẩu',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _passwordController,
-                  validator: Validators.password,
-                  obscureText: _obscurePassword,
-                  decoration: InputDecoration(
-                    hintText: 'Mật khẩu',
-                    hintStyle: const TextStyle(color: AppColors.textHint),
-                    filled: true,
-                    fillColor: const Color(0xFFF5F5F5),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
-                    ),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                        color: AppColors.textHint,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-
-                // Login Button
-                Obx(() => SizedBox(
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: _authController.isLoading.value
-                            ? null
-                            : _handleLogin,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryOrange,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(26),
-                          ),
-                          elevation: 0,
+    return GestureDetector(
+      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+      child: Scaffold(
+        resizeToAvoidBottomInset: true, // Allow resize for keyboard
+        body: WavyBackground(
+          child: SizedBox( // SizedBox to ensure full height
+            width: double.infinity,
+            height: double.infinity,
+            child: Center( // Center content when keyboard is closed
+              child: SingleChildScrollView( // Scrollable when keyboard opens
+                physics: const ClampingScrollPhysics(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Logo Section
+                      Hero(
+                        tag: 'logo',
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          width: 180,
+                          errorBuilder: (context, error, stackTrace) => const Icon(Icons.favorite, color: Colors.white, size: 100),
                         ),
-                        child: _authController.isLoading.value
-                            ? const SizedBox(
-                                height: 24,
-                                width: 24,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Text(
-                                'Đăng nhập',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                      ),
+                      const SizedBox(height: 48),
+
+                      // Glass Login Card
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(40),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                          child: Container(
+                            padding: const EdgeInsets.all(32),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.25),
+                              borderRadius: BorderRadius.circular(40),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.3),
+                                width: 1.5,
                               ),
-                      ),
-                    )),
+                            ),
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    'Đăng nhập',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primaryOrange,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 32),
 
-                const SizedBox(height: 24),
+                                  // Email Field (Stadium shape)
+                                  TextFormField(
+                                    controller: _usernameController,
+                                    validator: Validators.username,
+                                    decoration: _buildStadiumDecoration(
+                                      hintText: 'Tên đăng nhập',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
 
-                // Forgot password link
-                Center(
-                  child: TextButton(
-                    onPressed: () {
-                      Get.toNamed(AppRoutes.forgotPassword);
-                    },
-                    child: const Text(
-                      'Hoặc đăng nhập với email',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ),
+                                  // Password Field (Stadium shape)
+                                  TextFormField(
+                                    controller: _passwordController,
+                                    validator: Validators.password,
+                                    obscureText: _obscurePassword,
+                                    decoration: _buildStadiumDecoration(
+                                      hintText: 'Mật khẩu',
+                                      suffixIcon: IconButton(
+                                        icon: Icon(
+                                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                                          color: Colors.grey,
+                                        ),
+                                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 32),
 
-                const SizedBox(height: 24),
+                                  // Continue Button
+                                  Obx(() => ElevatedButton(
+                                    onPressed: _authController.isLoading.value ? null : _handleLogin,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primaryOrange,
+                                      foregroundColor: Colors.white,
+                                      elevation: 4,
+                                      shadowColor: AppColors.primaryOrange.withOpacity(0.4),
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      shape: const StadiumBorder(),
+                                    ),
+                                    child: _authController.isLoading.value
+                                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                        : const Text('Tiếp tục', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                  )),
 
-                // Google Sign-in button (UI only)
-                Container(
-                  height: 52,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.borderColor),
-                    borderRadius: BorderRadius.circular(26),
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () {
-                        Get.snackbar(
-                          'Thông báo',
-                          'Tính năng đăng nhập Google đang phát triển',
-                          backgroundColor: AppColors.info,
-                          colorText: Colors.white,
-                        );
-                      },
-                      borderRadius: BorderRadius.circular(26),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Image.network(
-                            'https://www.google.com/favicon.ico',
-                            width: 24,
-                            height: 24,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Icon(Icons.g_mobiledata, size: 32);
-                            },
-                          ),
-                          const SizedBox(width: 12),
-                          const Text(
-                            'Đăng nhập với Google',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: AppColors.textPrimary,
+                                  const SizedBox(height: 16),
+
+                                  // Forgot Password
+                                  Center(
+                                    child: TextButton(
+                                      onPressed: () => Get.toNamed(AppRoutes.forgotPassword),
+                                      child: const Text(
+                                        'Quên mật khẩu?',
+                                        style: TextStyle(
+                                          color: Colors.grey,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                          decoration: TextDecoration.underline,
+                                          decorationColor: Colors.grey,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
-
-                const SizedBox(height: 40),
-              ],
+              ),
             ),
           ),
         ),
@@ -268,26 +186,25 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildLogoLetter(String letter, Color color) {
-    return Transform.rotate(
-      angle: -0.05,
-      child: Container(
-        width: 45,
-        height: 60,
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Center(
-          child: Text(
-            letter,
-            style: const TextStyle(
-              fontSize: 30,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-        ),
+  InputDecoration _buildStadiumDecoration({required String hintText, Widget? suffixIcon}) {
+    return InputDecoration(
+      hintText: hintText,
+      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+      filled: true,
+      fillColor: Colors.white,
+      suffixIcon: suffixIcon,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(30),
+        borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(30),
+        borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(30),
+        borderSide: const BorderSide(color: AppColors.primaryOrange),
       ),
     );
   }
