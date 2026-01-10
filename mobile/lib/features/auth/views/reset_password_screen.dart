@@ -1,8 +1,10 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_routes.dart';
 import '../../../core/utils/validators.dart';
+import '../../../shared/widgets/wavy_background.dart';
 import '../controllers/auth_controller.dart';
 
 /// Reset Password Screen
@@ -50,177 +52,165 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-          onPressed: () => Get.back(),
-        ),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 20),
+    return GestureDetector(
+      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+      child: Scaffold(
+        resizeToAvoidBottomInset: true,
+        body: WavyBackground(
+          child: SizedBox(
+            height: double.infinity,
+            child: SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              child: Column(
+                children: [
+                  const SizedBox(height: 60),
 
-                const Text(
-                  'Đặt lại mật khẩu',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-
-                const SizedBox(height: 16),
-
-                const Text(
-                  'Nhập mật khẩu mới của bạn',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textSecondary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-
-                const SizedBox(height: 40),
-
-                // New Password field
-                const Text(
-                  'Mật khẩu mới',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _newPasswordController,
-                  validator: Validators.password,
-                  obscureText: _obscureNewPassword,
-                  decoration: InputDecoration(
-                    hintText: 'Nhập mật khẩu mới',
-                    hintStyle: const TextStyle(color: AppColors.textHint),
-                    filled: true,
-                    fillColor: const Color(0xFFF5F5F5),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
-                    ),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscureNewPassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                        color: AppColors.textHint,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscureNewPassword = !_obscureNewPassword;
-                        });
-                      },
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Confirm Password field
-                const Text(
-                  'Xác nhận mật khẩu',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _confirmPasswordController,
-                  validator: (value) => Validators.confirmPassword(
-                    value,
-                    _newPasswordController.text,
-                  ),
-                  obscureText: _obscureConfirmPassword,
-                  decoration: InputDecoration(
-                    hintText: 'Nhập lại mật khẩu mới',
-                    hintStyle: const TextStyle(color: AppColors.textHint),
-                    filled: true,
-                    fillColor: const Color(0xFFF5F5F5),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
-                    ),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscureConfirmPassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                        color: AppColors.textHint,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscureConfirmPassword = !_obscureConfirmPassword;
-                        });
-                      },
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-
-                // Reset Button
-                Obx(() => SizedBox(
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: _authController.isLoading.value
-                            ? null
-                            : _handleResetPassword,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryOrange,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(26),
-                          ),
-                          elevation: 0,
+                  // Top Bar
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back_ios, color: AppColors.primaryOrange, size: 24),
+                          onPressed: () => Get.back(),
                         ),
-                        child: _authController.isLoading.value
-                            ? const SizedBox(
-                                height: 24,
-                                width: 24,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Text(
-                                'Đặt lại mật khẩu',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                        const Expanded(
+                          child: Text(
+                            'New Password',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: AppColors.primaryOrange,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 48),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 40),
+                  
+                  const Icon(Icons.security, color: AppColors.primaryOrange, size: 80),
+                  const SizedBox(height: 40),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                    child: Container(
+                      padding: const EdgeInsets.all(32),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(40),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primaryOrange.withOpacity(0.1),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const Text(
+                              'Đặt lại mật khẩu',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryOrange,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 32),
+
+                            // New Password field (Stadium)
+                            TextFormField(
+                              controller: _newPasswordController,
+                              validator: Validators.password,
+                              obscureText: _obscureNewPassword,
+                              decoration: _buildStadiumDecoration(
+                                hintText: 'Nhập mật khẩu mới',
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscureNewPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                    color: Colors.grey,
+                                  ),
+                                  onPressed: () => setState(() => _obscureNewPassword = !_obscureNewPassword),
                                 ),
                               ),
+                            ),
+                            const SizedBox(height: 24),
+
+                            // Confirm Password field (Stadium)
+                            TextFormField(
+                              controller: _confirmPasswordController,
+                              validator: (value) => Validators.confirmPassword(value, _newPasswordController.text),
+                              obscureText: _obscureConfirmPassword,
+                              decoration: _buildStadiumDecoration(
+                                hintText: 'Nhập lại mật khẩu mới',
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscureConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                    color: Colors.grey,
+                                  ),
+                                  onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+
+                            // Reset Button
+                            Obx(() => ElevatedButton(
+                              onPressed: _authController.isLoading.value ? null : _handleResetPassword,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryOrange,
+                                foregroundColor: Colors.white,
+                                elevation: 4,
+                                shadowColor: AppColors.primaryOrange.withOpacity(0.4),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: const StadiumBorder(),
+                              ),
+                              child: _authController.isLoading.value
+                                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                  : const Text('Đặt lại mật khẩu', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            )),
+                          ],
+                        ),
                       ),
-                    )),
-              ],
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                ],
+              ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  InputDecoration _buildStadiumDecoration({required String hintText, Widget? suffixIcon}) {
+    return InputDecoration(
+      hintText: hintText,
+      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+      filled: true,
+      fillColor: Colors.white,
+      suffixIcon: suffixIcon,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(30),
+        borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(30),
+        borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(30),
+        borderSide: const BorderSide(color: AppColors.primaryOrange),
       ),
     );
   }

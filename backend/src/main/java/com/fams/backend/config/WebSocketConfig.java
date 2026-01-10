@@ -15,12 +15,15 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         config.enableSimpleBroker("/topic");
         config.setApplicationDestinationPrefixes("/app");
     }
+
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns(
+                        "http://localhost",
                         "http://localhost:3000",
                         "http://localhost:5173",
+                        "http://127.0.0.1",
                         "http://127.0.0.1:3000",
                         "https://www.fams-edu.online",
                         "https://fams-edu.online",

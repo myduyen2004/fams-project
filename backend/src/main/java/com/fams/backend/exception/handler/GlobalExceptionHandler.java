@@ -98,6 +98,7 @@ public class GlobalExceptionHandler {
                 firstErrorMessage,
                 LocalDateTime.now(),
                 errors);
+        log.warn("Validation failed: {} | Errors: {}", firstErrorMessage, errors);
         return ResponseEntity.badRequest().body(error);
     }
 

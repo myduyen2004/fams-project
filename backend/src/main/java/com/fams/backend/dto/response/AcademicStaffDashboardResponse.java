@@ -32,7 +32,6 @@ public class AcademicStaffDashboardResponse {
         private String className;
         private String email;
         private String course;
-        private Double avgMark;
         private Double gpa;
         private Integer attendance;
     }

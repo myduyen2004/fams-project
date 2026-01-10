@@ -8,4 +8,5 @@ class AppRoutes {
   static const String otpVerification = '/otp-verification';
   static const String resetPassword = '/reset-password';
   static const String home = '/home';
+  static const String changePasswordRequired = '/change-password-required';
 }

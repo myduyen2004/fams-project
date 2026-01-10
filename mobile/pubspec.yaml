@@ -44,6 +44,7 @@ dependencies:
 
   # UI Components
   cupertino_icons: ^1.0.8
+  qr_flutter: ^4.1.0
   google_fonts: ^6.1.0
   flutter_svg: ^2.0.9
 
@@ -59,6 +60,9 @@ dependencies:
   
   # WiFi Detection (Future Ready)
   network_info_plus: ^5.0.1
+
+  # Image Picker
+  image_picker: ^1.0.7
 
 dev_dependencies:
   flutter_test:

@@ -11,6 +11,8 @@ public interface UserService {
 
     UserResponse getUserById(Long id);
 
+    UserResponse getUserByUsername(String username);
+
     UserResponse createUser(UserRequest request, MultipartFile avatar);
 
     UserResponse updateUser(Long id, UserRequest request, MultipartFile avatar);
@@ -19,7 +21,17 @@ public interface UserService {
 
     void activateUsers(java.util.List<Long> ids);
 
-    void importUsers(MultipartFile file);
-
     void changePassword(String username, String newPassword);
+
+    UserResponse updateMyProfile(String username, com.fams.backend.dto.request.UpdateProfileRequest request,
+            MultipartFile avatar);
+
+    void importUsers(MultipartFile file, String importMode);
+
+    // New methods for background job import
+    void importExcelSync(MultipartFile file, String importMode);
+
+    String importZipAsync(byte[] fileBytes, String filename, String importMode);
+
+    com.fams.backend.dto.response.ImportJobResponse getImportJobStatus(String jobId);
 }
