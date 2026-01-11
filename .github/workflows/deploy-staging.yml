@@ -40,13 +40,12 @@ jobs:
             git reset --hard origin/staging  # Force overwrite local changes
             git pull origin staging
             
-            # Create .env.staging file with cleaned DB URL
-            DB_URL=$(echo "${{ secrets.NEON_STAGING_DB_URL }}" | sed 's/&channel_binding=require//')
-            cat > .env.staging << 'ENVEOF'
-            NEON_STAGING_DB_URL=${DB_URL}
-            NEON_STAGING_DB_USER=${{ secrets.NEON_STAGING_DB_USER }}
-            NEON_STAGING_DB_PASSWORD=${{ secrets.NEON_STAGING_DB_PASSWORD }}
-            ENVEOF
+            # Create .env.staging file with jdbc: prefix
+            cat > .env.staging << ENVEOF
+NEON_STAGING_DB_URL=jdbc:postgresql://neondb_owner:npg_KH5UoMe0NZYA@ep-shy-truth-a1qqexjr-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+NEON_STAGING_DB_USER=neondb_owner
+NEON_STAGING_DB_PASSWORD=npg_KH5UoMe0NZYA
+ENVEOF
             
             # Run deployment script
             chmod +x deploy-staging.sh
