@@ -19,11 +19,11 @@ fi
 
 # Stop existing containers
 echo "🛑 Stopping existing containers..."
-docker-compose -f docker-compose.staging.yml down
+docker compose -f docker-compose.staging.yml down
 
 # Build and start new containers
 echo "🔨 Building and starting containers..."
-docker-compose -f docker-compose.staging.yml up --build -d
+docker compose -f docker-compose.staging.yml up --build -d
 
 # Wait for health check
 echo "⏳ Waiting for health check..."
@@ -36,6 +36,6 @@ if curl -f http://localhost:8081/actuator/health; then
 else
     echo "❌ Staging deployment failed!"
     # Rollback
-    docker-compose -f docker-compose.staging.yml logs backend
+    docker compose -f docker-compose.staging.yml logs backend
     exit 1
 fi

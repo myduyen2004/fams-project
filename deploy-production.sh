@@ -19,11 +19,11 @@ fi
 
 # Stop existing containers
 echo "🛑 Stopping existing containers..."
-docker-compose -f docker-compose.prod.yml down
+docker compose -f docker-compose.prod.yml down
 
 # Build and start new containers
 echo "🔨 Building and starting containers..."
-docker-compose -f docker-compose.prod.yml up --build -d
+docker compose -f docker-compose.prod.yml up --build -d
 
 # Wait for health check
 echo "⏳ Waiting for health check..."
@@ -50,6 +50,6 @@ else
       -d "{\"embeds\": [{\"title\": \"❌ Production Deployment Failed\", \"color\": 15158332, \"fields\": [{\"name\": \"Environment\", \"value\": \"**PRODUCTION**\", \"inline\": true}, {\"name\": \"Branch\", \"value\": \"main\", \"inline\": true}, {\"name\": \"Commit\", \"value\": \"\`${COMMIT_HASH:0:7}\`\", \"inline\": true}], \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)\"}], \"username\": \"FAMS Deploy Monitor\"}"
     
     # Show logs
-    docker-compose -f docker-compose.prod.yml logs backend
+    docker compose -f docker-compose.prod.yml logs backend
     exit 1
 fi
