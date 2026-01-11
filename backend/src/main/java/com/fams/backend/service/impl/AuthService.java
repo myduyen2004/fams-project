@@ -48,6 +48,7 @@ public class AuthService implements UserDetailsService {
     private final DashboardBroadcastService dashboardBroadcastService;
     private final EmailService emailService;
     private final StringRedisTemplate redisTemplate;
+    private final UserActivityService userActivityService;
 
     private static final String OTP_PREFIX = "otp:";
     private static final long OTP_EXPIRY_MINUTES = 10;
@@ -99,9 +100,21 @@ public class AuthService implements UserDetailsService {
         // 5. Generate JWT token
         String token = jwtUtil.generateToken(user.getUsername());
 
-        // 6. Create user session and access log
-        createUserSession(user, httpRequest);
-        createAccessLog(user, httpRequest);
+        // 6. Create user session and access log (via separate service for resilience)
+        String ipAddress = getClientIP(httpRequest);
+        String userAgent = httpRequest.getHeader("User-Agent");
+
+        try {
+            userActivityService.createUserSession(user, ipAddress, userAgent);
+        } catch (Exception e) {
+            log.error("Failed to create user session during login flow | userId={}", user.getId());
+        }
+
+        try {
+            userActivityService.createAccessLog(user, ipAddress, userAgent);
+        } catch (Exception e) {
+            log.error("Failed to create access log during login flow | userId={}", user.getId());
+        }
 
         // 7. Broadcast update (wrapped in try-catch for resilience)
         try {
@@ -118,70 +131,6 @@ public class AuthService implements UserDetailsService {
                 .type("Bearer")
                 .user(LoginResponse.fromUser(user))
                 .build();
-    }
-
-    /**
-     * Create user session with geolocation from IP
-     */
-    private void createUserSession(User user, jakarta.servlet.http.HttpServletRequest request) {
-        try {
-            // Extract IP address
-            String ipAddress = getClientIP(request);
-
-            // Get geolocation from IP
-            GeoLocationService.LocationData location = geoLocationService.getLocationFromIP(ipAddress);
-
-            // Get user agent
-            String userAgent = request.getHeader("User-Agent");
-
-            // Create session
-            UserSession session = UserSession.builder()
-                    .user(user)
-                    .ipAddress(ipAddress)
-                    .province(location.getProvince())
-                    .city(location.getCity())
-                    .latitude(location.getLatitude())
-                    .longitude(location.getLongitude())
-                    .loginTime(java.time.LocalDateTime.now())
-                    .lastActivityTime(java.time.LocalDateTime.now())
-                    .isActive(true)
-                    .userAgent(userAgent)
-                    .build();
-
-            userSessionRepository.save(session);
-
-            log.info("User session created | userId={} | ip={} | province={}",
-                    user.getId(), ipAddress, location.getProvince());
-
-        } catch (Exception e) {
-            log.error("Failed to create user session | userId={}", user.getId(), e);
-            // Don't fail login if session creation fails
-        }
-    }
-
-    /**
-     * Create access log for dashboard
-     */
-    private void createAccessLog(User user, jakarta.servlet.http.HttpServletRequest request) {
-        try {
-            String ipAddress = getClientIP(request);
-            String userAgent = request.getHeader("User-Agent");
-            GeoLocationService.LocationData location = geoLocationService.getLocationFromIP(ipAddress);
-
-            AccessLog accessLog = AccessLog.builder()
-                    .user(user)
-                    .location(location.getProvince() + ", " + location.getCity())
-                    .status("Đang hoạt động")
-                    .ipAddress(ipAddress)
-                    .userAgent(userAgent)
-                    .accessTime(java.time.LocalDateTime.now())
-                    .build();
-
-            accessLogRepository.save(accessLog);
-            log.info("Access log created | userId={} | ip={}", user.getId(), ipAddress);
-        } catch (Exception e) {
-            log.error("Failed to create access log | userId={}", user.getId(), e);
-        }
     }
 
     /**
