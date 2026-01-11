@@ -49,10 +49,35 @@ ALTER TABLE users
 ADD COLUMN IF NOT EXISTS face_data_status VARCHAR(20);
 
 ALTER TABLE users
-ADD COLUMN IF NOT EXISTS created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
+ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 
 ALTER TABLE users
-ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+-- Force defaults and fill nulls for auditing
+ALTER TABLE users
+ALTER COLUMN created_at
+SET DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE users
+ALTER COLUMN updated_at
+SET DEFAULT CURRENT_TIMESTAMP;
+
+UPDATE users
+SET
+    created_at = CURRENT_TIMESTAMP
+WHERE
+    created_at IS NULL;
+
+UPDATE users
+SET
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    updated_at IS NULL;
+
+ALTER TABLE users ALTER COLUMN created_at SET NOT NULL;
+
+ALTER TABLE users ALTER COLUMN updated_at SET NOT NULL;
 
 CREATE TABLE IF NOT EXISTS lecturer_profiles (
     user_id BIGINT PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
@@ -216,10 +241,26 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 -- Repair notifications table
 ALTER TABLE notifications
-ADD COLUMN IF NOT EXISTS created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
+ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 
 ALTER TABLE notifications
-ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+UPDATE notifications
+SET
+    created_at = CURRENT_TIMESTAMP
+WHERE
+    created_at IS NULL;
+
+UPDATE notifications
+SET
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    updated_at IS NULL;
+
+ALTER TABLE notifications ALTER COLUMN created_at SET NOT NULL;
+
+ALTER TABLE notifications ALTER COLUMN updated_at SET NOT NULL;
 
 CREATE TABLE IF NOT EXISTS notification_recipients (
     id BIGSERIAL PRIMARY KEY,
@@ -374,7 +415,9 @@ INSERT INTO
         code,
         role,
         status,
-        is_password_changed
+        is_password_changed,
+        created_at,
+        updated_at
     )
 VALUES (
         'admin',
@@ -384,7 +427,9 @@ VALUES (
         'ADMIN002',
         'ADMIN',
         'ACTIVE',
-        true
+        true,
+        CURRENT_TIMESTAMP,
+        CURRENT_TIMESTAMP
     )
 ON CONFLICT DO NOTHING;
 
