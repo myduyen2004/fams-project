@@ -26,31 +26,27 @@ jobs:
           ssh-keyscan -H ${{ env.EC2_HOST }} >> ~/.ssh/known_hosts
       
       - name: Deploy to EC2
-        env:
-          NEON_STAGING_DB_URL: ${{ secrets.NEON_STAGING_DB_URL }}
-          NEON_STAGING_DB_USER: ${{ secrets.NEON_STAGING_DB_USER }}
-          NEON_STAGING_DB_PASSWORD: ${{ secrets.NEON_STAGING_DB_PASSWORD }}
         run: |
-          ssh ${{ env.EC2_USER }}@${{ env.EC2_HOST }} << 'EOF'
-            cd /home/ec2-user/fams-project || exit 1
-            
-            # Pull latest code
-            git fetch origin
-            git checkout staging
-            git reset --hard origin/staging  # Force overwrite local changes
-            git pull origin staging
-            
-            # Create .env.staging file with jdbc: prefix
-            cat > .env.staging << ENVEOF
-NEON_STAGING_DB_URL=jdbc:postgresql://neondb_owner:npg_KH5UoMe0NZYA@ep-shy-truth-a1qqexjr-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
-NEON_STAGING_DB_USER=neondb_owner
-NEON_STAGING_DB_PASSWORD=npg_KH5UoMe0NZYA
-ENVEOF
-            
-            # Run deployment script
-            chmod +x deploy-staging.sh
-            ./deploy-staging.sh
-          EOF
+          ssh ${{ env.EC2_USER }}@${{ env.EC2_HOST }} << 'ENDSSH'
+          cd /home/ec2-user/fams-project || exit 1
+          
+          # Pull latest code
+          git fetch origin
+          git checkout staging
+          git reset --hard origin/staging
+          git pull origin staging
+          
+          # Create .env.staging file
+          cat > .env.staging << 'ENVFILE'
+          NEON_STAGING_DB_URL=jdbc:postgresql://neondb_owner:npg_KH5UoMe0NZYA@ep-shy-truth-a1qqexjr-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+          NEON_STAGING_DB_USER=neondb_owner
+          NEON_STAGING_DB_PASSWORD=npg_KH5UoMe0NZYA
+          ENVFILE
+          
+          # Run deployment script
+          chmod +x deploy-staging.sh
+          ./deploy-staging.sh
+          ENDSSH
       
       - name: Deployment Summary
         if: success()
