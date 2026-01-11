@@ -79,6 +79,26 @@ public class User {
     @PrimaryKeyJoinColumn
     private LecturerProfile lecturerProfile;
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private java.util.List<AccessLog> accessLogs = new java.util.ArrayList<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private java.util.List<UserSession> userSessions = new java.util.ArrayList<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private java.util.List<AIChatSession> aiChatSessions = new java.util.ArrayList<>();
+
+    @OneToMany(mappedBy = "lecturer", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private java.util.List<AttendanceSession> attendanceSessions = new java.util.ArrayList<>();
+
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private java.util.List<StudentAttendance> studentAttendances = new java.util.ArrayList<>();
+
     @Column(nullable = false, columnDefinition = "boolean default false")
     @Builder.Default
     private Boolean isPasswordChanged = false;

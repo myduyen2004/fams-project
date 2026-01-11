@@ -97,14 +97,28 @@ public class AuthController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping(value = "/profile", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Cập nhật thông tin cá nhân", description = "Cập nhật SĐT, Ngày sinh (Sv/Gv) và Avatar (Gv only)")
+    public ResponseEntity<com.fams.backend.dto.response.UserResponse> updateProfile(
+            @RequestPart("data") @Valid com.fams.backend.dto.request.UpdateProfileRequest request,
+            @RequestPart(value = "avatar", required = false) org.springframework.web.multipart.MultipartFile avatar) {
+
+        String username = org.springframework.security.core.context.SecurityContextHolder.getContext()
+                .getAuthentication().getName();
+        log.info("PUT /auth/profile - user: {}", username);
+
+        return ResponseEntity.ok(userService.updateMyProfile(username, request, avatar));
+    }
+
     /**
      * GET /auth/me
      * Lấy thông tin user hiện tại (cần JWT token)
      */
     @GetMapping("/me")
     @Operation(summary = "Lấy thông tin người dùng hiện tại")
-    public ResponseEntity<?> getCurrentUser() {
-        // TODO: Implement get current user from JWT
-        return ResponseEntity.ok().build();
+    public ResponseEntity<com.fams.backend.dto.response.UserResponse> getCurrentUser() {
+        String username = org.springframework.security.core.context.SecurityContextHolder.getContext()
+                .getAuthentication().getName();
+        return ResponseEntity.ok(userService.getUserByUsername(username));
     }
 }

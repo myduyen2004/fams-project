@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, Moon, Sun, User, Settings, LogOut } from 'lucide-react';
+import { Moon, Sun, User,Settings, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../../services/api/authService';
 import { ConfirmModal } from '../common/ConfirmModal';
+import { NotificationBell } from '../common/NotificationBell';
 
 interface AdminHeaderProps {
   title: string;
@@ -11,7 +12,6 @@ interface AdminHeaderProps {
 export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
   const navigate = useNavigate();
   const [isDark, setIsDark] = useState(false);
-  const [notificationCount, _setNotificationCount] = useState(3);
   const [user, setUser] = useState<{ email: string; fullName: string; avatar?: string } | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -101,14 +101,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
         </button>
 
         {/* Notification Bell */}
-        <button className="relative p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors">
-          <Bell size={20} />
-          {notificationCount > 0 && (
-            <span className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-              {notificationCount}
-            </span>
-          )}
-        </button>
+        <NotificationBell />
 
         {/* User Info with Dropdown */}
         <div className="relative" ref={dropdownRef}>

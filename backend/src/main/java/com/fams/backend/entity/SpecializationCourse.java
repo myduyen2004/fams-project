@@ -31,6 +31,9 @@ public class SpecializationCourse {
     // Chuyên ngành
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "specialization_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Specialization specialization;
 
     // Môn học

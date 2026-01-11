@@ -58,7 +58,6 @@ export interface AcademicStaffDashboardResponse {
         className: string;
         email: string;
         course: string;
-        avgMark: number;
         gpa: number;
         attendance: number;
     }[];

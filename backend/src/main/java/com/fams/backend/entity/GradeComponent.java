@@ -52,6 +52,9 @@ public class GradeComponent {
     // Thuộc môn học nào
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Course course;
 
     @CreationTimestamp

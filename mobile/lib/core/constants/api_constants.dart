@@ -4,10 +4,11 @@ class ApiConstants {
 
   // Base URLs
   static const String baseUrlLocal = 'http://10.0.2.2:8080'; // Android Emulator
-  static const String baseUrlLocalDevice = 'http://10.0.14.160:8080'; // Real device via WiFi
+  static const String baseUrlUsb = 'http://localhost:8080'; // Real device via USB (adb reverse)
+  static const String baseUrlLocalDevice = 'http://192.168.1.35:8080'; // Real device via WiFi
   
-  // Current Environment - Change to baseUrlLocalDevice for real device
-  static const String baseUrl = baseUrlLocalDevice; // Using real device WiFi
+  // Current Environment
+  static const String baseUrl = baseUrlLocalDevice; // Use WiFi
 
   // Auth Endpoints
   static const String login = '/api/auth/login';
@@ -16,6 +17,7 @@ class ApiConstants {
   static const String verifyOtp = '/api/auth/verify-otp';
   static const String resetPassword = '/api/auth/reset-password';
   static const String changePassword = '/api/auth/change-password';
+  static const String updateProfile = '/api/auth/profile';
   static const String getCurrentUser = '/api/auth/me';
 
   // Timeouts

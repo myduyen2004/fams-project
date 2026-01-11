@@ -1,8 +1,5 @@
-package com.fams.backend.exception.handler;
+package com.fams.backend.exception;
 
-import com.fams.backend.exception.BadRequestException;
-import com.fams.backend.exception.NotFoundException;
-import com.fams.backend.exception.UnauthorizedException;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -98,6 +95,19 @@ public class GlobalExceptionHandler {
                 firstErrorMessage,
                 LocalDateTime.now(),
                 errors);
+        log.warn("Validation failed: {} | Errors: {}", firstErrorMessage, errors);
+        return ResponseEntity.badRequest().body(error);
+    }
+
+    /**
+     * Handle Business Logic Exceptions (IllegalArgumentException)
+     */
+    @ExceptionHandler({ IllegalArgumentException.class })
+    public ResponseEntity<ErrorResponse> handleBusinessExceptions(IllegalArgumentException ex) {
+        log.error("Business error: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                ex.getMessage());
         return ResponseEntity.badRequest().body(error);
     }
 

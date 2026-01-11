@@ -6,6 +6,15 @@ class User {
   final String email;
   final String role; // LECTURER or STUDENT
   final String? avatarUrl;
+  final bool isPasswordChanged;
+  final String? phone;
+  final DateTime? dob;
+  
+  // Profile Info
+  final String? major;
+  final String? specialization;
+  final String? department;
+  final String? expertise;
 
   User({
     required this.id,
@@ -14,6 +23,13 @@ class User {
     required this.email,
     required this.role,
     this.avatarUrl,
+    this.isPasswordChanged = true,
+    this.phone,
+    this.dob,
+    this.major,
+    this.specialization,
+    this.department,
+    this.expertise,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -23,7 +39,14 @@ class User {
       username: json['username'] ?? '',
       email: json['email'] ?? '',
       role: json['role'] ?? '',
-      avatarUrl: json['avatarUrl'],
+      avatarUrl: json['avatar'] ?? json['avatarUrl'],
+      isPasswordChanged: json['isPasswordChanged'] ?? true,
+      phone: json['phone'],
+      dob: json['dob'] != null ? DateTime.tryParse(json['dob'].toString()) : null,
+      major: json['major'],
+      specialization: json['specialization'],
+      department: json['department'],
+      expertise: json['expertise'],
     );
   }
 
@@ -34,7 +57,15 @@ class User {
       'username': username,
       'email': email,
       'role': role,
-      'avatarUrl': avatarUrl,
+      'avatar': avatarUrl,
+      'avatarUrl': avatarUrl, 
+      'isPasswordChanged': isPasswordChanged,
+      'phone': phone,
+      'dob': dob?.toIso8601String(),
+      'major': major,
+      'specialization': specialization,
+      'department': department,
+      'expertise': expertise,
     };
   }
 
