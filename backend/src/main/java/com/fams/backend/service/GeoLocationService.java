@@ -74,7 +74,12 @@ public class GeoLocationService {
     }
 
     public GeoLocationService() {
-        this.restTemplate = new RestTemplate();
+        // Configure timeouts to prevent hanging
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(3000); // 3 seconds
+        factory.setReadTimeout(3000); // 3 seconds
+
+        this.restTemplate = new RestTemplate(factory);
         this.objectMapper = new ObjectMapper();
     }
 
