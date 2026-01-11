@@ -1,12 +1,13 @@
 -- ===========================================================
--- FAMS CONSOLIDATED INITIAL SCHEMA (v1.0)
+-- FAMS CONSOLIDATED INITIAL SCHEMA (v1.1)
 -- This file replaces all previous migrations (V1-V8)
--- Made re-runnable with IF NOT EXISTS
+-- Made re-runnable with IF NOT EXISTS and Column repairs
 -- ===========================================================
 
 -- ===========================================================
 -- 1. UTILS AND EXTENSIONS
 -- ===========================================================
+RAISE NOTICE 'Flyway: Starting section 1 (Utils)';
 
 -- Auto-update updated_at timestamp function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -20,6 +21,7 @@ $$ language 'plpgsql';
 -- ===========================================================
 -- 2. USERS AND AUTHENTICATION
 -- ===========================================================
+RAISE NOTICE 'Flyway: Starting section 2 (Users)';
 
 CREATE TABLE IF NOT EXISTS users (
     id BIGSERIAL PRIMARY KEY,
@@ -39,22 +41,18 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Ensure missing columns exist in users table if it was created by an older version
-DO $$ 
-BEGIN 
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='is_password_changed') THEN
-        ALTER TABLE users ADD COLUMN is_password_changed BOOLEAN DEFAULT FALSE;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='face_data_status') THEN
-        ALTER TABLE users ADD COLUMN face_data_status VARCHAR(20);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='created_at') THEN
-        ALTER TABLE users ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='updated_at') THEN
-        ALTER TABLE users ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
-    END IF;
-END $$;
+-- Repair users table columns if it already existed
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS is_password_changed BOOLEAN DEFAULT FALSE;
+
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS face_data_status VARCHAR(20);
+
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 CREATE TABLE IF NOT EXISTS lecturer_profiles (
     user_id BIGINT PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
@@ -66,6 +64,7 @@ CREATE TABLE IF NOT EXISTS lecturer_profiles (
 -- ===========================================================
 -- 3. ACADEMIC STRUCTURE (MAJORS, SPECIALIZATIONS)
 -- ===========================================================
+RAISE NOTICE 'Flyway: Starting section 3 (Academic)';
 
 CREATE TABLE IF NOT EXISTS majors (
     id BIGSERIAL PRIMARY KEY,
@@ -114,6 +113,7 @@ CREATE TABLE IF NOT EXISTS student_profiles (
 -- ===========================================================
 -- 4. SEMESTERS AND COURSES
 -- ===========================================================
+RAISE NOTICE 'Flyway: Starting section 4 (Semesters)';
 
 CREATE TABLE IF NOT EXISTS semesters (
     id BIGSERIAL PRIMARY KEY,
@@ -150,6 +150,7 @@ CREATE TABLE IF NOT EXISTS class_sections (
 -- ===========================================================
 -- 5. MONITORING AND DASHBOARD
 -- ===========================================================
+RAISE NOTICE 'Flyway: Starting section 5 (Dashboard)';
 
 CREATE TABLE IF NOT EXISTS system_logs (
     id BIGSERIAL PRIMARY KEY,
@@ -213,6 +214,13 @@ CREATE TABLE IF NOT EXISTS notifications (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Repair notifications table
+ALTER TABLE notifications
+ADD COLUMN IF NOT EXISTS created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE notifications
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
 CREATE TABLE IF NOT EXISTS notification_recipients (
     id BIGSERIAL PRIMARY KEY,
     notification_id BIGINT NOT NULL REFERENCES notifications (id) ON DELETE CASCADE,
@@ -224,6 +232,7 @@ CREATE TABLE IF NOT EXISTS notification_recipients (
 -- ===========================================================
 -- 6. AI CHAT AND ATTENDANCE
 -- ===========================================================
+RAISE NOTICE 'Flyway: Starting section 6 (AI/Attendance)';
 
 CREATE TABLE IF NOT EXISTS ai_chat_sessions (
     id BIGSERIAL PRIMARY KEY,
@@ -282,6 +291,7 @@ CREATE TABLE IF NOT EXISTS student_attendances (
 -- ===========================================================
 -- 7. IMPORT TRACKING
 -- ===========================================================
+RAISE NOTICE 'Flyway: Starting section 7 (Import)';
 
 CREATE TABLE IF NOT EXISTS import_history (
     id BIGSERIAL PRIMARY KEY,
@@ -307,6 +317,7 @@ CREATE TABLE IF NOT EXISTS import_detail (
 -- ===========================================================
 -- 8. TRIGGERS FOR UPDATED_AT
 -- ===========================================================
+RAISE NOTICE 'Flyway: Starting section 8 (Triggers)';
 
 DROP TRIGGER IF EXISTS trg_users_updated_at ON users;
 
@@ -351,6 +362,7 @@ CREATE TRIGGER trg_timetable_slots_updated_at BEFORE UPDATE ON timetable_slots F
 -- ===========================================================
 -- 9. INITIAL SEED DATA
 -- ===========================================================
+RAISE NOTICE 'Flyway: Starting section 9 (Seed)';
 
 -- Passwords are 'admin123' hashed with BCrypt
 INSERT INTO
@@ -369,9 +381,11 @@ VALUES (
         '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xd00DMxs.TVu4sO/',
         'admin@fams.edu.vn',
         'System Administrator',
-        'ADMIN001',
+        'ADMIN002',
         'ADMIN',
         'ACTIVE',
         true
     )
 ON CONFLICT DO NOTHING;
+
+RAISE NOTICE 'Flyway: Migration V1 completed successfully';
