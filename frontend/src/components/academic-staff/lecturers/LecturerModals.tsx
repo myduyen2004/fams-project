@@ -177,8 +177,8 @@ export const AddLecturerModal: React.FC<{ onClose: () => void; onSuccess: () => 
 // --- EditLecturerModal ---
 export const EditLecturerModal: React.FC<{ lecturer: LecturerResponse; onClose: () => void; onSuccess: () => void }> = ({ lecturer, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
-  const [avatar, setAvatar] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(lecturer.avatar || null);
+  const [avatar] = useState<File | null>(null);
+  const [preview] = useState<string | null>(lecturer.avatar || null);
 
   const ensureStringDate = (d: unknown): string => {
     if (Array.isArray(d)) {
@@ -214,15 +214,15 @@ export const EditLecturerModal: React.FC<{ lecturer: LecturerResponse; onClose: 
     bio: lecturer.bio || ''
   });
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setAvatar(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setPreview(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
+  // const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0];
+  //   if (file) {
+  //     setAvatar(file);
+  //     const reader = new FileReader();
+  //     reader.onloadend = () => setPreview(reader.result as string);
+  //     reader.readAsDataURL(file);
+  //   }
+  // };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
