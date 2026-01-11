@@ -1,6 +1,6 @@
 package com.fams.backend.service.impl;
 
-import com.fams.backend.dto.request.SemesterDTORequest;
+import com.fams.backend.dto.response.SemesterResponse;
 import com.fams.backend.entity.Semester;
 import com.fams.backend.repository.SemesterRepository;
 import com.fams.backend.service.SemesterService;
@@ -18,7 +18,7 @@ public class SemesterServiceImpl implements SemesterService {
     private final SemesterRepository semesterRepository;
 
     @Override
-    public List<SemesterDTORequest> getAllSemesters() {
+    public List<SemesterResponse> getAllSemesters() {
         return semesterRepository.findAllOrderByStartDateDesc()
                 .stream()
                 .map(this::convertToDTO)
@@ -26,14 +26,14 @@ public class SemesterServiceImpl implements SemesterService {
     }
 
     @Override
-    public SemesterDTORequest getSemesterById(Long id) {
+    public SemesterResponse getSemesterById(Long id) {
         Semester semester = semesterRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Semester not found with id: " + id));
         return convertToDTO(semester);
     }
 
     @Override
-    public SemesterDTORequest createSemester(SemesterDTORequest semesterDTO) {
+    public SemesterResponse createSemester(SemesterResponse semesterDTO) {
         // Validate start date must be from today onwards
         LocalDate startDate = LocalDate.parse(semesterDTO.getStartDate());
         LocalDate endDate = LocalDate.parse(semesterDTO.getEndDate());
@@ -71,7 +71,7 @@ public class SemesterServiceImpl implements SemesterService {
     }
 
     @Override
-    public SemesterDTORequest updateSemester(String code, SemesterDTORequest semesterDTO) {
+    public SemesterResponse updateSemester(String code, SemesterResponse semesterDTO) {
         // Find existing semester by code
         Semester semester = semesterRepository.findByCode(code)
                 .orElseThrow(() -> new RuntimeException("Semester not found with code: " + code));
@@ -128,8 +128,8 @@ public class SemesterServiceImpl implements SemesterService {
         semesterRepository.delete(semester);
     }
 
-    private SemesterDTORequest convertToDTO(Semester semester) {
-        SemesterDTORequest dto = new SemesterDTORequest();
+    private SemesterResponse convertToDTO(Semester semester) {
+        SemesterResponse dto = new SemesterResponse();
         dto.setCode(semester.getCode());
         dto.setName(semester.getName());
         dto.setStartDate(semester.getStartDate().toString());
