@@ -39,6 +39,23 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Ensure missing columns exist in users table if it was created by an older version
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='is_password_changed') THEN
+        ALTER TABLE users ADD COLUMN is_password_changed BOOLEAN DEFAULT FALSE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='face_data_status') THEN
+        ALTER TABLE users ADD COLUMN face_data_status VARCHAR(20);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='created_at') THEN
+        ALTER TABLE users ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='updated_at') THEN
+        ALTER TABLE users ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
+    END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS lecturer_profiles (
     user_id BIGINT PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
     bio TEXT,
@@ -357,4 +374,4 @@ VALUES (
         'ACTIVE',
         true
     )
-ON CONFLICT (email) DO NOTHING;
+ON CONFLICT DO NOTHING;
