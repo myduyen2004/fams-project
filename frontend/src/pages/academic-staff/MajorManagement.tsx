@@ -459,13 +459,17 @@ export const MajorManagement: React.FC = () => {
             const response = await majorService.getMajors(params);
             setData(response.content || []);
             setTotalElements(response.totalElements || 0);
-            setSelectedIds([]); // Reset selection on fetch
+            // setSelectedIds([]); // Removed to persist selection after update
         } catch (error) {
             console.error('Failed to fetch majors:', error);
             toast.error('Không thể tải danh sách ngành');
         } finally {
             setLoading(false);
         }
+    }, [debouncedSearchTerm, statusFilter, page]);
+
+    useEffect(() => {
+        setSelectedIds([]);
     }, [debouncedSearchTerm, statusFilter, page]);
 
     useEffect(() => {
@@ -642,8 +646,8 @@ export const MajorManagement: React.FC = () => {
                                     </th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Mã ngành</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Tên ngành</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Thời gian đào tạo</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Trạng thái</th>
+                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Thời gian đào tạo</th>
+                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Trạng thái</th>
                                     <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-lg">Số chuyên ngành</th>
                                 </tr>
                             </thead>
@@ -681,10 +685,10 @@ export const MajorManagement: React.FC = () => {
                                                     onChange={() => handleSelectOne(major.id)}
                                                 />
                                             </td>
-                                            <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{major.code}</td>
+                                            <td className="px-4 py-3 font-medium text-fpt-orange hover:underline">{major.code}</td>
                                             <td className="px-4 py-3 text-gray-600 dark:text-zinc-400">{major.name}</td>
-                                            <td className="px-4 py-3 text-gray-600 dark:text-zinc-400">{major.programDuration}</td>
-                                            <td className="px-4 py-3">
+                                            <td className="px-4 py-3 text-center font-medium text-gray-600 dark:text-zinc-400 ">{major.programDuration}</td>
+                                            <td className="px-4 py-3 text-center">
                                                 {major.status === 'ACTIVE' ? (
                                                     <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400 border border-green-100 dark:border-green-900/30">
                                                         <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>

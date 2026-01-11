@@ -443,7 +443,7 @@ export const MajorDetail: React.FC = () => {
             const majorData = await majorService.getMajor(parseInt(id));
             setMajor(majorData);
             await fetchSpecializations(); // Fetch specializations using the new function
-            setSelectedIds([]);
+            // setSelectedIds([]);
         } catch (error) {
             console.error('Failed to fetch details:', error);
             toast.error('Không thể tải thông tin chi tiết');
@@ -451,6 +451,11 @@ export const MajorDetail: React.FC = () => {
             setLoading(false);
         }
     }, [id, fetchSpecializations]); // Depend on fetchSpecializations
+
+    // Clear selection when filters change
+    useEffect(() => {
+        setSelectedIds([]);
+    }, [debouncedSearchTerm, statusFilter, page, id]);
 
     // Fetch immediately when depedencies change (search is already debounced)
     useEffect(() => {
@@ -658,21 +663,20 @@ export const MajorDetail: React.FC = () => {
                                         </th>
                                         <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Mã chuyên ngành</th>
                                         <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Tên chuyên ngành</th>
-                                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Tổng số tín chỉ</th>
-                                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Thời gian đào tạo</th>
-                                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider rounded-tr-lg">Trạng thái</th>
+                                        <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider">Tổng số tín chỉ</th>
+                                        <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-lg">Trạng thái</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
                                     {loading && specializations.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="py-8 text-center">
+                                            <td colSpan={5} className="py-8 text-center">
                                                 <Loader2 className="h-6 w-6 animate-spin mx-auto text-fpt-orange" />
                                             </td>
                                         </tr>
                                     ) : specializations.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="py-8 text-center text-gray-500">
+                                            <td colSpan={5} className="py-8 text-center text-gray-500">
                                                 Chưa có chuyên ngành nào
                                             </td>
                                         </tr>
@@ -680,9 +684,10 @@ export const MajorDetail: React.FC = () => {
                                         specializations.map((spec) => (
                                             <tr
                                                 key={spec.id}
-                                                className={`hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors ${selectedIds.includes(spec.id) ? 'bg-orange-50 dark:bg-orange-900/20' : ''} ${loading ? 'opacity-50' : ''}`}
+                                                onClick={() => navigate(`/academic-staff/specializations/${spec.id}`)}
+                                                className={`hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer ${selectedIds.includes(spec.id) ? 'bg-orange-50 dark:bg-orange-900/20' : ''} ${loading ? 'opacity-50' : ''}`}
                                             >
-                                                <td className="px-6 py-4">
+                                                <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                                                     <input
                                                         type="checkbox"
                                                         className="w-4 h-4 rounded border-gray-300 text-fpt-orange focus:ring-fpt-orange dark:border-zinc-600 dark:bg-zinc-700 cursor-pointer"
@@ -690,19 +695,16 @@ export const MajorDetail: React.FC = () => {
                                                         onChange={() => handleSelectOne(spec.id)}
                                                     />
                                                 </td>
-                                                <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
+                                                <td className="px-6 py-4 font-medium text-fpt-orange hover:underline">
                                                     {spec.code}
                                                 </td>
                                                 <td className="px-6 py-4 text-gray-600 dark:text-zinc-400">
                                                     {spec.name}
                                                 </td>
-                                                <td className="px-6 py-4 text-gray-600 dark:text-zinc-400">
+                                                <td className="px-6 py-4 text-center text-gray-600 dark:text-zinc-400">
                                                     {spec.totalCredits || 0}
                                                 </td>
-                                                <td className="px-6 py-4 text-gray-600 dark:text-zinc-400">
-                                                    {major?.programDuration || '9 kì'}
-                                                </td>
-                                                <td className="px-6 py-4">
+                                                <td className="px-6 py-4 text-center">
                                                     <StatusBadge status={spec.status} variant="table" />
                                                 </td>
                                             </tr>

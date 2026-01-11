@@ -41,14 +41,13 @@ public class SpecializationCourse {
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
 
-    // Loại môn học trong chuyên ngành
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    // Thứ tự hiển thị (cho drag & drop)
     @Builder.Default
-    private CourseType courseType = CourseType.REQUIRED;
+    private Integer orderIndex = 0;
 
-    // Thứ tự hiển thị
-    private Integer orderIndex;
+    // Học kỳ (được gán khi thêm môn vào chuyên ngành)
+    @Builder.Default
+    private Integer semester = 1;
 
     // Ghi chú
     @Column(length = 500)
@@ -61,9 +60,4 @@ public class SpecializationCourse {
     @UpdateTimestamp
     @Column(nullable = false)
     private LocalDateTime updatedAt;
-
-    public enum CourseType {
-        REQUIRED, // Môn bắt buộc
-        ELECTIVE // Môn tự chọn
-    }
 }
