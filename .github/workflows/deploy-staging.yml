@@ -37,6 +37,7 @@ jobs:
             # Pull latest code
             git fetch origin
             git checkout staging
+            git reset --hard origin/staging  # Force overwrite local changes
             git pull origin staging
             
             # Create .env.staging file
