@@ -1,6 +1,6 @@
 package com.fams.backend.controller;
 
-import com.fams.backend.dto.request.SemesterDTORequest;
+import com.fams.backend.dto.response.SemesterResponse;
 import com.fams.backend.service.SemesterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,26 +16,26 @@ public class SemesterController {
     private final SemesterService semesterService;
 
     @GetMapping("/active")
-    public ResponseEntity<List<SemesterDTORequest>> getAllSemesters() {
+    public ResponseEntity<List<SemesterResponse>> getAllSemesters() {
         return ResponseEntity.ok(semesterService.getAllSemesters());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<SemesterDTORequest> getSemesterById(@PathVariable Long id) {
+    public ResponseEntity<SemesterResponse> getSemesterById(@PathVariable Long id) {
         return ResponseEntity.ok(semesterService.getSemesterById(id));
     }
 
     @PostMapping
-    public ResponseEntity<SemesterDTORequest> createSemester(@RequestBody SemesterDTORequest semesterDTO) {
-        SemesterDTORequest createdSemester = semesterService.createSemester(semesterDTO);
+    public ResponseEntity<SemesterResponse> createSemester(@RequestBody SemesterResponse semesterDTO) {
+        SemesterResponse createdSemester = semesterService.createSemester(semesterDTO);
         return ResponseEntity.status(201).body(createdSemester);
     }
 
     @PutMapping("/{code}")
-    public ResponseEntity<SemesterDTORequest> updateSemester(
+    public ResponseEntity<SemesterResponse> updateSemester(
             @PathVariable String code,
-            @RequestBody SemesterDTORequest semesterDTO) {
-        SemesterDTORequest updatedSemester = semesterService.updateSemester(code, semesterDTO);
+            @RequestBody SemesterResponse semesterDTO) {
+        SemesterResponse updatedSemester = semesterService.updateSemester(code, semesterDTO);
         return ResponseEntity.ok(updatedSemester);
     }
 
