@@ -1,11 +1,11 @@
 spring:
   application:
-    name: FAMS Backend Production
+    name: FAMS Backend Staging
   
   datasource:
-    url: ${NEON_PROD_DB_URL}
-    username: ${NEON_PROD_DB_USER}
-    password: ${NEON_PROD_DB_PASSWORD}
+    url: ${NEON_STAGING_DB_URL}
+    username: ${NEON_STAGING_DB_USER}
+    password: ${NEON_STAGING_DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     
   jpa:
@@ -22,17 +22,14 @@ spring:
       port: 6379
 
 server:
-  port: 8080
+  port: 8081
 
 app:
-  environment: production
+  environment: staging
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://fams-edu.online,https://www.fams-edu.online}
-  discord:
-    webhook-url: ${DISCORD_WEBHOOK_URL}
-    enabled: true
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://staging.fams-edu.online,https://fams-staging.vercel.app}
   
 logging:
   level:
-    root: WARN
+    root: INFO
     com.fams.backend: INFO
