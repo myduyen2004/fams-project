@@ -91,7 +91,8 @@ public class SecurityConfig {
                                 // Prod domains
                                 "https://www.fams-edu.online",
                                 "https://fams-edu.online",
-                                "https://api.fams-edu.online"));
+                                "https://api.fams-edu.online",
+                                "https://staging.fams-edu.online"));
 
                 // Allow HTTP methods
                 configuration.setAllowedMethods(List.of(
