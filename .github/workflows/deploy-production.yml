@@ -38,6 +38,7 @@ jobs:
             # Pull latest code
             git fetch origin
             git checkout main
+            git reset --hard origin/main  # Force overwrite local changes
             git pull origin main
             
             # Create .env.production file
