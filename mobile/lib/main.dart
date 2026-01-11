@@ -9,13 +9,19 @@ import 'features/auth/views/login_screen.dart';
 import 'features/auth/views/forgot_password_screen.dart';
 import 'features/auth/views/otp_verification_screen.dart';
 import 'features/auth/views/reset_password_screen.dart';
+import 'features/auth/views/change_password_required_screen.dart';
 import 'features/home/views/home_screen.dart';
+import 'features/home/bindings/home_binding.dart';
 
 void main() {
-  // Initialize GetX Controllers
-  Get.put(AuthController());
-
   runApp(const MyApp());
+}
+
+class InitialBinding extends Bindings {
+  @override
+  void dependencies() {
+    Get.put(AuthController());
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -33,10 +39,11 @@ class MyApp extends StatelessWidget {
           seedColor: AppColors.primaryOrange,
           primary: AppColors.primaryOrange,
         ),
-        textTheme: GoogleFonts.interTextTheme(),
+        textTheme: GoogleFonts.robotoTextTheme(),
         useMaterial3: true,
       ),
       initialRoute: AppRoutes.splash,
+      initialBinding: InitialBinding(),
       getPages: [
         GetPage(
           name: AppRoutes.splash,
@@ -59,8 +66,13 @@ class MyApp extends StatelessWidget {
           page: () => const ResetPasswordScreen(),
         ),
         GetPage(
+          name: AppRoutes.changePasswordRequired,
+          page: () => const ChangePasswordRequiredScreen(),
+        ),
+        GetPage(
           name: AppRoutes.home,
           page: () => const HomeScreen(),
+          binding: HomeBinding(),
         ),
       ],
     );

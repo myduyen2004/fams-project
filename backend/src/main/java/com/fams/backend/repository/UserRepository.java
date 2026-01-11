@@ -3,13 +3,22 @@ package com.fams.backend.repository;
 import com.fams.backend.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificationExecutor<User> {
+
+    @Query("SELECT u.code FROM User u WHERE u.code IS NOT NULL")
+    Set<String> findAllCodes();
+
+    @Query("SELECT u.email FROM User u")
+    Set<String> findAllEmails();
 
     /**
      * Tìm user theo username
@@ -51,4 +60,19 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     long countByRole(User.UserRole role);
 
     Optional<User> findByIdAndRole(Long id, User.UserRole role);
+
+    /**
+     * Xóa tất cả user ngoại trừ role chỉ định
+     */
+    void deleteAllByRoleNot(User.UserRole role);
+
+    /**
+     * Xóa tất cả user có role nằm trong danh sách
+     */
+    long deleteAllByRoleIn(Collection<User.UserRole> roles);
+
+    /**
+     * Xóa tất cả user có role nằm trong danh sách và trạng thái chỉ định
+     */
+    long deleteAllByRoleInAndStatus(Collection<User.UserRole> roles, User.UserStatus status);
 }

@@ -41,6 +41,7 @@ public class AcademicStaffDashboardController {
     @GetMapping("/dashboard")
     @Operation(summary = "Lấy dữ liệu dashboard")
     public ResponseEntity<AcademicStaffDashboardResponse> getDashboardData() {
+        log.info("GET /api/academic-staff/dashboard");
         return ResponseEntity.ok(dashboardService.getDashboardData());
     }
 

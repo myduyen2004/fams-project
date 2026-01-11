@@ -79,10 +79,44 @@ public class UserController {
     }
 
     @PostMapping("/import")
-    @Operation(summary = "Import người dùng từ file Excel/CSV")
-    public ResponseEntity<Void> importUsers(@RequestParam("file") MultipartFile file) {
-        log.info("POST /users/import | filename={}", file.getOriginalFilename());
-        userService.importUsers(file);
-        return ResponseEntity.ok().build();
+    @Operation(summary = "Import người dùng từ file Excel/ZIP (auto-detect)")
+    public ResponseEntity<?> importUsers(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "mode", defaultValue = "APPEND") String mode) {
+
+        String filename = file.getOriginalFilename();
+        log.info("POST /users/import | filename={}, mode={}", filename, mode);
+
+        try {
+            // Auto-detect file type and route accordingly
+            if (filename != null && filename.toLowerCase().endsWith(".zip")) {
+                // ZIP file -> Background async job
+                // CRITICAL: Copy bytes BEFORE async call to prevent temp file deletion
+                byte[] fileBytes = file.getBytes();
+                String jobId = userService.importZipAsync(fileBytes, filename, mode);
+                return ResponseEntity.ok(java.util.Map.of(
+                        "type", "async",
+                        "jobId", jobId,
+                        "message", "Import job created. Processing in background."));
+            } else {
+                // Excel file -> Fast sync import
+                userService.importExcelSync(file, mode);
+                return ResponseEntity.ok(java.util.Map.of(
+                        "type", "sync",
+                        "message", "Import completed successfully"));
+            }
+        } catch (Exception e) {
+            log.error("Import failed: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(java.util.Map.of(
+                    "error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/import-job/{jobId}")
+    @Operation(summary = "Lấy trạng thái của import job")
+    public ResponseEntity<com.fams.backend.dto.response.ImportJobResponse> getImportJobStatus(
+            @PathVariable String jobId) {
+        log.info("GET /users/import-job/{}", jobId);
+        return ResponseEntity.ok(userService.getImportJobStatus(jobId));
     }
 }

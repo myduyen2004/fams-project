@@ -50,14 +50,14 @@ export const AcademicStaffDashboard: React.FC = () => {
   const stats = [
     {
       label: 'Sinh viên',
-      value: (data.stats?.totalStudents ?? 0).toLocaleString(),
+      value: (Number(data.stats?.totalStudents) || 0).toLocaleString(),
       icon: <Users className="w-5 h-5" />,
       color: 'bg-orange-100 text-orange-600',
       description: 'Xem danh sách sinh viên'
     },
     {
       label: 'Giảng viên',
-      value: (data.stats?.totalLecturers ?? 0).toLocaleString(),
+      value: (Number(data.stats?.totalLecturers) || 0).toLocaleString(),
       icon: <GraduationCap className="w-5 h-5" />,
       color: 'bg-blue-100 text-blue-600',
       description: 'Xem danh sách giảng viên'
@@ -100,44 +100,40 @@ export const AcademicStaffDashboard: React.FC = () => {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Khóa
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        AVG
-                      </th>
+
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         GPA
                       </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-zinc-900 divide-y divide-gray-200 dark:divide-zinc-800">
-                    {(data.topStudents ?? []).slice(0, 6).map((student) => (
-                      <tr key={student.rank} className="hover:bg-gray-50 dark:hover:bg-zinc-800">
+                    {(data?.topStudents ?? []).slice(0, 6).map((student, idx) => (
+                      <tr key={student?.rank ?? idx} className="hover:bg-gray-50 dark:hover:bg-zinc-800">
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                          {student.rank}
+                          {student?.rank ?? idx + 1}
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-fpt-orange to-orange-600 flex items-center justify-center text-white text-xs font-semibold">
-                              {student.name.charAt(0)}
+                              {student?.name?.charAt(0) ?? 'S'}
                             </div>
                             <div>
                               <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                {student.name}
+                                {student?.name ?? 'Sinh viên'}
                               </p>
-                              <p className="text-[10px] text-gray-500">{student.className}</p>
+                              <p className="text-[10px] text-gray-500">{student?.className ?? 'N/A'}</p>
                             </div>
                           </div>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                          {student.email}
+                          {student?.email ?? 'N/A'}
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                          {student.course}
+                          {student?.course ?? 'N/A'}
                         </td>
+
                         <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
-                          {student.avgMark?.toFixed(1) ?? '0.0'}
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
-                          {student.gpa?.toFixed(1) ?? '0.0'}
+                          {student?.gpa?.toFixed(1) ?? '0.0'}
                         </td>
                       </tr>
                     ))}
@@ -154,13 +150,13 @@ export const AcademicStaffDashboard: React.FC = () => {
               {stats.map((stat, index) => (
                 <div key={index} className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm p-4 border border-gray-100 dark:border-zinc-800">
                   <div className="flex justify-between items-start mb-2">
-                    <span className="text-[10px] font-medium text-gray-500 uppercase">{stat.label}</span>
-                    <div className={`p-1.5 rounded-lg ${stat.color}`}>
-                      {stat.icon}
+                    <span className="text-[10px] font-medium text-gray-500 uppercase">{stat?.label ?? 'N/A'}</span>
+                    <div className={`p-1.5 rounded-lg ${stat?.color ?? 'bg-gray-100'}`}>
+                      {stat?.icon}
                     </div>
                   </div>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">{stat.value}</p>
-                  <p className="text-[9px] text-gray-400 hover:text-fpt-orange cursor-pointer transition-colors mt-1">{stat.description}</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-white">{stat?.value ?? '0'}</p>
+                  <p className="text-[9px] text-gray-400 hover:text-fpt-orange cursor-pointer transition-colors mt-1">{stat?.description ?? ''}</p>
                 </div>
               ))}
             </div>
@@ -174,12 +170,12 @@ export const AcademicStaffDashboard: React.FC = () => {
                 </button>
               </div>
               <div className="divide-y divide-gray-100 dark:divide-zinc-800 max-h-[300px] overflow-auto">
-                {(data.notifications ?? []).map((notif, index) => (
+                {(data?.notifications ?? []).map((notif, index) => (
                   <div key={index} className="p-5 hover:bg-gray-50 dark:hover:bg-zinc-800 cursor-pointer">
                     <p className="text-xs text-gray-900 dark:text-white font-medium mb-1">
-                      {notif.title}
+                      {notif?.title ?? 'Thông báo mới'}
                     </p>
-                    <p className="text-[10px] text-gray-400">{notif.timestamp}</p>
+                    <p className="text-[10px] text-gray-400">{notif?.timestamp ?? 'Vừa xong'}</p>
                   </div>
                 ))}
               </div>
@@ -218,7 +214,7 @@ export const AcademicStaffDashboard: React.FC = () => {
                       fill="none"
                       stroke="#22c55e"
                       strokeWidth="12"
-                      strokeDasharray={`${((data.attendanceStats?.present ?? 0) / ((data.attendanceStats?.present ?? 0) + (data.attendanceStats?.absent ?? 1))) * 251.33} 251.33`}
+                      strokeDasharray={`${((data?.attendanceStats?.present ?? 0) / (Math.max(1, (data?.attendanceStats?.present ?? 0) + (data?.attendanceStats?.absent ?? 0)))) * 251.33} 251.33`}
                       strokeDashoffset="0"
                       strokeLinecap="round"
                     />
@@ -230,14 +226,14 @@ export const AcademicStaffDashboard: React.FC = () => {
                       fill="none"
                       stroke="#ef4444"
                       strokeWidth="12"
-                      strokeDasharray={`${((data.attendanceStats?.absent ?? 0) / ((data.attendanceStats?.present ?? 0) + (data.attendanceStats?.absent ?? 1))) * 251.33} 251.33`}
-                      strokeDashoffset={`-${((data.attendanceStats?.present ?? 0) / ((data.attendanceStats?.present ?? 0) + (data.attendanceStats?.absent ?? 1))) * 251.33}`}
+                      strokeDasharray={`${((data?.attendanceStats?.absent ?? 0) / (Math.max(1, (data?.attendanceStats?.present ?? 0) + (data?.attendanceStats?.absent ?? 0)))) * 251.33} 251.33`}
+                      strokeDashoffset={`-${((data?.attendanceStats?.present ?? 0) / (Math.max(1, (data?.attendanceStats?.present ?? 0) + (data?.attendanceStats?.absent ?? 0)))) * 251.33}`}
                       strokeLinecap="round"
                     />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <p className="text-xs font-medium text-gray-500 uppercase">Thời gian</p>
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">{data.attendanceStats?.date ?? 'N/A'}</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">{data?.attendanceStats?.date ?? 'N/A'}</p>
                   </div>
                 </div>
               </div>

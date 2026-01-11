@@ -40,6 +40,10 @@ public class Major {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    // Thời gian đào tạo (e.g., "9 kì", "4 năm")
+    @Column(name = "program_duration", length = 50)
+    private String programDuration;
+
     // Trạng thái của ngành (ACTIVE, INACTIVE)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -49,6 +53,9 @@ public class Major {
     // Một ngành có nhiều chuyên ngành
     @OneToMany(mappedBy = "major", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @com.fasterxml.jackson.annotation.JsonIgnore // Prevent infinite recursion
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private List<Specialization> specializations = new ArrayList<>();
 
     @CreationTimestamp
