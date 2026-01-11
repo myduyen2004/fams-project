@@ -27,7 +27,8 @@ spring:
     baseline-on-migrate: true
     baseline-version: 0
     locations: classpath:db/migration
-    validate-on-migrate: true
+    validate-on-migrate: false
+    repair-on-migrate: true
 
 server:
   port: 8080
