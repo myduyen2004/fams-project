@@ -16,6 +16,7 @@ import com.fams.backend.dto.request.ResetPasswordRequest;
 import com.fams.backend.dto.request.VerifyOtpRequest;
 import com.fams.backend.service.EmailService;
 import com.fams.backend.service.GeoLocationService;
+import com.fams.backend.service.UserActivityService;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
