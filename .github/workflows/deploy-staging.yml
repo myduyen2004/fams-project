@@ -27,23 +27,18 @@ jobs:
       
       - name: Deploy to EC2
         run: |
-          ssh ${{ env.EC2_USER }}@${{ env.EC2_HOST }} << 'ENDSSH'
+          ssh ${{ env.EC2_USER }}@${{ env.EC2_HOST }} 'bash -s' << 'ENDSSH'
           cd /home/ec2-user/fams-project || exit 1
           
-          # Pull latest code
           git fetch origin
           git checkout staging
           git reset --hard origin/staging
           git pull origin staging
           
-          # Create .env.staging file
-          cat > .env.staging << 'ENVFILE'
-          NEON_STAGING_DB_URL=jdbc:postgresql://neondb_owner:npg_KH5UoMe0NZYA@ep-shy-truth-a1qqexjr-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
-          NEON_STAGING_DB_USER=neondb_owner
-          NEON_STAGING_DB_PASSWORD=npg_KH5UoMe0NZYA
-          ENVFILE
+          echo 'NEON_STAGING_DB_URL=jdbc:postgresql://ep-shy-truth-a1qqexjr-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require' > .env.staging
+          echo 'NEON_STAGING_DB_USER=neondb_owner' >> .env.staging
+          echo 'NEON_STAGING_DB_PASSWORD=npg_KH5UoMe0NZYA' >> .env.staging
           
-          # Run deployment script
           chmod +x deploy-staging.sh
           ./deploy-staging.sh
           ENDSSH

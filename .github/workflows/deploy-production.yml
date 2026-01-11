@@ -27,33 +27,26 @@ jobs:
       
       - name: Deploy to EC2
         run: |
-          ssh ${{ env.EC2_USER }}@${{ env.EC2_HOST }} << 'ENDSSH'
+          ssh ${{ env.EC2_USER }}@${{ env.EC2_HOST }} 'bash -s' << 'ENDSSH'
           cd /home/ec2-user/fams-project || exit 1
           
-          # Pull latest code
           git fetch origin
           git checkout main
           git reset --hard origin/main
           git pull origin main
           
-          # Create .env.production file
-          cat > .env.production << 'ENVFILE'
-          NEON_PROD_DB_URL=jdbc:postgresql://neondb_owner:npg_8mbEARX4ehip@ep-ancient-glitter-a1qpw4b8-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
-          NEON_PROD_DB_USER=neondb_owner
-          NEON_PROD_DB_PASSWORD=npg_8mbEARX4ehip
-          DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/1328003476803526660/Z2E1AybLWXKLrKxXrvJkBRm8FGxS3FN2M_WYLLbfO7nW2sOoWOPRv994D-3jI2EEXnRW
-          ENVFILE
+          echo 'NEON_PROD_DB_URL=jdbc:postgresql://ep-ancient-glitter-a1qpw4b8-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require' > .env.production
+          echo 'NEON_PROD_DB_USER=neondb_owner' >> .env.production
+          echo 'NEON_PROD_DB_PASSWORD=npg_8mbEARX4ehip' >> .env.production
+          echo 'DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/1328003476803526660/Z2E1AybLWXKLrKxXrvJkBRm8FGxS3FN2M_WYLLbfO7nW2sOoWOPRv994D-3jI2EEXnRW' >> .env.production
           
-          # Run deployment script
           chmod +x deploy-production.sh
           ./deploy-production.sh
           ENDSSH
       
       - name: Notify on Failure
         if: failure()
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
-          curl -X POST "$DISCORD_WEBHOOK" \
+          curl -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
             -H "Content-Type: application/json" \
-            -d '{"embeds": [{"title": "❌ Production Deployment Failed", "color": 15158332, "fields": [{"name": "Environment", "value": "**PRODUCTION**", "inline": true}, {"name": "Branch", "value": "main", "inline": true}]}], "username": "FAMS Deploy Monitor"}'
+            -d '{"embeds": [{"title": "❌ Production Deployment Failed", "color": 15158332}], "username": "FAMS Deploy Monitor"}'
