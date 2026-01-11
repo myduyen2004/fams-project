@@ -16,6 +16,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -25,6 +26,9 @@ import java.util.List;
 public class SecurityConfig {
 
         private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+        @org.springframework.beans.factory.annotation.Value("${app.cors.allowed-origins}")
+        private String allowedOrigins;
 
         // Cấu hình security chính
         @Bean
@@ -74,25 +78,9 @@ public class SecurityConfig {
         public CorsConfigurationSource corsConfigurationSource() {
                 CorsConfiguration configuration = new CorsConfiguration();
 
-                // Dev server React / Vite
-                configuration.setAllowedOriginPatterns(List.of(
-                                // Local dev (Docker nginx on :80 and Vite on :5173/:5174/:3000)
-                                "http://localhost",
-                                "http://localhost:80",
-                                "http://127.0.0.1",
-                                "http://localhost:3000",
-                                "http://localhost:5173",
-                                "http://localhost:5174",
-                                "http://127.0.0.1:80",
-                                "http://127.0.0.1:3000",
-                                "http://127.0.0.1:5173",
-                                "http://127.0.0.1:5174",
-
-                                // Prod domains
-                                "https://www.fams-edu.online",
-                                "https://fams-edu.online",
-                                "https://api.fams-edu.online",
-                                "https://staging.fams-edu.online"));
+                // Split comma-separated origins from properties
+                List<String> origins = Arrays.asList(allowedOrigins.split(","));
+                configuration.setAllowedOriginPatterns(origins);
 
                 // Allow HTTP methods
                 configuration.setAllowedMethods(List.of(
