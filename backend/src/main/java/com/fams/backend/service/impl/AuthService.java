@@ -103,8 +103,12 @@ public class AuthService implements UserDetailsService {
         createUserSession(user, httpRequest);
         createAccessLog(user, httpRequest);
 
-        // 7. Broadcast update
-        dashboardBroadcastService.broadcastUpdate();
+        // 7. Broadcast update (wrapped in try-catch for resilience)
+        try {
+            dashboardBroadcastService.broadcastUpdate();
+        } catch (Exception e) {
+            log.error("Failed to broadcast dashboard update after login | username={}", username, e);
+        }
 
         // 7. Create response
         log.info("Login successful | username={} | userId={} | role={}",
