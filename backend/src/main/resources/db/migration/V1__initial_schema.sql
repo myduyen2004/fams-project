@@ -7,7 +7,7 @@
 -- ===========================================================
 -- 1. UTILS AND EXTENSIONS
 -- ===========================================================
-RAISE NOTICE 'Flyway: Starting section 1 (Utils)';
+DO $$ BEGIN RAISE NOTICE 'Flyway: Starting section 1 (Utils)'; END $$;
 
 -- Auto-update updated_at timestamp function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -21,7 +21,7 @@ $$ language 'plpgsql';
 -- ===========================================================
 -- 2. USERS AND AUTHENTICATION
 -- ===========================================================
-RAISE NOTICE 'Flyway: Starting section 2 (Users)';
+DO $$ BEGIN RAISE NOTICE 'Flyway: Starting section 2 (Users)'; END $$;
 
 CREATE TABLE IF NOT EXISTS users (
     id BIGSERIAL PRIMARY KEY,
@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS lecturer_profiles (
 -- ===========================================================
 -- 3. ACADEMIC STRUCTURE (MAJORS, SPECIALIZATIONS)
 -- ===========================================================
-RAISE NOTICE 'Flyway: Starting section 3 (Academic)';
+DO $$ BEGIN RAISE NOTICE 'Flyway: Starting section 3 (Academic)'; END $$;
 
 CREATE TABLE IF NOT EXISTS majors (
     id BIGSERIAL PRIMARY KEY,
@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS student_profiles (
 -- ===========================================================
 -- 4. SEMESTERS AND COURSES
 -- ===========================================================
-RAISE NOTICE 'Flyway: Starting section 4 (Semesters)';
+DO $$ BEGIN RAISE NOTICE 'Flyway: Starting section 4 (Semesters)'; END $$;
 
 CREATE TABLE IF NOT EXISTS semesters (
     id BIGSERIAL PRIMARY KEY,
@@ -150,7 +150,7 @@ CREATE TABLE IF NOT EXISTS class_sections (
 -- ===========================================================
 -- 5. MONITORING AND DASHBOARD
 -- ===========================================================
-RAISE NOTICE 'Flyway: Starting section 5 (Dashboard)';
+DO $$ BEGIN RAISE NOTICE 'Flyway: Starting section 5 (Dashboard)'; END $$;
 
 CREATE TABLE IF NOT EXISTS system_logs (
     id BIGSERIAL PRIMARY KEY,
@@ -232,7 +232,7 @@ CREATE TABLE IF NOT EXISTS notification_recipients (
 -- ===========================================================
 -- 6. AI CHAT AND ATTENDANCE
 -- ===========================================================
-RAISE NOTICE 'Flyway: Starting section 6 (AI/Attendance)';
+DO $$ BEGIN RAISE NOTICE 'Flyway: Starting section 6 (AI/Attendance)'; END $$;
 
 CREATE TABLE IF NOT EXISTS ai_chat_sessions (
     id BIGSERIAL PRIMARY KEY,
@@ -291,7 +291,7 @@ CREATE TABLE IF NOT EXISTS student_attendances (
 -- ===========================================================
 -- 7. IMPORT TRACKING
 -- ===========================================================
-RAISE NOTICE 'Flyway: Starting section 7 (Import)';
+DO $$ BEGIN RAISE NOTICE 'Flyway: Starting section 7 (Import)'; END $$;
 
 CREATE TABLE IF NOT EXISTS import_history (
     id BIGSERIAL PRIMARY KEY,
@@ -317,7 +317,7 @@ CREATE TABLE IF NOT EXISTS import_detail (
 -- ===========================================================
 -- 8. TRIGGERS FOR UPDATED_AT
 -- ===========================================================
-RAISE NOTICE 'Flyway: Starting section 8 (Triggers)';
+DO $$ BEGIN RAISE NOTICE 'Flyway: Starting section 8 (Triggers)'; END $$;
 
 DROP TRIGGER IF EXISTS trg_users_updated_at ON users;
 
@@ -362,7 +362,7 @@ CREATE TRIGGER trg_timetable_slots_updated_at BEFORE UPDATE ON timetable_slots F
 -- ===========================================================
 -- 9. INITIAL SEED DATA
 -- ===========================================================
-RAISE NOTICE 'Flyway: Starting section 9 (Seed)';
+DO $$ BEGIN RAISE NOTICE 'Flyway: Starting section 9 (Seed)'; END $$;
 
 -- Passwords are 'admin123' hashed with BCrypt
 INSERT INTO
@@ -388,4 +388,4 @@ VALUES (
     )
 ON CONFLICT DO NOTHING;
 
-RAISE NOTICE 'Flyway: Migration V1 completed successfully';
+DO $$ BEGIN RAISE NOTICE 'Flyway: Migration V1 completed successfully'; END $$;
