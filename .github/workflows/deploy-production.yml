@@ -7,7 +7,7 @@ on:
 
 env:
   EC2_HOST: 16.176.158.195
-  EC2_USER: ubuntu
+  EC2_USER: ec2-user
 
 jobs:
   deploy:
@@ -33,7 +33,7 @@ jobs:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
           ssh ${{ env.EC2_USER }}@${{ env.EC2_HOST }} << 'EOF'
-            cd /home/ubuntu/fams-project || exit 1
+            cd /home/ec2-user/fams-project || exit 1
             
             # Pull latest code
             git fetch origin
