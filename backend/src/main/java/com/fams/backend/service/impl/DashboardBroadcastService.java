@@ -6,6 +6,7 @@ import com.fams.backend.service.MapService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +24,7 @@ public class DashboardBroadcastService {
     /**
      * Broadcast all dashboard statistics and logs
      */
+    @Async
     public void broadcastUpdate() {
         log.info("Broadcasting dashboard updates to all topics...");
 
