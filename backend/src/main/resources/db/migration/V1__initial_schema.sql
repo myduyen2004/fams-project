@@ -186,7 +186,7 @@ CREATE TABLE notifications (
     sender_id BIGINT REFERENCES users (id),
     target_type VARCHAR(20) NOT NULL DEFAULT 'ALL',
     target_roles VARCHAR(200),
-    target_class_name VARCHAR(50) UNIQUE REFERENCES class_sections (class_name),
+    target_class_name VARCHAR(50) REFERENCES class_sections (class_name),
     target_course_id BIGINT REFERENCES courses (id),
     scheduled_at TIMESTAMP,
     sent_at TIMESTAMP,
