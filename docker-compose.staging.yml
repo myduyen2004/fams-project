@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fams-backend-staging
+    environment:
+      - SPRING_PROFILES_ACTIVE=staging
+      - NEON_STAGING_DB_URL=${NEON_STAGING_DB_URL}
+      - NEON_STAGING_DB_USER=${NEON_STAGING_DB_USER}
+      - NEON_STAGING_DB_PASSWORD=${NEON_STAGING_DB_PASSWORD}
+    ports:
+      - "8081:8081"
+    networks:
+      - fams-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8081/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  redis:
+    image: redis:7-alpine
+    container_name: fams-redis-staging
+    ports:
+      - "6380:6379"
+    networks:
+      - fams-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+networks:
+  fams-network:
+    driver: bridge
