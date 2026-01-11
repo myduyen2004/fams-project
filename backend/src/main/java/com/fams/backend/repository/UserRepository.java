@@ -25,6 +25,12 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
      */
     Optional<User> findByUsername(String username);
 
+    /**
+     * Tìm user theo username với profiles (for login)
+     */
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.studentProfile LEFT JOIN FETCH u.lecturerProfile WHERE u.username = :username")
+    Optional<User> findByUsernameWithProfiles(String username);
+
     Optional<List<User>> findByRole(User.UserRole role);
 
     /**
