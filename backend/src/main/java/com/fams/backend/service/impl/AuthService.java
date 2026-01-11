@@ -70,8 +70,8 @@ public class AuthService implements UserDetailsService {
             throw new BadRequestException("Password không được để trống");
         }
 
-        // 2. Tìm user theo username
-        User user = userRepository.findByUsername(username)
+        // 2. Tìm user theo username (with profiles for response)
+        User user = userRepository.findByUsernameWithProfiles(username)
                 .orElseThrow(() -> {
                     log.warn("Login failed | username={} | reason=USER_NOT_FOUND", username);
                     return new UnauthorizedException("Tài khoản hoặc mật khẩu không đúng");
