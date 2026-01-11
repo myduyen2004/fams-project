@@ -21,6 +21,10 @@ spring:
       host: localhost
       port: 6379
 
+  # Flyway disabled for dev (use ddl-auto: update)
+  flyway:
+    enabled: false
+
 server:
   port: 8081
 
