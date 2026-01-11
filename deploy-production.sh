@@ -4,7 +4,7 @@ set -e
 echo "🚀 Starting Production Deployment..."
 
 # Navigate to project directory
-cd /home/ubuntu/fams-project
+cd /home/ec2-user/fams-project || exit 1
 
 # Checkout main branch
 echo "📦 Checking out main branch..."

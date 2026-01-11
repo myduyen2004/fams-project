@@ -4,7 +4,7 @@ set -e
 echo "🚀 Starting Staging Deployment..."
 
 # Navigate to project directory
-cd /home/ubuntu/fams-project
+cd /home/ec2-user/fams-project || exit 1
 
 # Checkout staging branch
 echo "📦 Checking out staging branch..."
