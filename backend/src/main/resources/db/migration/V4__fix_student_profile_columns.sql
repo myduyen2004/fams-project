@@ -1,0 +1,2 @@
+-- V4 placeholder - this migration was already applied
+-- Keeping empty file to satisfy Flyway validation
