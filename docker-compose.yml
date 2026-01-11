@@ -38,7 +38,7 @@ services:
       dockerfile: Dockerfile
     container_name: fams-ai-service
     ports:
-      - "5000:5000"
+      - "5001:5000"
     environment:
       - PORT=5000
       - TZ=Asia/Ho_Chi_Minh
@@ -63,7 +63,7 @@ services:
       - SPRING_PROFILES_ACTIVE=dev
       - DB_HOST=postgres
       - REDIS_HOST=redis
-      - AI_SERVICE_URL=http://ai-service:5000
+      - AI_SERVICE_URL=http://ai-service:5001
       - TZ=Asia/Ho_Chi_Minh
     depends_on:
       postgres:

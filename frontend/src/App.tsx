@@ -20,6 +20,7 @@ const ProfilePage = lazy(() => import('./pages/admin/ProfilePage').then(m => ({ 
 const AcademicStaffDashboard = lazy(() => import('./pages/academic-staff/AcademicStaffDashboard').then(m => ({ default: m.AcademicStaffDashboard })));
 const AcademicStaffProfilePage = lazy(() => import('./pages/academic-staff/ProfilePage').then(m => ({ default: m.ProfilePage })));
 const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
+const ManagerLecturersPage = lazy(() => import('./pages/academic-staff/ManagerLecturersPage').then(m => ({ default: m.ManagerLecturersPage })));
 const SemestersPage = lazy(() => import('./pages/academic-staff/SemestersPage').then(m => ({ default: m.SemestersPage })));
 const MajorManagement = lazy(() => import('./pages/academic-staff/MajorManagement').then(m => ({ default: m.MajorManagement })));
 const MajorDetail = lazy(() => import('./pages/academic-staff/MajorDetail').then(m => ({ default: m.MajorDetail })));
@@ -178,6 +179,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
                 <AcademicStaffProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/academic-staff/lecturers"
+            element={
+              <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
+                <ManagerLecturersPage />
               </ProtectedRoute>
             }
           />
