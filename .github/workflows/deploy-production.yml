@@ -30,16 +30,20 @@ jobs:
           ssh ${{ env.EC2_USER }}@${{ env.EC2_HOST }} 'bash -s' << 'ENDSSH'
           cd /home/ec2-user/fams-project || exit 1
           
+          # Force reset ALL local changes first
           git fetch origin
+          git reset --hard HEAD
+          git clean -fd
           git checkout main
           git reset --hard origin/main
-          git pull origin main
           
+          # Create env file
           echo 'NEON_PROD_DB_URL=jdbc:postgresql://ep-ancient-glitter-a1qpw4b8-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require' > .env.production
           echo 'NEON_PROD_DB_USER=neondb_owner' >> .env.production
           echo 'NEON_PROD_DB_PASSWORD=npg_8mbEARX4ehip' >> .env.production
           echo 'DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/1328003476803526660/Z2E1AybLWXKLrKxXrvJkBRm8FGxS3FN2M_WYLLbfO7nW2sOoWOPRv994D-3jI2EEXnRW' >> .env.production
           
+          # Run deploy script
           chmod +x deploy-production.sh
           ./deploy-production.sh
           ENDSSH

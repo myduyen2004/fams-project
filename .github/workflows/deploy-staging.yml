@@ -30,15 +30,19 @@ jobs:
           ssh ${{ env.EC2_USER }}@${{ env.EC2_HOST }} 'bash -s' << 'ENDSSH'
           cd /home/ec2-user/fams-project || exit 1
           
+          # Force reset ALL local changes first
           git fetch origin
+          git reset --hard HEAD
+          git clean -fd
           git checkout staging
           git reset --hard origin/staging
-          git pull origin staging
           
+          # Create env file
           echo 'NEON_STAGING_DB_URL=jdbc:postgresql://ep-shy-truth-a1qqexjr-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require' > .env.staging
           echo 'NEON_STAGING_DB_USER=neondb_owner' >> .env.staging
           echo 'NEON_STAGING_DB_PASSWORD=npg_KH5UoMe0NZYA' >> .env.staging
           
+          # Run deploy script
           chmod +x deploy-staging.sh
           ./deploy-staging.sh
           ENDSSH
