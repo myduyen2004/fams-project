@@ -44,14 +44,13 @@ public class SubSpecializationCourse {
     @com.fasterxml.jackson.annotation.JsonIgnore
     private Course course;
 
-    // Loại môn học
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    // Thứ tự hiển thị (cho drag & drop)
     @Builder.Default
-    private CourseType courseType = CourseType.REQUIRED;
+    private Integer orderIndex = 0;
 
-    // Thứ tự hiển thị
-    private Integer orderIndex;
+    // Học kỳ (được gán khi thêm môn vào chuyên ngành hẹp)
+    @Builder.Default
+    private Integer semester = 1;
 
     // Ghi chú
     @Column(length = 500)
@@ -64,9 +63,4 @@ public class SubSpecializationCourse {
     @UpdateTimestamp
     @Column(nullable = false)
     private LocalDateTime updatedAt;
-
-    public enum CourseType {
-        REQUIRED, // Môn bắt buộc
-        ELECTIVE // Môn tự chọn
-    }
 }

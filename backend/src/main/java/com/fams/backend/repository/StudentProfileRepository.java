@@ -17,4 +17,6 @@ public interface StudentProfileRepository extends JpaRepository<StudentProfile, 
     boolean existsByMajorId(Long majorId);
 
     boolean existsBySpecializationId(Long specializationId);
+
+    boolean existsBySubSpecializationId(Long subSpecializationId);
 }
