@@ -27,7 +27,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                         "http://127.0.0.1:3000",
                         "https://www.fams-edu.online",
                         "https://fams-edu.online",
-                        "https://api.fams-edu.online")
+                        "https://api.fams-edu.online",
+                        "https://staging.fams-edu.online")
                 .withSockJS();
     }
 }
