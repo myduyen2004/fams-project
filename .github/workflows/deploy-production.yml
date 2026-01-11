@@ -41,14 +41,13 @@ jobs:
             git reset --hard origin/main  # Force overwrite local changes
             git pull origin main
             
-            # Create .env.production file with cleaned DB URL
-            DB_URL=$(echo "${{ secrets.NEON_PROD_DB_URL }}" | sed 's/&channel_binding=require//')
-            cat > .env.production << 'ENVEOF'
-            NEON_PROD_DB_URL=${DB_URL}
-            NEON_PROD_DB_USER=${{ secrets.NEON_PROD_DB_USER }}
-            NEON_PROD_DB_PASSWORD=${{ secrets.NEON_PROD_DB_PASSWORD }}
-            DISCORD_WEBHOOK_URL=${{ secrets.DISCORD_WEBHOOK_URL }}
-            ENVEOF
+            # Create .env.production file with jdbc: prefix
+            cat > .env.production << ENVEOF
+NEON_PROD_DB_URL=jdbc:postgresql://neondb_owner:npg_8mbEARX4ehip@ep-ancient-glitter-a1qpw4b8-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+NEON_PROD_DB_USER=neondb_owner
+NEON_PROD_DB_PASSWORD=npg_8mbEARX4ehip
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/1328003476803526660/Z2E1AybLWXKLrKxXrvJkBRm8FGxS3FN2M_WYLLbfO7nW2sOoWOPRv994D-3jI2EEXnRW
+ENVEOF
             
             # Run deployment script
             chmod +x deploy-production.sh
