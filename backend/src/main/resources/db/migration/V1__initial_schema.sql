@@ -1,6 +1,7 @@
 -- ===========================================================
 -- FAMS CONSOLIDATED INITIAL SCHEMA (v1.0)
 -- This file replaces all previous migrations (V1-V8)
+-- Made re-runnable with IF NOT EXISTS
 -- ===========================================================
 
 -- ===========================================================
@@ -20,7 +21,7 @@ $$ language 'plpgsql';
 -- 2. USERS AND AUTHENTICATION
 -- ===========================================================
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id BIGSERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE,
     password VARCHAR(255),
@@ -38,7 +39,7 @@ CREATE TABLE users (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE lecturer_profiles (
+CREATE TABLE IF NOT EXISTS lecturer_profiles (
     user_id BIGINT PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
     bio TEXT,
     department VARCHAR(100),
@@ -49,7 +50,7 @@ CREATE TABLE lecturer_profiles (
 -- 3. ACADEMIC STRUCTURE (MAJORS, SPECIALIZATIONS)
 -- ===========================================================
 
-CREATE TABLE majors (
+CREATE TABLE IF NOT EXISTS majors (
     id BIGSERIAL PRIMARY KEY,
     code VARCHAR(20) UNIQUE NOT NULL,
     name VARCHAR(100) NOT NULL,
@@ -61,7 +62,7 @@ CREATE TABLE majors (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE specializations (
+CREATE TABLE IF NOT EXISTS specializations (
     id BIGSERIAL PRIMARY KEY,
     major_id BIGINT NOT NULL REFERENCES majors (id) ON DELETE CASCADE,
     code VARCHAR(20) UNIQUE NOT NULL,
@@ -73,7 +74,7 @@ CREATE TABLE specializations (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE sub_specializations (
+CREATE TABLE IF NOT EXISTS sub_specializations (
     id BIGSERIAL PRIMARY KEY,
     specialization_id BIGINT NOT NULL REFERENCES specializations (id) ON DELETE CASCADE,
     code VARCHAR(20) UNIQUE NOT NULL,
@@ -84,7 +85,7 @@ CREATE TABLE sub_specializations (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE student_profiles (
+CREATE TABLE IF NOT EXISTS student_profiles (
     user_id BIGINT PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
     major_id BIGINT REFERENCES majors (id),
     specialization_id BIGINT REFERENCES specializations (id),
@@ -97,7 +98,7 @@ CREATE TABLE student_profiles (
 -- 4. SEMESTERS AND COURSES
 -- ===========================================================
 
-CREATE TABLE semesters (
+CREATE TABLE IF NOT EXISTS semesters (
     id BIGSERIAL PRIMARY KEY,
     code VARCHAR(20) UNIQUE NOT NULL,
     name VARCHAR(100) NOT NULL,
@@ -108,7 +109,7 @@ CREATE TABLE semesters (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE courses (
+CREATE TABLE IF NOT EXISTS courses (
     id BIGSERIAL PRIMARY KEY,
     code VARCHAR(50) UNIQUE NOT NULL,
     name VARCHAR(200) NOT NULL,
@@ -118,7 +119,7 @@ CREATE TABLE courses (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE class_sections (
+CREATE TABLE IF NOT EXISTS class_sections (
     id BIGSERIAL PRIMARY KEY,
     class_name VARCHAR(50) UNIQUE NOT NULL,
     course_id BIGINT NOT NULL REFERENCES courses (id),
@@ -133,7 +134,7 @@ CREATE TABLE class_sections (
 -- 5. MONITORING AND DASHBOARD
 -- ===========================================================
 
-CREATE TABLE system_logs (
+CREATE TABLE IF NOT EXISTS system_logs (
     id BIGSERIAL PRIMARY KEY,
     title VARCHAR(200) NOT NULL,
     description TEXT NOT NULL,
@@ -142,7 +143,7 @@ CREATE TABLE system_logs (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE alerts (
+CREATE TABLE IF NOT EXISTS alerts (
     id BIGSERIAL PRIMARY KEY,
     title VARCHAR(200) NOT NULL,
     description TEXT NOT NULL,
@@ -153,7 +154,7 @@ CREATE TABLE alerts (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE access_logs (
+CREATE TABLE IF NOT EXISTS access_logs (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     location VARCHAR(100),
@@ -163,7 +164,7 @@ CREATE TABLE access_logs (
     access_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE user_sessions (
+CREATE TABLE IF NOT EXISTS user_sessions (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     ip_address VARCHAR(45),
@@ -177,7 +178,7 @@ CREATE TABLE user_sessions (
     user_agent VARCHAR(500)
 );
 
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
     id BIGSERIAL PRIMARY KEY,
     title VARCHAR(200) NOT NULL,
     content TEXT NOT NULL,
@@ -195,7 +196,7 @@ CREATE TABLE notifications (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE notification_recipients (
+CREATE TABLE IF NOT EXISTS notification_recipients (
     id BIGSERIAL PRIMARY KEY,
     notification_id BIGINT NOT NULL REFERENCES notifications (id) ON DELETE CASCADE,
     user_id BIGINT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
@@ -207,7 +208,7 @@ CREATE TABLE notification_recipients (
 -- 6. AI CHAT AND ATTENDANCE
 -- ===========================================================
 
-CREATE TABLE ai_chat_sessions (
+CREATE TABLE IF NOT EXISTS ai_chat_sessions (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     title VARCHAR(200),
@@ -217,7 +218,7 @@ CREATE TABLE ai_chat_sessions (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE ai_chat_messages (
+CREATE TABLE IF NOT EXISTS ai_chat_messages (
     id BIGSERIAL PRIMARY KEY,
     session_id BIGINT NOT NULL REFERENCES ai_chat_sessions (id) ON DELETE CASCADE,
     content TEXT NOT NULL,
@@ -226,7 +227,7 @@ CREATE TABLE ai_chat_messages (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE timetable_slots (
+CREATE TABLE IF NOT EXISTS timetable_slots (
     id BIGSERIAL PRIMARY KEY,
     class_section_id BIGINT NOT NULL REFERENCES class_sections (id),
     room_id BIGINT,
@@ -238,7 +239,7 @@ CREATE TABLE timetable_slots (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE attendance_sessions (
+CREATE TABLE IF NOT EXISTS attendance_sessions (
     id BIGSERIAL PRIMARY KEY,
     timetable_slot_id BIGINT NOT NULL REFERENCES timetable_slots (id),
     lecturer_id BIGINT NOT NULL REFERENCES users (id),
@@ -250,7 +251,7 @@ CREATE TABLE attendance_sessions (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE student_attendances (
+CREATE TABLE IF NOT EXISTS student_attendances (
     id BIGSERIAL PRIMARY KEY,
     session_id BIGINT NOT NULL REFERENCES attendance_sessions (id) ON DELETE CASCADE,
     student_id BIGINT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
@@ -265,7 +266,7 @@ CREATE TABLE student_attendances (
 -- 7. IMPORT TRACKING
 -- ===========================================================
 
-CREATE TABLE import_history (
+CREATE TABLE IF NOT EXISTS import_history (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users (id),
     entity_type VARCHAR(50) NOT NULL,
@@ -277,7 +278,7 @@ CREATE TABLE import_history (
     status VARCHAR(20) DEFAULT 'COMPLETED'
 );
 
-CREATE TABLE import_detail (
+CREATE TABLE IF NOT EXISTS import_detail (
     id BIGSERIAL PRIMARY KEY,
     import_history_id BIGINT NOT NULL REFERENCES import_history (id) ON DELETE CASCADE,
     row_number INTEGER NOT NULL,
@@ -290,23 +291,43 @@ CREATE TABLE import_detail (
 -- 8. TRIGGERS FOR UPDATED_AT
 -- ===========================================================
 
+DROP TRIGGER IF EXISTS trg_users_updated_at ON users;
+
 CREATE TRIGGER trg_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_majors_updated_at ON majors;
 
 CREATE TRIGGER trg_majors_updated_at BEFORE UPDATE ON majors FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS trg_specializations_updated_at ON specializations;
+
 CREATE TRIGGER trg_specializations_updated_at BEFORE UPDATE ON specializations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_sub_specializations_updated_at ON sub_specializations;
 
 CREATE TRIGGER trg_sub_specializations_updated_at BEFORE UPDATE ON sub_specializations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS trg_semesters_updated_at ON semesters;
+
 CREATE TRIGGER trg_semesters_updated_at BEFORE UPDATE ON semesters FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_courses_updated_at ON courses;
 
 CREATE TRIGGER trg_courses_updated_at BEFORE UPDATE ON courses FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS trg_class_sections_updated_at ON class_sections;
+
 CREATE TRIGGER trg_class_sections_updated_at BEFORE UPDATE ON class_sections FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_notifications_updated_at ON notifications;
 
 CREATE TRIGGER trg_notifications_updated_at BEFORE UPDATE ON notifications FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS trg_ai_chat_sessions_updated_at ON ai_chat_sessions;
+
 CREATE TRIGGER trg_ai_chat_sessions_updated_at BEFORE UPDATE ON ai_chat_sessions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_timetable_slots_updated_at ON timetable_slots;
 
 CREATE TRIGGER trg_timetable_slots_updated_at BEFORE UPDATE ON timetable_slots FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -336,4 +357,4 @@ VALUES (
         'ACTIVE',
         true
     )
-ON CONFLICT DO NOTHING;
+ON CONFLICT (email) DO NOTHING;
