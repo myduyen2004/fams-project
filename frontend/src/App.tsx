@@ -24,6 +24,8 @@ const ManagerLecturersPage = lazy(() => import('./pages/academic-staff/ManagerLe
 const SemestersPage = lazy(() => import('./pages/academic-staff/SemestersPage').then(m => ({ default: m.SemestersPage })));
 const MajorManagement = lazy(() => import('./pages/academic-staff/MajorManagement').then(m => ({ default: m.MajorManagement })));
 const MajorDetail = lazy(() => import('./pages/academic-staff/MajorDetail').then(m => ({ default: m.MajorDetail })));
+const SpecializationDetail = lazy(() => import('./pages/academic-staff/SpecializationDetail').then(m => ({ default: m.SpecializationDetail })));
+const CourseManagement = lazy(() => import('./pages/academic-staff/CourseManagement').then(m => ({ default: m.CourseManagement })));
 
 const PageLoader = () => (
   <div className="flex h-screen w-full items-center justify-center bg-gray-50 dark:bg-zinc-950">
@@ -190,14 +192,14 @@ function App() {
               </ProtectedRoute>
             }
           />
-            <Route
-              path="/academic-staff/semesters"
-              element={
-                <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
-                  <SemestersPage />
-                </ProtectedRoute>
-              }
-            />
+          <Route
+            path="/academic-staff/semesters"
+            element={
+              <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
+                <SemestersPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/academic-staff/majors"
             element={
@@ -211,6 +213,22 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
                 <MajorDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/academic-staff/specializations/:id"
+            element={
+              <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
+                <SpecializationDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/academic-staff/courses"
+            element={
+              <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
+                <CourseManagement />
               </ProtectedRoute>
             }
           />
