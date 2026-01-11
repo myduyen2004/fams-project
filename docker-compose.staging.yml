@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   backend:
     build:
@@ -11,6 +9,9 @@ services:
       - NEON_STAGING_DB_URL=${NEON_STAGING_DB_URL}
       - NEON_STAGING_DB_USER=${NEON_STAGING_DB_USER}
       - NEON_STAGING_DB_PASSWORD=${NEON_STAGING_DB_PASSWORD}
+    depends_on:
+      redis:
+        condition: service_healthy
     ports:
       - "8081:8081"
     networks:

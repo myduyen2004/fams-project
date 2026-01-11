@@ -18,12 +18,17 @@ spring:
 
   data:
     redis:
-      host: localhost
+      host: redis
       port: 6379
 
   # Flyway disabled for dev (use ddl-auto: update)
   flyway:
-    enabled: false
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+    validate-on-migrate: false
+    repair-on-migrate: true
 
 server:
   port: 8081
