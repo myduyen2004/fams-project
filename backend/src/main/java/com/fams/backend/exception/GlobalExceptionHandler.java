@@ -1,8 +1,11 @@
 package com.fams.backend.exception;
 
+import com.fams.backend.service.DiscordNotificationService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -10,6 +13,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -17,6 +22,9 @@ import java.util.Map;
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+    @Autowired(required = false)
+    private DiscordNotificationService discordNotificationService;
 
     @Data
     @AllArgsConstructor
@@ -115,11 +123,33 @@ public class GlobalExceptionHandler {
      * Handle Generic Exception
      */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
+    public ResponseEntity<ErrorResponse> handleGenericException(Exception ex, HttpServletRequest request) {
         log.error("Internal server error", ex);
+
+        // Send Discord notification for production errors
+        if (discordNotificationService != null) {
+            String stackTrace = getStackTrace(ex);
+            discordNotificationService.sendErrorNotification(
+                    ex.getClass().getSimpleName(),
+                    ex.getMessage() != null ? ex.getMessage() : "No error message",
+                    stackTrace,
+                    request.getRequestURI(),
+                    request.getMethod());
+        }
+
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau");
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+
+    /**
+     * Helper method to get stack trace as string
+     */
+    private String getStackTrace(Exception ex) {
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        ex.printStackTrace(pw);
+        return sw.toString();
     }
 }
