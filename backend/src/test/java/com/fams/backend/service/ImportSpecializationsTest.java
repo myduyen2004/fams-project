@@ -207,30 +207,31 @@ class ImportSpecializationsTest {
     }
 
     @Test
-    @DisplayName("UTCID07: Import file chỉ có header trả về danh sách rỗng")
-    void importSpecializations_OnlyHeader_ReturnsEmptyList() throws IOException {
+    @DisplayName("UTCID07: Import file chỉ có header ném ra ngoại lệ")
+    void importSpecializations_OnlyHeader_ThrowsException() {
         // Arrange
         when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
 
-        // Act
-        List<Specialization> result = specializationService.importSpecializations(1L, onlyHeaderExcelFile);
-
-        // Assert
-        assertTrue(result.isEmpty());
+        // Act & Assert
+        RuntimeException exception = assertThrows(
+                RuntimeException.class,
+                () -> specializationService.importSpecializations(1L, onlyHeaderExcelFile));
+        assertEquals("File không chứa dữ liệu chuyên ngành hợp lệ.", exception.getMessage());
         verify(specializationRepository, never()).saveAll(anyList());
     }
 
     @Test
-    @DisplayName("UTCID08: Import bỏ qua các dòng có major code khác")
-    void importSpecializations_DifferentMajorCode_SkipsRows() throws IOException {
+    @DisplayName("UTCID08: Import bỏ qua tất cả các dòng có major code khác ném ra ngoại lệ")
+    void importSpecializations_DifferentMajorCode_ThrowsException() {
         // Arrange
         when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
 
-        // Act
-        List<Specialization> result = specializationService.importSpecializations(1L, differentMajorCodeFile);
-
-        // Assert
-        assertTrue(result.isEmpty()); // Tất cả dòng đều có major code khác "SE"
+        // Act & Assert
+        RuntimeException exception = assertThrows(
+                RuntimeException.class,
+                () -> specializationService.importSpecializations(1L, differentMajorCodeFile));
+        assertTrue(exception.getMessage().contains("Không có chuyên ngành nào được import"));
+        assertTrue(exception.getMessage().contains("không khớp với ngành hiện tại"));
         verify(specializationRepository, never()).saveAll(anyList());
     }
 
