@@ -21,9 +21,12 @@ spring:
       host: localhost
       port: 6379
 
-  # Flyway disabled for dev (use ddl-auto: update)
+  # Flyway for staging (mirrors production with baseline)
   flyway:
-    enabled: false
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1
+    locations: classpath:db/migration
 
 server:
   port: 8081
