@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
-import { X, Camera, User as UserIcon, Loader2, Upload } from 'lucide-react';
+import { X, Camera, User as UserIcon, Loader2, Upload, AlertCircle } from 'lucide-react';
 import { userService, UserResponse } from '../../../services/api/userService';
 import { authService } from '../../../services/api/authService';
 import { useWebSocket } from '../../../hooks/useWebSocket';
 import toast from 'react-hot-toast';
+import { useRef } from 'react';
 
 // --- AddUserModal ---
 export const AddUserModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = ({ onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [avatar, setAvatar] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ fullName: '', code: '', email: '', dob: '', role: 'STUDENT' as any });
+  const [formData, setFormData] = useState({ fullName: '', code: '', email: '', dob: '', phone: '', role: 'STUDENT' as any });
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -71,7 +72,11 @@ export const AddUserModal: React.FC<{ onClose: () => void; onSuccess: () => void
               <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Email</label>
               <input required type="email" className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none" placeholder="anv@fpt.edu.vn" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
             </div>
-            <div className="col-span-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Số điện thoại</label>
+              <input type="text" className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none" placeholder="0123456789" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Vai trò</label>
               <select className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none" value={formData.role} onChange={e => setFormData({...formData, role: e.target.value as any})}>
                 <option value="STUDENT">Sinh viên</option>
@@ -305,6 +310,7 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
 
   const currentUser = authService.getUser();
   const username = currentUser?.username || 'anonymous';
+  const lastToastId = useRef<string | null>(null);
 
   useWebSocket(`/topic/import-progress/${username}`, (data) => {
     setProgress({
@@ -313,6 +319,33 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
       status: data.status
     });
   });
+
+  // Check for existing active jobs on mount
+  React.useEffect(() => {
+    const checkActiveJob = async () => {
+      try {
+        const activeJob = await userService.getActiveImportJob();
+        if (activeJob) {
+          setIsAsyncJob(true);
+          setLoading(true);
+          setProgress({
+            percentage: activeJob.percentage || 0,
+            message: activeJob.errorMessage || 'Đang xử lý trong background...',
+            status: activeJob.status
+          });
+          
+          // Prevent double toast using Ref
+          if (lastToastId.current !== activeJob.jobId) {
+            toast.success('Hệ thống đang tiếp tục xử lý bản import trước đó.');
+            lastToastId.current = activeJob.jobId;
+          }
+        }
+      } catch (error) {
+        console.error('Failed to check active job:', error);
+      }
+    };
+    checkActiveJob();
+  }, []);
 
   // Protection against accidental closure during import
   React.useEffect(() => {
@@ -405,102 +438,161 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
     }
   };
 
+  const handleCleanup = async () => {
+    if (!window.confirm('Bạn có chắc muốn dọn dẹp các tiến trình import đang hoạt động? Việc này sẽ dừng các yêu cầu import hiện tại.')) return;
+    
+    try {
+      setLoading(true);
+      await userService.cleanupStuckJobs();
+      toast.success('Đã dọn dẹp các tiến trình đang xử lý. Bạn có thể thử import lại.');
+      setIsAsyncJob(false);
+      setLoading(false);
+      setProgress({ percentage: 0, message: '', status: '' });
+      lastToastId.current = null;
+      onSuccess(); 
+    } catch (error) {
+      toast.error('Lỗi khi dọn dẹp tiến trình');
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-md border border-gray-100 dark:border-zinc-800 overflow-hidden">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-xl border border-gray-100 dark:border-zinc-800 overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800">
           <h3 className="text-xl font-bold text-gray-900 dark:text-white">Import người dùng</h3>
           <button onClick={handleClose}><X size={20} className="text-gray-400 hover:text-gray-600" /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="p-4 bg-blue-50 dark:bg-blue-900/10 text-blue-800 dark:text-blue-300 rounded-lg text-sm">
-            <p className="font-semibold mb-1">Hướng dẫn:</p>
-            <ul className="list-disc pl-4 space-y-1">
-              <li>Tải lên file <strong>.xlsx</strong> chứa dữ liệu người dùng.</li>
-              <li>Hoặc file <strong>.zip</strong> chứa file Excel và ảnh đại diện (đặt tên ảnh trùng Mã số).</li>
+          {/* Instructions */}
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/10 text-blue-800 dark:text-blue-300 rounded-xl text-sm border border-blue-100 dark:border-blue-900/20">
+            <p className="font-bold mb-1 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+              Hướng dẫn:
+            </p>
+            <ul className="list-disc pl-5 space-y-1 opacity-90">
+              <li>Tải lên file <strong className="text-blue-600 dark:text-blue-400">.xlsx</strong> chứa dữ liệu người dùng.</li>
+              <li>Hoặc file <strong className="text-blue-600 dark:text-blue-400">.zip</strong> chứa file Excel và ảnh đại diện (đặt tên ảnh trùng Mã số).</li>
             </ul>
           </div>
           
-          <div className="border-2 border-dashed border-gray-300 dark:border-zinc-700 rounded-lg p-6 flex flex-col items-center text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors relative">
+          {/* File Upload Area */}
+          <div className="border-2 border-dashed border-gray-200 dark:border-zinc-700 rounded-2xl p-8 flex flex-col items-center text-center cursor-pointer hover:border-fpt-orange hover:bg-orange-50/30 dark:hover:bg-orange-950/10 transition-all relative group">
              <input required type="file" accept=".xlsx, .xls, .zip" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileChange} />
-             <Upload size={32} className="text-fpt-orange mb-2" />
+             <div className="w-12 h-12 rounded-full bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <Upload size={24} className="text-fpt-orange" />
+             </div>
              {file ? (
-                <p className="text-sm font-medium text-gray-900 dark:text-white">{file.name}</p>
+                <div className="space-y-1">
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">{file.name}</p>
+                  <p className="text-xs text-green-600 dark:text-green-400 flex items-center justify-center gap-1 font-medium">
+                    <span className="w-1 h-1 rounded-full bg-green-500"></span>
+                    Đã sẵn sàng tải lên
+                  </p>
+                </div>
              ) : (
                 <>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">Chọn file để tải lên</p>
-                  <p className="text-xs text-gray-500 mt-1">Hỗ trợ .xlsx, .zip</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">Click để chọn file hoặc kéo thả</p>
+                  <p className="text-xs text-gray-500 mt-1">Hỗ trợ định dạng .xlsx, .xls, .zip</p>
                 </>
              )}
           </div>
 
+          {/* Strategy Selection */}
           <div className="space-y-3">
-            <label className="text-sm font-semibold text-gray-700 dark:text-zinc-400">Chiến lược Import:</label>
-            <div className="grid grid-cols-2 gap-3">
+            <label className="text-sm font-bold text-gray-700 dark:text-zinc-400 ml-1">Chiến lược Import:</label>
+            <div className="grid grid-cols-2 gap-4">
               <button
                 type="button"
                 onClick={() => setMode('APPEND')}
-                className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${
+                className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all duration-300 ${
                   mode === 'APPEND' 
-                    ? 'border-fpt-orange bg-orange-50 dark:bg-orange-900/10 text-fpt-orange' 
-                    : 'border-gray-100 dark:border-zinc-800 text-gray-500 hover:border-gray-200 dark:hover:border-zinc-700'
+                    ? 'border-fpt-orange bg-orange-50 dark:bg-orange-950/10 ring-4 ring-orange-500/10' 
+                    : 'border-gray-50 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800/50 text-gray-500 hover:border-gray-200 dark:hover:border-zinc-700'
                 }`}
               >
-                <span className="text-sm font-bold">Thêm mới</span>
-                <span className="text-[10px] opacity-70">Giữ danh sách hiện tại</span>
+                <span className={`text-sm font-bold ${mode === 'APPEND' ? 'text-fpt-orange' : ''}`}>Thêm mới</span>
+                <span className="text-[10px] mt-1 opacity-70">Giữ danh sách hiện tại</span>
               </button>
               <button
                 type="button"
                 onClick={() => setMode('REPLACE')}
-                className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${
+                className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all duration-300 ${
                   mode === 'REPLACE' 
-                    ? 'border-red-500 bg-red-50 dark:bg-red-900/10 text-red-500' 
-                    : 'border-gray-100 dark:border-zinc-800 text-gray-500 hover:border-gray-200 dark:hover:border-zinc-700'
+                    ? 'border-red-500 bg-red-50 dark:bg-red-950/10 ring-4 ring-red-500/10' 
+                    : 'border-gray-50 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800/50 text-gray-500 hover:border-gray-200 dark:hover:border-zinc-700'
                 }`}
               >
-                <span className="text-sm font-bold">Thay thế</span>
-                <span className="text-[10px] opacity-70">Xóa hết (trừ Admin)</span>
+                <span className={`text-sm font-bold ${mode === 'REPLACE' ? 'text-red-500' : ''}`}>Thay thế</span>
+                <span className="text-[10px] mt-1 opacity-70">Xóa hết cũ (trừ Admin)</span>
               </button>
             </div>
           </div>
 
+          {/* Error List */}
           {importErrors.length > 0 && (
-            <div className="p-4 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-xl space-y-2 animate-in slide-in-from-top-2 duration-300">
+            <div className="p-4 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-2xl space-y-2 animate-in slide-in-from-top-2 duration-300 shadow-sm">
               <div className="flex items-center gap-2 text-red-600 dark:text-red-400 font-bold text-sm">
                 <X size={16} />
-                Danh sách lỗi ({importErrors.length})
+                Phát hiện {importErrors.length} lỗi dữ liệu
               </div>
-              <div className="max-h-40 overflow-y-auto px-2 space-y-1 custom-scrollbar scrollbar-thin scrollbar-thumb-red-200">
+              <div className="max-h-40 overflow-y-auto px-2 space-y-1.5 custom-scrollbar scrollbar-thin scrollbar-thumb-red-200 dark:scrollbar-thumb-red-900/40">
                 {importErrors.map((err, idx) => (
-                  <p key={idx} className="text-xs text-red-500 dark:text-red-400 leading-relaxed">• {err}</p>
+                  <p key={idx} className="text-xs text-red-500 dark:text-red-400 leading-relaxed font-medium flex gap-2">
+                    <span className="opacity-50">#{(idx + 1).toString().padStart(2, '0')}</span>
+                    {err}
+                  </p>
                 ))}
               </div>
             </div>
           )}
 
+          {/* Progress Bar Area */}
           {loading && (
-            <div className="space-y-2 py-2 animate-in slide-in-from-top-2 duration-300">
-              <div className="flex justify-between text-xs font-medium">
-                <span className="text-gray-600 dark:text-zinc-400">{progress.message}</span>
-                <span className="text-fpt-orange">{progress.percentage}%</span>
+            <div className="space-y-4 py-4 px-2 animate-in slide-in-from-top-2 duration-500 font-sans">
+              <div className="flex justify-between items-start">
+                <div className="space-y-1.5">
+                  <span className="text-[11px] font-black text-fpt-orange uppercase tracking-[0.1em]">TIẾN TRÌNH XỬ LÝ</span>
+                  <p className="text-sm font-bold text-slate-700 dark:text-zinc-200 animate-pulse">{progress.message || 'Đang chuẩn bị dữ liệu...'}</p>
+                </div>
+                <div className="flex items-baseline gap-0.5">
+                  <span className="text-4xl font-black text-fpt-orange tracking-tighter drop-shadow-sm">{progress.percentage}</span>
+                  <span className="text-lg font-black text-fpt-orange opacity-80">%</span>
+                </div>
               </div>
-              <div className="w-full bg-gray-100 dark:bg-zinc-800 rounded-full h-2 overflow-hidden border border-gray-200 dark:border-zinc-700">
+              <div className="w-full bg-slate-100 dark:bg-zinc-800 rounded-full h-3.5 p-0.5 overflow-hidden border border-slate-200 dark:border-zinc-700 shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)]">
                 <div 
-                  className="bg-fpt-orange h-full transition-all duration-300 ease-out rounded-full shadow-[0_0_8px_rgba(242,113,34,0.4)]"
+                  className="bg-gradient-to-r from-orange-400 via-fpt-orange to-orange-600 h-full transition-all duration-700 ease-out rounded-full shadow-[0_0_15px_rgba(242,113,34,0.4)] relative overflow-hidden"
                   style={{ width: `${progress.percentage}%` }}
-                />
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-[shimmer_1.5s_infinite] -skew-x-[20deg] w-1/2"></div>
+                </div>
               </div>
               {progress.status === 'ERROR' && (
-                <p className="text-[10px] text-red-500 font-medium">Lỗi xảy ra, vui lòng kiểm tra lại file.</p>
+                <div className="flex items-center gap-2 text-[10px] text-red-500 font-bold bg-red-50 dark:bg-red-900/10 p-2 rounded-lg border border-red-100">
+                   <AlertCircle size={12} />
+                   Có lỗi xảy ra trong quá trình xử lý background.
+                </div>
               )}
             </div>
           )}
 
-          <div className="flex justify-end gap-3 mt-6">
-            <button type="button" onClick={handleClose} disabled={loading} className="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50">Hủy</button>
-            <button type="submit" disabled={loading} className="px-6 py-2 bg-fpt-orange text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center gap-2">
-               {loading && <Loader2 size={16} className="animate-spin" />} {loading ? 'Đang xử lý...' : 'Import ngay'}
-            </button>
+          <div className="flex justify-between items-center mt-6">
+            {isAsyncJob && (
+              <button
+                type="button"
+                onClick={handleCleanup}
+                className="text-xs text-red-500 hover:text-red-700 font-medium underline underline-offset-4"
+              >
+                Xử lí tiến trình đang chạy
+              </button>
+            )}
+            <div className="flex gap-3 ml-auto">
+              <button type="button" onClick={handleClose} disabled={loading && !isAsyncJob} className="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50">Hủy</button>
+              <button type="submit" disabled={loading} className="px-6 py-2 bg-fpt-orange text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center gap-2">
+                 {(loading && !isAsyncJob) && <Loader2 size={16} className="animate-spin" />} {isAsyncJob ? 'Đang chạy ngầm...' : (loading ? 'Đang gửi...' : 'Import ngay')}
+              </button>
+            </div>
           </div>
         </form>
       </div>

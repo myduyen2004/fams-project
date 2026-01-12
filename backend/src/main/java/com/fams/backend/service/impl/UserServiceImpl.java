@@ -30,6 +30,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.*;
 import java.nio.file.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -626,6 +627,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     @CacheEvict(value = CACHE_USERS, allEntries = true)
     public void importExcelSync(MultipartFile file, String importMode) {
+        checkActiveJob();
         String adminUsername = SecurityContextHolder.getContext().getAuthentication().getName();
         log.info("Fast Excel import (no images): {}, mode: {}", file.getOriginalFilename(), importMode);
 
@@ -700,6 +702,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public String importZipAsync(byte[] fileBytes, String filename, String importMode) {
+        checkActiveJob();
         String jobId = UUID.randomUUID().toString();
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
 
@@ -725,6 +728,37 @@ public class UserServiceImpl implements UserService {
         ImportJob job = importJobRepository.findByJobId(jobId)
                 .orElseThrow(() -> new NotFoundException("Import job not found: " + jobId));
         return com.fams.backend.dto.response.ImportJobResponse.fromEntity(job);
+    }
+
+    @Override
+    public com.fams.backend.dto.response.ImportJobResponse getActiveImportJob() {
+        return importJobRepository.findTopByStatusInOrderByCreatedAtDesc(
+                Arrays.asList(ImportJob.JobStatus.PENDING, ImportJob.JobStatus.PROCESSING))
+                .map(com.fams.backend.dto.response.ImportJobResponse::fromEntity)
+                .orElse(null);
+    }
+
+    @Override
+    @Transactional
+    public void cleanupStuckJobs() {
+        List<ImportJob> stuckJobs = importJobRepository.findByStatusIn(
+                Arrays.asList(ImportJob.JobStatus.PENDING, ImportJob.JobStatus.PROCESSING));
+
+        for (ImportJob job : stuckJobs) {
+            job.setStatus(ImportJob.JobStatus.CANCELLED);
+            job.setErrorMessage("Hệ thống đã tự động hủy bỏ vì tiến trình bị kẹt.");
+            job.setCompletedAt(LocalDateTime.now());
+        }
+        importJobRepository.saveAll(stuckJobs);
+        log.info("Cleaned up {} stuck import jobs", stuckJobs.size());
+    }
+
+    private void checkActiveJob() {
+        if (importJobRepository.existsByStatusIn(
+                Arrays.asList(ImportJob.JobStatus.PENDING, ImportJob.JobStatus.PROCESSING))) {
+            throw new BadRequestException(
+                    "Hiện đang có một tiến trình import đang chạy. Vui lòng đợi cho đến khi hoàn tất.");
+        }
     }
 
     // ========================= Helper Methods =========================

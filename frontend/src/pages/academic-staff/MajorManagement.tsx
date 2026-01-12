@@ -562,7 +562,9 @@ export const MajorManagement: React.FC = () => {
                     closeConfirmModal();
                 } catch (error: any) {
                     console.error('Bulk delete error:', error);
-                    toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi xóa ngành');
+                    // Extract exact error message from backend if available
+                    const errorMessage = error.response?.data?.message || error.message || 'Có lỗi xảy ra khi xóa ngành';
+                    toast.error(errorMessage);
                     closeConfirmModal();
                 }
             }

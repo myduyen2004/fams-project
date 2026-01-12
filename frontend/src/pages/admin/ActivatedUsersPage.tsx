@@ -6,7 +6,6 @@ import {
   Loader2,
   User as UserIcon,
   Edit2,
-  Lock,
   ShieldAlert,
   X,
   Camera
@@ -258,19 +257,6 @@ export const ActivatedUsersPage: React.FC = () => {
                         className="p-1.5 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors" title="Chỉnh sửa"
                       >
                         <Edit2 size={18} />
-                      </button>
-                      <button 
-                        onClick={() => {
-                          if (window.confirm('Bạn có chắc chắn muốn khóa tài khoản này?')) {
-                            userService.updateUser(user.id, { ...user, status: 'LOCKED' } as any).then(() => {
-                              toast.success('Đã khóa tài khoản');
-                              fetchUsers();
-                            });
-                          }
-                        }}
-                        className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Khóa"
-                      >
-                        <Lock size={18} />
                       </button>
                     </div>
                   </td>

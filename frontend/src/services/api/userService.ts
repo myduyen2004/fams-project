@@ -93,5 +93,15 @@ export const userService = {
     getImportJobStatus: async (jobId: string) => {
         const response = await apiClient.get(`/users/import-job/${jobId}`);
         return response.data;
+    },
+
+    getActiveImportJob: async () => {
+        const response = await apiClient.get('/users/import-job/active');
+        if (response.status === 204) return null;
+        return response.data;
+    },
+
+    cleanupStuckJobs: async () => {
+        await apiClient.post('/users/import-job/cleanup');
     }
 };
