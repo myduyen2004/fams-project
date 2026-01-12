@@ -1,5 +1,6 @@
 package com.fams.backend.controller;
 
+import com.fams.backend.dto.MajorImportDTO;
 import com.fams.backend.dto.request.MajorRequest;
 import com.fams.backend.dto.response.MajorResponse;
 import com.fams.backend.entity.Major;
@@ -13,7 +14,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/majors")
@@ -68,12 +70,27 @@ public class MajorController {
     }
 
     @PostMapping("/import")
-    public ResponseEntity<String> importMajors(@RequestParam("file") MultipartFile file) {
-        try {
-            majorService.importMajors(file);
-            return ResponseEntity.ok("Import successfully");
-        } catch (IOException e) {
-            return ResponseEntity.badRequest().body("Import failed: " + e.getMessage());
-        }
+    public ResponseEntity<Map<String, Object>> importMajors(@RequestParam("file") MultipartFile file) {
+        Map<String, Object> result = majorService.importMajors(file);
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/import/preview")
+    public ResponseEntity<List<MajorImportDTO>> previewImportMajors(@RequestParam("file") MultipartFile file) {
+        return ResponseEntity.ok(majorService.previewImportMajors(file));
+    }
+
+    @PostMapping("/import/save")
+    public ResponseEntity<Map<String, Object>> saveImportedMajors(@RequestBody List<MajorImportDTO> dtos) {
+        return ResponseEntity.ok(majorService.saveImportedMajors(dtos));
+    }
+
+    @GetMapping("/import/template")
+    public ResponseEntity<byte[]> downloadImportTemplate() {
+        byte[] data = majorService.exportMajorTemplate();
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=major_import_template.xlsx")
+                .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                .body(data);
     }
 }
