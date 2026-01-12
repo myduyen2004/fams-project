@@ -119,4 +119,23 @@ public class UserController {
         log.info("GET /users/import-job/{}", jobId);
         return ResponseEntity.ok(userService.getImportJobStatus(jobId));
     }
+
+    @GetMapping("/import-job/active")
+    @Operation(summary = "Lấy import job đang hoạt động (nếu có)")
+    public ResponseEntity<com.fams.backend.dto.response.ImportJobResponse> getActiveImportJob() {
+        log.info("GET /users/import-job/active");
+        com.fams.backend.dto.response.ImportJobResponse activeJob = userService.getActiveImportJob();
+        if (activeJob == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(activeJob);
+    }
+
+    @PostMapping("/import-job/cleanup")
+    @Operation(summary = "Dọn dẹp các import job bị kẹt (PENDING/PROCESSING)")
+    public ResponseEntity<Void> cleanupStuckJobs() {
+        log.info("POST /users/import-job/cleanup");
+        userService.cleanupStuckJobs();
+        return ResponseEntity.ok().build();
+    }
 }

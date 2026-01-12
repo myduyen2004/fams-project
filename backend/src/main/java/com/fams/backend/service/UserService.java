@@ -34,4 +34,8 @@ public interface UserService {
     String importZipAsync(byte[] fileBytes, String filename, String importMode);
 
     com.fams.backend.dto.response.ImportJobResponse getImportJobStatus(String jobId);
+
+    com.fams.backend.dto.response.ImportJobResponse getActiveImportJob();
+
+    void cleanupStuckJobs();
 }

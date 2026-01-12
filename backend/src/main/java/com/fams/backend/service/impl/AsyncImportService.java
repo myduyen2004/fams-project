@@ -14,10 +14,8 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
@@ -52,7 +50,6 @@ public class AsyncImportService {
     private final Map<String, String> passwordHashCache = new ConcurrentHashMap<>();
 
     @Async("asyncImportExecutor")
-    @Transactional
     public void processZipImportAsync(String jobId, byte[] fileBytes, String filename, String importMode,
             String username) {
         ImportJob job = importJobRepository.findByJobId(jobId)
@@ -64,6 +61,13 @@ public class AsyncImportService {
             importJobRepository.save(job);
 
             sendJobNotification(username, job);
+
+            if ("REPLACE".equalsIgnoreCase(importMode)) {
+                log.info(
+                        "REPLACE mode selected (ZIP). Deleting all INACTIVE STUDENT and LECTURER users before import.");
+                userRepository.deleteAllByRoleInAndStatus(Arrays.asList(User.UserRole.STUDENT, User.UserRole.LECTURER),
+                        User.UserStatus.INACTIVE);
+            }
 
             // Extract and process ZIP
             Path tempDir = Files.createTempDirectory("async_import_");
@@ -154,24 +158,37 @@ public class AsyncImportService {
                 if (rowNumber++ == 0)
                     continue;
 
+                String fullName = getCellValue(currentRow.getCell(0));
                 String code = getCellValue(currentRow.getCell(1));
+                String roleStr = getCellValue(currentRow.getCell(2));
+                String dobStr = getCellValue(currentRow.getCell(3));
                 String email = getCellValue(currentRow.getCell(4));
+                String phone = getCellValue(currentRow.getCell(5));
+
                 if (code.isEmpty() || email.isEmpty())
                     continue;
 
-                if (existingCodes.contains(code.toLowerCase()) || existingEmails.contains(email.toLowerCase())) {
-                    continue; // Skip duplicates
+                if (existingCodes.contains(code.toLowerCase())) {
+                    job.setFailedCount(job.getFailedCount() + 1);
+                    String error = "Dòng " + (rowNumber) + ": Mã số [" + code + "] đã tồn tại trong hệ thống.";
+                    job.setErrorMessage(job.getErrorMessage() == null ? error : job.getErrorMessage() + "\n" + error);
+                    continue;
                 }
-
-                String fullName = getCellValue(currentRow.getCell(0));
-                String roleStr = getCellValue(currentRow.getCell(2));
-                String dobStr = getCellValue(currentRow.getCell(3));
-                String phone = getCellValue(currentRow.getCell(5));
+                if (existingEmails.contains(email.toLowerCase())) {
+                    job.setFailedCount(job.getFailedCount() + 1);
+                    String error = "Dòng " + (rowNumber) + ": Email [" + email + "] đã tồn tại trong hệ thống.";
+                    job.setErrorMessage(job.getErrorMessage() == null ? error : job.getErrorMessage() + "\n" + error);
+                    continue;
+                }
 
                 try {
                     LocalDate dob = LocalDate.parse(dobStr, DOB_FORMATTER);
                     validRowData.add(new ImportRowData(fullName, code, roleStr, dob, email, phone));
                 } catch (Exception e) {
+                    job.setFailedCount(job.getFailedCount() + 1);
+                    String error = "Dòng " + (rowNumber) + ": Ngày sinh [" + dobStr
+                            + "] không hợp lệ (định dạng đúng: dd/mm/yyyy).";
+                    job.setErrorMessage(job.getErrorMessage() == null ? error : job.getErrorMessage() + "\n" + error);
                     log.warn("Invalid date format for user {}: {}", code, dobStr);
                 }
             }
@@ -219,7 +236,7 @@ public class AsyncImportService {
                         int current = completed.incrementAndGet();
 
                         job.setProcessedRecords(current);
-                        if (current % 10 == 0) {
+                        if (current % 5 == 0 || current == job.getTotalRecords()) {
                             importJobRepository.save(job);
                             sendJobNotification(username, job);
                         }
@@ -252,7 +269,9 @@ public class AsyncImportService {
 
     private void sendJobNotification(String username, ImportJob job) {
         ImportJobResponse response = ImportJobResponse.fromEntity(job);
-        messagingTemplate.convertAndSendToUser(username, "/queue/import-job", response);
+        log.debug("Broadcasting progress for user {}: {}%", username, response.getPercentage());
+        // Frontend listens on /topic/import-progress/{username}
+        messagingTemplate.convertAndSend("/topic/import-progress/" + username, response);
     }
 
     private String getCellValue(Cell cell) {

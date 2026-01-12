@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Moon, Sun, User, Settings, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../../services/api/authService';
+import { userService } from '../../services/api/userService';
 import { ConfirmModal } from './ConfirmModal';
 
 interface CommonHeaderProps {
@@ -21,6 +22,7 @@ export const CommonHeader: React.FC<CommonHeaderProps> = ({
   const [user, setUser] = useState<{ email: string; fullName: string; avatar?: string; role?: string } | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [activeJob, setActiveJob] = useState<any>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -59,11 +61,25 @@ export const CommonHeader: React.FC<CommonHeaderProps> = ({
 
   const handleLogout = async () => {
     try {
+      if (activeJob) {
+        await userService.cleanupStuckJobs();
+      }
       await authService.logout();
     } catch (error) {
       console.error('Logout failed:', error);
     }
     navigate('/login');
+  };
+
+  const handleOpenLogoutModal = async () => {
+    try {
+      const job = await userService.getActiveImportJob();
+      setActiveJob(job);
+    } catch (error) {
+      console.error('Failed to check active job:', error);
+    }
+    setShowLogoutModal(true);
+    setShowDropdown(false);
   };
 
   // Get profile route based on role
@@ -165,10 +181,7 @@ export const CommonHeader: React.FC<CommonHeaderProps> = ({
               <hr className="my-2 border-gray-200 dark:border-zinc-700" />
 
               <button
-                onClick={() => {
-                  setShowLogoutModal(true);
-                  setShowDropdown(false);
-                }}
+                onClick={handleOpenLogoutModal}
                 className="w-full flex items-center gap-3 px-4 py-2 text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
               >
                 <LogOut size={18} />
@@ -183,9 +196,12 @@ export const CommonHeader: React.FC<CommonHeaderProps> = ({
         isOpen={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
         onConfirm={handleLogout}
-        title="Đăng xuất"
-        message="Bạn có chắc chắn muốn đăng xuất khỏi hệ thống FAMS không?"
-        confirmLabel="Đăng xuất ngay"
+        title={activeJob ? "Cảnh báo: Tiến trình đang thực hiện" : "Đăng xuất"}
+        message={activeJob 
+          ? `Hệ thống đang thực hiện import dữ liệu (${activeJob.percentage}%). Nếu bạn đăng xuất và hủy bây giờ, dữ liệu có thể bị dở dang. Bạn có chắc muốn DỪNG tiến trình và đăng xuất không?`
+          : "Bạn có chắc chắn muốn đăng xuất khỏi hệ thống FAMS không?"
+        }
+        confirmLabel={activeJob ? "Dừng và đăng xuất" : "Đăng xuất ngay"}
         cancelLabel="Ở lại"
         type="danger"
       />
