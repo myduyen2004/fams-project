@@ -63,7 +63,7 @@ services:
       - SPRING_PROFILES_ACTIVE=dev
       - DB_HOST=postgres
       - REDIS_HOST=redis
-      - AI_SERVICE_URL=http://ai-service:5001
+      - AI_SERVICE_URL=http://ai-service:5000
       - TZ=Asia/Ho_Chi_Minh
     depends_on:
       postgres:
