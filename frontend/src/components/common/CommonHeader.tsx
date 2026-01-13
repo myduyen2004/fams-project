@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, Moon, Sun, User, Settings, LogOut } from 'lucide-react';
+import { Moon, Sun, User, Settings, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../../services/api/authService';
 import { userService } from '../../services/api/userService';
 import { ConfirmModal } from './ConfirmModal';
+import { NotificationBell } from './NotificationBell';
 
 interface CommonHeaderProps {
   title: string;
@@ -18,7 +19,6 @@ export const CommonHeader: React.FC<CommonHeaderProps> = ({
 }) => {
   const navigate = useNavigate();
   const [isDark, setIsDark] = useState(false);
-  const [notificationCount, _setNotificationCount] = useState(3);
   const [user, setUser] = useState<{ email: string; fullName: string; avatar?: string; role?: string } | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -114,16 +114,7 @@ export const CommonHeader: React.FC<CommonHeaderProps> = ({
         )}
 
         {/* Notification Bell */}
-        {showNotifications && (
-          <button className="relative p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors">
-            <Bell size={20} />
-            {notificationCount > 0 && (
-              <span className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                {notificationCount}
-              </span>
-            )}
-          </button>
-        )}
+        {showNotifications && <NotificationBell />}
 
         {/* User Info with Dropdown */}
         <div className="relative" ref={dropdownRef}>

@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.data.web.PageableDefault;
 
 @RestController
 @RequestMapping("/api/users")
@@ -31,7 +32,7 @@ public class UserController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String role,
             @RequestParam(required = false) String status,
-            Pageable pageable) {
+            @PageableDefault(size = 30) Pageable pageable) {
         log.info("GET /users | search={}, role={}, status={}", search, role, status);
         return ResponseEntity.ok(userService.getAllUsers(search, role, status, pageable));
     }
@@ -76,6 +77,14 @@ public class UserController {
         log.info("POST /users/activate | ids={}", ids);
         userService.activateUsers(ids);
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/import/preview")
+    @Operation(summary = "Xem trước dữ liệu import trước khi thực hiện")
+    public ResponseEntity<com.fams.backend.dto.response.PreviewImportResponse> previewImport(
+            @RequestParam("file") MultipartFile file) {
+        log.info("POST /users/import/preview | filename={}", file.getOriginalFilename());
+        return ResponseEntity.ok(userService.previewImportFile(file));
     }
 
     @PostMapping("/import")
