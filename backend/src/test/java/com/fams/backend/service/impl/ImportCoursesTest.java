@@ -403,8 +403,8 @@ class ImportCoursesTest {
         }
 
         @Test
-        @DisplayName("Bỏ qua dòng ERROR - Không lưu dòng có lỗi")
-        void SkipsErrorRows() {
+        @DisplayName("Từ chối import khi có dòng ERROR - Không lưu bất kỳ dòng nào")
+        void RejectsImportWhenErrorRowsExist() {
             // Arrange
             List<CourseImportDTO> dtos = Arrays.asList(
                     CourseImportDTO.builder()
@@ -416,16 +416,16 @@ class ImportCoursesTest {
                             .credits(3).numberOfSlots(30).fixedSemester(1)
                             .statusValue("ACTIVE").status("ERROR")
                             .errorMessage("Mã môn học không được để trống").build());
-            when(courseRepository.existsByCode("MAE101")).thenReturn(false);
-            when(courseRepository.save(any(Course.class))).thenAnswer(inv -> inv.getArgument(0));
 
             // Act
             Map<String, Object> result = courseService.saveImportedCourses(dtos);
 
-            // Assert
-            assertEquals(1, result.get("created"));
+            // Assert - Không import bất kỳ dòng nào khi có lỗi
+            assertEquals(0, result.get("created"));
             assertEquals(1, result.get("failed"));
-            verify(courseRepository, times(1)).save(any(Course.class));
+            assertNotNull(result.get("message"));
+            assertTrue(result.get("message").toString().contains("Không thể import"));
+            verify(courseRepository, never()).save(any(Course.class));
         }
 
         @Test

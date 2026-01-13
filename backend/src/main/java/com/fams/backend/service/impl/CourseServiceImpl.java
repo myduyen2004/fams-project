@@ -290,14 +290,24 @@ public class CourseServiceImpl implements CourseService {
         int createdCount = 0;
         int failedCount = 0;
 
-        for (CourseImportDTO dto : dtos) {
-            // Skip ERROR rows
-            if ("ERROR".equals(dto.getStatus())) {
-                failedCount++;
-                errors.add("Dòng " + dto.getRowNumber() + ": " + dto.getErrorMessage());
-                continue;
-            }
+        // Check if there are any ERROR rows - if yes, reject entire import
+        List<CourseImportDTO> errorRows = dtos.stream()
+                .filter(dto -> "ERROR".equals(dto.getStatus()))
+                .toList();
 
+        if (!errorRows.isEmpty()) {
+            for (CourseImportDTO errorDto : errorRows) {
+                errors.add("Dòng " + errorDto.getRowNumber() + ": " + errorDto.getErrorMessage());
+            }
+            result.put("created", 0);
+            result.put("failed", errorRows.size());
+            result.put("errors", errors);
+            result.put("message", "Không thể import vì có " + errorRows.size()
+                    + " dòng lỗi. Vui lòng sửa tất cả lỗi trước khi import.");
+            return result;
+        }
+
+        for (CourseImportDTO dto : dtos) {
             try {
                 // Double check - course code should not exist
                 if (courseRepository.existsByCode(dto.getCode())) {
