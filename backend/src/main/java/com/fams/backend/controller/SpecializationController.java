@@ -1,5 +1,6 @@
 package com.fams.backend.controller;
 
+import com.fams.backend.dto.SpecializationImportDTO;
 import com.fams.backend.dto.request.ReorderCoursesRequest;
 import com.fams.backend.dto.request.SpecializationRequest;
 import com.fams.backend.dto.response.CourseResponse;
@@ -7,16 +8,21 @@ import com.fams.backend.dto.response.SpecializationResponse;
 import com.fams.backend.entity.Specialization;
 import com.fams.backend.service.SpecializationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/specializations")
@@ -75,8 +81,10 @@ public class SpecializationController {
         return ResponseEntity.noContent().build();
     }
 
+    // ========== Import Specializations ==========
+
     @PostMapping("/import/{majorId}")
-    public ResponseEntity<List<Specialization>> importSpecializations(
+    public ResponseEntity<Map<String, Object>> importSpecializations(
             @PathVariable Long majorId,
             @RequestParam("file") MultipartFile file) {
         try {
@@ -84,6 +92,37 @@ public class SpecializationController {
         } catch (IOException e) {
             return ResponseEntity.badRequest().build();
         }
+    }
+
+    @PostMapping("/import/preview/{majorId}")
+    public ResponseEntity<List<SpecializationImportDTO>> previewImportSpecializations(
+            @PathVariable Long majorId,
+            @RequestParam("file") MultipartFile file) {
+        try {
+            return ResponseEntity.ok(specializationService.previewImportSpecializations(majorId, file));
+        } catch (IOException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/import/save/{majorId}")
+    public ResponseEntity<Map<String, Object>> saveImportedSpecializations(
+            @PathVariable Long majorId,
+            @RequestBody List<SpecializationImportDTO> dtos) {
+        return ResponseEntity.ok(specializationService.saveImportedSpecializations(majorId, dtos));
+    }
+
+    @GetMapping("/import/template")
+    public ResponseEntity<Resource> downloadImportTemplate() throws IOException {
+        byte[] data = specializationService.exportSpecializationTemplate();
+        ByteArrayResource resource = new ByteArrayResource(data);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=specialization_import_template.xlsx")
+                .contentType(
+                        MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .contentLength(data.length)
+                .body(resource);
     }
 
     // ========== Course Management ==========

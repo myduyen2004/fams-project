@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { API_URL } from './config';
-import { Specialization, SpecializationSearchParams, SpecializationCreateRequest } from '../../types/specialization';
+import { Specialization, SpecializationSearchParams, SpecializationCreateRequest, SpecializationImportDTO, SpecializationImportResult } from '../../types/specialization';
 import { Page } from '../../types/major';
 import { Course } from '../../types/course';
 
@@ -53,7 +53,8 @@ export const specializationService = {
         });
     },
 
-    importSpecializations: async (majorId: number, file: File): Promise<Specialization[]> => {
+    // Import Specializations with Preview
+    importSpecializations: async (majorId: number, file: File): Promise<SpecializationImportResult> => {
         const formData = new FormData();
         formData.append('file', file);
         const response = await axios.post(`${API_URL}/specializations/import/${majorId}`, formData, {
@@ -63,6 +64,40 @@ export const specializationService = {
             },
         });
         return response.data;
+    },
+
+    previewImportSpecializations: async (majorId: number, file: File): Promise<SpecializationImportDTO[]> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await axios.post(`${API_URL}/specializations/import/preview/${majorId}`, formData, {
+            headers: {
+                ...getAuthHeader(),
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
+    },
+
+    saveImportedSpecializations: async (majorId: number, dtos: SpecializationImportDTO[]): Promise<SpecializationImportResult> => {
+        const response = await axios.post(`${API_URL}/specializations/import/save/${majorId}`, dtos, {
+            headers: getAuthHeader()
+        });
+        return response.data;
+    },
+
+    downloadImportTemplate: async (): Promise<void> => {
+        const response = await axios.get(`${API_URL}/specializations/import/template`, {
+            headers: getAuthHeader(),
+            responseType: 'blob',
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'specialization_import_template.xlsx');
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
     },
 
     // Course management
