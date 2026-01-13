@@ -1,7 +1,9 @@
 package com.fams.backend.service.impl;
 
 import com.fams.backend.dto.response.ImportJobResponse;
+import com.fams.backend.dto.response.UserResponse;
 import com.fams.backend.entity.ImportJob;
+import com.fams.backend.entity.Notification;
 import com.fams.backend.entity.User;
 import com.fams.backend.exception.BadRequestException;
 import com.fams.backend.exception.NotFoundException;
@@ -44,6 +46,8 @@ public class AsyncImportService {
     private final UploadService uploadService;
     private final SimpMessagingTemplate messagingTemplate;
     private final Executor importExecutor;
+    private final com.fams.backend.service.impl.SystemLogService systemLogService;
+    private final com.fams.backend.service.NotificationService notificationService;
 
     private static final DateTimeFormatter DOB_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter PASSWORD_FORMATTER = DateTimeFormatter.ofPattern("ddMMyyyy");
@@ -60,7 +64,7 @@ public class AsyncImportService {
             job.setStartedAt(LocalDateTime.now());
             importJobRepository.save(job);
 
-            sendJobNotification(username, job);
+            sendJobNotification(username, job, null);
 
             if ("REPLACE".equalsIgnoreCase(importMode)) {
                 log.info(
@@ -88,7 +92,7 @@ public class AsyncImportService {
             job.setCompletedAt(LocalDateTime.now());
         } finally {
             importJobRepository.save(job);
-            sendJobNotification(username, job);
+            sendJobNotification(username, job, null);
         }
     }
 
@@ -195,6 +199,7 @@ public class AsyncImportService {
 
             job.setTotalRecords(validRowData.size());
             importJobRepository.save(job);
+            sendJobNotification(username, job, null);
 
             // Pre-hash passwords
             Set<String> uniquePasswords = validRowData.stream()
@@ -238,7 +243,7 @@ public class AsyncImportService {
                         job.setProcessedRecords(current);
                         if (current % 5 == 0 || current == job.getTotalRecords()) {
                             importJobRepository.save(job);
-                            sendJobNotification(username, job);
+                            sendJobNotification(username, job, null);
                         }
 
                         if (saveBuffer.size() >= BATCH_SIZE) {
@@ -254,6 +259,7 @@ public class AsyncImportService {
                             userRepository.saveAll(toSave);
                             job.setSuccessCount(job.getSuccessCount() + toSave.size());
                             importJobRepository.save(job);
+                            sendJobNotification(username, job, toSave);
                         }
                     }))
                     .collect(Collectors.toList());
@@ -263,15 +269,47 @@ public class AsyncImportService {
             if (!saveBuffer.isEmpty()) {
                 userRepository.saveAll(saveBuffer);
                 job.setSuccessCount(job.getSuccessCount() + saveBuffer.size());
+                sendJobNotification(username, job, saveBuffer);
             }
         }
     }
 
     private void sendJobNotification(String username, ImportJob job) {
+        sendJobNotification(username, job, null);
+    }
+
+    private void sendJobNotification(String username, ImportJob job, List<User> newUsers) {
         ImportJobResponse response = ImportJobResponse.fromEntity(job);
-        log.debug("Broadcasting progress for user {}: {}%", username, response.getPercentage());
-        // Frontend listens on /topic/import-progress/{username}
-        messagingTemplate.convertAndSend("/topic/import-progress/" + username, response);
+        if (newUsers != null && !newUsers.isEmpty()) {
+            response.setNewUsers(newUsers.stream()
+                    .map(UserResponse::fromUser)
+                    .collect(Collectors.toList()));
+        }
+        messagingTemplate.convertAndSendToUser(username, "/queue/import-job", response);
+
+        // Persistent notification on completion/failure
+        if (job.getStatus() == ImportJob.JobStatus.COMPLETED) {
+            userRepository.findByUsername(username).ifPresent(user -> {
+                notificationService.createNotification(
+                        user,
+                        "Import hoàn tất",
+                        String.format("File %s đã import xong. Thành công: %d, Thất bại: %d",
+                                job.getFilename(), job.getSuccessCount(), job.getFailedCount()),
+                        Notification.NotificationType.SYSTEM,
+                        "/admin/users",
+                        null);
+            });
+        } else if (job.getStatus() == ImportJob.JobStatus.FAILED) {
+            userRepository.findByUsername(username).ifPresent(user -> {
+                notificationService.createNotification(
+                        user,
+                        "Import thất bại",
+                        String.format("File %s gặp lỗi: %s", job.getFilename(), job.getErrorMessage()),
+                        Notification.NotificationType.SYSTEM,
+                        "/admin/users",
+                        null);
+            });
+        }
     }
 
     private String getCellValue(Cell cell) {

@@ -277,14 +277,14 @@ export const ActivatedUsersPage: React.FC = () => {
 
       {isEditModalOpen && selectedUserData && (
         <EditUserModal 
-          user={selectedUserData} 
+          user={selectedUserData as UserResponse} 
           onClose={() => setIsEditModalOpen(false)} 
           onSuccess={() => { setIsEditModalOpen(false); fetchUsers(); }} 
         />
       )}
       {isViewModalOpen && selectedUserData && (
         <ViewUserModal 
-          user={selectedUserData} 
+          user={selectedUserData as UserResponse} 
           onClose={() => setIsViewModalOpen(false)} 
         />
       )}
@@ -483,6 +483,16 @@ const ViewUserModal: React.FC<{ user: UserResponse; onClose: () => void }> = ({ 
               <div className="col-span-2">
                  <p className="text-gray-500 dark:text-zinc-400">Email</p>
                  <p className="font-medium text-gray-900 dark:text-white">{user.email}</p>
+              </div>
+              <div>
+                 <p className="text-gray-500 dark:text-zinc-400">Số điện thoại</p>
+                 <p className="font-medium text-gray-900 dark:text-white">{user.phone || 'Chưa cập nhật'}</p>
+              </div>
+              <div>
+                 <p className="text-gray-500 dark:text-zinc-400">Khuôn mặt</p>
+                 <p className={`font-medium ${user.faceDataStatus === 'REGISTERED' ? 'text-green-600' : 'text-red-500'}`}>
+                    {user.faceDataStatus === 'REGISTERED' ? 'Đã đăng ký' : 'Chưa đăng ký'}
+                 </p>
               </div>
               <div className="col-span-2 p-3 bg-gray-50 dark:bg-zinc-800/50 rounded-xl border border-gray-100 dark:border-zinc-800">
                  <p className="text-xs text-gray-500 dark:text-zinc-400 mb-1">Cập nhật lần cuối</p>

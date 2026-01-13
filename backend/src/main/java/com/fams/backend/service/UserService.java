@@ -38,4 +38,6 @@ public interface UserService {
     com.fams.backend.dto.response.ImportJobResponse getActiveImportJob();
 
     void cleanupStuckJobs();
+
+    com.fams.backend.dto.response.PreviewImportResponse previewImportFile(MultipartFile file);
 }
