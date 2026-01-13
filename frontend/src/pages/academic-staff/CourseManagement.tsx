@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Upload } from 'lucide-react';
+import { Plus, Search, Upload, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { courseService } from '../../services/api/courseService';
 import { StatusFilter, Pagination, SelectionActionBar } from '../../components/academic-staff';
 import { CourseFormModal } from '../../components/academic-staff/CourseFormModal';
-import { ImportModal } from '../../components/academic-staff/ImportModal';
+import { ImportCourseModal } from '../../components/academic-staff/ImportCourseModal';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { Course } from '../../types/course';
 
@@ -185,6 +185,27 @@ export const CourseManagement: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-2">
                         <button
+                            onClick={async () => {
+                                try {
+                                    const blob = await courseService.downloadImportTemplate();
+                                    const url = window.URL.createObjectURL(blob);
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    link.download = 'template-import-mon-hoc.xlsx';
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+                                    window.URL.revokeObjectURL(url);
+                                } catch (error) {
+                                    toast.error('Lỗi khi tải template');
+                                }
+                            }}
+                            className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                        >
+                            <Download className="h-4 w-4" />
+                            Tải template
+                        </button>
+                        <button
                             onClick={() => setIsImportOpen(true)}
                             className="flex items-center gap-2 rounded-lg border border-fpt-orange bg-orange-50 px-4 py-2 text-sm font-medium text-fpt-orange hover:bg-orange-100"
                         >
@@ -322,12 +343,10 @@ export const CourseManagement: React.FC = () => {
             />
 
             {/* Import Modal */}
-            <ImportModal
+            <ImportCourseModal
                 isOpen={isImportOpen}
                 onClose={() => setIsImportOpen(false)}
                 onSuccess={fetchData}
-                title="Import Môn học"
-                onImport={async () => ({ success: 0, failed: 0, errors: ['Chức năng đang phát triển'] })}
             />
 
             {/* Confirm Modal */}
