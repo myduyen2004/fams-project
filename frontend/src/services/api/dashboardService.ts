@@ -4,7 +4,7 @@ import {
     DashboardStats,
     RecentAccess,
     Alert,
-    Notification,
+    AppNotification,
     SystemLog
 } from '../../types/dashboard';
 
@@ -17,7 +17,7 @@ const getAuthHeader = () => {
 export const dashboardService = {
     // Get dashboard statistics
     getStatistics: async (): Promise<DashboardStats> => {
-        const response = await axios.get(`${API_URL}/dashboard/statistics`, {
+        const response = await axios.get(`${API_URL}/dashboard/stats`, {
             headers: getAuthHeader()
         });
         return response.data;
@@ -40,7 +40,7 @@ export const dashboardService = {
     },
 
     // Get notifications
-    getNotifications: async (): Promise<Notification[]> => {
+    getNotifications: async (): Promise<AppNotification[]> => {
         const response = await axios.get(`${API_URL}/dashboard/notifications`, {
             headers: getAuthHeader()
         });
@@ -53,5 +53,18 @@ export const dashboardService = {
             headers: getAuthHeader()
         });
         return response.data;
+    },
+
+    // Mark notification as read
+    markNotificationAsRead: async (id: number) => {
+        await axios.post(`${API_URL}/dashboard/notifications/${id}/read`, {}, {
+            headers: getAuthHeader()
+        });
+    },
+
+    markAllNotificationsAsRead: async () => {
+        await axios.post(`${API_URL}/dashboard/notifications/read-all`, {}, {
+            headers: getAuthHeader()
+        });
     }
 };

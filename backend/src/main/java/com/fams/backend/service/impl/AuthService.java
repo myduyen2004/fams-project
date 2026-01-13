@@ -55,8 +55,40 @@ public class AuthService implements UserDetailsService {
     /**
      * Đăng nhập
      */
-    @Transactional
+    /**
+     * Đăng nhập (với xử lý geolocation bên ngoài transaction)
+     */
     public LoginResponse login(LoginRequest request, jakarta.servlet.http.HttpServletRequest httpRequest) {
+        log.info("AuthService.login start - username: {}", request.getUsername());
+
+        // 1. Lấy vị trí từ IP (Bên ngoài transaction để tránh treo connection pool)
+        String ipAddress = getClientIP(httpRequest);
+        log.info("Client IP: {}", ipAddress);
+
+        GeoLocationService.LocationData location = geoLocationService.getLocationFromIP(ipAddress);
+        log.info("Location fetched: {}", location.getProvince());
+
+        // 2. Gọi logic login chính (Bên trong transaction)
+        log.info("Calling performLogin...");
+        LoginResponse response = performLogin(request, httpRequest, ipAddress, location);
+        log.info("performLogin completed successfully");
+
+        // 3. Broadcast update bên ngoài transaction để tránh deadlock/treo connection
+        // pool
+        try {
+            log.info("Triggering async dashboard broadcast...");
+            dashboardBroadcastService.broadcastUpdate();
+        } catch (Exception e) {
+            log.error("Failed to broadcast login update", e);
+        }
+
+        log.info("AuthService.login end - returning response");
+        return response;
+    }
+
+    @Transactional
+    public LoginResponse performLogin(LoginRequest request, jakarta.servlet.http.HttpServletRequest httpRequest,
+            String ipAddress, GeoLocationService.LocationData location) {
         String username = request.getUsername();
         log.info("Login attempt | username={}", username);
 
@@ -99,12 +131,12 @@ public class AuthService implements UserDetailsService {
         // 5. Generate JWT token
         String token = jwtUtil.generateToken(user.getUsername());
 
-        // 6. Create user session and access log
-        createUserSession(user, httpRequest);
-        createAccessLog(user, httpRequest);
+        // 6. Create user session and access log (Đã có location từ bên ngoài)
+        log.info("Creating user session...");
+        createUserSession(user, ipAddress, httpRequest.getHeader("User-Agent"), location);
 
-        // 7. Broadcast update
-        dashboardBroadcastService.broadcastUpdate();
+        log.info("Creating access log...");
+        createAccessLog(user, ipAddress, httpRequest.getHeader("User-Agent"), location);
 
         // 7. Create response
         log.info("Login successful | username={} | userId={} | role={}",
@@ -117,19 +149,11 @@ public class AuthService implements UserDetailsService {
     }
 
     /**
-     * Create user session with geolocation from IP
+     * Create user session with geolocation data
      */
-    private void createUserSession(User user, jakarta.servlet.http.HttpServletRequest request) {
+    private void createUserSession(User user, String ipAddress, String userAgent,
+            GeoLocationService.LocationData location) {
         try {
-            // Extract IP address
-            String ipAddress = getClientIP(request);
-
-            // Get geolocation from IP
-            GeoLocationService.LocationData location = geoLocationService.getLocationFromIP(ipAddress);
-
-            // Get user agent
-            String userAgent = request.getHeader("User-Agent");
-
             // Create session
             UserSession session = UserSession.builder()
                     .user(user)
@@ -158,12 +182,9 @@ public class AuthService implements UserDetailsService {
     /**
      * Create access log for dashboard
      */
-    private void createAccessLog(User user, jakarta.servlet.http.HttpServletRequest request) {
+    private void createAccessLog(User user, String ipAddress, String userAgent,
+            GeoLocationService.LocationData location) {
         try {
-            String ipAddress = getClientIP(request);
-            String userAgent = request.getHeader("User-Agent");
-            GeoLocationService.LocationData location = geoLocationService.getLocationFromIP(ipAddress);
-
             AccessLog accessLog = AccessLog.builder()
                     .user(user)
                     .location(location.getProvince() + ", " + location.getCity())
@@ -199,10 +220,21 @@ public class AuthService implements UserDetailsService {
     }
 
     /**
-     * Logout (invalidate active sessions)
+     * Logout
      */
-    @Transactional
     public void logout() {
+        performLogout();
+
+        // Broadcast update outside transaction
+        try {
+            dashboardBroadcastService.broadcastUpdate();
+        } catch (Exception e) {
+            log.error("Failed to broadcast logout update", e);
+        }
+    }
+
+    @Transactional
+    public void performLogout() {
         try {
             String username = org.springframework.security.core.context.SecurityContextHolder.getContext()
                     .getAuthentication().getName();
@@ -225,9 +257,6 @@ public class AuthService implements UserDetailsService {
                         logEntry.setStatus("Đã đăng xuất");
                         accessLogRepository.save(logEntry);
                     });
-
-            // Broadcast update
-            dashboardBroadcastService.broadcastUpdate();
 
             log.info("Logout successful | username={} | invalidatedSessions={}", username, activeSessions.size());
         } catch (Exception e) {

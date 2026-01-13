@@ -15,4 +15,8 @@ public class NotificationResponse {
     private String description;
     private String timestamp;
     private Boolean isRead;
+    private String type;
+    private String targetUrl;
+    private String senderName;
+    private String senderAvatar;
 }
