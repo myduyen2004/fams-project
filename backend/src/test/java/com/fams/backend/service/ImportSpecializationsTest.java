@@ -72,35 +72,35 @@ class ImportSpecializationsTest {
                                 .status(Major.MajorStatus.ACTIVE)
                                 .build();
 
-                // File Excel hợp lệ (cột: code, name, description, status)
+                // File Excel hợp lệ (cột: major_code, code, name, description, status)
                 validExcelFile = createExcelFile(new String[][] {
-                                { "code", "name", "description", "status" },
-                                { "SE-WEB", "Web Development", "Phát triển ứng dụng Web", "ACTIVE" },
-                                { "SE-MOB", "Mobile App Development", "Phát triển ứng dụng di động", "ACTIVE" }
+                                { "major_code", "code", "name", "description", "status" },
+                                { "SE", "SE-WEB", "Web Development", "Phát triển ứng dụng Web", "ACTIVE" },
+                                { "SE", "SE-MOB", "Mobile App Development", "Phát triển ứng dụng di động", "ACTIVE" }
                 });
 
                 // File với mã chuyên ngành trống
                 emptyCodeExcelFile = createExcelFile(new String[][] {
-                                { "code", "name", "description", "status" },
-                                { "", "Web Development", "Mô tả", "ACTIVE" }
+                                { "major_code", "code", "name", "description", "status" },
+                                { "SE", "", "Web Development", "Mô tả", "ACTIVE" }
                 });
 
                 // File với tên chuyên ngành trống
                 emptyNameExcelFile = createExcelFile(new String[][] {
-                                { "code", "name", "description", "status" },
-                                { "SE-WEB", "", "Mô tả", "ACTIVE" }
+                                { "major_code", "code", "name", "description", "status" },
+                                { "SE", "SE-WEB", "", "Mô tả", "ACTIVE" }
                 });
 
                 // File với mã chuyên ngành trùng trong file
                 duplicateCodeExcelFile = createExcelFile(new String[][] {
-                                { "code", "name", "description", "status" },
-                                { "SE-WEB", "Web Development", "Mô tả 1", "ACTIVE" },
-                                { "SE-WEB", "Web Development 2", "Mô tả 2", "ACTIVE" }
+                                { "major_code", "code", "name", "description", "status" },
+                                { "SE", "SE-WEB", "Web Development", "Mô tả 1", "ACTIVE" },
+                                { "SE", "SE-WEB", "Web Development 2", "Mô tả 2", "ACTIVE" }
                 });
 
                 // File chỉ có header
                 onlyHeaderExcelFile = createExcelFile(new String[][] {
-                                { "code", "name", "description", "status" }
+                                { "major_code", "code", "name", "description", "status" }
                 });
         }
 
@@ -248,8 +248,8 @@ class ImportSpecializationsTest {
         void importSpecializations_InvalidStatus_DefaultsToActive() throws IOException {
                 // Arrange
                 MultipartFile invalidStatusFile = createExcelFile(new String[][] {
-                                { "code", "name", "description", "status" },
-                                { "SE-WEB", "Web Development", "Mô tả", "INVALID_STATUS" }
+                                { "major_code", "code", "name", "description", "status" },
+                                { "SE", "SE-WEB", "Web Development", "Mô tả", "INVALID_STATUS" }
                 });
                 when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
                 when(specializationRepository.existsByCode("SE-WEB")).thenReturn(false);
@@ -313,8 +313,8 @@ class ImportSpecializationsTest {
         void previewImportSpecializations_InvalidStatus_HasWarning() throws IOException {
                 // Arrange
                 MultipartFile invalidStatusFile = createExcelFile(new String[][] {
-                                { "code", "name", "description", "status" },
-                                { "SE-WEB", "Web Development", "Mô tả", "INVALID_STATUS" }
+                                { "major_code", "code", "name", "description", "status" },
+                                { "SE", "SE-WEB", "Web Development", "Mô tả", "INVALID_STATUS" }
                 });
                 when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
                 when(specializationRepository.existsByCode("SE-WEB")).thenReturn(false);
