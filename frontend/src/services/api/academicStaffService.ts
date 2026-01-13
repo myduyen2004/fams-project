@@ -133,6 +133,7 @@ export interface LecturerImportDTO {
     code: string;
     fullName: string | null;
     email: string | null;
+    phone?: string;
     department: string;
     expertise: string;
     bio: string;
