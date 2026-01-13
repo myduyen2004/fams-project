@@ -1,48 +1,39 @@
-# ========================================
-# LOCAL DEVELOPMENT PROFILE
-# ========================================
-# Mỗi developer dùng Docker PostgreSQL riêng
-# Chạy: docker-compose up postgres redis
-
 spring:
-  # ---------------- Database (Local Docker) ----------------
+  application:
+    name: FAMS Backend
+  
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:5432/fams_db
-    username: postgres
-    password: postgres123
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres123}
     driver-class-name: org.postgresql.Driver
-    hikari:
-      maximum-pool-size: 5
-      minimum-idle: 2
-      connection-timeout: 30000
-
+    
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-        use_sql_comments: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
 
-  # ---------------- Redis (Local Docker) ----------------
   data:
     redis:
       host: ${REDIS_HOST:localhost}
       port: 6379
-      password:
-      timeout: 60000
 
-# ---------------- AI Service ----------------
-ai-service:
-  url: http://localhost:5000
-  timeout: 30000
+  flyway:
+    enabled: false
 
-# ---------------- Logging (More verbose for dev) ----------------
+server:
+  port: 8080
+
+app:
+  environment: development
+  cors:
+    allowed-origins: http://localhost:5173,http://localhost:3000
+  
 logging:
   level:
-    com.fams: DEBUG
-    org.springframework.web: DEBUG
-    org.springframework.security: DEBUG
-    org.hibernate.SQL: DEBUG
+    root: INFO
+    com.fams.backend: DEBUG

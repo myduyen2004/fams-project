@@ -1,10 +1,17 @@
 package com.fams.backend.service;
 
-import com.fams.backend.entity.Major;
+import com.fams.backend.dto.request.ReorderCoursesRequest;
 import com.fams.backend.dto.request.SpecializationRequest;
+import com.fams.backend.dto.response.CourseResponse;
 import com.fams.backend.dto.response.SpecializationResponse;
+import com.fams.backend.entity.Course;
+import com.fams.backend.entity.Major;
 import com.fams.backend.entity.Specialization;
+import com.fams.backend.entity.SpecializationCourse;
+import com.fams.backend.repository.CourseRepository;
+import com.fams.backend.repository.SpecializationCourseRepository;
 import com.fams.backend.repository.SpecializationRepository;
+import com.fams.backend.repository.SubSpecializationCourseRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -22,6 +29,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +39,9 @@ public class SpecializationService {
     private final SpecializationRepository specializationRepository;
     private final com.fams.backend.repository.MajorRepository majorRepository;
     private final com.fams.backend.repository.StudentProfileRepository studentProfileRepository;
+    private final SpecializationCourseRepository specializationCourseRepository;
+    private final SubSpecializationCourseRepository subSpecializationCourseRepository;
+    private final CourseRepository courseRepository;
 
     public Page<SpecializationResponse> getSpecializationsByMajor(Long majorId, String keyword,
             Specialization.SpecializationStatus status, Pageable pageable) {
@@ -76,6 +87,7 @@ public class SpecializationService {
 
         return convertToResponse(specializationRepository.save(specialization));
     }
+
     @org.springframework.transaction.annotation.Transactional
     public SpecializationResponse updateSpecialization(Long id, SpecializationRequest request) {
         Specialization specialization = specializationRepository.findById(id)
@@ -100,6 +112,78 @@ public class SpecializationService {
         }
         specializationRepository.deleteById(id);
     }
+
+    // ========== Course Management ==========
+
+    public List<CourseResponse> getCourses(Long specId) {
+        List<SpecializationCourse> courses = specializationCourseRepository
+                .findBySpecializationIdOrderByOrderIndexAsc(specId);
+        return courses.stream()
+                .map(this::convertCourseToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public CourseResponse addCourse(Long specId, Long courseId, Integer semester) {
+        log.info("Request to add course {} to specialization {} with semester {}", courseId, specId, semester);
+        try {
+            Specialization spec = specializationRepository.findById(specId)
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chuyên ngành"));
+            Course course = courseRepository.findById(courseId)
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy môn học"));
+
+            if (specializationCourseRepository.existsBySpecializationIdAndCourseId(specId, courseId)) {
+                log.warn("Course {} already exists in specialization {}", courseId, specId);
+                throw new IllegalArgumentException("Môn học đã tồn tại trong chuyên ngành");
+            }
+
+            // Check if course exists in any sub-specialization
+            if (subSpecializationCourseRepository.existsBySpecializationIdAndCourseId(specId, courseId)) {
+                log.warn("Course {} already exists in a sub-specialization of specialization {}", courseId, specId);
+                throw new IllegalArgumentException(
+                        "Môn học đã tồn tại trong chuyên ngành hẹp, không thể thêm vào chuyên ngành cha");
+            }
+
+            Integer maxOrder = specializationCourseRepository.findMaxOrderIndexBySpecializationId(specId);
+            int nextOrder = (maxOrder != null) ? maxOrder + 1 : 0;
+
+            Integer actualSemester = (semester != null) ? semester : 1;
+
+            SpecializationCourse sc = SpecializationCourse.builder()
+                    .specialization(spec)
+                    .course(course)
+                    .orderIndex(nextOrder)
+                    .semester(actualSemester)
+                    .build();
+
+            specializationCourseRepository.save(sc);
+            log.info("Successfully added course {} to specialization {}", courseId, specId);
+            return convertCourseToResponse(sc);
+        } catch (Exception e) {
+            log.error("Error adding course to specialization: ", e);
+            throw e;
+        }
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public void removeCourse(Long specId, Long courseId) {
+        specializationCourseRepository.deleteBySpecializationIdAndCourseId(specId, courseId);
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public void reorderCourses(Long specId, ReorderCoursesRequest request) {
+        List<Long> courseIds = request.getCourseIds();
+        for (int i = 0; i < courseIds.size(); i++) {
+            SpecializationCourse sc = specializationCourseRepository
+                    .findBySpecializationIdAndCourseId(specId, courseIds.get(i))
+                    .orElseThrow(() -> new IllegalArgumentException("Môn học không tồn tại trong chuyên ngành"));
+            sc.setOrderIndex(i);
+            specializationCourseRepository.save(sc);
+        }
+    }
+
+    // ========== Private Methods ==========
+
     private void validateRequest(SpecializationRequest request, Long excludeId) {
         specializationRepository.findByCode(request.getCode())
                 .ifPresent(existing -> {
@@ -108,15 +192,6 @@ public class SpecializationService {
                     }
                 });
 
-        // Note: existsByName doesn't support exclusion easily unless we add custom
-        // query or just fetch.
-        // For simplicity assuming name uniqueness is global or per major? Typically
-        // global codes, names maybe duplicates allowed?
-        // Reuse existsByName but careful. Ideally strictly check.
-        // Let's rely on code uniqueness mostly. Name check might conflict if updating
-        // same entity.
-        // skipping name check for update to avoid complexity or implementing findByName
-        // and comparing IDs.
         if (excludeId == null && specializationRepository.existsByName(request.getName())) {
             throw new IllegalArgumentException("Tên chuyên ngành đã tồn tại: " + request.getName());
         }
@@ -134,6 +209,7 @@ public class SpecializationService {
                 .canDelete(canDelete)
                 .build();
     }
+
     @Transactional
     public List<Specialization> importSpecializations(Long majorId, MultipartFile file) throws IOException {
         log.info("Importing specializations from file: {} for major: {}", file.getOriginalFilename(), majorId);
@@ -275,5 +351,22 @@ public class SpecializationService {
             default:
                 return "";
         }
+    }
+
+    private CourseResponse convertCourseToResponse(SpecializationCourse sc) {
+        Course course = sc.getCourse();
+        return CourseResponse.builder()
+                .id(course.getId())
+                .code(course.getCode())
+                .name(course.getName())
+                .description(course.getDescription())
+                .credits(course.getCredits())
+                .numberOfSlots(course.getNumberOfSlots())
+                .fixedSemester(course.getFixedSemester())
+                .semester(sc.getSemester())
+                .status(course.getStatus())
+                .orderIndex(sc.getOrderIndex())
+                .canDelete(true)
+                .build();
     }
 }
