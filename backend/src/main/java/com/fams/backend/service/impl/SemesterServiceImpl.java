@@ -6,7 +6,6 @@ import com.fams.backend.repository.SemesterRepository;
 import com.fams.backend.service.SemesterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -42,12 +41,9 @@ public class SemesterServiceImpl implements SemesterService {
         if (startDate.isBefore(today)) {
             throw new RuntimeException("Ngày bắt đầu học kỳ phải từ ngày hôm nay trở đi");
         }
-        
-        // Validate no overlapping semesters
-        List<Semester> overlappingSemesters = semesterRepository.findOverlappingSemestersForNew(startDate, endDate);
-        if (!overlappingSemesters.isEmpty()) {
-            throw new RuntimeException("Trong một khoảng thời gian chỉ có duy nhất 1 kỳ học. Kỳ học bị trùng: " + overlappingSemesters.get(0).getName());
-        }
+        if (endDate.isBefore(startDate)) {
+            throw new RuntimeException("Ngày kết thúc không được trước ngày bắt đầu");
+        }   
         
         // Create new Semester entity
         Semester semester = new Semester();
@@ -56,14 +52,14 @@ public class SemesterServiceImpl implements SemesterService {
         semester.setStartDate(startDate);
         semester.setEndDate(endDate);
         
-        // Determine status based on dates
+      // 2. Xác định status (Chỉ cần 2 trạng thái khi tạo mới)
         if (today.isBefore(startDate)) {
             semester.setStatus(Semester.SemesterStatus.UPCOMING);
-        } else if (today.isAfter(endDate)) {
-            semester.setStatus(Semester.SemesterStatus.COMPLETED);
         } else {
+            // Vì startDate >= today và endDate >= startDate, 
+            // nên ở đây chắc chắn là học kỳ đang diễn ra (ONGOING)
             semester.setStatus(Semester.SemesterStatus.ONGOING);
-        }
+        }       
         
         // Save and return
         Semester savedSemester = semesterRepository.save(semester);
@@ -82,15 +78,9 @@ public class SemesterServiceImpl implements SemesterService {
             throw new RuntimeException("Chỉ có thể cập nhật các học kỳ sắp diễn ra hoặc đang diễn ra");
         }
         
-        // Validate no overlapping semesters
+        // Update fields
         LocalDate newStartDate = LocalDate.parse(semesterDTO.getStartDate());
         LocalDate newEndDate = LocalDate.parse(semesterDTO.getEndDate());
-        List<Semester> overlappingSemesters = semesterRepository.findOverlappingSemesters(newStartDate, newEndDate, code);
-        if (!overlappingSemesters.isEmpty()) {
-            throw new RuntimeException("Trong một khoảng thời gian chỉ có duy nhất 1 kỳ học. Kỳ học bị trùng: " + overlappingSemesters.get(0).getName());
-        }
-        
-        // Update fields
         semester.setName(semesterDTO.getName());
         semester.setStartDate(newStartDate);
         semester.setEndDate(newEndDate);

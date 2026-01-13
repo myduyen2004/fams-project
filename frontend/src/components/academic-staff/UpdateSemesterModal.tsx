@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { X, Lock, Info } from 'lucide-react';
 
+interface Semester {
+  code: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+}
+
 interface UpdateSemesterModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -10,13 +18,8 @@ interface UpdateSemesterModalProps {
     startDate: string;
     endDate: string;
   }) => Promise<void>;
-  semester: {
-    code: string;
-    name: string;
-    startDate: string;
-    endDate: string;
-    status: string;
-  } | null;
+  semester: Semester | null;
+  existingSemesters?: Semester[];
 }
 
 export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
@@ -24,6 +27,7 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
   onClose,
   onSubmit,
   semester,
+  existingSemesters = [],
 }) => {
   const [formData, setFormData] = useState({
     code: '',
@@ -67,6 +71,15 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
       return;
     }
 
+    // Check for duplicate name (excluding current semester)
+    const duplicateName = existingSemesters.find(
+      s => s.name.toLowerCase() === formData.name.toLowerCase() && s.code !== semester?.code
+    );
+    if (duplicateName) {
+      setError(`Tên học kỳ "${formData.name}" đã tồn tại trong hệ thống`);
+      return;
+    }
+
     // Check if semester can be updated (only upcoming or active)
     if (semester?.status !== 'upcoming' && semester?.status !== 'active') {
       setError('Chỉ có thể cập nhật các học kỳ sắp diễn ra hoặc đang diễn ra');
@@ -78,8 +91,26 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
       setError(null);
       await onSubmit(formData);
       onClose();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật học kỳ');
+    } catch (err: unknown) {
+      let errorMessage = 'Có lỗi xảy ra khi cập nhật học kỳ';
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axiosError = err as { response?: { data?: { message?: string; error?: string }, status?: number } };
+        if (axiosError.response?.data?.message) {
+          errorMessage = axiosError.response.data.message;
+        } else if (axiosError.response?.data?.error) {
+          errorMessage = axiosError.response.data.error;
+        } else if (axiosError.response?.status === 409) {
+          errorMessage = 'Tên học kỳ đã tồn tại trong hệ thống';
+        } else if (axiosError.response?.status === 400) {
+          errorMessage = 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin';
+        } else if (axiosError.response?.status === 500) {
+          // Default message for server errors related to date overlap
+          errorMessage = 'Thời gian học kỳ bị trùng với học kỳ khác hoặc có lỗi hệ thống. Vui lòng kiểm tra lại';
+        }
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
