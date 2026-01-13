@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: FAMS Backend Staging
+  
+  datasource:
+    url: ${NEON_STAGING_DB_URL}
+    username: ${NEON_STAGING_DB_USER}
+    password: ${NEON_STAGING_DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  # Flyway for staging (mirrors production with baseline)
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1
+    locations: classpath:db/migration
+
+server:
+  port: 8081
+
+app:
+  environment: staging
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://staging.fams-edu.online,https://fams-staging.vercel.app}
+  
+logging:
+  level:
+    root: INFO
+    com.fams.backend: INFO

@@ -1,6 +1,8 @@
 package com.fams.backend.controller;
 
+import com.fams.backend.dto.request.ReorderCoursesRequest;
 import com.fams.backend.dto.request.SpecializationRequest;
+import com.fams.backend.dto.response.CourseResponse;
 import com.fams.backend.dto.response.SpecializationResponse;
 import com.fams.backend.entity.Specialization;
 import com.fams.backend.service.SpecializationService;
@@ -43,6 +45,11 @@ public class SpecializationController {
         return ResponseEntity.ok(specializationService.getSpecializationsByMajor(majorId, keyword, status, pageable));
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<SpecializationResponse> getSpecialization(@PathVariable Long id) {
+        return ResponseEntity.ok(specializationService.getSpecialization(id));
+    }
+
     @PutMapping("/{id}/status")
     public ResponseEntity<SpecializationResponse> updateStatus(@PathVariable Long id,
             @RequestParam Specialization.SpecializationStatus status) {
@@ -77,5 +84,30 @@ public class SpecializationController {
         } catch (IOException e) {
             return ResponseEntity.badRequest().build();
         }
+    }
+
+    // ========== Course Management ==========
+
+    @GetMapping("/{id}/courses")
+    public ResponseEntity<List<CourseResponse>> getCourses(@PathVariable Long id) {
+        return ResponseEntity.ok(specializationService.getCourses(id));
+    }
+
+    @PostMapping("/{id}/courses/{courseId}")
+    public ResponseEntity<CourseResponse> addCourse(@PathVariable Long id, @PathVariable Long courseId,
+            @RequestParam(required = false, defaultValue = "1") Integer semester) {
+        return ResponseEntity.ok(specializationService.addCourse(id, courseId, semester));
+    }
+
+    @DeleteMapping("/{id}/courses/{courseId}")
+    public ResponseEntity<Void> removeCourse(@PathVariable Long id, @PathVariable Long courseId) {
+        specializationService.removeCourse(id, courseId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}/courses/reorder")
+    public ResponseEntity<Void> reorderCourses(@PathVariable Long id, @RequestBody ReorderCoursesRequest request) {
+        specializationService.reorderCourses(id, request);
+        return ResponseEntity.ok().build();
     }
 }
