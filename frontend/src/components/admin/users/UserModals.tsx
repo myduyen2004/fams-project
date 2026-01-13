@@ -4,13 +4,14 @@ import { userService, UserResponse } from '../../../services/api/userService';
 import { authService } from '../../../services/api/authService';
 import { useWebSocket } from '../../../hooks/useWebSocket';
 import toast from 'react-hot-toast';
+import { useRef } from 'react';
 
 // --- AddUserModal ---
 export const AddUserModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = ({ onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [avatar, setAvatar] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ fullName: '', code: '', email: '', dob: '', role: 'STUDENT' as any });
+  const [formData, setFormData] = useState({ fullName: '', code: '', email: '', dob: '', phone: '', role: 'STUDENT' as any });
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -71,7 +72,11 @@ export const AddUserModal: React.FC<{ onClose: () => void; onSuccess: () => void
               <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Email</label>
               <input required type="email" className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none" placeholder="anv@fpt.edu.vn" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
             </div>
-            <div className="col-span-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Số điện thoại</label>
+              <input type="text" className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none" placeholder="0123456789" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Vai trò</label>
               <select className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none" value={formData.role} onChange={e => setFormData({...formData, role: e.target.value as any})}>
                 <option value="STUDENT">Sinh viên</option>
@@ -268,6 +273,10 @@ export const ViewUserModal: React.FC<{ user: UserResponse; onClose: () => void }
                  <p className="font-medium text-gray-900 dark:text-white">{user.email}</p>
               </div>
               <div>
+                 <p className="text-gray-500 dark:text-zinc-400">Số điện thoại</p>
+                 <p className="font-medium text-gray-900 dark:text-white">{user.phone || 'Chưa cập nhật'}</p>
+              </div>
+              <div>
                  <p className="text-gray-500 dark:text-zinc-400">Khuôn mặt</p>
                  <p className={`font-medium ${user.faceDataStatus === 'REGISTERED' ? 'text-green-600' : 'text-red-500'}`}>
                     {user.faceDataStatus === 'REGISTERED' ? 'Đã đăng ký' : 'Chưa đăng ký'}
@@ -293,18 +302,25 @@ export const ViewUserModal: React.FC<{ user: UserResponse; onClose: () => void }
 // --- ImportUserModal ---
 export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = ({ onClose, onSuccess }) => {
   const [file, setFile] = useState<File | null>(null);
-  const [mode, setMode] = useState<'APPEND' | 'REPLACE'>('APPEND');
   const [loading, setLoading] = useState(false);
-  const [isAsyncJob, setIsAsyncJob] = useState(false); // Track if it's a background job
+  const [previewData, setPreviewData] = useState<{
+    totalRows: number;
+    validRows: number;
+    errorRows: number;
+    previewData: any[];
+    validationMessages: string[];
+  } | null>(null);
+  const [isAsyncJob, setIsAsyncJob] = useState(false);
+  const [showMoreErrors, setShowMoreErrors] = useState(false);
   const [progress, setProgress] = useState<{
     percentage: number;
     message: string;
     status: string;
   }>({ percentage: 0, message: '', status: '' });
-  const [importErrors, setImportErrors] = useState<string[]>([]);
 
   const currentUser = authService.getUser();
   const username = currentUser?.username || 'anonymous';
+  const lastToastId = useRef<string | null>(null);
 
   useWebSocket(`/topic/import-progress/${username}`, (data) => {
     setProgress({
@@ -312,39 +328,56 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
       message: data.message,
       status: data.status
     });
+    
+    // Auto-set isAsyncJob when receiving updates (job is running)
+    if (['STARTING', 'PROCESSING', 'SAVING'].includes(data.status)) {
+      setIsAsyncJob(true);
+    }
+    
+    if (data.status === 'COMPLETED') {
+      toast.success('Import hoàn tất thành công!');
+      setIsAsyncJob(false);
+      setTimeout(() => {
+        onSuccess();
+        onClose();
+      }, 1000);
+    }
   });
 
-  // Protection against accidental closure during import
+  // Check for existing active jobs on mount
   React.useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (loading) {
-        e.preventDefault();
-        e.returnValue = 'Quá trình import đang diễn ra. Bạn có chắc muốn rời khỏi trang?';
+    const checkActiveJob = async () => {
+      try {
+        const activeJob = await userService.getActiveImportJob();
+        // Only show progress if job is actually running (PENDING or PROCESSING from DB)
+        if (activeJob && ['PENDING', 'PROCESSING'].includes(activeJob.status)) {
+          setIsAsyncJob(true);
+          setLoading(true);
+          setProgress({
+            percentage: activeJob.percentage || 0,
+            message: activeJob.errorMessage || 'Đang xử lý...',
+            status: activeJob.status
+          });
+          if (lastToastId.current !== activeJob.jobId) {
+            toast.success('Đang tiếp tục xử lý import...');
+            lastToastId.current = activeJob.jobId;
+          }
+        }
+      } catch (error) {
+        console.error('Failed to check active job:', error);
       }
     };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [loading, isAsyncJob]);
-
-  const handleClose = () => {
-    // Only confirm if it's a sync import in progress (NOT async background job)
-    if (loading && !isAsyncJob) {
-      const confirmed = window.confirm('Quá trình import đang diễn ra. Nếu đóng bây giờ, có thể sẽ có sai sót trong dữ liệu. Bạn có chắc muốn đóng?');
-      if (!confirmed) return;
-    }
-    // Reset state when closing
-    setIsAsyncJob(false);
-    onClose();
-  };
+    checkActiveJob();
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
-      setImportErrors([]);
+      setPreviewData(null);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handlePreview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) {
       toast.error('Vui lòng chọn file');
@@ -353,156 +386,265 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
 
     try {
       setLoading(true);
-      setImportErrors([]);
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const preview = await userService.previewImport(formData);
+      setPreviewData(preview);
+      if (preview.totalRows === 0) {
+        toast('File không có dữ liệu hợp lệ', { icon: '⚠️' });
+      } else {
+        toast.success(`Đã đọc ${preview.totalRows} dòng`);
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Lỗi khi đọc file');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!file || !previewData || previewData.validRows === 0) return;
+
+    try {
+      setLoading(true);
       setProgress({ percentage: 0, message: 'Đang khởi tạo...', status: 'STARTING' });
       
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('mode', mode);
+      formData.append('mode', 'APPEND');
       
       const response = await userService.importUsers(formData);
       
-      // Check response type
       if (response.data.type === 'sync') {
-        // Excel sync import - completed instantly
-        toast.success(`✅ Import hoàn tất! ${file.name}`);
+        toast.success('Import hoàn tất!');
         setProgress({ percentage: 100, message: 'Hoàn thành', status: 'COMPLETED' });
         setTimeout(() => {
           onSuccess();
           onClose();
         }, 500);
       } else if (response.data.type === 'async' && response.data.jobId) {
-        // ZIP async job - show job created message
-        const jobId = response.data.jobId;
-        setIsAsyncJob(true); // Mark as async job
-        setLoading(false); // Allow closing modal without warning
-        
-        toast.success(`🚀 Job ID: ${jobId.substring(0, 8)}... đang chạy background!`);
-        setProgress({ 
-          percentage: 0, 
-          message: 'Đang xử lý trong background. Bạn có thể đóng modal này.', 
-          status: 'PROCESSING' 
-        });
-        
-        // Store jobId in localStorage for notification tracking
-        const existingJobs = JSON.parse(localStorage.getItem('importJobs') || '[]');
-        existingJobs.push({ jobId, filename: file.name, startTime: new Date().toISOString() });
-        localStorage.setItem('importJobs', JSON.stringify(existingJobs));
-        
-        // Dispatch event to notify notification bell
-        window.dispatchEvent(new CustomEvent('new-import-job', { detail: { jobId, filename: file.name } }));
+        setIsAsyncJob(true);
+        toast.success('Đang xử lý trong nền...');
       }
-      
     } catch (error: any) {
-      const errMsg = error.response?.data?.message || 'Lỗi khi import người dùng';
-      if (errMsg.includes('\n')) {
-        setImportErrors(errMsg.split('\n').filter((l: string) => l.trim() !== ''));
-        toast.error('Dữ liệu không hợp lệ, vui lòng kiểm tra danh sách lỗi bên dưới');
-      } else {
-        toast.error(errMsg);
-      }
+      toast.error(error.response?.data?.message || 'Lỗi khi import');
       setLoading(false);
     }
   };
 
+  const validCount = previewData?.validRows || 0;
+  const errorCount = previewData?.errorRows || 0;
+  // Only show progress when actually importing (async job detected or import in progress)
+  // Note: STARTING/PROCESSING/SAVING are WebSocket statuses, PENDING/PROCESSING are DB statuses
+  const showProgress = isAsyncJob || ['PENDING', 'STARTING', 'PROCESSING', 'SAVING'].includes(progress.status);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-md border border-gray-100 dark:border-zinc-800 overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white">Import người dùng</h3>
-          <button onClick={handleClose}><X size={20} className="text-gray-400 hover:text-gray-600" /></button>
+      <div className={`bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full ${previewData ? 'max-w-5xl' : 'max-w-md'} border border-gray-100 dark:border-zinc-800 overflow-hidden transition-all duration-300 flex flex-col max-h-[90vh]`}>
+        
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800 shrink-0">
+          <div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Import danh sách người dùng</h3>
+            {previewData && (
+              <p className="text-sm text-gray-500 mt-1">
+                Xem trước: <span className="text-green-600 font-medium">{validCount} hợp lệ</span> • <span className="text-red-500 font-medium">{errorCount} lỗi</span>
+              </p>
+            )}
+          </div>
+          <button onClick={onClose}><X size={20} className="text-gray-400 hover:text-gray-600" /></button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="p-4 bg-blue-50 dark:bg-blue-900/10 text-blue-800 dark:text-blue-300 rounded-lg text-sm">
-            <p className="font-semibold mb-1">Hướng dẫn:</p>
-            <ul className="list-disc pl-4 space-y-1">
-              <li>Tải lên file <strong>.xlsx</strong> chứa dữ liệu người dùng.</li>
-              <li>Hoặc file <strong>.zip</strong> chứa file Excel và ảnh đại diện (đặt tên ảnh trùng Mã số).</li>
-            </ul>
-          </div>
-          
-          <div className="border-2 border-dashed border-gray-300 dark:border-zinc-700 rounded-lg p-6 flex flex-col items-center text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors relative">
-             <input required type="file" accept=".xlsx, .xls, .zip" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileChange} />
-             <Upload size={32} className="text-fpt-orange mb-2" />
-             {file ? (
-                <p className="text-sm font-medium text-gray-900 dark:text-white">{file.name}</p>
-             ) : (
-                <>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">Chọn file để tải lên</p>
-                  <p className="text-xs text-gray-500 mt-1">Hỗ trợ .xlsx, .zip</p>
-                </>
-             )}
-          </div>
 
-          <div className="space-y-3">
-            <label className="text-sm font-semibold text-gray-700 dark:text-zinc-400">Chiến lược Import:</label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setMode('APPEND')}
-                className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${
-                  mode === 'APPEND' 
-                    ? 'border-fpt-orange bg-orange-50 dark:bg-orange-900/10 text-fpt-orange' 
-                    : 'border-gray-100 dark:border-zinc-800 text-gray-500 hover:border-gray-200 dark:hover:border-zinc-700'
-                }`}
-              >
-                <span className="text-sm font-bold">Thêm mới</span>
-                <span className="text-[10px] opacity-70">Giữ danh sách hiện tại</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode('REPLACE')}
-                className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${
-                  mode === 'REPLACE' 
-                    ? 'border-red-500 bg-red-50 dark:bg-red-900/10 text-red-500' 
-                    : 'border-gray-100 dark:border-zinc-800 text-gray-500 hover:border-gray-200 dark:hover:border-zinc-700'
-                }`}
-              >
-                <span className="text-sm font-bold">Thay thế</span>
-                <span className="text-[10px] opacity-70">Xóa hết (trừ Admin)</span>
-              </button>
-            </div>
-          </div>
+        {/* Content */}
+        <div className="p-6 overflow-y-auto flex-1">
+          {/* Progress View - Show ONLY this when importing */}
+          {showProgress ? (
+            <div className="flex flex-col items-center justify-center py-8 space-y-6">
+              {/* Circular Progress */}
+              <div className="relative w-32 h-32">
+                <svg className="w-full h-full transform -rotate-90">
+                  <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="none" className="text-gray-100 dark:text-zinc-800" />
+                  <circle
+                    cx="64" cy="64" r="56"
+                    stroke="url(#progressGradient)"
+                    strokeWidth="8"
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeDasharray={352}
+                    strokeDashoffset={352 - (352 * progress.percentage) / 100}
+                    className="transition-all duration-500 ease-out"
+                  />
+                  <defs>
+                    <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#f97316" />
+                      <stop offset="100%" stopColor="#fb923c" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-3xl font-black text-fpt-orange">{progress.percentage}</span>
+                  <span className="text-xs font-bold text-gray-400">%</span>
+                </div>
+              </div>
 
-          {importErrors.length > 0 && (
-            <div className="p-4 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-xl space-y-2 animate-in slide-in-from-top-2 duration-300">
-              <div className="flex items-center gap-2 text-red-600 dark:text-red-400 font-bold text-sm">
-                <X size={16} />
-                Danh sách lỗi ({importErrors.length})
+              {/* Status Message */}
+              <div className="text-center space-y-2">
+                <p className="text-base font-semibold text-gray-900 dark:text-white">{progress.message || 'Đang khởi tạo...'}</p>
+                <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
+                  progress.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                  progress.status === 'ERROR' ? 'bg-red-100 text-red-700' :
+                  'bg-orange-100 text-orange-700'
+                }`}>
+                  {progress.status === 'STARTING' ? 'Khởi tạo' :
+                   progress.status === 'PROCESSING' ? 'Đang xử lý' :
+                   progress.status === 'SAVING' ? 'Đang lưu' :
+                   progress.status === 'COMPLETED' ? 'Hoàn thành' :
+                   progress.status === 'ERROR' ? 'Lỗi' : progress.status}
+                </span>
               </div>
-              <div className="max-h-40 overflow-y-auto px-2 space-y-1 custom-scrollbar scrollbar-thin scrollbar-thumb-red-200">
-                {importErrors.map((err, idx) => (
-                  <p key={idx} className="text-xs text-red-500 dark:text-red-400 leading-relaxed">• {err}</p>
-                ))}
-              </div>
-            </div>
-          )}
 
-          {loading && (
-            <div className="space-y-2 py-2 animate-in slide-in-from-top-2 duration-300">
-              <div className="flex justify-between text-xs font-medium">
-                <span className="text-gray-600 dark:text-zinc-400">{progress.message}</span>
-                <span className="text-fpt-orange">{progress.percentage}%</span>
-              </div>
-              <div className="w-full bg-gray-100 dark:bg-zinc-800 rounded-full h-2 overflow-hidden border border-gray-200 dark:border-zinc-700">
-                <div 
-                  className="bg-fpt-orange h-full transition-all duration-300 ease-out rounded-full shadow-[0_0_8px_rgba(242,113,34,0.4)]"
-                  style={{ width: `${progress.percentage}%` }}
-                />
-              </div>
-              {progress.status === 'ERROR' && (
-                <p className="text-[10px] text-red-500 font-medium">Lỗi xảy ra, vui lòng kiểm tra lại file.</p>
+              {/* Action for async jobs */}
+              {isAsyncJob && (
+                <div className="text-center space-y-3 pt-4">
+                  <p className="text-xs text-gray-500 italic">💡 Tiến trình đang chạy nền, có thể đóng và quay lại sau.</p>
+                  <button onClick={onClose} className="px-6 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors">
+                    Đóng
+                  </button>
+                </div>
               )}
             </div>
-          )}
+          ) : !previewData ? (
+            // Upload Form
+            <form onSubmit={handlePreview} className="space-y-4">
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/10 text-blue-800 dark:text-blue-300 rounded-lg text-sm">
+                <p className="font-semibold mb-1">Hướng dẫn:</p>
+                <ul className="list-disc pl-4 space-y-1">
+                  <li>Tải lên file <strong>.xlsx</strong> chứa dữ liệu người dùng.</li>
+                  <li>Hoặc file <strong>.zip</strong> chứa Excel + ảnh đại diện (tên ảnh = mã số).</li>
+                  <li>Nhấn "Xem trước" để kiểm tra dữ liệu trước khi lưu.</li>
+                </ul>
+              </div>
 
-          <div className="flex justify-end gap-3 mt-6">
-            <button type="button" onClick={handleClose} disabled={loading} className="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50">Hủy</button>
-            <button type="submit" disabled={loading} className="px-6 py-2 bg-fpt-orange text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center gap-2">
-               {loading && <Loader2 size={16} className="animate-spin" />} {loading ? 'Đang xử lý...' : 'Import ngay'}
-            </button>
-          </div>
-        </form>
+              <div className="border-2 border-dashed border-gray-300 dark:border-zinc-700 rounded-lg p-6 flex flex-col items-center text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors relative">
+                <input required type="file" accept=".xlsx, .xls, .zip" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileChange} />
+                <Upload size={32} className="text-fpt-orange mb-2" />
+                {file ? (
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{file.name}</p>
+                ) : (
+                  <>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Chọn file để tải lên</p>
+                    <p className="text-xs text-gray-500 mt-1">Hỗ trợ .xlsx, .zip</p>
+                  </>
+                )}
+              </div>
+
+
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button type="button" onClick={onClose} className="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Hủy</button>
+                <button type="submit" disabled={loading} className="px-6 py-2 bg-fpt-orange text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center gap-2">
+                  {loading && <Loader2 size={16} className="animate-spin" />} Xem trước
+                </button>
+              </div>
+            </form>
+          ) : (
+            // Preview Table
+            <div className="space-y-4">
+              {/* Error Details - ABOVE table */}
+              {errorCount > 0 && (() => {
+                const errorRows = previewData.previewData.filter(row => row.status === 'error');
+                const displayedErrors = showMoreErrors ? errorRows : errorRows.slice(0, 3);
+                
+                return (
+                  <div className="p-3 bg-red-50 dark:bg-red-900/10 rounded-lg border border-red-100 dark:border-red-800/20">
+                    <p className="text-sm font-semibold text-red-700 dark:text-red-400 mb-2">⚠️ Chi tiết lỗi ({errorCount} dòng):</p>
+                    <div className="space-y-1">
+                      {displayedErrors.map((row, idx) => (
+                        <p key={idx} className="text-xs text-red-600 dark:text-red-400 italic">
+                          <span className="font-medium not-italic">Dòng {previewData.previewData.findIndex(r => r === row) + 1}:</span> {row.errorMessage}
+                        </p>
+                      ))}
+                    </div>
+                    {errorRows.length > 3 && (
+                      <button
+                        onClick={() => setShowMoreErrors(!showMoreErrors)}
+                        className="mt-2 text-xs text-red-700 dark:text-red-300 font-medium hover:underline"
+                      >
+                        {showMoreErrors ? '← Thu gọn' : `Xem thêm ${errorRows.length - 3} lỗi...`}
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Preview Table */}
+              <div className="border rounded-lg overflow-hidden border-gray-200 dark:border-zinc-700">
+                <div className="max-h-72 overflow-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-gray-50 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 font-medium border-b border-gray-200 dark:border-zinc-700 sticky top-0">
+                      <tr>
+                        <th className="px-3 py-2 w-10 text-center">#</th>
+                        <th className="px-3 py-2">Mã số</th>
+                        <th className="px-3 py-2">Họ tên</th>
+                        <th className="px-3 py-2">Email</th>
+                        <th className="px-3 py-2">SĐT</th>
+                        <th className="px-3 py-2">Ngày sinh</th>
+                        <th className="px-3 py-2">Role</th>
+                        <th className="px-3 py-2 text-center">Ảnh</th>
+                        <th className="px-3 py-2 text-center">TT</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
+                      {previewData.previewData.map((row, index) => (
+                        <tr key={index} className={row.status === 'error' ? 'bg-red-50 dark:bg-red-900/10' : ''}>
+                          <td className="px-3 py-2 text-center text-gray-500 text-xs">{index + 1}</td>
+                          <td className="px-3 py-2 font-medium text-gray-900 dark:text-white text-xs">{row.code || '---'}</td>
+                          <td className="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{row.fullName || '---'}</td>
+                          <td className="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{row.email || '---'}</td>
+                          <td className="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{row.phone || '---'}</td>
+                          <td className="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{row.dob || '---'}</td>
+                          <td className="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{row.role || '---'}</td>
+                          <td className="px-3 py-2 text-center">
+                            {row.hasImage ? <span className="text-green-500">✓</span> : <span className="text-gray-300">—</span>}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            {row.status === 'valid' ? (
+                              <span className="text-green-500 text-xs">✓</span>
+                            ) : (
+                              <span className="text-red-500 text-xs">✗</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-4 border-t border-gray-100 dark:border-zinc-800">
+                <button
+                  onClick={() => setPreviewData(null)}
+                  className="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <Upload size={16} className="rotate-180" /> Quay lại upload
+                </button>
+                <div className="flex gap-3">
+                  <button onClick={onClose} className="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Hủy</button>
+                  <button
+                    onClick={handleConfirmImport}
+                    disabled={loading || validCount === 0 || errorCount > 0}
+                    className="px-6 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    title={errorCount > 0 ? 'Vui lòng sửa các lỗi trước khi import' : ''}
+                  >
+                    {loading && <Loader2 size={16} className="animate-spin" />}
+                    {errorCount > 0 ? `Có ${errorCount} lỗi` : `Xác nhận import (${validCount})`}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

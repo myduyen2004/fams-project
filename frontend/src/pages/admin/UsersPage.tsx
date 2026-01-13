@@ -8,6 +8,8 @@ import { UserTableRow } from '../../components/admin/users/UserTableRow';
 import { UserFilters } from '../../components/admin/users/UserFilters';
 import { BulkActions } from '../../components/admin/users/BulkActions';
 import { AddUserModal, EditUserModal, ViewUserModal, ImportUserModal } from '../../components/admin/users/UserModals';
+import { useWebSocket } from '../../hooks/useWebSocket';
+import { authService } from '../../services/api/authService';
 
 export const UsersPage = () => {
   const [users, setUsers] = useState<UserResponse[]>([]);
@@ -28,6 +30,27 @@ export const UsersPage = () => {
   // Action states
   const [isDeleting, setIsDeleting] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
+
+  // WebSocket for real-time updates during import
+  
+  useWebSocket(`/topic/import-progress/${authService.getUser()?.username}`, (message) => {
+    console.log('Received WebSocket message:', message.body);
+    const data = JSON.parse(message.body);
+    if (data.newUsers && data.newUsers.length > 0) {
+      console.log('New users received:', data.newUsers.length);
+      // Prepend new users and deduplicate
+      setUsers(prev => {
+        const existingIds = new Set(prev.map(u => u.id));
+        const uniqueNewUsers = data.newUsers.filter((u: UserResponse) => !existingIds.has(u.id));
+        console.log('Unique new users:', uniqueNewUsers.length);
+        if (uniqueNewUsers.length === 0) return prev;
+        
+        // Update total elements
+        setTotalElements(total => total + uniqueNewUsers.length);
+        return [...uniqueNewUsers, ...prev];
+      });
+    }
+  });
 
   const fetchUsers = useCallback(async () => {
     try {
