@@ -14,15 +14,13 @@ interface NotificationTableRowProps {
   index: number;
   isSelected: boolean;
   onSelect: (id: number) => void;
-  onView: (notification: AdminNotification) => void;
 }
 
 export const NotificationTableRow: React.FC<NotificationTableRowProps> = React.memo(({
   notification,
   index,
   isSelected,
-  onSelect,
-  onView
+  onSelect
 }) => {
   const navigate = useNavigate();
   const formatDateTime = (dateStr: string | null) => {
@@ -91,7 +89,7 @@ export const NotificationTableRow: React.FC<NotificationTableRowProps> = React.m
           </span>
         </div>
       </td>
-      <td className="px-4 py-4 text-gray-700 dark:text-gray-300">
+      <td className="px-4 py-4 text-gray-900 dark:text-white font-semibold">
         {getTargetTypeLabel(notification.targetType)}
       </td>
       <td className="px-4 py-4">
@@ -108,8 +106,8 @@ export const NotificationTableRow: React.FC<NotificationTableRowProps> = React.m
       <td className="px-4 py-4">
         <div className="flex items-center justify-center gap-2">
           <button
-            onClick={() => onView(notification)}
-            className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+            onClick={() => navigate(`/admin/notifications/${notification.id}`)}
+            className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
             title="Xem chi tiết"
           >
             <Eye size={18} />
@@ -120,7 +118,7 @@ export const NotificationTableRow: React.FC<NotificationTableRowProps> = React.m
             className={`p-1.5 rounded-lg transition-colors ${
               notification.status === NotificationStatus.SENT
                 ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
-                : 'text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20'
+                : 'text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20'
             }`}
             title={notification.status === NotificationStatus.SENT ? 'Không thể sửa thông báo đã gửi' : 'Chỉnh sửa'}
           >

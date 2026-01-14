@@ -15,6 +15,7 @@ const NotificationsPage = lazy(() => import('./pages/admin/NotificationsPage').t
 const NotificationManagementPage = lazy(() => import('./pages/admin/NotificationManagementPage').then(m => ({ default: m.NotificationManagementPage })));
 const CreateNotificationPage = lazy(() => import('./pages/admin/CreateNotificationPage').then(m => ({ default: m.CreateNotificationPage })));
 const EditNotificationPage = lazy(() => import('./pages/admin/EditNotificationPage').then(m => ({ default: m.EditNotificationPage })));
+const NotificationDetailPage = lazy(() => import('./pages/admin/NotificationDetailPage').then(m => ({ default: m.NotificationDetailPage })));
 const SystemLogsPage = lazy(() => import('./pages/admin/SystemLogsPage').then(m => ({ default: m.SystemLogsPage })));
 const UsersPage = lazy(() => import('./pages/admin/UsersPage').then(m => ({ default: m.UsersPage })));
 const ActivatedUsersPage = lazy(() => import('./pages/admin/ActivatedUsersPage').then(m => ({ default: m.ActivatedUsersPage })));
@@ -150,6 +151,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
                 <EditNotificationPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/notifications/:id"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <NotificationDetailPage />
               </ProtectedRoute>
             }
           />

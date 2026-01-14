@@ -3,11 +3,8 @@ import { Loader2, Eye, EyeOff, Trash2, AlertCircle } from 'lucide-react';
 
 interface NotificationBulkActionsProps {
   selectedCount: number;
-  onPublish: () => void;
-  onHide: () => void;
+  onEdit: () => void;
   onDelete: () => void;
-  isPublishing: boolean;
-  isHiding: boolean;
   isDeleting: boolean;
   canDelete?: boolean;
   hasSentNotification?: boolean;
@@ -15,11 +12,8 @@ interface NotificationBulkActionsProps {
 
 export const NotificationBulkActions: React.FC<NotificationBulkActionsProps> = React.memo(({
   selectedCount,
-  onPublish,
-  onHide,
+  onEdit,
   onDelete,
-  isPublishing,
-  isHiding,
   isDeleting,
   canDelete = true,
   hasSentNotification = false
