@@ -17,7 +17,6 @@ public class CourseResponse {
     private String description;
     private Integer credits;
     private Integer numberOfSlots;
-    private Integer fixedSemester; // Deprecated - use semester instead
     private Integer semester; // Học kỳ được gán trong chuyên ngành
     private Course.CourseStatus status;
     private Integer orderIndex; // Thứ tự trong specialization/subspecialization

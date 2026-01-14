@@ -30,6 +30,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.*;
 import java.nio.file.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -98,6 +99,8 @@ public class UserServiceImpl implements UserService {
                         cb.like(cb.lower(root.get("username")), searchLower)));
             }
 
+            // Special rule for academic staff to potentially see only non-admin active
+            // users
             if ("ACTIVE".equalsIgnoreCase(status)) {
                 predicates.add(cb.notEqual(root.get("role"), User.UserRole.ADMIN));
             }
@@ -626,6 +629,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     @CacheEvict(value = CACHE_USERS, allEntries = true)
     public void importExcelSync(MultipartFile file, String importMode) {
+        checkActiveJob();
         String adminUsername = SecurityContextHolder.getContext().getAuthentication().getName();
         log.info("Fast Excel import (no images): {}, mode: {}", file.getOriginalFilename(), importMode);
 
@@ -700,6 +704,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public String importZipAsync(byte[] fileBytes, String filename, String importMode) {
+        checkActiveJob();
         String jobId = UUID.randomUUID().toString();
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
 
@@ -725,6 +730,37 @@ public class UserServiceImpl implements UserService {
         ImportJob job = importJobRepository.findByJobId(jobId)
                 .orElseThrow(() -> new NotFoundException("Import job not found: " + jobId));
         return com.fams.backend.dto.response.ImportJobResponse.fromEntity(job);
+    }
+
+    @Override
+    public com.fams.backend.dto.response.ImportJobResponse getActiveImportJob() {
+        return importJobRepository.findTopByStatusInOrderByCreatedAtDesc(
+                Arrays.asList(ImportJob.JobStatus.PENDING, ImportJob.JobStatus.PROCESSING))
+                .map(com.fams.backend.dto.response.ImportJobResponse::fromEntity)
+                .orElse(null);
+    }
+
+    @Override
+    @Transactional
+    public void cleanupStuckJobs() {
+        List<ImportJob> stuckJobs = importJobRepository.findByStatusIn(
+                Arrays.asList(ImportJob.JobStatus.PENDING, ImportJob.JobStatus.PROCESSING));
+
+        for (ImportJob job : stuckJobs) {
+            job.setStatus(ImportJob.JobStatus.CANCELLED);
+            job.setErrorMessage("Hệ thống đã tự động hủy bỏ vì tiến trình bị kẹt.");
+            job.setCompletedAt(LocalDateTime.now());
+        }
+        importJobRepository.saveAll(stuckJobs);
+        log.info("Cleaned up {} stuck import jobs", stuckJobs.size());
+    }
+
+    private void checkActiveJob() {
+        if (importJobRepository.existsByStatusIn(
+                Arrays.asList(ImportJob.JobStatus.PENDING, ImportJob.JobStatus.PROCESSING))) {
+            throw new BadRequestException(
+                    "Hiện đang có một tiến trình import đang chạy. Vui lòng đợi cho đến khi hoàn tất.");
+        }
     }
 
     // ========================= Helper Methods =========================
@@ -778,6 +814,182 @@ public class UserServiceImpl implements UserService {
         @Override
         public void transferTo(File dest) throws IOException {
             Files.write(dest.toPath(), content);
+        }
+    }
+
+    // ========================= Preview Import Implementation
+    // =========================
+
+    @Override
+    public com.fams.backend.dto.response.PreviewImportResponse previewImportFile(MultipartFile file) {
+        log.info("Previewing import file: {}", file.getOriginalFilename());
+
+        Path tempDir = null;
+        try {
+            List<com.fams.backend.dto.response.PreviewImportResponse.PreviewRow> previewRows = new ArrayList<>();
+            List<String> validationMessages = new ArrayList<>();
+            int totalRows = 0;
+            int validRows = 0;
+            int errorRows = 0;
+
+            Map<String, Boolean> imageMap = new HashMap<>();
+            InputStream excelStream = null;
+
+            String filename = file.getOriginalFilename();
+            boolean isZip = filename != null && filename.toLowerCase().endsWith(".zip");
+
+            if (isZip) {
+                // Extract ZIP to find Excel and images
+                tempDir = Files.createTempDirectory("preview_import_");
+                try (ZipInputStream zis = new ZipInputStream(file.getInputStream())) {
+                    ZipEntry zipEntry;
+                    File excelFile = null;
+                    while ((zipEntry = zis.getNextEntry()) != null) {
+                        if (!zipEntry.isDirectory()) {
+                            File newFile = new File(tempDir.toFile(), zipEntry.getName());
+                            newFile.getParentFile().mkdirs();
+                            Files.copy(zis, newFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+                            String name = newFile.getName().toLowerCase();
+                            if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
+                                excelFile = newFile;
+                            } else if (isImage(name)) {
+                                String code = name.contains(".") ? name.substring(0, name.lastIndexOf(".")) : name;
+                                imageMap.put(code.toLowerCase(), true);
+                            }
+                        }
+                    }
+                    if (excelFile != null) {
+                        excelStream = new FileInputStream(excelFile);
+                    }
+                }
+            } else {
+                excelStream = file.getInputStream();
+            }
+
+            if (excelStream == null) {
+                throw new BadRequestException("Không tìm thấy file Excel");
+            }
+
+            // Get existing codes and emails for validation
+            Set<String> existingCodes = userRepository.findAllCodes().stream()
+                    .map(String::toLowerCase).collect(Collectors.toSet());
+            Set<String> existingEmails = userRepository.findAllEmails().stream()
+                    .map(String::toLowerCase).collect(Collectors.toSet());
+            Set<String> seenCodes = new HashSet<>();
+            Set<String> seenEmails = new HashSet<>();
+
+            try (Workbook workbook = new XSSFWorkbook(excelStream)) {
+                Sheet sheet = workbook.getSheetAt(0);
+                Iterator<Row> rows = sheet.iterator();
+                int rowNumber = 0;
+
+                while (rows.hasNext()) {
+                    Row currentRow = rows.next();
+                    if (rowNumber++ == 0)
+                        continue; // Skip header
+
+                    String fullName = getCellValue(currentRow.getCell(0));
+                    String code = getCellValue(currentRow.getCell(1));
+                    String roleStr = getCellValue(currentRow.getCell(2));
+                    String dobStr = getCellValue(currentRow.getCell(3));
+                    String email = getCellValue(currentRow.getCell(4));
+                    String phone = getCellValue(currentRow.getCell(5));
+
+                    if (code.isEmpty() && email.isEmpty() && fullName.isEmpty())
+                        continue;
+
+                    totalRows++;
+                    StringBuilder errorMsg = new StringBuilder();
+                    String status = "valid";
+
+                    // Validate code
+                    if (code.isEmpty()) {
+                        errorMsg.append("Thiếu mã số. ");
+                        status = "error";
+                    } else if (seenCodes.contains(code.toLowerCase())) {
+                        errorMsg.append("Mã số trùng lặp trong file. ");
+                        status = "error";
+                    } else if (existingCodes.contains(code.toLowerCase())) {
+                        errorMsg.append("Mã số đã tồn tại. ");
+                        status = "error";
+                    }
+
+                    // Validate email
+                    if (email.isEmpty()) {
+                        errorMsg.append("Thiếu email. ");
+                        status = "error";
+                    } else if (seenEmails.contains(email.toLowerCase())) {
+                        errorMsg.append("Email trùng lặp trong file. ");
+                        status = "error";
+                    } else if (existingEmails.contains(email.toLowerCase())) {
+                        errorMsg.append("Email đã tồn tại. ");
+                        status = "error";
+                    }
+
+                    // Validate DOB format
+                    if (!dobStr.isEmpty()) {
+                        try {
+                            LocalDate.parse(dobStr, DOB_FORMATTER);
+                        } catch (Exception e) {
+                            errorMsg.append("Ngày sinh không hợp lệ. ");
+                            status = "error";
+                        }
+                    }
+
+                    if ("error".equals(status)) {
+                        errorRows++;
+                    } else {
+                        validRows++;
+                        seenCodes.add(code.toLowerCase());
+                        seenEmails.add(email.toLowerCase());
+                    }
+
+                    boolean hasImage = imageMap.containsKey(code.toLowerCase());
+
+                    // Add all rows to preview (for complete error reporting)
+                    previewRows.add(com.fams.backend.dto.response.PreviewImportResponse.PreviewRow.builder()
+                            .rowNumber(rowNumber)
+                            .fullName(fullName)
+                            .code(code)
+                            .role(roleStr)
+                            .dob(dobStr)
+                            .email(email)
+                            .phone(phone)
+                            .hasImage(hasImage)
+                            .status(status)
+                            .errorMessage(errorMsg.length() > 0 ? errorMsg.toString().trim() : null)
+                            .build());
+                }
+            }
+
+            if (errorRows > 0) {
+                validationMessages.add("Có " + errorRows + " dòng lỗi cần kiểm tra lại.");
+            }
+            if (validRows > 0) {
+                validationMessages.add(validRows + " người dùng hợp lệ sẵn sàng import.");
+            }
+            if (isZip) {
+                int imagesFound = imageMap.size();
+                validationMessages.add("Tìm thấy " + imagesFound + " ảnh trong file ZIP.");
+            }
+
+            return com.fams.backend.dto.response.PreviewImportResponse.builder()
+                    .totalRows(totalRows)
+                    .validRows(validRows)
+                    .errorRows(errorRows)
+                    .previewData(previewRows)
+                    .validationMessages(validationMessages)
+                    .build();
+
+        } catch (
+
+        Exception e) {
+            log.error("Error previewing import file", e);
+            throw new BadRequestException("Lỗi khi xem trước file: " + e.getMessage());
+        } finally {
+            if (tempDir != null)
+                cleanUpTempDir(tempDir);
         }
     }
 }

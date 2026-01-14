@@ -1,5 +1,6 @@
 package com.fams.backend.service;
 
+import com.fams.backend.dto.SpecializationImportDTO;
 import com.fams.backend.dto.request.ReorderCoursesRequest;
 import com.fams.backend.dto.request.SpecializationRequest;
 import com.fams.backend.dto.response.CourseResponse;
@@ -22,12 +23,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -67,8 +71,9 @@ public class SpecializationService {
     @org.springframework.transaction.annotation.Transactional
     public SpecializationResponse createSpecialization(
             SpecializationRequest request) {
-        if (specializationRepository.findByCode(request.getCode()).isPresent()) {
-            throw new IllegalArgumentException("Mã chuyên ngành đã tồn tại: " + request.getCode());
+        String code = request.getCode().toUpperCase();
+        if (specializationRepository.findByCode(code).isPresent()) {
+            throw new IllegalArgumentException("Mã chuyên ngành đã tồn tại: " + code);
         }
         if (specializationRepository.existsByName(request.getName())) {
             throw new IllegalArgumentException("Tên chuyên ngành đã tồn tại: " + request.getName());
@@ -78,7 +83,7 @@ public class SpecializationService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ngành"));
 
         Specialization specialization = Specialization.builder()
-                .code(request.getCode())
+                .code(code)
                 .name(request.getName())
                 .description(request.getDescription())
                 .status(request.getStatus() != null ? request.getStatus() : Specialization.SpecializationStatus.ACTIVE)
@@ -93,9 +98,10 @@ public class SpecializationService {
         Specialization specialization = specializationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy chuyên ngành"));
 
+        String code = request.getCode().toUpperCase();
         validateRequest(request, id);
 
-        specialization.setCode(request.getCode());
+        specialization.setCode(code);
         specialization.setName(request.getName());
         specialization.setDescription(request.getDescription());
         if (request.getStatus() != null) {
@@ -210,22 +216,23 @@ public class SpecializationService {
                 .build();
     }
 
-    @Transactional
-    public List<Specialization> importSpecializations(Long majorId, MultipartFile file) throws IOException {
-        log.info("Importing specializations from file: {} for major: {}", file.getOriginalFilename(), majorId);
+    // ========== Import Specializations with Preview ==========
+
+    public List<SpecializationImportDTO> previewImportSpecializations(Long majorId, MultipartFile file)
+            throws IOException {
+        log.info("Preview import specializations from file: {} for major: {}", file.getOriginalFilename(), majorId);
 
         Major major = majorRepository.findById(majorId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy ngành với ID: " + majorId));
 
-        List<Specialization> specializationsToSave = new ArrayList<>();
-        List<String> validationErrors = new ArrayList<>();
-        Set<String> seenCodes = new HashSet<>();
-        int rowNumber = 0;
-        int skippedRows = 0;
+        List<SpecializationImportDTO> previewList = new ArrayList<>();
 
         try (InputStream is = file.getInputStream(); Workbook workbook = new XSSFWorkbook(is)) {
             Sheet sheet = workbook.getSheetAt(0);
             Iterator<Row> rows = sheet.iterator();
+
+            int rowNumber = 0;
+            Set<String> seenCodes = new HashSet<>();
 
             while (rows.hasNext()) {
                 Row currentRow = rows.next();
@@ -237,98 +244,198 @@ public class SpecializationService {
                     continue;
                 }
 
-                // Column A: major code
+                // Read columns according to Excel structure:
+                // A: major code, B: specialization code, C: name, D: description, E: status
                 String majorCode = getCellValue(currentRow.getCell(0));
-                // Column B: specialization code
                 String code = getCellValue(currentRow.getCell(1));
-                // Column C: specialization name
                 String name = getCellValue(currentRow.getCell(2));
-                // Column D: description
                 String description = getCellValue(currentRow.getCell(3));
-                // Column E: totalCredits (skip - calculated field)
-                // Column F: status
-                String statusStr = getCellValue(currentRow.getCell(5));
+                String statusStr = getCellValue(currentRow.getCell(4));
+
+                // Skip completely empty rows
+                if (code.isEmpty() && name.isEmpty()) {
+                    rowNumber++;
+                    continue;
+                }
 
                 // Skip rows that don't match the current major
                 if (!majorCode.equalsIgnoreCase(major.getCode())) {
-                    skippedRows++;
                     rowNumber++;
                     continue;
+                }
+
+                SpecializationImportDTO dto = SpecializationImportDTO.builder()
+                        .rowNumber(currentRowNum)
+                        .majorCode(majorCode)
+                        .code(code)
+                        .name(name)
+                        .description(description)
+                        .statusStr("ACTIVE") // Default to ACTIVE
+                        .status("VALID")
+                        .build();
+
+                // Validate status and set warning if invalid
+                if (!statusStr.isEmpty()) {
+                    try {
+                        Specialization.SpecializationStatus.valueOf(statusStr.toUpperCase());
+                        dto.setStatusStr(statusStr.toUpperCase());
+                    } catch (IllegalArgumentException e) {
+                        dto.setWarningMessage("Trạng thái '" + statusStr + "' không hợp lệ, sẽ sử dụng ACTIVE");
+                    }
                 }
 
                 // Validate required fields
                 if (code.isEmpty()) {
-                    validationErrors.add("Dòng " + currentRowNum + ": Mã chuyên ngành không được để trống");
+                    dto.setStatus("ERROR");
+                    dto.setErrorMessage("Mã chuyên ngành không được để trống");
+                    previewList.add(dto);
                     rowNumber++;
                     continue;
                 }
                 if (name.isEmpty()) {
-                    validationErrors.add("Dòng " + currentRowNum + ": Tên chuyên ngành không được để trống");
+                    dto.setStatus("ERROR");
+                    dto.setErrorMessage("Tên chuyên ngành không được để trống");
+                    previewList.add(dto);
                     rowNumber++;
                     continue;
                 }
 
                 // Check duplicate in file
                 if (seenCodes.contains(code.toLowerCase())) {
-                    validationErrors
-                            .add("Dòng " + currentRowNum + ": Mã chuyên ngành '" + code + "' bị trùng trong file");
+                    dto.setStatus("ERROR");
+                    dto.setErrorMessage("Mã chuyên ngành '" + code + "' bị trùng trong file");
+                    previewList.add(dto);
                     rowNumber++;
                     continue;
                 }
                 seenCodes.add(code.toLowerCase());
 
-                // Check duplicate in database
-                if (specializationRepository.findByCode(code).isPresent()) {
-                    validationErrors.add(
-                            "Dòng " + currentRowNum + ": Mã chuyên ngành '" + code + "' đã tồn tại trong hệ thống");
+                // Check if specialization exists in database - treat as error
+                if (specializationRepository.existsByCode(code)) {
+                    dto.setStatus("ERROR");
+                    dto.setErrorMessage("Mã chuyên ngành '" + code + "' đã tồn tại trong hệ thống");
+                    previewList.add(dto);
                     rowNumber++;
+                    continue;
+                }
+
+                previewList.add(dto);
+                rowNumber++;
+            }
+        } catch (Exception e) {
+            log.error("Error previewing import file", e);
+            throw new RuntimeException("Lỗi khi đọc file: " + e.getMessage());
+        }
+
+        return previewList;
+    }
+
+    @Transactional
+    public Map<String, Object> saveImportedSpecializations(Long majorId, List<SpecializationImportDTO> dtos) {
+        log.info("Saving {} imported specializations for major {}", dtos.size(), majorId);
+
+        Major major = majorRepository.findById(majorId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy ngành với ID: " + majorId));
+
+        Map<String, Object> result = new HashMap<>();
+        List<String> errors = new ArrayList<>();
+        int createdCount = 0;
+        int failedCount = 0;
+
+        for (SpecializationImportDTO dto : dtos) {
+            // Skip invalid entries
+            if ("ERROR".equals(dto.getStatus())) {
+                failedCount++;
+                errors.add("Dòng " + dto.getRowNumber() + ": " + dto.getErrorMessage());
+                continue;
+            }
+
+            try {
+                String code = dto.getCode();
+                String name = dto.getName();
+                String description = dto.getDescription();
+                String statusStr = dto.getStatusStr();
+
+                // Double check - skip if already exists
+                if (specializationRepository.existsByCode(code)) {
+                    failedCount++;
+                    errors.add("Dòng " + dto.getRowNumber() + ": Mã chuyên ngành '" + code
+                            + "' đã tồn tại trong hệ thống");
                     continue;
                 }
 
                 // Parse status
                 Specialization.SpecializationStatus status = Specialization.SpecializationStatus.ACTIVE;
-                if (!statusStr.isEmpty()) {
+                if (statusStr != null && !statusStr.isEmpty()) {
                     try {
                         status = Specialization.SpecializationStatus.valueOf(statusStr.toUpperCase());
                     } catch (IllegalArgumentException e) {
-                        log.warn("Invalid status '{}' at row {}, defaulting to ACTIVE", statusStr, currentRowNum);
+                        // Keep default ACTIVE
                     }
                 }
 
                 Specialization specialization = Specialization.builder()
                         .code(code)
                         .name(name)
-                        .description(description.isEmpty() ? null : description)
+                        .description(description == null || description.isEmpty() ? null : description)
                         .status(status)
                         .major(major)
                         .build();
+                specializationRepository.save(specialization);
+                createdCount++;
+                log.info("Created specialization: {} - {}", code, name);
+            } catch (Exception e) {
+                failedCount++;
+                errors.add("Dòng " + dto.getRowNumber() + ": Lỗi khi lưu: " + e.getMessage());
+                log.error("Error saving specialization at row {}: {}", dto.getRowNumber(), e.getMessage());
+            }
+        }
 
-                specializationsToSave.add(specialization);
-                rowNumber++;
+        result.put("created", createdCount);
+        result.put("failed", failedCount);
+        result.put("errors", errors);
+        log.info("Save imported specializations completed: created={}, failed={}", createdCount, failedCount);
+        return result;
+    }
+
+    public byte[] exportSpecializationTemplate() throws IOException {
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("Template");
+
+            // Create header style
+            CellStyle headerStyle = workbook.createCellStyle();
+            Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerStyle.setFont(headerFont);
+            headerStyle.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
+            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            headerStyle.setBorderBottom(BorderStyle.THIN);
+            headerStyle.setBorderTop(BorderStyle.THIN);
+            headerStyle.setBorderLeft(BorderStyle.THIN);
+            headerStyle.setBorderRight(BorderStyle.THIN);
+
+            // Create header row - matching Excel structure
+            Row headerRow = sheet.createRow(0);
+            String[] headers = { "major code", "specialization code", "specialization name", "description", "status" };
+
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers[i]);
+                cell.setCellStyle(headerStyle);
+                sheet.setColumnWidth(i, 6000);
             }
 
-            if (!validationErrors.isEmpty()) {
-                throw new RuntimeException("Dữ liệu không hợp lệ:\n" + String.join("\n", validationErrors));
-            }
+            // Create example row
+            Row exampleRow = sheet.createRow(1);
+            exampleRow.createCell(0).setCellValue("SE");
+            exampleRow.createCell(1).setCellValue("SE-WEB");
+            exampleRow.createCell(2).setCellValue("Web Development");
+            exampleRow.createCell(3).setCellValue("Phát triển ứng dụng Web (Full-stack, Frontend, Backend).");
+            exampleRow.createCell(4).setCellValue("ACTIVE");
 
-            if (skippedRows > 0) {
-                log.info("Skipped {} rows with different major code", skippedRows);
-            }
-
-            // Kiểm tra nếu không có dữ liệu hợp lệ để import
-            if (specializationsToSave.isEmpty()) {
-                if (skippedRows > 0) {
-                    throw new RuntimeException("Không có chuyên ngành nào được import. " +
-                            "Tất cả " + skippedRows + " dòng đều có mã ngành không khớp với ngành hiện tại ('"
-                            + major.getCode() + "').");
-                } else {
-                    throw new RuntimeException("File không chứa dữ liệu chuyên ngành hợp lệ.");
-                }
-            }
-
-            List<Specialization> saved = specializationRepository.saveAll(specializationsToSave);
-            log.info("Imported {} specializations successfully", saved.size());
-            return saved;
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            workbook.write(out);
+            return out.toByteArray();
         }
     }
 
@@ -362,7 +469,6 @@ public class SpecializationService {
                 .description(course.getDescription())
                 .credits(course.getCredits())
                 .numberOfSlots(course.getNumberOfSlots())
-                .fixedSemester(course.getFixedSemester())
                 .semester(sc.getSemester())
                 .status(course.getStatus())
                 .orderIndex(sc.getOrderIndex())

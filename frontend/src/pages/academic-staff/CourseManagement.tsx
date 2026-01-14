@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Upload } from 'lucide-react';
+import { Plus, Search, Upload, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { courseService } from '../../services/api/courseService';
 import { StatusFilter, Pagination, SelectionActionBar } from '../../components/academic-staff';
 import { CourseFormModal } from '../../components/academic-staff/CourseFormModal';
-import { ImportModal } from '../../components/academic-staff/ImportModal';
+import { ImportCourseModal } from '../../components/academic-staff/ImportCourseModal';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { Course } from '../../types/course';
 
@@ -47,7 +47,7 @@ export const CourseManagement: React.FC = () => {
                 keyword: searchTerm || undefined,
                 status: status,
                 page,
-                size: 10
+                size: 30
             });
             setCourses(result.content);
             setTotalElements(result.totalElements);
@@ -80,11 +80,45 @@ export const CourseManagement: React.FC = () => {
         }
     };
 
+    // State for range selection
+    const [lastSelectedId, setLastSelectedId] = useState<number | null>(null);
+
     const handleSelectOne = (id: number) => {
         if (selectedIds.includes(id)) {
             setSelectedIds(selectedIds.filter(itemId => itemId !== id));
         } else {
             setSelectedIds([...selectedIds, id]);
+        }
+        setLastSelectedId(id);
+    };
+
+    const handleRowClick = (course: Course, e: React.MouseEvent) => {
+        // Prevent text selection
+        if (e.shiftKey) {
+            document.getSelection()?.removeAllRanges();
+        }
+
+        if (e.shiftKey && lastSelectedId !== null) {
+            const currentIndex = courses.findIndex(c => c.id === course.id);
+            const lastIndex = courses.findIndex(c => c.id === lastSelectedId);
+
+            if (currentIndex !== -1 && lastIndex !== -1) {
+                const start = Math.min(currentIndex, lastIndex);
+                const end = Math.max(currentIndex, lastIndex);
+                const rangeIds = courses.slice(start, end + 1).map(c => c.id);
+
+                // Union with existing selectedIds
+                const newSelected = Array.from(new Set([...selectedIds, ...rangeIds]));
+                setSelectedIds(newSelected);
+            }
+        } else {
+            // Toggle selection: add if not selected, remove if selected
+            if (selectedIds.includes(course.id)) {
+                setSelectedIds(selectedIds.filter(id => id !== course.id));
+            } else {
+                setSelectedIds([...selectedIds, course.id]);
+            }
+            setLastSelectedId(course.id);
         }
     };
 
@@ -185,6 +219,27 @@ export const CourseManagement: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-2">
                         <button
+                            onClick={async () => {
+                                try {
+                                    const blob = await courseService.downloadImportTemplate();
+                                    const url = window.URL.createObjectURL(blob);
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    link.download = 'template-import-mon-hoc.xlsx';
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+                                    window.URL.revokeObjectURL(url);
+                                } catch (error) {
+                                    toast.error('Lỗi khi tải template');
+                                }
+                            }}
+                            className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                        >
+                            <Download className="h-4 w-4" />
+                            Tải template
+                        </button>
+                        <button
                             onClick={() => setIsImportOpen(true)}
                             className="flex items-center gap-2 rounded-lg border border-fpt-orange bg-orange-50 px-4 py-2 text-sm font-medium text-fpt-orange hover:bg-orange-100"
                         >
@@ -244,7 +299,7 @@ export const CourseManagement: React.FC = () => {
                                         />
                                     </th>
                                     <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Mã môn</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Tên môn học</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Tên môn học</th>
                                     <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Số tín chỉ</th>
                                     <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-lg">Trạng thái</th>
                                 </tr>
@@ -273,7 +328,7 @@ export const CourseManagement: React.FC = () => {
                                         <tr
                                             key={course.id}
                                             className={`border-b transition-colors cursor-pointer ${selectedIds.includes(course.id) ? 'bg-orange-50 dark:bg-orange-900/20' : 'bg-white hover:bg-gray-50 dark:bg-zinc-900 dark:hover:bg-zinc-800/50'} dark:border-zinc-800 ${loading ? 'opacity-50' : ''}`}
-                                            onClick={() => handleSelectOne(course.id)}
+                                            onClick={(e) => handleRowClick(course, e)}
                                         >
                                             <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                                                 <input
@@ -283,8 +338,8 @@ export const CourseManagement: React.FC = () => {
                                                     onChange={() => handleSelectOne(course.id)}
                                                 />
                                             </td>
-                                            <td className="px-4 py-3 text-center font-medium text-gray-900 dark:text-white">{course.code}</td>
-                                            <td className="px-4 py-3 text-gray-600 dark:text-zinc-400">{course.name}</td>
+                                            <td className="px-4 py-3 text-center font-medium font-semibold text-gray-900 dark:text-white">{course.code}</td>
+                                            <td className="px-4 py-3 text-left text-gray-600 dark:text-zinc-400">{course.name}</td>
                                             <td className="px-4 py-3 text-center">
                                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
                                                     {course.credits} TC
@@ -322,12 +377,10 @@ export const CourseManagement: React.FC = () => {
             />
 
             {/* Import Modal */}
-            <ImportModal
+            <ImportCourseModal
                 isOpen={isImportOpen}
                 onClose={() => setIsImportOpen(false)}
                 onSuccess={fetchData}
-                title="Import Môn học"
-                onImport={async () => ({ success: 0, failed: 0, errors: ['Chức năng đang phát triển'] })}
             />
 
             {/* Confirm Modal */}

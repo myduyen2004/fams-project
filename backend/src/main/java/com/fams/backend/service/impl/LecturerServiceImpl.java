@@ -38,6 +38,26 @@ public class LecturerServiceImpl implements LecturerService {
     private final UserRepository userRepository;
     private final LecturerProfileRepository lecturerProfileRepository;
 
+    private static final Set<String> VALID_DEPARTMENTS = Set.of(
+            "Khoa Công nghệ Thông tin",
+            "Khoa Khoa học Máy tính",
+            "Khoa Trí tuệ Nhân tạo",
+            "Khoa Kỹ thuật Phần mềm",
+            "Khoa Kinh tế",
+            "Khoa Quản trị Kinh doanh",
+            "Khoa Marketing",
+            "Khoa Tài chính – Ngân hàng",
+            "Khoa Ngôn ngữ Anh",
+            "Khoa Ngôn ngữ Nhật",
+            "Khoa Ngôn ngữ Hàn Quốc",
+            "Khoa Ngôn ngữ Trung Quốc",
+            "Khoa Thiết kế Đồ họa",
+            "Khoa Mỹ thuật",
+            "Khoa Kiến trúc",
+            "Khoa Luật",
+            "Khoa Khoa học Xã hội",
+            "Khoa Du lịch – Khách sạn");
+
     @Override
     public Page<LecturerResponse> getAllLecturers(String search, String status, String department, Boolean hasProfile,
             Pageable pageable) {
@@ -507,6 +527,9 @@ public class LecturerServiceImpl implements LecturerService {
                 }
 
                 String code = getCellValueAsString(currentRow.getCell(1));
+                String fullName = getCellValueAsString(currentRow.getCell(2));
+                String email = getCellValueAsString(currentRow.getCell(3));
+                String phone = getCellValueAsString(currentRow.getCell(4));
                 String department = getCellValueAsString(currentRow.getCell(5));
                 String expertise = getCellValueAsString(currentRow.getCell(6));
                 String bio = getCellValueAsString(currentRow.getCell(7));
@@ -541,10 +564,53 @@ public class LecturerServiceImpl implements LecturerService {
                         User user = userOpt.get();
                         dto.setFullName(user.getFullName());
                         dto.setEmail(user.getEmail());
+                        dto.setPhone(phone); // Set phone from excel to DTO for preview
 
                         if (user.getRole() != User.UserRole.LECTURER) {
                             dto.setStatus("ERROR");
                             dto.setErrorMessage("Không phải là giảng viên");
+                        } else {
+                            // STRICT VALIDATION
+                            StringBuilder errorMsg = new StringBuilder();
+                            boolean hasError = false;
+
+                            // Validate Full Name
+                            if (fullName != null && !fullName.trim().equalsIgnoreCase(user.getFullName())) {
+                                errorMsg.append("Tên không trùng khớp (Excel: ").append(fullName).append(" vs DB: ")
+                                        .append(user.getFullName()).append("). ");
+                                hasError = true;
+                            }
+
+                            // Validate Email
+                            if (email != null && !email.trim().equalsIgnoreCase(user.getEmail())) {
+                                errorMsg.append("Email không trùng khớp (Excel: ").append(email).append(" vs DB: ")
+                                        .append(user.getEmail()).append("). ");
+                                hasError = true;
+                            }
+
+                            // Validate Phone
+                            // Note: user.getPhone() might be null
+                            String dbPhone = user.getPhone() != null ? user.getPhone() : "";
+                            String excelPhone = phone != null ? phone : "";
+                            // Simple comparison, you might want to normalize phone numbers (remove spaces,
+                            // etc) if needed
+                            if (!excelPhone.trim().equals(dbPhone)) {
+                                errorMsg.append("SĐT không trùng khớp (Excel: ").append(excelPhone).append(" vs DB: ")
+                                        .append(dbPhone).append("). ");
+                                hasError = true;
+                            }
+
+                            // Validate Department
+                            if (department != null && !department.trim().isEmpty()
+                                    && !VALID_DEPARTMENTS.contains(department.trim())) {
+                                errorMsg.append("Khoa không hợp lệ: ").append(department).append(". ");
+                                hasError = true;
+                            }
+
+                            if (hasError) {
+                                dto.setStatus("ERROR");
+                                dto.setErrorMessage(errorMsg.toString().trim());
+                            }
                         }
                     }
                 }

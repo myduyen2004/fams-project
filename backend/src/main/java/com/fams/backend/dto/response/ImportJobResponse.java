@@ -25,6 +25,7 @@ public class ImportJobResponse {
     private LocalDateTime createdAt;
     private LocalDateTime completedAt;
     private Integer percentage;
+    private java.util.List<UserResponse> newUsers;
 
     public static ImportJobResponse fromEntity(ImportJob job) {
         int percentage = 0;
