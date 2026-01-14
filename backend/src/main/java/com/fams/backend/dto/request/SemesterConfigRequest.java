@@ -1,4 +1,4 @@
-package com.fams.backend.dto.response;
+package com.fams.backend.dto.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,27 +11,19 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SemesterResponse {
-    private String code;
-    private String name;
-    private String startDate;
-    private String endDate;
-    private String status;
-    private String action;
-    private Boolean isPublished;
-
-    // Configuration details
+public class SemesterConfigRequest {
     private List<String> selectedDays;
     private Integer maxSlotsPerDay;
     private Integer slotsPerSubjectPerWeek;
     private Integer slotDuration;
-    private List<SlotTypeResponse> slots;
-    private List<HolidayResponse> holidays;
+    private Boolean isPublished;
+    private List<SlotTypeRequest> slots;
+    private List<HolidayRequest> holidays;
 
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class SlotTypeResponse {
+    public static class SlotTypeRequest {
         private String startTime;
         private String endTime;
     }
@@ -39,7 +31,7 @@ public class SemesterResponse {
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class HolidayResponse {
+    public static class HolidayRequest {
         private String holidayDate;
         private String description;
     }
