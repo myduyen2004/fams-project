@@ -5,7 +5,6 @@ export interface Course {
     description?: string;
     credits: number;
     numberOfSlots: number;
-    fixedSemester: number;
     semester?: number; // Học kỳ được gán khi thêm vào chuyên ngành
     status: 'ACTIVE' | 'INACTIVE';
     orderIndex?: number;
@@ -25,5 +24,5 @@ export interface CourseCreateRequest {
     description?: string;
     credits: number;
     numberOfSlots: number;
-    fixedSemester: number;
 }
+

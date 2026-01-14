@@ -38,15 +38,16 @@ public class MajorService {
 
     @Transactional
     public Major createMajor(MajorRequest request) {
-        if (majorRepository.existsByCode(request.getCode())) {
-            throw new IllegalArgumentException("Mã ngành đã tồn tại: " + request.getCode());
+        String code = request.getCode().toUpperCase();
+        if (majorRepository.existsByCode(code)) {
+            throw new IllegalArgumentException("Mã ngành đã tồn tại: " + code);
         }
         if (majorRepository.existsByName(request.getName())) {
             throw new IllegalArgumentException("Tên ngành đã tồn tại: " + request.getName());
         }
 
         Major major = Major.builder()
-                .code(request.getCode())
+                .code(code)
                 .name(request.getName())
                 .description(request.getDescription())
                 .programDuration(request.getProgramDuration())
@@ -61,14 +62,15 @@ public class MajorService {
         Major major = majorRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ngành với mã ngành: " + id));
 
-        if (!major.getCode().equals(request.getCode()) && majorRepository.existsByCode(request.getCode())) {
-            throw new IllegalArgumentException("Mã ngành đã tồn tại: " + request.getCode());
+        String code = request.getCode().toUpperCase();
+        if (!major.getCode().equals(code) && majorRepository.existsByCode(code)) {
+            throw new IllegalArgumentException("Mã ngành đã tồn tại: " + code);
         }
         if (!major.getName().equals(request.getName()) && majorRepository.existsByName(request.getName())) {
             throw new IllegalArgumentException("Tên ngành đã tồn tại: " + request.getName());
         }
 
-        major.setCode(request.getCode());
+        major.setCode(code);
         major.setName(request.getName());
         major.setDescription(request.getDescription());
         major.setProgramDuration(request.getProgramDuration());
@@ -87,6 +89,16 @@ public class MajorService {
         Major major = majorRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ngành với mã ngành: " + id));
         major.setStatus(status);
+
+        // Cascade status change to all specializations
+        if (major.getSpecializations() != null) {
+            major.getSpecializations().forEach(spec -> {
+                spec.setStatus(status == Major.MajorStatus.ACTIVE
+                        ? com.fams.backend.entity.Specialization.SpecializationStatus.ACTIVE
+                        : com.fams.backend.entity.Specialization.SpecializationStatus.INACTIVE);
+            });
+        }
+
         return majorRepository.save(major);
     }
 

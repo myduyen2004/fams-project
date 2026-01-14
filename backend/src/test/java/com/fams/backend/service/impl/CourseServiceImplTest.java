@@ -56,7 +56,6 @@ class CourseServiceImplTest {
                 .description("Introduction to programming")
                 .credits(3)
                 .numberOfSlots(45)
-                .fixedSemester(1)
                 .status(Course.CourseStatus.ACTIVE)
                 .build();
 
@@ -66,7 +65,6 @@ class CourseServiceImplTest {
                 .description("Introduction to programming")
                 .credits(3)
                 .numberOfSlots(45)
-                .fixedSemester(1)
                 .build();
     }
 
