@@ -24,7 +24,6 @@ export const LecturerFilters: React.FC<LecturerFiltersProps> = React.memo(({
   onStatusFilterChange,
   departmentFilter = 'all',
   onDepartmentFilterChange,
-  departments = [],
   onImportClick,
   onExportClick,
   showImportButton = true,
@@ -52,17 +51,37 @@ export const LecturerFilters: React.FC<LecturerFiltersProps> = React.memo(({
         {showDepartmentFilter && onDepartmentFilterChange && (
           <div className="lg:w-48">
             <label className="block text-xs font-medium text-gray-600 dark:text-zinc-400 mb-1">
-              Chuyên ngành
+              Khoa
             </label>
             <select
               value={departmentFilter}
               onChange={(e) => onDepartmentFilterChange(e.target.value)}
               className="border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 rounded-lg px-3 py-2.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white"
             >
-              <option value="all">Tất cả chuyên ngành</option>
-              {departments.map((dept) => (
-                <option key={dept} value={dept}>{dept}</option>
-              ))}
+              <option value="">Tất cả các khoa</option>
+
+              <option value="Khoa Công nghệ Thông tin">Khoa Công nghệ Thông tin</option>
+              <option value="Khoa Khoa học Máy tính">Khoa Khoa học Máy tính</option>
+              <option value="Khoa Trí tuệ Nhân tạo">Khoa Trí tuệ Nhân tạo</option>
+              <option value="Khoa Kỹ thuật Phần mềm">Khoa Kỹ thuật Phần mềm</option>
+
+              <option value="Khoa Kinh tế">Khoa Kinh tế</option>
+              <option value="Khoa Quản trị Kinh doanh">Khoa Quản trị Kinh doanh</option>
+              <option value="Khoa Marketing">Khoa Marketing</option>
+              <option value="Khoa Tài chính – Ngân hàng">Khoa Tài chính – Ngân hàng</option>
+
+              <option value="Khoa Ngôn ngữ Anh">Khoa Ngôn ngữ Anh</option>
+              <option value="Khoa Ngôn ngữ Nhật">Khoa Ngôn ngữ Nhật</option>
+              <option value="Khoa Ngôn ngữ Hàn Quốc">Khoa Ngôn ngữ Hàn Quốc</option>
+              <option value="Khoa Ngôn ngữ Trung Quốc">Khoa Ngôn ngữ Trung Quốc</option>
+
+              <option value="Khoa Thiết kế Đồ họa">Khoa Thiết kế Đồ họa</option>
+              <option value="Khoa Mỹ thuật">Khoa Mỹ thuật</option>
+              <option value="Khoa Kiến trúc">Khoa Kiến trúc</option>
+
+              <option value="Khoa Luật">Khoa Luật</option>
+              <option value="Khoa Khoa học Xã hội">Khoa Khoa học Xã hội</option>
+              <option value="Khoa Du lịch – Khách sạn">Khoa Du lịch – Khách sạn</option>
             </select>
           </div>
         )}

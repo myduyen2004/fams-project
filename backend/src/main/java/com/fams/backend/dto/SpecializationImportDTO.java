@@ -9,15 +9,14 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class LecturerImportDTO {
+public class SpecializationImportDTO {
     private Integer rowNumber;
+    private String majorCode;
     private String code;
-    private String fullName;
-    private String email;
-    private String phone;
-    private String department;
-    private String expertise;
-    private String bio;
-    private String status; // VALID, ERROR
+    private String name;
+    private String description;
+    private String statusStr;
+    private String status; // VALID, ERROR, WARNING
     private String errorMessage;
+    private String warningMessage;
 }

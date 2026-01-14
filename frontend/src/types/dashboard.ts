@@ -24,12 +24,16 @@ export interface Alert {
     timestamp: string;
 }
 
-export interface Notification {
+export interface AppNotification {
     id: number;
     title: string;
     description: string;
     isRead: boolean;
     timestamp: string;
+    type?: 'SYSTEM' | 'ALERT' | 'IMPORT';
+    targetUrl?: string;
+    senderName?: string;
+    senderAvatar?: string;
 }
 
 export interface SystemLog {
