@@ -63,7 +63,8 @@ class SemesterServiceTest {
     @DisplayName("Create Semester: Success")
     void createSemester_Success() {
         // Arrange - Condition: authorized, valid inputs, no duplicate, no overlap
-        when(semesterRepository.findOverlappingSemestersForNew(any(), any())).thenReturn(Collections.emptyList());
+        lenient().when(semesterRepository.findOverlappingSemestersForNew(any(), any()))
+                .thenReturn(Collections.emptyList());
         when(semesterRepository.save(any(Semester.class))).thenReturn(activeSemester);
 
         // Act
@@ -107,7 +108,8 @@ class SemesterServiceTest {
         semesterRequest.setEndDate(yesterday.plusDays(30).toString());
 
         // Act & Assert - Confirmation: throw RuntimeException with message
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> semesterService.createSemester(semesterRequest));
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> semesterService.createSemester(semesterRequest));
         assertTrue(exception.getMessage().contains("Ngày bắt đầu học kỳ phải từ ngày hôm nay trở đi"));
     }
 
@@ -135,11 +137,14 @@ class SemesterServiceTest {
     @DisplayName("Create Semester: Fail - Duplicate Code in Database")
     void createSemester_DuplicateCode_Failure() {
         // Arrange - Condition: code exists in DB
-        when(semesterRepository.findOverlappingSemestersForNew(any(), any())).thenReturn(Collections.emptyList());
-        when(semesterRepository.save(any(Semester.class))).thenThrow(new RuntimeException("Mã học kỳ đã tồn tại trong hệ thống"));
+        lenient().when(semesterRepository.findOverlappingSemestersForNew(any(), any()))
+                .thenReturn(Collections.emptyList());
+        when(semesterRepository.save(any(Semester.class)))
+                .thenThrow(new RuntimeException("Mã học kỳ đã tồn tại trong hệ thống"));
 
         // Act & Assert - Confirmation: throw exception with message
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> semesterService.createSemester(semesterRequest));
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> semesterService.createSemester(semesterRequest));
         assertTrue(exception.getMessage().contains("Mã học kỳ đã tồn tại trong hệ thống"));
     }
 
@@ -157,7 +162,8 @@ class SemesterServiceTest {
         when(semesterRepository.findOverlappingSemestersForNew(any(), any())).thenReturn(List.of(overlapping));
 
         // Act & Assert - Confirmation: throw exception with overlapping semester name
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> semesterService.createSemester(semesterRequest));
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> semesterService.createSemester(semesterRequest));
         assertTrue(exception.getMessage().contains("Kỳ học bị trùng: Summer 2026"));
     }
 
@@ -166,9 +172,11 @@ class SemesterServiceTest {
     @Test
     @DisplayName("Update Semester: Success")
     void updateSemester_Success() {
-        // Arrange - Condition: semester exists, status = UPCOMING, no overlap, valid dates
+        // Arrange - Condition: semester exists, status = UPCOMING, no overlap, valid
+        // dates
         when(semesterRepository.findByCode("SP26")).thenReturn(Optional.of(activeSemester));
-        when(semesterRepository.findOverlappingSemesters(any(), any(), anyString())).thenReturn(Collections.emptyList());
+        lenient().when(semesterRepository.findOverlappingSemesters(any(), any(), anyString()))
+                .thenReturn(Collections.emptyList());
         when(semesterRepository.save(any(Semester.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         SemesterResponse updateRequest = SemesterResponse.builder()
@@ -195,7 +203,8 @@ class SemesterServiceTest {
         when(semesterRepository.findByCode("NOTEXIST")).thenReturn(Optional.empty());
 
         // Act & Assert - Confirmation: throw RuntimeException
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> semesterService.updateSemester("NOTEXIST", semesterRequest));
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> semesterService.updateSemester("NOTEXIST", semesterRequest));
         assertTrue(exception.getMessage().contains("Semester not found with code: NOTEXIST"));
     }
 
@@ -212,7 +221,8 @@ class SemesterServiceTest {
         when(semesterRepository.findByCode("FA24")).thenReturn(Optional.of(completedSemester));
 
         // Act & Assert - Confirmation: throw exception
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> semesterService.updateSemester("FA24", semesterRequest));
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> semesterService.updateSemester("FA24", semesterRequest));
         assertTrue(exception.getMessage().contains("Chỉ có thể cập nhật các học kỳ sắp diễn ra hoặc đang diễn ra"));
     }
 
@@ -229,7 +239,8 @@ class SemesterServiceTest {
         when(semesterRepository.findOverlappingSemesters(any(), any(), anyString())).thenReturn(List.of(overlapping));
 
         // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> semesterService.updateSemester("SP26", semesterRequest));
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> semesterService.updateSemester("SP26", semesterRequest));
         assertTrue(exception.getMessage().contains("Kỳ học bị trùng: Summer 2026"));
     }
 
@@ -257,7 +268,8 @@ class SemesterServiceTest {
         when(semesterRepository.findByCode("NOTEXIST")).thenReturn(Optional.empty());
 
         // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> semesterService.deleteSemester("NOTEXIST"));
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> semesterService.deleteSemester("NOTEXIST"));
         assertTrue(exception.getMessage().contains("Semester not found with code: NOTEXIST"));
         verify(semesterRepository, never()).delete(any());
     }
@@ -366,4 +378,3 @@ class SemesterServiceTest {
         assertEquals(0, result.size());
     }
 }
-

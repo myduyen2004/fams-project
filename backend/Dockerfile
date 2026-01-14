@@ -23,7 +23,7 @@ COPY src ./src
 # Build application (skip tests để build nhanh hơn)
 # GIẢI THÍCH: 
 # - clean: Xóa thư mục target cũ
-# - package: Build và tạo file .jar
+# - package: Build và tạo file .jar (dependencies sẽ tự động download)
 # - -DskipTests: Bỏ qua tests khi build
 RUN mvn clean package -DskipTests
 
@@ -71,8 +71,8 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
 # - -Xms512m -Xmx1024m: Set min/max heap memory
 # - -Djava.security.egd: Tăng tốc random number generation
 ENTRYPOINT ["java", \
-  "-Xms256m", \
-  "-Xmx512m", \
+  "-Xms512m", \
+  "-Xmx1024m", \
   "-Djava.security.egd=file:/dev/./urandom", \
   "-jar", \
   "app.jar"]
