@@ -42,7 +42,7 @@ public class DashboardController {
 
     @GetMapping("/notifications")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<NotificationResponse>> getNotifications() {
+    public ResponseEntity<List<DashboardNotificationResponse>> getNotifications() {
         log.info("GET /api/dashboard/notifications");
         return ResponseEntity.ok(dashboardService.getNotifications());
     }

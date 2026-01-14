@@ -1,7 +1,7 @@
 package com.fams.backend.service.impl;
 
 import com.fams.backend.dto.response.AcademicStaffDashboardResponse;
-import com.fams.backend.dto.response.NotificationResponse;
+import com.fams.backend.dto.response.DashboardNotificationResponse;
 import com.fams.backend.entity.User;
 import com.fams.backend.repository.*;
 import com.fams.backend.service.AcademicStaffDashboardService;
@@ -68,10 +68,10 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
                 return 90 + (int) (Math.random() * 10);
         }
 
-        private List<NotificationResponse> getNotifications() {
+        private List<DashboardNotificationResponse> getNotifications() {
                 log.debug("Fetching recent notifications");
                 return notificationRepository.findTop5ByOrderByCreatedAtDesc().stream()
-                                .map(n -> NotificationResponse.builder()
+                                .map(n -> DashboardNotificationResponse.builder()
                                                 .id(n.getId())
                                                 .title(n.getTitle())
                                                 .timestamp(n.getCreatedAt().format(FORMATTER))

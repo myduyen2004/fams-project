@@ -83,11 +83,11 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     @Override
-    public List<NotificationResponse> getNotifications() {
+    public List<DashboardNotificationResponse> getNotifications() {
         List<Notification> notifications = notificationRepository.findTop5ByOrderByCreatedAtDesc();
 
         return notifications.stream()
-                .map(notification -> NotificationResponse.builder()
+                .map(notification -> DashboardNotificationResponse.builder()
                         .id(notification.getId())
                         .title(notification.getTitle())
                         .description(notification.getContent())

@@ -62,10 +62,6 @@ public class Notification {
     @Builder.Default
     private TargetType targetType = TargetType.ALL;
 
-    // Các role nhận (comma-separated: "STUDENT,LECTURER")
-    @Column(length = 200)
-    private String targetRoles;
-
     // Lớp học phần mục tiêu - FK tới ClassSection(className)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "target_class_name", referencedColumnName = "className")
@@ -117,13 +113,13 @@ public class Notification {
         HIGH,
         URGENT
     }
-
     public enum TargetType {
-        ALL, // Tất cả
-        ROLE, // Theo role
-        CLASS, // Theo lớp
-        COURSE, // Theo môn học
-        USER // Cá nhân
+        ALL,       // Tất cả
+        STUDENT,   // Tất cả sinh viên
+        LECTURER,  // Tất cả giảng viên
+        CLASS,     // Theo lớp học phần
+        COURSE,    // Theo môn học
+        USER       // Cá nhân cụ thể
     }
 
     public enum NotificationStatus {
