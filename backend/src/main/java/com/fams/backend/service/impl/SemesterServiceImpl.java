@@ -37,30 +37,30 @@ public class SemesterServiceImpl implements SemesterService {
         LocalDate startDate = LocalDate.parse(semesterDTO.getStartDate());
         LocalDate endDate = LocalDate.parse(semesterDTO.getEndDate());
         LocalDate today = LocalDate.now();
-        
+
         if (startDate.isBefore(today)) {
             throw new RuntimeException("Ngày bắt đầu học kỳ phải từ ngày hôm nay trở đi");
         }
         if (endDate.isBefore(startDate)) {
             throw new RuntimeException("Ngày kết thúc không được trước ngày bắt đầu");
-        }   
-        
+        }
+
         // Create new Semester entity
         Semester semester = new Semester();
         semester.setCode(semesterDTO.getCode());
         semester.setName(semesterDTO.getName());
         semester.setStartDate(startDate);
         semester.setEndDate(endDate);
-        
-      // 2. Xác định status (Chỉ cần 2 trạng thái khi tạo mới)
+
+        // 2. Xác định status (Chỉ cần 2 trạng thái khi tạo mới)
         if (today.isBefore(startDate)) {
             semester.setStatus(Semester.SemesterStatus.UPCOMING);
         } else {
-            // Vì startDate >= today và endDate >= startDate, 
+            // Vì startDate >= today và endDate >= startDate,
             // nên ở đây chắc chắn là học kỳ đang diễn ra (ONGOING)
             semester.setStatus(Semester.SemesterStatus.ONGOING);
-        }       
-        
+        }
+
         // Save and return
         Semester savedSemester = semesterRepository.save(semester);
         return convertToDTO(savedSemester);
@@ -71,25 +71,25 @@ public class SemesterServiceImpl implements SemesterService {
         // Find existing semester by code
         Semester semester = semesterRepository.findByCode(code)
                 .orElseThrow(() -> new RuntimeException("Semester not found with code: " + code));
-        
+
         // Check if semester can be updated (only UPCOMING or ONGOING)
-        if (semester.getStatus() != Semester.SemesterStatus.UPCOMING && 
-            semester.getStatus() != Semester.SemesterStatus.ONGOING) {
+        if (semester.getStatus() != Semester.SemesterStatus.UPCOMING &&
+                semester.getStatus() != Semester.SemesterStatus.ONGOING) {
             throw new RuntimeException("Chỉ có thể cập nhật các học kỳ sắp diễn ra hoặc đang diễn ra");
         }
-        
+
         // Update fields
         LocalDate newStartDate = LocalDate.parse(semesterDTO.getStartDate());
         LocalDate newEndDate = LocalDate.parse(semesterDTO.getEndDate());
         semester.setName(semesterDTO.getName());
         semester.setStartDate(newStartDate);
         semester.setEndDate(newEndDate);
-        
+
         // Recalculate status based on new dates
         LocalDate today = LocalDate.now();
         LocalDate startDate = semester.getStartDate();
         LocalDate endDate = semester.getEndDate();
-        
+
         if (today.isBefore(startDate)) {
             semester.setStatus(Semester.SemesterStatus.UPCOMING);
         } else if (today.isAfter(endDate)) {
@@ -97,7 +97,7 @@ public class SemesterServiceImpl implements SemesterService {
         } else {
             semester.setStatus(Semester.SemesterStatus.ONGOING);
         }
-        
+
         // Save and return
         Semester updatedSemester = semesterRepository.save(semester);
         return convertToDTO(updatedSemester);
@@ -108,12 +108,12 @@ public class SemesterServiceImpl implements SemesterService {
         // Find existing semester by code
         Semester semester = semesterRepository.findByCode(code)
                 .orElseThrow(() -> new RuntimeException("Semester not found with code: " + code));
-        
+
         // Only allow deleting UPCOMING semesters
         if (semester.getStatus() != Semester.SemesterStatus.UPCOMING) {
             throw new RuntimeException("Chỉ có thể xóa các học kỳ sắp diễn ra (chưa bắt đầu)");
         }
-        
+
         // Delete the semester
         semesterRepository.delete(semester);
     }
@@ -139,5 +139,12 @@ public class SemesterServiceImpl implements SemesterService {
             default:
                 return "unknown";
         }
+    }
+
+    @Override
+    public SemesterResponse getSemesterByCode(String code) {
+        Semester semester = semesterRepository.findByCode(code)
+                .orElseThrow(() -> new RuntimeException("Semester not found with code: " + code));
+        return convertToDTO(semester);
     }
 }
