@@ -1,12 +1,16 @@
 package com.fams.backend.service.impl;
 
+import com.fams.backend.dto.request.SemesterConfigRequest;
 import com.fams.backend.dto.response.SemesterResponse;
-import com.fams.backend.entity.Semester;
-import com.fams.backend.repository.SemesterRepository;
+import com.fams.backend.entity.*;
+import com.fams.backend.repository.*;
 import com.fams.backend.service.SemesterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -15,6 +19,10 @@ import java.util.stream.Collectors;
 public class SemesterServiceImpl implements SemesterService {
 
     private final SemesterRepository semesterRepository;
+    private final SemesterConfigRepository semesterConfigRepository;
+    private final SlotTypeRepository slotTypeRepository;
+    private final HolidayRepository holidayRepository;
+    private final SemesterWeekdayRepository semesterWeekdayRepository;
 
     @Override
     public List<SemesterResponse> getAllSemesters() {
@@ -122,8 +130,12 @@ public class SemesterServiceImpl implements SemesterService {
         SemesterResponse dto = new SemesterResponse();
         dto.setCode(semester.getCode());
         dto.setName(semester.getName());
-        dto.setStartDate(semester.getStartDate().toString());
-        dto.setEndDate(semester.getEndDate().toString());
+        if (semester.getStartDate() != null) {
+            dto.setStartDate(semester.getStartDate().toString());
+        }
+        if (semester.getEndDate() != null) {
+            dto.setEndDate(semester.getEndDate().toString());
+        }
         dto.setStatus(mapStatus(semester.getStatus()));
         return dto;
     }
@@ -142,9 +154,172 @@ public class SemesterServiceImpl implements SemesterService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public SemesterResponse getSemesterByCode(String code) {
         Semester semester = semesterRepository.findByCode(code)
                 .orElseThrow(() -> new RuntimeException("Semester not found with code: " + code));
-        return convertToDTO(semester);
+        SemesterResponse response = convertToDTO(semester);
+
+        SemesterConfig config = semester.getConfig();
+        if (config != null) {
+            response.setIsPublished(config.getIsPublished());
+            response.setMaxSlotsPerDay(config.getMaxSlotPerDay());
+            response.setSlotsPerSubjectPerWeek(config.getSlotPerSubjectPerWeek());
+            response.setSlotDuration(config.getSlotDuration());
+        } else {
+            response.setIsPublished(false);
+        }
+
+        // Map Weekdays
+        if (semester.getWeekdays() != null) {
+            response.setSelectedDays(semester.getWeekdays().stream()
+                    .map(w -> mapIntegerToDay(w.getWeekday()))
+                    .collect(Collectors.toList()));
+        }
+
+        // Map SlotTypes
+        if (semester.getSlotTypes() != null) {
+            response.setSlots(semester.getSlotTypes().stream()
+                    .map(s -> new SemesterResponse.SlotTypeResponse(
+                            s.getStartTime() != null ? s.getStartTime().toString() : "",
+                            s.getEndTime() != null ? s.getEndTime().toString() : ""))
+                    .collect(Collectors.toList()));
+        }
+
+        // Map Holidays
+        if (semester.getHolidays() != null) {
+            response.setHolidays(semester.getHolidays().stream()
+                    .filter(h -> h.getHolidayDate() != null)
+                    .map(h -> new SemesterResponse.HolidayResponse(
+                            h.getHolidayDate().toString(),
+                            h.getDescription()))
+                    .collect(Collectors.toList()));
+        }
+
+        return response;
+    }
+
+    private String mapIntegerToDay(Integer day) {
+        switch (day) {
+            case 2:
+                return "MON";
+            case 3:
+                return "TUE";
+            case 4:
+                return "WED";
+            case 5:
+                return "THU";
+            case 6:
+                return "FRI";
+            case 7:
+                return "SAT";
+            case 8:
+                return "SUN";
+            default:
+                return "MON";
+        }
+    }
+
+    @Override
+    @Transactional
+    public void saveSemesterConfig(String code, SemesterConfigRequest configRequest) {
+        Semester semester = semesterRepository.findByCode(code)
+                .orElseThrow(() -> new RuntimeException("Semester not found with code: " + code));
+
+        // 1. Update or Create SemesterConfig
+        SemesterConfig config = semester.getConfig();
+        if (config == null) {
+            config = new SemesterConfig();
+            config.setSemester(semester);
+            semester.setConfig(config);
+        }
+        config.setMaxSlotPerDay(configRequest.getMaxSlotsPerDay());
+        config.setSlotPerSubjectPerWeek(configRequest.getSlotsPerSubjectPerWeek());
+        config.setSlotDuration(configRequest.getSlotDuration());
+        config.setIsPublished(configRequest.getIsPublished());
+        semesterConfigRepository.save(config);
+
+        // 2. Update Weekdays (Delete current and re-add)
+        semesterWeekdayRepository.deleteAll(semester.getWeekdays());
+        semester.getWeekdays().clear();
+        if (configRequest.getSelectedDays() != null) {
+            for (String dayStr : configRequest.getSelectedDays()) {
+                SemesterWeekday weekday = new SemesterWeekday();
+                weekday.setSemester(semester);
+                weekday.setWeekday(mapDayToInteger(dayStr));
+                semester.getWeekdays().add(weekday);
+            }
+        }
+
+        // 3. Update SlotTypes (Delete current and re-add)
+        slotTypeRepository.deleteAll(semester.getSlotTypes());
+        semester.getSlotTypes().clear();
+        if (configRequest.getSlots() != null) {
+            int index = 1;
+            for (SemesterConfigRequest.SlotTypeRequest slotReq : configRequest.getSlots()) {
+                if (slotReq.getStartTime() == null || slotReq.getStartTime().isEmpty())
+                    continue;
+
+                SlotType slotType = new SlotType();
+                slotType.setSemester(semester);
+                slotType.setName("Slot " + index);
+                slotType.setSlotIndex(index++);
+                slotType.setStartTime(LocalTime.parse(slotReq.getStartTime()));
+                slotType.setEndTime(LocalTime.parse(slotReq.getEndTime()));
+
+                // Map duration
+                if (configRequest.getSlotDuration() == 45) {
+                    slotType.setDuration(SlotType.SlotDuration.MINUTES_45);
+                } else if (configRequest.getSlotDuration() == 120) {
+                    slotType.setDuration(SlotType.SlotDuration.MINUTES_120);
+                } else {
+                    slotType.setDuration(SlotType.SlotDuration.MINUTES_90);
+                }
+
+                semester.getSlotTypes().add(slotType);
+            }
+        }
+
+        // 4. Update Holidays (Delete current and re-add)
+        List<Holiday> currentHolidays = holidayRepository.findBySemesterId(semester.getId());
+        holidayRepository.deleteAll(currentHolidays);
+        semester.getHolidays().clear();
+
+        if (configRequest.getHolidays() != null) {
+            for (SemesterConfigRequest.HolidayRequest holReq : configRequest.getHolidays()) {
+                if (holReq.getHolidayDate() == null || holReq.getHolidayDate().isEmpty())
+                    continue;
+
+                Holiday holiday = new Holiday();
+                holiday.setSemester(semester);
+                holiday.setHolidayDate(LocalDate.parse(holReq.getHolidayDate()));
+                holiday.setDescription(holReq.getDescription());
+                holiday.setIsRecurring(false);
+                semester.getHolidays().add(holiday);
+            }
+        }
+
+        semesterRepository.save(semester);
+    }
+
+    private Integer mapDayToInteger(String day) {
+        switch (day) {
+            case "MON":
+                return 2;
+            case "TUE":
+                return 3;
+            case "WED":
+                return 4;
+            case "THU":
+                return 5;
+            case "FRI":
+                return 6;
+            case "SAT":
+                return 7;
+            case "SUN":
+                return 8;
+            default:
+                throw new IllegalArgumentException("Invalid day: " + day);
+        }
     }
 }
