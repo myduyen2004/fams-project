@@ -167,7 +167,6 @@ export const ImportCourseModal: React.FC<ImportCourseModalProps> = ({ isOpen, on
                                             <th className="px-4 py-3">Tên môn học</th>
                                             <th className="px-4 py-3 text-center w-24">Tín chỉ</th>
                                             <th className="px-4 py-3 text-center">Slots</th>
-                                            <th className="px-4 py-3 text-center">Kỳ</th>
                                             <th className="px-4 py-3 text-center">Trạng thái</th>
                                             <th className="px-4 py-3 text-center">Kiểm tra</th>
                                             <th className="px-4 py-3">Ghi chú</th>
@@ -181,7 +180,6 @@ export const ImportCourseModal: React.FC<ImportCourseModalProps> = ({ isOpen, on
                                                 <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{row.name || '---'}</td>
                                                 <td className="px-4 py-3 text-center text-gray-600 dark:text-gray-400">{row.credits || '---'}</td>
                                                 <td className="px-4 py-3 text-center text-gray-600 dark:text-gray-400">{row.numberOfSlots || '---'}</td>
-                                                <td className="px-4 py-3 text-center text-gray-600 dark:text-gray-400">{row.fixedSemester || '---'}</td>
                                                 <td className="px-4 py-3 text-center">
                                                     {row.statusValue === 'ACTIVE' ? (
                                                         <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
