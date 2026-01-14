@@ -23,6 +23,7 @@ public class DashboardBroadcastService {
     /**
      * Broadcast all dashboard statistics and logs
      */
+    @org.springframework.scheduling.annotation.Async
     public void broadcastUpdate() {
         log.info("Broadcasting dashboard updates to all topics...");
 

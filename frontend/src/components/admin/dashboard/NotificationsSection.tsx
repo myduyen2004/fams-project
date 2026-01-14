@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Notification } from '../../../types/dashboard';
+import { AppNotification } from '../../../types/dashboard';
 import { Bell } from 'lucide-react';
 
 interface NotificationsSectionProps {
-  notifications: Notification[];
+  notifications: AppNotification[];
   isDashboard?: boolean;
 }
 
@@ -35,28 +35,59 @@ export const NotificationsSection: React.FC<NotificationsSectionProps> = ({ noti
                   : 'border-fpt-orange/30 bg-orange-50 dark:bg-orange-900/10'
               } hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors`}
             >
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 mt-0.5">
-                  <Bell size={16} className={notification.isRead ? 'text-gray-400' : 'text-fpt-orange'} />
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  {notification.senderName && notification.senderName !== 'System' ? (
+                    notification.senderAvatar ? (
+                      <img 
+                        src={notification.senderAvatar} 
+                        alt={notification.senderName} 
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                        notification.type === 'ALERT' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
+                      }`}>
+                         {notification.senderName.charAt(0)}
+                      </div>
+                    )
+                  ) : (
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      notification.type === 'SYSTEM' ? 'bg-blue-100 text-blue-600' :
+                      notification.type === 'ALERT' ? 'bg-red-100 text-red-600' :
+                      'bg-orange-100 text-fpt-orange'
+                    }`}>
+                       <Bell size={20} />
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium ${
+                  <p className={`text-sm leading-tight ${
                     notification.isRead 
-                      ? 'text-gray-700 dark:text-gray-300' 
-                      : 'text-gray-900 dark:text-white'
+                      ? 'text-gray-700 dark:text-gray-300 font-medium' 
+                      : 'text-gray-900 dark:text-white font-bold'
                   }`}>
+                    {notification.senderName && notification.senderName !== 'System' && (
+                      <span className="block text-[11px] text-gray-500 dark:text-gray-400 font-normal mb-0.5">
+                        {notification.senderName}
+                      </span>
+                    )}
                     {notification.title}
                   </p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
                     {notification.description}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-                    {notification.timestamp}
-                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                        {notification.senderName && notification.senderName !== 'System' ? 'Cá nhân' : (notification.type === 'SYSTEM' ? 'Hệ thống' : 'Cảnh báo')}
+                     </span>
+                     <span className="text-[10px] text-gray-400">•</span>
+                     <span className="text-[10px] text-gray-400 font-medium">{notification.timestamp}</span>
+                  </div>
                 </div>
                 {!notification.isRead && (
-                  <div className="flex-shrink-0">
-                    <div className="w-2 h-2 bg-fpt-orange rounded-full"></div>
+                  <div className="flex-shrink-0 pt-1">
+                    <div className="w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white dark:border-zinc-900"></div>
                   </div>
                 )}
               </div>

@@ -37,6 +37,7 @@ public class AcademicStaffDashboardController {
     private final AcademicStaffDashboardService dashboardService;
     private final UserService userService;
     private final LecturerService lecturerService;
+    private final com.fams.backend.service.StudentService studentService;
 
     @GetMapping("/dashboard")
     @Operation(summary = "Lấy dữ liệu dashboard")
@@ -108,19 +109,112 @@ public class AcademicStaffDashboardController {
 
     @GetMapping("/students")
     @Operation(summary = "Lấy danh sách sinh viên", description = "Lấy danh sách sinh viên với phân trang và tìm kiếm")
-    public ResponseEntity<Page<UserResponse>> getStudents(
+    public ResponseEntity<Page<com.fams.backend.dto.response.StudentResponse>> getStudents(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String major,
+            @RequestParam(required = false) String specialization,
             Pageable pageable) {
-        log.info("GET /academic-staff/students | search={}, status={}", search, status);
-        return ResponseEntity.ok(userService.getAllUsers(search, "STUDENT", status, pageable));
+        log.info("GET /academic-staff/students | search={}, status={}, major={}, spec={}", search, status, major,
+                specialization);
+        return ResponseEntity.ok(studentService.getAllStudents(search, status, major, specialization, pageable));
     }
 
     @GetMapping("/students/{id}")
     @Operation(summary = "Lấy thông tin chi tiết sinh viên")
-    public ResponseEntity<UserResponse> getStudentById(@PathVariable Long id) {
+    public ResponseEntity<com.fams.backend.dto.response.StudentResponse> getStudentById(@PathVariable Long id) {
         log.info("GET /academic-staff/students/{}", id);
-        return ResponseEntity.ok(userService.getUserById(id));
+        return ResponseEntity.ok(studentService.getStudentById(id));
+    }
+
+    @DeleteMapping("/students/{id}")
+    @Operation(summary = "Xóa sinh viên")
+    public ResponseEntity<Void> deleteStudent(@PathVariable Long id) {
+        log.info("DELETE /academic-staff/students/{}", id);
+        studentService.deleteStudent(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/students")
+    @Operation(summary = "Xóa nhiều sinh viên")
+    public ResponseEntity<Void> deleteStudents(@RequestBody List<Long> ids) {
+        log.info("DELETE /academic-staff/students | ids={}", ids);
+        studentService.deleteStudents(ids);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/students/{id}", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Cập nhật thông tin sinh viên")
+    public ResponseEntity<com.fams.backend.dto.response.StudentResponse> updateStudent(
+            @PathVariable Long id,
+            @RequestPart("user") @Valid com.fams.backend.dto.request.StudentUpdateRequest request,
+            @RequestPart(value = "avatar", required = false) MultipartFile avatar) {
+        log.info("PUT /academic-staff/students/{} | Updating profile", id);
+        return ResponseEntity.ok(studentService.updateStudent(id, request, avatar));
+    }
+
+    @PostMapping("/students/import")
+    @Operation(summary = "Import sinh viên từ file Excel")
+    public ResponseEntity<java.util.Map<String, Object>> importStudents(@RequestParam("file") MultipartFile file) {
+        log.info("POST /academic-staff/students/import | filename={}", file.getOriginalFilename());
+        return ResponseEntity.ok(studentService.importStudents(file));
+    }
+
+    @PostMapping("/students/import/preview")
+    @Operation(summary = "Xem trước import sinh viên từ file Excel")
+    public ResponseEntity<List<com.fams.backend.dto.StudentImportDTO>> previewImportStudents(
+            @RequestParam("file") MultipartFile file) {
+        log.info("POST /academic-staff/students/import/preview | filename={}", file.getOriginalFilename());
+        return ResponseEntity.ok(studentService.previewImportStudents(file));
+    }
+
+    @PostMapping("/students/import/save")
+    @Operation(summary = "Lưu danh sách sinh viên đã import")
+    public ResponseEntity<java.util.Map<String, Object>> saveImportedStudents(
+            @RequestBody List<com.fams.backend.dto.StudentImportDTO> dtos) {
+        log.info("POST /academic-staff/students/import/save | count={}", dtos.size());
+        return ResponseEntity.ok(studentService.saveImportedStudents(dtos));
+    }
+
+    @GetMapping("/students/export")
+    @Operation(summary = "Xuất danh sách sinh viên ra Excel")
+    public ResponseEntity<byte[]> exportStudents(
+            @RequestParam(required = false) String major,
+            @RequestParam(required = false) String specialization,
+            @RequestParam(required = false) String subSpecialization,
+            @RequestParam(required = false) String status) {
+        log.info("GET /academic-staff/students/export | major={}, spec={}, subSpec={}, status={}", major,
+                specialization,
+                subSpecialization, status);
+        byte[] data = studentService.exportStudents(major, specialization, subSpecialization, status);
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=students.xlsx")
+                .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                .body(data);
+    }
+
+    @GetMapping("/majors-list")
+    @Operation(summary = "Lấy danh sách các ngành học (cho dropdown)")
+    public ResponseEntity<List<String>> getAllMajors() {
+        return ResponseEntity.ok(studentService.getAllMajors());
+    }
+
+    @GetMapping("/specializations-list")
+    @Operation(summary = "Lấy danh sách các chuyên ngành (cho dropdown)")
+    public ResponseEntity<List<String>> getAllSpecializations() {
+        return ResponseEntity.ok(studentService.getAllSpecializations());
+    }
+
+    @GetMapping("/specializations-by-major")
+    @Operation(summary = "Lấy danh sách chuyên ngành theo Major")
+    public ResponseEntity<List<String>> getSpecializationsByMajor(@RequestParam String majorName) {
+        return ResponseEntity.ok(studentService.getSpecializationsByMajor(majorName));
+    }
+
+    @GetMapping("/sub-specializations-by-specialization")
+    @Operation(summary = "Lấy danh sách Combo theo Specialization")
+    public ResponseEntity<List<String>> getSubSpecializationsBySpecialization(@RequestParam String specializationName) {
+        return ResponseEntity.ok(studentService.getSubSpecializationsBySpecialization(specializationName));
     }
 
     @PutMapping(value = "/lecturers/{id}", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)

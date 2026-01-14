@@ -26,10 +26,11 @@ interface DraggableCourseRowProps {
     isDragging: boolean;
     isSelected?: boolean;
     onSelect?: (checked: boolean) => void;
+    onClick?: (e: React.MouseEvent) => void;
 }
 
 const DraggableCourseRow: React.FC<DraggableCourseRowProps> = ({
-    course, index, onRemove, onDragStart, onDragOver, onDragEnd, isDragging, isSelected, onSelect
+    course, index, onRemove, onDragStart, onDragOver, onDragEnd, isDragging, isSelected, onSelect, onClick
 }) => {
     return (
         <tr
@@ -37,7 +38,8 @@ const DraggableCourseRow: React.FC<DraggableCourseRowProps> = ({
             onDragStart={() => onDragStart(index)}
             onDragOver={(e) => { e.preventDefault(); onDragOver(index); }}
             onDragEnd={onDragEnd}
-            className={`group hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors cursor-move ${isDragging ? 'opacity-50 bg-orange-50' : ''}`}
+            className={`group hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors cursor-move ${isDragging ? 'opacity-50 bg-orange-50' : ''} ${isSelected ? 'bg-orange-50 dark:bg-orange-900/20' : ''}`}
+            onClick={onClick}
         >
             <td className="px-4 py-3 text-left w-10">
                 {onSelect && (
@@ -52,7 +54,7 @@ const DraggableCourseRow: React.FC<DraggableCourseRowProps> = ({
             <td className="px-4 py-3">
                 <GripVertical className="h-4 w-4 text-gray-400 group-hover:text-fpt-orange transition-colors" />
             </td>
-            <td className="px-4 py-3 font-medium text-fpt-orange">{course.code}</td>
+            <td className="px-4 py-3 font-medium font-semibold text-gray-900">{course.code}</td>
             <td className="px-4 py-3 text-gray-900 dark:text-white">{course.name}</td>
             <td className="px-4 py-3 text-center">
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
@@ -60,7 +62,10 @@ const DraggableCourseRow: React.FC<DraggableCourseRowProps> = ({
                 </span>
             </td>
             <td className="px-4 py-3 text-center text-gray-600 dark:text-zinc-400">
-                Học kỳ {course.semester || course.fixedSemester}
+                Học kỳ {course.semester || '-'}
+            </td>
+            <td className="px-4 py-3 text-center">
+                <StatusBadge status={course.status} />
             </td>
             <td className="px-4 py-3 text-center">
                 <button
@@ -91,6 +96,88 @@ export const SpecializationDetail: React.FC = () => {
 
     const [selectedSubSpecCourses, setSelectedSubSpecCourses] = useState<number[]>([]);
     const [selectedSpecCourses, setSelectedSpecCourses] = useState<number[]>([]);
+
+    // State for range selection
+    const [lastSelectedSpecCourseId, setLastSelectedSpecCourseId] = useState<number | null>(null);
+    const [lastSelectedSubSpecCourseId, setLastSelectedSubSpecCourseId] = useState<number | null>(null);
+
+    const handleSpecCourseRowClick = (course: Course, e: React.MouseEvent) => {
+        if (e.shiftKey) {
+            document.getSelection()?.removeAllRanges();
+        }
+
+        if (e.shiftKey && lastSelectedSpecCourseId !== null) {
+            const currentIndex = specCourses.findIndex(c => c.id === course.id);
+            const lastIndex = specCourses.findIndex(c => c.id === lastSelectedSpecCourseId);
+
+            if (currentIndex !== -1 && lastIndex !== -1) {
+                const start = Math.min(currentIndex, lastIndex);
+                const end = Math.max(currentIndex, lastIndex);
+                const rangeIds = specCourses.slice(start, end + 1).map(c => c.id);
+                // Union with existing
+                const newSelected = Array.from(new Set([...selectedSpecCourses, ...rangeIds]));
+                setSelectedSpecCourses(newSelected);
+            }
+        } else if (e.ctrlKey || e.metaKey) {
+            if (selectedSpecCourses.includes(course.id)) {
+                setSelectedSpecCourses(selectedSpecCourses.filter(id => id !== course.id));
+            } else {
+                setSelectedSpecCourses([...selectedSpecCourses, course.id]);
+            }
+            setLastSelectedSpecCourseId(course.id);
+        } else {
+            setSelectedSpecCourses([course.id]);
+            setLastSelectedSpecCourseId(course.id);
+        }
+    };
+
+    const handleSubSpecCourseRowClick = (course: Course, e: React.MouseEvent) => {
+        if (e.shiftKey) {
+            document.getSelection()?.removeAllRanges();
+        }
+
+        if (e.shiftKey && lastSelectedSubSpecCourseId !== null) {
+            const currentIndex = subSpecCourses.findIndex(c => c.id === course.id);
+            const lastIndex = subSpecCourses.findIndex(c => c.id === lastSelectedSubSpecCourseId);
+
+            if (currentIndex !== -1 && lastIndex !== -1) {
+                const start = Math.min(currentIndex, lastIndex);
+                const end = Math.max(currentIndex, lastIndex);
+                const rangeIds = subSpecCourses.slice(start, end + 1).map(c => c.id);
+                // Union
+                const newSelected = Array.from(new Set([...selectedSubSpecCourses, ...rangeIds]));
+                setSelectedSubSpecCourses(newSelected);
+            }
+        } else if (e.ctrlKey || e.metaKey) {
+            if (selectedSubSpecCourses.includes(course.id)) {
+                setSelectedSubSpecCourses(selectedSubSpecCourses.filter(id => id !== course.id));
+            } else {
+                setSelectedSubSpecCourses([...selectedSubSpecCourses, course.id]);
+            }
+            setLastSelectedSubSpecCourseId(course.id);
+        } else {
+            setSelectedSubSpecCourses([course.id]);
+            setLastSelectedSubSpecCourseId(course.id);
+        }
+    };
+
+    const handleSelectOneSpecCourse = (id: number, checked: boolean) => {
+        if (checked) {
+            setSelectedSpecCourses([...selectedSpecCourses, id]);
+        } else {
+            setSelectedSpecCourses(selectedSpecCourses.filter(item => item !== id));
+        }
+        setLastSelectedSpecCourseId(id);
+    };
+
+    const handleSelectOneSubSpecCourse = (id: number, checked: boolean) => {
+        if (checked) {
+            setSelectedSubSpecCourses([...selectedSubSpecCourses, id]);
+        } else {
+            setSelectedSubSpecCourses(selectedSubSpecCourses.filter(item => item !== id));
+        }
+        setLastSelectedSubSpecCourseId(id);
+    };
 
     // Modal state
     const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
@@ -410,7 +497,7 @@ export const SpecializationDetail: React.FC = () => {
                                         className="flex items-center gap-1 text-sm text-red-600 hover:text-red-700"
                                     >
                                         <Trash2 className="h-4 w-4" />
-                                        Xóa hàng loạt
+                                        {selectedSpecCourses.length > 1 ? 'Xóa hàng loạt' : 'Xóa'}
                                     </button>
                                 </>
                             )}
@@ -437,13 +524,14 @@ export const SpecializationDetail: React.FC = () => {
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-zinc-400">Tên môn học</th>
                                     <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-zinc-400">Số tín chỉ</th>
                                     <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-zinc-400">Học kỳ</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-zinc-400 w-20">Thao tác</th>
+                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-zinc-400">Trạng thái</th>
+                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-zinc-400 w-20 whitespace-nowrap">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
                                 {specCourses.length === 0 ? (
                                     <tr>
-                                        <td colSpan={7} className="py-8 text-center text-gray-500">
+                                        <td colSpan={8} className="py-8 text-center text-gray-500">
                                             Chưa có môn học nào. Nhấn "Thêm từ kho môn học" để bắt đầu.
                                         </td>
                                     </tr>
@@ -451,21 +539,16 @@ export const SpecializationDetail: React.FC = () => {
                                     specCourses.map((course, index) => (
                                         <DraggableCourseRow
                                             key={course.id}
-                                            course={course}
                                             index={index}
-                                            onRemove={(cid) => handleRemoveCourse(cid, 'specialization', parseInt(id!))}
+                                            course={course}
+                                            onRemove={(courseId) => handleRemoveCourse(courseId, 'specialization', parseInt(id!))}
                                             onDragStart={setDragIndex}
                                             onDragOver={setDragOverIndex}
                                             onDragEnd={() => handleDragEnd('specialization', parseInt(id!))}
                                             isDragging={dragIndex === index}
                                             isSelected={selectedSpecCourses.includes(course.id)}
-                                            onSelect={(checked) => {
-                                                if (checked) {
-                                                    setSelectedSpecCourses(prev => [...prev, course.id]);
-                                                } else {
-                                                    setSelectedSpecCourses(prev => prev.filter(id => id !== course.id));
-                                                }
-                                            }}
+                                            onSelect={(checked) => handleSelectOneSpecCourse(course.id, checked)}
+                                            onClick={(e) => handleSpecCourseRowClick(course, e)}
                                         />
                                     ))
                                 )}
@@ -626,13 +709,13 @@ export const SpecializationDetail: React.FC = () => {
                                             className="flex items-center gap-1 text-sm text-red-600 hover:text-red-700"
                                         >
                                             <Trash2 className="h-4 w-4" />
-                                            Xóa hàng loạt
+                                            {selectedSubSpecCourses.length > 1 ? 'Xóa hàng loạt' : 'Xóa'}
                                         </button>
                                     </>
                                 )}
                             </div>
                             <div className="flex items-center gap-2">
-                                <span className="text-sm text-gray-500">Tín chỉ chuyên ngành: {totalSubSpecCredits}</span>
+                                <span className="text-sm text-gray-500">Tổng số tín chỉ: {totalSubSpecCredits} TC</span>
                                 {/* <div className="w-24 h-2 bg-gray-200 rounded-full dark:bg-zinc-700 overflow-hidden">
                                     <div
                                         className="h-full bg-blue-500 rounded-full"
@@ -649,76 +732,42 @@ export const SpecializationDetail: React.FC = () => {
                                     <tr className="bg-gray-50/50 dark:bg-zinc-900/50 border-b border-gray-100 dark:border-zinc-800">
                                         <th className="px-4 py-3 text-left w-10"></th>
                                         <th className="px-4 py-3 text-left w-10"></th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-400">Môn học</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-400">Mã môn</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-400">Tên môn học</th>
                                         <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-400">Số tín chỉ</th>
                                         <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-400">Học kỳ</th>
-                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-400 w-24">Thao tác</th>
+                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-400">Trạng thái</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-400 w-24 whitespace-nowrap">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
                                     {loadingSubSpecCourses ? (
                                         <tr>
-                                            <td colSpan={6} className="py-8 text-center">
+                                            <td colSpan={8} className="py-8 text-center">
                                                 <Loader2 className="h-6 w-6 animate-spin mx-auto text-fpt-orange" />
                                             </td>
                                         </tr>
                                     ) : subSpecCourses.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="py-12 text-center text-gray-500">
+                                            <td colSpan={8} className="py-12 text-center text-gray-500">
                                                 Chưa có môn học nào trong chuyên ngành hẹp này.
                                             </td>
                                         </tr>
                                     ) : (
                                         subSpecCourses.map((course, index) => (
-                                            <tr
+                                            <DraggableCourseRow
                                                 key={course.id}
-                                                draggable
-                                                onDragStart={() => setDragIndex(index)}
-                                                onDragOver={(e) => { e.preventDefault(); setDragOverIndex(index); }}
+                                                index={index}
+                                                course={course}
+                                                onRemove={(courseId) => handleRemoveCourse(courseId, 'subspecialization', activeTab)}
+                                                onDragStart={setDragIndex}
+                                                onDragOver={setDragOverIndex}
                                                 onDragEnd={() => handleDragEnd('subspecialization', activeTab)}
-                                                className={`group hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors ${dragIndex === index ? 'opacity-50 bg-orange-50' : ''}`}
-                                            >
-                                                <td className="px-4 py-3">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="h-4 w-4 rounded border-gray-300 text-fpt-orange focus:ring-fpt-orange"
-                                                        checked={selectedSubSpecCourses.includes(course.id)}
-                                                        onChange={(e) => {
-                                                            if (e.target.checked) {
-                                                                setSelectedSubSpecCourses(prev => [...prev, course.id]);
-                                                            } else {
-                                                                setSelectedSubSpecCourses(prev => prev.filter(id => id !== course.id));
-                                                            }
-                                                        }}
-                                                    />
-                                                </td>
-                                                <td className="px-4 py-3 cursor-move">
-                                                    <GripVertical className="h-4 w-4 text-gray-400 group-hover:text-fpt-orange transition-colors" />
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <div className="flex flex-col">
-                                                        <span className="font-semibold text-gray-900 dark:text-white">{course.name}</span>
-                                                        <span className="text-xs text-fpt-orange font-medium">{course.code}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-3 text-center">
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
-                                                        {course.credits} Tín chỉ
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-3 text-center text-gray-600 dark:text-zinc-400">
-                                                    Học kỳ {course.semester || course.fixedSemester}
-                                                </td>
-                                                <td className="px-4 py-3 text-right">
-                                                    <button
-                                                        onClick={() => handleRemoveCourse(course.id, 'subspecialization', activeTab)}
-                                                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded bg-white hover:bg-red-50 text-gray-400 hover:text-red-600 shadow-sm border border-gray-100 hover:border-red-100 transition-all duration-200 transform translate-y-1 group-hover:translate-y-0"
-                                                        title="Xóa khỏi chương trình"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </button>
-                                                </td>
-                                            </tr>
+                                                isDragging={dragIndex === index}
+                                                isSelected={selectedSubSpecCourses.includes(course.id)}
+                                                onSelect={(checked) => handleSelectOneSubSpecCourse(course.id, checked)}
+                                                onClick={(e) => handleSubSpecCourseRowClick(course, e)}
+                                            />
                                         ))
                                     )}
                                 </tbody>
@@ -735,29 +784,33 @@ export const SpecializationDetail: React.FC = () => {
                                 className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 py-3 text-sm font-medium text-gray-500 hover:border-fpt-orange hover:text-fpt-orange hover:bg-orange-50/50 transition-all dark:border-zinc-700 dark:hover:border-fpt-orange dark:hover:bg-orange-900/20"
                             >
                                 <Plus className="h-4 w-4" />
-                                Thêm môn tự chọn cho chuyên ngành này
+                                Thêm môn tự chọn cho chuyên ngành hẹp này
                             </button>
                         </div>
-                    </div>
+                    </div >
                 )}
 
-                {subSpecializations.length === 0 && (
-                    <div className="p-8 text-center text-gray-500">
-                        Chưa có chuyên ngành hẹp nào. Vui lòng tạo chuyên ngành hẹp trước.
-                    </div>
-                )}
-            </div>
+                {
+                    subSpecializations.length === 0 && (
+                        <div className="p-8 text-center text-gray-500">
+                            Chưa có chuyên ngành hẹp nào. Vui lòng tạo chuyên ngành hẹp trước.
+                        </div>
+                    )
+                }
+            </div >
 
             {/* Course Selection Modal */}
-            {courseModalTarget && (
-                <CourseSelectionModal
-                    isOpen={isCourseModalOpen}
-                    onClose={() => setIsCourseModalOpen(false)}
-                    onConfirm={handleConfirmSelection}
-                    excludeType={courseModalTarget.type}
-                    excludeId={courseModalTarget.id}
-                />
-            )}
+            {
+                courseModalTarget && (
+                    <CourseSelectionModal
+                        isOpen={isCourseModalOpen}
+                        onClose={() => setIsCourseModalOpen(false)}
+                        onConfirm={handleConfirmSelection}
+                        excludeType={courseModalTarget.type}
+                        excludeId={courseModalTarget.id}
+                    />
+                )
+            }
 
             {/* SubSpec CRUD Modal */}
             <SubSpecFormModal
@@ -778,6 +831,6 @@ export const SpecializationDetail: React.FC = () => {
                 type={confirmModal.type}
                 confirmLabel={confirmModal.confirmLabel}
             />
-        </AcademicStaffLayout>
+        </AcademicStaffLayout >
     );
 };
