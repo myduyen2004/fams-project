@@ -1,11 +1,12 @@
 import React from 'react';
-import { X, Trash2, AlertCircle } from 'lucide-react';
+import { X, Trash2, AlertCircle, XCircle } from 'lucide-react';
 
 interface DeleteSemesterModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => Promise<void>;
   semesterName: string;
+  semesterStatus: string;
 }
 
 export const DeleteSemesterModal: React.FC<DeleteSemesterModalProps> = ({
@@ -13,10 +14,14 @@ export const DeleteSemesterModal: React.FC<DeleteSemesterModalProps> = ({
   onClose,
   onConfirm,
   semesterName,
+  semesterStatus,
 }) => {
   const [loading, setLoading] = React.useState(false);
+  
+  const canDelete = semesterStatus === 'upcoming';
 
   const handleConfirm = async () => {
+    if (!canDelete) return;
     try {
       setLoading(true);
       await onConfirm();
@@ -55,19 +60,32 @@ export const DeleteSemesterModal: React.FC<DeleteSemesterModalProps> = ({
 
           {/* Message */}
           <p className="text-slate-500 leading-relaxed text-center px-2">
-            Bạn có chắc chắn muốn xóa học kỳ này không?
+            {canDelete ? (
+              <>Bạn có chắc chắn muốn xóa học kỳ này không?</>
+            ) : (
+              <>Không thể xóa học kỳ này!</>
+            )}
             <span className="block mt-1 font-semibold text-slate-700 underline decoration-red-300 decoration-2">
               {semesterName}
             </span>
           </p>
 
           {/* Warning Box */}
-          <div className="mt-6 w-full py-3 px-4 bg-slate-50 border-l-4 border-red-500 rounded-r-xl flex items-center gap-3">
-            <AlertCircle className="text-red-500 w-5 h-5 flex-shrink-0" />
-            <p className="text-xs text-slate-600 font-medium italic">
-              Lưu ý: Hành động này không thể hoàn tác.
-            </p>
-          </div>
+          {canDelete ? (
+            <div className="mt-6 w-full py-3 px-4 bg-slate-50 border-l-4 border-red-500 rounded-r-xl flex items-center gap-3">
+              <AlertCircle className="text-red-500 w-5 h-5 flex-shrink-0" />
+              <p className="text-xs text-slate-600 font-medium italic">
+                Lưu ý: Hành động này không thể hoàn tác.
+              </p>
+            </div>
+          ) : (
+            <div className="mt-6 w-full py-3 px-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl flex items-center gap-3">
+              <XCircle className="text-red-500 w-5 h-5 flex-shrink-0" />
+              <p className="text-xs text-red-600 font-medium">
+                Chỉ được xóa học kỳ có trạng thái "Sắp diễn ra"
+              </p>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="grid grid-cols-2 gap-4 w-full mt-10">
@@ -80,14 +98,25 @@ export const DeleteSemesterModal: React.FC<DeleteSemesterModalProps> = ({
               Quay lại
             </button>
 
-            <button
-              type="button"
-              onClick={handleConfirm}
-              disabled={loading}
-              className="py-3.5 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white rounded-2xl font-bold text-sm transition-all duration-200 shadow-lg shadow-red-200 active:scale-95 disabled:opacity-50"
-            >
-              {loading ? 'Đang xóa...' : 'Đồng ý xóa'}
-            </button>
+            {canDelete ? (
+              <button
+                type="button"
+                onClick={handleConfirm}
+                disabled={loading}
+                className="py-3.5 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white rounded-2xl font-bold text-sm transition-all duration-200 shadow-lg shadow-red-200 active:scale-95 disabled:opacity-50"
+              >
+                {loading ? 'Đang xóa...' : 'Đồng ý xóa'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onClose}
+                className="py-3.5 bg-gray-400 text-white rounded-2xl font-bold text-sm cursor-not-allowed"
+                disabled
+              >
+                Không thể xóa
+              </button>
+            )}
           </div>
         </div>
       </div>
