@@ -44,4 +44,9 @@ public class SemesterController {
         semesterService.deleteSemester(code);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/get-by-code/{code}")
+    public ResponseEntity<SemesterResponse> getSemesterByCode(@PathVariable String code) {
+        return ResponseEntity.ok(semesterService.getSemesterByCode(code));
+    }
 }
