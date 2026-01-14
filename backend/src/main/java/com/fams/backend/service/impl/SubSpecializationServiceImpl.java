@@ -64,15 +64,16 @@ public class SubSpecializationServiceImpl implements SubSpecializationService {
     @Override
     @Transactional
     public SubSpecializationResponse createSubSpecialization(SubSpecializationRequest request) {
-        if (subSpecializationRepository.existsByCode(request.getCode())) {
-            throw new IllegalArgumentException("Mã chuyên ngành hẹp đã tồn tại: " + request.getCode());
+        String code = request.getCode().toUpperCase();
+        if (subSpecializationRepository.existsByCode(code)) {
+            throw new IllegalArgumentException("Mã chuyên ngành hẹp đã tồn tại: " + code);
         }
 
         Specialization specialization = specializationRepository.findById(request.getSpecializationId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chuyên ngành"));
 
         SubSpecialization subSpec = SubSpecialization.builder()
-                .code(request.getCode())
+                .code(code)
                 .name(request.getName())
                 .description(request.getDescription())
                 .specialization(specialization)
@@ -88,13 +89,14 @@ public class SubSpecializationServiceImpl implements SubSpecializationService {
         SubSpecialization subSpec = subSpecializationRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chuyên ngành hẹp"));
 
-        subSpecializationRepository.findByCode(request.getCode()).ifPresent(existing -> {
+        String code = request.getCode().toUpperCase();
+        subSpecializationRepository.findByCode(code).ifPresent(existing -> {
             if (!existing.getId().equals(id)) {
-                throw new IllegalArgumentException("Mã chuyên ngành hẹp đã tồn tại: " + request.getCode());
+                throw new IllegalArgumentException("Mã chuyên ngành hẹp đã tồn tại: " + code);
             }
         });
 
-        subSpec.setCode(request.getCode());
+        subSpec.setCode(code);
         subSpec.setName(request.getName());
         subSpec.setDescription(request.getDescription());
 
@@ -224,7 +226,6 @@ public class SubSpecializationServiceImpl implements SubSpecializationService {
                 .description(course.getDescription())
                 .credits(course.getCredits())
                 .numberOfSlots(course.getNumberOfSlots())
-                .fixedSemester(course.getFixedSemester())
                 .semester(ssc.getSemester())
                 .status(course.getStatus())
                 .orderIndex(ssc.getOrderIndex())

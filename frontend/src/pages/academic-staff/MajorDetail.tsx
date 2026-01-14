@@ -43,10 +43,12 @@ const SpecializationCreateModal: React.FC<SpecializationCreateModalProps> = ({ i
             code: Yup.string()
                 .trim()
                 .matches(/^[a-zA-Z0-9-]+$/, 'Mã chuyên ngành chỉ được chứa chữ cái, số và dấu gạch ngang')
+                .matches(/[a-zA-Z]/, 'Mã chuyên ngành phải chứa ít nhất một chữ cái')
                 .max(20, 'Mã chuyên ngành không được quá 20 ký tự')
                 .required('Mã chuyên ngành là bắt buộc'),
             name: Yup.string()
                 .trim()
+                .matches(/[a-zA-ZÀ-ỹ]/, 'Tên chuyên ngành phải chứa ít nhất một chữ cái')
                 .min(5, 'Tên chuyên ngành phải có ít nhất 5 ký tự')
                 .max(100, 'Tên chuyên ngành không được quá 100 ký tự')
                 .required('Tên chuyên ngành là bắt buộc'),
@@ -634,6 +636,10 @@ export const MajorDetail: React.FC = () => {
         }
     };
 
+    const handleRowClick = (specialization: Specialization) => {
+        navigate(`/academic-staff/specializations/${specialization.id}`);
+    };
+
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -712,6 +718,7 @@ export const MajorDetail: React.FC = () => {
                 try {
                     await Promise.all(selectedIds.map(id => specializationService.updateStatus(id, newStatus)));
                     toast.success('Cập nhật trạng thái thành công');
+                    setSelectedIds([]);
                     fetchData();
                     closeConfirmModal();
                 } catch (error) {
@@ -857,8 +864,8 @@ export const MajorDetail: React.FC = () => {
                                         specializations.map((spec) => (
                                             <tr
                                                 key={spec.id}
-                                                onClick={() => navigate(`/academic-staff/specializations/${spec.id}`)}
                                                 className={`hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer ${selectedIds.includes(spec.id) ? 'bg-orange-50 dark:bg-orange-900/20' : ''} ${loading ? 'opacity-50' : ''}`}
+                                                onClick={() => handleRowClick(spec)}
                                             >
                                                 <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                                                     <input
@@ -868,7 +875,7 @@ export const MajorDetail: React.FC = () => {
                                                         onChange={() => handleSelectOne(spec.id)}
                                                     />
                                                 </td>
-                                                <td className="px-6 py-4 font-medium text-fpt-orange hover:underline">
+                                                <td className="px-6 py-4 font-medium font-semibold text-gray-900">
                                                     {spec.code}
                                                 </td>
                                                 <td className="px-6 py-4 text-gray-600 dark:text-zinc-400">
