@@ -71,8 +71,9 @@ public class SpecializationService {
     @org.springframework.transaction.annotation.Transactional
     public SpecializationResponse createSpecialization(
             SpecializationRequest request) {
-        if (specializationRepository.findByCode(request.getCode()).isPresent()) {
-            throw new IllegalArgumentException("Mã chuyên ngành đã tồn tại: " + request.getCode());
+        String code = request.getCode().toUpperCase();
+        if (specializationRepository.findByCode(code).isPresent()) {
+            throw new IllegalArgumentException("Mã chuyên ngành đã tồn tại: " + code);
         }
         if (specializationRepository.existsByName(request.getName())) {
             throw new IllegalArgumentException("Tên chuyên ngành đã tồn tại: " + request.getName());
@@ -82,7 +83,7 @@ public class SpecializationService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ngành"));
 
         Specialization specialization = Specialization.builder()
-                .code(request.getCode())
+                .code(code)
                 .name(request.getName())
                 .description(request.getDescription())
                 .status(request.getStatus() != null ? request.getStatus() : Specialization.SpecializationStatus.ACTIVE)
@@ -97,9 +98,10 @@ public class SpecializationService {
         Specialization specialization = specializationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy chuyên ngành"));
 
+        String code = request.getCode().toUpperCase();
         validateRequest(request, id);
 
-        specialization.setCode(request.getCode());
+        specialization.setCode(code);
         specialization.setName(request.getName());
         specialization.setDescription(request.getDescription());
         if (request.getStatus() != null) {
@@ -467,7 +469,6 @@ public class SpecializationService {
                 .description(course.getDescription())
                 .credits(course.getCredits())
                 .numberOfSlots(course.getNumberOfSlots())
-                .fixedSemester(course.getFixedSemester())
                 .semester(sc.getSemester())
                 .status(course.getStatus())
                 .orderIndex(sc.getOrderIndex())
