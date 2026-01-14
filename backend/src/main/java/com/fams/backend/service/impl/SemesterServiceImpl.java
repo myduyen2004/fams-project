@@ -239,9 +239,13 @@ public class SemesterServiceImpl implements SemesterService {
         config.setIsPublished(configRequest.getIsPublished());
         semesterConfigRepository.save(config);
 
-        // 2. Update Weekdays (Delete current and re-add)
-        semesterWeekdayRepository.deleteAll(semester.getWeekdays());
-        semester.getWeekdays().clear();
+        // 2. Update Weekdays (Delete current and re-add using direct query)
+        semesterWeekdayRepository.deleteBySemesterId(semester.getId());
+        if (semester.getWeekdays() != null) {
+            semester.getWeekdays().clear();
+        } else {
+            semester.setWeekdays(new java.util.ArrayList<>());
+        }
         if (configRequest.getSelectedDays() != null) {
             for (String dayStr : configRequest.getSelectedDays()) {
                 SemesterWeekday weekday = new SemesterWeekday();
@@ -251,15 +255,25 @@ public class SemesterServiceImpl implements SemesterService {
             }
         }
 
-        // 3. Update SlotTypes (Delete current and re-add)
-        slotTypeRepository.deleteAll(semester.getSlotTypes());
-        semester.getSlotTypes().clear();
+        // 3. Update SlotTypes (Delete current and re-add using direct query)
+        slotTypeRepository.deleteBySemesterId(semester.getId());
+        if (semester.getSlotTypes() != null) {
+            semester.getSlotTypes().clear();
+        } else {
+            semester.setSlotTypes(new java.util.ArrayList<>());
+        }
+
         if (configRequest.getSlots() != null) {
             int index = 1;
             for (SemesterConfigRequest.SlotTypeRequest slotReq : configRequest.getSlots()) {
                 if (slotReq.getStartTime() == null || slotReq.getStartTime().isEmpty())
                     continue;
 
+                // Validate slot times before creating SlotType
+                if (slotReq.getStartTime() == null || slotReq.getStartTime().isEmpty() ||
+                        slotReq.getEndTime() == null || slotReq.getEndTime().isEmpty()) {
+                    continue; // skip invalid slot entry
+                }
                 SlotType slotType = new SlotType();
                 slotType.setSemester(semester);
                 slotType.setName("Slot " + index);
@@ -267,11 +281,9 @@ public class SemesterServiceImpl implements SemesterService {
                 slotType.setStartTime(LocalTime.parse(slotReq.getStartTime()));
                 slotType.setEndTime(LocalTime.parse(slotReq.getEndTime()));
 
-                // Map duration
-                if (configRequest.getSlotDuration() == 45) {
-                    slotType.setDuration(SlotType.SlotDuration.MINUTES_45);
-                } else if (configRequest.getSlotDuration() == 120) {
-                    slotType.setDuration(SlotType.SlotDuration.MINUTES_120);
+                // Map duration (90 phút hoặc 135 phút)
+                if (configRequest.getSlotDuration() != null && configRequest.getSlotDuration() == 135) {
+                    slotType.setDuration(SlotType.SlotDuration.MINUTES_135);
                 } else {
                     slotType.setDuration(SlotType.SlotDuration.MINUTES_90);
                 }
@@ -280,10 +292,13 @@ public class SemesterServiceImpl implements SemesterService {
             }
         }
 
-        // 4. Update Holidays (Delete current and re-add)
-        List<Holiday> currentHolidays = holidayRepository.findBySemesterId(semester.getId());
-        holidayRepository.deleteAll(currentHolidays);
-        semester.getHolidays().clear();
+        // 4. Update Holidays (Delete current and re-add using direct query)
+        holidayRepository.deleteBySemesterId(semester.getId());
+        if (semester.getHolidays() != null) {
+            semester.getHolidays().clear();
+        } else {
+            semester.setHolidays(new java.util.ArrayList<>());
+        }
 
         if (configRequest.getHolidays() != null) {
             for (SemesterConfigRequest.HolidayRequest holReq : configRequest.getHolidays()) {
