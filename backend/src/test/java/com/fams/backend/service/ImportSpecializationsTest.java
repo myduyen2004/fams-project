@@ -23,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -124,153 +125,10 @@ class ImportSpecializationsTest {
                 }
         }
 
-        @Test
-        @DisplayName("UTCID01: Import thành công với file Excel hợp lệ")
-        void importSpecializations_Success() throws IOException {
-                // Arrange
-                when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
-                when(specializationRepository.existsByCode("SE-WEB")).thenReturn(false);
-                when(specializationRepository.existsByCode("SE-MOB")).thenReturn(false);
-                when(specializationRepository.save(any(Specialization.class)))
-                                .thenAnswer(invocation -> invocation.getArgument(0));
-
-                // Act
-                Map<String, Object> result = specializationService.importSpecializations(1L, validExcelFile);
-
-                // Assert
-                assertEquals(2, result.get("created"));
-                assertEquals(0, result.get("failed"));
-                verify(specializationRepository, times(2)).save(any(Specialization.class));
-        }
-
-        @Test
-        @DisplayName("UTCID02: Import thất bại khi không tìm thấy Major")
-        void importSpecializations_MajorNotFound_ThrowsException() {
-                // Arrange
-                when(majorRepository.findById(999L)).thenReturn(Optional.empty());
-
-                // Act & Assert
-                RuntimeException exception = assertThrows(
-                                RuntimeException.class,
-                                () -> specializationService.importSpecializations(999L, validExcelFile));
-                assertTrue(exception.getMessage().contains("Không tìm thấy ngành"));
-        }
-
-        @Test
-        @DisplayName("UTCID03: Import với mã chuyên ngành để trống trả về lỗi")
-        void importSpecializations_EmptyCode_ReturnsError() throws IOException {
-                // Arrange
-                when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
-
-                // Act
-                Map<String, Object> result = specializationService.importSpecializations(1L, emptyCodeExcelFile);
-
-                // Assert
-                assertEquals(1, result.get("failed"));
-                @SuppressWarnings("unchecked")
-                List<String> errors = (List<String>) result.get("errors");
-                assertTrue(errors.stream().anyMatch(e -> e.contains("Mã chuyên ngành không được để trống")));
-        }
-
-        @Test
-        @DisplayName("UTCID04: Import với tên chuyên ngành để trống trả về lỗi")
-        void importSpecializations_EmptyName_ReturnsError() throws IOException {
-                // Arrange
-                when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
-
-                // Act
-                Map<String, Object> result = specializationService.importSpecializations(1L, emptyNameExcelFile);
-
-                // Assert
-                assertEquals(1, result.get("failed"));
-                @SuppressWarnings("unchecked")
-                List<String> errors = (List<String>) result.get("errors");
-                assertTrue(errors.stream().anyMatch(e -> e.contains("Tên chuyên ngành không được để trống")));
-        }
-
-        @Test
-        @DisplayName("UTCID05: Import với mã chuyên ngành bị trùng trong file")
-        void importSpecializations_DuplicateCodeInFile_ReturnsError() throws IOException {
-                // Arrange
-                when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
-                when(specializationRepository.existsByCode("SE-WEB")).thenReturn(false);
-                when(specializationRepository.save(any(Specialization.class)))
-                                .thenAnswer(invocation -> invocation.getArgument(0));
-
-                // Act
-                Map<String, Object> result = specializationService.importSpecializations(1L, duplicateCodeExcelFile);
-
-                // Assert
-                assertEquals(1, result.get("created")); // First SE-WEB is created
-                assertEquals(1, result.get("failed")); // Second SE-WEB fails as duplicate in file
-                @SuppressWarnings("unchecked")
-                List<String> errors = (List<String>) result.get("errors");
-                assertTrue(errors.stream().anyMatch(e -> e.contains("bị trùng trong file")));
-        }
-
-        @Test
-        @DisplayName("UTCID06: Import thất bại khi mã chuyên ngành đã tồn tại trong database")
-        void importSpecializations_CodeExistsInDatabase_ReturnsError() throws IOException {
-                // Arrange
-                when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
-                when(specializationRepository.existsByCode("SE-WEB")).thenReturn(true);
-                when(specializationRepository.existsByCode("SE-MOB")).thenReturn(true);
-
-                // Act
-                Map<String, Object> result = specializationService.importSpecializations(1L, validExcelFile);
-
-                // Assert
-                assertEquals(0, result.get("created"));
-                assertEquals(2, result.get("failed"));
-                @SuppressWarnings("unchecked")
-                List<String> errors = (List<String>) result.get("errors");
-                assertTrue(errors.stream().anyMatch(e -> e.contains("đã tồn tại trong hệ thống")));
-                verify(specializationRepository, never()).save(any(Specialization.class));
-        }
-
-        @Test
-        @DisplayName("UTCID07: Import file chỉ có header trả về kết quả rỗng")
-        void importSpecializations_OnlyHeader_ReturnsEmptyResult() throws IOException {
-                // Arrange
-                when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
-
-                // Act
-                Map<String, Object> result = specializationService.importSpecializations(1L, onlyHeaderExcelFile);
-
-                // Assert
-                assertEquals(0, result.get("created"));
-                assertEquals(0, result.get("failed"));
-                verify(specializationRepository, never()).save(any(Specialization.class));
-        }
-
-        @Test
-        @DisplayName("UTCID08: Import với status không hợp lệ sẽ mặc định là ACTIVE")
-        void importSpecializations_InvalidStatus_DefaultsToActive() throws IOException {
-                // Arrange
-                MultipartFile invalidStatusFile = createExcelFile(new String[][] {
-                                { "major_code", "code", "name", "description", "status" },
-                                { "SE", "SE-WEB", "Web Development", "Mô tả", "INVALID_STATUS" }
-                });
-                when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
-                when(specializationRepository.existsByCode("SE-WEB")).thenReturn(false);
-                when(specializationRepository.save(any(Specialization.class))).thenAnswer(invocation -> {
-                        Specialization savedSpec = invocation.getArgument(0);
-                        assertEquals(Specialization.SpecializationStatus.ACTIVE, savedSpec.getStatus());
-                        return savedSpec;
-                });
-
-                // Act
-                Map<String, Object> result = specializationService.importSpecializations(1L, invalidStatusFile);
-
-                // Assert
-                assertEquals(1, result.get("created"));
-                verify(specializationRepository, times(1)).save(any(Specialization.class));
-        }
-
         // ============== Tests for Preview Import ==============
 
         @Test
-        @DisplayName("UTCID09: Preview import trả về danh sách DTO hợp lệ")
+        @DisplayName("UTCID01: Preview import trả về danh sách DTO hợp lệ")
         void previewImportSpecializations_Success() throws IOException {
                 // Arrange
                 when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
@@ -290,7 +148,7 @@ class ImportSpecializationsTest {
         }
 
         @Test
-        @DisplayName("UTCID10: Preview import với mã chuyên ngành đã tồn tại trả về ERROR")
+        @DisplayName("UTCID02: Preview import với mã chuyên ngành đã tồn tại trả về ERROR")
         void previewImportSpecializations_CodeExists_ReturnsError() throws IOException {
                 // Arrange
                 when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
@@ -309,7 +167,7 @@ class ImportSpecializationsTest {
         }
 
         @Test
-        @DisplayName("UTCID11: Preview import với status không hợp lệ có warningMessage")
+        @DisplayName("UTCID03: Preview import với status không hợp lệ có warningMessage")
         void previewImportSpecializations_InvalidStatus_HasWarning() throws IOException {
                 // Arrange
                 MultipartFile invalidStatusFile = createExcelFile(new String[][] {
@@ -332,7 +190,7 @@ class ImportSpecializationsTest {
         }
 
         @Test
-        @DisplayName("UTCID12: Preview import với mã chuyên ngành trùng trong file")
+        @DisplayName("UTCID04: Preview import với mã chuyên ngành trùng trong file")
         void previewImportSpecializations_DuplicateCodeInFile_ReturnsError() throws IOException {
                 // Arrange
                 when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
@@ -347,5 +205,222 @@ class ImportSpecializationsTest {
                 assertEquals("VALID", result.get(0).getStatus());
                 assertEquals("ERROR", result.get(1).getStatus());
                 assertTrue(result.get(1).getErrorMessage().contains("bị trùng trong file"));
+        }
+
+        @Test
+        @DisplayName("UTCID05: Preview import với mã chuyên ngành trống trả về ERROR")
+        void previewImportSpecializations_EmptyCode_ReturnsError() throws IOException {
+                // Arrange
+                when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
+
+                // Act
+                List<SpecializationImportDTO> result = specializationService.previewImportSpecializations(1L,
+                                emptyCodeExcelFile);
+
+                // Assert
+                assertEquals(1, result.size());
+                assertEquals("ERROR", result.get(0).getStatus());
+                assertTrue(result.get(0).getErrorMessage().contains("Mã chuyên ngành không được để trống"));
+        }
+
+        @Test
+        @DisplayName("UTCID06: Preview import với tên chuyên ngành trống trả về ERROR")
+        void previewImportSpecializations_EmptyName_ReturnsError() throws IOException {
+                // Arrange
+                when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
+
+                // Act
+                List<SpecializationImportDTO> result = specializationService.previewImportSpecializations(1L,
+                                emptyNameExcelFile);
+
+                // Assert
+                assertEquals(1, result.size());
+                assertEquals("ERROR", result.get(0).getStatus());
+                assertTrue(result.get(0).getErrorMessage().contains("Tên chuyên ngành không được để trống"));
+        }
+
+        @Test
+        @DisplayName("UTCID07: Preview import file chỉ có header trả về danh sách rỗng")
+        void previewImportSpecializations_OnlyHeader_ReturnsEmptyList() throws IOException {
+                // Arrange
+                when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
+
+                // Act
+                List<SpecializationImportDTO> result = specializationService.previewImportSpecializations(1L,
+                                onlyHeaderExcelFile);
+
+                // Assert
+                assertEquals(0, result.size());
+        }
+
+        @Test
+        @DisplayName("UTCID08: Preview import thất bại khi không tìm thấy Major")
+        void previewImportSpecializations_MajorNotFound_ThrowsException() {
+                // Arrange
+                when(majorRepository.findById(999L)).thenReturn(Optional.empty());
+
+                // Act & Assert
+                RuntimeException exception = assertThrows(
+                                RuntimeException.class,
+                                () -> specializationService.previewImportSpecializations(999L, validExcelFile));
+                assertTrue(exception.getMessage().contains("Không tìm thấy ngành"));
+        }
+
+        // ============== Tests for Save Imported Specializations ==============
+
+        @Test
+        @DisplayName("UTCID09: Save imported specializations thành công")
+        void saveImportedSpecializations_Success() {
+                // Arrange
+                List<SpecializationImportDTO> dtos = new ArrayList<>();
+                dtos.add(SpecializationImportDTO.builder()
+                                .rowNumber(2)
+                                .majorCode("SE")
+                                .code("SE-WEB")
+                                .name("Web Development")
+                                .description("Phát triển ứng dụng Web")
+                                .statusStr("ACTIVE")
+                                .status("VALID")
+                                .build());
+                dtos.add(SpecializationImportDTO.builder()
+                                .rowNumber(3)
+                                .majorCode("SE")
+                                .code("SE-MOB")
+                                .name("Mobile App Development")
+                                .description("Phát triển ứng dụng di động")
+                                .statusStr("ACTIVE")
+                                .status("VALID")
+                                .build());
+
+                when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
+                when(specializationRepository.existsByCode("SE-WEB")).thenReturn(false);
+                when(specializationRepository.existsByCode("SE-MOB")).thenReturn(false);
+                when(specializationRepository.save(any(Specialization.class)))
+                                .thenAnswer(invocation -> invocation.getArgument(0));
+
+                // Act
+                Map<String, Object> result = specializationService.saveImportedSpecializations(1L, dtos);
+
+                // Assert
+                assertEquals(2, result.get("created"));
+                assertEquals(0, result.get("failed"));
+                verify(specializationRepository, times(2)).save(any(Specialization.class));
+        }
+
+        @Test
+        @DisplayName("UTCID10: Save imported specializations bỏ qua các entry có ERROR")
+        void saveImportedSpecializations_SkipsErrorEntries() {
+                // Arrange
+                List<SpecializationImportDTO> dtos = new ArrayList<>();
+                dtos.add(SpecializationImportDTO.builder()
+                                .rowNumber(2)
+                                .majorCode("SE")
+                                .code("SE-WEB")
+                                .name("Web Development")
+                                .status("ERROR")
+                                .errorMessage("Mã chuyên ngành đã tồn tại")
+                                .build());
+                dtos.add(SpecializationImportDTO.builder()
+                                .rowNumber(3)
+                                .majorCode("SE")
+                                .code("SE-MOB")
+                                .name("Mobile App Development")
+                                .statusStr("ACTIVE")
+                                .status("VALID")
+                                .build());
+
+                when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
+                when(specializationRepository.existsByCode("SE-MOB")).thenReturn(false);
+                when(specializationRepository.save(any(Specialization.class)))
+                                .thenAnswer(invocation -> invocation.getArgument(0));
+
+                // Act
+                Map<String, Object> result = specializationService.saveImportedSpecializations(1L, dtos);
+
+                // Assert
+                assertEquals(1, result.get("created"));
+                assertEquals(1, result.get("failed"));
+                verify(specializationRepository, times(1)).save(any(Specialization.class));
+        }
+
+        @Test
+        @DisplayName("UTCID11: Save imported specializations thất bại khi mã đã tồn tại trong DB")
+        void saveImportedSpecializations_CodeExistsInDB_ReturnsError() {
+                // Arrange
+                List<SpecializationImportDTO> dtos = new ArrayList<>();
+                dtos.add(SpecializationImportDTO.builder()
+                                .rowNumber(2)
+                                .majorCode("SE")
+                                .code("SE-WEB")
+                                .name("Web Development")
+                                .statusStr("ACTIVE")
+                                .status("VALID")
+                                .build());
+
+                when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
+                when(specializationRepository.existsByCode("SE-WEB")).thenReturn(true);
+
+                // Act
+                Map<String, Object> result = specializationService.saveImportedSpecializations(1L, dtos);
+
+                // Assert
+                assertEquals(0, result.get("created"));
+                assertEquals(1, result.get("failed"));
+                @SuppressWarnings("unchecked")
+                List<String> errors = (List<String>) result.get("errors");
+                assertTrue(errors.stream().anyMatch(e -> e.contains("đã tồn tại trong hệ thống")));
+                verify(specializationRepository, never()).save(any(Specialization.class));
+        }
+
+        @Test
+        @DisplayName("UTCID12: Save imported specializations với status không hợp lệ sẽ mặc định là ACTIVE")
+        void saveImportedSpecializations_InvalidStatus_DefaultsToActive() {
+                // Arrange
+                List<SpecializationImportDTO> dtos = new ArrayList<>();
+                dtos.add(SpecializationImportDTO.builder()
+                                .rowNumber(2)
+                                .majorCode("SE")
+                                .code("SE-WEB")
+                                .name("Web Development")
+                                .statusStr("INVALID_STATUS")
+                                .status("VALID")
+                                .build());
+
+                when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
+                when(specializationRepository.existsByCode("SE-WEB")).thenReturn(false);
+                when(specializationRepository.save(any(Specialization.class))).thenAnswer(invocation -> {
+                        Specialization savedSpec = invocation.getArgument(0);
+                        assertEquals(Specialization.SpecializationStatus.ACTIVE, savedSpec.getStatus());
+                        return savedSpec;
+                });
+
+                // Act
+                Map<String, Object> result = specializationService.saveImportedSpecializations(1L, dtos);
+
+                // Assert
+                assertEquals(1, result.get("created"));
+                verify(specializationRepository, times(1)).save(any(Specialization.class));
+        }
+
+        @Test
+        @DisplayName("UTCID13: Save imported specializations thất bại khi không tìm thấy Major")
+        void saveImportedSpecializations_MajorNotFound_ThrowsException() {
+                // Arrange
+                List<SpecializationImportDTO> dtos = new ArrayList<>();
+                dtos.add(SpecializationImportDTO.builder()
+                                .rowNumber(2)
+                                .majorCode("SE")
+                                .code("SE-WEB")
+                                .name("Web Development")
+                                .status("VALID")
+                                .build());
+
+                when(majorRepository.findById(999L)).thenReturn(Optional.empty());
+
+                // Act & Assert
+                RuntimeException exception = assertThrows(
+                                RuntimeException.class,
+                                () -> specializationService.saveImportedSpecializations(999L, dtos));
+                assertTrue(exception.getMessage().contains("Không tìm thấy ngành"));
         }
 }

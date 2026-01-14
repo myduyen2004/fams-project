@@ -69,12 +69,6 @@ public class MajorController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/import")
-    public ResponseEntity<Map<String, Object>> importMajors(@RequestParam("file") MultipartFile file) {
-        Map<String, Object> result = majorService.importMajors(file);
-        return ResponseEntity.ok(result);
-    }
-
     @PostMapping("/import/preview")
     public ResponseEntity<List<MajorImportDTO>> previewImportMajors(@RequestParam("file") MultipartFile file) {
         return ResponseEntity.ok(majorService.previewImportMajors(file));
