@@ -61,7 +61,6 @@ class ImportCoursesTest {
                 .name("Programming Fundamentals")
                 .credits(3)
                 .numberOfSlots(30)
-                .fixedSemester(1)
                 .status(Course.CourseStatus.ACTIVE)
                 .build();
     }
@@ -75,7 +74,7 @@ class ImportCoursesTest {
 
             // Header row
             Row headerRow = sheet.createRow(0);
-            String[] headers = { "Code", "Name", "Credits", "Slots", "Semester", "Description", "Status" };
+            String[] headers = { "Code", "Name", "Credits", "Slots", "Description", "Status" };
             for (int i = 0; i < headers.length; i++) {
                 headerRow.createCell(i).setCellValue(headers[i]);
             }
@@ -87,7 +86,7 @@ class ImportCoursesTest {
                     Cell cell = row.createCell(j);
                     String value = dataRows[i][j];
                     if (value != null && !value.isEmpty()) {
-                        if (j >= 2 && j <= 4) {
+                        if (j >= 2 && j <= 3) {
                             try {
                                 cell.setCellValue(Double.parseDouble(value));
                             } catch (NumberFormatException e) {
@@ -118,7 +117,7 @@ class ImportCoursesTest {
         @DisplayName("UTCID01: Mã môn học trống - Trả về ERROR")
         void UTCID01_EmptyCode_ReturnsError() throws IOException {
             // Arrange
-            String[][] data = { { "", "Test Course", "3", "30", "1", "Description", "ACTIVE" } };
+            String[][] data = { { "", "Test Course", "3", "30", "Description", "ACTIVE" } };
             MultipartFile file = createExcelFile(data);
 
             // Act
@@ -134,7 +133,7 @@ class ImportCoursesTest {
         @DisplayName("UTCID02: Tên môn học trống - Trả về ERROR")
         void UTCID02_EmptyName_ReturnsError() throws IOException {
             // Arrange
-            String[][] data = { { "MAE101", "", "3", "30", "1", "Description", "ACTIVE" } };
+            String[][] data = { { "MAE101", "", "3", "30", "Description", "ACTIVE" } };
             MultipartFile file = createExcelFile(data);
             when(courseRepository.findByCode("MAE101")).thenReturn(Optional.empty());
 
@@ -152,8 +151,8 @@ class ImportCoursesTest {
         void UTCID03_DuplicateCodeInFile_ReturnsError() throws IOException {
             // Arrange
             String[][] data = {
-                    { "MAE101", "Course 1", "3", "30", "1", "Desc 1", "ACTIVE" },
-                    { "MAE101", "Course 2", "3", "30", "2", "Desc 2", "ACTIVE" }
+                    { "MAE101", "Course 1", "3", "30", "Desc 1", "ACTIVE" },
+                    { "MAE101", "Course 2", "3", "30", "Desc 2", "ACTIVE" }
             };
             MultipartFile file = createExcelFile(data);
             when(courseRepository.findByCode("MAE101")).thenReturn(Optional.empty());
@@ -172,7 +171,7 @@ class ImportCoursesTest {
         @DisplayName("UTCID04: Mã môn học đã tồn tại trong hệ thống - Trả về ERROR")
         void UTCID04_CodeExistsInDatabase_ReturnsError() throws IOException {
             // Arrange
-            String[][] data = { { "PRF192", "New Course", "3", "30", "1", "Description", "ACTIVE" } };
+            String[][] data = { { "PRF192", "New Course", "3", "30", "Description", "ACTIVE" } };
             MultipartFile file = createExcelFile(data);
             when(courseRepository.findByCode("PRF192")).thenReturn(Optional.of(existingCourse));
 
@@ -189,7 +188,7 @@ class ImportCoursesTest {
         @DisplayName("UTCID05: Trạng thái không hợp lệ - Trả về WARNING và tự động đặt ACTIVE")
         void UTCID05_InvalidStatus_ReturnsWarningAndDefaultsToActive() throws IOException {
             // Arrange
-            String[][] data = { { "MAE101", "Test Course", "3", "30", "1", "Description", "XYZ" } };
+            String[][] data = { { "MAE101", "Test Course", "3", "30", "Description", "XYZ" } };
             MultipartFile file = createExcelFile(data);
             when(courseRepository.findByCode("MAE101")).thenReturn(Optional.empty());
 
@@ -207,7 +206,7 @@ class ImportCoursesTest {
         @DisplayName("UTCID06: Dữ liệu hợp lệ với ACTIVE - Trả về VALID")
         void UTCID06_ValidDataWithActive_ReturnsValid() throws IOException {
             // Arrange
-            String[][] data = { { "MAE101", "Mathematics", "3", "30", "1", "Math description", "ACTIVE" } };
+            String[][] data = { { "MAE101", "Mathematics", "3", "30", "Math description", "ACTIVE" } };
             MultipartFile file = createExcelFile(data);
             when(courseRepository.findByCode("MAE101")).thenReturn(Optional.empty());
 
@@ -222,7 +221,6 @@ class ImportCoursesTest {
             assertEquals("Mathematics", dto.getName());
             assertEquals(3, dto.getCredits());
             assertEquals(30, dto.getNumberOfSlots());
-            assertEquals(1, dto.getFixedSemester());
             assertEquals("ACTIVE", dto.getStatusValue());
             assertNull(dto.getErrorMessage());
             assertNull(dto.getWarningMessage());
@@ -232,7 +230,7 @@ class ImportCoursesTest {
         @DisplayName("UTCID06b: Dữ liệu hợp lệ với INACTIVE - Trả về VALID")
         void UTCID06b_ValidDataWithInactive_ReturnsValid() throws IOException {
             // Arrange
-            String[][] data = { { "MAE101", "Mathematics", "3", "30", "1", "Description", "INACTIVE" } };
+            String[][] data = { { "MAE101", "Mathematics", "3", "30", "Description", "INACTIVE" } };
             MultipartFile file = createExcelFile(data);
             when(courseRepository.findByCode("MAE101")).thenReturn(Optional.empty());
 
@@ -249,7 +247,7 @@ class ImportCoursesTest {
         @DisplayName("Số tín chỉ không hợp lệ - Trả về ERROR")
         void InvalidCredits_ReturnsError() throws IOException {
             // Arrange
-            String[][] data = { { "MAE101", "Course", "0", "30", "1", "Desc", "ACTIVE" } };
+            String[][] data = { { "MAE101", "Course", "0", "30", "Desc", "ACTIVE" } };
             MultipartFile file = createExcelFile(data);
             when(courseRepository.findByCode("MAE101")).thenReturn(Optional.empty());
 
@@ -265,7 +263,7 @@ class ImportCoursesTest {
         @DisplayName("Số slot không hợp lệ - Trả về ERROR")
         void InvalidSlots_ReturnsError() throws IOException {
             // Arrange
-            String[][] data = { { "MAE101", "Course", "3", "0", "1", "Desc", "ACTIVE" } };
+            String[][] data = { { "MAE101", "Course", "3", "0", "Desc", "ACTIVE" } };
             MultipartFile file = createExcelFile(data);
             when(courseRepository.findByCode("MAE101")).thenReturn(Optional.empty());
 
@@ -278,26 +276,10 @@ class ImportCoursesTest {
         }
 
         @Test
-        @DisplayName("Kỳ học ngoài phạm vi 1-9 - Trả về ERROR")
-        void InvalidSemester_ReturnsError() throws IOException {
-            // Arrange
-            String[][] data = { { "MAE101", "Course", "3", "30", "10", "Desc", "ACTIVE" } };
-            MultipartFile file = createExcelFile(data);
-            when(courseRepository.findByCode("MAE101")).thenReturn(Optional.empty());
-
-            // Act
-            List<CourseImportDTO> result = courseService.previewImportCourses(file);
-
-            // Assert
-            assertEquals("ERROR", result.get(0).getStatus());
-            assertTrue(result.get(0).getErrorMessage().contains("Kỳ học phải từ 1-9"));
-        }
-
-        @Test
         @DisplayName("Nhiều lỗi trong một dòng - Gộp tất cả thông báo lỗi")
         void MultipleErrors_CombinesMessages() throws IOException {
             // Arrange
-            String[][] data = { { "", "", "0", "0", "10", "Desc", "ACTIVE" } };
+            String[][] data = { { "", "", "0", "0", "Desc", "ACTIVE" } };
             MultipartFile file = createExcelFile(data);
 
             // Act
@@ -310,7 +292,6 @@ class ImportCoursesTest {
             assertTrue(errorMsg.contains("Tên môn học không được để trống"));
             assertTrue(errorMsg.contains("Số tín chỉ phải > 0"));
             assertTrue(errorMsg.contains("Số slot phải > 0"));
-            assertTrue(errorMsg.contains("Kỳ học phải từ 1-9"));
         }
 
         @Test
@@ -332,9 +313,9 @@ class ImportCoursesTest {
         void SkipsEmptyRows() throws IOException {
             // Arrange
             String[][] data = {
-                    { "MAE101", "Course 1", "3", "30", "1", "Desc", "ACTIVE" },
-                    { "", "", "", "", "", "", "" },
-                    { "MAE102", "Course 2", "3", "30", "2", "Desc", "ACTIVE" }
+                    { "MAE101", "Course 1", "3", "30", "Desc", "ACTIVE" },
+                    { "", "", "", "", "", "" },
+                    { "MAE102", "Course 2", "3", "30", "Desc", "ACTIVE" }
             };
             MultipartFile file = createExcelFile(data);
             when(courseRepository.findByCode(anyString())).thenReturn(Optional.empty());
@@ -353,8 +334,8 @@ class ImportCoursesTest {
         void CaseInsensitiveDuplicateCheck() throws IOException {
             // Arrange
             String[][] data = {
-                    { "MAE101", "Course 1", "3", "30", "1", "Desc", "ACTIVE" },
-                    { "mae101", "Course 2", "3", "30", "2", "Desc", "ACTIVE" }
+                    { "MAE101", "Course 1", "3", "30", "Desc", "ACTIVE" },
+                    { "mae101", "Course 2", "3", "30", "Desc", "ACTIVE" }
             };
             MultipartFile file = createExcelFile(data);
             when(courseRepository.findByCode(anyString())).thenReturn(Optional.empty());
@@ -383,11 +364,11 @@ class ImportCoursesTest {
             List<CourseImportDTO> dtos = Arrays.asList(
                     CourseImportDTO.builder()
                             .rowNumber(2).code("MAE101").name("Mathematics")
-                            .credits(3).numberOfSlots(30).fixedSemester(1)
+                            .credits(3).numberOfSlots(30)
                             .statusValue("ACTIVE").status("VALID").build(),
                     CourseImportDTO.builder()
                             .rowNumber(3).code("PRO192").name("Programming")
-                            .credits(3).numberOfSlots(30).fixedSemester(2)
+                            .credits(3).numberOfSlots(30)
                             .statusValue("INACTIVE").status("VALID").build());
             when(courseRepository.existsByCode(anyString())).thenReturn(false);
             when(courseRepository.save(any(Course.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -409,11 +390,11 @@ class ImportCoursesTest {
             List<CourseImportDTO> dtos = Arrays.asList(
                     CourseImportDTO.builder()
                             .rowNumber(2).code("MAE101").name("Valid")
-                            .credits(3).numberOfSlots(30).fixedSemester(1)
+                            .credits(3).numberOfSlots(30)
                             .statusValue("ACTIVE").status("VALID").build(),
                     CourseImportDTO.builder()
                             .rowNumber(3).code("").name("Invalid")
-                            .credits(3).numberOfSlots(30).fixedSemester(1)
+                            .credits(3).numberOfSlots(30)
                             .statusValue("ACTIVE").status("ERROR")
                             .errorMessage("Mã môn học không được để trống").build());
 
@@ -435,7 +416,7 @@ class ImportCoursesTest {
             List<CourseImportDTO> dtos = Arrays.asList(
                     CourseImportDTO.builder()
                             .rowNumber(2).code("MAE101").name("Course")
-                            .credits(3).numberOfSlots(30).fixedSemester(1)
+                            .credits(3).numberOfSlots(30)
                             .statusValue("ACTIVE").status("WARNING")
                             .warningMessage("Trạng thái không hợp lệ, tự động đặt là ACTIVE").build());
             when(courseRepository.existsByCode("MAE101")).thenReturn(false);
@@ -457,7 +438,7 @@ class ImportCoursesTest {
             List<CourseImportDTO> dtos = Arrays.asList(
                     CourseImportDTO.builder()
                             .rowNumber(2).code("MAE101").name("Course")
-                            .credits(3).numberOfSlots(30).fixedSemester(1)
+                            .credits(3).numberOfSlots(30)
                             .statusValue("ACTIVE").status("VALID").build());
             when(courseRepository.existsByCode("MAE101")).thenReturn(true);
 
@@ -479,7 +460,7 @@ class ImportCoursesTest {
             List<CourseImportDTO> dtos = Arrays.asList(
                     CourseImportDTO.builder()
                             .rowNumber(2).code("MAE101").name("Inactive Course")
-                            .credits(3).numberOfSlots(30).fixedSemester(1)
+                            .credits(3).numberOfSlots(30)
                             .statusValue("INACTIVE").status("VALID").build());
             when(courseRepository.existsByCode("MAE101")).thenReturn(false);
             when(courseRepository.save(any(Course.class))).thenAnswer(inv -> {
@@ -503,7 +484,7 @@ class ImportCoursesTest {
             List<CourseImportDTO> dtos = Arrays.asList(
                     CourseImportDTO.builder()
                             .rowNumber(2).code("MAE101").name("Course")
-                            .credits(3).numberOfSlots(30).fixedSemester(1)
+                            .credits(3).numberOfSlots(30)
                             .statusValue("ACTIVE").status("VALID").build());
             when(courseRepository.existsByCode("MAE101")).thenReturn(false);
             when(courseRepository.save(any(Course.class))).thenThrow(new RuntimeException("Database error"));
@@ -562,9 +543,8 @@ class ImportCoursesTest {
                 assertEquals("Name", headerRow.getCell(1).getStringCellValue());
                 assertEquals("Credits", headerRow.getCell(2).getStringCellValue());
                 assertEquals("Slots", headerRow.getCell(3).getStringCellValue());
-                assertEquals("Semester", headerRow.getCell(4).getStringCellValue());
-                assertEquals("Description", headerRow.getCell(5).getStringCellValue());
-                assertEquals("Status", headerRow.getCell(6).getStringCellValue());
+                assertEquals("Description", headerRow.getCell(4).getStringCellValue());
+                assertEquals("Status", headerRow.getCell(5).getStringCellValue());
 
                 // Check sample data
                 Row sampleRow = dataSheet.getRow(1);
@@ -589,10 +569,10 @@ class ImportCoursesTest {
             // Arrange
             List<Course> courses = Arrays.asList(
                     Course.builder().id(1L).code("MAE101").name("Math")
-                            .credits(3).numberOfSlots(30).fixedSemester(1)
+                            .credits(3).numberOfSlots(30)
                             .status(Course.CourseStatus.ACTIVE).build(),
                     Course.builder().id(2L).code("PRO192").name("Programming")
-                            .credits(3).numberOfSlots(30).fixedSemester(2)
+                            .credits(3).numberOfSlots(30)
                             .status(Course.CourseStatus.INACTIVE).build());
             when(courseRepository.findAll()).thenReturn(courses);
 
@@ -613,10 +593,10 @@ class ImportCoursesTest {
             // Arrange
             List<Course> courses = Arrays.asList(
                     Course.builder().id(1L).code("MAE101").name("Math")
-                            .credits(3).numberOfSlots(30).fixedSemester(1)
+                            .credits(3).numberOfSlots(30)
                             .status(Course.CourseStatus.ACTIVE).build(),
                     Course.builder().id(2L).code("PRO192").name("Programming")
-                            .credits(3).numberOfSlots(30).fixedSemester(2)
+                            .credits(3).numberOfSlots(30)
                             .status(Course.CourseStatus.INACTIVE).build());
             when(courseRepository.findAll()).thenReturn(courses);
 
