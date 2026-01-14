@@ -5,6 +5,7 @@ import com.fams.backend.entity.Semester;
 import com.fams.backend.repository.SemesterRepository;
 import com.fams.backend.service.SemesterService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SemesterServiceImpl implements SemesterService {
 
     private final SemesterRepository semesterRepository;
@@ -33,37 +35,68 @@ public class SemesterServiceImpl implements SemesterService {
 
     @Override
     public SemesterResponse createSemester(SemesterResponse semesterDTO) {
-        // Validate start date must be from today onwards
-        LocalDate startDate = LocalDate.parse(semesterDTO.getStartDate());
-        LocalDate endDate = LocalDate.parse(semesterDTO.getEndDate());
-        LocalDate today = LocalDate.now();
+        log.info("Creating semester - Input data: code={}, name={}, startDate={}, endDate={}", 
+            semesterDTO.getCode(), semesterDTO.getName(), semesterDTO.getStartDate(), semesterDTO.getEndDate());
         
-        if (startDate.isBefore(today)) {
-            throw new RuntimeException("Ngày bắt đầu học kỳ phải từ ngày hôm nay trở đi");
+        try {
+            // Validate inputs
+            if (semesterDTO.getCode() == null || semesterDTO.getCode().trim().isEmpty()) {
+                log.error("Validation failed: Mã học kỳ is empty");
+                throw new RuntimeException("Mã học kỳ không được để trống");
+            }
+            if (semesterDTO.getName() == null || semesterDTO.getName().trim().isEmpty()) {
+                log.error("Validation failed: Tên học kỳ is empty");
+                throw new RuntimeException("Tên học kỳ không được để trống");
+            }
+            if (semesterDTO.getStartDate() == null || semesterDTO.getEndDate() == null) {
+                log.error("Validation failed: Dates are null");
+                throw new RuntimeException("Ngày bắt đầu và ngày kết thúc không được để trống");
+            }
+            
+            // Validate start date must be from today onwards
+            LocalDate startDate = LocalDate.parse(semesterDTO.getStartDate());
+            LocalDate endDate = LocalDate.parse(semesterDTO.getEndDate());
+            LocalDate today = LocalDate.now();
+            
+            log.info("Parsed dates - startDate={}, endDate={}, today={}", startDate, endDate, today);
+            
+            if (startDate.isBefore(today)) {
+                log.error("Validation failed: Start date {} is before today {}", startDate, today);
+                throw new RuntimeException("Ngày bắt đầu học kỳ phải từ ngày hôm nay trở đi");
+            }
+            if (endDate.isBefore(startDate)) {
+                log.error("Validation failed: End date {} is before start date {}", endDate, startDate);
+                throw new RuntimeException("Ngày kết thúc không được trước ngày bắt đầu");
+            }
+            
+            // Create new Semester entity
+            Semester semester = new Semester();
+            semester.setCode(semesterDTO.getCode().trim());
+            semester.setName(semesterDTO.getName().trim());
+            semester.setStartDate(startDate);
+            semester.setEndDate(endDate);
+            
+            // Set status based on date
+            if (today.isBefore(startDate)) {
+                semester.setStatus(Semester.SemesterStatus.UPCOMING);
+                log.info("Set status to UPCOMING");
+            } else {
+                semester.setStatus(Semester.SemesterStatus.ONGOING);
+                log.info("Set status to ONGOING");
+            }
+            
+            // Save and return
+            log.info("Saving semester to database...");
+            Semester savedSemester = semesterRepository.save(semester);
+            log.info("Semester saved successfully with ID: {}", savedSemester.getId());
+            
+            SemesterResponse response = convertToDTO(savedSemester);
+            log.info("Returning semester response: {}", response);
+            return response;
+        } catch (Exception e) {
+            log.error("Error creating semester: {}", e.getMessage(), e);
+            throw e;
         }
-        if (endDate.isBefore(startDate)) {
-            throw new RuntimeException("Ngày kết thúc không được trước ngày bắt đầu");
-        }   
-        
-        // Create new Semester entity
-        Semester semester = new Semester();
-        semester.setCode(semesterDTO.getCode());
-        semester.setName(semesterDTO.getName());
-        semester.setStartDate(startDate);
-        semester.setEndDate(endDate);
-        
-      // 2. Xác định status (Chỉ cần 2 trạng thái khi tạo mới)
-        if (today.isBefore(startDate)) {
-            semester.setStatus(Semester.SemesterStatus.UPCOMING);
-        } else {
-            // Vì startDate >= today và endDate >= startDate, 
-            // nên ở đây chắc chắn là học kỳ đang diễn ra (ONGOING)
-            semester.setStatus(Semester.SemesterStatus.ONGOING);
-        }       
-        
-        // Save and return
-        Semester savedSemester = semesterRepository.save(semester);
-        return convertToDTO(savedSemester);
     }
 
     @Override
