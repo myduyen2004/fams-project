@@ -44,17 +44,17 @@ public class CourseServiceImpl implements CourseService {
     @Override
     @Transactional
     public CourseResponse createCourse(CourseRequest request) {
-        if (courseRepository.existsByCode(request.getCode())) {
-            throw new IllegalArgumentException("Mã môn học đã tồn tại: " + request.getCode());
+        String code = request.getCode().toUpperCase();
+        if (courseRepository.existsByCode(code)) {
+            throw new IllegalArgumentException("Mã môn học đã tồn tại: " + code);
         }
 
         Course course = Course.builder()
-                .code(request.getCode())
+                .code(code)
                 .name(request.getName())
                 .description(request.getDescription())
                 .credits(request.getCredits())
                 .numberOfSlots(request.getNumberOfSlots())
-                .fixedSemester(request.getFixedSemester())
                 .status(Course.CourseStatus.ACTIVE)
                 .build();
 
@@ -66,20 +66,20 @@ public class CourseServiceImpl implements CourseService {
     public CourseResponse updateCourse(Long id, CourseRequest request) {
         Course course = courseRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy môn học"));
+        String code = request.getCode().toUpperCase();
 
         // Check code uniqueness
-        courseRepository.findByCode(request.getCode()).ifPresent(existing -> {
+        courseRepository.findByCode(code).ifPresent(existing -> {
             if (!existing.getId().equals(id)) {
-                throw new IllegalArgumentException("Mã môn học đã tồn tại: " + request.getCode());
+                throw new IllegalArgumentException("Mã môn học đã tồn tại: " + code);
             }
         });
 
-        course.setCode(request.getCode());
+        course.setCode(code);
         course.setName(request.getName());
         course.setDescription(request.getDescription());
         course.setCredits(request.getCredits());
         course.setNumberOfSlots(request.getNumberOfSlots());
-        course.setFixedSemester(request.getFixedSemester());
 
         return convertToResponse(courseRepository.save(course));
     }
@@ -142,7 +142,6 @@ public class CourseServiceImpl implements CourseService {
                 .description(course.getDescription())
                 .credits(course.getCredits())
                 .numberOfSlots(course.getNumberOfSlots())
-                .fixedSemester(course.getFixedSemester())
                 .status(course.getStatus())
                 .canDelete(canDelete)
                 .build();

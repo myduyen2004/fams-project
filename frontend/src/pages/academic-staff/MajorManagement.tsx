@@ -1,6 +1,6 @@
-import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Upload, Search, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import toast from 'react-hot-toast';
@@ -134,14 +134,15 @@ const MajorCreateModal: React.FC<MajorCreateModalProps> = ({ isOpen, onClose, on
         code: Yup.string()
             .trim()
             .matches(/^[a-zA-Z0-9-]+$/, 'Mã ngành chỉ được chứa chữ cái, số và dấu gạch ngang')
+            .matches(/[a-zA-Z]/, 'Mã ngành phải chứa ít nhất một chữ cái')
             .max(20, 'Mã ngành không được quá 20 ký tự')
             .required('Mã ngành là bắt buộc'),
         name: Yup.string()
             .trim()
+            .matches(/[a-zA-ZÀ-ỹ]/, 'Tên ngành phải chứa ít nhất một chữ cái')
             .min(5, 'Tên ngành phải có ít nhất 5 ký tự')
             .max(100, 'Tên ngành không được quá 100 ký tự')
             .required('Tên ngành là bắt buộc'),
-        programDuration: Yup.string().required('Thời gian đào tạo là bắt buộc'),
         description: Yup.string()
             .max(500, 'Mô tả không được quá 500 ký tự')
     });
@@ -150,7 +151,7 @@ const MajorCreateModal: React.FC<MajorCreateModalProps> = ({ isOpen, onClose, on
         initialValues: {
             code: '',
             name: '',
-            programDuration: '',
+            programDuration: '9 kỳ',
             description: ''
         },
         validationSchema,
@@ -217,19 +218,15 @@ const MajorCreateModal: React.FC<MajorCreateModalProps> = ({ isOpen, onClose, on
                     </div>
 
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">Thời gian đào tạo <span className="text-red-500">*</span></label>
+                        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">Thời gian đào tạo</label>
                         <input
                             type="text"
                             name="programDuration"
-                            className={`w-full rounded-lg border p-2.5 text-sm dark:bg-zinc-800 dark:text-white ${formik.touched.programDuration && formik.errors.programDuration ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-fpt-orange focus:ring-fpt-orange dark:border-zinc-700'}`}
-                            placeholder="VD: 9 kì"
+                            className="w-full rounded-lg border border-gray-300 p-2.5 text-sm bg-gray-100 dark:bg-zinc-700 dark:text-zinc-400 dark:border-zinc-700 cursor-not-allowed"
                             value={formik.values.programDuration}
-                            onChange={formik.handleChange}
-                            onBlur={formik.handleBlur}
+                            disabled
+                            readOnly
                         />
-                        {formik.touched.programDuration && formik.errors.programDuration && (
-                            <p className="mt-1 text-xs text-red-500">{formik.errors.programDuration}</p>
-                        )}
                     </div>
 
                     <div>
@@ -274,14 +271,15 @@ const MajorUpdateModal: React.FC<MajorUpdateModalProps> = ({ isOpen, onClose, on
         code: Yup.string()
             .trim()
             .matches(/^[a-zA-Z0-9-]+$/, 'Mã ngành chỉ được chứa chữ cái, số và dấu gạch ngang')
+            .matches(/[a-zA-Z]/, 'Mã ngành phải chứa ít nhất một chữ cái')
             .max(20, 'Mã ngành không được quá 20 ký tự')
             .required('Mã ngành là bắt buộc'),
         name: Yup.string()
             .trim()
+            .matches(/[a-zA-ZÀ-ỹ]/, 'Tên ngành phải chứa ít nhất một chữ cái')
             .min(5, 'Tên ngành phải có ít nhất 5 ký tự')
             .max(100, 'Tên ngành không được quá 100 ký tự')
             .required('Tên ngành là bắt buộc'),
-        programDuration: Yup.string().required('Thời gian đào tạo là bắt buộc'),
         description: Yup.string()
             .max(500, 'Mô tả không được quá 500 ký tự')
     });
@@ -357,19 +355,15 @@ const MajorUpdateModal: React.FC<MajorUpdateModalProps> = ({ isOpen, onClose, on
                     </div>
 
                     <div>
-                        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">Thời gian đào tạo <span className="text-red-500">*</span></label>
+                        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">Thời gian đào tạo</label>
                         <input
                             type="text"
                             name="programDuration"
-                            className={`w-full rounded-lg border p-2.5 text-sm dark:bg-zinc-800 dark:text-white ${formik.touched.programDuration && formik.errors.programDuration ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-fpt-orange focus:ring-fpt-orange dark:border-zinc-700'}`}
-                            placeholder="VD: 9 kì"
+                            className="w-full rounded-lg border border-gray-300 p-2.5 text-sm bg-gray-100 dark:bg-zinc-700 dark:text-zinc-400 dark:border-zinc-700 cursor-not-allowed"
                             value={formik.values.programDuration}
-                            onChange={formik.handleChange}
-                            onBlur={formik.handleBlur}
+                            disabled
+                            readOnly
                         />
-                        {formik.touched.programDuration && formik.errors.programDuration && (
-                            <p className="mt-1 text-xs text-red-500">{formik.errors.programDuration}</p>
-                        )}
                     </div>
 
                     <div>
@@ -454,7 +448,7 @@ export const MajorManagement: React.FC = () => {
                 keyword: debouncedSearchTerm,
                 status: statusFilter, // Removed generic ALL check, strictly use validation
                 page: page,
-                size: 10
+                size: 30
             };
             const response = await majorService.getMajors(params);
             setData(response.content || []);
@@ -483,7 +477,6 @@ export const MajorManagement: React.FC = () => {
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.checked) {
             setSelectedIds(data.map(m => m.id));
-        } else {
             setSelectedIds([]);
         }
     };
@@ -494,6 +487,10 @@ export const MajorManagement: React.FC = () => {
         } else {
             setSelectedIds([...selectedIds, id]);
         }
+    };
+
+    const handleRowClick = (major: Major) => {
+        navigate(`/academic-staff/majors/${major.id}`);
     };
 
     const handleBulkStatusChange = (newStatus: 'ACTIVE' | 'INACTIVE') => {
@@ -507,12 +504,12 @@ export const MajorManagement: React.FC = () => {
         if (selectedIds.length === 1) {
             const selectedItem = data.find(m => m.id === selectedIds[0]);
             confirmMsg = newStatus === 'ACTIVE'
-                ? `Bạn có chắc chắn muốn mở lại ngành "${selectedItem?.name}"?`
-                : `Bạn có chắc chắn muốn ngừng đào tạo ngành "${selectedItem?.name}"?`;
+                ? `Bạn có chắc chắn muốn mở lại ngành "${selectedItem?.name}"?\n\n⚠️ Tất cả chuyên ngành trong ngành này cũng sẽ được mở lại.`
+                : `Bạn có chắc chắn muốn ngừng đào tạo ngành "${selectedItem?.name}"?\n\n⚠️ Tất cả chuyên ngành trong ngành này cũng sẽ bị ngừng đào tạo.`;
         } else {
             confirmMsg = newStatus === 'ACTIVE'
-                ? `Bạn có chắc chắn muốn mở lại ${selectedIds.length} ngành đã chọn?`
-                : `Bạn có chắc chắn muốn ngừng đào tạo ${selectedIds.length} ngành đã chọn?`;
+                ? `Bạn có chắc chắn muốn mở lại ${selectedIds.length} ngành đã chọn?\n\n⚠️ Tất cả chuyên ngành trong các ngành này cũng sẽ được mở lại.`
+                : `Bạn có chắc chắn muốn ngừng đào tạo ${selectedIds.length} ngành đã chọn?\n\n⚠️ Tất cả chuyên ngành trong các ngành này cũng sẽ bị ngừng đào tạo.`;
         }
 
         setConfirmModal({
@@ -525,6 +522,7 @@ export const MajorManagement: React.FC = () => {
                 try {
                     await Promise.all(selectedIds.map(id => majorService.updateStatus(id, newStatus)));
                     toast.success('Cập nhật trạng thái thành công');
+                    setSelectedIds([]);
                     fetchMajors();
                     closeConfirmModal();
                 } catch (error) {
@@ -674,8 +672,8 @@ export const MajorManagement: React.FC = () => {
                                     data.map((major) => (
                                         <tr
                                             key={major.id}
-                                            onClick={() => navigate(`/academic-staff/majors/${major.id}`)}
-                                            className={`border-b transition-colors cursor-pointer ${selectedIds.includes(major.id) ? 'bg-orange-50 dark:bg-orange-900/20' : 'bg-white hover:bg-gray-50 dark:bg-zinc-900 dark:hover:bg-zinc-800/50'} dark:border-zinc-800 ${loading ? 'opacity-50' : ''}`}
+                                            className={`border-b transition-colors cursor-pointer ${selectedIds.includes(major.id) ? 'bg-orange-50 dark:bg-orange-900/20' : 'bg-white hover:bg-gray-50 dark:bg-zinc-900 dark:hover:bg-zinc-800/50'} dark:border-zinc-800`}
+                                            onClick={() => handleRowClick(major)}
                                         >
                                             <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                                                 <input
@@ -685,7 +683,7 @@ export const MajorManagement: React.FC = () => {
                                                     onChange={() => handleSelectOne(major.id)}
                                                 />
                                             </td>
-                                            <td className="px-4 py-3 font-medium text-fpt-orange hover:underline">{major.code}</td>
+                                            <td className="px-4 py-3 font-medium font-semibold text-gray-900">{major.code}</td>
                                             <td className="px-4 py-3 text-gray-600 dark:text-zinc-400">{major.name}</td>
                                             <td className="px-4 py-3 text-center font-medium text-gray-600 dark:text-zinc-400 ">{major.programDuration}</td>
                                             <td className="px-4 py-3 text-center">
