@@ -69,6 +69,7 @@ public class SlotType {
     private LocalDateTime updatedAt;
 
     public enum SlotDuration {
+        MINUTES_45(45), // 45 phút
         MINUTES_90(90), // 90 phút
         MINUTES_120(120); // 120 phút
 
