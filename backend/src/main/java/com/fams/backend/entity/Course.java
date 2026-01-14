@@ -16,8 +16,7 @@ import java.util.List;
 @Entity
 @Table(name = "courses", indexes = {
         @Index(name = "idx_course_code", columnList = "code"),
-        @Index(name = "idx_course_name", columnList = "name"),
-        @Index(name = "idx_course_fixed_semester", columnList = "fixedSemester")
+        @Index(name = "idx_course_name", columnList = "name")
 })
 @Data
 @Builder
@@ -49,10 +48,6 @@ public class Course {
     // Số slot
     @Column(nullable = false)
     private Integer numberOfSlots;
-
-    // Kỳ học cố định sẽ học môn này (e.g., 1, 2, 3, 4, 5, 6, 7, 8, 9)
-    @Column(nullable = false)
-    private Integer fixedSemester;
 
     // Trạng thái môn học
     @Enumerated(EnumType.STRING)

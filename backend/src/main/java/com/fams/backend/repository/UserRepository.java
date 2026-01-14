@@ -6,9 +6,13 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.Set;
+
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.jpa.repository.Modifying;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificationExecutor<User> {
@@ -24,10 +28,14 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
      */
     Optional<User> findByUsername(String username);
 
+    Optional<List<User>> findByRole(User.UserRole role);
+
     /**
      * Tìm user theo email
      */
     Optional<User> findByEmail(String email);
+
+    Optional<User> findById(Long id);
 
     /**
      * Tìm user theo mã số (MSSV/MSGV/MSNV)
@@ -69,5 +77,8 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     /**
      * Xóa tất cả user có role nằm trong danh sách và trạng thái chỉ định
      */
+
+    @Transactional
+    @Modifying
     long deleteAllByRoleInAndStatus(Collection<User.UserRole> roles, User.UserStatus status);
 }
