@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { AxiosError } from 'axios';
 import { Loader2 } from 'lucide-react';
 import { Pagination } from '../../components/common/Pagination';
@@ -14,11 +15,11 @@ import {
   NotificationFilters,
   NotificationBulkActions,
   NotificationTableRow,
-  ViewNotificationModal,
   NotificationFormModal
 } from '../../components/admin/notifications';
 
 export const NotificationManagementPage = () => {
+  const navigate = useNavigate();
   // Data states
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,14 +37,10 @@ export const NotificationManagementPage = () => {
 
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [selectedNotification, setSelectedNotification] = useState<AdminNotification | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   // Action states
-  const [isPublishing, setIsPublishing] = useState(false);
-  const [isHiding, setIsHiding] = useState(false);
+
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch notifications from API
@@ -118,16 +115,6 @@ export const NotificationManagementPage = () => {
     );
   }, []);
 
-  const handleView = useCallback((notification: AdminNotification) => {
-    setSelectedNotification(notification);
-    setIsViewModalOpen(true);
-  }, []);
-
-  const handleEdit = useCallback((notification: AdminNotification) => {
-    setSelectedNotification(notification);
-    setIsEditModalOpen(true);
-  }, []);
-
   const handleEditFromBulk = useCallback(() => {
     const notification = notifications.find(n => n.id === selectedIds[0]);
     if (notification) {
@@ -135,37 +122,11 @@ export const NotificationManagementPage = () => {
         toast.error('Không thể chỉnh sửa thông báo đã gửi');
         return;
       }
-      handleEdit(notification);
-    }
-  }, [notifications, selectedIds, handleEdit]);
-
-  const handlePublish = useCallback(async () => {
-    try {
-      setIsPublishing(true);
-      await notificationService.publishNotifications(selectedIds);
-      toast.success('Đã mở thông báo thành công');
+      navigate(`/admin/notifications/edit/${notification.id}`);
       setSelectedIds([]);
-      fetchNotifications();
-    } catch {
-      toast.error('Có lỗi xảy ra khi mở thông báo');
-    } finally {
-      setIsPublishing(false);
     }
-  }, [selectedIds, fetchNotifications]);
+  }, [notifications, selectedIds, navigate]);
 
-  const handleHide = useCallback(async () => {
-    try {
-      setIsHiding(true);
-      await notificationService.hideNotifications(selectedIds);
-      toast.success('Đã ẩn thông báo thành công');
-      setSelectedIds([]);
-      fetchNotifications();
-    } catch {
-      toast.error('Có lỗi xảy ra khi ẩn thông báo');
-    } finally {
-      setIsHiding(false);
-    }
-  }, [selectedIds, fetchNotifications]);
 
   const handleDelete = useCallback(async () => {
     try {
@@ -192,8 +153,6 @@ export const NotificationManagementPage = () => {
 
   const handleModalSuccess = useCallback(() => {
     setIsCreateModalOpen(false);
-    setIsEditModalOpen(false);
-    setSelectedNotification(null);
     setSelectedIds([]);
     fetchNotifications();
   }, [fetchNotifications]);
@@ -215,11 +174,9 @@ export const NotificationManagementPage = () => {
         {/* Bulk Actions */}
         <NotificationBulkActions
           selectedCount={selectedIds.length}
-          onPublish={handlePublish}
-          onHide={handleHide}
+          
+          onEdit={handleEditFromBulk}
           onDelete={() => setIsDeleteConfirmOpen(true)}
-          isPublishing={isPublishing}
-          isHiding={isHiding}
           isDeleting={isDeleting}
           canDelete={!hasSentNotification}
           hasSentNotification={hasSentNotification}
@@ -268,7 +225,6 @@ export const NotificationManagementPage = () => {
                     index={page * pageSize + index}
                     isSelected={selectedIds.includes(notification.id)}
                     onSelect={handleSelect}
-                    onView={handleView}
                   />
                 ))
               )}
@@ -291,27 +247,6 @@ export const NotificationManagementPage = () => {
         <NotificationFormModal
           onClose={() => setIsCreateModalOpen(false)}
           onSuccess={handleModalSuccess}
-        />
-      )}
-
-      {isEditModalOpen && selectedNotification && (
-        <NotificationFormModal
-          notification={selectedNotification}
-          onClose={() => {
-            setIsEditModalOpen(false);
-            setSelectedNotification(null);
-          }}
-          onSuccess={handleModalSuccess}
-        />
-      )}
-
-      {isViewModalOpen && selectedNotification && (
-        <ViewNotificationModal
-          notification={selectedNotification}
-          onClose={() => {
-            setIsViewModalOpen(false);
-            setSelectedNotification(null);
-          }}
         />
       )}
 
