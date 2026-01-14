@@ -32,7 +32,6 @@ export interface CourseImportDTO {
     name: string;
     credits: number;
     numberOfSlots: number;
-    fixedSemester: number;
     description?: string;
     statusValue: string; // ACTIVE, INACTIVE from Excel
     status: string; // VALID, WARNING, ERROR - validation status
