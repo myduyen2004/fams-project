@@ -12,6 +12,9 @@ const Dashboard = lazy(() => import('./pages/admin/Dashboard').then(m => ({ defa
 const RecentAccessPage = lazy(() => import('./pages/admin/RecentAccessPage').then(m => ({ default: m.RecentAccessPage })));
 const AlertsPage = lazy(() => import('./pages/admin/AlertsPage').then(m => ({ default: m.AlertsPage })));
 const NotificationsPage = lazy(() => import('./pages/admin/NotificationsPage').then(m => ({ default: m.NotificationsPage })));
+const NotificationManagementPage = lazy(() => import('./pages/admin/NotificationManagementPage').then(m => ({ default: m.NotificationManagementPage })));
+const CreateNotificationPage = lazy(() => import('./pages/admin/CreateNotificationPage').then(m => ({ default: m.CreateNotificationPage })));
+const EditNotificationPage = lazy(() => import('./pages/admin/EditNotificationPage').then(m => ({ default: m.EditNotificationPage })));
 const SystemLogsPage = lazy(() => import('./pages/admin/SystemLogsPage').then(m => ({ default: m.SystemLogsPage })));
 const UsersPage = lazy(() => import('./pages/admin/UsersPage').then(m => ({ default: m.UsersPage })));
 const ActivatedUsersPage = lazy(() => import('./pages/admin/ActivatedUsersPage').then(m => ({ default: m.ActivatedUsersPage })));
@@ -123,6 +126,30 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
                 <NotificationsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/notification-management"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <NotificationManagementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/notifications/create"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <CreateNotificationPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/notifications/edit/:id"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <EditNotificationPage />
               </ProtectedRoute>
             }
           />
