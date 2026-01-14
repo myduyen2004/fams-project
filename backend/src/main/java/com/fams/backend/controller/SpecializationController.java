@@ -83,17 +83,6 @@ public class SpecializationController {
 
     // ========== Import Specializations ==========
 
-    @PostMapping("/import/{majorId}")
-    public ResponseEntity<Map<String, Object>> importSpecializations(
-            @PathVariable Long majorId,
-            @RequestParam("file") MultipartFile file) {
-        try {
-            return ResponseEntity.ok(specializationService.importSpecializations(majorId, file));
-        } catch (IOException e) {
-            return ResponseEntity.badRequest().build();
-        }
-    }
-
     @PostMapping("/import/preview/{majorId}")
     public ResponseEntity<List<SpecializationImportDTO>> previewImportSpecializations(
             @PathVariable Long majorId,

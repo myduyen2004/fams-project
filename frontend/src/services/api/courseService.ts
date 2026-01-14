@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { API_URL } from './config';
-import { Course, CourseSearchParams, CourseCreateRequest } from '../../types/course';
+import { Course, CourseSearchParams, CourseCreateRequest, CourseImportDTO } from '../../types/course';
 import { Page } from '../../types/major';
 
 const getAuthHeader = () => {
@@ -72,6 +72,43 @@ export const courseService = {
         const response = await axios.get(`${API_URL}/courses/search/not-in-sub-specialization/${subSpecId}`, {
             params: { keyword, limit },
             headers: getAuthHeader()
+        });
+        return response.data;
+    },
+
+    // Import/Export methods
+    previewImportCourses: async (file: File): Promise<CourseImportDTO[]> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await axios.post<CourseImportDTO[]>(`${API_URL}/courses/import/preview`, formData, {
+            headers: {
+                ...getAuthHeader(),
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+        return response.data;
+    },
+
+    saveImportedCourses: async (dtos: CourseImportDTO[]): Promise<{ created: number; failed: number; errors?: string[] }> => {
+        const response = await axios.post<{ created: number; failed: number; errors?: string[] }>(`${API_URL}/courses/import/save`, dtos, {
+            headers: getAuthHeader()
+        });
+        return response.data;
+    },
+
+    exportCourses: async (params?: { status?: string }): Promise<Blob> => {
+        const response = await axios.get(`${API_URL}/courses/export`, {
+            params,
+            headers: getAuthHeader(),
+            responseType: 'blob'
+        });
+        return response.data;
+    },
+
+    downloadImportTemplate: async (): Promise<Blob> => {
+        const response = await axios.get(`${API_URL}/courses/import/template`, {
+            headers: getAuthHeader(),
+            responseType: 'blob'
         });
         return response.data;
     }

@@ -127,116 +127,6 @@ public class MajorService {
                 .build();
     }
 
-    @Transactional
-    public Map<String, Object> importMajors(MultipartFile file) {
-        log.info("Importing majors from file: {}", file.getOriginalFilename());
-        Map<String, Object> result = new HashMap<>();
-        List<String> errors = new ArrayList<>();
-        int createdCount = 0;
-        int failedCount = 0;
-
-        Set<String> seenCodes = new HashSet<>();
-        int rowNumber = 0;
-
-        try (InputStream is = file.getInputStream(); Workbook workbook = new XSSFWorkbook(is)) {
-            Sheet sheet = workbook.getSheetAt(0);
-            Iterator<Row> rows = sheet.iterator();
-
-            while (rows.hasNext()) {
-                Row currentRow = rows.next();
-                int currentRowNum = rowNumber + 1;
-
-                // Skip header row
-                if (rowNumber == 0) {
-                    rowNumber++;
-                    continue;
-                }
-
-                String code = getCellValue(currentRow.getCell(0));
-                String name = getCellValue(currentRow.getCell(1));
-                String description = getCellValue(currentRow.getCell(2));
-                String programDuration = getCellValue(currentRow.getCell(3));
-                String statusStr = getCellValue(currentRow.getCell(4));
-
-                // Skip empty rows
-                if (code.isEmpty() && name.isEmpty()) {
-                    rowNumber++;
-                    continue;
-                }
-
-                // Validate required fields
-                if (code.isEmpty()) {
-                    errors.add("Dòng " + currentRowNum + ": Mã ngành không được để trống");
-                    failedCount++;
-                    rowNumber++;
-                    continue;
-                }
-                if (name.isEmpty()) {
-                    errors.add("Dòng " + currentRowNum + ": Tên ngành không được để trống");
-                    failedCount++;
-                    rowNumber++;
-                    continue;
-                }
-
-                // Check duplicate in file
-                if (seenCodes.contains(code.toLowerCase())) {
-                    errors.add("Dòng " + currentRowNum + ": Mã ngành '" + code + "' bị trùng trong file");
-                    failedCount++;
-                    rowNumber++;
-                    continue;
-                }
-                seenCodes.add(code.toLowerCase());
-
-                // Check if major exists in database - treat as error
-                if (majorRepository.existsByCode(code)) {
-                    errors.add("Dòng " + currentRowNum + ": Mã ngành '" + code + "' đã tồn tại trong hệ thống");
-                    failedCount++;
-                    rowNumber++;
-                    continue;
-                }
-
-                try {
-                    // Parse status
-                    Major.MajorStatus status = Major.MajorStatus.ACTIVE;
-                    if (!statusStr.isEmpty()) {
-                        try {
-                            status = Major.MajorStatus.valueOf(statusStr.toUpperCase());
-                        } catch (IllegalArgumentException e) {
-                            log.warn("Invalid status '{}' at row {}, defaulting to ACTIVE", statusStr, currentRowNum);
-                        }
-                    }
-
-                    // CREATE new major only
-                    Major major = Major.builder()
-                            .code(code)
-                            .name(name)
-                            .description(description.isEmpty() ? null : description)
-                            .programDuration(programDuration.isEmpty() ? "9 Kỳ" : programDuration)
-                            .status(status)
-                            .build();
-                    majorRepository.save(major);
-                    createdCount++;
-                    log.info("Created major: {} - {}", code, name);
-                } catch (Exception e) {
-                    errors.add("Dòng " + currentRowNum + ": Lỗi khi xử lý: " + e.getMessage());
-                    failedCount++;
-                    log.error("Error processing major at row {}: {}", currentRowNum, e.getMessage());
-                }
-
-                rowNumber++;
-            }
-        } catch (Exception e) {
-            log.error("Error processing import file", e);
-            throw new RuntimeException("Lỗi khi xử lý file import: " + e.getMessage());
-        }
-
-        result.put("created", createdCount);
-        result.put("failed", failedCount);
-        result.put("errors", errors);
-        log.info("Import majors completed: created={}, failed={}", createdCount, failedCount);
-        return result;
-    }
-
     public List<MajorImportDTO> previewImportMajors(MultipartFile file) {
         log.info("Preview import majors from file: {}", file.getOriginalFilename());
         List<MajorImportDTO> previewList = new ArrayList<>();
@@ -342,7 +232,6 @@ public class MajorService {
         Map<String, Object> result = new HashMap<>();
         List<String> errors = new ArrayList<>();
         int createdCount = 0;
-        int updatedCount = 0;
         int failedCount = 0;
 
         for (MajorImportDTO dto : dtos) {
