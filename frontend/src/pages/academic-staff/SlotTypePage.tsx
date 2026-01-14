@@ -22,7 +22,7 @@ interface SemesterConfig {
   selectedDays: string[];
   maxSlotsPerDay: number;
   slotsPerSubjectPerWeek: number;
-  slotType: '90' | '45' | '120';
+  slotType: '90' | '135';
   slots: SlotTime[];
   holidays: Holiday[];
   isPublished: boolean;
@@ -97,11 +97,33 @@ export const SlotTypePage: React.FC = () => {
 
   useEffect(() => {
     const duration = parseInt(config.slotType);
-    const updatedSlots = config.slots.map(slot => ({
-      ...slot,
-      endTime: slot.startTime ? addMinutes(slot.startTime, duration) : ''
-    }));
-    const hasChanged = updatedSlots.some((slot, i) => slot.endTime !== config.slots[i].endTime);
+    const BREAK_DURATION = 15; // 15-minute break between slots
+    
+    // Use reduce to properly chain calculations - each slot depends on the NEWLY calculated previous slot
+    const updatedSlots = config.slots.reduce<SlotTime[]>((acc, slot, index) => {
+      if (index === 0) {
+        // Keep first slot's start time, just update end time
+        const startTime = slot.startTime || '07:30';
+        acc.push({
+          startTime,
+          endTime: addMinutes(startTime, duration)
+        });
+      } else {
+        // Calculate start time based on the NEWLY calculated previous slot's end time + break
+        const prevCalculatedSlot = acc[index - 1];
+        const newStartTime = addMinutes(prevCalculatedSlot.endTime, BREAK_DURATION);
+        acc.push({
+          startTime: newStartTime,
+          endTime: addMinutes(newStartTime, duration)
+        });
+      }
+      return acc;
+    }, []);
+    
+    const hasChanged = updatedSlots.some((slot, i) => 
+      slot.startTime !== config.slots[i].startTime || slot.endTime !== config.slots[i].endTime
+    );
+    
     if (hasChanged) {
       setConfig(prev => ({ ...prev, slots: updatedSlots }));
     }
@@ -316,15 +338,16 @@ export const SlotTypePage: React.FC = () => {
       toast.success('Lưu cấu hình thành công!');
       setOriginalConfig(config);
       setIsReadOnly(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving configuration:', error);
-      toast.error('Không thể lưu cấu hình');
+      const errorMsg = error.response?.data?.message || error.response?.data || error.message || 'Lỗi không xác định';
+      toast.error(`Không thể lưu cấu hình: ${typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg)}`);
     }
   };
 
   return (
     <AcademicStaffLayout pageTitle="Cấu hình kỳ học">
-      <div className="max-w-7xl mx-auto space-y-4 pb-20 pt-2">
+      <div className="max-w-7xl mx-auto space-y-3 pb-20 pt-2">
         
         {/* Top Header & Breadcrumb */}
         <div className="flex items-center justify-between">
@@ -375,31 +398,39 @@ export const SlotTypePage: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 gap-3">
           
             {/* Row 1: Basic Information */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden p-5">
-              <div className="flex items-center mb-4">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden p-4">
+              <div className="flex items-center mb-3">
                 <h2 className="text-xl font-bold text-gray-800">Thông tin chung</h2>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {/* Tên học kỳ */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-semibold text-gray-700">Tên học kỳ</label>
-<input type="text" placeholder="VD: SPRING 2026" value={config.semesterName} readOnly={isReadOnly} onChange={(e) => handleInputChange('semesterName', e.target.value)} className={isReadOnly ? "w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-gray-500 cursor-not-allowed outline-none" : "w-full bg-white border-gray-300 rounded-xl px-4 py-3 text-sm font-bold text-gray-900 outline-none"} />
+                  {isReadOnly ? (
+                    <div className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm font-bold text-gray-900">{config.semesterName || '--'}</div>
+                  ) : (
+                    <input type="text" placeholder="VD: SPRING 2026" value={config.semesterName} onChange={(e) => handleInputChange('semesterName', e.target.value)} className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold text-gray-900 outline-none hover:border-orange-400 focus:border-orange-500" />
+                  )}
                 </div>
 
                 {/* Thời gian kỳ học */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-semibold text-gray-700">Thời gian kỳ học</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input type="date" value={config.startDate} readOnly={isReadOnly} onChange={(e) => handleInputChange('startDate', e.target.value)} className={isReadOnly ? "w-full bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed rounded-xl px-4 py-3 text-sm font-bold outline-none" : "w-full bg-white border-gray-300 text-gray-900 rounded-xl px-4 py-3 text-sm font-bold outline-none"} />
-                    <input type="date" value={config.endDate} readOnly={isReadOnly} onChange={(e) => handleInputChange('endDate', e.target.value)} className={isReadOnly ? "w-full bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed rounded-xl px-4 py-3 text-sm font-bold outline-none" : "w-full bg-white border-gray-300 text-gray-900 rounded-xl px-4 py-3 text-sm font-bold outline-none"} />
-                      onChange={(e) => handleInputChange('endDate', e.target.value)}
-                      className={`w-full ${isReadOnly ? 'bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white border-gray-300 text-gray-900'} rounded-xl px-4 py-3 text-sm font-bold outline-none`}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-gray-500 cursor-not-allowed outline-none" />
-                  </div>
+                  {isReadOnly ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm font-bold text-gray-900">{config.startDate || '--'}</div>
+                      <div className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm font-bold text-gray-900">{config.endDate || '--'}</div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      <input type="date" value={config.startDate} onChange={(e) => handleInputChange('startDate', e.target.value)} className="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-3 py-2 text-sm font-bold outline-none hover:border-orange-400 focus:border-orange-500" />
+                      <input type="date" value={config.endDate} onChange={(e) => handleInputChange('endDate', e.target.value)} className="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-3 py-2 text-sm font-bold outline-none hover:border-orange-400 focus:border-orange-500" />
+                    </div>
+                  )}
                 </div>
 
                 {/* Ngày học trong tuần */}
@@ -450,19 +481,19 @@ export const SlotTypePage: React.FC = () => {
             </div>
 
           {/* Row 2: Logical Grouping: Content & Slots */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
             
             {/* Left Sidebar: Training Params */}
-            <div className="lg:col-span-4 space-y-4">
+            <div className="lg:col-span-4 space-y-3">
               
               {/* Training Parameters (Now at top of sidebar) */}
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-6 h-full">
-                <div className="space-y-6">
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-4 h-full">
+                <div className="space-y-4">
                   <div className="flex items-center gap-2">
                     <h2 className="text-xl font-bold text-gray-800">Cài đặt đào tạo</h2>
                   </div>
                   
-                  <div className="space-y-6">
+                  <div className="space-y-4">
                     <div className="space-y-3">
                       <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-2">
                         <Clock className="w-3.5 h-3.5" /> Loại tiết học (Duration)
@@ -473,40 +504,52 @@ export const SlotTypePage: React.FC = () => {
                           className={`flex-1 py-3 rounded-xl text-xs font-bold transition-all duration-300 ${config.slotType === '90' ? 'bg-orange-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'} ${isReadOnly ? 'cursor-not-allowed' : ''}`}>
                           90 PHÚT
                         </button>
-                        <button onClick={() => handleInputChange('slotType', '45')} 
+                        <button onClick={() => handleInputChange('slotType', '135')} 
                           disabled={isReadOnly}
-                          className={`flex-1 py-3 rounded-xl text-xs font-bold transition-all duration-300 ${config.slotType === '45' ? 'bg-orange-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'} ${isReadOnly ? 'cursor-not-allowed' : ''}`}>
-                          45 PHÚT
+                          className={`flex-1 py-3 rounded-xl text-xs font-bold transition-all duration-300 ${config.slotType === '135' ? 'bg-orange-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'} ${isReadOnly ? 'cursor-not-allowed' : ''}`}>
+                          135 PHÚT
                         </button>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-4">
+                    <div className="grid grid-cols-1 gap-3">
                       <div className="space-y-1.5">
                         <label className="text-sm font-semibold text-gray-700">Max Slots / Ngày</label>
-                        <div className={`flex items-center bg-gray-100 border-2 border-gray-200 rounded-xl overflow-hidden px-4 transition-all ${isReadOnly ? 'opacity-80' : 'hover:border-orange-400 focus-within:bg-white focus-within:border-orange-500'}`}>
-                          <Settings className="w-4 h-4 text-gray-500" />
-                          <input 
-                            type="number" 
-                            value={config.maxSlotsPerDay} 
-                            onChange={(e) => handleInputChange('maxSlotsPerDay', parseInt(e.target.value))}
-                            readOnly={isReadOnly}
-                            className={`w-full bg-transparent py-3 px-3 text-sm font-bold text-gray-900 outline-none border-none focus:ring-0 ${isReadOnly ? 'cursor-not-allowed text-gray-500' : ''}`} 
-                          />
-                        </div>
+                        {isReadOnly ? (
+                          <div className="flex items-center bg-gray-50 rounded-lg px-3 py-2">
+                            <Settings className="w-4 h-4 text-gray-500" />
+                            <span className="px-2 text-sm font-bold text-gray-900">{config.maxSlotsPerDay}</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center bg-gray-100 border-2 border-gray-200 rounded-lg overflow-hidden px-3 transition-all hover:border-orange-400 focus-within:bg-white focus-within:border-orange-500">
+                            <Settings className="w-4 h-4 text-gray-500" />
+                            <input 
+                              type="number" 
+                              value={config.maxSlotsPerDay} 
+                              onChange={(e) => handleInputChange('maxSlotsPerDay', parseInt(e.target.value))}
+                              className="w-full bg-transparent py-2 px-2 text-sm font-bold text-gray-900 outline-none border-none focus:ring-0" 
+                            />
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-sm font-semibold text-gray-700">Slots / Môn / Tuần</label>
-                        <div className={`flex items-center bg-gray-100 border-2 border-gray-200 rounded-xl overflow-hidden px-4 transition-all ${isReadOnly ? 'opacity-80' : 'hover:border-orange-400 focus-within:bg-white focus-within:border-orange-500'}`}>
-                          <Calendar className="w-4 h-4 text-gray-500" />
-                          <input 
-                            type="number" 
-                            value={config.slotsPerSubjectPerWeek} 
-                            onChange={(e) => handleInputChange('slotsPerSubjectPerWeek', parseInt(e.target.value))}
-                            readOnly={isReadOnly}
-                            className={`w-full bg-transparent py-3 px-3 text-sm font-bold text-gray-900 outline-none border-none focus:ring-0 ${isReadOnly ? 'cursor-not-allowed text-gray-500' : ''}`} 
-                          />
-                        </div>
+                        {isReadOnly ? (
+                          <div className="flex items-center bg-gray-50 rounded-lg px-3 py-2">
+                            <Calendar className="w-4 h-4 text-gray-500" />
+                            <span className="px-2 text-sm font-bold text-gray-900">{config.slotsPerSubjectPerWeek}</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center bg-gray-100 border-2 border-gray-200 rounded-lg overflow-hidden px-3 transition-all hover:border-orange-400 focus-within:bg-white focus-within:border-orange-500">
+                            <Calendar className="w-4 h-4 text-gray-500" />
+                            <input 
+                              type="number" 
+                              value={config.slotsPerSubjectPerWeek} 
+                              onChange={(e) => handleInputChange('slotsPerSubjectPerWeek', parseInt(e.target.value))}
+                              className="w-full bg-transparent py-2 px-2 text-sm font-bold text-gray-900 outline-none border-none focus:ring-0" 
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -549,28 +592,38 @@ export const SlotTypePage: React.FC = () => {
                             <span className="text-xs font-bold text-gray-500 group-hover:text-orange-600">SLOT {index + 1}</span>
                           </td>
                           <td className="px-5 py-2.5">
-                            <input 
-                              type="time" 
-                              value={slot.startTime} 
-                              onChange={(e) => handleSlotTimeChange(index, e.target.value)}
-                              readOnly={isReadOnly}
-                              className={`bg-gray-100 border border-gray-300 rounded-xl px-2.5 py-1 text-sm font-bold text-gray-900 outline-none shadow-sm transition-all ${
-                                isReadOnly ? 'cursor-not-allowed opacity-80' : 'hover:border-orange-400 focus:border-orange-500 focus:bg-white'
-                              }`} 
-                            />
+                            {isReadOnly ? (
+                              <span className="text-sm font-bold text-gray-900">{slot.startTime || '--:--'}</span>
+                            ) : (
+                              <input 
+                                type="time" 
+                                value={slot.startTime} 
+                                onChange={(e) => handleSlotTimeChange(index, e.target.value)}
+                                className="bg-gray-100 border border-gray-300 rounded-xl px-2.5 py-1 text-sm font-bold text-gray-900 outline-none shadow-sm transition-all hover:border-orange-400 focus:border-orange-500 focus:bg-white"
+                              />
+                            )}
                           </td>
                           <td className="px-5 py-2.5">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-bold text-gray-900 bg-gray-100 group-hover:bg-white group-hover:shadow-sm px-2.5 py-1 rounded-xl transition-all">
-                                {slot.endTime || '--:--'}
-                              </span>
-                              <Check className="w-3 h-3 text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              {isReadOnly ? (
+                                <span className="text-sm font-bold text-gray-900">{slot.endTime || '--:--'}</span>
+                              ) : (
+                                <input 
+                                  type="time" 
+                                  value={slot.endTime || ''} 
+                                  disabled
+                                  className="bg-gray-100 border border-gray-300 rounded-xl px-2.5 py-1 text-sm font-bold text-gray-900 outline-none shadow-sm cursor-not-allowed opacity-80"
+                                />
+                              )}
+                              {!isReadOnly && <Check className="w-3 h-3 text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />}
                             </div>
                           </td>
                           <td className="px-5 py-2.5 text-right">
-                            <button onClick={() => removeSlot(index)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100" title="Xóa slot">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {!isReadOnly && (
+                              <button onClick={() => removeSlot(index)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100" title="Xóa slot">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -647,35 +700,39 @@ export const SlotTypePage: React.FC = () => {
                         <span className="text-xs font-bold text-gray-400 group-hover:text-orange-600 transition-colors">#{index + 1}</span>
                       </td>
                       <td className="px-5 py-2">
-                        <input 
-                          type="date" 
-                          value={holiday.holidayDate} 
-                          onChange={(e) => handleHolidayChange(index, 'holidayDate', e.target.value)}
-                          readOnly={isReadOnly}
-                          className={`bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-bold text-gray-900 outline-none transition-all shadow-sm w-full ${
-                             isReadOnly ? 'cursor-not-allowed opacity-80' : 'hover:border-orange-400 focus:border-orange-500'
-                          }`} 
-                        />
+                        {isReadOnly ? (
+                          <span className="text-xs font-bold text-gray-900">{holiday.holidayDate || '--'}</span>
+                        ) : (
+                          <input 
+                            type="date" 
+                            value={holiday.holidayDate} 
+                            onChange={(e) => handleHolidayChange(index, 'holidayDate', e.target.value)}
+                            className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-bold text-gray-900 outline-none transition-all shadow-sm w-full hover:border-orange-400 focus:border-orange-500" 
+                          />
+                        )}
                       </td>
                       <td className="px-5 py-2">
-                        <input 
-                          type="text" 
-                          placeholder="Nhập lý do nghỉ lễ..." 
-                          value={holiday.description} 
-                          onChange={(e) => handleHolidayChange(index, 'description', e.target.value)}
-                          readOnly={isReadOnly}
-                          className={`bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-900 outline-none transition-all shadow-sm w-full ${
-                            isReadOnly ? 'cursor-not-allowed opacity-80' : 'hover:border-orange-400 focus:border-orange-500'
-                          }`} 
-                        />
+                        {isReadOnly ? (
+                          <span className="text-xs font-semibold text-gray-900">{holiday.description || '--'}</span>
+                        ) : (
+                          <input 
+                            type="text" 
+                            placeholder="Nhập lý do nghỉ lễ..." 
+                            value={holiday.description} 
+                            onChange={(e) => handleHolidayChange(index, 'description', e.target.value)}
+                            className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-900 outline-none transition-all shadow-sm w-full hover:border-orange-400 focus:border-orange-500" 
+                          />
+                        )}
                       </td>
                       <td className="px-5 py-2 text-right">
-                        <button 
-                          onClick={() => removeHoliday(index)} 
-                          className="p-1.5 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {!isReadOnly && (
+                          <button 
+                            onClick={() => removeHoliday(index)} 
+                            className="p-1.5 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
