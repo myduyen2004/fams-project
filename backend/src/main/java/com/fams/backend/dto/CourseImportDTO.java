@@ -15,7 +15,6 @@ public class CourseImportDTO {
     private String name;
     private Integer credits;
     private Integer numberOfSlots;
-    private Integer fixedSemester;
     private String description;
     private String statusValue; // ACTIVE, INACTIVE from Excel
     private String status; // VALID, WARNING, ERROR - validation status
