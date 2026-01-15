@@ -82,9 +82,9 @@ export const AcademicStaffSidebar: React.FC = () => {
     },
     {
       id: 'announcements',
-      label: 'Cài đặt thông báo',
+      label: 'Quản lý thông báo',
       icon: <Bell size={20} />,
-      path: '/academic-staff/announcements'
+      path: '/academic-staff/notification-management'
     },
     {
       id: 'attendance',

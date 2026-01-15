@@ -2,7 +2,7 @@ package com.fams.backend.controller;
 
 import com.fams.backend.dto.response.*;
 import com.fams.backend.service.DashboardService;
-import com.fams.backend.service.NotificationService;
+import com.fams.backend.service.impl.NotificationServiceImpl;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,7 @@ import java.util.List;
 public class DashboardController {
 
     private final DashboardService dashboardService;
-    private final NotificationService notificationService;
+    private final NotificationServiceImpl notificationService;
 
     @GetMapping("/stats")
     @Operation(summary = "Lấy thống kê trang dashboard")
@@ -45,10 +45,9 @@ public class DashboardController {
     }
 
     @GetMapping("/notifications")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<DashboardNotificationResponse>> getNotifications() {
         log.info("GET /api/dashboard/notifications");
-        return ResponseEntity.ok(notificationService.getMyNotifications());
+        return ResponseEntity.ok(dashboardService.getNotifications());
     }
 
     @PostMapping("/notifications/{id}/read")

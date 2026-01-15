@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Upload, X, FileText, Eye } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -11,8 +11,9 @@ import { NotificationStatus, TargetType } from '../../types/notification';
 interface NotificationForm {
   title: string;
   content: string;
+  type: any;
+  priority: any;
   targetType: TargetType;
-  targetValue: string;
   status: NotificationStatus;
   scheduledAt: string | null;
 }
@@ -31,8 +32,9 @@ export const CreateNotificationPage = () => {
   const [formData, setFormData] = useState<NotificationForm>({
     title: '',
     content: '',
+    type: 'SYSTEM',
+    priority: 'MEDIUM',
     targetType: TargetType.ALL,
-    targetValue: '',
     status: NotificationStatus.DRAFT,
     scheduledAt: null
   });
@@ -174,9 +176,14 @@ export const CreateNotificationPage = () => {
     setIsSubmitting(true);
     try {
       // Prepare form data
-      const submitData = {
-        ...formData,
-        status: isDraft ? NotificationStatus.DRAFT : formData.status
+      const submitData: any = {
+        title: formData.title,
+        content: formData.content,
+        type: formData.type,
+        priority: formData.priority,
+        targetType: formData.targetType,
+        status: isDraft ? NotificationStatus.DRAFT : formData.status,
+        scheduledAt: formData.scheduledAt
       };
 
       // If sending now, set status to SENT
@@ -213,8 +220,12 @@ export const CreateNotificationPage = () => {
         toast.success('Đã lưu thông báo nháp');
       } else if (submitData.status === NotificationStatus.SENT) {
         toast.success('Đã gửi thông báo thành công');
+        // Trigger notification bell update
+        window.dispatchEvent(new Event('notificationRefresh'));
       } else if (submitData.status === NotificationStatus.SCHEDULED) {
         toast.success('Đã lên lịch gửi thông báo');
+        // Trigger notification bell update
+        window.dispatchEvent(new Event('notificationRefresh'));
       }
 
       // Navigate back to management page

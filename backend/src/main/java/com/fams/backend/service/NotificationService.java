@@ -4,9 +4,10 @@ import com.fams.backend.dto.request.NotificationRequest;
 import com.fams.backend.dto.response.NotificationResponse;
 import com.fams.backend.entity.Notification;
 import com.fams.backend.entity.Notification.NotificationStatus;
+import com.fams.backend.entity.NotificationRecipient;
 import com.fams.backend.entity.User;
 import com.fams.backend.exception.NotFoundException;
-import com.fams.backend.repository.CourseRepository;
+import com.fams.backend.repository.NotificationRecipientRepository;
 import com.fams.backend.repository.NotificationRepository;
 import com.fams.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,8 +32,8 @@ import java.util.List;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final NotificationRecipientRepository notificationRecipientRepository;
     private final UserRepository userRepository;
-    private final CourseRepository courseRepository;
 
     /**
      * Lấy danh sách thông báo có phân trang
@@ -48,8 +49,15 @@ public class NotificationService {
         
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new NotFoundException("Người dùng không tìm thấy"));
+        
         Specification<Notification> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
+            
+            // Chỉ lấy thông báo của người dùng hiện tại (do họ tạo)
+            predicates.add(cb.equal(root.get("sender"), currentUser));
             
             // Tìm kiếm theo tiêu đề hoặc nội dung
             if (search != null && !search.trim().isEmpty()) {
@@ -102,8 +110,18 @@ public class NotificationService {
      */
     @Transactional(readOnly = true)
     public NotificationResponse getNotificationById(Long id) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new NotFoundException("Người dùng không tìm thấy"));
+        
         Notification notification = notificationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy thông báo với ID: " + id));
+        
+        // Kiểm tra xem người dùng hiện tại có phải là người tạo thông báo này không
+        if (!notification.getSender().equals(currentUser)) {
+            throw new NotFoundException("Bạn không có quyền xem thông báo này");
+        }
+        
         return mapToResponse(notification);
     }
 
@@ -132,14 +150,13 @@ public class NotificationService {
             notification.setSentAt(LocalDateTime.now());
         }
 
-        // Set target course if applicable
-        if (request.getTargetCourseId() != null) {
-            courseRepository.findById(request.getTargetCourseId())
-                    .ifPresent(notification::setTargetCourse);
-        }
-
         Notification saved = notificationRepository.save(notification);
         log.info("Created notification: {} by {}", saved.getId(), username);
+        
+        // Tạo NotificationRecipient nếu status là SENT
+        if (saved.getStatus() == NotificationStatus.SENT) {
+            createNotificationRecipients(saved);
+        }
         
         return mapToResponse(saved);
     }
@@ -149,8 +166,17 @@ public class NotificationService {
      */
     @Transactional
     public NotificationResponse updateNotification(Long id, NotificationRequest request) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new NotFoundException("Người dùng không tìm thấy"));
+        
         Notification notification = notificationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy thông báo với ID: " + id));
+
+        // Kiểm tra xem người dùng hiện tại có phải là người tạo thông báo này không
+        if (!notification.getSender().equals(currentUser)) {
+            throw new NotFoundException("Bạn không có quyền chỉnh sửa thông báo này");
+        }
 
         // Không cho phép sửa thông báo đã gửi
         if (notification.getStatus() == NotificationStatus.SENT) {
@@ -181,8 +207,17 @@ public class NotificationService {
      */
     @Transactional
     public void deleteNotification(Long id) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new NotFoundException("Người dùng không tìm thấy"));
+        
         Notification notification = notificationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy thông báo với ID: " + id));
+        
+        // Kiểm tra xem người dùng hiện tại có phải là người tạo thông báo này không
+        if (!notification.getSender().equals(currentUser)) {
+            throw new NotFoundException("Bạn không có quyền xóa thông báo này");
+        }
         
         // Không cho phép xóa thông báo đã gửi
         if (notification.getStatus() == NotificationStatus.SENT) {
@@ -198,7 +233,19 @@ public class NotificationService {
      */
     @Transactional
     public void bulkDeleteNotifications(List<Long> ids) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new NotFoundException("Người dùng không tìm thấy"));
+        
         List<Notification> notifications = notificationRepository.findAllById(ids);
+        
+        // Kiểm tra xem người dùng có quyền xóa tất cả thông báo không
+        boolean hasUnauthorized = notifications.stream()
+                .anyMatch(n -> !n.getSender().equals(currentUser));
+        
+        if (hasUnauthorized) {
+            throw new NotFoundException("Bạn không có quyền xóa một số thông báo này");
+        }
         
         // Kiểm tra xem có thông báo nào đã gửi không
         boolean hasSent = notifications.stream()
@@ -255,8 +302,6 @@ public class NotificationService {
                 .type(notification.getType().name())
                 .priority(notification.getPriority().name())
                 .targetType(notification.getTargetType().name())
-                .targetClassName(notification.getTargetClass() != null ? notification.getTargetClass().getClassName() : null)
-                .targetCourseId(notification.getTargetCourse() != null ? notification.getTargetCourse().getId() : null)
                 .status(notification.getStatus().name())
                 .scheduledAt(notification.getScheduledAt())
                 .sentAt(notification.getSentAt())
@@ -269,4 +314,51 @@ public class NotificationService {
                         .build() : null)
                 .build();
     }
-}
+
+    /**
+     * Tạo NotificationRecipient records dựa trên targetType
+     */
+    private void createNotificationRecipients(Notification notification) {
+        List<User> recipients = new ArrayList<>();
+        
+        switch (notification.getTargetType()) {
+            case ALL:
+                // Gửi cho tất cả users active (trừ sender)
+                recipients = userRepository.findAll().stream()
+                        .filter(u -> u.getStatus() == User.UserStatus.ACTIVE)
+                        .filter(u -> !u.equals(notification.getSender()))
+                        .collect(java.util.stream.Collectors.toList());
+                break;
+            case STUDENT:
+                recipients = userRepository.findByRole(User.UserRole.STUDENT)
+                        .orElse(new ArrayList<>()).stream()
+                        .filter(u -> u.getStatus() == User.UserStatus.ACTIVE)
+                        .collect(java.util.stream.Collectors.toList());
+                break;
+            case LECTURER:
+                recipients = userRepository.findByRole(User.UserRole.LECTURER)
+                        .orElse(new ArrayList<>()).stream()
+                        .filter(u -> u.getStatus() == User.UserStatus.ACTIVE)
+                        .collect(java.util.stream.Collectors.toList());
+                break;
+            case CLASS:
+            case COURSE:
+            case USER:
+                // TODO: Implement logic cho CLASS, COURSE, USER
+                log.warn("TargetType {} chưa được implement", notification.getTargetType());
+                break;
+        }
+        
+        if (!recipients.isEmpty()) {
+            List<NotificationRecipient> notificationRecipients = recipients.stream()
+                    .map(recipient -> NotificationRecipient.builder()
+                            .notification(notification)
+                            .recipient(recipient)
+                            .isRead(false)
+                            .build())
+                    .collect(java.util.stream.Collectors.toList());
+            
+            notificationRecipientRepository.saveAll(notificationRecipients);
+            log.info("Created {} notification recipients for notification {}", notificationRecipients.size(), notification.getId());
+        }
+    }}

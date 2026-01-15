@@ -38,6 +38,10 @@ public class Notification {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    // URL mục tiêu (optional)
+    @Column(length = 500)
+    private String targetUrl;
+
     // Loại thông báo
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -61,16 +65,6 @@ public class Notification {
     @Column(nullable = false, length = 20)
     @Builder.Default
     private TargetType targetType = TargetType.ALL;
-
-    // Lớp học phần mục tiêu - FK tới ClassSection(className)
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "target_class_name", referencedColumnName = "className")
-    private ClassSection targetClass;
-
-    // Môn học mục tiêu
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "target_course_id")
-    private Course targetCourse;
 
     // === Scheduling ===
     // Thời gian lên lịch gửi

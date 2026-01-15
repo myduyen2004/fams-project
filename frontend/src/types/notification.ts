@@ -50,8 +50,6 @@ export interface AdminNotification {
   priority: NotificationPriority;
   sender: UserBasic | null;
   targetType: TargetType;
-  targetClassName: string | null;   // FK to ClassSection
-  targetCourseId: number | null;    // FK to Course
   scheduledAt: string | null;
   sentAt: string | null;
   status: NotificationStatus;
@@ -65,8 +63,6 @@ export interface NotificationRequest {
   type: NotificationType;
   priority: NotificationPriority;
   targetType: TargetType;
-  targetClassName?: string | null;
-  targetCourseId?: number | null;
   scheduledAt?: string | null;
   status: NotificationStatus;
 }

@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { notificationService, AdminNotification } from '../../services/api/notificationService';
 import { NotificationStatus, getTypeLabel, getPriorityLabel, getStatusLabel, getTargetTypeLabel, getStatusColor, getPriorityColor } from '../../types/notification';
-import { Loader2, ArrowLeft, Edit2, Bell, X } from 'lucide-react';
+import { Loader2, Edit2, Bell } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const NotificationDetailPage: React.FC = () => {
@@ -150,14 +150,14 @@ export const NotificationDetailPage: React.FC = () => {
                 </label>
                 <span className="text-gray-900 dark:text-white font-medium">
                   {notification.status === NotificationStatus.SCHEDULED 
-                    ? formatDateTime(notification.scheduledAt) 
-                    : formatDateTime(notification.sentAt)}
+                    ? formatDateTime(notification.scheduledAt || '') 
+                    : formatDateTime(notification.sentAt || '')}
                 </span>
               </div>
               <div>
                 <label className="block text-gray-500 dark:text-gray-400 mb-1">Cập nhật lần cuối</label>
                 <span className="text-gray-900 dark:text-white font-medium">
-                  {formatDateTime(notification.updatedAt)}
+                  {formatDateTime(notification.updatedAt || '')}
                 </span>
               </div>
               <div>
