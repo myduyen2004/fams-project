@@ -238,6 +238,12 @@ export const SlotTypePage: React.FC = () => {
     toast.success('Lưu cấu hình thành công!');
   };
 
+  const handleNavigateClassSection = () => {
+    setTimeout(() => {
+      navigate(`/academic-staff/semesters/${semesterCode}/class-sections`);
+    }, 1000);
+  };
+
   return (
     <AcademicStaffLayout pageTitle="Cấu hình kỳ học">
       <div className="max-w-7xl mx-auto space-y-6 pb-32 pt-2">
@@ -252,11 +258,8 @@ export const SlotTypePage: React.FC = () => {
             <span className="text-gray-900 font-bold">{semesterCode || 'SPRING 2026'}</span>
           </div>
           <div className="flex gap-2">
-            <button className="px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 bg-white hover:bg-gray-50 transition-all">
-              HỦY THAY ĐỔI
-            </button>
-            <button onClick={handleSubmit} className="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg text-xs font-bold text-white shadow-lg shadow-orange-600/20 transition-all active:scale-95">
-              XÁC NHẬN CẤU HÌNH
+            <button onClick={handleNavigateClassSection} className="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg text-xs font-bold text-white shadow-lg shadow-orange-600/20 transition-all active:scale-95">
+              QUẢN LÝ LỚP HỌC PHẦN
             </button>
           </div>
         </div>
