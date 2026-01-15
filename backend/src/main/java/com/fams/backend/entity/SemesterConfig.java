@@ -35,6 +35,10 @@ public class SemesterConfig {
     @Column(nullable = false)
     private Integer slotDuration; // phút (90, 120)
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isPublished = false;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
