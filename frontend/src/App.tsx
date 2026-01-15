@@ -25,6 +25,7 @@ const SemestersPage = lazy(() => import('./pages/academic-staff/SemestersPage').
 const MajorManagement = lazy(() => import('./pages/academic-staff/MajorManagement').then(m => ({ default: m.MajorManagement })));
 const MajorDetail = lazy(() => import('./pages/academic-staff/MajorDetail').then(m => ({ default: m.MajorDetail })));
 const SlotTypePage = lazy(() => import('./pages/academic-staff/SlotTypePage').then(m => ({ default: m.SlotTypePage })));
+const ClassSectionManagement = lazy(() => import('./pages/academic-staff/ClassSectionManagement').then(m => ({ default: m.ClassSectionManagement })));
 const SpecializationDetail = lazy(() => import('./pages/academic-staff/SpecializationDetail').then(m => ({ default: m.SpecializationDetail })));
 const CourseManagement = lazy(() => import('./pages/academic-staff/CourseManagement').then(m => ({ default: m.CourseManagement })));
 
@@ -222,6 +223,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
                 <SlotTypePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/academic-staff/semesters/:semesterCode/class-sections"
+            element={
+              <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
+                <ClassSectionManagement />
               </ProtectedRoute>
             }
           />
