@@ -43,6 +43,12 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     Optional<User> findByCode(String code);
 
     /**
+     * Tìm user theo mã số (MSSV/MSGV/MSNV) - case insensitive
+     */
+    @Query("SELECT u FROM User u WHERE LOWER(u.code) = LOWER(:code)")
+    Optional<User> findByCodeIgnoreCase(String code);
+
+    /**
      * Kiểm tra username đã tồn tại
      */
     boolean existsByUsername(String username);
