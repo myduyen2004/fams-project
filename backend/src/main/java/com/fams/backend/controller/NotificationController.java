@@ -64,7 +64,7 @@ public class NotificationController {
      */
     @PostMapping
     @Operation(summary = "Tạo thông báo mới")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('ACADEMIC_STAFF')")
     public ResponseEntity<NotificationResponse> createNotification(@Valid @RequestBody NotificationRequest request) {
         log.info("Creating notification: {}", request.getTitle());
         return ResponseEntity.ok(notificationService.createNotification(request));
@@ -75,7 +75,7 @@ public class NotificationController {
      */
     @PutMapping("/{id}")
     @Operation(summary = "Cập nhật thông báo")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('ACADEMIC_STAFF')")
     public ResponseEntity<NotificationResponse> updateNotification(
             @PathVariable Long id,
             @Valid @RequestBody NotificationRequest request) {
@@ -87,7 +87,7 @@ public class NotificationController {
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "Xóa thông báo")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('ACADEMIC_STAFF')")
     public ResponseEntity<Void> deleteNotification(@PathVariable Long id) {
         notificationService.deleteNotification(id);
         return ResponseEntity.noContent().build();
@@ -98,7 +98,7 @@ public class NotificationController {
      */
     @PostMapping("/bulk-delete")
     @Operation(summary = "Xóa nhiều thông báo")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('ACADEMIC_STAFF')")
     public ResponseEntity<Map<String, String>> bulkDeleteNotifications(@RequestBody Map<String, List<Long>> request) {
         List<Long> ids = request.get("ids");
         notificationService.bulkDeleteNotifications(ids);

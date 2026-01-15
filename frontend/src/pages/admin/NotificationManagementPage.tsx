@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { AxiosError } from 'axios';
 import { Loader2 } from 'lucide-react';
 import { Pagination } from '../../components/common/Pagination';
 import { AdminLayout } from '../../components/admin/AdminLayout';
+import { authService } from '../../services/api/authService';
 import {
   notificationService,
   AdminNotification
@@ -20,6 +21,21 @@ import {
 
 export const NotificationManagementPage = () => {
   const navigate = useNavigate();
+  const [userRole, setUserRole] = useState<string>('');
+  
+  // Determine base path based on user role
+  const basePath = useMemo(() => {
+    return userRole === 'ACADEMIC_STAFF' ? '/academic-staff' : '/admin';
+  }, [userRole]);
+  
+  // Get user role on mount
+  useEffect(() => {
+    const user = authService.getUser();
+    if (user) {
+      setUserRole(user.role);
+    }
+  }, []);
+  
   // Data states
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,14 +74,17 @@ export const NotificationManagementPage = () => {
       });
       
       console.log('API Response:', response);
+      console.log('Raw response data:', JSON.stringify(response, null, 2));
       
       // Handle both Page response format and direct array
       if (Array.isArray(response)) {
         // If response is directly an array (old format)
+        console.log('Setting notifications from array format');
         setNotifications(response);
         setTotalElements(response.length);
       } else if (response && response.content) {
         // Spring Data Page format
+        console.log('Setting notifications from Page format, content:', response.content);
         setNotifications(response.content);
         setTotalElements(response.totalElements);
       } else {
@@ -122,10 +141,10 @@ export const NotificationManagementPage = () => {
         toast.error('Không thể chỉnh sửa thông báo đã gửi');
         return;
       }
-      navigate(`/admin/notifications/edit/${notification.id}`);
+      navigate(`${basePath}/notifications/edit/${notification.id}`);
       setSelectedIds([]);
     }
-  }, [notifications, selectedIds, navigate]);
+  }, [notifications, selectedIds, navigate, basePath]);
 
 
   const handleDelete = useCallback(async () => {
@@ -169,6 +188,7 @@ export const NotificationManagementPage = () => {
           onTargetTypeFilterChange={setTargetTypeFilter}
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
+          basePath={basePath}
         />
 
         {/* Bulk Actions */}
@@ -225,6 +245,7 @@ export const NotificationManagementPage = () => {
                     index={page * pageSize + index}
                     isSelected={selectedIds.includes(notification.id)}
                     onSelect={handleSelect}
+                    basePath={basePath}
                   />
                 ))
               )}

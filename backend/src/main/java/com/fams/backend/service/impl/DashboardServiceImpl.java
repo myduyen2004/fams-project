@@ -4,18 +4,23 @@ import com.fams.backend.dto.response.*;
 import com.fams.backend.entity.AccessLog;
 import com.fams.backend.entity.Alert;
 import com.fams.backend.entity.Notification;
+import com.fams.backend.entity.NotificationRecipient;
 import com.fams.backend.entity.SystemLog;
 import com.fams.backend.entity.User;
 import com.fams.backend.repository.*;
 import com.fams.backend.service.DashboardService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -25,6 +30,7 @@ public class DashboardServiceImpl implements DashboardService {
     private final AccessLogRepository accessLogRepository;
     private final AlertRepository alertRepository;
     private final NotificationRepository notificationRepository;
+    private final NotificationRecipientRepository notificationRecipientRepository;
     private final SystemLogRepository systemLogRepository;
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -84,16 +90,46 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     public List<DashboardNotificationResponse> getNotifications() {
-        List<Notification> notifications = notificationRepository.findTop5ByOrderByCreatedAtDesc();
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username).orElse(null);
+        
+        if (user == null) {
+            return Collections.emptyList();
+        }
+        
+        // Lấy 5 notification recipients gần nhất của user hiện tại
+        List<NotificationRecipient> recipients = notificationRecipientRepository
+                .findByRecipientOrderByCreatedAtDesc(user)
+                .stream()
+                .limit(5)
+                .collect(Collectors.toList());
 
-        return notifications.stream()
-                .map(notification -> DashboardNotificationResponse.builder()
-                        .id(notification.getId())
-                        .title(notification.getTitle())
-                        .description(notification.getContent())
-                        .timestamp(notification.getCreatedAt().format(DATE_TIME_FORMATTER))
-                        .isRead(false) // Default to unread for system notifications
-                        .build())
+        return recipients.stream()
+                .map(recipient -> {
+                    Notification notification = recipient.getNotification();
+                    User sender = notification.getSender();
+                    
+                    // Debug logging
+                    log.debug("Processing notification ID: {}, Sender: {}, FullName: {}", 
+                            notification.getId(), 
+                            sender != null ? sender.getUsername() : "NULL", 
+                            sender != null ? sender.getFullName() : "NULL");
+                    
+                    DashboardNotificationResponse response = DashboardNotificationResponse.builder()
+                            .id(recipient.getId())
+                            .title(notification.getTitle())
+                            .description(notification.getContent())
+                            .timestamp(recipient.getCreatedAt().format(DATE_TIME_FORMATTER))
+                            .isRead(recipient.getIsRead())
+                            .type(notification.getType() != null ? notification.getType().name() : null)
+                            .targetUrl(notification.getTargetUrl())
+                            .senderName(sender != null ? sender.getUsername() : null)
+                            .senderFullName(sender != null ? sender.getFullName() : null)
+                            .senderAvatar(sender != null ? sender.getAvatar() : null)
+                            .build();
+                    
+                    return response;
+                })
                 .collect(Collectors.toList());
     }
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, Eye, EyeOff, Trash2, AlertCircle } from 'lucide-react';
+import { Loader2, Trash2, AlertCircle } from 'lucide-react';
 
 interface NotificationBulkActionsProps {
   selectedCount: number;
@@ -35,8 +35,6 @@ export const NotificationBulkActions: React.FC<NotificationBulkActionsProps> = R
           Đã chọn {selectedCount} thông báo
         </span>
         <div className="flex gap-2">
-          
-         
           {selectedCount === 1 && (
             <button
               onClick={onEdit}

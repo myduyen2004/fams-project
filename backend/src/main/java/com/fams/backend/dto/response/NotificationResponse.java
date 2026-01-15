@@ -25,6 +25,8 @@ public class NotificationResponse {
     private LocalDateTime sentAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Boolean isRead;
+    private LocalDateTime readAt;
     private UserBasic sender;
 
     @Data
