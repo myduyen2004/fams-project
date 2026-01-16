@@ -126,6 +126,8 @@ public class GeoLocationService {
     }
 
     private boolean isPrivateIP(String ip) {
+        if (ip == null)
+            return true;
         return ip.startsWith("127.") ||
                 ip.startsWith("10.") ||
                 ip.startsWith("192.168.") ||
