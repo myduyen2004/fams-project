@@ -39,4 +39,6 @@ public class NotificationRequest {
     private LocalDateTime scheduledAt;
 
     private NotificationStatus status = NotificationStatus.DRAFT;
+
+    private java.util.List<String> attachmentUrls;
 }

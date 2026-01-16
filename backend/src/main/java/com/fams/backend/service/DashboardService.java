@@ -13,5 +13,7 @@ public interface DashboardService {
 
     List<DashboardNotificationResponse> getNotifications();
 
+    DashboardNotificationResponse getNotificationById(Long id);
+
     List<SystemLogResponse> getSystemLogs();
 }

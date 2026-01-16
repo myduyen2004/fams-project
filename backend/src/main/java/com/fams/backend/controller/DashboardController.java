@@ -50,6 +50,13 @@ public class DashboardController {
         return ResponseEntity.ok(dashboardService.getNotifications());
     }
 
+    @GetMapping("/notifications/{id}")
+    @Operation(summary = "Lấy chi tiết thông báo trên dashboard theo ID")
+    public ResponseEntity<DashboardNotificationResponse> getNotificationById(@PathVariable Long id) {
+        log.info("GET /api/dashboard/notifications/{}", id);
+        return ResponseEntity.ok(dashboardService.getNotificationById(id));
+    }
+
     @PostMapping("/notifications/{id}/read")
     @Operation(summary = "Đánh dấu thông báo là đã đọc")
     public ResponseEntity<Void> markAsRead(@PathVariable Long id) {

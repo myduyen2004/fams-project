@@ -7,6 +7,7 @@ import com.fams.backend.entity.Notification;
 import com.fams.backend.entity.NotificationRecipient;
 import com.fams.backend.entity.SystemLog;
 import com.fams.backend.entity.User;
+import com.fams.backend.exception.NotFoundException;
 import com.fams.backend.repository.*;
 import com.fams.backend.service.DashboardService;
 import lombok.RequiredArgsConstructor;
@@ -90,13 +91,20 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     public List<DashboardNotificationResponse> getNotifications() {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getPrincipal())) {
+            log.debug("No authenticated user found (likely scheduled task), returning empty notifications");
+            return Collections.emptyList();
+        }
+
+        String username = authentication.getName();
         User user = userRepository.findByUsername(username).orElse(null);
-        
+
         if (user == null) {
             return Collections.emptyList();
         }
-        
+
         // Lấy 5 notification recipients gần nhất của user hiện tại
         List<NotificationRecipient> recipients = notificationRecipientRepository
                 .findByRecipientOrderByCreatedAtDesc(user)
@@ -108,29 +116,94 @@ public class DashboardServiceImpl implements DashboardService {
                 .map(recipient -> {
                     Notification notification = recipient.getNotification();
                     User sender = notification.getSender();
-                    
+
                     // Debug logging
-                    log.debug("Processing notification ID: {}, Sender: {}, FullName: {}", 
-                            notification.getId(), 
-                            sender != null ? sender.getUsername() : "NULL", 
+                    log.debug("Processing notification ID: {}, Sender: {}, FullName: {}",
+                            notification.getId(),
+                            sender != null ? sender.getUsername() : "NULL",
                             sender != null ? sender.getFullName() : "NULL");
-                    
+
                     DashboardNotificationResponse response = DashboardNotificationResponse.builder()
-                            .id(recipient.getId())
+                            .id(notification.getId())
                             .title(notification.getTitle())
                             .description(notification.getContent())
                             .timestamp(recipient.getCreatedAt().format(DATE_TIME_FORMATTER))
                             .isRead(recipient.getIsRead())
                             .type(notification.getType() != null ? notification.getType().name() : null)
-                            .targetUrl(notification.getTargetUrl())
                             .senderName(sender != null ? sender.getUsername() : null)
                             .senderFullName(sender != null ? sender.getFullName() : null)
                             .senderAvatar(sender != null ? sender.getAvatar() : null)
+                            .attachmentUrls(notification.getAttachmentUrls() != null
+                                    ? new java.util.ArrayList<>(notification.getAttachmentUrls())
+                                    : new java.util.ArrayList<>())
                             .build();
-                    
+
                     return response;
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public DashboardNotificationResponse getNotificationById(Long id) {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getPrincipal())) {
+            throw new NotFoundException("Người dùng chưa xác thực");
+        }
+
+        String username = authentication.getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new NotFoundException("Người dùng không tìm thấy"));
+
+        // Try to find the recipient record for this user and this notification ID
+        java.util.Optional<NotificationRecipient> recipientOpt = notificationRecipientRepository
+                .findByNotificationIdAndRecipient(id, user);
+
+        if (recipientOpt.isPresent()) {
+            NotificationRecipient recipient = recipientOpt.get();
+            Notification notification = recipient.getNotification();
+            User sender = notification.getSender();
+
+            return DashboardNotificationResponse.builder()
+                    .id(notification.getId())
+                    .title(notification.getTitle())
+                    .description(notification.getContent())
+                    .timestamp(recipient.getCreatedAt().format(DATE_TIME_FORMATTER))
+                    .isRead(recipient.getIsRead())
+                    .type(notification.getType() != null ? notification.getType().name() : null)
+                    .senderName(sender != null ? sender.getUsername() : null)
+                    .senderFullName(sender != null ? sender.getFullName() : null)
+                    .senderAvatar(sender != null ? sender.getAvatar() : null)
+                    .attachmentUrls(notification.getAttachmentUrls() != null
+                            ? new java.util.ArrayList<>(notification.getAttachmentUrls())
+                            : new java.util.ArrayList<>())
+                    .build();
+        }
+
+        // If no recipient record, check if user has direct access rights
+        // (ADMIN/ACADEMIC_STAFF)
+        if (user.getRole() == User.UserRole.ADMIN || user.getRole() == User.UserRole.ACADEMIC_STAFF) {
+            Notification notification = notificationRepository.findById(id)
+                    .orElseThrow(() -> new NotFoundException("Không tìm thấy thông báo"));
+            User sender = notification.getSender();
+
+            return DashboardNotificationResponse.builder()
+                    .id(notification.getId())
+                    .title(notification.getTitle())
+                    .description(notification.getContent())
+                    .timestamp(notification.getCreatedAt().format(DATE_TIME_FORMATTER))
+                    .isRead(true) // For staff viewing original, we can say it's read
+                    .type(notification.getType() != null ? notification.getType().name() : null)
+                    .senderName(sender != null ? sender.getUsername() : null)
+                    .senderFullName(sender != null ? sender.getFullName() : null)
+                    .senderAvatar(sender != null ? sender.getAvatar() : null)
+                    .attachmentUrls(notification.getAttachmentUrls() != null
+                            ? new java.util.ArrayList<>(notification.getAttachmentUrls())
+                            : new java.util.ArrayList<>())
+                    .build();
+        }
+
+        throw new NotFoundException("Không tìm thấy thông báo hoặc bạn không có quyền xem");
     }
 
     @Override

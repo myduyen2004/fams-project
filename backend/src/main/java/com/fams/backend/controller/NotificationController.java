@@ -39,13 +39,15 @@ public class NotificationController {
             @RequestParam(defaultValue = "ALL") String status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        
-        log.info("GET /api/admin/notifications - Params: search={}, type={}, targetType={}, status={}, page={}, size={}", 
-            search, type, targetType, status, page, size);
-        
-        Page<NotificationResponse> result = notificationService.getNotifications(search, type, targetType, status, page, size);
+
+        log.info(
+                "GET /api/admin/notifications - Params: search={}, type={}, targetType={}, status={}, page={}, size={}",
+                search, type, targetType, status, page, size);
+
+        Page<NotificationResponse> result = notificationService.getNotifications(search, type, targetType, status, page,
+                size);
         log.info("Returning {} notifications (total: {})", result.getContent().size(), result.getTotalElements());
-        
+
         return ResponseEntity.ok(result);
     }
 

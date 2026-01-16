@@ -68,10 +68,10 @@ public class NotificationServiceImpl {
                                 .sentAt(LocalDateTime.now())
                                 .createdAt(LocalDateTime.now())
                                 .sender(sender != null ? NotificationResponse.UserBasic.builder()
-                                        .id(sender.getId())
-                                        .username(sender.getUsername())
-                                        .fullName(sender.getFullName())
-                                        .build() : null)
+                                                .id(sender.getId())
+                                                .username(sender.getUsername())
+                                                .fullName(sender.getFullName())
+                                                .build() : null)
                                 .build();
 
                 messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/notifications",
@@ -105,26 +105,40 @@ public class NotificationServiceImpl {
                                                 .sentAt(nr.getNotification().getSentAt())
                                                 .isRead(nr.getIsRead())
                                                 .readAt(nr.getReadAt())
-                                                .sender(nr.getNotification().getSender() != null 
-                                                        ? NotificationResponse.UserBasic.builder()
-                                                                .id(nr.getNotification().getSender().getId())
-                                                                .username(nr.getNotification().getSender().getUsername())
-                                                                .fullName(nr.getNotification().getSender().getFullName())
-                                                                .build()
-                                                        : null)
+                                                .sender(nr.getNotification().getSender() != null
+                                                                ? NotificationResponse.UserBasic.builder()
+                                                                                .id(nr.getNotification().getSender()
+                                                                                                .getId())
+                                                                                .username(nr.getNotification()
+                                                                                                .getSender()
+                                                                                                .getUsername())
+                                                                                .fullName(nr.getNotification()
+                                                                                                .getSender()
+                                                                                                .getFullName())
+                                                                                .build()
+                                                                : null)
                                                 .build())
                                 .collect(Collectors.toList());
         }
 
         @Transactional
-        public void markAsRead(Long notificationRecipientId) {
-                log.info("Marking notification recipient {} as read", notificationRecipientId);
-                recipientRepository.findById(notificationRecipientId).ifPresentOrElse(nr -> {
+        public void markAsRead(Long notificationId) {
+                String username = SecurityContextHolder.getContext().getAuthentication().getName();
+                log.info("Marking notification {} as read for user {}", notificationId, username);
+
+                User user = userRepository.findByUsername(username).orElse(null);
+                if (user == null) {
+                        log.warn("User {} not found during markAsRead", username);
+                        return;
+                }
+
+                recipientRepository.findByNotificationIdAndRecipient(notificationId, user).ifPresentOrElse(nr -> {
                         nr.setIsRead(true);
                         nr.setReadAt(LocalDateTime.now());
                         recipientRepository.save(nr);
-                        log.info("Notification recipient {} marked as read successfully", notificationRecipientId);
-                }, () -> log.warn("Notification recipient {} not found", notificationRecipientId));
+                        log.info("Notification {} marked as read for user {} successfully", notificationId, username);
+                }, () -> log.warn("Notification recipient for notification {} and user {} not found", notificationId,
+                                username));
         }
 
         @Transactional

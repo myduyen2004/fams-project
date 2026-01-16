@@ -38,10 +38,6 @@ public class Notification {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    // URL mục tiêu (optional)
-    @Column(length = 500)
-    private String targetUrl;
-
     // Loại thông báo
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -84,6 +80,12 @@ public class Notification {
     @Builder.Default
     private List<NotificationRecipient> recipients = new ArrayList<>();
 
+    @ElementCollection
+    @CollectionTable(name = "notification_attachments", joinColumns = @JoinColumn(name = "notification_id"))
+    @Column(name = "url", columnDefinition = "TEXT")
+    @Builder.Default
+    private List<String> attachmentUrls = new ArrayList<>();
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -107,13 +109,14 @@ public class Notification {
         HIGH,
         URGENT
     }
+
     public enum TargetType {
-        ALL,       // Tất cả
-        STUDENT,   // Tất cả sinh viên
-        LECTURER,  // Tất cả giảng viên
-        CLASS,     // Theo lớp học phần
-        COURSE,    // Theo môn học
-        USER       // Cá nhân cụ thể
+        ALL, // Tất cả
+        STUDENT, // Tất cả sinh viên
+        LECTURER, // Tất cả giảng viên
+        CLASS, // Theo lớp học phần
+        COURSE, // Theo môn học
+        USER // Cá nhân cụ thể
     }
 
     public enum NotificationStatus {
