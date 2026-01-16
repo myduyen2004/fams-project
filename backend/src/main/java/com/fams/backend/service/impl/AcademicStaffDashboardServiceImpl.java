@@ -74,7 +74,15 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
                                 .map(n -> DashboardNotificationResponse.builder()
                                                 .id(n.getId())
                                                 .title(n.getTitle())
+                                                .description(n.getContent())
                                                 .timestamp(n.getCreatedAt().format(FORMATTER))
+                                                .type(n.getType() != null ? n.getType().name() : null)
+                                                .senderName(n.getSender() != null ? n.getSender().getUsername() : null)
+                                                .senderFullName(n.getSender() != null ? n.getSender().getFullName()
+                                                                : null)
+                                                .attachmentUrls(n.getAttachmentUrls() != null
+                                                                ? new java.util.ArrayList<>(n.getAttachmentUrls())
+                                                                : new java.util.ArrayList<>())
                                                 .build())
                                 .collect(Collectors.toList());
         }

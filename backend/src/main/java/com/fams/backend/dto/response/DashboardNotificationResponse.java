@@ -19,8 +19,10 @@ public class DashboardNotificationResponse {
     private String timestamp;
     private Boolean isRead;
     private String type;
-    private String targetUrl;
+
     private String senderName;
     private String senderFullName;
     private String senderAvatar;
+
+    private java.util.List<String> attachmentUrls;
 }

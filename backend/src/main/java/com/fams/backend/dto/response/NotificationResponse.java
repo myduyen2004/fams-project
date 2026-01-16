@@ -28,6 +28,7 @@ public class NotificationResponse {
     private Boolean isRead;
     private LocalDateTime readAt;
     private UserBasic sender;
+    private java.util.List<String> attachmentUrls;
 
     @Data
     @Builder

@@ -1,6 +1,7 @@
 package com.fams.backend.service;
 
 import com.fams.backend.dto.response.*;
+import com.fams.backend.dto.response.DashboardNotificationResponse;
 import com.fams.backend.entity.AccessLog;
 import com.fams.backend.entity.Alert;
 import com.fams.backend.entity.Notification;
@@ -102,7 +103,8 @@ class DashboardServiceImplTest {
         when(notificationRepository.findTop5ByOrderByCreatedAtDesc())
                 .thenReturn(Collections.singletonList(notification));
 
-        List<NotificationResponse> results = dashboardService.getNotifications();
+        // Đổi kiểu dữ liệu sang DashboardNotificationResponse
+        List<DashboardNotificationResponse> results = dashboardService.getNotifications();
 
         assertFalse(results.isEmpty());
         assertEquals("New Message", results.get(0).getTitle());

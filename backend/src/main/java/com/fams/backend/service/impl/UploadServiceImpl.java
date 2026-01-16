@@ -27,7 +27,12 @@ public class UploadServiceImpl implements UploadService {
         try {
             log.info("Uploading file to Cloudinary: {}", file.getOriginalFilename());
             Map<Object, Object> uploadResult = (Map<Object, Object>) cloudinary.uploader().upload(file.getBytes(),
-                    ObjectUtils.asMap("resource_type", "auto"));
+                    ObjectUtils.asMap(
+                            "resource_type", "auto",
+                            "folder", "fams_notifications",
+                            "use_filename", true,
+                            "unique_filename", true,
+                            "filename", file.getOriginalFilename()));
             String url = (String) uploadResult.get("secure_url");
             log.info("Upload successful: {}", url);
             return url;

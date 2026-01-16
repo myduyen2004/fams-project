@@ -5,7 +5,7 @@
 # STAGE 1: Build Stage
 # ========================================
 # GIẢI THÍCH: Stage này compile code Java thành file .jar
-FROM maven:3.9-eclipse-temurin-21-alpine AS build
+FROM maven:3.9-eclipse-temurin-23-alpine AS build
 
 # Set working directory trong container
 WORKDIR /app
@@ -32,7 +32,7 @@ RUN mvn clean package -DskipTests
 # ========================================
 # GIẢI THÍCH: Stage này chỉ chứa JRE và file .jar, không có Maven
 # Alpine Linux rất nhẹ (~5MB), giúp image nhỏ gọn
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:23-jre-alpine
 
 # Install curl để health check
 RUN apk add --no-cache curl
