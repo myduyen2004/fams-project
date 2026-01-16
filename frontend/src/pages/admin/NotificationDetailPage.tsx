@@ -3,13 +3,13 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { notificationService, AdminNotification } from '../../services/api/notificationService';
 import { NotificationStatus, getTypeLabel, getPriorityLabel, getStatusLabel, getTargetTypeLabel, getStatusColor, getPriorityColor } from '../../types/notification';
-import { Loader2, Edit2, Bell } from 'lucide-react';
+import { Loader2, Edit2, Bell, Paperclip, FileText, Image as ImageIcon, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const NotificationDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
+
   const [notification, setNotification] = useState<AdminNotification | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -19,13 +19,13 @@ export const NotificationDetailPage: React.FC = () => {
     try {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return '--/--/---- --:--';
-      
+
       const day = String(d.getDate()).padStart(2, '0');
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const year = d.getFullYear();
       const hours = String(d.getHours()).padStart(2, '0');
       const minutes = String(d.getMinutes()).padStart(2, '0');
-      
+
       return `${day}/${month}/${year} ${hours}:${minutes}`;
     } catch {
       return '--/--/---- --:--';
@@ -67,7 +67,7 @@ export const NotificationDetailPage: React.FC = () => {
       <AdminLayout pageTitle="Chi tiết thông báo">
         <div className="p-8 text-center">
           <p className="text-gray-500 dark:text-gray-400 mb-4">Không tìm thấy thông báo</p>
-       
+
         </div>
       </AdminLayout>
     );
@@ -80,7 +80,7 @@ export const NotificationDetailPage: React.FC = () => {
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-       
+
         </div>
 
         {/* Main Content Card */}
@@ -136,8 +136,47 @@ export const NotificationDetailPage: React.FC = () => {
               />
             </div>
 
+            {/* Attachments */}
+            {notification.attachmentUrls && notification.attachmentUrls.length > 0 && (
+              <div className="pt-4 border-t border-gray-100 dark:border-zinc-800">
+                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-2">
+                  <Paperclip size={16} />
+                  Tài liệu đính kèm ({notification.attachmentUrls.length})
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {notification.attachmentUrls.map((url, index) => {
+                    const fileName = url.split('/').pop() || `Attachment-${index + 1}`;
+                    const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
+
+                    return (
+                      <a
+                        key={index}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-750 border border-gray-200 dark:border-zinc-700 rounded-xl transition-all group"
+                      >
+                        <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0 text-fpt-orange">
+                          {isImage ? <ImageIcon size={20} /> : <FileText size={20} />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate group-hover:text-fpt-orange transition-colors">
+                            {fileName}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase">
+                            {url.split('.').pop()?.split('?')[0]} File
+                          </p>
+                        </div>
+                        <ExternalLink size={14} className="text-gray-400 group-hover:text-fpt-orange" />
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Meta Info */}
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="pt-6 border-t border-gray-100 dark:border-zinc-800 grid grid-cols-2 lg:grid-cols-4 gap-6 text-sm">
               <div>
                 <label className="block text-gray-500 dark:text-gray-400 mb-1">Ngày tạo</label>
                 <span className="text-gray-900 dark:text-white font-medium">
@@ -149,8 +188,8 @@ export const NotificationDetailPage: React.FC = () => {
                   {notification.status === NotificationStatus.SCHEDULED ? 'Thời gian lên lịch' : 'Ngày gửi'}
                 </label>
                 <span className="text-gray-900 dark:text-white font-medium">
-                  {notification.status === NotificationStatus.SCHEDULED 
-                    ? formatDateTime(notification.scheduledAt || '') 
+                  {notification.status === NotificationStatus.SCHEDULED
+                    ? formatDateTime(notification.scheduledAt || '')
                     : formatDateTime(notification.sentAt || '')}
                 </span>
               </div>
