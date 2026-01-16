@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Upload, X } from 'lucide-react';
+import { uploadFile } from '../../services/utils/fileUploadService';
 import toast from 'react-hot-toast';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -19,10 +20,12 @@ interface NotificationForm {
 }
 
 interface AttachedFile {
-  file: File;
+  file?: File;
   name: string;
   size: number;
   type: string;
+  url?: string;
+  isUploading?: boolean;
 }
 
 export const CreateNotificationPage = () => {
@@ -50,7 +53,7 @@ export const CreateNotificationPage = () => {
       [{ 'header': [1, 2, 3, false] }],
       ['bold', 'italic', 'underline', 'strike'],
       [{ 'color': [] }, { 'background': [] }],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
       [{ 'align': [] }],
       ['link', 'image'],
       ['clean']
@@ -74,29 +77,53 @@ export const CreateNotificationPage = () => {
   };
 
   // Process files (common function for upload and drag & drop)
-  const processFiles = (files: File[]) => {
-    files.forEach(file => {
+  const processFiles = async (files: File[]) => {
+    for (const file of files) {
       // Check file size (max 10MB)
       if (file.size > 10 * 1024 * 1024) {
         toast.error(`File ${file.name} quá lớn. Vui lòng chọn file nhỏ hơn 10MB.`);
-        return;
+        continue;
       }
 
       // Check if file already exists
       if (attachedFiles.some(f => f.name === file.name)) {
         toast.error(`File ${file.name} đã được thêm trước đó.`);
-        return;
+        continue;
       }
 
-      const attachedFile: AttachedFile = {
+      // Add file to list with uploading state
+      const newFile: AttachedFile = {
         file,
         name: file.name,
         size: file.size,
-        type: file.type
+        type: file.type,
+        isUploading: true
       };
 
-      setAttachedFiles(prev => [...prev, attachedFile]);
-    });
+      setAttachedFiles(prev => [...prev, newFile]);
+
+      try {
+        const data = await uploadFile(file);
+        console.log("File URL:", data.secure_url);
+
+        // Update file with URL and remove uploading state
+        setAttachedFiles(prev => prev.map(f => {
+          if (f.name === file.name && f.isUploading) {
+            return {
+              ...f,
+              url: data.secure_url,
+              isUploading: false
+            };
+          }
+          return f;
+        }));
+      } catch (err) {
+        console.error(err);
+        toast.error(`Lỗi khi tải file ${file.name}`);
+        // Remove failed file
+        setAttachedFiles(prev => prev.filter(f => f.name !== file.name));
+      }
+    }
   };
 
   // Handle drag & drop
@@ -113,7 +140,7 @@ export const CreateNotificationPage = () => {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
-    
+
     const files = Array.from(e.dataTransfer.files);
     processFiles(files);
   };
@@ -198,23 +225,15 @@ export const CreateNotificationPage = () => {
         submitData.scheduledAt = submitData.scheduledAt + ':00';
       }
 
+      // Map attachment URLs
+      const attachmentUrls = attachedFiles
+        .filter(f => f.url)
+        .map(f => f.url as string);
+
+      submitData.attachmentUrls = attachmentUrls;
+
       // Create notification
-      const response = await notificationService.createNotification(submitData);
-
-      // Upload files if any
-      if (attachedFiles.length > 0 && response.id) {
-        const formDataFiles = new FormData();
-        attachedFiles.forEach(({ file }) => {
-          formDataFiles.append('files', file);
-        });
-
-        try {
-          await notificationService.uploadAttachments(response.id, formDataFiles);
-        } catch (error) {
-          console.error('Failed to upload files:', error);
-          toast.error('Thông báo đã được tạo nhưng có lỗi khi tải file đính kèm');
-        }
-      }
+      await notificationService.createNotification(submitData);
 
       if (isDraft) {
         toast.success('Đã lưu thông báo nháp');
@@ -250,9 +269,8 @@ export const CreateNotificationPage = () => {
               </label>
               <input
                 type="text"
-                className={`w-full px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 border rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none transition-all text-gray-900 dark:text-white ${
-                  errors.title ? 'border-red-300' : 'border-gray-200 dark:border-zinc-700'
-                }`}
+                className={`w-full px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 border rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none transition-all text-gray-900 dark:text-white ${errors.title ? 'border-red-300' : 'border-gray-200 dark:border-zinc-700'
+                  }`}
                 placeholder="Nhập tiêu đề thông báo..."
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -267,9 +285,8 @@ export const CreateNotificationPage = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Nội dung thông báo <span className="text-red-500">*</span>
               </label>
-              <div className={`border rounded-lg overflow-hidden ${
-                errors.content ? 'border-red-300' : 'border-gray-200 dark:border-zinc-700'
-              }`}>
+              <div className={`border rounded-lg overflow-hidden ${errors.content ? 'border-red-300' : 'border-gray-200 dark:border-zinc-700'
+                }`}>
                 <ReactQuill
                   value={formData.content}
                   onChange={(value) => setFormData({ ...formData, content: value })}
@@ -289,14 +306,13 @@ export const CreateNotificationPage = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 File đính kèm
               </label>
-              
+
               {/* Upload Button */}
-              <div 
-                className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                  isDragOver 
-                    ? 'border-fpt-orange bg-fpt-orange/10' 
-                    : 'border-gray-300 dark:border-zinc-600 hover:border-fpt-orange hover:bg-fpt-orange/5'
-                }`}
+              <div
+                className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${isDragOver
+                  ? 'border-fpt-orange bg-fpt-orange/10'
+                  : 'border-gray-300 dark:border-zinc-600 hover:border-fpt-orange hover:bg-fpt-orange/5'
+                  }`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
@@ -396,9 +412,8 @@ export const CreateNotificationPage = () => {
                 </label>
                 <input
                   type="datetime-local"
-                  className={`w-full px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 border rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none text-gray-900 dark:text-white ${
-                    errors.scheduledAt ? 'border-red-300' : 'border-gray-200 dark:border-zinc-700'
-                  }`}
+                  className={`w-full px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 border rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none text-gray-900 dark:text-white ${errors.scheduledAt ? 'border-red-300' : 'border-gray-200 dark:border-zinc-700'
+                    }`}
                   value={formData.scheduledAt || ''}
                   onChange={(e) => setFormData({ ...formData, scheduledAt: e.target.value })}
                   min={new Date().toISOString().slice(0, 16)}
@@ -420,16 +435,16 @@ export const CreateNotificationPage = () => {
               >
                 {isSubmitting ? 'Đang lưu...' : 'Lưu nháp'}
               </button>
-              
+
               <button
                 onClick={() => handleSubmit(false)}
                 disabled={isSubmitting}
                 className="px-4 py-2 text-sm font-medium text-white bg-fpt-orange hover:bg-fpt-orange-dark rounded-lg transition-colors disabled:opacity-50"
               >
-                {isSubmitting 
-                  ? 'Đang xử lý...' 
-                  : formData.status === NotificationStatus.SCHEDULED 
-                    ? 'Lưu lịch gửi' 
+                {isSubmitting
+                  ? 'Đang xử lý...'
+                  : formData.status === NotificationStatus.SCHEDULED
+                    ? 'Lưu lịch gửi'
                     : 'Gửi ngay'}
               </button>
             </div>

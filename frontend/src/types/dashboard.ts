@@ -35,6 +35,7 @@ export interface AppNotification {
     senderName?: string;
     senderFullName?: string;
     senderAvatar?: string;
+    attachmentUrls?: string[];
 }
 
 export interface SystemLog {

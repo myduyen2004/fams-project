@@ -76,15 +76,6 @@ export const notificationService = {
   // Hide notifications
   hideNotifications: async (ids: number[]): Promise<void> => {
     await apiClient.post('/admin/notifications/hide', { ids });
-  },
-
-  // Upload file attachments
-  uploadAttachments: async (notificationId: number, formData: FormData): Promise<void> => {
-    await apiClient.post(`/admin/notifications/${notificationId}/attachments`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
   }
 };
 

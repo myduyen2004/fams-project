@@ -55,6 +55,7 @@ export interface AdminNotification {
   status: NotificationStatus;
   createdAt: string;
   updatedAt: string;
+  attachmentUrls?: string[];
 }
 
 export interface NotificationRequest {
@@ -65,6 +66,7 @@ export interface NotificationRequest {
   targetType: TargetType;
   scheduledAt?: string | null;
   status: NotificationStatus;
+  attachmentUrls?: string[];
 }
 
 export interface NotificationPageResponse {
