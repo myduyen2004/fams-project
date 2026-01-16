@@ -21,3 +21,15 @@
     @apply bg-white rounded-xl shadow-sm p-6 border border-gray-200;
   }
 }
+
+@layer utilities {
+  .bg-stripes {
+    background-image: repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 8px,
+      rgba(255, 255, 255, 0.4) 8px,
+      rgba(255, 255, 255, 0.4) 16px
+    );
+  }
+}

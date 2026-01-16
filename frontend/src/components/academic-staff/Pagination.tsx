@@ -18,7 +18,7 @@ export const Pagination: React.FC<PaginationProps> = ({
     onPageChange,
     itemLabel = 'mục'
 }) => {
-    const totalPages = Math.ceil(totalElements / pageSize);
+    const totalPages = Math.max(1, Math.ceil(totalElements / pageSize));
     const startItem = totalElements === 0 ? 0 : page * pageSize + 1;
     const endItem = Math.min((page + 1) * pageSize, totalElements);
 

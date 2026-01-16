@@ -48,6 +48,21 @@ public class Room {
     // Tầng
     private Integer floor;
 
+    // Grid position fields for floor plan layout
+    @Column(name = "grid_row")
+    private Integer gridRow;
+
+    @Column(name = "grid_col")
+    private Integer gridCol;
+
+    @Column(name = "grid_row_span")
+    @Builder.Default
+    private Integer gridRowSpan = 1;
+
+    @Column(name = "grid_col_span")
+    @Builder.Default
+    private Integer gridColSpan = 1;
+
     // Loại phòng
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
