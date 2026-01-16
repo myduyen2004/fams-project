@@ -28,6 +28,12 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
      */
     Optional<User> findByUsername(String username);
 
+    /**
+     * Tìm user theo username - case insensitive
+     */
+    @Query("SELECT u FROM User u WHERE LOWER(u.username) = LOWER(:username)")
+    Optional<User> findByUsernameIgnoreCase(String username);
+
     Optional<List<User>> findByRole(User.UserRole role);
 
     /**
