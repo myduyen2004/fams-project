@@ -182,7 +182,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                         .rowNumber(currentRowNum)
                         .className(className != null ? className.trim() : "")
                         .courseCode(courseCode != null ? courseCode.trim().toUpperCase() : "")
-                        .lecturerCode(lecturerCode != null ? lecturerCode.trim().toLowerCase() : null)
+                        .lecturerCode(lecturerCode != null ? lecturerCode.trim() : null)
                         .maxStudents(maxStudents != null ? maxStudents : 30)
                         .status("VALID")
                         .build();
@@ -216,13 +216,15 @@ public class ClassSectionServiceImpl implements ClassSectionService {
 
                 // Check lecturer exists (optional)
                 if (dto.getLecturerCode() != null && !dto.getLecturerCode().isEmpty()) {
-                    Optional<User> lecturerOpt = userRepository.findByUsername(dto.getLecturerCode());
+                    Optional<User> lecturerOpt = userRepository.findByUsernameIgnoreCase(dto.getLecturerCode());
                     if (lecturerOpt.isEmpty()) {
                         errors.add("Không tìm thấy giảng viên: " + dto.getLecturerCode());
                     } else {
                         User lecturer = lecturerOpt.get();
                         if (lecturer.getRole() != User.UserRole.LECTURER) {
                             errors.add("User " + dto.getLecturerCode() + " không phải là giảng viên");
+                        } else if (lecturer.getStatus() != User.UserStatus.ACTIVE) {
+                            errors.add("Giảng viên " + dto.getLecturerCode() + " không ở trạng thái hoạt động");
                         } else {
                             dto.setLecturerName(lecturer.getFullName());
                         }
@@ -321,12 +323,17 @@ public class ClassSectionServiceImpl implements ClassSectionService {
             // Get lecturer (optional)
             User lecturer = null;
             if (dto.getLecturerCode() != null && !dto.getLecturerCode().isEmpty()) {
-                Optional<User> lecturerOpt = userRepository.findByUsername(dto.getLecturerCode());
+                Optional<User> lecturerOpt = userRepository.findByUsernameIgnoreCase(dto.getLecturerCode());
                 if (lecturerOpt.isEmpty()) {
                     errors.add("Dòng " + dto.getRowNumber() + ": Không tìm thấy giảng viên " + dto.getLecturerCode());
                     continue;
                 }
                 lecturer = lecturerOpt.get();
+                if (lecturer.getStatus() != User.UserStatus.ACTIVE) {
+                    errors.add("Dòng " + dto.getRowNumber() + ": Giảng viên " + dto.getLecturerCode()
+                            + " không ở trạng thái hoạt động");
+                    continue;
+                }
             }
 
             // Build class section entity
@@ -576,6 +583,8 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                         User student = studentOpt.get();
                         if (student.getRole() != User.UserRole.STUDENT) {
                             errors.add("User " + dto.getStudentCode() + " không phải là sinh viên");
+                        } else if (student.getStatus() != User.UserStatus.ACTIVE) {
+                            errors.add("Sinh viên " + dto.getStudentCode() + " không ở trạng thái hoạt động");
                         } else {
                             dto.setStudentName(student.getFullName());
                         }
@@ -692,6 +701,11 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                 continue;
             }
             User student = studentOpt.get();
+            if (student.getStatus() != User.UserStatus.ACTIVE) {
+                errors.add("Dòng " + dto.getRowNumber() + ": Sinh viên " + dto.getStudentCode()
+                        + " không ở trạng thái hoạt động");
+                continue;
+            }
 
             // Check max students for this class
             long currentEnrollment = enrollmentRepository.countByClassSectionClassName(className);
