@@ -423,4 +423,76 @@ class ImportSpecializationsTest {
                                 () -> specializationService.saveImportedSpecializations(999L, dtos));
                 assertTrue(exception.getMessage().contains("Không tìm thấy ngành"));
         }
+
+        // ============== Tests for Export Specialization Template ==============
+
+        @Test
+        @DisplayName("UTCID14: Export template trả về file Excel hợp lệ với headers")
+        void exportSpecializationTemplate_ReturnsValidExcelWithHeaders() throws IOException {
+                // Act
+                byte[] templateBytes = specializationService.exportSpecializationTemplate();
+
+                // Assert
+                assertNotNull(templateBytes);
+                assertTrue(templateBytes.length > 0);
+
+                // Verify Excel content
+                try (Workbook workbook = new XSSFWorkbook(new java.io.ByteArrayInputStream(templateBytes))) {
+                        Sheet sheet = workbook.getSheetAt(0);
+                        assertNotNull(sheet);
+
+                        // Verify header row
+                        Row headerRow = sheet.getRow(0);
+                        assertNotNull(headerRow);
+                        assertEquals("major code", headerRow.getCell(0).getStringCellValue());
+                        assertEquals("specialization code", headerRow.getCell(1).getStringCellValue());
+                        assertEquals("specialization name", headerRow.getCell(2).getStringCellValue());
+                        assertEquals("description", headerRow.getCell(3).getStringCellValue());
+                        assertEquals("status", headerRow.getCell(4).getStringCellValue());
+                }
+        }
+
+        @Test
+        @DisplayName("UTCID15: Export template chứa dữ liệu mẫu")
+        void exportSpecializationTemplate_ContainsSampleData() throws IOException {
+                // Act
+                byte[] templateBytes = specializationService.exportSpecializationTemplate();
+
+                // Assert
+                try (Workbook workbook = new XSSFWorkbook(new java.io.ByteArrayInputStream(templateBytes))) {
+                        Sheet sheet = workbook.getSheetAt(0);
+
+                        // Verify sample data row
+                        Row sampleRow = sheet.getRow(1);
+                        assertNotNull(sampleRow);
+                        assertEquals("SE", sampleRow.getCell(0).getStringCellValue());
+                        assertEquals("SE-WEB", sampleRow.getCell(1).getStringCellValue());
+                        assertEquals("Web Development", sampleRow.getCell(2).getStringCellValue());
+                        assertNotNull(sampleRow.getCell(3).getStringCellValue()); // Description
+                        assertEquals("ACTIVE", sampleRow.getCell(4).getStringCellValue());
+                }
+        }
+
+        @Test
+        @DisplayName("UTCID16: Export template có đúng 5 cột")
+        void exportSpecializationTemplate_HasCorrectNumberOfColumns() throws IOException {
+                // Act
+                byte[] templateBytes = specializationService.exportSpecializationTemplate();
+
+                // Assert
+                try (Workbook workbook = new XSSFWorkbook(new java.io.ByteArrayInputStream(templateBytes))) {
+                        Sheet sheet = workbook.getSheetAt(0);
+                        Row headerRow = sheet.getRow(0);
+
+                        // Count non-null cells in header row
+                        int columnCount = 0;
+                        for (int i = 0; i < headerRow.getLastCellNum(); i++) {
+                                Cell cell = headerRow.getCell(i);
+                                if (cell != null && !cell.getStringCellValue().isEmpty()) {
+                                        columnCount++;
+                                }
+                        }
+                        assertEquals(5, columnCount);
+                }
+        }
 }

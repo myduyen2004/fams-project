@@ -363,4 +363,76 @@ class ImportMajorsTest {
         assertEquals(1, result.get("created"));
         verify(majorRepository, times(1)).save(any(Major.class));
     }
+
+    // ============== Tests for Export Major Template ==============
+
+    @Test
+    @DisplayName("UTCID13: Export template trả về file Excel hợp lệ với headers")
+    void exportMajorTemplate_ReturnsValidExcelWithHeaders() throws IOException {
+        // Act
+        byte[] templateBytes = majorService.exportMajorTemplate();
+
+        // Assert
+        assertNotNull(templateBytes);
+        assertTrue(templateBytes.length > 0);
+
+        // Verify Excel content
+        try (Workbook workbook = new XSSFWorkbook(new java.io.ByteArrayInputStream(templateBytes))) {
+            Sheet sheet = workbook.getSheetAt(0);
+            assertNotNull(sheet);
+
+            // Verify header row
+            Row headerRow = sheet.getRow(0);
+            assertNotNull(headerRow);
+            assertEquals("Mã ngành", headerRow.getCell(0).getStringCellValue());
+            assertEquals("Tên ngành", headerRow.getCell(1).getStringCellValue());
+            assertEquals("Mô tả", headerRow.getCell(2).getStringCellValue());
+            assertEquals("Thời gian đào tạo", headerRow.getCell(3).getStringCellValue());
+            assertEquals("Trạng thái", headerRow.getCell(4).getStringCellValue());
+        }
+    }
+
+    @Test
+    @DisplayName("UTCID14: Export template chứa dữ liệu mẫu")
+    void exportMajorTemplate_ContainsSampleData() throws IOException {
+        // Act
+        byte[] templateBytes = majorService.exportMajorTemplate();
+
+        // Assert
+        try (Workbook workbook = new XSSFWorkbook(new java.io.ByteArrayInputStream(templateBytes))) {
+            Sheet sheet = workbook.getSheetAt(0);
+
+            // Verify sample data row
+            Row sampleRow = sheet.getRow(1);
+            assertNotNull(sampleRow);
+            assertEquals("SE", sampleRow.getCell(0).getStringCellValue());
+            assertEquals("Kỹ thuật phần mềm", sampleRow.getCell(1).getStringCellValue());
+            assertEquals("Ngành đào tạo kỹ sư phần mềm", sampleRow.getCell(2).getStringCellValue());
+            assertEquals("9 Kỳ", sampleRow.getCell(3).getStringCellValue());
+            assertEquals("ACTIVE", sampleRow.getCell(4).getStringCellValue());
+        }
+    }
+
+    @Test
+    @DisplayName("UTCID15: Export template có đúng 5 cột")
+    void exportMajorTemplate_HasCorrectNumberOfColumns() throws IOException {
+        // Act
+        byte[] templateBytes = majorService.exportMajorTemplate();
+
+        // Assert
+        try (Workbook workbook = new XSSFWorkbook(new java.io.ByteArrayInputStream(templateBytes))) {
+            Sheet sheet = workbook.getSheetAt(0);
+            Row headerRow = sheet.getRow(0);
+
+            // Count non-null cells in header row
+            int columnCount = 0;
+            for (int i = 0; i < headerRow.getLastCellNum(); i++) {
+                Cell cell = headerRow.getCell(i);
+                if (cell != null && !cell.getStringCellValue().isEmpty()) {
+                    columnCount++;
+                }
+            }
+            assertEquals(5, columnCount);
+        }
+    }
 }
