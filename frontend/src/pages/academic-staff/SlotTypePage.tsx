@@ -345,6 +345,12 @@ export const SlotTypePage: React.FC = () => {
     }
   };
 
+  const handleNavigateClassSection = () => {
+    setTimeout(() => {
+      navigate(`/academic-staff/semesters/${semesterCode}/class-sections`);
+    }, 1000);
+  };
+
   return (
     <AcademicStaffLayout pageTitle="Cấu hình kỳ học">
       <div className="max-w-7xl mx-auto space-y-3 pb-20 pt-2">
@@ -372,6 +378,9 @@ export const SlotTypePage: React.FC = () => {
           </div>
           
           <div className="flex gap-2">
+            <button onClick={handleNavigateClassSection} className="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg text-xs font-bold text-white shadow-lg shadow-orange-600/20 transition-all active:scale-95">
+              QUẢN LÝ LỚP HỌC PHẦN
+            </button>
             {isReadOnly ? (
               <button 
                 onClick={() => setIsReadOnly(false)}
