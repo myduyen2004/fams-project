@@ -65,8 +65,14 @@ public class AuthService implements UserDetailsService {
         String ipAddress = getClientIP(httpRequest);
         log.info("Client IP: {}", ipAddress);
 
-        GeoLocationService.LocationData location = geoLocationService.getLocationFromIP(ipAddress);
-        log.info("Location fetched: {}", location.getProvince());
+        GeoLocationService.LocationData location;
+        try {
+            location = geoLocationService.getLocationFromIP(ipAddress);
+        } catch (Exception e) {
+            log.warn("GeoLocation service failed, using null location", e);
+            location = null;
+        }
+        log.info("Location fetched: {}", location != null ? location.getProvince() : "Unknown");
 
         // 2. Gọi logic login chính (Bên trong transaction)
         log.info("Calling performLogin...");
@@ -158,10 +164,10 @@ public class AuthService implements UserDetailsService {
             UserSession session = UserSession.builder()
                     .user(user)
                     .ipAddress(ipAddress)
-                    .province(location.getProvince())
-                    .city(location.getCity())
-                    .latitude(location.getLatitude())
-                    .longitude(location.getLongitude())
+                    .province(location != null ? location.getProvince() : "Unknown")
+                    .city(location != null ? location.getCity() : "Unknown")
+                    .latitude(location != null ? location.getLatitude() : null)
+                    .longitude(location != null ? location.getLongitude() : null)
                     .loginTime(java.time.LocalDateTime.now())
                     .lastActivityTime(java.time.LocalDateTime.now())
                     .isActive(true)
@@ -171,7 +177,7 @@ public class AuthService implements UserDetailsService {
             userSessionRepository.save(session);
 
             log.info("User session created | userId={} | ip={} | province={}",
-                    user.getId(), ipAddress, location.getProvince());
+                    user.getId(), ipAddress, location != null ? location.getProvince() : "Unknown");
 
         } catch (Exception e) {
             log.error("Failed to create user session | userId={}", user.getId(), e);
@@ -187,7 +193,7 @@ public class AuthService implements UserDetailsService {
         try {
             AccessLog accessLog = AccessLog.builder()
                     .user(user)
-                    .location(location.getProvince() + ", " + location.getCity())
+                    .location(location != null ? (location.getProvince() + ", " + location.getCity()) : "Unknown")
                     .status("Đang hoạt động")
                     .ipAddress(ipAddress)
                     .userAgent(userAgent)

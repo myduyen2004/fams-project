@@ -15,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -53,5 +54,28 @@ class DashboardServiceImplTest {
         verify(userRepository, times(1)).countByRole(User.UserRole.STUDENT);
         verify(userRepository, times(1)).countByRole(User.UserRole.LECTURER);
         verify(userRepository, times(1)).count();
+    }
+
+    @Test
+    @DisplayName("UTCID-DASH02 (Boundary): Empty Database")
+    void getStatistics_EmptyDatabase() {
+        when(userRepository.countByRole(User.UserRole.STUDENT)).thenReturn(0L);
+        when(userRepository.countByRole(User.UserRole.LECTURER)).thenReturn(0L);
+        when(userRepository.count()).thenReturn(0L);
+
+        DashboardStatsResponse stats = dashboardService.getStatistics();
+
+        assertEquals(0, stats.getTotalStudents());
+        assertEquals(0, stats.getTotalUsers());
+        assertEquals(0, stats.getTotalAccounts());
+    }
+
+    @Test
+    @DisplayName("UTCID-DASH03 (Abnormal): Repository Error")
+    void getStatistics_RepoError_ThrowsException() {
+        when(userRepository.countByRole(any())).thenReturn(0L);
+        when(userRepository.count()).thenThrow(new RuntimeException("DB Error"));
+
+        assertThrows(RuntimeException.class, () -> dashboardService.getStatistics());
     }
 }

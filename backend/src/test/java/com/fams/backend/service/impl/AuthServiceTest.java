@@ -14,6 +14,7 @@ import com.fams.backend.repository.UserSessionRepository;
 import com.fams.backend.security.jwt.JwtUtil;
 import com.fams.backend.service.EmailService;
 import com.fams.backend.service.GeoLocationService;
+import com.fams.backend.service.impl.DashboardBroadcastService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -27,8 +28,12 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -150,6 +155,25 @@ class AuthServiceTest {
         }
 
         @Test
+        @DisplayName("UTCID07 (Abnormal): Sai mật khẩu")
+        void login_WrongPassword_ThrowsException() {
+            LoginRequest request = new LoginRequest("testuser", "wrong_pass");
+            when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(activeUser));
+            when(passwordEncoder.matches("wrong_pass", "hashed_pass")).thenReturn(false);
+
+            assertThrows(UnauthorizedException.class, () -> authService.login(request, httpRequest));
+        }
+
+        @Test
+        @DisplayName("UTCID09 (Abnormal): Tài khoản không tồn tại")
+        void login_UserNotFound_ThrowsException() {
+            LoginRequest request = new LoginRequest("ghost", "pass");
+            when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
+
+            assertThrows(UnauthorizedException.class, () -> authService.login(request, httpRequest));
+        }
+
+        @Test
         @DisplayName("UTCID08 (Boundary): Lỗi lưu Session (DB) - không làm hỏng Login")
         void login_SessionSaveFails_StillReturnsToken() {
             LoginRequest request = new LoginRequest("testuser", "password123");
@@ -164,7 +188,64 @@ class AuthServiceTest {
 
             assertNotNull(response);
             assertEquals("token123", response.getToken());
-            // Login still succeeds despite session log failure
+        }
+
+        @Test
+        @DisplayName("UTCID10 (Boundary): GeoLocation trả về lỗi - Vẫn cho login")
+        void login_GeoLocationFails_StillReturnsToken() {
+            LoginRequest request = new LoginRequest("testuser", "password123");
+            when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(activeUser));
+            when(passwordEncoder.matches("password123", "hashed_pass")).thenReturn(true);
+            when(jwtUtil.generateToken("testuser")).thenReturn("token123");
+            when(geoLocationService.getLocationFromIP(anyString())).thenThrow(new RuntimeException("API Down"));
+
+            LoginResponse response = authService.login(request, httpRequest);
+
+            assertNotNull(response);
+            assertEquals("token123", response.getToken());
+            verify(userSessionRepository).save(argThat(session -> "Unknown".equals(session.getProvince())));
+        }
+    }
+
+    @Nested
+    @DisplayName("Logout Tests")
+    class LogoutTests {
+        @Test
+        @DisplayName("Logout thành công")
+        void logout_Success() {
+            // Mock security context
+            Authentication auth = mock(Authentication.class);
+            when(auth.getName()).thenReturn("testuser");
+            SecurityContextHolder.getContext().setAuthentication(auth);
+
+            when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(activeUser));
+            when(userSessionRepository.findActiveSessionsByUserId(activeUser.getId()))
+                    .thenReturn(Collections.singletonList(new com.fams.backend.entity.UserSession()));
+            when(accessLogRepository.findTopByUserIdOrderByAccessTimeDesc(activeUser.getId()))
+                    .thenReturn(Optional.of(new com.fams.backend.entity.AccessLog()));
+
+            authService.logout();
+
+            verify(userSessionRepository).saveAll(anyList());
+            verify(accessLogRepository).save(any());
+            verify(dashboardBroadcastService).broadcastUpdate();
+        }
+
+        @Test
+        @DisplayName("Logout khi không có session active")
+        void logout_NoActiveSessions_Graceful() {
+            Authentication auth = mock(Authentication.class);
+            when(auth.getName()).thenReturn("testuser");
+            SecurityContextHolder.getContext().setAuthentication(auth);
+
+            when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(activeUser));
+            when(userSessionRepository.findActiveSessionsByUserId(activeUser.getId()))
+                    .thenReturn(Collections.emptyList());
+
+            authService.logout();
+
+            verify(userSessionRepository).saveAll(argThat(list -> !list.iterator().hasNext()));
+            verify(dashboardBroadcastService).broadcastUpdate();
         }
     }
 
