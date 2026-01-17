@@ -517,7 +517,6 @@ class ImportCoursesTest {
     }
 
     // ==================== GET IMPORT TEMPLATE TESTS ====================
-
     @Nested
     @DisplayName("getImportTemplate() Tests")
     class GetImportTemplateTests {

@@ -1,5 +1,6 @@
 package com.fams.backend.repository;
 
+import com.fams.backend.entity.Specialization;
 import com.fams.backend.entity.SubSpecialization;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,26 +15,30 @@ import java.util.Optional;
 @Repository
 public interface SubSpecializationRepository extends JpaRepository<SubSpecialization, Long> {
 
-    Optional<SubSpecialization> findByCode(String code);
+        Optional<SubSpecialization> findByCode(String code);
 
-    boolean existsByCode(String code);
+        Optional<SubSpecialization> findByName(String name);
 
-    boolean existsByName(String name);
+        boolean existsByCode(String code);
 
-    List<SubSpecialization> findBySpecializationId(Long specializationId);
+        boolean existsByName(String name);
 
-    @Query("SELECT ss FROM SubSpecialization ss WHERE ss.specialization.id = :specId " +
-            "AND (:keyword IS NULL OR :keyword = '' OR LOWER(ss.code) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(ss.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) "
-            +
-            "AND (:status IS NULL OR ss.status = :status) " +
-            "ORDER BY ss.code ASC")
-    Page<SubSpecialization> findBySpecializationIdAndSearch(@Param("specId") Long specId,
-            @Param("keyword") String keyword,
-            @Param("status") SubSpecialization.SubSpecializationStatus status,
-            Pageable pageable);
+        List<SubSpecialization> findBySpecializationId(Long specializationId);
 
-    long countBySpecializationId(Long specializationId);
+        @Query("SELECT ss FROM SubSpecialization ss WHERE ss.specialization.id = :specId " +
+                        "AND (:keyword IS NULL OR :keyword = '' OR LOWER(ss.code) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(ss.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) "
+                        +
+                        "AND (:status IS NULL OR ss.status = :status) " +
+                        "ORDER BY ss.code ASC")
+        Page<SubSpecialization> findBySpecializationIdAndSearch(@Param("specId") Long specId,
+                        @Param("keyword") String keyword,
+                        @Param("status") SubSpecialization.SubSpecializationStatus status,
+                        Pageable pageable);
 
-    @Query("SELECT COUNT(ss) FROM SubSpecialization ss WHERE ss.specialization.id = :specId AND ss.status = 'ACTIVE'")
-    long countActiveBySpecializationId(@Param("specId") Long specId);
+        long countBySpecializationId(Long specializationId);
+
+        @Query("SELECT COUNT(ss) FROM SubSpecialization ss WHERE ss.specialization.id = :specId AND ss.status = 'ACTIVE'")
+        long countActiveBySpecializationId(@Param("specId") Long specId);
+
+        Optional<SubSpecialization> findByNameAndSpecialization(String name, Specialization specialization);
 }

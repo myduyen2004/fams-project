@@ -121,12 +121,12 @@ export const AcademicStaffSidebar: React.FC = () => {
 
   const isActive = (path?: string) => {
     if (!path) return false;
-    return location.pathname === path;
+    return location.pathname === path || (path !== '/academic-staff/dashboard' && location.pathname.startsWith(path + '/'));
   };
 
   const isSubmenuActive = (submenu?: SubMenuItem[]) => {
     if (!submenu) return false;
-    return submenu.some(subItem => location.pathname === subItem.path);
+    return submenu.some(subItem => isActive(subItem.path));
   };
 
   const handleMenuClick = (item: MenuItem) => {
