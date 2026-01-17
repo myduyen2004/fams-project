@@ -12,11 +12,10 @@ import java.util.List;
 /**
  * ClassSection (Lớp học phần)
  * Represents a specific class section for a course in a semester
- * PK: className = classCode + courseCode (e.g., "SE18B02-PRN211")
+ * PK: className (e.g., "SE18B02-PRN211")
  */
 @Entity
 @Table(name = "class_sections", indexes = {
-        @Index(name = "idx_class_section_class_code", columnList = "classCode"),
         @Index(name = "idx_class_section_semester", columnList = "semester_id"),
         @Index(name = "idx_class_section_course", columnList = "course_id"),
         @Index(name = "idx_class_section_lecturer", columnList = "lecturer_id")
@@ -27,14 +26,10 @@ import java.util.List;
 @AllArgsConstructor
 public class ClassSection {
 
-    // Mã lớp = Mã lớp + Mã môn (e.g., "SE18B02-PRN211") - PRIMARY KEY
+    // Mã lớp học phần (e.g., "SE18B02-PRN211") - PRIMARY KEY
     @Id
     @Column(length = 50)
     private String className;
-
-    // Mã lớp (e.g., "SE18B02")
-    @Column(nullable = false, length = 20)
-    private String classCode;
 
     // Môn học
     @ManyToOne(fetch = FetchType.LAZY)
@@ -46,12 +41,12 @@ public class ClassSection {
     @JoinColumn(name = "semester_id", nullable = false)
     private Semester semester;
 
-    // Giảng viên phụ trách (MSGV)
+    // Giảng viên phụ trách (MSGV) (User với role = LECTURER)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lecturer_id")
     private User lecturer;
 
-    // Số slot trong kỳ
+    // Số slot trong kỳ (tương ứng với numberOfSlots trong Course)
     @Column(nullable = false)
     @Builder.Default
     private Integer numberOfSlots = 20;
@@ -70,12 +65,7 @@ public class ClassSection {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
-    private ClassStatus status = ClassStatus.OPEN;
-
-    // Hiển thị thời khóa biểu cho người dùng
-    @Column(nullable = false)
-    @Builder.Default
-    private Boolean timetablePublished = false;
+    private ClassStatus status = ClassStatus.UPCOMING;
 
     // Danh sách đăng ký
     @OneToMany(mappedBy = "classSection", cascade = CascadeType.ALL)
@@ -100,21 +90,18 @@ public class ClassSection {
     private LocalDateTime updatedAt;
 
     public enum ClassStatus {
-        OPEN, // Đang mở đăng ký
-        CLOSED, // Đã đóng đăng ký
-        FULL, // Đã đủ số lượng
-        IN_PROGRESS, // Đang diễn ra
-        COMPLETED, // Đã hoàn thành
-        CANCELLED // Đã hủy
+        UPCOMING, // Sắp diễn ra
+        ONGOING, // Đang diễn ra
+        FINISHED // Đã kết thúc
     }
 
     /**
-     * Tự động tạo className từ classCode và courseCode trước khi persist
+     * Tự động tạo className nếu chưa có trước khi persist
      */
     @PrePersist
     public void generateClassName() {
-        if (this.className == null && this.classCode != null && this.course != null && this.course.getCode() != null) {
-            this.className = this.classCode + "-" + this.course.getCode();
+        if (this.className == null && this.course != null && this.course.getCode() != null) {
+            this.className = this.course.getCode() + "-" + System.currentTimeMillis();
         }
     }
 }

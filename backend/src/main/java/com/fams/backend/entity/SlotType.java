@@ -70,7 +70,7 @@ public class SlotType {
 
     public enum SlotDuration {
         MINUTES_90(90), // 90 phút
-        MINUTES_120(120); // 120 phút
+        MINUTES_135(135); // 135 phút
 
         private final int minutes;
 

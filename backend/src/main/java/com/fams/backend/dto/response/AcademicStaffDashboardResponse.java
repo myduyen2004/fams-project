@@ -14,7 +14,7 @@ import java.util.List;
 public class AcademicStaffDashboardResponse {
     private DashboardStats stats;
     private List<TopStudentDTO> topStudents;
-    private List<NotificationResponse> notifications;
+    private List<DashboardNotificationResponse> notifications;
     private AttendanceStatsDTO attendanceStats;
 
     @Data

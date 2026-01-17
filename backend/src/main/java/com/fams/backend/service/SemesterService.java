@@ -16,4 +16,6 @@ public interface SemesterService {
     void deleteSemester(String code);
 
     SemesterResponse getSemesterByCode(String code);
+
+    void saveSemesterConfig(String code, com.fams.backend.dto.request.SemesterConfigRequest configRequest);
 }

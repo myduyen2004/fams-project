@@ -24,6 +24,13 @@ export const NotificationBell: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'notifications' | 'jobs'>('notifications');
   const navigate = useNavigate();
 
+  // Strip HTML tags and return plain text
+  const stripHtml = (html: string): string => {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+  };
+
   // Listen for import job progress (transient)
   useWebSocket(`/user/queue/import-job`, (data) => {
     updateJob(data);
@@ -141,29 +148,31 @@ export const NotificationBell: React.FC = () => {
   };
 
   const handleNotificationClick = async (notification: AppNotification) => {
-    try {
-      if (!notification.isRead) {
-        console.log('[NotificationBell] Marking notification as read:', notification.id);
-        
-        // Immediately update UI state for instant feedback
-        setNotifications(prev => prev.map(n => 
-          n.id === notification.id ? { ...n, isRead: true } : n
-        ));
-        
-        // Then sync with backend
+    // Try to mark as read, but don't block navigation if it fails
+    if (!notification.isRead) {
+      console.log('[NotificationBell] Marking notification as read:', notification.id);
+      
+      // Immediately update UI state for instant feedback
+      setNotifications(prev => prev.map(n => 
+        n.id === notification.id ? { ...n, isRead: true } : n
+      ));
+      
+      // Try to sync with backend, but don't fail if it doesn't work
+      try {
         await dashboardService.markNotificationAsRead(notification.id);
         console.log('[NotificationBell] Successfully marked notification as read:', notification.id);
+      } catch (error) {
+        console.warn('[NotificationBell] Failed to mark as read on backend, but continuing:', error);
+        // Revert UI state if backend failed
+        setNotifications(prev => prev.map(n => 
+          n.id === notification.id ? { ...n, isRead: false } : n
+        ));
       }
-      
-      if (notification.targetUrl) {
-        navigate(notification.targetUrl);
-        setShowDropdown(false);
-      }
-    } catch (error) {
-      console.error('[NotificationBell] Error handling notification click:', error);
-      // Reload notifications on error to restore correct state
-      loadNotifications();
     }
+    
+    // Always navigate to notification detail page
+    navigate(`/notifications/${notification.id}`);
+    setShowDropdown(false);
   };
 
   const handleMarkAllAsRead = async () => {
@@ -238,7 +247,14 @@ export const NotificationBell: React.FC = () => {
                   <Check size={18} />
                 </button>
               )}
-              <button className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-gray-500">
+              <button
+                onClick={() => {
+                  navigate('/admin/notification-management');
+                  setShowDropdown(false);
+                }}
+                className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-gray-500"
+                title="Quản lý thông báo"
+              >
                 <Settings size={18} />
               </button>
             </div>
@@ -281,7 +297,7 @@ export const NotificationBell: React.FC = () => {
           </div>
 
           {/* Content */}
-          <div className="max-h-[480px] overflow-y-auto custom-scrollbar">
+          <div className="max-h-[480px] overflow-y-auto notification-content">
             {activeTab === 'notifications' ? (
               notifications.length === 0 ? (
                 <div className="py-16 flex flex-col items-center justify-center text-gray-400">
@@ -291,7 +307,7 @@ export const NotificationBell: React.FC = () => {
                   <p className="text-sm font-medium">Không có thông báo mới</p>
                 </div>
               ) : (
-                notifications.map(n => (
+                notifications.slice(0, 5).map(n => (
                   <div
                     key={n.id}
                     onClick={() => handleNotificationClick(n)}
@@ -341,13 +357,13 @@ export const NotificationBell: React.FC = () => {
           <div className="flex-1 min-w-0">
             <div className="flex justify-between items-start">
               <div className="flex-1 pr-2">
-                <p className={`text-sm leading-snug ${!n.isRead ? 'text-gray-900 dark:text-white font-semibold' : 'text-gray-600 dark:text-gray-400 font-medium'}`}>
-                  {n.senderName && n.senderName !== 'System' && (
-                    <span className="font-bold truncate block mb-0.5">{n.senderName}</span>
-                  )}
-                  <span className={n.senderName && n.senderName !== 'System' ? 'text-gray-600 dark:text-gray-400 font-normal' : ''}>
-                    {n.description}
-                  </span>
+                {/* Tiêu đề thông báo - in đậm */}
+                <p className="text-sm font-bold text-gray-900 dark:text-white mb-1 truncate">
+                  {n.title}
+                </p>
+                {/* Nội dung thông báo - bình thường */}
+                <p className={`text-xs line-clamp-2 ${!n.isRead ? 'text-gray-700 dark:text-gray-300' : 'text-gray-500 dark:text-gray-400'}`}>
+                  {stripHtml(n.description)}
                 </p>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500">

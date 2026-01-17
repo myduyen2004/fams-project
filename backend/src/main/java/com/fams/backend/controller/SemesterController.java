@@ -49,4 +49,12 @@ public class SemesterController {
     public ResponseEntity<SemesterResponse> getSemesterByCode(@PathVariable String code) {
         return ResponseEntity.ok(semesterService.getSemesterByCode(code));
     }
+
+    @PostMapping("/{code}/config")
+    public ResponseEntity<Void> saveSemesterConfig(
+            @PathVariable String code,
+            @RequestBody com.fams.backend.dto.request.SemesterConfigRequest configRequest) {
+        semesterService.saveSemesterConfig(code, configRequest);
+        return ResponseEntity.ok().build();
+    }
 }
