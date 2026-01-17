@@ -52,6 +52,7 @@ public class SecurityConfig {
                                                                 "/api/auth/**", // auth with /api prefix
                                                                 "/api/map/**", // map endpoints
                                                                 "/api/v1/semesters/**", // semester endpoints
+                                                                "/api/v1/class-sections/**", // class section endpoints
                                                                 "/api-docs/**",
                                                                 "/swagger-ui/**",
                                                                 "/swagger-ui.html",
