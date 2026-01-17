@@ -801,14 +801,20 @@ export const MajorDetail: React.FC = () => {
                                         type="text"
                                         placeholder="Tìm kiếm..."
                                         value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        onChange={(e) => {
+                                            setSearchTerm(e.target.value);
+                                            setPage(0);
+                                        }}
                                         className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-fpt-orange focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                                     />
                                 </div>
 
                                 <StatusFilter
                                     value={statusFilter}
-                                    onChange={setStatusFilter}
+                                    onChange={(value) => {
+                                        setStatusFilter(value);
+                                        setPage(0);
+                                    }}
                                     isOpen={isFilterOpen}
                                     onToggle={() => setIsFilterOpen(!isFilterOpen)}
                                 />

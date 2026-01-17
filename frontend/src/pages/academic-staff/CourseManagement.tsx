@@ -47,7 +47,7 @@ export const CourseManagement: React.FC = () => {
                 keyword: searchTerm || undefined,
                 status: status,
                 page,
-                size: 30
+                size: 10
             });
             setCourses(result.content);
             setTotalElements(result.totalElements);
@@ -349,12 +349,12 @@ export const CourseManagement: React.FC = () => {
                                                 {course.status === 'ACTIVE' ? (
                                                     <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400 border border-green-100 dark:border-green-900/30">
                                                         <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                                                        Đang hoạt động
+                                                        Đang mở
                                                     </span>
                                                 ) : (
                                                     <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-100 dark:border-red-900/30">
                                                         <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-                                                        Ngừng hoạt động
+                                                        Ngừng đào tạo
                                                     </span>
                                                 )}
                                             </td>
