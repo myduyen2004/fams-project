@@ -22,6 +22,16 @@
   }
 }
 
+@layer utilities {
+  .bg-stripes {
+    background-image: repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 8px,
+      rgba(255, 255, 255, 0.4) 8px,
+      rgba(255, 255, 255, 0.4) 16px
+    );
+  }
 /* Hide scrollbar for notification popup */
 .notification-content::-webkit-scrollbar {
   display: none;

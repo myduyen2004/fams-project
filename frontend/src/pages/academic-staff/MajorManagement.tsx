@@ -607,7 +607,7 @@ export const MajorManagement: React.FC = () => {
                 keyword: debouncedSearchTerm,
                 status: statusFilter, // Removed generic ALL check, strictly use validation
                 page: page,
-                size: 30
+                size: 10
             };
             const response = await majorService.getMajors(params);
             setData(response.content || []);
@@ -631,6 +631,7 @@ export const MajorManagement: React.FC = () => {
 
     const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(e.target.value);
+        setPage(0);
     };
 
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -792,7 +793,10 @@ export const MajorManagement: React.FC = () => {
                             </div>
                             <StatusFilter
                                 value={statusFilter}
-                                onChange={setStatusFilter}
+                                onChange={(value) => {
+                                    setStatusFilter(value);
+                                    setPage(0);
+                                }}
                                 isOpen={isFilterOpen}
                                 onToggle={() => setIsFilterOpen(!isFilterOpen)}
                             />
