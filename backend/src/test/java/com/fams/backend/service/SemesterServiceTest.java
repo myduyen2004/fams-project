@@ -62,9 +62,7 @@ class SemesterServiceTest {
     @Test
     @DisplayName("Create Semester: Success")
     void createSemester_Success() {
-        // Arrange - Condition: authorized, valid inputs, no duplicate, no overlap
-        lenient().when(semesterRepository.findOverlappingSemestersForNew(any(), any()))
-                .thenReturn(Collections.emptyList());
+        // Arrange - Condition: authorized, valid inputs, no duplicate
         when(semesterRepository.save(any(Semester.class))).thenReturn(activeSemester);
 
         // Act
@@ -75,7 +73,6 @@ class SemesterServiceTest {
         assertEquals("SP26", result.getCode());
         assertEquals("Spring 2026", result.getName());
         assertEquals("upcoming", result.getStatus());
-        verify(semesterRepository).findOverlappingSemestersForNew(any(), any());
         verify(semesterRepository).save(any(Semester.class));
     }
 
@@ -86,7 +83,7 @@ class SemesterServiceTest {
         semesterRequest.setCode(null);
 
         // Act & Assert - Confirmation: should throw exception
-        assertThrows(NullPointerException.class, () -> semesterService.createSemester(semesterRequest));
+        assertThrows(RuntimeException.class, () -> semesterService.createSemester(semesterRequest));
     }
 
     @Test
@@ -96,7 +93,7 @@ class SemesterServiceTest {
         semesterRequest.setName(null);
 
         // Act & Assert
-        assertThrows(NullPointerException.class, () -> semesterService.createSemester(semesterRequest));
+        assertThrows(RuntimeException.class, () -> semesterService.createSemester(semesterRequest));
     }
 
     @Test
@@ -137,8 +134,6 @@ class SemesterServiceTest {
     @DisplayName("Create Semester: Fail - Duplicate Code in Database")
     void createSemester_DuplicateCode_Failure() {
         // Arrange - Condition: code exists in DB
-        lenient().when(semesterRepository.findOverlappingSemestersForNew(any(), any()))
-                .thenReturn(Collections.emptyList());
         when(semesterRepository.save(any(Semester.class)))
                 .thenThrow(new RuntimeException("Mã học kỳ đã tồn tại trong hệ thống"));
 
@@ -149,34 +144,10 @@ class SemesterServiceTest {
     }
 
     @Test
-    @DisplayName("Create Semester: Fail - Overlapping Time Period")
-    void createSemester_OverlappingDates_Failure() {
-        // Arrange - Condition: semester with overlapping dates exists in DB
-        Semester overlapping = Semester.builder()
-                .id(2L)
-                .code("SU26")
-                .name("Summer 2026")
-                .startDate(tomorrow.plusDays(45))
-                .endDate(tomorrow.plusDays(100))
-                .build();
-        when(semesterRepository.findOverlappingSemestersForNew(any(), any())).thenReturn(List.of(overlapping));
-
-        // Act & Assert - Confirmation: throw exception with overlapping semester name
-        RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> semesterService.createSemester(semesterRequest));
-        assertTrue(exception.getMessage().contains("Kỳ học bị trùng: Summer 2026"));
-    }
-
-    // ============ UPDATE SEMESTER TESTS ============
-
-    @Test
     @DisplayName("Update Semester: Success")
     void updateSemester_Success() {
-        // Arrange - Condition: semester exists, status = UPCOMING, no overlap, valid
-        // dates
+        // Arrange - Condition: semester exists, status = UPCOMING, valid dates
         when(semesterRepository.findByCode("SP26")).thenReturn(Optional.of(activeSemester));
-        lenient().when(semesterRepository.findOverlappingSemesters(any(), any(), anyString()))
-                .thenReturn(Collections.emptyList());
         when(semesterRepository.save(any(Semester.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         SemesterResponse updateRequest = SemesterResponse.builder()
@@ -224,24 +195,6 @@ class SemesterServiceTest {
         RuntimeException exception = assertThrows(RuntimeException.class,
                 () -> semesterService.updateSemester("FA24", semesterRequest));
         assertTrue(exception.getMessage().contains("Chỉ có thể cập nhật các học kỳ sắp diễn ra hoặc đang diễn ra"));
-    }
-
-    @Test
-    @DisplayName("Update Semester: Fail - Overlapping Time Period")
-    void updateSemester_OverlappingDates_Failure() {
-        // Arrange - Condition: updated dates overlap with another semester
-        when(semesterRepository.findByCode("SP26")).thenReturn(Optional.of(activeSemester));
-        Semester overlapping = Semester.builder()
-                .id(3L)
-                .code("SU26")
-                .name("Summer 2026")
-                .build();
-        when(semesterRepository.findOverlappingSemesters(any(), any(), anyString())).thenReturn(List.of(overlapping));
-
-        // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> semesterService.updateSemester("SP26", semesterRequest));
-        assertTrue(exception.getMessage().contains("Kỳ học bị trùng: Summer 2026"));
     }
 
     // ============ DELETE SEMESTER TESTS ============

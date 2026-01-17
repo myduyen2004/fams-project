@@ -2,19 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { Users, GraduationCap, Loader2 } from 'lucide-react';
 import { academicStaffService } from '../../services/api/academicStaffService';
-import { AcademicStaffDashboardResponse } from '../../types/dashboard';
+import { dashboardService } from '../../services/api/dashboardService';
+import { AcademicStaffDashboardResponse, AppNotification } from '../../types/dashboard';
+import { NotificationsSection } from '../../components/admin/dashboard/NotificationsSection';
 import toast from 'react-hot-toast';
 
 export const AcademicStaffDashboard: React.FC = () => {
   const [data, setData] = useState<AcademicStaffDashboardResponse | null>(null);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const dashboardData = await academicStaffService.getDashboardData();
+        // Fetch both dashboard data and notifications
+        const [dashboardData, notificationsData] = await Promise.all([
+          academicStaffService.getDashboardData(),
+          dashboardService.getNotifications()
+        ]);
         setData(dashboardData);
+        setNotifications(notificationsData || []);
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
         toast.error('Không thể tải dữ liệu dashboard');
@@ -162,24 +170,11 @@ export const AcademicStaffDashboard: React.FC = () => {
             </div>
 
             {/* Notifications List */}
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800">
-              <div className="p-6 border-b border-gray-100 dark:border-zinc-800 flex justify-between items-center">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Thông báo</h2>
-                <button className="text-xs text-fpt-orange hover:underline font-medium">
-                  Xem tất cả {"\u00bb\u00bb\u00bb"}
-                </button>
-              </div>
-              <div className="divide-y divide-gray-100 dark:divide-zinc-800 max-h-[300px] overflow-auto">
-                {(data?.notifications ?? []).map((notif, index) => (
-                  <div key={index} className="p-5 hover:bg-gray-50 dark:hover:bg-zinc-800 cursor-pointer">
-                    <p className="text-xs text-gray-900 dark:text-white font-medium mb-1">
-                      {notif?.title ?? 'Thông báo mới'}
-                    </p>
-                    <p className="text-[10px] text-gray-400">{notif?.timestamp ?? 'Vừa xong'}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <NotificationsSection 
+              notifications={notifications}
+              isDashboard={true}
+              viewAllUrl="/notifications"
+            />
           </div>
         </div>
 

@@ -1,7 +1,7 @@
 package com.fams.backend.service.impl;
 
 import com.fams.backend.dto.response.AcademicStaffDashboardResponse;
-import com.fams.backend.dto.response.NotificationResponse;
+import com.fams.backend.dto.response.DashboardNotificationResponse;
 import com.fams.backend.entity.User;
 import com.fams.backend.repository.*;
 import com.fams.backend.service.AcademicStaffDashboardService;
@@ -68,13 +68,21 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
                 return 90 + (int) (Math.random() * 10);
         }
 
-        private List<NotificationResponse> getNotifications() {
+        private List<DashboardNotificationResponse> getNotifications() {
                 log.debug("Fetching recent notifications");
                 return notificationRepository.findTop5ByOrderByCreatedAtDesc().stream()
-                                .map(n -> NotificationResponse.builder()
+                                .map(n -> DashboardNotificationResponse.builder()
                                                 .id(n.getId())
                                                 .title(n.getTitle())
+                                                .description(n.getContent())
                                                 .timestamp(n.getCreatedAt().format(FORMATTER))
+                                                .type(n.getType() != null ? n.getType().name() : null)
+                                                .senderName(n.getSender() != null ? n.getSender().getUsername() : null)
+                                                .senderFullName(n.getSender() != null ? n.getSender().getFullName()
+                                                                : null)
+                                                .attachmentUrls(n.getAttachmentUrls() != null
+                                                                ? new java.util.ArrayList<>(n.getAttachmentUrls())
+                                                                : new java.util.ArrayList<>())
                                                 .build())
                                 .collect(Collectors.toList());
         }

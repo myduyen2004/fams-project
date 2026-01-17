@@ -47,7 +47,7 @@ public class AsyncImportService {
     private final SimpMessagingTemplate messagingTemplate;
     private final Executor importExecutor;
     private final com.fams.backend.service.impl.SystemLogService systemLogService;
-    private final com.fams.backend.service.NotificationService notificationService;
+    private final com.fams.backend.service.impl.NotificationServiceImpl notificationService;
 
     private static final DateTimeFormatter DOB_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter PASSWORD_FORMATTER = DateTimeFormatter.ofPattern("ddMMyyyy");
