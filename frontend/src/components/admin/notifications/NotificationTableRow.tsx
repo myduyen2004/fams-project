@@ -1,10 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, Edit2 } from 'lucide-react';
-import { 
-  AdminNotification, 
-  getStatusLabel, 
-  getStatusColor, 
+import {
+  AdminNotification,
+  getStatusLabel,
+  getStatusColor,
   getTargetTypeLabel,
   NotificationStatus
 } from '../../../types/notification';
@@ -30,14 +30,14 @@ export const NotificationTableRow: React.FC<NotificationTableRowProps> = React.m
     try {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return { date: '--/--/----', time: '--:--' };
-      
+
       // Manual format để tránh vấn đề timezone
       const day = String(d.getDate()).padStart(2, '0');
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const year = d.getFullYear();
       const hours = String(d.getHours()).padStart(2, '0');
       const minutes = String(d.getMinutes()).padStart(2, '0');
-      
+
       return {
         date: `${day}/${month}/${year}`,
         time: `${hours}:${minutes}`
@@ -117,11 +117,10 @@ export const NotificationTableRow: React.FC<NotificationTableRowProps> = React.m
           <button
             onClick={() => navigate(`${basePath}/notifications/edit/${notification.id}`)}
             disabled={notification.status === NotificationStatus.SENT}
-            className={`p-1.5 rounded-lg transition-colors ${
-              notification.status === NotificationStatus.SENT
+            className={`p-1.5 rounded-lg transition-colors ${notification.status === NotificationStatus.SENT
                 ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
                 : 'text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20'
-            }`}
+              }`}
             title={notification.status === NotificationStatus.SENT ? 'Không thể sửa thông báo đã gửi' : 'Chỉnh sửa'}
           >
             <Edit2 size={18} />

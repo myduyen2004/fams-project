@@ -41,13 +41,13 @@ const formatDateTime = (timestamp: string): string => {
   try {
     const date = new Date(timestamp);
     if (isNaN(date.getTime())) return timestamp;
-    
+
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
-    
+
     return `${day}/${month}/${year} ${hours}:${minutes}`;
   } catch {
     return timestamp;
@@ -57,7 +57,7 @@ const formatDateTime = (timestamp: string): string => {
 export const NotificationListPage: React.FC = () => {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  
+
   // Strip HTML tags from text
   const stripHtml = (html: string): string => {
     const tmp = document.createElement('div');
@@ -217,25 +217,23 @@ export const NotificationListPage: React.FC = () => {
             <nav className="flex gap-6 overflow-x-auto">
               <button
                 onClick={() => setFilter('all')}
-                className={`whitespace-nowrap pb-3 text-sm font-bold transition-all border-b-2 ${
-                  filter === 'all'
+                className={`whitespace-nowrap pb-3 text-sm font-bold transition-all border-b-2 ${filter === 'all'
                     ? 'border-fpt-orange text-fpt-orange'
                     : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                }`}
+                  }`}
               >
                 Tất cả
               </button>
               <button
                 onClick={() => setFilter('unread')}
-                className={`whitespace-nowrap pb-3 text-sm font-bold transition-all border-b-2 ${
-                  filter === 'unread'
+                className={`whitespace-nowrap pb-3 text-sm font-bold transition-all border-b-2 ${filter === 'unread'
                     ? 'border-fpt-orange text-fpt-orange'
                     : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                }`}
+                  }`}
               >
                 Chưa đọc {unreadCount > 0 && <span className="ml-1">({unreadCount})</span>}
               </button>
-       
+
             </nav>
 
             {/* Search Bar */}
@@ -259,11 +257,10 @@ export const NotificationListPage: React.FC = () => {
               <div
                 key={notification.id}
                 onClick={() => handleNotificationClick(notification)}
-                className={`group flex items-start gap-4 p-5 cursor-pointer transition-all relative ${
-                  !notification.isRead
+                className={`group flex items-start gap-4 p-5 cursor-pointer transition-all relative ${!notification.isRead
                     ? 'bg-fpt-orange/5 hover:bg-fpt-orange/10 border-b border-gray-100 dark:border-zinc-800'
                     : 'bg-white dark:bg-transparent hover:bg-gray-50 dark:hover:bg-zinc-800/50 border-b border-gray-100 dark:border-zinc-800 last:border-b-0'
-                }`}
+                  }`}
               >
                 {/* Icon */}
                 <div
@@ -278,16 +275,15 @@ export const NotificationListPage: React.FC = () => {
                 <div className="flex flex-col flex-1 gap-1 min-w-0 pr-8">
                   <div className="flex items-start justify-between gap-2">
                     <p
-                      className={`text-sm leading-tight ${
-                        !notification.isRead
+                      className={`text-sm leading-tight ${!notification.isRead
                           ? 'font-bold text-gray-900 dark:text-white'
                           : 'font-semibold text-gray-900 dark:text-gray-200'
-                      }`}
+                        }`}
                     >
                       {stripHtml(notification.title)}
                     </p>
                   </div>
-                  
+
                   {/* Sender Info */}
                   {notification.senderName && notification.senderName !== 'System' && (
                     <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
@@ -295,22 +291,21 @@ export const NotificationListPage: React.FC = () => {
                       <span>{notification.senderName}</span>
                     </div>
                   )}
-                  
+
                   {/* Description */}
-                  <p className={`text-sm leading-relaxed ${
-                      !notification.isRead
-                        ? 'text-gray-700 dark:text-gray-300'
-                        : 'text-gray-500 dark:text-gray-400'
+                  <p className={`text-sm leading-relaxed ${!notification.isRead
+                      ? 'text-gray-700 dark:text-gray-300'
+                      : 'text-gray-500 dark:text-gray-400'
                     }`}>
                     {truncateText(stripHtml(notification.description))}
                   </p>
-                  
+
                   {/* Footer with timestamp and type */}
                   <div className="flex items-center justify-between gap-2 mt-1">
                     <span className="text-xs text-gray-400 dark:text-gray-500">
                       {formatDateTime(notification.timestamp)}
                     </span>
-                    
+
                     {/* Type Badge */}
                     {notification.type && (
                       <span className="text-xs font-medium px-2 py-1 rounded-full bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-400">

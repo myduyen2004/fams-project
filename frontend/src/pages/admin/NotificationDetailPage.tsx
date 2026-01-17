@@ -1,9 +1,10 @@
+// ... imports remain the same
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { notificationService, AdminNotification } from '../../services/api/notificationService';
-import { NotificationStatus, getTypeLabel, getPriorityLabel, getStatusLabel, getTargetTypeLabel, getStatusColor, getPriorityColor } from '../../types/notification';
-import { Loader2, Edit2, Bell, Paperclip, FileText, Image as ImageIcon, ExternalLink } from 'lucide-react';
+import { NotificationStatus, getStatusLabel, getTargetTypeLabel } from '../../types/notification';
+import { Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const NotificationDetailPage: React.FC = () => {
@@ -14,7 +15,7 @@ export const NotificationDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   // Helper function to format date
-  const formatDateTime = (dateStr: string): string => {
+  const formatDateTime = (dateStr: string | null | undefined): string => {
     if (!dateStr) return '--/--/---- --:--';
     try {
       const d = new Date(dateStr);
@@ -65,9 +66,8 @@ export const NotificationDetailPage: React.FC = () => {
   if (!notification) {
     return (
       <AdminLayout pageTitle="Chi tiết thông báo">
-        <div className="p-8 text-center">
+        <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-xl">
           <p className="text-gray-500 dark:text-gray-400 mb-4">Không tìm thấy thông báo</p>
-
         </div>
       </AdminLayout>
     );
@@ -75,138 +75,172 @@ export const NotificationDetailPage: React.FC = () => {
 
   const isEditable = notification.status === NotificationStatus.DRAFT || notification.status === NotificationStatus.SCHEDULED;
 
+  const getStatusBadgeColor = (status: NotificationStatus) => {
+    // Mapping project status colors to the requested design style (using existing utils logic but applied to new classes if needed)
+    // The user provided: bg-green-100 text-green-700
+    // Our util getStatusColor returns classes like 'bg-green-500' (text-white).
+    // We will adjust to match the lighter pastel style of the requested design while using our colors.
+    switch (status) {
+      case NotificationStatus.SENT: return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+      case NotificationStatus.SCHEDULED: return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400';
+      case NotificationStatus.DRAFT: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
+      default: return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+    }
+  };
+
   return (
     <AdminLayout pageTitle="Chi tiết thông báo">
-      <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
+      <div className="flex flex-col justify-center px-4 md:px-0">
+        <div className="flex flex-col max-w-[1200px] w-full mx-auto flex-1 gap-8">
+          {/* Header Section */}
+          <div className="flex flex-col gap-4">
+            <h1 className="text-slate-900 dark:text-white text-3xl md:text-5xl font-black leading-tight tracking-tight">
+              {notification.title}
+            </h1>
 
-        </div>
-
-        {/* Main Content Card */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-gray-100 dark:border-zinc-800 overflow-hidden">
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Chi tiết thông báo</h3>
-            {isEditable && (
-              <Link
-                to={`/admin/notifications/edit/${notification.id}`}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white rounded-lg hover:bg-orange-600 transition-colors"
-              >
-                <Edit2 size={18} />
-                Chỉnh sửa
-              </Link>
-            )}
-          </div>
-
-          {/* Content */}
-          <div className="p-8 space-y-8 max-w-4xl mx-auto">
-            {/* Title with Icon and Badges */}
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
-                <Bell size={24} className="text-fpt-orange" />
-              </div>
-              <div className="flex-1">
-                <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-                  {notification.title}
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium text-white ${getStatusColor(notification.status)}`}>
+            <div className="flex items-end justify-between">
+              {/* Left Side: Status + Meta */}
+              <div className="flex flex-col gap-3">
+                <div className="flex">
+                  <span className={`text-xs font-bold px-3 py-1 rounded uppercase tracking-wider ${getStatusBadgeColor(notification.status)}`}>
                     {getStatusLabel(notification.status)}
                   </span>
-                  <span className="inline-flex px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300">
-                    {getTargetTypeLabel(notification.targetType)}
-                  </span>
-                  <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium text-white ${getPriorityColor(notification.priority)}`}>
-                    {getPriorityLabel(notification.priority)}
-                  </span>
-                  <span className="inline-flex px-3 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
-                    {getTypeLabel(notification.type)}
-                  </span>
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-slate-500 dark:text-slate-400">
+                  <p className="text-sm font-medium">
+                    {notification.status === NotificationStatus.SENT ? 'Đã gửi vào lúc: ' :
+                      notification.status === NotificationStatus.SCHEDULED ? 'Lên lịch vào lúc: ' : 'Ngày tạo: '}
+                    <span className="text-slate-700 dark:text-slate-200">
+                      {notification.status === NotificationStatus.SENT ? formatDateTime(notification.sentAt) :
+                        notification.status === NotificationStatus.SCHEDULED ? formatDateTime(notification.scheduledAt) :
+                          formatDateTime(notification.createdAt)}
+                    </span>
+                  </p>
+                  <p className="text-sm font-medium">
+                    Người nhận: <span className="text-slate-700 dark:text-slate-200">{getTargetTypeLabel(notification.targetType)}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Right Side: Edit Button */}
+              {isEditable && (
+                <div className="pb-1">
+                  <Link
+                    to={`${window.location.pathname.startsWith('/academic-staff') ? '/academic-staff' : '/admin'}/notifications/edit/${notification.id}`}
+                    className="inline-flex items-center gap-2 px-5 py-2 bg-fpt-orange text-white text-sm font-bold rounded-lg hover:bg-orange-600 transition-colors shadow-sm"
+                  >
+                    Chỉnh sửa thông báo
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Main Grid Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
+            {/* Left Column: Content */}
+            <div className="lg:col-span-2 flex">
+              <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 p-8 shadow-sm w-full flex flex-col">
+                <h3 className="text-slate-400 dark:text-gray-500 text-xs font-bold uppercase tracking-widest mb-6">
+                  Nội dung thông báo
+                </h3>
+                {/* Prose content */}
+                <div className="prose prose-slate dark:prose-invert max-w-none flex-grow">
+                  <div
+                    className="text-slate-800 dark:text-slate-200 text-lg leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: notification.content }}
+                  />
                 </div>
               </div>
             </div>
 
-            {/* Content */}
-            <div>
-              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Nội dung</label>
-              <div
-                className="p-4 bg-gray-50 dark:bg-zinc-800 rounded-lg prose prose-sm dark:prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: notification.content }}
-              />
-            </div>
-
-            {/* Attachments */}
-            {notification.attachmentUrls && notification.attachmentUrls.length > 0 && (
-              <div className="pt-4 border-t border-gray-100 dark:border-zinc-800">
-                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-2">
-                  <Paperclip size={16} />
-                  Tài liệu đính kèm ({notification.attachmentUrls.length})
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {notification.attachmentUrls.map((url, index) => {
-                    const fileName = url.split('/').pop() || `Attachment-${index + 1}`;
-                    const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
-
-                    return (
-                      <a
-                        key={index}
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-750 border border-gray-200 dark:border-zinc-700 rounded-xl transition-all group"
-                      >
-                        <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0 text-fpt-orange">
-                          {isImage ? <ImageIcon size={20} /> : <FileText size={20} />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate group-hover:text-fpt-orange transition-colors">
-                            {fileName}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase">
-                            {url.split('.').pop()?.split('?')[0]} File
-                          </p>
-                        </div>
-                        <ExternalLink size={14} className="text-gray-400 group-hover:text-fpt-orange" />
-                      </a>
-                    );
-                  })}
+            {/* Right Column: Details */}
+            <div className="flex">
+              <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 p-8 shadow-sm w-full">
+                <div className="flex items-center justify-between mb-6 border-b border-slate-100 dark:border-zinc-800 pb-3">
+                  <h3 className="text-slate-900 dark:text-white text-base font-bold">
+                    Thông tin chi tiết
+                  </h3>
                 </div>
-              </div>
-            )}
-
-            {/* Meta Info */}
-            <div className="pt-6 border-t border-gray-100 dark:border-zinc-800 grid grid-cols-2 lg:grid-cols-4 gap-6 text-sm">
-              <div>
-                <label className="block text-gray-500 dark:text-gray-400 mb-1">Ngày tạo</label>
-                <span className="text-gray-900 dark:text-white font-medium">
-                  {formatDateTime(notification.createdAt)}
-                </span>
-              </div>
-              <div>
-                <label className="block text-gray-500 dark:text-gray-400 mb-1">
-                  {notification.status === NotificationStatus.SCHEDULED ? 'Thời gian lên lịch' : 'Ngày gửi'}
-                </label>
-                <span className="text-gray-900 dark:text-white font-medium">
-                  {notification.status === NotificationStatus.SCHEDULED
-                    ? formatDateTime(notification.scheduledAt || '')
-                    : formatDateTime(notification.sentAt || '')}
-                </span>
-              </div>
-              <div>
-                <label className="block text-gray-500 dark:text-gray-400 mb-1">Cập nhật lần cuối</label>
-                <span className="text-gray-900 dark:text-white font-medium">
-                  {formatDateTime(notification.updatedAt || '')}
-                </span>
-              </div>
-              <div>
-                <label className="block text-gray-500 dark:text-gray-400 mb-1">Người gửi</label>
-                <span className="text-gray-900 dark:text-white font-medium">
-                  {notification.sender?.fullName || '---'}
-                </span>
+                <div className="space-y-6">
+                  <div>
+                    <p className="text-slate-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">
+                      Người gửi
+                    </p>
+                    <p className="text-slate-900 dark:text-white text-sm font-semibold">
+                      {notification.sender?.fullName || 'Hệ thống'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-slate-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">
+                      Ngày tạo bản nháp
+                    </p>
+                    <p className="text-slate-700 dark:text-gray-300 text-sm">
+                      {formatDateTime(notification.createdAt)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-slate-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">
+                      {notification.status === NotificationStatus.SCHEDULED ? 'Thời gian lên lịch' : 'Ngày gửi'}
+                    </p>
+                    <p className="text-slate-700 dark:text-gray-300 text-sm">
+                      {notification.status === NotificationStatus.SCHEDULED
+                        ? formatDateTime(notification.scheduledAt)
+                        : formatDateTime(notification.sentAt)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-slate-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">
+                      Cập nhật lần cuối
+                    </p>
+                    <p className="text-slate-700 dark:text-gray-300 text-sm">
+                      {formatDateTime(notification.updatedAt)}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
+
+          {/* Attachments Section */}
+          {notification.attachmentUrls && notification.attachmentUrls.length > 0 && (
+            <div className="flex flex-col gap-4">
+              <h3 className="text-slate-900 dark:text-white text-base font-bold">
+                Tài liệu đính kèm ({notification.attachmentUrls.length})
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {notification.attachmentUrls.map((url, index) => {
+                  let fileName = 'unknown-file';
+                  try {
+                    const decodedUrl = decodeURIComponent(url);
+                    fileName = decodedUrl.split('/').pop()?.split('?')[0] || 'unknown-file';
+                  } catch (e) {
+                    fileName = url.split('/').pop() || 'unknown-file';
+                  }
+                  const extension = fileName.split('.').pop()?.toUpperCase() || 'FILE';
+
+                  return (
+                    <a
+                      key={index}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg p-4 hover:border-fpt-orange hover:shadow-md transition-all cursor-pointer group"
+                    >
+                      <div className="flex flex-col gap-1">
+                        <span className="text-slate-900 dark:text-white font-semibold text-sm truncate group-hover:text-fpt-orange transition-colors">
+                          {fileName}
+                        </span>
+                        <span className="text-slate-400 text-xs">
+                          {extension} File
+                        </span>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </AdminLayout>
