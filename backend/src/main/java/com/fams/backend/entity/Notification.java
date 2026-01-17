@@ -62,20 +62,6 @@ public class Notification {
     @Builder.Default
     private TargetType targetType = TargetType.ALL;
 
-    // Các role nhận (comma-separated: "STUDENT,LECTURER")
-    @Column(length = 200)
-    private String targetRoles;
-
-    // Lớp học phần mục tiêu - FK tới ClassSection(className)
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "target_class_name", referencedColumnName = "className")
-    private ClassSection targetClass;
-
-    // Môn học mục tiêu
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "target_course_id")
-    private Course targetCourse;
-
     // === Scheduling ===
     // Thời gian lên lịch gửi
     private LocalDateTime scheduledAt;
@@ -93,6 +79,12 @@ public class Notification {
     @OneToMany(mappedBy = "notification", cascade = CascadeType.ALL)
     @Builder.Default
     private List<NotificationRecipient> recipients = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(name = "notification_attachments", joinColumns = @JoinColumn(name = "notification_id"))
+    @Column(name = "url", columnDefinition = "TEXT")
+    @Builder.Default
+    private List<String> attachmentUrls = new ArrayList<>();
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
@@ -120,10 +112,11 @@ public class Notification {
 
     public enum TargetType {
         ALL, // Tất cả
-        ROLE, // Theo role
-        CLASS, // Theo lớp
+        STUDENT, // Tất cả sinh viên
+        LECTURER, // Tất cả giảng viên
+        CLASS, // Theo lớp học phần
         COURSE, // Theo môn học
-        USER // Cá nhân
+        USER // Cá nhân cụ thể
     }
 
     public enum NotificationStatus {

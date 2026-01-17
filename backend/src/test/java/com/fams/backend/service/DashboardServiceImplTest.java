@@ -1,6 +1,7 @@
 package com.fams.backend.service;
 
 import com.fams.backend.dto.response.*;
+import com.fams.backend.dto.response.DashboardNotificationResponse;
 import com.fams.backend.entity.AccessLog;
 import com.fams.backend.entity.Alert;
 import com.fams.backend.entity.Notification;
@@ -32,6 +33,8 @@ class DashboardServiceImplTest {
     private AlertRepository alertRepository;
     @Mock
     private NotificationRepository notificationRepository;
+    @Mock
+    private NotificationRecipientRepository notificationRecipientRepository;
     @Mock
     private SystemLogRepository systemLogRepository;
 
@@ -92,6 +95,23 @@ class DashboardServiceImplTest {
 
     @Test
     void whenGetNotifications_thenReturnMappedList() {
+        // Arrange
+        String username = "testuser";
+        User user = new User();
+        user.setUsername(username);
+
+        // Mock Security Context
+        org.springframework.security.core.Authentication authentication = mock(
+                org.springframework.security.core.Authentication.class);
+        org.springframework.security.core.context.SecurityContext securityContext = mock(
+                org.springframework.security.core.context.SecurityContext.class);
+        org.springframework.security.core.context.SecurityContextHolder.setContext(securityContext);
+
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getName()).thenReturn(username);
+        when(userRepository.findByUsername(username)).thenReturn(java.util.Optional.of(user));
+
         Notification notification = new Notification();
         notification.setTitle("New Message");
         notification.setContent("Hello");
@@ -99,11 +119,22 @@ class DashboardServiceImplTest {
         notification.setStatus(Notification.NotificationStatus.SENT);
         notification.setCreatedAt(LocalDateTime.now());
 
-        when(notificationRepository.findTop5ByOrderByCreatedAtDesc())
-                .thenReturn(Collections.singletonList(notification));
+        com.fams.backend.entity.NotificationRecipient recipient = com.fams.backend.entity.NotificationRecipient
+                .builder()
+                .notification(notification)
+                .recipient(user)
+                .isRead(false)
+                .createdAt(LocalDateTime.now())
+                .build();
 
-        List<NotificationResponse> results = dashboardService.getNotifications();
+        // Use findByRecipientOrderByCreatedAtDesc as per Service implementation
+        when(notificationRecipientRepository.findByRecipientOrderByCreatedAtDesc(user))
+                .thenReturn(Collections.singletonList(recipient));
 
+        // Act
+        List<DashboardNotificationResponse> results = dashboardService.getNotifications();
+
+        // Assert
         assertFalse(results.isEmpty());
         assertEquals("New Message", results.get(0).getTitle());
         assertFalse(results.get(0).getIsRead());

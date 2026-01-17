@@ -6,16 +6,30 @@ import { Bell } from 'lucide-react';
 interface NotificationsSectionProps {
   notifications: AppNotification[];
   isDashboard?: boolean;
+  viewAllUrl?: string;
 }
 
-export const NotificationsSection: React.FC<NotificationsSectionProps> = ({ notifications, isDashboard = false }) => {
+export const NotificationsSection: React.FC<NotificationsSectionProps> = ({ notifications, isDashboard = false, viewAllUrl = '/notifications' }) => {
+  // Strip HTML tags from text
+  const stripHtml = (html: string): string => {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+  };
+
+  // Truncate text with ellipsis
+  const truncateText = (text: string, maxLength: number = 100): string => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+  };
+
   return (
     <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-800 h-full">
       <div className="px-6 py-4 border-b border-gray-200 dark:border-zinc-800 flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
           Thông báo
         </h3>
-        <Link to="/admin/notifications" className="text-sm text-fpt-orange hover:text-orange-600 font-medium">
+        <Link to={viewAllUrl} className="text-sm text-fpt-orange hover:text-orange-600 font-medium">
           Xem tất cả →
         </Link>
       </div>
@@ -41,14 +55,14 @@ export const NotificationsSection: React.FC<NotificationsSectionProps> = ({ noti
                     notification.senderAvatar ? (
                       <img 
                         src={notification.senderAvatar} 
-                        alt={notification.senderName} 
+                        alt={notification.senderFullName || notification.senderName} 
                         className="w-10 h-10 rounded-full object-cover"
                       />
                     ) : (
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
                         notification.type === 'ALERT' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
                       }`}>
-                         {notification.senderName.charAt(0)}
+                         {(notification.senderFullName || notification.senderName).charAt(0)}
                       </div>
                     )
                   ) : (
@@ -69,17 +83,17 @@ export const NotificationsSection: React.FC<NotificationsSectionProps> = ({ noti
                   }`}>
                     {notification.senderName && notification.senderName !== 'System' && (
                       <span className="block text-[11px] text-gray-500 dark:text-gray-400 font-normal mb-0.5">
-                        {notification.senderName}
+                        {notification.senderFullName || notification.senderName}
                       </span>
                     )}
-                    {notification.title}
+                    {stripHtml(notification.title)}
                   </p>
                   <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
-                    {notification.description}
+                    {truncateText(stripHtml(notification.description))}
                   </p>
                   <div className="flex items-center gap-2 mt-2">
                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                        {notification.senderName && notification.senderName !== 'System' ? 'Cá nhân' : (notification.type === 'SYSTEM' ? 'Hệ thống' : 'Cảnh báo')}
+                        {notification.senderName && notification.senderName !== 'System' ? (notification.senderFullName || notification.senderName) : (notification.type === 'SYSTEM' ? 'Hệ thống' : 'Cảnh báo')}
                      </span>
                      <span className="text-[10px] text-gray-400">•</span>
                      <span className="text-[10px] text-gray-400 font-medium">{notification.timestamp}</span>

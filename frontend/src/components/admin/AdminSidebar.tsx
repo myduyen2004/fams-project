@@ -53,9 +53,9 @@ export const AdminSidebar: React.FC = () => {
     },
     {
       id: 'notifications-settings',
-      label: 'Cài đặt thông báo',
+      label: 'Quản lý thông báo',
       icon: <Bell size={20} />,
-      path: '/admin/notification-settings'
+      path: '/admin/notification-management'
     },
     {
       id: 'alerts',
