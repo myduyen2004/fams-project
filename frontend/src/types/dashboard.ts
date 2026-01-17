@@ -33,7 +33,9 @@ export interface AppNotification {
     type?: 'SYSTEM' | 'ALERT' | 'IMPORT';
     targetUrl?: string;
     senderName?: string;
+    senderFullName?: string;
     senderAvatar?: string;
+    attachmentUrls?: string[];
 }
 
 export interface SystemLog {
