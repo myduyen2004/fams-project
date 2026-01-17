@@ -75,21 +75,6 @@ services:
     networks:
       - fams-network
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        - VITE_API_URL=http://localhost:8080/api
-        - VITE_WS_URL=http://localhost:8080/ws
-    container_name: fams-frontend
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
-    networks:
-      - fams-network
-
 volumes:
   postgres_data:
 
