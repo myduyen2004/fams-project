@@ -58,12 +58,26 @@ export const NotificationBell: React.FC = () => {
             errorMessage: status.errorMessage,
             completedAt: status.completedAt
           });
-        } catch (error) {
-          console.error('Failed to fetch job status:', error);
+        } catch (error: any) {
+          console.error(`Failed to fetch status for job ${job.jobId}:`, error.message);
+          // If job not found (404), it's likely from another environment or database reset
+          if (error.response?.status === 404) {
+            removeJob(job.jobId);
+          }
         }
       });
     }
   }, []);
+
+  const removeJob = (jobId: string) => {
+    setJobs(prev => {
+      const filtered = prev.filter(j => j.jobId !== jobId);
+      const stored = JSON.parse(localStorage.getItem('importJobs') || '[]');
+      const updatedStored = stored.filter((j: any) => j.jobId !== jobId);
+      localStorage.setItem('importJobs', JSON.stringify(updatedStored));
+      return filtered;
+    });
+  };
 
   const addJob = (job: ImportJobNotification) => {
     setJobs(prev => {
