@@ -34,9 +34,19 @@ jobs:
           git fetch origin
           git reset --hard origin/main
           
-          # Create env file (Ensuring jdbc: prefix)
-          URL="${{ secrets.NEON_PROD_DB_URL }}"
-          [[ "$URL" != jdbc:* ]] && URL="jdbc:$URL"
+          # Robust URL sanitization
+          RAW_URL="${{ secrets.NEON_PROD_DB_URL }}"
+          # 1. Trim whitespace
+          CLEAN_URL=$(echo "$RAW_URL" | xargs)
+          # 2. Strip any protocol prefixes (jdbc:, postgresql://, postgres://)
+          CLEAN_URL="${CLEAN_URL#jdbc:}"
+          CLEAN_URL="${CLEAN_URL#postgresql://}"
+          CLEAN_URL="${CLEAN_URL#postgres://}"
+          # 3. Strip user:pass@ if present
+          CLEAN_URL="${CLEAN_URL##*@}"
+          # 4. Construct final JDBC URL
+          URL="jdbc:postgresql://$CLEAN_URL"
+          
           echo "NEON_PROD_DB_URL=$URL" > .env.production
           echo 'NEON_PROD_DB_USER=${{ secrets.NEON_PROD_DB_USER }}' >> .env.production
           echo 'NEON_PROD_DB_PASSWORD=${{ secrets.NEON_PROD_DB_PASSWORD }}' >> .env.production
