@@ -3,8 +3,8 @@
 # Script cài đặt SSL và Nginx cho EC2 Backend (Amazon Linux 2023)
 # Chạy script này trên EC2 instance
 
-DOMAIN="api.fams-edu.online"
-EMAIL="admin@fams-edu.online"
+DOMAIN="${1:-api.fams-edu.online}"
+EMAIL="${2:-admin@fams-edu.online}"
 
 echo "=== Setup SSL for $DOMAIN (AL2023) ==="
 

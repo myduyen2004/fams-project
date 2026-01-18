@@ -35,10 +35,10 @@ jobs:
           git reset --hard origin/main
           
           # Create env file (after git reset to avoid deletion)
-          echo 'NEON_PROD_DB_URL=jdbc:postgresql://ep-ancient-glitter-a1qpw4b8-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require' > .env.production
-          echo 'NEON_PROD_DB_USER=neondb_owner' >> .env.production
-          echo 'NEON_PROD_DB_PASSWORD=npg_8mbEARX4ehip' >> .env.production
-          echo 'DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/1328003476803526660/Z2E1AybLWXKLrKxXrvJkBRm8FGxS3FN2M_WYLLbfO7nW2sOoWOPRv994D-3jI2EEXnRW' >> .env.production
+          echo 'NEON_PROD_DB_URL=${{ secrets.NEON_PROD_DB_URL }}' > .env.production
+          echo 'NEON_PROD_DB_USER=${{ secrets.NEON_PROD_DB_USER }}' >> .env.production
+          echo 'NEON_PROD_DB_PASSWORD=${{ secrets.NEON_PROD_DB_PASSWORD }}' >> .env.production
+          echo 'DISCORD_WEBHOOK_URL=${{ secrets.DISCORD_WEBHOOK_URL }}' >> .env.production
           
           # Stop old containers
           docker compose -f docker-compose.prod.yml --env-file .env.production down 2>/dev/null || true
