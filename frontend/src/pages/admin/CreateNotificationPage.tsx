@@ -159,20 +159,7 @@ export const CreateNotificationPage = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // Get file icon based on type
-  const getFileIcon = (type: string) => {
-    if (type.startsWith('image/')) {
-      return '🖼️';
-    } else if (type.includes('pdf')) {
-      return '📄';
-    } else if (type.includes('word')) {
-      return '📝';
-    } else if (type.includes('excel') || type.includes('sheet')) {
-      return '📊';
-    } else {
-      return '📎';
-    }
-  };
+
 
   // Validate form
   const validateForm = (): boolean => {
@@ -350,7 +337,6 @@ export const CreateNotificationPage = () => {
                   {attachedFiles.map((file, index) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-zinc-800 rounded-lg">
                       <div className="flex items-center gap-3">
-                        <span className="text-lg">{getFileIcon(file.type)}</span>
                         <div>
                           <p className="text-sm font-medium text-gray-900 dark:text-white">
                             {file.name}
@@ -399,6 +385,7 @@ export const CreateNotificationPage = () => {
                   onChange={(e) => setFormData({ ...formData, status: e.target.value as NotificationStatus })}
                 >
                   <option value={NotificationStatus.DRAFT}>Lưu nháp</option>
+                  <option value={NotificationStatus.SENT}>Gửi ngay</option>
                   <option value={NotificationStatus.SCHEDULED}>Lên lịch gửi</option>
                 </select>
               </div>
@@ -428,25 +415,35 @@ export const CreateNotificationPage = () => {
           {/* Actions */}
           <div className="px-6 py-4 bg-gray-50 dark:bg-zinc-800/50 border-t border-gray-100 dark:border-zinc-800 flex justify-end">
             <div className="flex gap-3">
-              <button
-                onClick={() => handleSubmit(true)}
-                disabled={isSubmitting}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-600 rounded-lg transition-colors disabled:opacity-50"
-              >
-                {isSubmitting ? 'Đang lưu...' : 'Lưu nháp'}
-              </button>
+              {formData.status === NotificationStatus.DRAFT && (
+                <button
+                  onClick={() => handleSubmit(true)}
+                  disabled={isSubmitting || attachedFiles.some(f => f.isUploading)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-600 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Đang lưu...' : 'Lưu nháp'}
+                </button>
+              )}
 
-              <button
-                onClick={() => handleSubmit(false)}
-                disabled={isSubmitting}
-                className="px-4 py-2 text-sm font-medium text-white bg-fpt-orange hover:bg-fpt-orange-dark rounded-lg transition-colors disabled:opacity-50"
-              >
-                {isSubmitting
-                  ? 'Đang xử lý...'
-                  : formData.status === NotificationStatus.SCHEDULED
-                    ? 'Lưu lịch gửi'
-                    : 'Gửi ngay'}
-              </button>
+              {formData.status === NotificationStatus.SENT && (
+                <button
+                  onClick={() => handleSubmit(false)}
+                  disabled={isSubmitting || attachedFiles.some(f => f.isUploading)}
+                  className="px-4 py-2 text-sm font-medium text-white bg-fpt-orange hover:bg-fpt-orange-dark rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Đang xử lý...' : 'Gửi ngay'}
+                </button>
+              )}
+
+              {formData.status === NotificationStatus.SCHEDULED && (
+                <button
+                  onClick={() => handleSubmit(false)}
+                  disabled={isSubmitting || attachedFiles.some(f => f.isUploading)}
+                  className="px-4 py-2 text-sm font-medium text-white bg-fpt-orange hover:bg-fpt-orange-dark rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Đang xử lý...' : 'Lưu lịch gửi'}
+                </button>
+              )}
             </div>
           </div>
         </div>

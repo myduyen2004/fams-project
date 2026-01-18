@@ -20,10 +20,11 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class NotificationSchedulerService {
-    
+
     private final NotificationRepository notificationRepository;
+    private final NotificationService notificationService;
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
-    
+
     /**
      * Chạy mỗi 30 giây để kiểm tra và gửi các thông báo đã lên lịch
      * Các thông báo có trạng thái SCHEDULED và scheduledAt <= hiện tại sẽ được gửi
@@ -34,35 +35,38 @@ public class NotificationSchedulerService {
         try {
             LocalDateTime now = LocalDateTime.now();
             log.info("Checking scheduled notifications at {}", now.format(FORMATTER));
-            
+
             // Tìm các thông báo đã lên lịch và đã đến thời gian gửi (scheduledAt <= now)
             List<Notification> scheduledNotifications = notificationRepository.findByStatusAndScheduledAtLessThanEqual(
                     NotificationStatus.SCHEDULED,
-                    now
-            );
-            
+                    now);
+
             if (scheduledNotifications.isEmpty()) {
                 log.info("No scheduled notifications to send at {}", now.format(FORMATTER));
                 return;
             }
-            
+
             log.info("Found {} scheduled notifications to send", scheduledNotifications.size());
-            
+
             // Cập nhật trạng thái thành SENT và ghi nhận thời gian gửi
             for (Notification notification : scheduledNotifications) {
-                log.info("Processing notification ID: {}, Title: '{}', ScheduledAt: {}", 
-                        notification.getId(), 
+                log.info("Processing notification ID: {}, Title: '{}', ScheduledAt: {}",
+                        notification.getId(),
                         notification.getTitle(),
-                        notification.getScheduledAt() != null ? notification.getScheduledAt().format(FORMATTER) : "null");
-                
+                        notification.getScheduledAt() != null ? notification.getScheduledAt().format(FORMATTER)
+                                : "null");
+
                 notification.setStatus(NotificationStatus.SENT);
                 notification.setSentAt(now);
+
+                // Tạo recipients cho thông báo
+                notificationService.createNotificationRecipients(notification);
             }
-            
+
             notificationRepository.saveAll(scheduledNotifications);
-            log.info("Successfully sent {} scheduled notifications at {}", 
+            log.info("Successfully sent {} scheduled notifications at {}",
                     scheduledNotifications.size(), now.format(FORMATTER));
-            
+
         } catch (Exception e) {
             log.error("Error sending scheduled notifications: {}", e.getMessage(), e);
         }

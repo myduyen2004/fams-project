@@ -5,6 +5,7 @@ import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { AddSemesterModal } from '../../components/academic-staff/AddSemesterModal';
 import { UpdateSemesterModal } from '../../components/academic-staff/UpdateSemesterModal';
 import { DeleteSemesterModal } from '../../components/academic-staff/DeleteSemesterModal';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 import axios from 'axios';
 
 interface Semester {
@@ -27,6 +28,21 @@ export const SemestersPage: React.FC = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedSemester, setSelectedSemester] = useState<Semester | null>(null);
   const [selectedSemesters, setSelectedSemesters] = useState<string[]>([]);
+
+  // Bulk delete confirmation state
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  const [bulkDeleteConfig, setBulkDeleteConfig] = useState<{
+    title: string;
+    message: string;
+    type: 'danger' | 'warning' | 'info';
+    action?: () => Promise<void>;
+    showConfirmButton: boolean;
+  }>({
+    title: '',
+    message: '',
+    type: 'info',
+    showConfirmButton: true
+  });
 
   // Fetch semesters from API
   const fetchSemesters = async () => {
@@ -201,7 +217,7 @@ export const SemestersPage: React.FC = () => {
             <div className="flex flex-wrap items-center justify-between gap-4 pt-4">
               <div className="flex items-center gap-8 flex-wrap">
                 <span className="font-semibold text-gray-700 text-sm">FPTU - Đà Nẵng</span>
-                
+
                 {/* Search */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
@@ -236,7 +252,7 @@ export const SemestersPage: React.FC = () => {
                 </div>
 
                 {/* Add Button */}
-                <button 
+                <button
                   onClick={() => setIsModalOpen(true)}
                   className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-md font-medium text-xs flex items-center gap-2 transition shadow-sm"
                 >
@@ -254,41 +270,57 @@ export const SemestersPage: React.FC = () => {
             <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-end gap-3">
               <span className="text-sm text-gray-500">Đã chọn {selectedSemesters.length} học kỳ</span>
               <button
-                onClick={async () => {
+                onClick={() => {
                   // Filter only upcoming semesters for bulk delete
                   const upcomingSemesters = semesters.filter(
                     s => selectedSemesters.includes(s.code) && s.status === 'upcoming'
                   );
+
                   if (upcomingSemesters.length === 0) {
-                    alert('Chỉ được xóa học kỳ có trạng thái "Sắp diễn ra"');
+                    setBulkDeleteConfig({
+                      title: 'Không thể xóa',
+                      message: 'Chỉ được xóa học kỳ có trạng thái "Sắp diễn ra"',
+                      type: 'warning',
+                      showConfirmButton: false
+                    });
+                    setIsBulkDeleteModalOpen(true);
                     return;
                   }
+
+                  const handleBulkDelete = async () => {
+                    try {
+                      const deletePromises = upcomingSemesters.map(s =>
+                        axios.delete(`/api/v1/semesters/${s.code}`)
+                      );
+                      await Promise.all(deletePromises);
+                      // Refresh list after deleting
+                      await fetchSemesters();
+                      setSelectedSemesters([]);
+                    } catch (error) {
+                      console.error('Error bulk deleting semesters:', error);
+                    } finally {
+                      setIsBulkDeleteModalOpen(false);
+                    }
+                  };
+
                   if (upcomingSemesters.length < selectedSemesters.length) {
-                    const confirm = window.confirm(
-                      `Chỉ có ${upcomingSemesters.length}/${selectedSemesters.length} học kỳ có thể xóa (trạng thái "Sắp diễn ra"). Bạn có muốn tiếp tục?`
-                    );
-                    if (!confirm) return;
+                    setBulkDeleteConfig({
+                      title: 'Xác nhận xóa',
+                      message: `Chỉ có ${upcomingSemesters.length}/${selectedSemesters.length} học kỳ có thể xóa (trạng thái "Sắp diễn ra"). Bạn có muốn tiếp tục?`,
+                      type: 'warning',
+                      action: handleBulkDelete,
+                      showConfirmButton: true
+                    });
                   } else {
-                    const confirm = window.confirm(
-                      `Bạn có chắc chắn muốn xóa ${upcomingSemesters.length} học kỳ đã chọn?`
-                    );
-                    if (!confirm) return;
+                    setBulkDeleteConfig({
+                      title: 'Xác nhận xóa',
+                      message: `Bạn có chắc chắn muốn xóa ${upcomingSemesters.length} học kỳ đã chọn?`,
+                      type: 'danger',
+                      action: handleBulkDelete,
+                      showConfirmButton: true
+                    });
                   }
-                  
-                  // Call delete API for each semester
-                  try {
-                    const deletePromises = upcomingSemesters.map(s => 
-                      axios.delete(`/api/v1/semesters/${s.code}`)
-                    );
-                    await Promise.all(deletePromises);
-                    // Refresh list after deleting
-                    await fetchSemesters();
-                    setSelectedSemesters([]);
-                    alert(`Đã xóa thành công ${upcomingSemesters.length} học kỳ`);
-                  } catch (error) {
-                    console.error('Error bulk deleting semesters:', error);
-                    alert('Có lỗi xảy ra khi xóa học kỳ. Vui lòng thử lại.');
-                  }
+                  setIsBulkDeleteModalOpen(true);
                 }}
                 className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md font-medium text-xs flex items-center gap-2 transition shadow-sm"
               >
@@ -315,11 +347,12 @@ export const SemestersPage: React.FC = () => {
                       }}
                     />
                   </th>
-                  <th className="py-4 w-1/5">Tên học kỳ</th>
-                  <th className="py-4 w-1/5">Ngày bắt đầu</th>
-                  <th className="py-4 w-1/5">Ngày kết thúc</th>
-                  <th className="py-4 w-1/5">Trạng thái</th>
-                  <th className="py-4 w-[10%] text-left pr-2">Thao tác</th>
+                  <th className="py-4 w-[15%]">Mã học kỳ</th>
+                  <th className="py-4 w-[20%]">Tên học kỳ</th>
+                  <th className="py-4 w-[15%]">Ngày bắt đầu</th>
+                  <th className="py-4 w-[15%]">Ngày kết thúc</th>
+                  <th className="py-4 w-[15%]">Trạng thái</th>
+                  <th className="py-4 w-[15%] text-left pr-2">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="text-sm text-gray-700">
@@ -343,6 +376,7 @@ export const SemestersPage: React.FC = () => {
                           }}
                         />
                       </td>
+                      <td className="py-4 font-medium text-gray-800">{semester.code}</td>
                       <td className="py-4 font-bold text-gray-800">{semester.name}</td>
                       <td className="py-4">{formatDate(semester.startDate)}</td>
                       <td className="py-4">{formatDate(semester.endDate)}</td>
@@ -356,20 +390,20 @@ export const SemestersPage: React.FC = () => {
                         </span>
                       </td>
                       <td className="py-4 text-left pr-2 text-gray-300">
-                        <button 
+                        <button
                           onClick={() => navigate(`/academic-staff/semesters/${semester.code}/config`)}
                           className="hover:text-blue-500 mr-3 transition inline-flex"
                           title="Cấu hình kỳ học"
                         >
                           <Settings className="w-4 h-4" />
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleEditClick(semester)}
                           className="hover:text-orange-500 mr-3 transition inline-flex"
                         >
                           <Pen className="w-4 h-4" />
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleDeleteClick(semester)}
                           className="hover:text-red-500 transition inline-flex"
                         >
@@ -408,11 +442,10 @@ export const SemestersPage: React.FC = () => {
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`w-8 h-8 flex items-center justify-center rounded font-medium transition ${
-                      currentPage === page
-                        ? 'bg-orange-500 text-white shadow-sm'
-                        : 'hover:bg-gray-50 text-gray-600'
-                    }`}
+                    className={`w-8 h-8 flex items-center justify-center rounded font-medium transition ${currentPage === page
+                      ? 'bg-orange-500 text-white shadow-sm'
+                      : 'hover:bg-gray-50 text-gray-600'
+                      }`}
                   >
                     {page}
                   </button>
@@ -460,6 +493,26 @@ export const SemestersPage: React.FC = () => {
         onConfirm={handleDeleteSemester}
         semesterName={selectedSemester?.name || ''}
         semesterStatus={selectedSemester?.status || ''}
+      />
+
+      {/* Bulk Delete Confirm Modal */}
+      <ConfirmModal
+        isOpen={isBulkDeleteModalOpen}
+        onClose={() => setIsBulkDeleteModalOpen(false)}
+        onConfirm={async () => {
+          if (bulkDeleteConfig.action) {
+            await bulkDeleteConfig.action();
+          }
+          // The modal will be closed inside the action or here if no action
+          if (!bulkDeleteConfig.action) {
+            setIsBulkDeleteModalOpen(false);
+          }
+        }}
+        title={bulkDeleteConfig.title}
+        message={bulkDeleteConfig.message}
+        type={bulkDeleteConfig.type}
+        confirmLabel={bulkDeleteConfig.showConfirmButton ? "Xác nhận" : ""}
+        cancelLabel={bulkDeleteConfig.showConfirmButton ? "Hủy" : ""}
       />
     </AcademicStaffLayout>
   );

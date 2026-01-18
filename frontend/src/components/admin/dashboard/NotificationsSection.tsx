@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AppNotification } from '../../../types/dashboard';
 import { Bell } from 'lucide-react';
 
@@ -10,6 +10,7 @@ interface NotificationsSectionProps {
 }
 
 export const NotificationsSection: React.FC<NotificationsSectionProps> = ({ notifications, isDashboard = false, viewAllUrl = '/notifications' }) => {
+  const navigate = useNavigate();
   // Strip HTML tags from text
   const stripHtml = (html: string): string => {
     const tmp = document.createElement('div');
@@ -43,44 +44,41 @@ export const NotificationsSection: React.FC<NotificationsSectionProps> = ({ noti
           (isDashboard ? notifications.slice(0, 6) : notifications).map((notification) => (
             <div
               key={notification.id}
-              className={`p-4 rounded-lg border ${
-                notification.isRead
-                  ? 'border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900'
-                  : 'border-fpt-orange/30 bg-orange-50 dark:bg-orange-900/10'
-              } hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors`}
+              onClick={() => navigate(`/notifications/${notification.id}`)}
+              className={`p-4 rounded-lg border cursor-pointer ${notification.isRead
+                ? 'border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900'
+                : 'border-fpt-orange/30 bg-orange-50 dark:bg-orange-900/10'
+                } hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors`}
             >
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0">
                   {notification.senderName && notification.senderName !== 'System' ? (
                     notification.senderAvatar ? (
-                      <img 
-                        src={notification.senderAvatar} 
-                        alt={notification.senderFullName || notification.senderName} 
+                      <img
+                        src={notification.senderAvatar}
+                        alt={notification.senderFullName || notification.senderName}
                         className="w-10 h-10 rounded-full object-cover"
                       />
                     ) : (
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
-                        notification.type === 'ALERT' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
-                      }`}>
-                         {(notification.senderFullName || notification.senderName).charAt(0)}
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${notification.type === 'ALERT' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
+                        }`}>
+                        {(notification.senderFullName || notification.senderName).charAt(0)}
                       </div>
                     )
                   ) : (
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      notification.type === 'SYSTEM' ? 'bg-blue-100 text-blue-600' :
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${notification.type === 'SYSTEM' ? 'bg-blue-100 text-blue-600' :
                       notification.type === 'ALERT' ? 'bg-red-100 text-red-600' :
-                      'bg-orange-100 text-fpt-orange'
-                    }`}>
-                       <Bell size={20} />
+                        'bg-orange-100 text-fpt-orange'
+                      }`}>
+                      <Bell size={20} />
                     </div>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm leading-tight ${
-                    notification.isRead 
-                      ? 'text-gray-700 dark:text-gray-300 font-medium' 
-                      : 'text-gray-900 dark:text-white font-bold'
-                  }`}>
+                  <p className={`text-sm leading-tight ${notification.isRead
+                    ? 'text-gray-700 dark:text-gray-300 font-medium'
+                    : 'text-gray-900 dark:text-white font-bold'
+                    }`}>
                     {notification.senderName && notification.senderName !== 'System' && (
                       <span className="block text-[11px] text-gray-500 dark:text-gray-400 font-normal mb-0.5">
                         {notification.senderFullName || notification.senderName}
@@ -92,11 +90,11 @@ export const NotificationsSection: React.FC<NotificationsSectionProps> = ({ noti
                     {truncateText(stripHtml(notification.description))}
                   </p>
                   <div className="flex items-center gap-2 mt-2">
-                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                        {notification.senderName && notification.senderName !== 'System' ? (notification.senderFullName || notification.senderName) : (notification.type === 'SYSTEM' ? 'Hệ thống' : 'Cảnh báo')}
-                     </span>
-                     <span className="text-[10px] text-gray-400">•</span>
-                     <span className="text-[10px] text-gray-400 font-medium">{notification.timestamp}</span>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      {notification.senderName && notification.senderName !== 'System' ? (notification.senderFullName || notification.senderName) : (notification.type === 'SYSTEM' ? 'Hệ thống' : 'Cảnh báo')}
+                    </span>
+                    <span className="text-[10px] text-gray-400">•</span>
+                    <span className="text-[10px] text-gray-400 font-medium">{notification.timestamp}</span>
                   </div>
                 </div>
                 {!notification.isRead && (
