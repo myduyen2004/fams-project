@@ -207,6 +207,10 @@ public class NotificationService {
             throw new IllegalStateException("Không thể chỉnh sửa thông báo đã gửi");
         }
 
+        // Set sentAt if status changed to SENT
+        boolean shouldSend = request.getStatus() == NotificationStatus.SENT
+                && notification.getStatus() != NotificationStatus.SENT;
+
         notification.setTitle(request.getTitle());
         notification.setContent(request.getContent());
         notification.setType(request.getType());
@@ -219,12 +223,16 @@ public class NotificationService {
             notification.setAttachmentUrls(request.getAttachmentUrls());
         }
 
-        // Set sentAt if status changed to SENT
-        if (request.getStatus() == NotificationStatus.SENT && notification.getSentAt() == null) {
+        if (shouldSend) {
             notification.setSentAt(LocalDateTime.now());
         }
 
         Notification saved = notificationRepository.save(notification);
+
+        if (shouldSend) {
+            createNotificationRecipients(saved);
+        }
+
         log.info("Updated notification: {}", saved.getId());
 
         return mapToResponse(saved);
@@ -304,8 +312,11 @@ public class NotificationService {
         LocalDateTime now = LocalDateTime.now();
 
         notifications.forEach(n -> {
-            n.setStatus(NotificationStatus.SENT);
-            n.setSentAt(now);
+            if (n.getStatus() != NotificationStatus.SENT) {
+                n.setStatus(NotificationStatus.SENT);
+                n.setSentAt(now);
+                createNotificationRecipients(n);
+            }
         });
 
         notificationRepository.saveAll(notifications);
@@ -357,7 +368,7 @@ public class NotificationService {
     /**
      * Tạo NotificationRecipient records dựa trên targetType
      */
-    private void createNotificationRecipients(Notification notification) {
+    public void createNotificationRecipients(Notification notification) {
         List<User> recipients = new ArrayList<>();
 
         switch (notification.getTargetType()) {
@@ -372,19 +383,15 @@ public class NotificationService {
                 recipients = userRepository.findByRole(User.UserRole.STUDENT)
                         .orElse(new ArrayList<>()).stream()
                         .filter(u -> u.getStatus() == User.UserStatus.ACTIVE)
+                        .filter(u -> !u.equals(notification.getSender()))
                         .collect(java.util.stream.Collectors.toList());
                 break;
             case LECTURER:
                 recipients = userRepository.findByRole(User.UserRole.LECTURER)
                         .orElse(new ArrayList<>()).stream()
                         .filter(u -> u.getStatus() == User.UserStatus.ACTIVE)
+                        .filter(u -> !u.equals(notification.getSender()))
                         .collect(java.util.stream.Collectors.toList());
-                break;
-            case CLASS:
-            case COURSE:
-            case USER:
-                // TODO: Implement logic cho CLASS, COURSE, USER
-                log.warn("TargetType {} chưa được implement", notification.getTargetType());
                 break;
         }
 

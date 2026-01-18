@@ -45,7 +45,7 @@ export const AddSemesterModal: React.FC<AddSemesterModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validation
     if (!formData.code || !formData.name || !formData.startDate || !formData.endDate) {
       setError('Vui lòng điền đầy đủ thông tin');
@@ -54,8 +54,10 @@ export const AddSemesterModal: React.FC<AddSemesterModalProps> = ({
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const startDate = new Date(formData.startDate);
-    
+    // Parse input as local date to avoid timezone issues
+    const [startYear, startMonth, startDay] = formData.startDate.split('-').map(Number);
+    const startDate = new Date(startYear, startMonth - 1, startDay);
+
     if (startDate <= today) {
       setError('Ngày bắt đầu học kỳ phải sau ngày hôm nay');
       return;
@@ -63,6 +65,14 @@ export const AddSemesterModal: React.FC<AddSemesterModalProps> = ({
 
     if (new Date(formData.startDate) >= new Date(formData.endDate)) {
       setError('Ngày kết thúc phải sau ngày bắt đầu');
+      return;
+    }
+
+    // Validate semester code format
+    // Code must be 4 characters: 2 chars (SP/SU/FA) + 2 digits
+    const codeRegex = /^(SP|SU|FA)\d{2}$/;
+    if (!codeRegex.test(formData.code)) {
+      setError('Vui lòng nhập đúng mã học kỳ, mã học kỳ phải bắt đầu SP, SU, FA. VD: SP26, SU26, FA26');
       return;
     }
 
@@ -243,7 +253,7 @@ export const AddSemesterModal: React.FC<AddSemesterModalProps> = ({
               {loading ? 'Đang thêm...' : 'Thêm học kỳ'}
             </button>
           </div>
-         
+
         </form>
       </div>
     </div>

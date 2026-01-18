@@ -4,6 +4,7 @@ import type { AxiosError } from 'axios';
 import { Loader2 } from 'lucide-react';
 import { Pagination } from '../../components/common/Pagination';
 import { AdminLayout } from '../../components/admin/AdminLayout';
+import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { authService } from '../../services/api/authService';
 import {
   notificationService,
@@ -22,12 +23,12 @@ import {
 export const NotificationManagementPage = () => {
   const navigate = useNavigate();
   const [userRole, setUserRole] = useState<string>('');
-  
+
   // Determine base path based on user role
   const basePath = useMemo(() => {
     return userRole === 'ACADEMIC_STAFF' ? '/academic-staff' : '/admin';
   }, [userRole]);
-  
+
   // Get user role on mount
   useEffect(() => {
     const user = authService.getUser();
@@ -35,12 +36,12 @@ export const NotificationManagementPage = () => {
       setUserRole(user.role);
     }
   }, []);
-  
+
   // Data states
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalElements, setTotalElements] = useState(0);
-  
+
   // Filter states
   const [search, setSearch] = useState('');
   const [targetTypeFilter, setTargetTypeFilter] = useState('ALL');
@@ -63,7 +64,7 @@ export const NotificationManagementPage = () => {
   const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       // Call real API
       const response = await notificationService.getNotifications({
         search: search || undefined,
@@ -72,10 +73,10 @@ export const NotificationManagementPage = () => {
         page,
         size: pageSize
       });
-      
+
       console.log('API Response:', response);
       console.log('Raw response data:', JSON.stringify(response, null, 2));
-      
+
       // Handle both Page response format and direct array
       if (Array.isArray(response)) {
         // If response is directly an array (old format)
@@ -176,10 +177,12 @@ export const NotificationManagementPage = () => {
     fetchNotifications();
   }, [fetchNotifications]);
 
+  const Layout = userRole === 'ACADEMIC_STAFF' ? AcademicStaffLayout : AdminLayout;
+
   return (
-    <AdminLayout pageTitle="Quản lý thông báo">
+    <Layout pageTitle="Quản lý thông báo">
       <div className="p-6 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800">
-        
+
         {/* Filters */}
         <NotificationFilters
           search={search}
@@ -194,7 +197,7 @@ export const NotificationManagementPage = () => {
         {/* Bulk Actions */}
         <NotificationBulkActions
           selectedCount={selectedIds.length}
-          
+
           onEdit={handleEditFromBulk}
           onDelete={() => setIsDeleteConfirmOpen(true)}
           isDeleting={isDeleting}
@@ -281,6 +284,6 @@ export const NotificationManagementPage = () => {
         cancelLabel="Hủy"
         type="danger"
       />
-    </AdminLayout>
+    </Layout>
   );
 };

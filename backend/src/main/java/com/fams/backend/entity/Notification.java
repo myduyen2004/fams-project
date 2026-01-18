@@ -114,9 +114,6 @@ public class Notification {
         ALL, // Tất cả
         STUDENT, // Tất cả sinh viên
         LECTURER, // Tất cả giảng viên
-        CLASS, // Theo lớp học phần
-        COURSE, // Theo môn học
-        USER // Cá nhân cụ thể
     }
 
     public enum NotificationStatus {
