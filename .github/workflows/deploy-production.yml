@@ -34,8 +34,10 @@ jobs:
           git fetch origin
           git reset --hard origin/main
           
-          # Create env file (after git reset to avoid deletion)
-          echo 'NEON_PROD_DB_URL=${{ secrets.NEON_PROD_DB_URL }}' > .env.production
+          # Create env file (Ensuring jdbc: prefix)
+          URL="${{ secrets.NEON_PROD_DB_URL }}"
+          [[ "$URL" != jdbc:* ]] && URL="jdbc:$URL"
+          echo "NEON_PROD_DB_URL=$URL" > .env.production
           echo 'NEON_PROD_DB_USER=${{ secrets.NEON_PROD_DB_USER }}' >> .env.production
           echo 'NEON_PROD_DB_PASSWORD=${{ secrets.NEON_PROD_DB_PASSWORD }}' >> .env.production
           echo 'DISCORD_WEBHOOK_URL=${{ secrets.DISCORD_WEBHOOK_URL }}' >> .env.production
