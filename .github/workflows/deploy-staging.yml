@@ -35,9 +35,9 @@ jobs:
           git reset --hard origin/staging
           
           # Create env file (after git reset to avoid deletion)
-          echo 'NEON_STAGING_DB_URL=jdbc:postgresql://ep-shy-truth-a1qqexjr-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require' > .env.staging
-          echo 'NEON_STAGING_DB_USER=neondb_owner' >> .env.staging
-          echo 'NEON_STAGING_DB_PASSWORD=npg_KH5UoMe0NZYA' >> .env.staging
+          echo 'NEON_STAGING_DB_URL=${{ secrets.NEON_STAGING_DB_URL }}' > .env.staging
+          echo 'NEON_STAGING_DB_USER=${{ secrets.NEON_STAGING_DB_USER }}' >> .env.staging
+          echo 'NEON_STAGING_DB_PASSWORD=${{ secrets.NEON_STAGING_DB_PASSWORD }}' >> .env.staging
           
           # Stop old containers
           docker compose -f docker-compose.staging.yml --env-file .env.staging down 2>/dev/null || true

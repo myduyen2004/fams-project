@@ -45,7 +45,7 @@ git push --set-upstream origin staging
 
 SSH vào EC2:
 ```bash
-ssh ubuntu@16.176.158.195
+ssh ec2-user@16.176.158.195
 ```
 
 ### 3.1 Clone repository (nếu chưa có):
@@ -149,6 +149,26 @@ sudo ln -s /etc/nginx/sites-available/fams-staging /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
+
+## 🔒 Bước 5.1: Setup SSL (Bắt buộc cho Vercel)
+
+Do Vercel dùng HTTPS, backend cũng phải có SSL để tránh lỗi Mixed Content.
+
+Sử dụng script `setup-ssl.sh` đã có sẵn:
+
+```bash
+cd /home/ec2-user/fams-project
+chmod +x scripts/setup-ssl.sh
+
+# Setup cho Staging
+./scripts/setup-ssl.sh staging.fams-edu.online admin@fams-edu.online
+
+# Setup cho Production
+./scripts/setup-ssl.sh fams-edu.online admin@fams-edu.online
+```
+
+> [!IMPORTANT]
+> Bạn phải trỏ A Record của domain về IP EC2 trước khi chạy script này.
 
 ## 📱 Bước 6: Setup Vercel Frontend
 
