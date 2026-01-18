@@ -6,11 +6,10 @@ echo "🚀 Starting Production Deployment..."
 # Navigate to project directory
 cd /home/ec2-user/fams-main || exit 1
 
-# Checkout main branch
-echo "📦 Checking out main branch..."
+# Sync with main branch
+echo "📦 Syncing with main branch..."
 git fetch origin
-git checkout main
-git pull origin main
+git reset --hard origin/main
 
 # Stop existing containers
 echo "🛑 Stopping existing containers..."

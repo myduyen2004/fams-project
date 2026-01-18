@@ -6,11 +6,10 @@ echo "🚀 Starting Staging Deployment..."
 # Navigate to project directory
 cd /home/ec2-user/fams-staging || exit 1
 
-# Checkout staging branch
-echo "📦 Checking out staging branch..."
+# Sync with staging branch
+echo "📦 Syncing with staging branch..."
 git fetch origin
-git checkout staging
-git pull origin staging
+git reset --hard origin/staging
 
 # Stop existing containers
 echo "🛑 Stopping existing containers..."
