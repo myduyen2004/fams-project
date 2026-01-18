@@ -4,7 +4,7 @@ set -e
 echo "🚀 Starting Production Deployment..."
 
 # Navigate to project directory
-cd /home/ec2-user/fams-project || exit 1
+cd /home/ec2-user/fams-main || exit 1
 
 # Checkout main branch
 echo "📦 Checking out main branch..."
@@ -14,11 +14,11 @@ git pull origin main
 
 # Stop existing containers
 echo "🛑 Stopping existing containers..."
-docker compose -f docker-compose.prod.yml --env-file .env.production down 2>/dev/null || true
+docker compose -p fams-main -f docker-compose.prod.yml --env-file .env.production down 2>/dev/null || true
 
 # Build and start new containers with env file
 echo "🔨 Building and starting containers..."
-docker compose -f docker-compose.prod.yml --env-file .env.production up --build -d
+docker compose -p fams-main -f docker-compose.prod.yml --env-file .env.production up --build -d
 
 # Wait for health check (longer wait for schema creation)
 echo "⏳ Waiting for health check (60s for schema creation)..."
@@ -47,6 +47,6 @@ else
           -d "{\"embeds\": [{\"title\": \"❌ Production Deployment Failed\", \"color\": 15158332}], \"username\": \"FAMS Deploy Monitor\"}"
     fi
     
-    docker compose -f docker-compose.prod.yml --env-file .env.production logs backend --tail=50
+    docker compose -p fams-main -f docker-compose.prod.yml --env-file .env.production logs backend --tail=50
     exit 1
 fi

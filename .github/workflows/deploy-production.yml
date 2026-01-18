@@ -28,7 +28,7 @@ jobs:
       - name: Deploy to EC2
         run: |
           ssh ${{ env.EC2_USER }}@${{ env.EC2_HOST }} 'bash -s' << 'ENDSSH'
-          cd /home/ec2-user/fams-project || exit 1
+          cd /home/ec2-user/fams-main || exit 1
           
           # Force reset and sync with remote
           git fetch origin
