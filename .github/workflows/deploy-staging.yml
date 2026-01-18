@@ -34,8 +34,10 @@ jobs:
           git fetch origin
           git reset --hard origin/staging
           
-          # Create env file (after git reset to avoid deletion)
-          echo 'NEON_STAGING_DB_URL=${{ secrets.NEON_STAGING_DB_URL }}' > .env.staging
+          # Create env file (Ensuring jdbc: prefix)
+          URL="${{ secrets.NEON_STAGING_DB_URL }}"
+          [[ "$URL" != jdbc:* ]] && URL="jdbc:$URL"
+          echo "NEON_STAGING_DB_URL=$URL" > .env.staging
           echo 'NEON_STAGING_DB_USER=${{ secrets.NEON_STAGING_DB_USER }}' >> .env.staging
           echo 'NEON_STAGING_DB_PASSWORD=${{ secrets.NEON_STAGING_DB_PASSWORD }}' >> .env.staging
           

@@ -18,12 +18,12 @@ Vào repository Settings → Secrets and variables → Actions → New repositor
 - `EC2_SSH_KEY`: SSH private key để connect tới EC2
   
 ### Secrets cho Staging:
-- `NEON_STAGING_DB_URL`: `postgresql://[user]:[password]@[host]/fams-test?sslmode=require`
+- `NEON_STAGING_DB_URL`: `jdbc:postgresql://[host]/fams-test?sslmode=require` (Bắt đầu bằng jdbc:)
 - `NEON_STAGING_DB_USER`: Username Neon staging database
 - `NEON_STAGING_DB_PASSWORD`: Password Neon staging database
 
 ### Secrets cho Production:
-- `NEON_PROD_DB_URL`: `postgresql://[user]:[password]@[host]/fams-project?sslmode=require`
+- `NEON_PROD_DB_URL`: `jdbc:postgresql://[host]/fams-project?sslmode=require` (Bắt đầu bằng jdbc:)
 - `NEON_PROD_DB_USER`: Username Neon production database  
 - `NEON_PROD_DB_PASSWORD`: Password Neon production database
 - `DISCORD_WEBHOOK_URL`: `https://discord.com/api/webhooks/1459826342605623375/P7HtDHOTrkhzNIJzw3zcf0E20tGhruu_b_EWnGH4IUjX-ac7qrq8uUsp-_8HMSgUq9Ma`
