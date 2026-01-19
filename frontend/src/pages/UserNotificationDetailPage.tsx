@@ -2,17 +2,31 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AdminLayout } from '../components/admin/AdminLayout';
 import { AcademicStaffLayout } from '../layouts/AcademicStaffLayout';
+import { StudentLayout } from '../layouts/StudentLayout';
 import { authService } from '../services/api/authService';
 import { dashboardService } from '../services/api/dashboardService';
 import { AppNotification } from '../types/dashboard';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const UserNotificationDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const user = authService.getUser();
-  const Layout = user?.role === 'ACADEMIC_STAFF' ? AcademicStaffLayout : AdminLayout;
+
+  const getLayout = (role?: string) => {
+    switch (role) {
+      case 'STUDENT':
+        return StudentLayout;
+      case 'ACADEMIC_STAFF':
+      case 'LECTURER':
+        return AcademicStaffLayout;
+      default:
+        return AdminLayout;
+    }
+  };
+
+  const Layout = getLayout(user?.role);
 
   const [notification, setNotification] = useState<AppNotification | null>(null);
   const [loading, setLoading] = useState(true);
@@ -71,6 +85,13 @@ export const UserNotificationDetailPage: React.FC = () => {
         <div className="flex flex-col max-w-[1200px] w-full mx-auto flex-1 gap-8">
           {/* Header Section */}
           <div className="flex flex-col gap-4">
+            <button
+              onClick={() => navigate('/notifications')}
+              className="flex items-center gap-2 text-sm text-gray-500 hover:text-fpt-orange transition-colors w-fit group"
+            >
+              <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+              Quay lại danh sách
+            </button>
             <h1 className="text-slate-900 dark:text-white text-3xl md:text-5xl font-black leading-tight tracking-tight">
               {notification.title}
             </h1>
@@ -163,14 +184,7 @@ export const UserNotificationDetailPage: React.FC = () => {
                       {notification.timestamp}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-slate-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">
-                      Loại thông báo
-                    </p>
-                    <p className="text-slate-700 dark:text-gray-300 text-sm">
-                      {notification.type || 'Hệ thống'}
-                    </p>
-                  </div>
+
                 </div>
               </div>
             </div>
