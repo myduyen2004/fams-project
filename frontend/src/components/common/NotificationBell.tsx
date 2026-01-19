@@ -24,11 +24,34 @@ export const NotificationBell: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'notifications' | 'jobs'>('notifications');
   const navigate = useNavigate();
 
-  // Strip HTML tags and return plain text
-  const stripHtml = (html: string): string => {
-    const tmp = document.createElement('div');
-    tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || '';
+  // Get first line of HTML content
+  const getFirstLineHtml = (html: string): string => {
+    let clean = html;
+
+    // 1. Strip leading empty blocks (e.g. <p><br></p>, <p>&nbsp;</p>) and loose breaks/spaces
+    let prev;
+    do {
+      prev = clean;
+      // Strip loose <br>, whitespace, &nbsp;
+      clean = clean.replace(/^(\s|&nbsp;|<br\s*\/?>)+/i, '');
+      // Strip empty tags P, DIV, H1-6, LI containing only whitespace/br/&nbsp;
+      clean = clean.replace(/^<(p|div|h[1-6]|li)[^>]*>(\s|&nbsp;|<br\s*\/?>)*<\/\1>/i, '');
+    } while (clean !== prev && clean.length > 0);
+
+    // 2. Strip leading whitespace strictly inside the first opening tag if present
+    clean = clean.replace(/^(<[a-z][^>]*>)(\s|&nbsp;|<br\s*\/?>)+/i, '$1');
+
+    const splitRegex = /(<br\s*\/?>|<\/(p|div|h[1-6]|li)>)/i;
+    const match = clean.match(splitRegex);
+
+    if (match && match.index !== undefined) {
+      if (match[0].startsWith('</')) {
+        return clean.substring(0, match.index + match[0].length).trim();
+      } else {
+        return clean.substring(0, match.index).trim();
+      }
+    }
+    return clean.trim();
   };
 
   // Listen for import job progress (transient)
@@ -44,12 +67,12 @@ export const NotificationBell: React.FC = () => {
       // NEVER overwrite existing notifications to preserve their isRead status
       const existingIds = new Set(prev.map(n => n.id));
       const newNotifications = data.filter(n => !existingIds.has(n.id));
-      
+
       if (newNotifications.length > 0) {
         console.log('[NotificationBell] Adding', newNotifications.length, 'new notifications');
         return [...newNotifications, ...prev];
       }
-      
+
       console.log('[NotificationBell] No new notifications, keeping existing state');
       return prev;
     });
@@ -58,7 +81,7 @@ export const NotificationBell: React.FC = () => {
   // Load notifications and jobs on mount
   useEffect(() => {
     loadNotifications();
-    
+
     // 1. Fetch active job from backend on mount (covers refresh/new login)
     const fetchActiveJob = async () => {
       try {
@@ -80,7 +103,7 @@ export const NotificationBell: React.FC = () => {
     };
 
     fetchActiveJob();
-    
+
     // 2. Load existing jobs from local storage for history
     const storedJobs = JSON.parse(localStorage.getItem('importJobs') || '[]');
     if (storedJobs.length > 0) {
@@ -138,7 +161,7 @@ export const NotificationBell: React.FC = () => {
 
       // If finished, refresh notifications as a persistent one might have been created
       if (update.status === 'COMPLETED' || update.status === 'FAILED') {
-         loadNotifications();
+        loadNotifications();
       }
 
       // Save to localStorage
@@ -151,12 +174,12 @@ export const NotificationBell: React.FC = () => {
     // Try to mark as read, but don't block navigation if it fails
     if (!notification.isRead) {
       console.log('[NotificationBell] Marking notification as read:', notification.id);
-      
+
       // Immediately update UI state for instant feedback
-      setNotifications(prev => prev.map(n => 
+      setNotifications(prev => prev.map(n =>
         n.id === notification.id ? { ...n, isRead: true } : n
       ));
-      
+
       // Try to sync with backend, but don't fail if it doesn't work
       try {
         await dashboardService.markNotificationAsRead(notification.id);
@@ -164,12 +187,12 @@ export const NotificationBell: React.FC = () => {
       } catch (error) {
         console.warn('[NotificationBell] Failed to mark as read on backend, but continuing:', error);
         // Revert UI state if backend failed
-        setNotifications(prev => prev.map(n => 
+        setNotifications(prev => prev.map(n =>
           n.id === notification.id ? { ...n, isRead: false } : n
         ));
       }
     }
-    
+
     // Always navigate to notification detail page
     navigate(`/notifications/${notification.id}`);
     setShowDropdown(false);
@@ -178,10 +201,10 @@ export const NotificationBell: React.FC = () => {
   const handleMarkAllAsRead = async () => {
     try {
       console.log('[NotificationBell] Marking all notifications as read');
-      
+
       // Immediately update UI state for instant feedback
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-      
+
       // Then sync with backend
       await dashboardService.markAllNotificationsAsRead();
       console.log('[NotificationBell] Successfully marked all as read');
@@ -205,7 +228,7 @@ export const NotificationBell: React.FC = () => {
     console.log('[NotificationBell] Recalculating unreadCount:', count);
     return count;
   }, [notifications]);
-  
+
   const processingJobsCount = useMemo(() => {
     return jobs.filter(j => j.status === 'PROCESSING').length;
   }, [jobs]);
@@ -264,11 +287,10 @@ export const NotificationBell: React.FC = () => {
           <div className="flex px-5 mb-2 border-b border-gray-50 dark:border-zinc-800/50">
             <button
               onClick={() => setActiveTab('notifications')}
-              className={`pb-3 text-sm font-semibold transition-all relative mr-6 ${
-                activeTab === 'notifications' 
-                ? 'text-fpt-orange' 
+              className={`pb-3 text-sm font-semibold transition-all relative mr-6 ${activeTab === 'notifications'
+                ? 'text-fpt-orange'
                 : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
-              }`}
+                }`}
             >
               Thông báo
               {unreadCount > 0 && (
@@ -280,11 +302,10 @@ export const NotificationBell: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveTab('jobs')}
-              className={`pb-3 text-sm font-semibold transition-all relative ${
-                activeTab === 'jobs' 
-                ? 'text-fpt-orange' 
+              className={`pb-3 text-sm font-semibold transition-all relative ${activeTab === 'jobs'
+                ? 'text-fpt-orange'
                 : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
-              }`}
+                }`}
             >
               Tiến trình
               {processingJobsCount > 0 && (
@@ -311,70 +332,69 @@ export const NotificationBell: React.FC = () => {
                   <div
                     key={n.id}
                     onClick={() => handleNotificationClick(n)}
-                    className={`p-4 flex gap-4 cursor-pointer transition-all relative group hover:bg-gray-50 dark:hover:bg-zinc-800/50 ${
-                      !n.isRead ? 'bg-blue-50/20 dark:bg-blue-900/10' : ''
-                    }`}
+                    className={`p-4 flex gap-4 cursor-pointer transition-all relative group hover:bg-gray-50 dark:hover:bg-zinc-800/50 ${!n.isRead ? 'bg-blue-50/20 dark:bg-blue-900/10' : ''
+                      }`}
                   >
                     {/* Avatar/Icon Circle */}
-          <div className="relative flex-shrink-0">
-            {n.senderName && n.senderName !== 'System' ? (
-              n.senderAvatar ? (
-                <img 
-                  src={n.senderAvatar} 
-                  alt={n.senderName} 
-                  className="w-12 h-12 rounded-full object-cover"
-                />
-              ) : (
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold ${
-                  n.type === 'ALERT' ? 'bg-red-100 text-red-600 dark:bg-red-900/30' :
-                  'bg-blue-100 text-blue-600 dark:bg-blue-900/30'
-                }`}>
-                   {n.senderName.charAt(0)}
-                </div>
-              )
-            ) : (
-              <div className="w-12 h-12 rounded-full bg-white dark:bg-zinc-800 border-2 border-fpt-orange flex items-center justify-center p-2 overflow-hidden">
-                <img 
-                  src="/fams-logo.png" 
-                  alt="FAMS" 
-                  className="w-full h-full object-contain"
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    target.style.display = 'none';
-                    const parent = target.parentElement;
-                    if (parent) {
-                      parent.innerHTML = '<span class="text-fpt-orange font-bold text-xl">F</span>';
-                    }
-                  }}
-                />
-              </div>
-            )}
-            {!n.isRead && (
-              <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-blue-500 rounded-full border-2 border-white dark:border-zinc-900"></div>
-            )}
-          </div>
+                    <div className="relative flex-shrink-0">
+                      {n.senderName && n.senderName !== 'System' ? (
+                        n.senderAvatar ? (
+                          <img
+                            src={n.senderAvatar}
+                            alt={n.senderName}
+                            className="w-12 h-12 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold ${n.type === 'ALERT' ? 'bg-red-100 text-red-600 dark:bg-red-900/30' :
+                            'bg-blue-100 text-blue-600 dark:bg-blue-900/30'
+                            }`}>
+                            {n.senderName.charAt(0)}
+                          </div>
+                        )
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-white dark:bg-zinc-800 border-2 border-fpt-orange flex items-center justify-center p-2 overflow-hidden">
+                          <img
+                            src="/fams-logo.png"
+                            alt="FAMS"
+                            className="w-full h-full object-contain"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              target.style.display = 'none';
+                              const parent = target.parentElement;
+                              if (parent) {
+                                parent.innerHTML = '<span class="text-fpt-orange font-bold text-xl">F</span>';
+                              }
+                            }}
+                          />
+                        </div>
+                      )}
+                      {!n.isRead && (
+                        <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-blue-500 rounded-full border-2 border-white dark:border-zinc-900"></div>
+                      )}
+                    </div>
 
-          <div className="flex-1 min-w-0">
-            <div className="flex justify-between items-start">
-              <div className="flex-1 pr-2">
-                {/* Tiêu đề thông báo - in đậm */}
-                <p className="text-sm font-bold text-gray-900 dark:text-white mb-1 truncate">
-                  {n.title}
-                </p>
-                {/* Nội dung thông báo - bình thường */}
-                <p className={`text-xs line-clamp-2 ${!n.isRead ? 'text-gray-700 dark:text-gray-300' : 'text-gray-500 dark:text-gray-400'}`}>
-                  {stripHtml(n.description)}
-                </p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500">
-                     {n.senderName && n.senderName !== 'System' ? 'Cá nhân' : (n.type === 'SYSTEM' ? 'Hệ thống' : n.type === 'ALERT' ? 'Cảnh báo' : 'Dữ liệu')}
-                  </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1 pr-2">
+                          {/* Tiêu đề thông báo - in đậm */}
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-1 truncate">
+                            {n.title}
+                          </p>
+                          {/* Nội dung thông báo - bình thường */}
+                          <div
+                            className={`text-xs line-clamp-1 ${!n.isRead ? 'text-gray-700 dark:text-gray-300' : 'text-gray-500 dark:text-gray-400'}`}
+                            dangerouslySetInnerHTML={{ __html: getFirstLineHtml(n.description) }}
+                          />
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500">
+                              {n.senderName && n.senderName !== 'System' ? 'Cá nhân' : (n.type === 'SYSTEM' ? 'Hệ thống' : n.type === 'ALERT' ? 'Cảnh báo' : 'Dữ liệu')}
+                            </span>
                             <span className="text-[11px] text-gray-400">•</span>
                             <span className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">{n.timestamp}</span>
                           </div>
                         </div>
                         <button className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                           <MoreVertical size={16} />
+                          <MoreVertical size={16} />
                         </button>
                       </div>
                     </div>
@@ -393,13 +413,12 @@ export const NotificationBell: React.FC = () => {
                 jobs.map(job => (
                   <div key={job.jobId} className="p-4 flex gap-4 hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors group">
                     <div className="flex-shrink-0">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                        job.status === 'COMPLETED' ? 'bg-orange-100 dark:bg-orange-900/20 text-fpt-orange' :
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${job.status === 'COMPLETED' ? 'bg-orange-100 dark:bg-orange-900/20 text-fpt-orange' :
                         job.status === 'FAILED' ? 'bg-red-100 text-red-600' :
-                        'bg-orange-100 text-fpt-orange'
-                      }`}>
-                        {job.status === 'COMPLETED' ? <CheckCircle2 size={24} /> : 
-                         job.status === 'FAILED' ? <AlertCircle size={24} /> : <Loader2 size={24} className="animate-spin" />}
+                          'bg-orange-100 text-fpt-orange'
+                        }`}>
+                        {job.status === 'COMPLETED' ? <CheckCircle2 size={24} /> :
+                          job.status === 'FAILED' ? <AlertCircle size={24} /> : <Loader2 size={24} className="animate-spin" />}
                       </div>
                     </div>
 
@@ -411,7 +430,7 @@ export const NotificationBell: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-1">
                           {(job.status === 'COMPLETED' || job.status === 'FAILED') && (
-                            <button 
+                            <button
                               onClick={() => removeJob(job.jobId)}
                               className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity"
                             >
@@ -420,13 +439,12 @@ export const NotificationBell: React.FC = () => {
                           )}
                         </div>
                       </div>
-                      
+
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
-                          <span className={`text-[10px] font-bold ${
-                            job.status === 'COMPLETED' ? 'text-fpt-orange' :
+                          <span className={`text-[10px] font-bold ${job.status === 'COMPLETED' ? 'text-fpt-orange' :
                             job.status === 'FAILED' ? 'text-red-600' : 'text-fpt-orange'
-                          }`}>
+                            }`}>
                             {job.status === 'COMPLETED' ? '✓ Hoàn tất' : job.status === 'FAILED' ? '✗ Thất bại' : `${job.percentage}%`}
                           </span>
                           {job.status === 'COMPLETED' && (job.failedCount ?? 0) > 0 && (
@@ -436,11 +454,10 @@ export const NotificationBell: React.FC = () => {
                           )}
                         </div>
                         <div className="w-full bg-gray-100 dark:bg-zinc-800 rounded-full h-1 overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full transition-all duration-500 ${
-                              job.status === 'COMPLETED' ? 'bg-fpt-orange' :
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${job.status === 'COMPLETED' ? 'bg-fpt-orange' :
                               job.status === 'FAILED' ? 'bg-red-500' : 'bg-fpt-orange'
-                            }`} 
+                              }`}
                             style={{ width: `${job.percentage}%` }}
                           ></div>
                         </div>
@@ -451,14 +468,14 @@ export const NotificationBell: React.FC = () => {
               )
             )}
           </div>
-          
+
           <div className="p-4 flex justify-center bg-white dark:bg-zinc-900">
-             <button 
-               onClick={() => setShowDropdown(false)}
-               className="text-xs font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-             >
-               Ẩn bảng thông báo
-             </button>
+            <button
+              onClick={() => setShowDropdown(false)}
+              className="text-xs font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            >
+              Ẩn bảng thông báo
+            </button>
           </div>
         </div>
       )}
