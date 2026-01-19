@@ -361,6 +361,8 @@ public class NotificationService {
                         .id(notification.getSender().getId())
                         .username(notification.getSender().getUsername())
                         .fullName(notification.getSender().getFullName())
+                        .role(notification.getSender().getRole() != null ? notification.getSender().getRole().name()
+                                : null)
                         .build() : null)
                 .build();
     }
