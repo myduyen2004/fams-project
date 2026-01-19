@@ -15,9 +15,9 @@ public class AsyncConfig {
     @Bean(name = "importExecutor")
     public Executor importExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(2);
-        executor.setMaxPoolSize(3);
-        executor.setQueueCapacity(1500);
+        executor.setCorePoolSize(50);
+        executor.setMaxPoolSize(100);
+        executor.setQueueCapacity(10000);
         executor.setThreadNamePrefix("import-executor-");
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.initialize();
@@ -27,9 +27,9 @@ public class AsyncConfig {
     @Bean(name = "asyncImportExecutor")
     public Executor asyncImportExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(5);
-        executor.setMaxPoolSize(10);
-        executor.setQueueCapacity(50);
+        executor.setCorePoolSize(50);
+        executor.setMaxPoolSize(100);
+        executor.setQueueCapacity(10000);
         executor.setThreadNamePrefix("async-import-");
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.initialize();

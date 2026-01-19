@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Bell, Check, Trash2, Clock, CheckCircle2, AlertCircle, Loader2, Settings, MoreVertical } from 'lucide-react';
 import { userService } from '../../services/api/userService';
+import { authService } from '../../services/api/authService';
 import { dashboardService } from '../../services/api/dashboardService';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { useNavigate } from 'react-router-dom';
@@ -9,12 +10,12 @@ import { AppNotification } from '../../types/dashboard';
 interface ImportJobNotification {
   jobId: string;
   filename: string;
-  status: 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'PENDING';
+  status: 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'PENDING' | 'CANCELLED' | 'SAVING';
   percentage: number;
   successCount?: number;
   failedCount?: number;
   errorMessage?: string;
-  createdAt: string;
+  createdAt: number; // timestamp
 }
 
 export const NotificationBell: React.FC = () => {
@@ -31,8 +32,10 @@ export const NotificationBell: React.FC = () => {
     return tmp.textContent || tmp.innerText || '';
   };
 
-  // Listen for import job progress (transient)
-  useWebSocket(`/user/queue/import-job`, (data) => {
+  const username = authService.getUser()?.username || 'anonymous';
+
+  // Listen for import job progress
+  useWebSocket(`/topic/import-progress/${username}`, (data) => {
     updateJob(data);
   });
 
@@ -71,7 +74,7 @@ export const NotificationBell: React.FC = () => {
             percentage: activeJob.percentage || 0,
             successCount: activeJob.successCount,
             failedCount: activeJob.failedCount,
-            createdAt: new Date(activeJob.createdAt).toLocaleString('vi-VN'),
+            createdAt: new Date(activeJob.createdAt).getTime(),
           });
         }
       } catch (error) {
@@ -95,7 +98,7 @@ export const NotificationBell: React.FC = () => {
             percentage: status.percentage || 0,
             successCount: status.successCount,
             failedCount: status.failedCount,
-            createdAt: new Date(status.createdAt).toLocaleString('vi-VN'),
+            createdAt: new Date(status.createdAt).getTime(),
           });
         } catch (error) {
           console.error('Failed to fetch job status:', error);
@@ -129,15 +132,21 @@ export const NotificationBell: React.FC = () => {
     setJobs(prev => {
       const index = prev.findIndex(j => j.jobId === update.jobId);
       let updated;
+      const jobWithTimestamp = {
+        ...update,
+        createdAt: update.createdAt ? new Date(update.createdAt).getTime() : 
+                  (index !== -1 ? prev[index].createdAt : Date.now())
+      };
+
       if (index === -1) {
-        updated = [update, ...prev];
+        updated = [jobWithTimestamp, ...prev];
       } else {
         updated = [...prev];
-        updated[index] = { ...updated[index], ...update };
+        updated[index] = { ...updated[index], ...jobWithTimestamp };
       }
 
       // If finished, refresh notifications as a persistent one might have been created
-      if (update.status === 'COMPLETED' || update.status === 'FAILED') {
+      if (update.status === 'COMPLETED' || update.status === 'FAILED' || update.status === 'CANCELLED') {
          loadNotifications();
       }
 
@@ -206,8 +215,12 @@ export const NotificationBell: React.FC = () => {
     return count;
   }, [notifications]);
   
+  const sortedJobs = useMemo(() => {
+    return [...jobs].sort((a, b) => b.createdAt - a.createdAt);
+  }, [jobs]);
+
   const processingJobsCount = useMemo(() => {
-    return jobs.filter(j => j.status === 'PROCESSING').length;
+    return jobs.filter(j => j.status === 'PROCESSING' || j.status === 'SAVING' || j.status === 'PENDING').length;
   }, [jobs]);
 
   // Debug logging
@@ -390,23 +403,25 @@ export const NotificationBell: React.FC = () => {
                   <p className="text-sm font-medium">Không có tiến trình nào gần đây</p>
                 </div>
               ) : (
-                jobs.map(job => (
+                sortedJobs.map(job => (
                   <div key={job.jobId} className="p-4 flex gap-4 hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors group">
                     <div className="flex-shrink-0">
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
                         job.status === 'COMPLETED' ? 'bg-orange-100 dark:bg-orange-900/20 text-fpt-orange' :
-                        job.status === 'FAILED' ? 'bg-red-100 text-red-600' :
+                        job.status === 'FAILED' || job.status === 'CANCELLED' ? 'bg-red-100 text-red-600' :
                         'bg-orange-100 text-fpt-orange'
                       }`}>
                         {job.status === 'COMPLETED' ? <CheckCircle2 size={24} /> : 
-                         job.status === 'FAILED' ? <AlertCircle size={24} /> : <Loader2 size={24} className="animate-spin" />}
+                         job.status === 'FAILED' || job.status === 'CANCELLED' ? <AlertCircle size={24} /> : <Loader2 size={24} className="animate-spin" />}
                       </div>
                     </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-center mb-2">
                         <div className="flex-1 min-w-0 pr-2">
-                          <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium truncate">{job.filename}</p>
+                          <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium truncate">
+                            {job.filename} • {new Date(job.createdAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
+                          </p>
                           <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">Import danh sách người dùng</p>
                         </div>
                         <div className="flex items-center gap-1">
@@ -425,9 +440,11 @@ export const NotificationBell: React.FC = () => {
                         <div className="flex items-center justify-between">
                           <span className={`text-[10px] font-bold ${
                             job.status === 'COMPLETED' ? 'text-fpt-orange' :
-                            job.status === 'FAILED' ? 'text-red-600' : 'text-fpt-orange'
+                            job.status === 'FAILED' || job.status === 'CANCELLED' ? 'text-red-600' : 'text-fpt-orange'
                           }`}>
-                            {job.status === 'COMPLETED' ? '✓ Hoàn tất' : job.status === 'FAILED' ? '✗ Thất bại' : `${job.percentage}%`}
+                            {job.status === 'COMPLETED' ? '✓ Hoàn tất' : 
+                             job.status === 'FAILED' ? '✗ Thất bại' : 
+                             job.status === 'CANCELLED' ? '✗ Đã dừng' : `${job.percentage}%`}
                           </span>
                           {job.status === 'COMPLETED' && (job.failedCount ?? 0) > 0 && (
                             <span className="text-[9px] font-medium text-red-600 dark:text-red-400">
@@ -439,7 +456,7 @@ export const NotificationBell: React.FC = () => {
                           <div 
                             className={`h-full rounded-full transition-all duration-500 ${
                               job.status === 'COMPLETED' ? 'bg-fpt-orange' :
-                              job.status === 'FAILED' ? 'bg-red-500' : 'bg-fpt-orange'
+                              job.status === 'FAILED' || job.status === 'CANCELLED' ? 'bg-red-500' : 'bg-fpt-orange'
                             }`} 
                             style={{ width: `${job.percentage}%` }}
                           ></div>

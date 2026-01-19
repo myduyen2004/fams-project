@@ -127,5 +127,11 @@ export const userService = {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
         return response.data;
-    }
+    },
+    /**
+     * Cancel the current user's active import job
+     */
+    cancelImportJob: async (): Promise<void> => {
+        await apiClient.post('/users/import-job/cancel');
+    },
 };

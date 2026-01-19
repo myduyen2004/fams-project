@@ -147,4 +147,12 @@ public class UserController {
         userService.cleanupStuckJobs();
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/import-job/cancel")
+    @Operation(summary = "Hủy tiến trình import hiện tại của người dùng")
+    public ResponseEntity<Void> cancelImportJob() {
+        log.info("POST /users/import-job/cancel");
+        userService.cancelMyActiveImportJob();
+        return ResponseEntity.ok().build();
+    }
 }
