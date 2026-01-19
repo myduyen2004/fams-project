@@ -755,6 +755,16 @@ public class UserServiceImpl implements UserService {
         log.info("Cleaned up {} stuck import jobs", stuckJobs.size());
     }
 
+    @Override
+    public void cancelMyActiveImportJob() {
+        String username = getCurrentUsername();
+        importJobRepository.findTopByStatusInAndCreatedByOrderByCreatedAtDesc(
+                Arrays.asList(ImportJob.JobStatus.PENDING, ImportJob.JobStatus.PROCESSING),
+                username).ifPresent(job -> {
+                    asyncImportService.stopJob(job.getJobId());
+                });
+    }
+
     private void checkActiveJob() {
         if (importJobRepository.existsByStatusIn(
                 Arrays.asList(ImportJob.JobStatus.PENDING, ImportJob.JobStatus.PROCESSING))) {

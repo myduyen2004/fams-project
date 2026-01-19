@@ -7,6 +7,10 @@ spring:
     username: ${NEON_PROD_DB_USER}
     password: ${NEON_PROD_DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 100
+      minimum-idle: 20
+      connection-timeout: 30000
     
   jpa:
     hibernate:
@@ -15,6 +19,10 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          batch_size: 100
+          order_inserts: true
+          order_updates: true
 
   data:
     redis:
@@ -44,3 +52,4 @@ logging:
   level:
     root: WARN
     com.fams.backend: INFO
+    org.hibernate.SQL: WARN
