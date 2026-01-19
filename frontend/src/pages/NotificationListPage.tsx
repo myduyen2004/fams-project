@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AdminLayout } from '../components/admin/AdminLayout';
 import { AcademicStaffLayout } from '../layouts/AcademicStaffLayout';
+import { StudentLayout } from '../layouts/StudentLayout';
 import { Pagination } from '../components/common/Pagination';
 import { dashboardService } from '../services/api/dashboardService';
 import { authService } from '../services/api/authService';
@@ -77,6 +78,20 @@ export const NotificationListPage: React.FC = () => {
   const pageSize = 10;
   const user = authService.getUser();
   const isAcademicStaff = user?.role === 'ACADEMIC_STAFF';
+
+  const getLayout = (role?: string) => {
+    switch (role) {
+      case 'STUDENT':
+        return StudentLayout;
+      case 'ACADEMIC_STAFF':
+      case 'LECTURER':
+        return AcademicStaffLayout;
+      default:
+        return AdminLayout;
+    }
+  };
+
+  const LayoutComponent = getLayout(user?.role);
 
   // Load notifications
   useEffect(() => {
@@ -161,25 +176,15 @@ export const NotificationListPage: React.FC = () => {
 
   if (loading) {
     return (
-      <>
-        {isAcademicStaff ? (
-          <AcademicStaffLayout pageTitle="Thông báo">
-            <div className="flex items-center justify-center min-h-[60vh]">
-              <Loader2 className="w-8 h-8 animate-spin text-fpt-orange" />
-            </div>
-          </AcademicStaffLayout>
-        ) : (
-          <AdminLayout pageTitle="Thông báo">
-            <div className="flex items-center justify-center min-h-[60vh]">
-              <Loader2 className="w-8 h-8 animate-spin text-fpt-orange" />
-            </div>
-          </AdminLayout>
-        )}
-      </>
+      <LayoutComponent pageTitle="Thông báo">
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-fpt-orange" />
+        </div>
+      </LayoutComponent>
     );
   }
 
-  const LayoutComponent = isAcademicStaff ? AcademicStaffLayout : AdminLayout;
+
 
   return (
     <LayoutComponent pageTitle="Thông báo">
@@ -218,8 +223,8 @@ export const NotificationListPage: React.FC = () => {
               <button
                 onClick={() => setFilter('all')}
                 className={`whitespace-nowrap pb-3 text-sm font-bold transition-all border-b-2 ${filter === 'all'
-                    ? 'border-fpt-orange text-fpt-orange'
-                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  ? 'border-fpt-orange text-fpt-orange'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                   }`}
               >
                 Tất cả
@@ -227,8 +232,8 @@ export const NotificationListPage: React.FC = () => {
               <button
                 onClick={() => setFilter('unread')}
                 className={`whitespace-nowrap pb-3 text-sm font-bold transition-all border-b-2 ${filter === 'unread'
-                    ? 'border-fpt-orange text-fpt-orange'
-                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  ? 'border-fpt-orange text-fpt-orange'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                   }`}
               >
                 Chưa đọc {unreadCount > 0 && <span className="ml-1">({unreadCount})</span>}
@@ -258,8 +263,8 @@ export const NotificationListPage: React.FC = () => {
                 key={notification.id}
                 onClick={() => handleNotificationClick(notification)}
                 className={`group flex items-start gap-4 p-5 cursor-pointer transition-all relative ${!notification.isRead
-                    ? 'bg-fpt-orange/5 hover:bg-fpt-orange/10 border-b border-gray-100 dark:border-zinc-800'
-                    : 'bg-white dark:bg-transparent hover:bg-gray-50 dark:hover:bg-zinc-800/50 border-b border-gray-100 dark:border-zinc-800 last:border-b-0'
+                  ? 'bg-fpt-orange/5 hover:bg-fpt-orange/10 border-b border-gray-100 dark:border-zinc-800'
+                  : 'bg-white dark:bg-transparent hover:bg-gray-50 dark:hover:bg-zinc-800/50 border-b border-gray-100 dark:border-zinc-800 last:border-b-0'
                   }`}
               >
                 {/* Icon */}
@@ -276,8 +281,8 @@ export const NotificationListPage: React.FC = () => {
                   <div className="flex items-start justify-between gap-2">
                     <p
                       className={`text-sm leading-tight ${!notification.isRead
-                          ? 'font-bold text-gray-900 dark:text-white'
-                          : 'font-semibold text-gray-900 dark:text-gray-200'
+                        ? 'font-bold text-gray-900 dark:text-white'
+                        : 'font-semibold text-gray-900 dark:text-gray-200'
                         }`}
                     >
                       {stripHtml(notification.title)}
@@ -294,8 +299,8 @@ export const NotificationListPage: React.FC = () => {
 
                   {/* Description */}
                   <p className={`text-sm leading-relaxed ${!notification.isRead
-                      ? 'text-gray-700 dark:text-gray-300'
-                      : 'text-gray-500 dark:text-gray-400'
+                    ? 'text-gray-700 dark:text-gray-300'
+                    : 'text-gray-500 dark:text-gray-400'
                     }`}>
                     {truncateText(stripHtml(notification.description))}
                   </p>
