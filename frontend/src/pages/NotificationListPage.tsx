@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AdminLayout } from '../components/admin/AdminLayout';
 import { AcademicStaffLayout } from '../layouts/AcademicStaffLayout';
+import { LecturerLayout } from '../layouts/LecturerLayout';
 import { StudentLayout } from '../layouts/StudentLayout';
 import { Pagination } from '../components/common/Pagination';
 import { dashboardService } from '../services/api/dashboardService';
 import { authService } from '../services/api/authService';
 import { AppNotification } from '../types/dashboard';
-import { Loader2, Search, Bell, AlertCircle, CheckCircle2, User } from 'lucide-react';
+import { Loader2, Search, Bell, AlertCircle, CheckCircle2, User, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 type FilterType = 'all' | 'unread' | 'system';
@@ -66,26 +67,65 @@ export const NotificationListPage: React.FC = () => {
     return tmp.textContent || tmp.innerText || '';
   };
 
-  // Truncate text with ellipsis
-  const truncateText = (text: string, maxLength: number = 120): string => {
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + '...';
+  // Process notification content to get first line with formatting
+  const processNotificationContent = (html: string) => {
+    if (!html) return '';
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+
+    let content = '';
+
+    // Strategy 1: Find first paragraph with text content
+    const paragraphs = tempDiv.querySelectorAll('p');
+    for (let i = 0; i < paragraphs.length; i++) {
+      // Check if paragraph has meaningful text (ignoring whitespace/nbsp)
+      if (paragraphs[i].textContent && paragraphs[i].textContent?.replace(/[\s\u00A0]/g, '').length > 0) {
+        content = paragraphs[i].innerHTML;
+        break;
+      }
+    }
+
+    // Strategy 2: If no valid p found, split by <br> and find first non-empty line
+    if (!content) {
+      const lines = tempDiv.innerHTML.split(/<br\s*\/?>/i);
+      content = lines.find(line => {
+        const t = document.createElement('div');
+        t.innerHTML = line;
+        // Check if line has meaningful text
+        return t.textContent && t.textContent.replace(/[\s\u00A0]/g, '').length > 0;
+      }) || lines[0] || '';
+    }
+
+    // Remove leading <br> tags if any remain
+    content = content.replace(/^(\s*<br\s*\/?>\s*)+/gi, '');
+
+    // Robust trimming of leading whitespace/entities while preserving formatting tags
+    // Matches start of string, optional tags, then whitespace/entities
+    // Loop to handle deep nesting (e.g. <b><i>&nbsp;Text</i></b>)
+    let oldContent = '';
+    while (content !== oldContent) {
+      oldContent = content;
+      content = content.replace(/^((?:<[^>]+>)*)(?:&nbsp;|&#160;|\s)+/gi, '$1');
+    }
+
+    return content;
   };
+
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
   const pageSize = 10;
   const user = authService.getUser();
-  const isAcademicStaff = user?.role === 'ACADEMIC_STAFF';
 
   const getLayout = (role?: string) => {
     switch (role) {
       case 'STUDENT':
         return StudentLayout;
       case 'ACADEMIC_STAFF':
-      case 'LECTURER':
         return AcademicStaffLayout;
+      case 'LECTURER':
+        return LecturerLayout;
       default:
         return AdminLayout;
     }
@@ -174,6 +214,21 @@ export const NotificationListPage: React.FC = () => {
     }
   };
 
+  // Handle back navigation
+  const handleBack = () => {
+    switch (user?.role) {
+      case 'STUDENT':
+        navigate('/student/dashboard');
+        break;
+      case 'ACADEMIC_STAFF':
+      case 'LECTURER':
+        navigate('/academic-staff/dashboard');
+        break;
+      default:
+        navigate('/admin/dashboard');
+    }
+  };
+
   if (loading) {
     return (
       <LayoutComponent pageTitle="Thông báo">
@@ -188,15 +243,27 @@ export const NotificationListPage: React.FC = () => {
 
   return (
     <LayoutComponent pageTitle="Thông báo">
+      <div className="mb-4">
+        <button
+          onClick={handleBack}
+          className="flex items-center gap-2 text-sm text-gray-500 hover:text-fpt-orange transition-colors w-fit group"
+        >
+          <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+          Quay lại Dashboard
+        </button>
+      </div>
       <div className="mx-auto max-w-5xl flex flex-col gap-6">
         {/* Header Section */}
         <div className="flex flex-col gap-6">
           {/* Title and Stats */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex flex-col gap-1">
-              <h1 className="text-3xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tight">
-                Thông báo
-              </h1>
+              <div className="flex flex-col gap-4">
+
+                <h1 className="text-3xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tight">
+                  Thông báo
+                </h1>
+              </div>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 {unreadCount > 0
                   ? `Bạn có ${unreadCount} thông báo chưa đọc`
@@ -298,12 +365,15 @@ export const NotificationListPage: React.FC = () => {
                   )}
 
                   {/* Description */}
-                  <p className={`text-sm leading-relaxed ${!notification.isRead
-                    ? 'text-gray-700 dark:text-gray-300'
-                    : 'text-gray-500 dark:text-gray-400'
-                    }`}>
-                    {truncateText(stripHtml(notification.description))}
-                  </p>
+                  <div
+                    className={`text-sm leading-relaxed line-clamp-1 ${!notification.isRead
+                      ? 'text-gray-700 dark:text-gray-300'
+                      : 'text-gray-500 dark:text-gray-400'
+                      }`}
+                    dangerouslySetInnerHTML={{
+                      __html: processNotificationContent(notification.description),
+                    }}
+                  />
 
                   {/* Footer with timestamp and type */}
                   <div className="flex items-center justify-between gap-2 mt-1">

@@ -34,14 +34,14 @@ export const ViewNotificationModal: React.FC<ViewNotificationModalProps> = ({ no
       // Nếu có 'Z' (UTC), Date sẽ tự convert sang local
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return '---';
-      
+
       // Format theo định dạng Việt Nam
       const day = String(d.getDate()).padStart(2, '0');
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const year = d.getFullYear();
       const hours = String(d.getHours()).padStart(2, '0');
       const minutes = String(d.getMinutes()).padStart(2, '0');
-      
+
       return `${day}/${month}/${year} ${hours}:${minutes}`;
     } catch {
       return '---';
@@ -109,8 +109,8 @@ export const ViewNotificationModal: React.FC<ViewNotificationModalProps> = ({ no
                 {notification.status === NotificationStatus.SCHEDULED ? 'Thời gian lên lịch' : 'Ngày gửi'}
               </label>
               <span className="text-gray-900 dark:text-white font-medium">
-                {notification.status === NotificationStatus.SCHEDULED 
-                  ? formatDateTime(notification.scheduledAt) 
+                {notification.status === NotificationStatus.SCHEDULED
+                  ? formatDateTime(notification.scheduledAt)
                   : formatDateTime(notification.sentAt)}
               </span>
             </div>
@@ -176,7 +176,7 @@ export const NotificationFormModal: React.FC<NotificationFormModalProps> = ({
     toolbar: [
       [{ 'header': [1, 2, 3, false] }],
       ['bold', 'italic', 'underline', 'strike'],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
       [{ 'color': [] }, { 'background': [] }],
       [{ 'align': [] }],
       ['link'],
@@ -223,9 +223,9 @@ export const NotificationFormModal: React.FC<NotificationFormModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent, sendNow: boolean = false) => {
     e.preventDefault();
-    
+
     const submitData = { ...formData };
-    
+
     // Xử lý logic status dựa trên hành động người dùng
     if (sendNow) {
       // Nút "Gửi ngay" - gửi luôn
@@ -239,12 +239,12 @@ export const NotificationFormModal: React.FC<NotificationFormModalProps> = ({
         submitData.scheduledAt = null;
       }
     }
-    
+
     // Update formData for validation
     if (sendNow) {
       setFormData(submitData);
     }
-    
+
     if (!validate()) return;
 
     try {
@@ -301,9 +301,8 @@ export const NotificationFormModal: React.FC<NotificationFormModalProps> = ({
             </label>
             <input
               type="text"
-              className={`w-full px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 border rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none transition-all text-gray-900 dark:text-white ${
-                errors.title ? 'border-red-500' : 'border-gray-200 dark:border-zinc-700'
-              }`}
+              className={`w-full px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 border rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none transition-all text-gray-900 dark:text-white ${errors.title ? 'border-red-500' : 'border-gray-200 dark:border-zinc-700'
+                }`}
               placeholder="Nhập tiêu đề thông báo..."
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -392,9 +391,8 @@ export const NotificationFormModal: React.FC<NotificationFormModalProps> = ({
               </label>
               <input
                 type="datetime-local"
-                className={`w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 outline-none text-gray-900 dark:text-white ${
-                  errors.scheduledAt ? 'border-red-500' : 'border-blue-200 dark:border-zinc-700'
-                }`}
+                className={`w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 outline-none text-gray-900 dark:text-white ${errors.scheduledAt ? 'border-red-500' : 'border-blue-200 dark:border-zinc-700'
+                  }`}
                 min={getMinDateTime()}
                 value={formData.scheduledAt ? formData.scheduledAt.slice(0, 16) : ''}
                 onChange={(e) => {
@@ -419,7 +417,7 @@ export const NotificationFormModal: React.FC<NotificationFormModalProps> = ({
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Nội dung <span className="text-red-500">*</span>
             </label>
-            
+
             <div className={`rounded-lg overflow-hidden border ${errors.content ? 'border-red-500' : 'border-gray-200 dark:border-zinc-700'}`}>
               <ReactQuill
                 theme="snow"
@@ -475,7 +473,7 @@ export const NotificationFormModal: React.FC<NotificationFormModalProps> = ({
             >
               Hủy
             </button>
-            
+
             {/* Save button - Lưu theo trạng thái đã chọn */}
             {formData.status !== NotificationStatus.SENT && (
               <button
@@ -504,6 +502,109 @@ export const NotificationFormModal: React.FC<NotificationFormModalProps> = ({
               </button>
             )}
           </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ========================= Confirmation Modal =========================
+interface ConfirmationModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  variant?: 'danger' | 'warning' | 'info' | 'success';
+  isProcessing?: boolean;
+  hideIcon?: boolean;
+}
+
+export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  message,
+  confirmLabel = 'Xác nhận',
+  cancelLabel = 'Hủy',
+  variant = 'danger',
+  isProcessing = false,
+  hideIcon = false
+}) => {
+  if (!isOpen) return null;
+
+  const getVariantStyles = () => {
+    switch (variant) {
+      case 'danger':
+        return {
+          icon: <AlertCircle className="w-6 h-6 text-red-600" />,
+          button: 'bg-red-600 hover:bg-red-700 text-white',
+          iconBg: 'bg-red-100 dark:bg-red-900/20'
+        };
+      case 'warning':
+        return {
+          icon: <AlertCircle className="w-6 h-6 text-orange-600" />,
+          button: 'bg-orange-600 hover:bg-orange-700 text-white',
+          iconBg: 'bg-orange-100 dark:bg-orange-900/20'
+        };
+      case 'success':
+        return {
+          icon: <Send className="w-6 h-6 text-white" />,
+          button: 'bg-fpt-orange hover:bg-orange-600 text-white',
+          iconBg: 'bg-fpt-orange/10 dark:bg-orange-900/20'
+        };
+      case 'info':
+      default:
+        return {
+          icon: <AlertCircle className="w-6 h-6 text-blue-600" />,
+          button: 'bg-blue-600 hover:bg-blue-700 text-white',
+          iconBg: 'bg-blue-100 dark:bg-blue-900/20'
+        };
+    }
+  };
+
+  const styles = getVariantStyles();
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-xl w-full max-w-md border border-gray-100 dark:border-zinc-800 overflow-hidden transform transition-all scale-100">
+        <div className="p-6">
+          <div className="flex items-start gap-4">
+            {!hideIcon && (
+              <div className={`p-3 rounded-full flex-shrink-0 ${styles.iconBg}`}>
+                {styles.icon}
+              </div>
+            )}
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                {title}
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {message}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-4 bg-gray-50 dark:bg-zinc-800/50 flex justify-end gap-3 border-t border-gray-100 dark:border-zinc-800">
+          <button
+            onClick={onClose}
+            disabled={isProcessing}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-fpt-orange dark:bg-zinc-800 dark:text-gray-300 dark:border-zinc-700 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50"
+          >
+            {cancelLabel}
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isProcessing}
+            className={`px-4 py-2 text-sm font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-fpt-orange transition-all flex items-center gap-2 disabled:opacity-50 ${styles.button}`}
+          >
+            {isProcessing && <Loader2 className="w-4 h-4 animate-spin" />}
+            {confirmLabel}
+          </button>
         </div>
       </div>
     </div>

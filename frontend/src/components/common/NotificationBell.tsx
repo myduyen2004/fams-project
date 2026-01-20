@@ -24,11 +24,48 @@ export const NotificationBell: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'notifications' | 'jobs'>('notifications');
   const navigate = useNavigate();
 
-  // Strip HTML tags and return plain text
-  const stripHtml = (html: string): string => {
-    const tmp = document.createElement('div');
-    tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || '';
+  // Get first line of HTML content
+  const getFirstLineHtml = (html: string): string => {
+    if (!html) return '';
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+
+    let content = '';
+
+    // Strategy 1: Find first paragraph with text content
+    const paragraphs = tempDiv.querySelectorAll('p');
+    for (let i = 0; i < paragraphs.length; i++) {
+      // Check if paragraph has meaningful text (ignoring whitespace/nbsp)
+      if (paragraphs[i].textContent && paragraphs[i].textContent?.replace(/[\s\u00A0]/g, '').length > 0) {
+        content = paragraphs[i].innerHTML;
+        break;
+      }
+    }
+
+    // Strategy 2: If no valid p found, split by <br> and find first non-empty line
+    if (!content) {
+      const lines = tempDiv.innerHTML.split(/<br\s*\/?>/i);
+      content = lines.find(line => {
+        const t = document.createElement('div');
+        t.innerHTML = line;
+        // Check if line has meaningful text
+        return t.textContent && t.textContent.replace(/[\s\u00A0]/g, '').length > 0;
+      }) || lines[0] || '';
+    }
+
+    // Remove leading <br> tags if any remain
+    content = content.replace(/^(\s*<br\s*\/?>\s*)+/gi, '');
+
+    // Robust trimming of leading whitespace/entities while preserving formatting tags
+    // Matches start of string, optional tags, then whitespace/entities
+    // Loop to handle deep nesting (e.g. <b><i>&nbsp;Text</i></b>)
+    let oldContent = '';
+    while (content !== oldContent) {
+      oldContent = content;
+      content = content.replace(/^((?:<[^>]+>)*)(?:&nbsp;|&#160;|\s)+/gi, '$1');
+    }
+
+    return content;
   };
 
   // Listen for import job progress (transient)
@@ -265,8 +302,8 @@ export const NotificationBell: React.FC = () => {
             <button
               onClick={() => setActiveTab('notifications')}
               className={`pb-3 text-sm font-semibold transition-all relative mr-6 ${activeTab === 'notifications'
-                  ? 'text-fpt-orange'
-                  : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                ? 'text-fpt-orange'
+                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
                 }`}
             >
               Thông báo
@@ -280,8 +317,8 @@ export const NotificationBell: React.FC = () => {
             <button
               onClick={() => setActiveTab('jobs')}
               className={`pb-3 text-sm font-semibold transition-all relative ${activeTab === 'jobs'
-                  ? 'text-fpt-orange'
-                  : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                ? 'text-fpt-orange'
+                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
                 }`}
             >
               Tiến trình
@@ -323,7 +360,7 @@ export const NotificationBell: React.FC = () => {
                           />
                         ) : (
                           <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold ${n.type === 'ALERT' ? 'bg-red-100 text-red-600 dark:bg-red-900/30' :
-                              'bg-blue-100 text-blue-600 dark:bg-blue-900/30'
+                            'bg-blue-100 text-blue-600 dark:bg-blue-900/30'
                             }`}>
                             {n.senderName.charAt(0)}
                           </div>
@@ -358,9 +395,10 @@ export const NotificationBell: React.FC = () => {
                             {n.title}
                           </p>
                           {/* Nội dung thông báo - bình thường */}
-                          <p className={`text-xs line-clamp-2 ${!n.isRead ? 'text-gray-700 dark:text-gray-300' : 'text-gray-500 dark:text-gray-400'}`}>
-                            {stripHtml(n.description)}
-                          </p>
+                          <div
+                            className={`text-xs line-clamp-2 ${!n.isRead ? 'text-gray-700 dark:text-gray-300' : 'text-gray-500 dark:text-gray-400'}`}
+                            dangerouslySetInnerHTML={{ __html: getFirstLineHtml(n.description) }}
+                          />
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500">
                               {n.senderName && n.senderName !== 'System' ? 'Cá nhân' : (n.type === 'SYSTEM' ? 'Hệ thống' : n.type === 'ALERT' ? 'Cảnh báo' : 'Dữ liệu')}
@@ -390,8 +428,8 @@ export const NotificationBell: React.FC = () => {
                   <div key={job.jobId} className="p-4 flex gap-4 hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors group">
                     <div className="flex-shrink-0">
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center ${job.status === 'COMPLETED' ? 'bg-orange-100 dark:bg-orange-900/20 text-fpt-orange' :
-                          job.status === 'FAILED' ? 'bg-red-100 text-red-600' :
-                            'bg-orange-100 text-fpt-orange'
+                        job.status === 'FAILED' ? 'bg-red-100 text-red-600' :
+                          'bg-orange-100 text-fpt-orange'
                         }`}>
                         {job.status === 'COMPLETED' ? <CheckCircle2 size={24} /> :
                           job.status === 'FAILED' ? <AlertCircle size={24} /> : <Loader2 size={24} className="animate-spin" />}
@@ -419,7 +457,7 @@ export const NotificationBell: React.FC = () => {
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
                           <span className={`text-[10px] font-bold ${job.status === 'COMPLETED' ? 'text-fpt-orange' :
-                              job.status === 'FAILED' ? 'text-red-600' : 'text-fpt-orange'
+                            job.status === 'FAILED' ? 'text-red-600' : 'text-fpt-orange'
                             }`}>
                             {job.status === 'COMPLETED' ? '✓ Hoàn tất' : job.status === 'FAILED' ? '✗ Thất bại' : `${job.percentage}%`}
                           </span>
@@ -432,7 +470,7 @@ export const NotificationBell: React.FC = () => {
                         <div className="w-full bg-gray-100 dark:bg-zinc-800 rounded-full h-1 overflow-hidden">
                           <div
                             className={`h-full rounded-full transition-all duration-500 ${job.status === 'COMPLETED' ? 'bg-fpt-orange' :
-                                job.status === 'FAILED' ? 'bg-red-500' : 'bg-fpt-orange'
+                              job.status === 'FAILED' ? 'bg-red-500' : 'bg-fpt-orange'
                               }`}
                             style={{ width: `${job.percentage}%` }}
                           ></div>
