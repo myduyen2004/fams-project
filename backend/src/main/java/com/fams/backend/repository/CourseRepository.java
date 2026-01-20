@@ -16,6 +16,10 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 
         Optional<Course> findByCode(String code);
 
+        // Batch fetch all courses by codes (for import optimization)
+        @Query("SELECT c FROM Course c WHERE c.code IN :codes")
+        List<Course> findByCodeIn(@Param("codes") java.util.Collection<String> codes);
+
         boolean existsByCode(String code);
 
         boolean existsByName(String name);
