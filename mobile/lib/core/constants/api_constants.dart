@@ -8,7 +8,7 @@ class ApiConstants {
   static const String baseUrlLocalDevice = 'http://192.168.1.35:8080'; // Real device via WiFi
   
   // Current Environment
-  static const String baseUrl = baseUrlLocalDevice; // Use WiFi
+  static const String baseUrl = baseUrlLocal; // Use USB (adb reverse)
 
   // Auth Endpoints
   static const String login = '/api/auth/login';
