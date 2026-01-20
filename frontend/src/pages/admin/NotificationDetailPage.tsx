@@ -1,18 +1,25 @@
-// ... imports remain the same
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { AdminLayout } from '../../components/admin/AdminLayout';
+import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
+import { ConfirmationModal } from '../../components/admin/notifications/NotificationModals';
 import { notificationService, AdminNotification } from '../../services/api/notificationService';
 import { NotificationStatus, getStatusLabel, getTargetTypeLabel } from '../../types/notification';
-import { Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const NotificationDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isAcademicStaff = location.pathname.startsWith('/academic-staff');
+
+  const Layout = isAcademicStaff ? AcademicStaffLayout : AdminLayout;
+  const backUrl = isAcademicStaff ? '/academic-staff/notification-management' : '/admin/notification-management';
 
   const [notification, setNotification] = useState<AdminNotification | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // Helper function to format date
   const formatDateTime = (dateStr: string | null | undefined): string => {
@@ -47,39 +54,47 @@ export const NotificationDetailPage: React.FC = () => {
     } catch (error) {
       toast.error('Không thể tải thông báo');
       console.error(error);
-      setTimeout(() => navigate('/admin/notification-management'), 2000);
+      setTimeout(() => navigate(backUrl), 2000);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <AdminLayout pageTitle="Chi tiết thông báo">
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-8 h-8 animate-spin text-fpt-orange" />
-        </div>
-      </AdminLayout>
-    );
-  }
+  const handlePublishClick = () => {
+    setShowConfirmModal(true);
+  };
 
-  if (!notification) {
-    return (
-      <AdminLayout pageTitle="Chi tiết thông báo">
-        <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-xl">
-          <p className="text-gray-500 dark:text-gray-400 mb-4">Không tìm thấy thông báo</p>
-        </div>
-      </AdminLayout>
-    );
-  }
+  const handleConfirmPublish = async () => {
+    if (!notification) return;
 
-  const isEditable = notification.status === NotificationStatus.DRAFT || notification.status === NotificationStatus.SCHEDULED;
+    try {
+      setLoading(true);
+
+      const submitData = {
+        title: notification.title,
+        content: notification.content,
+        type: notification.type,
+        priority: notification.priority,
+        targetType: notification.targetType,
+        status: NotificationStatus.SENT,
+        scheduledAt: null,
+        attachmentUrls: notification.attachmentUrls || []
+      };
+
+      await notificationService.updateNotification(notification.id, submitData);
+      toast.success('Đã gửi thông báo thành công');
+      await fetchNotification(notification.id);
+    } catch (error: any) {
+      console.error(error);
+      const errorMessage = error?.response?.data?.message || error?.message || 'Không thể gửi thông báo';
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+      setShowConfirmModal(false);
+    }
+  };
 
   const getStatusBadgeColor = (status: NotificationStatus) => {
-    // Mapping project status colors to the requested design style (using existing utils logic but applied to new classes if needed)
-    // The user provided: bg-green-100 text-green-700
-    // Our util getStatusColor returns classes like 'bg-green-500' (text-white).
-    // We will adjust to match the lighter pastel style of the requested design while using our colors.
     switch (status) {
       case NotificationStatus.SENT: return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
       case NotificationStatus.SCHEDULED: return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400';
@@ -88,13 +103,45 @@ export const NotificationDetailPage: React.FC = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <Layout pageTitle="Chi tiết thông báo">
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-fpt-orange" />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!notification) {
+    return (
+      <Layout pageTitle="Chi tiết thông báo">
+        <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-xl">
+          <p className="text-gray-500 dark:text-gray-400 mb-4">Không tìm thấy thông báo</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  const isEditable = notification.status === NotificationStatus.DRAFT || notification.status === NotificationStatus.SCHEDULED;
+
   return (
-    <AdminLayout pageTitle="Chi tiết thông báo">
+    <Layout pageTitle="Chi tiết thông báo">
       <div className="flex flex-col justify-center px-4 md:px-0">
         <div className="flex flex-col max-w-[1200px] w-full mx-auto flex-1 gap-8">
+
+          {/* Back Button */}
+          <button
+            onClick={() => navigate(backUrl)}
+            className="flex items-center gap-2 text-sm text-gray-500 hover:text-fpt-orange w-fit transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Quay lại danh sách
+          </button>
+
           {/* Header Section */}
           <div className="flex flex-col gap-4">
-            <h1 className="text-slate-900 dark:text-white text-3xl md:text-5xl font-black leading-tight tracking-tight">
+            <h1 className="text-gray-900 dark:text-white text-2xl md:text-3xl font-bold leading-tight">
               {notification.title}
             </h1>
 
@@ -122,17 +169,7 @@ export const NotificationDetailPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Right Side: Edit Button */}
-              {isEditable && (
-                <div className="pb-1">
-                  <Link
-                    to={`${window.location.pathname.startsWith('/academic-staff') ? '/academic-staff' : '/admin'}/notifications/edit/${notification.id}`}
-                    className="inline-flex items-center gap-2 px-5 py-2 bg-fpt-orange text-white text-sm font-bold rounded-lg hover:bg-orange-600 transition-colors shadow-sm"
-                  >
-                    Chỉnh sửa thông báo
-                  </Link>
-                </div>
-              )}
+              {/* Right Side: Actions - MOVED TO BOTTOM */}
             </div>
           </div>
 
@@ -145,9 +182,8 @@ export const NotificationDetailPage: React.FC = () => {
                   Nội dung thông báo
                 </h3>
                 {/* Prose content */}
-                <div className="prose prose-slate dark:prose-invert max-w-none flex-grow">
+                <div className="ui-content max-w-none flex-grow">
                   <div
-                    className="text-slate-800 dark:text-slate-200 text-lg leading-relaxed"
                     dangerouslySetInnerHTML={{ __html: notification.content }}
                   />
                 </div>
@@ -171,14 +207,18 @@ export const NotificationDetailPage: React.FC = () => {
                       {notification.sender?.fullName || 'Hệ thống'}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-slate-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">
-                      Ngày tạo bản nháp
-                    </p>
-                    <p className="text-slate-700 dark:text-gray-300 text-sm">
-                      {formatDateTime(notification.createdAt)}
-                    </p>
-                  </div>
+                  {/* Draft Date - Only visible if viewing own role's notification */
+                    ((isAcademicStaff && notification.sender?.role === 'ACADEMIC_STAFF') ||
+                      (!isAcademicStaff && notification.sender?.role === 'ADMIN')) && (
+                      <div>
+                        <p className="text-slate-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">
+                          Ngày tạo bản nháp
+                        </p>
+                        <p className="text-slate-700 dark:text-gray-300 text-sm">
+                          {formatDateTime(notification.createdAt)}
+                        </p>
+                      </div>
+                    )}
                   <div>
                     <p className="text-slate-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">
                       {notification.status === NotificationStatus.SCHEDULED ? 'Thời gian lên lịch' : 'Ngày gửi'}
@@ -241,8 +281,42 @@ export const NotificationDetailPage: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* Bottom Actions Section */}
+          <div className="flex justify-end items-center gap-3 pt-4">
+            {isEditable && (
+              <Link
+                to={`${isAcademicStaff ? '/academic-staff' : '/admin'}/notifications/edit/${notification.id}`}
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-300 transition-colors shadow-sm dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
+              >
+                Chỉnh sửa thông báo
+              </Link>
+            )}
+
+            {notification.status === NotificationStatus.DRAFT && (
+              <button
+                onClick={handlePublishClick}
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-fpt-orange text-white text-sm font-bold rounded-lg hover:bg-orange-600 transition-colors shadow-sm"
+                title="Gửi thông báo ngay lập tức"
+              >
+                Gửi ngay
+              </button>
+            )}
+          </div>
         </div>
       </div>
-    </AdminLayout>
+
+      <ConfirmationModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={handleConfirmPublish}
+        title="Gửi thông báo ngay?"
+        message="Thông báo sẽ được gửi ngay lập tức đến tất cả người nhận đã chọn. Bạn có chắc chắn muốn tiếp tục?"
+        confirmLabel="Gửi ngay"
+        variant="success"
+        isProcessing={loading}
+        hideIcon={true}
+      />
+    </Layout >
   );
 };
