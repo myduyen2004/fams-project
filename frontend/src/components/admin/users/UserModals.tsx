@@ -311,7 +311,6 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
     validationMessages: string[];
   } | null>(null);
   const [isAsyncJob, setIsAsyncJob] = useState(false);
-  const [showMoreErrors, setShowMoreErrors] = useState(false);
   const [progress, setProgress] = useState<{
     percentage: number;
     message: string;
@@ -334,6 +333,14 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
       setIsAsyncJob(true);
     }
     
+    if (data.statusMessage === 'DATA_PHASE_COMPLETE') {
+      toast.success('Dữ liệu đã sẵn sàng! Đang chuẩn bị ảnh nền...');
+      setIsAsyncJob(false);
+      onSuccess();
+      onClose();
+      return;
+    }
+    
     if (data.status === 'COMPLETED') {
       toast.success('Import hoàn tất thành công!');
       setIsAsyncJob(false);
@@ -341,6 +348,9 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
         onSuccess();
         onClose();
       }, 1000);
+    } else if (data.status === 'CANCELLED') {
+      setIsAsyncJob(false);
+      toast.error('Tiến trình đã bị dừng.');
     }
   });
 
@@ -355,7 +365,7 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
           setLoading(true);
           setProgress({
             percentage: activeJob.percentage || 0,
-            message: activeJob.errorMessage || 'Đang xử lý...',
+            message: activeJob.statusMessage || activeJob.errorMessage || 'Đang chờ xử lý...',
             status: activeJob.status
           });
           if (lastToastId.current !== activeJob.jobId) {
@@ -493,19 +503,21 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
                 <p className="text-base font-semibold text-gray-900 dark:text-white">{progress.message || 'Đang khởi tạo...'}</p>
                 <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
                   progress.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
-                  progress.status === 'ERROR' ? 'bg-red-100 text-red-700' :
+                  progress.status === 'ERROR' || progress.status === 'FAILED' || progress.status === 'CANCELLED' ? 'bg-red-100 text-red-700' :
                   'bg-orange-100 text-orange-700'
                 }`}>
-                  {progress.status === 'STARTING' ? 'Khởi tạo' :
+                  {progress.status === 'PENDING' ? 'Đang chờ' :
+                   progress.status === 'STARTING' ? 'Khởi tạo' :
                    progress.status === 'PROCESSING' ? 'Đang xử lý' :
                    progress.status === 'SAVING' ? 'Đang lưu' :
                    progress.status === 'COMPLETED' ? 'Hoàn thành' :
-                   progress.status === 'ERROR' ? 'Lỗi' : progress.status}
+                   progress.status === 'CANCELLED' ? 'Đã dừng' :
+                   progress.status === 'ERROR' || progress.status === 'FAILED' ? 'Lỗi' : progress.status}
                 </span>
               </div>
 
               {/* Action for async jobs */}
-              {isAsyncJob && (
+              {(isAsyncJob || ['PENDING', 'PROCESSING', 'SAVING'].includes(progress.status)) && (
                 <div className="text-center space-y-3 pt-4">
                   <p className="text-xs text-gray-500 italic">💡 Tiến trình đang chạy nền, có thể đóng và quay lại sau.</p>
                   <button onClick={onClose} className="px-6 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors">
@@ -551,68 +563,66 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
           ) : (
             // Preview Table
             <div className="space-y-4">
-              {/* Error Details - ABOVE table */}
-              {errorCount > 0 && (() => {
-                const errorRows = previewData.previewData.filter(row => row.status === 'error');
-                const displayedErrors = showMoreErrors ? errorRows : errorRows.slice(0, 3);
-                
-                return (
-                  <div className="p-3 bg-red-50 dark:bg-red-900/10 rounded-lg border border-red-100 dark:border-red-800/20">
-                    <p className="text-sm font-semibold text-red-700 dark:text-red-400 mb-2">⚠️ Chi tiết lỗi ({errorCount} dòng):</p>
-                    <div className="space-y-1">
-                      {displayedErrors.map((row, idx) => (
-                        <p key={idx} className="text-xs text-red-600 dark:text-red-400 italic">
-                          <span className="font-medium not-italic">Dòng {previewData.previewData.findIndex(r => r === row) + 1}:</span> {row.errorMessage}
-                        </p>
-                      ))}
-                    </div>
-                    {errorRows.length > 3 && (
-                      <button
-                        onClick={() => setShowMoreErrors(!showMoreErrors)}
-                        className="mt-2 text-xs text-red-700 dark:text-red-300 font-medium hover:underline"
-                      >
-                        {showMoreErrors ? '← Thu gọn' : `Xem thêm ${errorRows.length - 3} lỗi...`}
-                      </button>
-                    )}
-                  </div>
-                );
-              })()}
+              {/* Error summary alert */}
+              {errorCount > 0 && (
+                <div className="p-4 bg-red-50 dark:bg-red-900/10 text-red-800 dark:text-red-300 rounded-xl border border-red-100 dark:border-red-800/20 text-sm">
+                  <p className="font-semibold mt-1">⚠️ Không thể import do có {errorCount} dòng bị lỗi. Vui lòng sửa file và thử lại.</p>
+                </div>
+              )}
 
               {/* Preview Table */}
-              <div className="border rounded-lg overflow-hidden border-gray-200 dark:border-zinc-700">
-                <div className="max-h-72 overflow-auto">
+              <div className="border rounded-xl overflow-hidden border-gray-200 dark:border-zinc-700 shadow-sm">
+                <div className="max-h-[400px] overflow-auto">
                   <table className="w-full text-sm text-left">
-                    <thead className="bg-gray-50 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 font-medium border-b border-gray-200 dark:border-zinc-700 sticky top-0">
+                    <thead className="bg-gray-50 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 font-bold border-b border-gray-200 dark:border-zinc-700 sticky top-0 z-10">
                       <tr>
-                        <th className="px-3 py-2 w-10 text-center">#</th>
-                        <th className="px-3 py-2">Mã số</th>
-                        <th className="px-3 py-2">Họ tên</th>
-                        <th className="px-3 py-2">Email</th>
-                        <th className="px-3 py-2">SĐT</th>
-                        <th className="px-3 py-2">Ngày sinh</th>
-                        <th className="px-3 py-2">Role</th>
-                        <th className="px-3 py-2 text-center">Ảnh</th>
-                        <th className="px-3 py-2 text-center">TT</th>
+                        <th className="px-4 py-3 w-12 text-center">#</th>
+                        <th className="px-4 py-3 w-32">Mã số</th>
+                        <th className="px-4 py-3 w-48">Họ tên</th>
+                        <th className="px-4 py-3 w-56">Email</th>
+                        <th className="px-4 py-3 w-32">Ngày sinh</th>
+                        <th className="px-4 py-3 w-28 text-center">Vai trò</th>
+                        <th className="px-4 py-3 w-12 text-center">Ảnh</th>
+                        <th className="px-4 py-3 w-28 text-center">Kết quả</th>
+                        <th className="px-4 py-3">Ghi chú</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
-                      {previewData.previewData.map((row, index) => (
-                        <tr key={index} className={row.status === 'error' ? 'bg-red-50 dark:bg-red-900/10' : ''}>
-                          <td className="px-3 py-2 text-center text-gray-500 text-xs">{index + 1}</td>
-                          <td className="px-3 py-2 font-medium text-gray-900 dark:text-white text-xs">{row.code || '---'}</td>
-                          <td className="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{row.fullName || '---'}</td>
-                          <td className="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{row.email || '---'}</td>
-                          <td className="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{row.phone || '---'}</td>
-                          <td className="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{row.dob || '---'}</td>
-                          <td className="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{row.role || '---'}</td>
-                          <td className="px-3 py-2 text-center">
-                            {row.hasImage ? <span className="text-green-500">✓</span> : <span className="text-gray-300">—</span>}
+                      {previewData?.previewData.map((row: any, index: number) => (
+                        <tr key={index} className={row.status === 'error' ? 'bg-red-50/50 dark:bg-red-900/5' : ''}>
+                          <td className="px-4 py-3 text-center text-gray-500 font-medium">{index + 1}</td>
+                          <td className="px-4 py-3 font-bold text-gray-900 dark:text-white uppercase">{row.code || '---'}</td>
+                          <td className="px-4 py-3 text-gray-700 dark:text-zinc-300">{row.fullName || '---'}</td>
+                          <td className="px-4 py-3 text-gray-600 dark:text-zinc-400">{row.email || '---'}</td>
+                          <td className="px-4 py-3 text-gray-600 dark:text-zinc-400">{row.dob || '---'}</td>
+                          <td className="px-4 py-3 text-center">
+                            <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-400">
+                              {row.role}
+                            </span>
                           </td>
-                          <td className="px-3 py-2 text-center">
-                            {row.status === 'valid' ? (
-                              <span className="text-green-500 text-xs">✓</span>
+                          <td className="px-4 py-3 text-center">
+                            {row.hasImage ? (
+                                <span className="text-green-600 font-bold" title="Đã tìm thấy ảnh">✓</span>
                             ) : (
-                              <span className="text-red-500 text-xs">✗</span>
+                                <span className="text-gray-300">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {row.status === 'valid' ? (
+                              <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 text-[10px] font-bold rounded-full">
+                                ✓ HỢP LỆ
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-1 bg-red-100 text-red-600 text-[10px] font-bold rounded-full">
+                                ✕ LỖI
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {row.status === 'error' ? (
+                              <span className="text-xs text-red-600 font-medium">{row.errorMessage}</span>
+                            ) : (
+                              <span className="text-xs text-green-600">Sẵn sàng import</span>
                             )}
                           </td>
                         </tr>
@@ -634,11 +644,10 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
                   <button
                     onClick={handleConfirmImport}
                     disabled={loading || validCount === 0 || errorCount > 0}
-                    className="px-6 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    title={errorCount > 0 ? 'Vui lòng sửa các lỗi trước khi import' : ''}
+                    className="px-6 py-2 bg-fpt-orange text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-orange-500/20 flex items-center gap-2"
                   >
                     {loading && <Loader2 size={16} className="animate-spin" />}
-                    {errorCount > 0 ? `Có ${errorCount} lỗi` : `Xác nhận import (${validCount})`}
+                    {errorCount > 0 ? `Có ${errorCount} dòng lỗi` : `Xác nhận import (${validCount})`}
                   </button>
                 </div>
               </div>
