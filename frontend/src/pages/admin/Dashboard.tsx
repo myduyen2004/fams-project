@@ -39,7 +39,7 @@ export const Dashboard: React.FC = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      
+
       const [
         statsData,
         recentAccessData,
@@ -85,7 +85,16 @@ export const Dashboard: React.FC = () => {
 
   const handleNotificationsUpdate = useCallback((data: AppNotification[]) => {
     console.log('WS: Received notifications update', data);
-    setNotifications(data);
+    setNotifications(prev => {
+      // Merge new notifications with existing ones, avoiding duplicates
+      const existingIds = new Set(prev.map(n => n.id));
+      const newNotifications = data.filter(n => !existingIds.has(n.id));
+
+      if (newNotifications.length > 0) {
+        return [...newNotifications, ...prev];
+      }
+      return prev;
+    });
   }, []);
 
   const handleSystemLogsUpdate = useCallback((data: SystemLog[]) => {

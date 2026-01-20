@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Settings, LogOut } from 'lucide-react';
+import { Settings, LogOut, ChevronDown, ChevronRight } from 'lucide-react';
 import { authService } from '../../services/api/authService';
 import { ConfirmModal } from '../common/ConfirmModal';
 
-// --- Custom Solid Icons (FontAwesome Solid Equivalents) ---
-
+// --- Custom Solid Icons (Reuse from StudentSidebar for consistency) ---
 const DashboardIcon = ({ size = 20, className = "" }: { size?: number, className?: string }) => (
     <svg width={size} height={size} viewBox="0 0 576 512" fill="currentColor" className={className}>
         <path d="M575.8 255.5c0 18-15 32.1-32 32.1h-32l.7 160.2c0 2.7-.2 5.4-.5 8.1V472c0 22.1-17.9 40-40 40H456c-1.1 0-2.2 0-3.3-.1c-1.4 .1-2.8 .1-4.2 .1H416 392c-22.1 0-40-17.9-40-40V448 384c0-17.7-14.3-32-32-32H256c-17.7 0-32 14.3-32 32v64 24c0 22.1-17.9 40-40 40H160 128.1c-1.5 0-3-.1-4.5-.2c-1.2 .1-2.4 .2-3.6 .2H104c-22.1 0-40-17.9-40-40V360c0-.9 0-1.9 .1-2.8V287.6H32c-18 0-32-14-32-32.1c0-9 3-17 10-24L266.4 8c7-7 15-8 22-8s15 2 21 7L564.8 231.5c8 7 12 15 11 24z" />
@@ -19,25 +18,15 @@ const ScheduleIcon = ({ size = 20, className = "" }: { size?: number, className?
 );
 
 const AttendanceIcon = ({ size = 20, className = "" }: { size?: number, className?: string }) => (
-    <svg
-        width={size}
-        height={size}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className={className}
-    >
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
         <path d="M9 10h.01M15 10h.01M9.5 15a3.5 3.5 0 0 0 5 0" />
         <path d="M3 7V5a2 2 0 0 1 2-2h2 M17 3h2a2 2 0 0 1 2 2v2 M21 17v2a2 2 0 0 1-2 2h-2 M7 21H5a2 2 0 0 1-2-2v-2" />
     </svg>
 );
 
-const StudyIcon = ({ size = 20, className = "" }: { size?: number, className?: string }) => (
+const ManagementIcon = ({ size = 20, className = "" }: { size?: number, className?: string }) => (
     <svg width={size} height={size} viewBox="0 0 448 512" fill="currentColor" className={className}>
-        <path d="M0 96C0 43 43 0 96 0h96V190.7c0 13.4 15.5 20.9 26 12.5L256 176l38 27.2c10.5 8.4 26 .9 26-12.5V0h32 32c17.7 0 32 14.3 32 32V352c0 17.7-14.3 32-32 32v64c17.7 0 32 14.3 32 32s-14.3 32-32 32H384 96c-53 0-96-43-96-96V128 96zM64 416c0 17.7 14.3 32 32 32H352V384H96c-17.7 0-32 14.3-32 32z" />
+        <path d="M96 0C43 0 0 43 0 96V416c0 53 43 96 96 96H384h32c17.7 0 32-14.3 32-32s-14.3-32-32-32V384c17.7 0 32-14.3 32-32V32c0-17.7-14.3-32-32-32H384 96zm0 384H352v64H96c-17.7 0-32-14.3-32-32s14.3-32 32-32zm32-240c0-8.8 7.2-16 16-16H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16zm0 48c0-8.8 7.2-16 16-16H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16z" />
     </svg>
 );
 
@@ -53,55 +42,73 @@ const RequestsIcon = ({ size = 20, className = "" }: { size?: number, className?
     </svg>
 );
 
+interface SubMenuItem {
+    id: string;
+    label: string;
+    path: string;
+}
+
 interface MenuItem {
     id: string;
     label: string;
     icon: React.ReactNode;
-    path: string;
+    path?: string;
+    subItems?: SubMenuItem[];
 }
 
-export const StudentSidebar: React.FC = () => {
+export const LecturerSidebar: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [isExpanded, setIsExpanded] = useState(false);
+    const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+    // Initial check for open submenu based on current path
+    React.useEffect(() => {
+        if (location.pathname.includes('/lecturer/grades') || location.pathname.includes('/lecturer/classes')) {
+            setOpenSubmenu('management');
+        }
+    }, []);
 
     const menuItems: MenuItem[] = [
         {
             id: 'dashboard',
             label: 'Dashboard',
             icon: <DashboardIcon size={20} />,
-            path: '/student/dashboard'
+            path: '/lecturer/dashboard'
         },
         {
             id: 'schedule',
-            label: 'Thời khóa biểu',
+            label: 'Lịch giảng dạy',
             icon: <ScheduleIcon size={20} />,
-            path: '/student/schedule'
+            path: '/lecturer/schedule'
         },
         {
             id: 'attendance',
             label: 'Điểm danh',
             icon: <AttendanceIcon size={20} />,
-            path: '/student/attendance'
+            path: '/lecturer/attendance'
         },
         {
-            id: 'study',
-            label: 'Học tập',
-            icon: <StudyIcon size={20} />,
-            path: '/student/study'
+            id: 'management',
+            label: 'Quản lý',
+            icon: <ManagementIcon size={20} />,
+            subItems: [
+                { id: 'grades', label: 'Điểm', path: '/lecturer/grades' },
+                { id: 'classes', label: 'Lớp học', path: '/lecturer/classes' }
+            ]
         },
         {
             id: 'messages',
             label: 'Tin nhắn',
             icon: <MessagesIcon size={20} />,
-            path: '/student/messages'
+            path: '/lecturer/messages'
         },
         {
             id: 'requests',
             label: 'Gửi đơn yêu cầu',
             icon: <RequestsIcon size={20} />,
-            path: '/student/requests'
+            path: '/lecturer/requests'
         }
     ];
 
@@ -115,23 +122,34 @@ export const StudentSidebar: React.FC = () => {
         navigate('/login');
     };
 
-    const isActive = (path: string) => {
-        return location.pathname === path || (path !== '/student/dashboard' && location.pathname.startsWith(path + '/'));
+    const toggleSubmenu = (id: string) => {
+        if (openSubmenu === id) {
+            setOpenSubmenu(null);
+        } else {
+            setOpenSubmenu(id);
+            setIsExpanded(true); // Auto expand sidebar when opening submenu
+        }
+    };
+
+    const isActive = (path?: string) => {
+        if (!path) return false;
+        return location.pathname === path || (path !== '/lecturer/dashboard' && location.pathname.startsWith(path + '/'));
     };
 
     return (
         <div
-            className={`fixed left-0 top-0 h-screen bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-800 transition-all duration-300 z-50 ${isExpanded ? 'w-64' : 'w-16'
-                }`}
+            className={`fixed left-0 top-0 h-screen bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-800 transition-all duration-300 z-50 ${isExpanded ? 'w-64' : 'w-16'}`}
             onMouseEnter={() => setIsExpanded(true)}
-            onMouseLeave={() => setIsExpanded(false)}
+            onMouseLeave={() => {
+                setIsExpanded(false);
+                setOpenSubmenu(null); // Optional: close submenu on collapse
+            }}
         >
             <div className="flex flex-col h-full overflow-hidden">
                 {/* Logo Section */}
                 <div
-                    onClick={() => navigate('/student/dashboard')}
+                    onClick={() => navigate('/lecturer/dashboard')}
                     className="h-16 flex items-center justify-center border-b border-gray-200 dark:border-zinc-800 px-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors select-none"
-                    title="Về trang chủ"
                 >
                     {isExpanded ? (
                         <img
@@ -160,23 +178,70 @@ export const StudentSidebar: React.FC = () => {
                 <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2">
                     {menuItems.map((item) => (
                         <div key={item.id} className="mb-1">
-                            <button
-                                onClick={() => navigate(item.path)}
-                                className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group ${isActive(item.path)
-                                    ? 'bg-fpt-orange text-white'
-                                    : 'text-fpt-orange hover:bg-fpt-orange hover:text-white'
-                                    }`}
-                                title={!isExpanded ? item.label : ''}
-                            >
-                                <div className={`flex-shrink-0 transition-colors duration-200 ${isActive(item.path) ? 'text-white font-bold' : 'text-fpt-orange group-hover:text-white'}`}>
-                                    {item.icon}
+                            {item.subItems ? (
+                                // Dropdown Menu Item
+                                <div>
+                                    <button
+                                        onClick={() => toggleSubmenu(item.id)}
+                                        className={`w-full flex items-center justify-between px-3 py-3 rounded-lg transition-all duration-200 group ${openSubmenu === item.id
+                                            ? 'text-fpt-orange bg-fpt-orange/10 font-bold'
+                                            : 'text-fpt-orange hover:bg-fpt-orange hover:text-white'
+                                            }`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex-shrink-0 transition-colors duration-200">
+                                                {item.icon}
+                                            </div>
+                                            {isExpanded && (
+                                                <span className="text-sm font-medium whitespace-nowrap transition-colors duration-200">
+                                                    {item.label}
+                                                </span>
+                                            )}
+                                        </div>
+                                        {isExpanded && (
+                                            <div className="transition-transform duration-200">
+                                                {openSubmenu === item.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                            </div>
+                                        )}
+                                    </button>
+
+                                    {/* Submenu Items */}
+                                    {openSubmenu === item.id && isExpanded && (
+                                        <div className="ml-9 mt-1 space-y-1">
+                                            {item.subItems.map((sub) => (
+                                                <button
+                                                    key={sub.id}
+                                                    onClick={() => navigate(sub.path)}
+                                                    className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${isActive(sub.path)
+                                                        ? 'text-fpt-orange font-bold bg-fpt-orange/10'
+                                                        : 'text-gray-600 dark:text-gray-400 hover:text-fpt-orange hover:bg-fpt-orange/5'
+                                                        }`}
+                                                >
+                                                    {sub.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
-                                {isExpanded && (
-                                    <span className={`flex-1 text-left text-sm whitespace-nowrap transition-colors duration-200 ${isActive(item.path) ? 'text-white font-bold' : 'text-fpt-orange font-medium group-hover:text-white'}`}>
-                                        {item.label}
-                                    </span>
-                                )}
-                            </button>
+                            ) : (
+                                // Standard Menu Item
+                                <button
+                                    onClick={() => navigate(item.path!)}
+                                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group ${isActive(item.path)
+                                        ? 'bg-fpt-orange text-white'
+                                        : 'text-fpt-orange hover:bg-fpt-orange hover:text-white'
+                                        }`}
+                                >
+                                    <div className={`flex-shrink-0 transition-colors duration-200 ${isActive(item.path) ? 'text-white' : 'text-fpt-orange group-hover:text-white'}`}>
+                                        {item.icon}
+                                    </div>
+                                    {isExpanded && (
+                                        <span className={`flex-1 text-left text-sm whitespace-nowrap transition-colors duration-200 ${isActive(item.path) ? 'text-white font-bold' : 'font-medium group-hover:text-white'}`}>
+                                            {item.label}
+                                        </span>
+                                    )}
+                                </button>
+                            )}
                         </div>
                     ))}
                 </nav>
@@ -184,20 +249,18 @@ export const StudentSidebar: React.FC = () => {
                 {/* Bottom Actions */}
                 <div className="border-t border-gray-200 dark:border-zinc-800 p-2 space-y-1">
                     <button
-                        onClick={() => navigate('/student/settings')}
-                        className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-fpt-orange hover:bg-fpt-orange hover:text-white transition-all duration-200 group ${isActive('/student/settings') ? 'bg-fpt-orange text-white' : ''}`}
-                        title={!isExpanded ? 'Cài đặt' : ''}
+                        onClick={() => navigate('/lecturer/settings')}
+                        className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-fpt-orange hover:bg-fpt-orange hover:text-white transition-all duration-200 group ${isActive('/lecturer/settings') ? 'bg-fpt-orange text-white' : ''}`}
                     >
-                        <div className={`flex-shrink-0 transition-colors duration-200 ${isActive('/student/settings') ? 'text-white' : 'text-fpt-orange group-hover:text-white'}`}>
+                        <div className={`flex-shrink-0 transition-colors duration-200 ${isActive('/lecturer/settings') ? 'text-white' : 'text-fpt-orange group-hover:text-white'}`}>
                             <Settings size={20} />
                         </div>
-                        {isExpanded && <span className={`text-sm font-medium whitespace-nowrap ${isActive('/student/settings') ? 'text-white' : ''}`}>Cài đặt</span>}
+                        {isExpanded && <span className={`text-sm font-medium whitespace-nowrap ${isActive('/lecturer/settings') ? 'text-white' : ''}`}>Cài đặt</span>}
                     </button>
 
                     <button
                         onClick={() => setShowLogoutModal(true)}
                         className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-fpt-orange hover:bg-fpt-orange hover:text-white transition-all duration-200 group"
-                        title={!isExpanded ? 'Đăng xuất' : ''}
                     >
                         <div className="flex-shrink-0 text-fpt-orange group-hover:text-white transition-colors duration-200">
                             <LogOut size={20} />

@@ -29,11 +29,15 @@ public class NotificationRecipient {
     // Thông báo
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "notification_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Notification notification;
 
     // Người nhận
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "recipient_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private User recipient;
 
     // Đã đọc chưa

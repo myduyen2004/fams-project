@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { Upload, X } from 'lucide-react';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { Upload, ArrowLeft, Loader2, CheckCircle2, XCircle, Trash2 } from 'lucide-react';
 import { uploadFile } from '../../services/utils/fileUploadService';
 import toast from 'react-hot-toast';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { AdminLayout } from '../../components/admin/AdminLayout';
+import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { notificationService, AdminNotification } from '../../services/api/notificationService';
 import { NotificationStatus, TargetType } from '../../types/notification';
 
@@ -25,13 +26,18 @@ interface AttachedFile {
   size: number;
   type: string;
   url?: string;
-  isUploading?: boolean;
+  status: 'uploading' | 'success' | 'error';
 }
 
 export const EditNotificationPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isAcademicStaff = location.pathname.startsWith('/academic-staff');
+  const Layout = isAcademicStaff ? AcademicStaffLayout : AdminLayout;
+  const backUrl = isAcademicStaff ? '/academic-staff/notification-management' : '/admin/notification-management';
 
   const [notification, setNotification] = useState<AdminNotification | null>(null);
   const [loading, setLoading] = useState(true);
@@ -73,7 +79,7 @@ export const EditNotificationPage = () => {
   useEffect(() => {
     const loadNotification = async () => {
       if (!id) {
-        navigate('/admin/notification-management');
+        navigate(backUrl);
         return;
       }
 
@@ -117,7 +123,7 @@ export const EditNotificationPage = () => {
               size: 0, // Size is not available from URL
               type: 'unknown', // Type is not available from URL
               url: url,
-              isUploading: false
+              status: 'success'
             };
           });
           setAttachedFiles(filesFromUrl);
@@ -125,14 +131,14 @@ export const EditNotificationPage = () => {
       } catch (error) {
         console.error('Failed to load notification:', error);
         toast.error('Không thể tải thông báo');
-        navigate('/admin/notification-management');
+        navigate(backUrl);
       } finally {
         setLoading(false);
       }
     };
 
     loadNotification();
-  }, [id, navigate]);
+  }, [id, navigate, backUrl]);
 
   // Handle file upload
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -165,7 +171,7 @@ export const EditNotificationPage = () => {
         name: file.name,
         size: file.size,
         type: file.type,
-        isUploading: true
+        status: 'uploading'
       };
 
       setAttachedFiles(prev => [...prev, newFile]);
@@ -176,11 +182,11 @@ export const EditNotificationPage = () => {
 
         // Update file with URL and remove uploading state
         setAttachedFiles(prev => prev.map(f => {
-          if (f.name === file.name && f.isUploading) {
+          if (f.name === file.name && f.status === 'uploading') {
             return {
               ...f,
               url: data.secure_url,
-              isUploading: false
+              status: 'success'
             };
           }
           return f;
@@ -188,8 +194,13 @@ export const EditNotificationPage = () => {
       } catch (err) {
         console.error(err);
         toast.error(`Lỗi khi tải file ${file.name}`);
-        // Remove failed file
-        setAttachedFiles(prev => prev.filter(f => f.name !== file.name));
+        // Mark as error
+        setAttachedFiles(prev => prev.map(f => {
+          if (f.name === file.name) {
+            return { ...f, status: 'error' };
+          }
+          return f;
+        }));
       }
     }
   };
@@ -305,7 +316,7 @@ export const EditNotificationPage = () => {
       }
 
       // Navigate back to management page
-      navigate('/admin/notification-management');
+      navigate(backUrl);
     } catch (error) {
       console.error('Failed to update notification:', error);
       toast.error('Có lỗi xảy ra khi cập nhật thông báo');
@@ -316,20 +327,28 @@ export const EditNotificationPage = () => {
 
   if (loading) {
     return (
-      <AdminLayout pageTitle="Chỉnh sửa thông báo">
+      <Layout pageTitle="Chỉnh sửa thông báo">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-fpt-orange mx-auto mb-4"></div>
             <p className="text-gray-600 dark:text-gray-400">Đang tải thông báo...</p>
           </div>
         </div>
-      </AdminLayout>
+      </Layout>
     );
   }
 
   return (
-    <AdminLayout pageTitle="Chỉnh sửa thông báo">
+    <Layout pageTitle="Chỉnh sửa thông báo">
       <div className="max-w-4xl mx-auto">
+        <button
+          onClick={() => navigate(`${isAcademicStaff ? '/academic-staff' : '/admin'}/notifications/${id}`)}
+          className="flex items-center gap-2 text-sm text-gray-500 hover:text-fpt-orange mb-4 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Quay lại chi tiết
+        </button>
+
         <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 overflow-hidden">
           <div className="p-6 space-y-6">
             {/* Title */}
@@ -420,7 +439,6 @@ export const EditNotificationPage = () => {
                   {attachedFiles.map((file, index) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-zinc-800 rounded-lg">
                       <div className="flex items-center gap-3">
-                        {/* Icon removed */}
                         <div>
                           <p className="text-sm font-medium text-gray-900 dark:text-white">
                             {file.name}
@@ -430,12 +448,27 @@ export const EditNotificationPage = () => {
                           </p>
                         </div>
                       </div>
-                      <button
-                        onClick={() => handleRemoveFile(index)}
-                        className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                      >
-                        <X size={16} />
-                      </button>
+                      <div className="flex items-center gap-3">
+                        {/* Status Icons */}
+                        {file.status === 'uploading' && (
+                          <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                        )}
+                        {file.status === 'success' && (
+                          <CheckCircle2 className="w-5 h-5 text-green-500" />
+                        )}
+                        {file.status === 'error' && (
+                          <XCircle className="w-5 h-5 text-red-500" />
+                        )}
+
+                        {/* Remove Action */}
+                        <button
+                          onClick={() => handleRemoveFile(index)}
+                          className="p-1 text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded transition-colors"
+                          title="Xóa file"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -502,7 +535,7 @@ export const EditNotificationPage = () => {
               {formData.status === NotificationStatus.DRAFT && (
                 <button
                   onClick={() => handleSubmit(true)}
-                  disabled={isSubmitting || attachedFiles.some(f => f.isUploading)}
+                  disabled={isSubmitting || attachedFiles.some(f => f.status === 'uploading')}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-600 rounded-lg transition-colors disabled:opacity-50"
                 >
                   {isSubmitting ? 'Đang lưu...' : 'Lưu nháp'}
@@ -512,7 +545,7 @@ export const EditNotificationPage = () => {
               {formData.status === NotificationStatus.SENT && (
                 <button
                   onClick={() => handleSubmit(false)}
-                  disabled={isSubmitting || attachedFiles.some(f => f.isUploading)}
+                  disabled={isSubmitting || attachedFiles.some(f => f.status === 'uploading')}
                   className="px-4 py-2 text-sm font-medium text-white bg-fpt-orange hover:bg-fpt-orange-dark rounded-lg transition-colors disabled:opacity-50"
                 >
                   {isSubmitting ? 'Đang xử lý...' : 'Gửi ngay'}
@@ -522,7 +555,7 @@ export const EditNotificationPage = () => {
               {formData.status === NotificationStatus.SCHEDULED && (
                 <button
                   onClick={() => handleSubmit(false)}
-                  disabled={isSubmitting || attachedFiles.some(f => f.isUploading)}
+                  disabled={isSubmitting || attachedFiles.some(f => f.status === 'uploading')}
                   className="px-4 py-2 text-sm font-medium text-white bg-fpt-orange hover:bg-fpt-orange-dark rounded-lg transition-colors disabled:opacity-50"
                 >
                   {isSubmitting ? 'Đang xử lý...' : 'Cập nhật lịch gửi'}
@@ -532,7 +565,7 @@ export const EditNotificationPage = () => {
           </div>
         </div>
       </div>
-    </AdminLayout>
+    </Layout>
   );
 };
 
