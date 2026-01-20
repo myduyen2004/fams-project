@@ -11,17 +11,34 @@ interface NotificationsSectionProps {
 
 export const NotificationsSection: React.FC<NotificationsSectionProps> = ({ notifications, isDashboard = false, viewAllUrl = '/notifications' }) => {
   const navigate = useNavigate();
-  // Strip HTML tags from text
-  const stripHtml = (html: string): string => {
-    const tmp = document.createElement('div');
-    tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || '';
-  };
+  // Get first line of HTML content
+  const getFirstLineHtml = (html: string): string => {
+    let clean = html;
 
-  // Truncate text with ellipsis
-  const truncateText = (text: string, maxLength: number = 100): string => {
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + '...';
+    // 1. Strip leading empty blocks (e.g. <p><br></p>, <p>&nbsp;</p>) and loose breaks/spaces
+    let prev;
+    do {
+      prev = clean;
+      // Strip loose <br>, whitespace, &nbsp;
+      clean = clean.replace(/^(\s|&nbsp;|<br\s*\/?>)+/i, '');
+      // Strip empty tags P, DIV, H1-6, LI containing only whitespace/br/&nbsp;
+      clean = clean.replace(/^<(p|div|h[1-6]|li)[^>]*>(\s|&nbsp;|<br\s*\/?>)*<\/\1>/i, '');
+    } while (clean !== prev && clean.length > 0);
+
+    // 2. Strip leading whitespace strictly inside the first opening tag if present
+    clean = clean.replace(/^(<[a-z][^>]*>)(\s|&nbsp;|<br\s*\/?>)+/i, '$1');
+
+    const splitRegex = /(<br\s*\/?>|<\/(p|div|h[1-6]|li)>)/i;
+    const match = clean.match(splitRegex);
+
+    if (match && match.index !== undefined) {
+      if (match[0].startsWith('</')) {
+        return clean.substring(0, match.index + match[0].length).trim();
+      } else {
+        return clean.substring(0, match.index).trim();
+      }
+    }
+    return clean.trim();
   };
 
   return (
@@ -84,11 +101,12 @@ export const NotificationsSection: React.FC<NotificationsSectionProps> = ({ noti
                         {notification.senderFullName || notification.senderName}
                       </span>
                     )}
-                    {stripHtml(notification.title)}
+                    {notification.title}
                   </p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
-                    {truncateText(stripHtml(notification.description))}
-                  </p>
+                  <div
+                    className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-1"
+                    dangerouslySetInnerHTML={{ __html: getFirstLineHtml(notification.description) }}
+                  />
                   <div className="flex items-center gap-2 mt-2">
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                       {notification.senderName && notification.senderName !== 'System' ? (notification.senderFullName || notification.senderName) : (notification.type === 'SYSTEM' ? 'Hệ thống' : 'Cảnh báo')}

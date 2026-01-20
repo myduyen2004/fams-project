@@ -62,10 +62,34 @@ export const NotificationTableRow: React.FC<NotificationTableRowProps> = React.m
 
   const displayDateTime = getDisplayDateTime();
 
-  // Strip HTML tags for snippet
-  const getSnippet = (content: string) => {
-    const stripped = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-    return stripped.length > 80 ? stripped.substring(0, 80) + '...' : stripped;
+  // Get the first line of content preserving HTML tags
+  const getFirstLineHtml = (content: string) => {
+    let clean = content;
+
+    // 1. Strip leading empty blocks (e.g. <p><br></p>, <p>&nbsp;</p>) and loose breaks/spaces
+    let prev;
+    do {
+      prev = clean;
+      // Strip loose <br>, whitespace, &nbsp;
+      clean = clean.replace(/^(\s|&nbsp;|<br\s*\/?>)+/i, '');
+      // Strip empty tags P, DIV, H1-6, LI containing only whitespace/br/&nbsp;
+      clean = clean.replace(/^<(p|div|h[1-6]|li)[^>]*>(\s|&nbsp;|<br\s*\/?>)*<\/\1>/i, '');
+    } while (clean !== prev && clean.length > 0);
+
+    // 2. Strip leading whitespace strictly inside the first opening tag if present
+    clean = clean.replace(/^(<[a-z][^>]*>)(\s|&nbsp;|<br\s*\/?>)+/i, '$1');
+
+    const splitRegex = /(<br\s*\/?>|<\/(p|div|h[1-6]|li)>)/i;
+    const match = clean.match(splitRegex);
+
+    if (match && match.index !== undefined) {
+      if (match[0].startsWith('</')) {
+        return clean.substring(0, match.index + match[0].length).trim();
+      } else {
+        return clean.substring(0, match.index).trim();
+      }
+    }
+    return clean.trim();
   };
 
   return (
@@ -86,9 +110,10 @@ export const NotificationTableRow: React.FC<NotificationTableRowProps> = React.m
           <span className="block font-semibold text-gray-900 dark:text-white">
             {notification.title}
           </span>
-          <span className="block text-xs text-gray-500 dark:text-gray-400 truncate">
-            {getSnippet(notification.content)}
-          </span>
+          <div
+            className="text-xs text-gray-500 dark:text-gray-400 truncate-html"
+            dangerouslySetInnerHTML={{ __html: getFirstLineHtml(notification.content) }}
+          />
         </div>
       </td>
       <td className="px-4 py-4 text-gray-900 dark:text-white font-semibold">
@@ -118,8 +143,8 @@ export const NotificationTableRow: React.FC<NotificationTableRowProps> = React.m
             onClick={() => navigate(`${basePath}/notifications/edit/${notification.id}`)}
             disabled={notification.status === NotificationStatus.SENT}
             className={`p-1.5 rounded-lg transition-colors ${notification.status === NotificationStatus.SENT
-                ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
-                : 'text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20'
+              ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
+              : 'text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20'
               }`}
             title={notification.status === NotificationStatus.SENT ? 'Không thể sửa thông báo đã gửi' : 'Chỉnh sửa'}
           >

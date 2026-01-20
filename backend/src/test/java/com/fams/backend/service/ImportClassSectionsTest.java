@@ -100,6 +100,7 @@ class ImportClassSectionsTest {
                 .username("sonnt5")
                 .fullName("Nguyễn Thành Sơn")
                 .role(User.UserRole.LECTURER)
+                .status(User.UserStatus.ACTIVE)
                 .build();
 
         // Create non-lecturer user
@@ -108,6 +109,7 @@ class ImportClassSectionsTest {
                 .username("student01")
                 .fullName("Student User")
                 .role(User.UserRole.STUDENT)
+                .status(User.UserStatus.ACTIVE)
                 .build();
     }
 
@@ -128,7 +130,7 @@ class ImportClassSectionsTest {
 
             when(semesterRepository.findByCode("SP2024")).thenReturn(Optional.of(testSemester));
             when(courseRepository.findByCode("PRN211")).thenReturn(Optional.of(testCourse));
-            when(userRepository.findByUsername("sonnt5")).thenReturn(Optional.of(testLecturer));
+            when(userRepository.findByUsernameIgnoreCase("sonnt5")).thenReturn(Optional.of(testLecturer));
             when(classSectionRepository.existsByClassNameIgnoreCase(anyString())).thenReturn(false);
 
             // Act
@@ -259,7 +261,7 @@ class ImportClassSectionsTest {
 
             when(semesterRepository.findByCode("SP2024")).thenReturn(Optional.of(testSemester));
             when(courseRepository.findByCode("PRN211")).thenReturn(Optional.of(testCourse));
-            when(userRepository.findByUsername("invaliduser")).thenReturn(Optional.empty());
+            when(userRepository.findByUsernameIgnoreCase("invaliduser")).thenReturn(Optional.empty());
             when(classSectionRepository.existsByClassNameIgnoreCase(anyString())).thenReturn(false);
 
             // Act
@@ -282,7 +284,7 @@ class ImportClassSectionsTest {
 
             when(semesterRepository.findByCode("SP2024")).thenReturn(Optional.of(testSemester));
             when(courseRepository.findByCode("PRN211")).thenReturn(Optional.of(testCourse));
-            when(userRepository.findByUsername("student01")).thenReturn(Optional.of(nonLecturerUser));
+            when(userRepository.findByUsernameIgnoreCase("student01")).thenReturn(Optional.of(nonLecturerUser));
             when(classSectionRepository.existsByClassNameIgnoreCase(anyString())).thenReturn(false);
 
             // Act
@@ -306,7 +308,7 @@ class ImportClassSectionsTest {
 
             when(semesterRepository.findByCode("SP2024")).thenReturn(Optional.of(testSemester));
             when(courseRepository.findByCode("PRN211")).thenReturn(Optional.of(testCourse));
-            when(userRepository.findByUsername("sonnt5")).thenReturn(Optional.of(testLecturer));
+            when(userRepository.findByUsernameIgnoreCase("sonnt5")).thenReturn(Optional.of(testLecturer));
             when(classSectionRepository.existsByClassNameIgnoreCase("SE18B02-PRN211")).thenReturn(false);
 
             // Act
@@ -330,7 +332,7 @@ class ImportClassSectionsTest {
 
             when(semesterRepository.findByCode("SP2024")).thenReturn(Optional.of(testSemester));
             when(courseRepository.findByCode("PRN211")).thenReturn(Optional.of(testCourse));
-            when(userRepository.findByUsername("sonnt5")).thenReturn(Optional.of(testLecturer));
+            when(userRepository.findByUsernameIgnoreCase("sonnt5")).thenReturn(Optional.of(testLecturer));
             when(classSectionRepository.existsByClassNameIgnoreCase("EXISTING-CLASS")).thenReturn(true);
 
             // Act
@@ -353,7 +355,7 @@ class ImportClassSectionsTest {
 
             when(semesterRepository.findByCode("SP2024")).thenReturn(Optional.of(testSemester));
             when(courseRepository.findByCode("PRN211")).thenReturn(Optional.of(testCourse));
-            when(userRepository.findByUsername("sonnt5")).thenReturn(Optional.of(testLecturer));
+            when(userRepository.findByUsernameIgnoreCase("sonnt5")).thenReturn(Optional.of(testLecturer));
             when(classSectionRepository.existsByClassNameIgnoreCase(anyString())).thenReturn(false);
 
             // Act
@@ -400,7 +402,7 @@ class ImportClassSectionsTest {
 
             when(semesterRepository.findByCode("SP2024")).thenReturn(Optional.of(testSemester));
             when(courseRepository.findByCode("PRN211")).thenReturn(Optional.of(testCourse));
-            when(userRepository.findByUsername("sonnt5")).thenReturn(Optional.of(testLecturer));
+            when(userRepository.findByUsernameIgnoreCase("sonnt5")).thenReturn(Optional.of(testLecturer));
             when(classSectionRepository.existsByClassNameIgnoreCase(anyString())).thenReturn(false);
 
             // Act
@@ -436,7 +438,7 @@ class ImportClassSectionsTest {
             when(semesterRepository.findByCode("SP2024")).thenReturn(Optional.of(testSemester));
             when(classSectionRepository.existsByClassNameIgnoreCase("SE18B02-PRN211")).thenReturn(false);
             when(courseRepository.findByCode("PRN211")).thenReturn(Optional.of(testCourse));
-            when(userRepository.findByUsername("sonnt5")).thenReturn(Optional.of(testLecturer));
+            when(userRepository.findByUsernameIgnoreCase("sonnt5")).thenReturn(Optional.of(testLecturer));
             when(classSectionRepository.saveAll(any())).thenReturn(new ArrayList<>());
 
             // Act
@@ -460,6 +462,8 @@ class ImportClassSectionsTest {
                             .status("ERROR")
                             .errorMessage("Some error")
                             .build());
+
+            when(semesterRepository.findByCode("SP2024")).thenReturn(Optional.of(testSemester));
 
             // Act
             Map<String, Object> result = classSectionService.saveImportedClassSections("SP2024", dtos);
@@ -569,7 +573,7 @@ class ImportClassSectionsTest {
             when(semesterRepository.findByCode("SP2024")).thenReturn(Optional.of(testSemester));
             when(classSectionRepository.existsByClassNameIgnoreCase("SE18B02-PRN211")).thenReturn(false);
             when(courseRepository.findByCode("PRN211")).thenReturn(Optional.of(testCourse));
-            when(userRepository.findByUsername("sonnt5")).thenReturn(Optional.of(testLecturer));
+            when(userRepository.findByUsernameIgnoreCase("sonnt5")).thenReturn(Optional.of(testLecturer));
             when(classSectionRepository.saveAll(any())).thenReturn(new ArrayList<>());
 
             // Act
