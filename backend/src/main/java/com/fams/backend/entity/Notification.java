@@ -53,6 +53,8 @@ public class Notification {
     // Người gửi
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sender_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private User sender;
 
     // === Target filtering ===
@@ -78,6 +80,8 @@ public class Notification {
     // Danh sách người nhận
     @OneToMany(mappedBy = "notification", cascade = CascadeType.ALL)
     @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private List<NotificationRecipient> recipients = new ArrayList<>();
 
     @ElementCollection

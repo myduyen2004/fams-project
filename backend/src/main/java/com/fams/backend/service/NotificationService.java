@@ -414,17 +414,27 @@ public class NotificationService {
         }
 
         if (!recipients.isEmpty()) {
-            List<NotificationRecipient> notificationRecipients = recipients.stream()
-                    .map(recipient -> NotificationRecipient.builder()
-                            .notification(notification)
-                            .recipient(recipient)
-                            .isRead(false)
-                            .build())
-                    .collect(java.util.stream.Collectors.toList());
+            log.info("Found {} recipients for target type {}", recipients.size(), notification.getTargetType());
+            try {
+                List<NotificationRecipient> notificationRecipients = recipients.stream()
+                        .map(recipient -> NotificationRecipient.builder()
+                                .notification(notification)
+                                .recipient(recipient)
+                                .isRead(false)
+                                .build())
+                        .collect(java.util.stream.Collectors.toList());
 
-            notificationRecipientRepository.saveAll(notificationRecipients);
-            log.info("Created {} notification recipients for notification {}", notificationRecipients.size(),
-                    notification.getId());
+                log.info("Saving {} notification recipients...", notificationRecipients.size());
+                notificationRecipientRepository.saveAll(notificationRecipients);
+                log.info("Successfully created {} notification recipients for notification {}",
+                        notificationRecipients.size(),
+                        notification.getId());
+            } catch (Exception e) {
+                log.error("Error saving notification recipients: ", e);
+                throw e; // Re-throw to ensure transaction rollback if needed
+            }
+        } else {
+            log.warn("No recipients found for target type {}", notification.getTargetType());
         }
     }
 }

@@ -27,32 +27,46 @@ export const NotificationBell: React.FC = () => {
 
   // Get first line of HTML content
   const getFirstLineHtml = (html: string): string => {
-    let clean = html;
+    if (!html) return '';
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
 
-    // 1. Strip leading empty blocks (e.g. <p><br></p>, <p>&nbsp;</p>) and loose breaks/spaces
-    let prev;
-    do {
-      prev = clean;
-      // Strip loose <br>, whitespace, &nbsp;
-      clean = clean.replace(/^(\s|&nbsp;|<br\s*\/?>)+/i, '');
-      // Strip empty tags P, DIV, H1-6, LI containing only whitespace/br/&nbsp;
-      clean = clean.replace(/^<(p|div|h[1-6]|li)[^>]*>(\s|&nbsp;|<br\s*\/?>)*<\/\1>/i, '');
-    } while (clean !== prev && clean.length > 0);
+    let content = '';
 
-    // 2. Strip leading whitespace strictly inside the first opening tag if present
-    clean = clean.replace(/^(<[a-z][^>]*>)(\s|&nbsp;|<br\s*\/?>)+/i, '$1');
-
-    const splitRegex = /(<br\s*\/?>|<\/(p|div|h[1-6]|li)>)/i;
-    const match = clean.match(splitRegex);
-
-    if (match && match.index !== undefined) {
-      if (match[0].startsWith('</')) {
-        return clean.substring(0, match.index + match[0].length).trim();
-      } else {
-        return clean.substring(0, match.index).trim();
+    // Strategy 1: Find first paragraph with text content
+    const paragraphs = tempDiv.querySelectorAll('p');
+    for (let i = 0; i < paragraphs.length; i++) {
+      // Check if paragraph has meaningful text (ignoring whitespace/nbsp)
+      if (paragraphs[i].textContent && paragraphs[i].textContent?.replace(/[\s\u00A0]/g, '').length > 0) {
+        content = paragraphs[i].innerHTML;
+        break;
       }
     }
-    return clean.trim();
+
+    // Strategy 2: If no valid p found, split by <br> and find first non-empty line
+    if (!content) {
+      const lines = tempDiv.innerHTML.split(/<br\s*\/?>/i);
+      content = lines.find(line => {
+        const t = document.createElement('div');
+        t.innerHTML = line;
+        // Check if line has meaningful text
+        return t.textContent && t.textContent.replace(/[\s\u00A0]/g, '').length > 0;
+      }) || lines[0] || '';
+    }
+
+    // Remove leading <br> tags if any remain
+    content = content.replace(/^(\s*<br\s*\/?>\s*)+/gi, '');
+
+    // Robust trimming of leading whitespace/entities while preserving formatting tags
+    // Matches start of string, optional tags, then whitespace/entities
+    // Loop to handle deep nesting (e.g. <b><i>&nbsp;Text</i></b>)
+    let oldContent = '';
+    while (content !== oldContent) {
+      oldContent = content;
+      content = content.replace(/^((?:<[^>]+>)*)(?:&nbsp;|&#160;|\s)+/gi, '$1');
+    }
+
+    return content;
   };
 
   const username = authService.getUser()?.username || 'anonymous';

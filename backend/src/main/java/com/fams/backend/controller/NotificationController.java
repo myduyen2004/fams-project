@@ -68,8 +68,15 @@ public class NotificationController {
     @Operation(summary = "Tạo thông báo mới")
     @PreAuthorize("hasRole('ADMIN') or hasRole('ACADEMIC_STAFF')")
     public ResponseEntity<NotificationResponse> createNotification(@Valid @RequestBody NotificationRequest request) {
+        System.out.println("DEBUG: Entering createNotification controller");
         log.info("Creating notification: {}", request.getTitle());
-        return ResponseEntity.ok(notificationService.createNotification(request));
+        try {
+            return ResponseEntity.ok(notificationService.createNotification(request));
+        } catch (Exception e) {
+            System.err.println("DEBUG: Exception in controller: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     /**
