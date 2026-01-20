@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { AxiosError } from 'axios';
 import { Loader2 } from 'lucide-react';
-import { Pagination } from '../../components/common/Pagination';
+import { Pagination } from '../../components/academic-staff/Pagination';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { authService } from '../../services/api/authService';
@@ -258,11 +258,11 @@ export const NotificationManagementPage = () => {
 
         {/* Pagination */}
         <Pagination
-          currentPage={page}
-          totalPages={Math.ceil(totalElements / pageSize)}
+          page={page}
           totalElements={totalElements}
           pageSize={pageSize}
           onPageChange={setPage}
+          itemLabel="thông báo"
         />
       </div>
 

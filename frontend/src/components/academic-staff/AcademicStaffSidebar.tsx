@@ -121,6 +121,10 @@ export const AcademicStaffSidebar: React.FC = () => {
 
   const isActive = (path?: string) => {
     if (!path) return false;
+    // Special case for notification management to be active on sub-routes keys like 'edit' or 'create' which differ in path structure
+    if (path === '/academic-staff/notification-management' && location.pathname.startsWith('/academic-staff/notifications/')) {
+      return true;
+    }
     return location.pathname === path || (path !== '/academic-staff/dashboard' && location.pathname.startsWith(path + '/'));
   };
 

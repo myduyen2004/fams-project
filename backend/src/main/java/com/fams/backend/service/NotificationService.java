@@ -47,13 +47,30 @@ public class NotificationService {
             int page,
             int size) {
         try {
+            // Get current user to determine role
+            String username = SecurityContextHolder.getContext().getAuthentication().getName();
+            User currentUser = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new NotFoundException("Người dùng không tìm thấy"));
+
             Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-            log.info("getNotifications - Search: {}, Type: {}, Target: {}, Status: {}",
-                    search, type, targetType, status);
+            log.info("getNotifications - User: {}, Role: {}, Search: {}, Type: {}, Target: {}, Status: {}",
+                    username, currentUser.getRole(), search, type, targetType, status);
 
             Specification<Notification> spec = (root, query, cb) -> {
                 List<Predicate> predicates = new ArrayList<>();
+
+                // Filter by Sender Role (Role-based Isolation)
+                if (currentUser.getRole() == User.UserRole.ADMIN) {
+                    // Admin only sees notifications from Admins
+                    predicates.add(cb.equal(root.get("sender").get("role"), User.UserRole.ADMIN));
+                } else if (currentUser.getRole() == User.UserRole.ACADEMIC_STAFF) {
+                    // Staff only sees notifications from Staff
+                    predicates.add(cb.equal(root.get("sender").get("role"), User.UserRole.ACADEMIC_STAFF));
+                }
+                // Note: Other roles invoking this service directly might see everything if not
+                // handled,
+                // but Controller protects this with @PreAuthorize for ADMIN/STAFF only.
 
                 // Tìm kiếm theo tiêu đề hoặc nội dung
                 if (search != null && !search.trim().isEmpty()) {
@@ -128,12 +145,8 @@ public class NotificationService {
         Notification notification = notificationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy thông báo với ID: " + id));
 
-        // Kiểm tra quyền: ADMIN/STAFF xem tất cả, người khác chỉ xem của mình
-        boolean isStaff = currentUser.getRole() == User.UserRole.ADMIN
-                || currentUser.getRole() == User.UserRole.ACADEMIC_STAFF;
-        if (!isStaff && !notification.getSender().equals(currentUser)) {
-            throw new NotFoundException("Bạn không có quyền xem thông báo này");
-        }
+        // Kiểm tra quyền: ADMIN chỉ xem của ADMIN, STAFF chỉ xem của STAFF
+        checkRoleAccess(currentUser, notification);
 
         return mapToResponse(notification);
     }
@@ -194,13 +207,8 @@ public class NotificationService {
         Notification notification = notificationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy thông báo với ID: " + id));
 
-        // Kiểm tra quyền: ADMIN/STAFF có thể sửa của bất kỳ ai, người khác chỉ sửa của
-        // mình
-        boolean isStaff = currentUser.getRole() == User.UserRole.ADMIN
-                || currentUser.getRole() == User.UserRole.ACADEMIC_STAFF;
-        if (!isStaff && !notification.getSender().equals(currentUser)) {
-            throw new NotFoundException("Bạn không có quyền chỉnh sửa thông báo này");
-        }
+        // Kiểm tra quyền
+        checkRoleAccess(currentUser, notification);
 
         // Không cho phép sửa thông báo đã gửi
         if (notification.getStatus() == NotificationStatus.SENT) {
@@ -250,13 +258,8 @@ public class NotificationService {
         Notification notification = notificationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy thông báo with ID: " + id));
 
-        // Kiểm tra quyền: ADMIN/STAFF có thể xóa của bất kỳ ai, người khác chỉ xóa của
-        // mình
-        boolean isStaff = currentUser.getRole() == User.UserRole.ADMIN
-                || currentUser.getRole() == User.UserRole.ACADEMIC_STAFF;
-        if (!isStaff && !notification.getSender().equals(currentUser)) {
-            throw new NotFoundException("Bạn không có quyền xóa thông báo này");
-        }
+        // Kiểm tra quyền
+        checkRoleAccess(currentUser, notification);
 
         // Không cho phép xóa thông báo đã gửi
         if (notification.getStatus() == NotificationStatus.SENT) {
@@ -278,16 +281,9 @@ public class NotificationService {
 
         List<Notification> notifications = notificationRepository.findAllById(ids);
 
-        // Kiểm tra quyền: ADMIN/STAFF có thể xóa của bất kỳ ai, người khác chỉ xóa của
-        // mình
-        boolean isStaff = currentUser.getRole() == User.UserRole.ADMIN
-                || currentUser.getRole() == User.UserRole.ACADEMIC_STAFF;
-        if (!isStaff) {
-            boolean hasUnauthorized = notifications.stream()
-                    .anyMatch(n -> !n.getSender().equals(currentUser));
-            if (hasUnauthorized) {
-                throw new NotFoundException("Bạn không có quyền xóa một số thông báo này");
-            }
+        // Kiểm tra quyền
+        for (Notification notification : notifications) {
+            checkRoleAccess(currentUser, notification);
         }
 
         // Kiểm tra xem có thông báo nào đã gửi không
@@ -301,6 +297,26 @@ public class NotificationService {
 
         notificationRepository.deleteAllById(ids);
         log.info("Bulk deleted notifications: {}", ids);
+    }
+
+    // Helper method to check role access
+    private void checkRoleAccess(User currentUser, Notification notification) {
+        if (currentUser.getRole() == User.UserRole.ADMIN) {
+            if (notification.getSender().getRole() != User.UserRole.ADMIN) {
+                throw new NotFoundException(
+                        "Bạn không có quyền truy cập thông báo này (Chỉ Admin mới có thể truy cập thông báo của Admin)");
+            }
+        } else if (currentUser.getRole() == User.UserRole.ACADEMIC_STAFF) {
+            if (notification.getSender().getRole() != User.UserRole.ACADEMIC_STAFF) {
+                throw new NotFoundException(
+                        "Bạn không có quyền truy cập thông báo này (Chỉ Academic Staff mới có thể truy cập thông báo của Academic Staff)");
+            }
+        } else {
+            // Fallback for other roles, strict ownership
+            if (!notification.getSender().equals(currentUser)) {
+                throw new NotFoundException("Bạn không có quyền truy cập thông báo này");
+            }
+        }
     }
 
     /**
@@ -361,6 +377,8 @@ public class NotificationService {
                         .id(notification.getSender().getId())
                         .username(notification.getSender().getUsername())
                         .fullName(notification.getSender().getFullName())
+                        .role(notification.getSender().getRole() != null ? notification.getSender().getRole().name()
+                                : null)
                         .build() : null)
                 .build();
     }

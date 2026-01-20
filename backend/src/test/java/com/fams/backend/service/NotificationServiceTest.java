@@ -131,6 +131,8 @@ public class NotificationServiceTest {
         // Condition: Keyword Empty/Null, Filters "ALL" or Null
         // Confirm: findAll called, No Exception, Return Page
         // Arrange
+        mockSecurityContext("admin");
+        when(userRepository.findByUsername(anyString())).thenReturn(Optional.of(adminUser));
         Page<Notification> notificationPage = new PageImpl<>(List.of(notificationDraft));
         when(notificationRepository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(notificationPage);
@@ -150,6 +152,8 @@ public class NotificationServiceTest {
         // Condition: Keyword Empty, Type="SYSTEM", Status="SENT"
         // Confirm: findAll called, No Exception, Return Page
         // Arrange
+        mockSecurityContext("admin");
+        when(userRepository.findByUsername(anyString())).thenReturn(Optional.of(adminUser));
         Page<Notification> notificationPage = new PageImpl<>(List.of(notificationSent));
         when(notificationRepository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(notificationPage);
@@ -170,6 +174,8 @@ public class NotificationServiceTest {
         // Condition: Keyword "test", Filters ALL
         // Confirm: findAll called, No Exception, Return Page
         // Arrange
+        mockSecurityContext("admin");
+        when(userRepository.findByUsername(anyString())).thenReturn(Optional.of(adminUser));
         Page<Notification> notificationPage = new PageImpl<>(List.of(notificationDraft));
         when(notificationRepository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(notificationPage);
@@ -188,6 +194,8 @@ public class NotificationServiceTest {
         // Condition: Invalid Filter Value
         // Confirm: findAll called, No Exception (Handled in service), Return Page
         // Arrange
+        mockSecurityContext("admin");
+        when(userRepository.findByUsername(anyString())).thenReturn(Optional.of(adminUser));
         Page<Notification> notificationPage = new PageImpl<>(Collections.emptyList());
         when(notificationRepository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(notificationPage);
@@ -207,6 +215,8 @@ public class NotificationServiceTest {
         // Condition: RuntimeException
         // Confirm: RuntimeException thrown
         // Arrange
+        mockSecurityContext("admin");
+        when(userRepository.findByUsername(anyString())).thenReturn(Optional.of(adminUser));
         when(notificationRepository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenThrow(new RuntimeException("Database error"));
 
@@ -272,7 +282,7 @@ public class NotificationServiceTest {
         // Act & Assert
         NotFoundException exception = assertThrows(NotFoundException.class,
                 () -> notificationService.getNotificationById(100L));
-        assertEquals("Bạn không có quyền xem thông báo này", exception.getMessage());
+        assertEquals("Bạn không có quyền truy cập thông báo này", exception.getMessage());
     }
 
     @Test
@@ -536,6 +546,6 @@ public class NotificationServiceTest {
         // Act & Assert
         NotFoundException exception = assertThrows(NotFoundException.class,
                 () -> notificationService.bulkDeleteNotifications(ids));
-        assertEquals("Bạn không có quyền xóa một số thông báo này", exception.getMessage());
+        assertEquals("Bạn không có quyền truy cập thông báo này", exception.getMessage());
     }
 }
