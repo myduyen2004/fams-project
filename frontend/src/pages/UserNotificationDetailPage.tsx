@@ -71,7 +71,7 @@ export const UserNotificationDetailPage: React.FC = () => {
         <div className="flex flex-col max-w-[1200px] w-full mx-auto flex-1 gap-8">
           {/* Header Section */}
           <div className="flex flex-col gap-4">
-            <h1 className="text-slate-900 dark:text-white text-3xl md:text-5xl font-black leading-tight tracking-tight">
+            <h1 className="text-gray-900 dark:text-white text-2xl md:text-3xl font-bold leading-tight">
               {notification.title}
             </h1>
 
@@ -129,9 +129,8 @@ export const UserNotificationDetailPage: React.FC = () => {
                   Nội dung thông báo
                 </h3>
                 {/* Prose content */}
-                <div className="prose prose-slate dark:prose-invert max-w-none flex-grow">
+                <div className="ui-content max-w-none flex-grow">
                   <div
-                    className="text-slate-800 dark:text-slate-200 text-lg leading-relaxed"
                     dangerouslySetInnerHTML={{ __html: notification.description }}
                   />
                 </div>
@@ -163,14 +162,7 @@ export const UserNotificationDetailPage: React.FC = () => {
                       {notification.timestamp}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-slate-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">
-                      Loại thông báo
-                    </p>
-                    <p className="text-slate-700 dark:text-gray-300 text-sm">
-                      {notification.type || 'Hệ thống'}
-                    </p>
-                  </div>
+
                 </div>
               </div>
             </div>
