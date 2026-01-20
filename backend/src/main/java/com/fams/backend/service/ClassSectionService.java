@@ -1,18 +1,24 @@
 package com.fams.backend.service;
 
-import com.fams.backend.dto.ClassSectionImportDTO;
-import com.fams.backend.dto.EnrollmentImportDTO;
 import com.fams.backend.dto.response.ClassSectionResponse;
 import com.fams.backend.dto.response.EnrollmentResponse;
 import com.fams.backend.dto.response.LecturerOptionResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.Map;
 
+/**
+ * Service interface for class section operations.
+ * 
+ * Note: Import functionality has been moved to StagingImportService
+ * for better performance with large files (streaming + staging tables).
+ */
 public interface ClassSectionService {
+
+    /**
+     * Get paginated class sections by semester with optional filters.
+     */
     Page<ClassSectionResponse> getClassSectionsBySemester(
             String semesterCode,
             String search,
@@ -20,22 +26,23 @@ public interface ClassSectionService {
             Long lecturerId,
             Pageable pageable);
 
+    /**
+     * Get list of lecturers who have class sections in a semester.
+     */
     List<LecturerOptionResponse> getLecturersBySemester(String semesterCode);
 
-    // Enrollment methods
+    /**
+     * Get enrollments for a specific class section.
+     */
     List<EnrollmentResponse> getEnrollmentsByClassName(String className);
 
-    // Import class section methods
-    List<ClassSectionImportDTO> previewImportClassSections(String semesterCode, MultipartFile file);
-
-    Map<String, Object> saveImportedClassSections(String semesterCode, List<ClassSectionImportDTO> dtos);
-
+    /**
+     * Generate Excel template for importing class sections.
+     */
     byte[] getImportTemplate();
 
-    // Import enrollment methods (support multiple class sections)
-    List<EnrollmentImportDTO> previewImportEnrollments(String semesterCode, MultipartFile file);
-
-    Map<String, Object> saveImportedEnrollments(List<EnrollmentImportDTO> dtos);
-
+    /**
+     * Generate Excel template for importing enrollments.
+     */
     byte[] getEnrollmentImportTemplate(String semesterCode);
 }
