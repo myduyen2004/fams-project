@@ -101,14 +101,16 @@ public class StagingImportService {
 
         try {
             String insertSql = """
-                    INSERT INTO class_sections (class_name, semester_id, course_id, lecturer_id, max_students, current_enrollment, created_at, updated_at)
+                    INSERT INTO class_sections (class_name, semester_id, course_id, lecturer_id, number_of_slots, max_students, current_enrollment, status, created_at, updated_at)
                     SELECT
                         s.class_name,
                         ?,
                         c.id,
                         u.id,
+                        COALESCE(c.number_of_slots, 20),
                         COALESCE(NULLIF(s.max_students, '')::int, 30),
                         0,
+                        'UPCOMING',
                         NOW(),
                         NOW()
                     FROM %s s
