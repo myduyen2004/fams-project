@@ -57,4 +57,21 @@ public class SemesterController {
         semesterService.saveSemesterConfig(code, configRequest);
         return ResponseEntity.ok().build();
     }
+
+    @PatchMapping("/{code}/publish")
+    public ResponseEntity<java.util.Map<String, Object>> togglePublished(
+            @PathVariable String code,
+            @RequestBody java.util.Map<String, Boolean> request) {
+        Boolean isPublished = request.get("isPublished");
+        semesterService.setPublished(code, isPublished != null && isPublished);
+        return ResponseEntity.ok(java.util.Map.of(
+                "success", true,
+                "isPublished", isPublished != null && isPublished));
+    }
+
+    @GetMapping("/{code}/publish")
+    public ResponseEntity<java.util.Map<String, Object>> getPublishStatus(@PathVariable String code) {
+        boolean isPublished = semesterService.isPublished(code);
+        return ResponseEntity.ok(java.util.Map.of("isPublished", isPublished));
+    }
 }
