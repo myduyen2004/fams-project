@@ -18,4 +18,8 @@ public interface SemesterService {
     SemesterResponse getSemesterByCode(String code);
 
     void saveSemesterConfig(String code, com.fams.backend.dto.request.SemesterConfigRequest configRequest);
+
+    void setPublished(String code, boolean isPublished);
+
+    boolean isPublished(String code);
 }

@@ -1,0 +1,156 @@
+package com.fams.backend.repository;
+
+import com.fams.backend.entity.TimetableSlot;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.util.List;
+
+@Repository
+public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Long> {
+
+        /**
+         * Find all slots for a class section
+         */
+        @Query("SELECT ts FROM TimetableSlot ts " +
+                        "JOIN FETCH ts.room r " +
+                        "JOIN FETCH ts.slotType st " +
+                        "WHERE ts.classSection.className = :className " +
+                        "ORDER BY ts.date, ts.slotNumber")
+        List<TimetableSlot> findByClassName(@Param("className") String className);
+
+        /**
+         * Find all slots for a semester (via class section)
+         */
+        @Query("SELECT ts FROM TimetableSlot ts " +
+                        "JOIN FETCH ts.classSection cs " +
+                        "LEFT JOIN FETCH cs.course c " +
+                        "LEFT JOIN FETCH cs.lecturer lec " +
+                        "JOIN FETCH ts.room r " +
+                        "JOIN FETCH ts.slotType st " +
+                        "WHERE cs.semester.code = :semesterCode " +
+                        "ORDER BY ts.date, ts.slotNumber")
+        List<TimetableSlot> findBySemesterCode(@Param("semesterCode") String semesterCode);
+
+        /**
+         * Find slots for a semester and specific date (optimized for single day view)
+         */
+        @Query("SELECT ts FROM TimetableSlot ts " +
+                        "JOIN FETCH ts.classSection cs " +
+                        "LEFT JOIN FETCH cs.course c " +
+                        "LEFT JOIN FETCH cs.lecturer lec " +
+                        "JOIN FETCH ts.room r " +
+                        "JOIN FETCH ts.slotType st " +
+                        "WHERE cs.semester.code = :semesterCode " +
+                        "AND ts.date = :date " +
+                        "ORDER BY ts.slotNumber")
+        List<TimetableSlot> findBySemesterCodeAndDate(
+                        @Param("semesterCode") String semesterCode,
+                        @Param("date") LocalDate date);
+
+        /**
+         * Find slots by date range
+         */
+        @Query("SELECT ts FROM TimetableSlot ts " +
+                        "JOIN FETCH ts.classSection cs " +
+                        "JOIN FETCH ts.room r " +
+                        "JOIN FETCH ts.slotType st " +
+                        "WHERE ts.date BETWEEN :startDate AND :endDate " +
+                        "ORDER BY ts.date, ts.slotNumber")
+        List<TimetableSlot> findByDateBetween(
+                        @Param("startDate") LocalDate startDate,
+                        @Param("endDate") LocalDate endDate);
+
+        /**
+         * Find slots for a student (via enrollment)
+         */
+        @Query("SELECT ts FROM TimetableSlot ts " +
+                        "JOIN FETCH ts.classSection cs " +
+                        "JOIN FETCH ts.room r " +
+                        "JOIN FETCH ts.slotType st " +
+                        "JOIN cs.enrollments e " +
+                        "WHERE e.student.id = :studentId " +
+                        "AND e.status = 'ENROLLED' " +
+                        "AND ts.date BETWEEN :startDate AND :endDate " +
+                        "ORDER BY ts.date, ts.slotNumber")
+        List<TimetableSlot> findByStudentIdAndDateBetween(
+                        @Param("studentId") Long studentId,
+                        @Param("startDate") LocalDate startDate,
+                        @Param("endDate") LocalDate endDate);
+
+        /**
+         * Find slots for a lecturer
+         */
+        @Query("SELECT ts FROM TimetableSlot ts " +
+                        "JOIN FETCH ts.classSection cs " +
+                        "JOIN FETCH ts.room r " +
+                        "JOIN FETCH ts.slotType st " +
+                        "WHERE cs.lecturer.id = :lecturerId " +
+                        "AND ts.date BETWEEN :startDate AND :endDate " +
+                        "ORDER BY ts.date, ts.slotNumber")
+        List<TimetableSlot> findByLecturerIdAndDateBetween(
+                        @Param("lecturerId") Long lecturerId,
+                        @Param("startDate") LocalDate startDate,
+                        @Param("endDate") LocalDate endDate);
+
+        /**
+         * Find slots for a room
+         */
+        @Query("SELECT ts FROM TimetableSlot ts " +
+                        "JOIN FETCH ts.classSection cs " +
+                        "JOIN FETCH ts.slotType st " +
+                        "WHERE ts.room.id = :roomId " +
+                        "AND ts.date BETWEEN :startDate AND :endDate " +
+                        "ORDER BY ts.date, ts.slotNumber")
+        List<TimetableSlot> findByRoomIdAndDateBetween(
+                        @Param("roomId") Long roomId,
+                        @Param("startDate") LocalDate startDate,
+                        @Param("endDate") LocalDate endDate);
+
+        /**
+         * Delete all slots for a semester
+         */
+        @Modifying(clearAutomatically = true)
+        @Transactional
+        @Query("DELETE FROM TimetableSlot ts WHERE ts.classSection.className IN " +
+                        "(SELECT cs.className FROM ClassSection cs WHERE cs.semester.code = :semesterCode)")
+        void deleteBySemesterCode(@Param("semesterCode") String semesterCode);
+
+        /**
+         * Count slots by semester
+         */
+        @Query("SELECT COUNT(ts) FROM TimetableSlot ts " +
+                        "WHERE ts.classSection.semester.code = :semesterCode")
+        long countBySemesterCode(@Param("semesterCode") String semesterCode);
+
+        /**
+         * Check room availability at specific slot
+         */
+        @Query("SELECT CASE WHEN COUNT(ts) > 0 THEN false ELSE true END FROM TimetableSlot ts " +
+                        "WHERE ts.room.id = :roomId " +
+                        "AND ts.date = :date " +
+                        "AND ts.slotNumber = :slotNumber " +
+                        "AND ts.status = 'SCHEDULED'")
+        boolean isRoomAvailable(
+                        @Param("roomId") Long roomId,
+                        @Param("date") LocalDate date,
+                        @Param("slotNumber") Integer slotNumber);
+
+        /**
+         * Find conflicts for a slot assignment
+         */
+        @Query("SELECT ts FROM TimetableSlot ts " +
+                        "WHERE ts.room.id = :roomId " +
+                        "AND ts.date = :date " +
+                        "AND ts.slotNumber = :slotNumber " +
+                        "AND ts.status = 'SCHEDULED'")
+        List<TimetableSlot> findConflicts(
+                        @Param("roomId") Long roomId,
+                        @Param("date") LocalDate date,
+                        @Param("slotNumber") Integer slotNumber);
+}
