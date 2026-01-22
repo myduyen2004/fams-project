@@ -3,7 +3,8 @@ import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import axios from 'axios';
 import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
 import { toast } from 'react-hot-toast';
-import { Calendar, Users, BookOpen, School, Wand2, MoreVertical, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Calendar, Users, BookOpen, School, Wand2, MoreVertical, ChevronLeft, ChevronRight, Loader2, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 interface Semester {
   code: string;
@@ -337,6 +338,58 @@ export const SchedulePage: React.FC = () => {
     }
   };
 
+  // Export timetable to Excel
+  const handleExportExcel = () => {
+    if (filteredSlots.length === 0) {
+      toast.error('Không có dữ liệu để xuất');
+      return;
+    }
+
+    try {
+      // Prepare data for Excel
+      const exportData = filteredSlots.map(slot => ({
+        'Ngày': slot.date || '',
+        'Thứ': slot.dayOfWeek ? ['', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ Nhật'][slot.dayOfWeek] || '' : '',
+        'Tiết': slot.slotNumber || '',
+        'Giờ bắt đầu': slot.startTime || '',
+        'Giờ kết thúc': slot.endTime || '',
+        'Mã lớp': slot.className || '',
+        'Mã môn': slot.courseCode || '',
+        'Tên môn': slot.courseName || '',
+        'Giảng viên': slot.lecturerName || '',
+        'Phòng': slot.roomCode || slot.roomName || '',
+        'Trạng thái': slot.status || ''
+      }));
+
+      // Create workbook and worksheet
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Thời khóa biểu');
+
+      // Auto-size columns
+      const maxWidth = 30;
+      const colWidths = Object.keys(exportData[0] || {}).map(key => ({
+        wch: Math.min(maxWidth, Math.max(key.length,
+          ...exportData.map(row => String(row[key as keyof typeof row] || '').length)
+        ))
+      }));
+      worksheet['!cols'] = colWidths;
+
+      // Generate filename with semester and date
+      const selectedSemester = semesters.find(s => s.code === selected);
+      const semesterName = selectedSemester?.name || selected || 'timetable';
+      const dateStr = selectedDate || new Date().toISOString().split('T')[0];
+      const filename = `ThoiKhoaBieu_${semesterName}_${dateStr}.xlsx`;
+
+      // Download file
+      XLSX.writeFile(workbook, filename);
+      toast.success(`Đã xuất file ${filename}`);
+    } catch (err) {
+      console.error('Export failed', err);
+      toast.error('Không thể xuất file Excel');
+    }
+  };
+
   // Get unique values for filters
   const uniqueClasses = Array.from(new Set(slots.map(s => s.className).filter(Boolean)));
   const uniqueTeachers = Array.from(new Set(slots.map(s => s.lecturerName).filter(Boolean)));
@@ -510,6 +563,16 @@ export const SchedulePage: React.FC = () => {
                 ))}
               </select>
             </div>
+
+            {/* Export Excel Button */}
+            <button
+              onClick={handleExportExcel}
+              disabled={filteredSlots.length === 0}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              <Download size={16} />
+              Xuất Excel
+            </button>
           </div>
         </div>
 
