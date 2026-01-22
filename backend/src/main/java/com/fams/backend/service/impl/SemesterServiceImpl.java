@@ -43,9 +43,9 @@ public class SemesterServiceImpl implements SemesterService {
 
     @Override
     public SemesterResponse createSemester(SemesterResponse semesterDTO) {
-        log.info("Creating semester - Input data: code={}, name={}, startDate={}, endDate={}", 
-            semesterDTO.getCode(), semesterDTO.getName(), semesterDTO.getStartDate(), semesterDTO.getEndDate());
-        
+        log.info("Creating semester - Input data: code={}, name={}, startDate={}, endDate={}",
+                semesterDTO.getCode(), semesterDTO.getName(), semesterDTO.getStartDate(), semesterDTO.getEndDate());
+
         try {
             // Validate inputs
             if (semesterDTO.getCode() == null || semesterDTO.getCode().trim().isEmpty()) {
@@ -60,14 +60,14 @@ public class SemesterServiceImpl implements SemesterService {
                 log.error("Validation failed: Dates are null");
                 throw new RuntimeException("Ngày bắt đầu và ngày kết thúc không được để trống");
             }
-            
+
             // Validate start date must be from today onwards
             LocalDate startDate = LocalDate.parse(semesterDTO.getStartDate());
             LocalDate endDate = LocalDate.parse(semesterDTO.getEndDate());
             LocalDate today = LocalDate.now();
-            
+
             log.info("Parsed dates - startDate={}, endDate={}, today={}", startDate, endDate, today);
-            
+
             if (startDate.isBefore(today)) {
                 log.error("Validation failed: Start date {} is before today {}", startDate, today);
                 throw new RuntimeException("Ngày bắt đầu học kỳ phải từ ngày hôm nay trở đi");
@@ -76,14 +76,14 @@ public class SemesterServiceImpl implements SemesterService {
                 log.error("Validation failed: End date {} is before start date {}", endDate, startDate);
                 throw new RuntimeException("Ngày kết thúc không được trước ngày bắt đầu");
             }
-            
+
             // Create new Semester entity
             Semester semester = new Semester();
             semester.setCode(semesterDTO.getCode().trim());
             semester.setName(semesterDTO.getName().trim());
             semester.setStartDate(startDate);
             semester.setEndDate(endDate);
-            
+
             // Set status based on date
             if (today.isBefore(startDate)) {
                 semester.setStatus(Semester.SemesterStatus.UPCOMING);
@@ -92,12 +92,12 @@ public class SemesterServiceImpl implements SemesterService {
                 semester.setStatus(Semester.SemesterStatus.ONGOING);
                 log.info("Set status to ONGOING");
             }
-            
+
             // Save and return
             log.info("Saving semester to database...");
             Semester savedSemester = semesterRepository.save(semester);
             log.info("Semester saved successfully with ID: {}", savedSemester.getId());
-            
+
             SemesterResponse response = convertToDTO(savedSemester);
             log.info("Returning semester response: {}", response);
             return response;
@@ -369,5 +369,35 @@ public class SemesterServiceImpl implements SemesterService {
             default:
                 throw new IllegalArgumentException("Invalid day: " + day);
         }
+    }
+
+    @Override
+    @Transactional
+    public void setPublished(String code, boolean isPublished) {
+        Semester semester = semesterRepository.findByCode(code)
+                .orElseThrow(() -> new RuntimeException("Semester not found with code: " + code));
+
+        SemesterConfig config = semester.getConfig();
+        if (config == null) {
+            config = new SemesterConfig();
+            config.setSemester(semester);
+            config.setMaxSlotPerDay(4);
+            config.setSlotPerSubjectPerWeek(2);
+            config.setSlotDuration(90);
+            semester.setConfig(config);
+        }
+        config.setIsPublished(isPublished);
+        semesterConfigRepository.save(config);
+        log.info("Set isPublished={} for semester {}", isPublished, code);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isPublished(String code) {
+        Semester semester = semesterRepository.findByCode(code)
+                .orElseThrow(() -> new RuntimeException("Semester not found with code: " + code));
+
+        SemesterConfig config = semester.getConfig();
+        return config != null && Boolean.TRUE.equals(config.getIsPublished());
     }
 }
