@@ -14,7 +14,7 @@ import java.util.List;
  */
 @Entity
 @Table(name = "chat_groups", indexes = {
-        @Index(name = "idx_chat_group_class", columnList = "class_section_id"),
+        @Index(name = "idx_chat_group_class", columnList = "class_name"),
         @Index(name = "idx_chat_group_type", columnList = "type")
 })
 @Data

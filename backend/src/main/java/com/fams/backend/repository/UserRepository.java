@@ -4,6 +4,7 @@ import com.fams.backend.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -19,6 +20,14 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     @Query("SELECT u.code FROM User u WHERE u.code IS NOT NULL")
     Set<String> findAllCodes();
+
+    // Batch fetch users by usernames (for import optimization)
+    @Query("SELECT u FROM User u WHERE LOWER(u.username) IN :usernames")
+    List<User> findByUsernameInIgnoreCase(@Param("usernames") java.util.Collection<String> usernames);
+
+    // Batch fetch users by codes (for import optimization)
+    @Query("SELECT u FROM User u WHERE LOWER(u.code) IN :codes")
+    List<User> findByCodeInIgnoreCase(@Param("codes") java.util.Collection<String> codes);
 
     @Query("SELECT u.email FROM User u")
     Set<String> findAllEmails();
