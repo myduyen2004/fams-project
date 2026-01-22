@@ -24,6 +24,12 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     Set<String> findAllEmails();
 
     /**
+     * Tìm user theo username kèm theo thông tin profiles
+     */
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.studentProfile LEFT JOIN FETCH u.lecturerProfile WHERE u.username = :username")
+    Optional<User> findByUsernameWithProfiles(String username);
+
+    /**
      * Tìm user theo username
      */
     Optional<User> findByUsername(String username);
@@ -40,8 +46,6 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
      * Tìm user theo email
      */
     Optional<User> findByEmail(String email);
-
-    Optional<User> findById(Long id);
 
     /**
      * Tìm user theo mã số (MSSV/MSGV/MSNV)
