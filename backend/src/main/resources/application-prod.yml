@@ -14,7 +14,7 @@ spring:
     
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
@@ -26,8 +26,17 @@ spring:
 
   data:
     redis:
-      host: localhost
+      host: redis
       port: 6379
+
+  # Flyway for safe production migrations
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+    validate-on-migrate: false
+    repair-on-migrate: true
 
 server:
   port: 8080
@@ -39,15 +48,7 @@ app:
   discord:
     webhook-url: ${DISCORD_WEBHOOK_URL}
     enabled: true
-  
-  # Flyway for safe production migrations
-  flyway:
-    enabled: true
-    baseline-on-migrate: true
-    baseline-version: 1
-    locations: classpath:db/migration
-    validate-on-migrate: true
-  
+
 logging:
   level:
     root: WARN

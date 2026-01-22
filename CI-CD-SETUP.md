@@ -18,12 +18,12 @@ Vào repository Settings → Secrets and variables → Actions → New repositor
 - `EC2_SSH_KEY`: SSH private key để connect tới EC2
   
 ### Secrets cho Staging:
-- `NEON_STAGING_DB_URL`: `postgresql://[user]:[password]@[host]/fams-test?sslmode=require`
+- `NEON_STAGING_DB_URL`: `jdbc:postgresql://[host]/fams-test?sslmode=require` (Bắt đầu bằng jdbc:)
 - `NEON_STAGING_DB_USER`: Username Neon staging database
 - `NEON_STAGING_DB_PASSWORD`: Password Neon staging database
 
 ### Secrets cho Production:
-- `NEON_PROD_DB_URL`: `postgresql://[user]:[password]@[host]/fams-project?sslmode=require`
+- `NEON_PROD_DB_URL`: `jdbc:postgresql://[host]/fams-project?sslmode=require` (Bắt đầu bằng jdbc:)
 - `NEON_PROD_DB_USER`: Username Neon production database  
 - `NEON_PROD_DB_PASSWORD`: Password Neon production database
 - `DISCORD_WEBHOOK_URL`: `https://discord.com/api/webhooks/1459826342605623375/P7HtDHOTrkhzNIJzw3zcf0E20tGhruu_b_EWnGH4IUjX-ac7qrq8uUsp-_8HMSgUq9Ma`
@@ -45,7 +45,7 @@ git push --set-upstream origin staging
 
 SSH vào EC2:
 ```bash
-ssh ubuntu@16.176.158.195
+ssh ec2-user@16.176.158.195
 ```
 
 ### 3.1 Clone repository (nếu chưa có):
@@ -149,6 +149,26 @@ sudo ln -s /etc/nginx/sites-available/fams-staging /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
+
+## 🔒 Bước 5.1: Setup SSL (Bắt buộc cho Vercel)
+
+Do Vercel dùng HTTPS, backend cũng phải có SSL để tránh lỗi Mixed Content.
+
+Sử dụng script `setup-ssl.sh` đã có sẵn:
+
+```bash
+cd /home/ec2-user/fams-project
+chmod +x scripts/setup-ssl.sh
+
+# Setup cho Staging
+./scripts/setup-ssl.sh staging.fams-edu.online admin@fams-edu.online
+
+# Setup cho Production
+./scripts/setup-ssl.sh fams-edu.online admin@fams-edu.online
+```
+
+> [!IMPORTANT]
+> Bạn phải trỏ A Record của domain về IP EC2 trước khi chạy script này.
 
 ## 📱 Bước 6: Setup Vercel Frontend
 

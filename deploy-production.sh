@@ -4,52 +4,48 @@ set -e
 echo "🚀 Starting Production Deployment..."
 
 # Navigate to project directory
-cd /home/ubuntu/fams-project
+cd /home/ec2-user/fams-main || exit 1
 
-# Checkout main branch
-echo "📦 Checking out main branch..."
+# Sync with main branch
+echo "📦 Syncing with main branch..."
 git fetch origin
-git checkout main
-git pull origin main
-
-# Load environment variables
-if [ -f .env.production ]; then
-    export $(cat .env.production | grep -v '^#' | xargs)
-fi
+git reset --hard origin/main
 
 # Stop existing containers
 echo "🛑 Stopping existing containers..."
-docker-compose -f docker-compose.prod.yml down
+docker compose -p fams-main -f docker-compose.prod.yml --env-file .env.production down 2>/dev/null || true
 
-# Build and start new containers
+# Build and start new containers with env file
 echo "🔨 Building and starting containers..."
-docker-compose -f docker-compose.prod.yml up --build -d
+docker compose -p fams-main -f docker-compose.prod.yml --env-file .env.production up --build -d
 
-# Wait for health check
-echo "⏳ Waiting for health check..."
-sleep 15
+# Wait for health check (longer wait for schema creation)
+echo "⏳ Waiting for health check (60s for schema creation)..."
+sleep 60
 
 # Check health
-if curl -f http://localhost:8080/actuator/health; then
+if curl -sf http://localhost:8080/actuator/health; then
     echo "✅ Production deployment successful!"
     
     # Send success notification to Discord
     COMMIT_HASH=$(git rev-parse HEAD)
-    curl -X POST "${DISCORD_WEBHOOK_URL}" \
-      -H "Content-Type: application/json" \
-      -d "{\"embeds\": [{\"title\": \"✅ Production Deployment Successful\", \"color\": 3066993, \"fields\": [{\"name\": \"Environment\", \"value\": \"**PRODUCTION**\", \"inline\": true}, {\"name\": \"Branch\", \"value\": \"main\", \"inline\": true}, {\"name\": \"Commit\", \"value\": \"\`${COMMIT_HASH:0:7}\`\", \"inline\": true}], \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)\"}], \"username\": \"FAMS Deploy Monitor\"}"
+    if [ -n "$DISCORD_WEBHOOK_URL" ]; then
+        curl -X POST "${DISCORD_WEBHOOK_URL}" \
+          -H "Content-Type: application/json" \
+          -d "{\"embeds\": [{\"title\": \"✅ Production Deployment Successful\", \"color\": 3066993, \"fields\": [{\"name\": \"Environment\", \"value\": \"**PRODUCTION**\", \"inline\": true}, {\"name\": \"Commit\", \"value\": \"\`${COMMIT_HASH:0:7}\`\", \"inline\": true}]}], \"username\": \"FAMS Deploy Monitor\"}"
+    fi
     
     exit 0
 else
     echo "❌ Production deployment failed!"
     
     # Send failure notification to Discord
-    COMMIT_HASH=$(git rev-parse HEAD)
-    curl -X POST "${DISCORD_WEBHOOK_URL}" \
-      -H "Content-Type: application/json" \
-      -d "{\"embeds\": [{\"title\": \"❌ Production Deployment Failed\", \"color\": 15158332, \"fields\": [{\"name\": \"Environment\", \"value\": \"**PRODUCTION**\", \"inline\": true}, {\"name\": \"Branch\", \"value\": \"main\", \"inline\": true}, {\"name\": \"Commit\", \"value\": \"\`${COMMIT_HASH:0:7}\`\", \"inline\": true}], \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)\"}], \"username\": \"FAMS Deploy Monitor\"}"
+    if [ -n "$DISCORD_WEBHOOK_URL" ]; then
+        curl -X POST "${DISCORD_WEBHOOK_URL}" \
+          -H "Content-Type: application/json" \
+          -d "{\"embeds\": [{\"title\": \"❌ Production Deployment Failed\", \"color\": 15158332}], \"username\": \"FAMS Deploy Monitor\"}"
+    fi
     
-    # Show logs
-    docker-compose -f docker-compose.prod.yml logs backend
+    docker compose -p fams-main -f docker-compose.prod.yml --env-file .env.production logs backend --tail=50
     exit 1
 fi

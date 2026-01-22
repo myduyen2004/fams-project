@@ -14,7 +14,7 @@ spring:
     
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
@@ -26,7 +26,7 @@ spring:
 
   data:
     redis:
-      host: localhost
+      host: redis
       port: 6379
 
   # Flyway for staging (mirrors production with baseline)
@@ -37,7 +37,7 @@ spring:
     locations: classpath:db/migration
 
 server:
-  port: 8081
+  port: 8080
 
 app:
   environment: staging

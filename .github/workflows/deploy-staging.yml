@@ -7,7 +7,7 @@ on:
 
 env:
   EC2_HOST: 16.176.158.195
-  EC2_USER: ubuntu
+  EC2_USER: ec2-user
 
 jobs:
   deploy:
@@ -26,30 +26,50 @@ jobs:
           ssh-keyscan -H ${{ env.EC2_HOST }} >> ~/.ssh/known_hosts
       
       - name: Deploy to EC2
-        env:
-          NEON_STAGING_DB_URL: ${{ secrets.NEON_STAGING_DB_URL }}
-          NEON_STAGING_DB_USER: ${{ secrets.NEON_STAGING_DB_USER }}
-          NEON_STAGING_DB_PASSWORD: ${{ secrets.NEON_STAGING_DB_PASSWORD }}
         run: |
-          ssh ${{ env.EC2_USER }}@${{ env.EC2_HOST }} << 'EOF'
-            cd /home/ubuntu/fams-project || exit 1
-            
-            # Pull latest code
-            git fetch origin
-            git checkout staging
-            git pull origin staging
-            
-            # Create .env.staging file
-            cat > .env.staging << EOL
-          NEON_STAGING_DB_URL=${{ secrets.NEON_STAGING_DB_URL }}
-          NEON_STAGING_DB_USER=${{ secrets.NEON_STAGING_DB_USER }}
-          NEON_STAGING_DB_PASSWORD=${{ secrets.NEON_STAGING_DB_PASSWORD }}
-          EOL
-            
-            # Run deployment script
-            chmod +x deploy-staging.sh
-            ./deploy-staging.sh
-          EOF
+          ssh ${{ env.EC2_USER }}@${{ env.EC2_HOST }} 'bash -s' << 'ENDSSH'
+          cd /home/ec2-user/fams-staging || exit 1
+          
+          # Force reset and sync with remote
+          git fetch origin
+          git reset --hard origin/staging
+          
+          # Robust URL sanitization
+          RAW_URL="${{ secrets.NEON_STAGING_DB_URL }}"
+          # 1. Trim whitespace
+          CLEAN_URL=$(echo "$RAW_URL" | xargs)
+          # 2. Strip any protocol prefixes (jdbc:, postgresql://, postgres://)
+          CLEAN_URL="${CLEAN_URL#jdbc:}"
+          CLEAN_URL="${CLEAN_URL#postgresql://}"
+          CLEAN_URL="${CLEAN_URL#postgres://}"
+          # 3. Strip user:pass@ if present
+          CLEAN_URL="${CLEAN_URL##*@}"
+          # 4. Construct final JDBC URL
+          URL="jdbc:postgresql://$CLEAN_URL"
+          
+          echo "NEON_STAGING_DB_URL=$URL" > .env.staging
+          echo 'NEON_STAGING_DB_USER=${{ secrets.NEON_STAGING_DB_USER }}' >> .env.staging
+          echo 'NEON_STAGING_DB_PASSWORD=${{ secrets.NEON_STAGING_DB_PASSWORD }}' >> .env.staging
+          
+          # Stop old containers
+          docker compose -f docker-compose.staging.yml --env-file .env.staging down 2>/dev/null || true
+          
+          # Build and start
+          docker compose -f docker-compose.staging.yml --env-file .env.staging up --build -d
+          
+          # Wait for app to start
+          echo "Waiting 60s for app to start..."
+          sleep 60
+          
+          # Check health
+          if curl -sf http://localhost:8081/actuator/health; then
+            echo "✅ Staging deployment successful!"
+          else
+            echo "❌ Health check failed, showing logs:"
+            docker compose -f docker-compose.staging.yml --env-file .env.staging logs backend --tail=30
+            exit 1
+          fi
+          ENDSSH
       
       - name: Deployment Summary
         if: success()
