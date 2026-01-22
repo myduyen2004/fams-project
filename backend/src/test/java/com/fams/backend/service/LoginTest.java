@@ -112,7 +112,7 @@ class LoginTest {
         loginRequest.setUsername("admin");
         loginRequest.setPassword("password123");
 
-        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(testUser));
+        when(userRepository.findByUsernameWithProfiles("admin")).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches("password123", "encodedPassword")).thenReturn(true);
         when(jwtUtil.generateToken("admin")).thenReturn("mock-jwt-token");
 
@@ -135,7 +135,7 @@ class LoginTest {
         loginRequest.setUsername("admin");
         loginRequest.setPassword("wrongPassword");
 
-        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(testUser));
+        when(userRepository.findByUsernameWithProfiles("admin")).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches("wrongPassword", "encodedPassword")).thenReturn(false);
         when(httpServletRequest.getHeader("X-Forwarded-For")).thenReturn("127.0.0.1");
         GeoLocationService.LocationData mockLocation = mock(GeoLocationService.LocationData.class);
@@ -153,7 +153,7 @@ class LoginTest {
         loginRequest.setPassword("password123");
         testUser.setStatus(User.UserStatus.INACTIVE);
 
-        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(testUser));
+        when(userRepository.findByUsernameWithProfiles("admin")).thenReturn(Optional.of(testUser));
         when(httpServletRequest.getHeader("X-Forwarded-For")).thenReturn("127.0.0.1");
         GeoLocationService.LocationData mockLocation = mock(GeoLocationService.LocationData.class);
         when(geoLocationService.getLocationFromIP(anyString())).thenReturn(mockLocation);
@@ -170,7 +170,7 @@ class LoginTest {
         loginRequest.setPassword("password123");
         testUser.setStatus(User.UserStatus.LOCKED);
 
-        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(testUser));
+        when(userRepository.findByUsernameWithProfiles("admin")).thenReturn(Optional.of(testUser));
         when(httpServletRequest.getHeader("X-Forwarded-For")).thenReturn("127.0.0.1");
         GeoLocationService.LocationData mockLocation = mock(GeoLocationService.LocationData.class);
         when(geoLocationService.getLocationFromIP(anyString())).thenReturn(mockLocation);
