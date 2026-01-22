@@ -26,10 +26,13 @@ public class NotificationRequest {
     @NotBlank(message = "Nội dung không được để trống")
     private String content;
 
+    @Builder.Default
     private NotificationType type = NotificationType.SYSTEM;
 
+    @Builder.Default
     private NotificationPriority priority = NotificationPriority.MEDIUM;
 
+    @Builder.Default
     private TargetType targetType = TargetType.ALL;
 
     private String targetClassName;
@@ -38,6 +41,7 @@ public class NotificationRequest {
 
     private LocalDateTime scheduledAt;
 
+    @Builder.Default
     private NotificationStatus status = NotificationStatus.DRAFT;
 
     private java.util.List<String> attachmentUrls;
