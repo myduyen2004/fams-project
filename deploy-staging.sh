@@ -4,38 +4,31 @@ set -e
 echo "🚀 Starting Staging Deployment..."
 
 # Navigate to project directory
-cd /home/ubuntu/fams-project
+cd /home/ec2-user/fams-staging || exit 1
 
-# Checkout staging branch
-echo "📦 Checking out staging branch..."
+# Sync with staging branch
+echo "📦 Syncing with staging branch..."
 git fetch origin
-git checkout staging
-git pull origin staging
-
-# Load environment variables
-if [ -f .env.staging ]; then
-    export $(cat .env.staging | grep -v '^#' | xargs)
-fi
+git reset --hard origin/staging
 
 # Stop existing containers
 echo "🛑 Stopping existing containers..."
-docker-compose -f docker-compose.staging.yml down
+docker compose -p fams-staging -f docker-compose.staging.yml --env-file .env.staging down 2>/dev/null || true
 
-# Build and start new containers
+# Build and start new containers with env file
 echo "🔨 Building and starting containers..."
-docker-compose -f docker-compose.staging.yml up --build -d
+docker compose -p fams-staging -f docker-compose.staging.yml --env-file .env.staging up --build -d
 
-# Wait for health check
-echo "⏳ Waiting for health check..."
-sleep 10
+# Wait for health check (longer wait for schema creation)
+echo "⏳ Waiting for health check (60s for schema creation)..."
+sleep 60
 
 # Check health
-if curl -f http://localhost:8081/actuator/health; then
+if curl -sf http://localhost:8081/actuator/health; then
     echo "✅ Staging deployment successful!"
     exit 0
 else
     echo "❌ Staging deployment failed!"
-    # Rollback
-    docker-compose -f docker-compose.staging.yml logs backend
+    docker compose -p fams-staging -f docker-compose.staging.yml --env-file .env.staging logs backend --tail=50
     exit 1
 fi

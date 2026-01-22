@@ -16,6 +16,7 @@ import com.fams.backend.dto.request.ResetPasswordRequest;
 import com.fams.backend.dto.request.VerifyOtpRequest;
 import com.fams.backend.service.EmailService;
 import com.fams.backend.service.GeoLocationService;
+import com.fams.backend.service.UserActivityService;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +49,7 @@ public class AuthService implements UserDetailsService {
     private final DashboardBroadcastService dashboardBroadcastService;
     private final EmailService emailService;
     private final StringRedisTemplate redisTemplate;
+    private final UserActivityService userActivityService;
 
     private static final String OTP_PREFIX = "otp:";
     private static final long OTP_EXPIRY_MINUTES = 10;
@@ -102,8 +104,8 @@ public class AuthService implements UserDetailsService {
             throw new BadRequestException("Password không được để trống");
         }
 
-        // 2. Tìm user theo username
-        User user = userRepository.findByUsername(username)
+        // 2. Tìm user theo username (with profiles for response)
+        User user = userRepository.findByUsernameWithProfiles(username)
                 .orElseThrow(() -> {
                     log.warn("Login failed | username={} | reason=USER_NOT_FOUND", username);
                     return new UnauthorizedException("Tài khoản hoặc mật khẩu không đúng");

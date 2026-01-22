@@ -137,8 +137,12 @@ export const NotificationBell: React.FC = () => {
             failedCount: status.failedCount,
             createdAt: new Date(status.createdAt).getTime(),
           });
-        } catch (error) {
-          console.error('Failed to fetch job status:', error);
+        } catch (error: any) {
+          console.error(`Failed to fetch status for job ${job.jobId}:`, error.message);
+          // If job not found (404), it's likely from another environment or database reset
+          if (error.response?.status === 404) {
+            removeJob(job.jobId);
+          }
         }
       });
     }

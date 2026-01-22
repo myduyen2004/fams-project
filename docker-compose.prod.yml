@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   backend:
     build:
@@ -17,6 +15,8 @@ services:
     networks:
       - fams-network
     restart: unless-stopped
+    depends_on:
+      - redis
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
       interval: 30s

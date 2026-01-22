@@ -51,18 +51,28 @@ public class LoginResponse {
                 .phone(user.getPhone())
                 .dob(user.getDob());
 
-        if (user.getStudentProfile() != null) {
-            if (user.getStudentProfile().getMajor() != null) {
-                builder.major(user.getStudentProfile().getMajor().getName());
+        // Safely access StudentProfile (may be lazy-loaded)
+        try {
+            if (user.getStudentProfile() != null) {
+                if (user.getStudentProfile().getMajor() != null) {
+                    builder.major(user.getStudentProfile().getMajor().getName());
+                }
+                if (user.getStudentProfile().getSpecialization() != null) {
+                    builder.specialization(user.getStudentProfile().getSpecialization().getName());
+                }
             }
-            if (user.getStudentProfile().getSpecialization() != null) {
-                builder.specialization(user.getStudentProfile().getSpecialization().getName());
-            }
+        } catch (Exception ignored) {
+            // Lazy loading exception - skip profile data
         }
 
-        if (user.getLecturerProfile() != null) {
-            builder.department(user.getLecturerProfile().getDepartment());
-            builder.expertise(user.getLecturerProfile().getExpertise());
+        // Safely access LecturerProfile (may be lazy-loaded)
+        try {
+            if (user.getLecturerProfile() != null) {
+                builder.department(user.getLecturerProfile().getDepartment());
+                builder.expertise(user.getLecturerProfile().getExpertise());
+            }
+        } catch (Exception ignored) {
+            // Lazy loading exception - skip profile data
         }
 
         return builder.build();
