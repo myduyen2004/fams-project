@@ -39,6 +39,9 @@ const ManagerStudentsPage = lazy(() => import('./pages/academic-staff/ManagerStu
 const RoomManagement = lazy(() => import('./pages/academic-staff/RoomManagement').then(m => ({ default: m.RoomManagement })));
 const RoomDetail = lazy(() => import('./pages/academic-staff/RoomDetail').then(m => ({ default: m.RoomDetail })));
 
+const StudentDashboard = lazy(() => import('./pages/student/StudentDashboard').then(m => ({ default: m.StudentDashboard })));
+const LecturerDashboard = lazy(() => import('./pages/lecturer/LecturerDashboard').then(m => ({ default: m.LecturerDashboard })));
+
 const PageLoader = () => (
   <div className="flex h-screen w-full items-center justify-center bg-gray-50 dark:bg-zinc-950">
     <div className="flex flex-col items-center gap-2">
@@ -260,6 +263,41 @@ function App() {
           />
 
           {/* Academic Staff Routes */}
+
+
+          {/* Lecturer Routes */}
+          <Route
+            path="/lecturer/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['LECTURER']}>
+                <LecturerDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/lecturer/schedule" element={<ProtectedRoute allowedRoles={['LECTURER']}><ComingSoon title="Lịch giảng dạy" /></ProtectedRoute>} />
+          <Route path="/lecturer/attendance" element={<ProtectedRoute allowedRoles={['LECTURER']}><ComingSoon title="Điểm danh" /></ProtectedRoute>} />
+          <Route path="/lecturer/grades" element={<ProtectedRoute allowedRoles={['LECTURER']}><ComingSoon title="Quản lý điểm" /></ProtectedRoute>} />
+          <Route path="/lecturer/classes" element={<ProtectedRoute allowedRoles={['LECTURER']}><ComingSoon title="Quản lý lớp học" /></ProtectedRoute>} />
+          <Route path="/lecturer/messages" element={<ProtectedRoute allowedRoles={['LECTURER']}><ComingSoon title="Tin nhắn" /></ProtectedRoute>} />
+          <Route path="/lecturer/requests" element={<ProtectedRoute allowedRoles={['LECTURER']}><ComingSoon title="Gửi đơn yêu cầu" /></ProtectedRoute>} />
+          <Route path="/lecturer/settings" element={<ProtectedRoute allowedRoles={['LECTURER']}><ComingSoon title="Cài đặt" /></ProtectedRoute>} />
+
+          {/* Student Routes */}
+          <Route
+            path="/student/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['STUDENT']}>
+                <StudentDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/student/schedule" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Thời khóa biểu" /></ProtectedRoute>} />
+          <Route path="/student/attendance" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Điểm danh" /></ProtectedRoute>} />
+          <Route path="/student/study" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Học tập" /></ProtectedRoute>} />
+          <Route path="/student/messages" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Tin nhắn" /></ProtectedRoute>} />
+          <Route path="/student/requests" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Gửi đơn yêu cầu" /></ProtectedRoute>} />
+          <Route path="/student/settings" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Cài đặt" /></ProtectedRoute>} />
+          <Route path="/student/profile" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Hồ sơ cá nhân" /></ProtectedRoute>} />
           <Route
             path="/academic-staff/dashboard"
             element={

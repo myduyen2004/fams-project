@@ -1,11 +1,12 @@
 import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Upload, X } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Upload, ArrowLeft, Loader2, CheckCircle2, XCircle, Trash2 } from 'lucide-react';
 import { uploadFile } from '../../services/utils/fileUploadService';
 import toast from 'react-hot-toast';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { AdminLayout } from '../../components/admin/AdminLayout';
+import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { notificationService } from '../../services/api/notificationService';
 import { NotificationStatus, TargetType } from '../../types/notification';
 
@@ -25,12 +26,17 @@ interface AttachedFile {
   size: number;
   type: string;
   url?: string;
-  isUploading?: boolean;
+  status: 'uploading' | 'success' | 'error';
 }
 
 export const CreateNotificationPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isAcademicStaff = location.pathname.startsWith('/academic-staff');
+  const Layout = isAcademicStaff ? AcademicStaffLayout : AdminLayout;
+  const backUrl = isAcademicStaff ? '/academic-staff/notification-management' : '/admin/notification-management';
 
   const [formData, setFormData] = useState<NotificationForm>({
     title: '',
@@ -97,7 +103,7 @@ export const CreateNotificationPage = () => {
         name: file.name,
         size: file.size,
         type: file.type,
-        isUploading: true
+        status: 'uploading'
       };
 
       setAttachedFiles(prev => [...prev, newFile]);
@@ -108,11 +114,11 @@ export const CreateNotificationPage = () => {
 
         // Update file with URL and remove uploading state
         setAttachedFiles(prev => prev.map(f => {
-          if (f.name === file.name && f.isUploading) {
+          if (f.name === file.name && f.status === 'uploading') {
             return {
               ...f,
               url: data.secure_url,
-              isUploading: false
+              status: 'success'
             };
           }
           return f;
@@ -120,8 +126,13 @@ export const CreateNotificationPage = () => {
       } catch (err) {
         console.error(err);
         toast.error(`Lỗi khi tải file ${file.name}`);
-        // Remove failed file
-        setAttachedFiles(prev => prev.filter(f => f.name !== file.name));
+        // Mark as error instead of removing
+        setAttachedFiles(prev => prev.map(f => {
+          if (f.name === file.name) {
+            return { ...f, status: 'error' };
+          }
+          return f;
+        }));
       }
     }
   };
@@ -158,8 +169,6 @@ export const CreateNotificationPage = () => {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
-
-
 
   // Validate form
   const validateForm = (): boolean => {
@@ -235,7 +244,7 @@ export const CreateNotificationPage = () => {
       }
 
       // Navigate back to management page
-      navigate('/admin/notification-management');
+      navigate(backUrl);
     } catch (error) {
       console.error('Failed to create notification:', error);
       toast.error('Có lỗi xảy ra khi tạo thông báo');
@@ -245,8 +254,16 @@ export const CreateNotificationPage = () => {
   };
 
   return (
-    <AdminLayout pageTitle="Tạo thông báo mới">
+    <Layout pageTitle="Tạo thông báo mới">
       <div className="max-w-4xl mx-auto">
+        <button
+          onClick={() => navigate(backUrl)}
+          className="flex items-center gap-2 text-sm text-gray-500 hover:text-fpt-orange mb-4 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Quay lại danh sách
+        </button>
+
         <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 overflow-hidden">
           <div className="p-6 space-y-6">
             {/* Title */}
@@ -346,12 +363,27 @@ export const CreateNotificationPage = () => {
                           </p>
                         </div>
                       </div>
-                      <button
-                        onClick={() => handleRemoveFile(index)}
-                        className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                      >
-                        <X size={16} />
-                      </button>
+                      <div className="flex items-center gap-3">
+                        {/* Status Icons */}
+                        {file.status === 'uploading' && (
+                          <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                        )}
+                        {file.status === 'success' && (
+                          <CheckCircle2 className="w-5 h-5 text-green-500" />
+                        )}
+                        {file.status === 'error' && (
+                          <XCircle className="w-5 h-5 text-red-500" />
+                        )}
+
+                        {/* Remove Action */}
+                        <button
+                          onClick={() => handleRemoveFile(index)}
+                          className="p-1 text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded transition-colors"
+                          title="Xóa file"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -418,7 +450,7 @@ export const CreateNotificationPage = () => {
               {formData.status === NotificationStatus.DRAFT && (
                 <button
                   onClick={() => handleSubmit(true)}
-                  disabled={isSubmitting || attachedFiles.some(f => f.isUploading)}
+                  disabled={isSubmitting || attachedFiles.some(f => f.status === 'uploading')}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-600 rounded-lg transition-colors disabled:opacity-50"
                 >
                   {isSubmitting ? 'Đang lưu...' : 'Lưu nháp'}
@@ -428,7 +460,7 @@ export const CreateNotificationPage = () => {
               {formData.status === NotificationStatus.SENT && (
                 <button
                   onClick={() => handleSubmit(false)}
-                  disabled={isSubmitting || attachedFiles.some(f => f.isUploading)}
+                  disabled={isSubmitting || attachedFiles.some(f => f.status === 'uploading')}
                   className="px-4 py-2 text-sm font-medium text-white bg-fpt-orange hover:bg-fpt-orange-dark rounded-lg transition-colors disabled:opacity-50"
                 >
                   {isSubmitting ? 'Đang xử lý...' : 'Gửi ngay'}
@@ -438,7 +470,7 @@ export const CreateNotificationPage = () => {
               {formData.status === NotificationStatus.SCHEDULED && (
                 <button
                   onClick={() => handleSubmit(false)}
-                  disabled={isSubmitting || attachedFiles.some(f => f.isUploading)}
+                  disabled={isSubmitting || attachedFiles.some(f => f.status === 'uploading')}
                   className="px-4 py-2 text-sm font-medium text-white bg-fpt-orange hover:bg-fpt-orange-dark rounded-lg transition-colors disabled:opacity-50"
                 >
                   {isSubmitting ? 'Đang xử lý...' : 'Lưu lịch gửi'}
@@ -448,7 +480,7 @@ export const CreateNotificationPage = () => {
           </div>
         </div>
       </div>
-    </AdminLayout>
+    </Layout>
   );
 };
 

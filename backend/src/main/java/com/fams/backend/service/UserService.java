@@ -39,5 +39,7 @@ public interface UserService {
 
     void cleanupStuckJobs();
 
+    void cancelMyActiveImportJob();
+
     com.fams.backend.dto.response.PreviewImportResponse previewImportFile(MultipartFile file);
 }

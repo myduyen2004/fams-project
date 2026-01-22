@@ -121,6 +121,10 @@ export const AcademicStaffSidebar: React.FC = () => {
 
   const isActive = (path?: string) => {
     if (!path) return false;
+    // Special case for notification management to be active on sub-routes keys like 'edit' or 'create' which differ in path structure
+    if (path === '/academic-staff/notification-management' && location.pathname.startsWith('/academic-staff/notifications/')) {
+      return true;
+    }
     return location.pathname === path || (path !== '/academic-staff/dashboard' && location.pathname.startsWith(path + '/'));
   };
 
@@ -151,7 +155,7 @@ export const AcademicStaffSidebar: React.FC = () => {
         {/* Logo Section */}
         <div
           onClick={() => navigate('/academic-staff/dashboard')}
-          className="h-16 flex items-center justify-center border-b border-gray-200 dark:border-zinc-800 px-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors"
+          className="h-16 flex items-center justify-center border-b border-gray-200 dark:border-zinc-800 px-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors select-none"
           title="Về trang chủ"
         >
           {isExpanded ? (
