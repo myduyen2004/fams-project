@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Bell, Check, Trash2, Clock, CheckCircle2, AlertCircle, Loader2, Settings, MoreVertical } from 'lucide-react';
 import { userService } from '../../services/api/userService';
+import { authService } from '../../services/api/authService';
 import { dashboardService } from '../../services/api/dashboardService';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { useNavigate } from 'react-router-dom';
@@ -9,12 +10,12 @@ import { AppNotification } from '../../types/dashboard';
 interface ImportJobNotification {
   jobId: string;
   filename: string;
-  status: 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'PENDING';
+  status: 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'PENDING' | 'CANCELLED' | 'SAVING';
   percentage: number;
   successCount?: number;
   failedCount?: number;
   errorMessage?: string;
-  createdAt: string;
+  createdAt: number; // timestamp
 }
 
 export const NotificationBell: React.FC = () => {
@@ -24,15 +25,54 @@ export const NotificationBell: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'notifications' | 'jobs'>('notifications');
   const navigate = useNavigate();
 
-  // Strip HTML tags and return plain text
-  const stripHtml = (html: string): string => {
-    const tmp = document.createElement('div');
-    tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || '';
+  // Get first line of HTML content
+  const getFirstLineHtml = (html: string): string => {
+    if (!html) return '';
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+
+    let content = '';
+
+    // Strategy 1: Find first paragraph with text content
+    const paragraphs = tempDiv.querySelectorAll('p');
+    for (let i = 0; i < paragraphs.length; i++) {
+      // Check if paragraph has meaningful text (ignoring whitespace/nbsp)
+      if (paragraphs[i].textContent && paragraphs[i].textContent?.replace(/[\s\u00A0]/g, '').length > 0) {
+        content = paragraphs[i].innerHTML;
+        break;
+      }
+    }
+
+    // Strategy 2: If no valid p found, split by <br> and find first non-empty line
+    if (!content) {
+      const lines = tempDiv.innerHTML.split(/<br\s*\/?>/i);
+      content = lines.find(line => {
+        const t = document.createElement('div');
+        t.innerHTML = line;
+        // Check if line has meaningful text
+        return t.textContent && t.textContent.replace(/[\s\u00A0]/g, '').length > 0;
+      }) || lines[0] || '';
+    }
+
+    // Remove leading <br> tags if any remain
+    content = content.replace(/^(\s*<br\s*\/?>\s*)+/gi, '');
+
+    // Robust trimming of leading whitespace/entities while preserving formatting tags
+    // Matches start of string, optional tags, then whitespace/entities
+    // Loop to handle deep nesting (e.g. <b><i>&nbsp;Text</i></b>)
+    let oldContent = '';
+    while (content !== oldContent) {
+      oldContent = content;
+      content = content.replace(/^((?:<[^>]+>)*)(?:&nbsp;|&#160;|\s)+/gi, '$1');
+    }
+
+    return content;
   };
 
-  // Listen for import job progress (transient)
-  useWebSocket(`/user/queue/import-job`, (data) => {
+  const username = authService.getUser()?.username || 'anonymous';
+
+  // Listen for import job progress
+  useWebSocket(`/topic/import-progress/${username}`, (data) => {
     updateJob(data);
   });
 
@@ -44,12 +84,12 @@ export const NotificationBell: React.FC = () => {
       // NEVER overwrite existing notifications to preserve their isRead status
       const existingIds = new Set(prev.map(n => n.id));
       const newNotifications = data.filter(n => !existingIds.has(n.id));
-      
+
       if (newNotifications.length > 0) {
         console.log('[NotificationBell] Adding', newNotifications.length, 'new notifications');
         return [...newNotifications, ...prev];
       }
-      
+
       console.log('[NotificationBell] No new notifications, keeping existing state');
       return prev;
     });
@@ -58,7 +98,7 @@ export const NotificationBell: React.FC = () => {
   // Load notifications and jobs on mount
   useEffect(() => {
     loadNotifications();
-    
+
     // 1. Fetch active job from backend on mount (covers refresh/new login)
     const fetchActiveJob = async () => {
       try {
@@ -71,7 +111,7 @@ export const NotificationBell: React.FC = () => {
             percentage: activeJob.percentage || 0,
             successCount: activeJob.successCount,
             failedCount: activeJob.failedCount,
-            createdAt: new Date(activeJob.createdAt).toLocaleString('vi-VN'),
+            createdAt: new Date(activeJob.createdAt).getTime(),
           });
         }
       } catch (error) {
@@ -80,7 +120,7 @@ export const NotificationBell: React.FC = () => {
     };
 
     fetchActiveJob();
-    
+
     // 2. Load existing jobs from local storage for history
     const storedJobs = JSON.parse(localStorage.getItem('importJobs') || '[]');
     if (storedJobs.length > 0) {
@@ -95,7 +135,7 @@ export const NotificationBell: React.FC = () => {
             percentage: status.percentage || 0,
             successCount: status.successCount,
             failedCount: status.failedCount,
-            createdAt: new Date(status.createdAt).toLocaleString('vi-VN'),
+            createdAt: new Date(status.createdAt).getTime(),
           });
         } catch (error) {
           console.error('Failed to fetch job status:', error);
@@ -129,15 +169,21 @@ export const NotificationBell: React.FC = () => {
     setJobs(prev => {
       const index = prev.findIndex(j => j.jobId === update.jobId);
       let updated;
+      const jobWithTimestamp = {
+        ...update,
+        createdAt: update.createdAt ? new Date(update.createdAt).getTime() : 
+                  (index !== -1 ? prev[index].createdAt : Date.now())
+      };
+
       if (index === -1) {
-        updated = [update, ...prev];
+        updated = [jobWithTimestamp, ...prev];
       } else {
         updated = [...prev];
-        updated[index] = { ...updated[index], ...update };
+        updated[index] = { ...updated[index], ...jobWithTimestamp };
       }
 
       // If finished, refresh notifications as a persistent one might have been created
-      if (update.status === 'COMPLETED' || update.status === 'FAILED') {
+      if (update.status === 'COMPLETED' || update.status === 'FAILED' || update.status === 'CANCELLED') {
          loadNotifications();
       }
 
@@ -151,12 +197,12 @@ export const NotificationBell: React.FC = () => {
     // Try to mark as read, but don't block navigation if it fails
     if (!notification.isRead) {
       console.log('[NotificationBell] Marking notification as read:', notification.id);
-      
+
       // Immediately update UI state for instant feedback
-      setNotifications(prev => prev.map(n => 
+      setNotifications(prev => prev.map(n =>
         n.id === notification.id ? { ...n, isRead: true } : n
       ));
-      
+
       // Try to sync with backend, but don't fail if it doesn't work
       try {
         await dashboardService.markNotificationAsRead(notification.id);
@@ -164,12 +210,12 @@ export const NotificationBell: React.FC = () => {
       } catch (error) {
         console.warn('[NotificationBell] Failed to mark as read on backend, but continuing:', error);
         // Revert UI state if backend failed
-        setNotifications(prev => prev.map(n => 
+        setNotifications(prev => prev.map(n =>
           n.id === notification.id ? { ...n, isRead: false } : n
         ));
       }
     }
-    
+
     // Always navigate to notification detail page
     navigate(`/notifications/${notification.id}`);
     setShowDropdown(false);
@@ -178,10 +224,10 @@ export const NotificationBell: React.FC = () => {
   const handleMarkAllAsRead = async () => {
     try {
       console.log('[NotificationBell] Marking all notifications as read');
-      
+
       // Immediately update UI state for instant feedback
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-      
+
       // Then sync with backend
       await dashboardService.markAllNotificationsAsRead();
       console.log('[NotificationBell] Successfully marked all as read');
@@ -206,8 +252,12 @@ export const NotificationBell: React.FC = () => {
     return count;
   }, [notifications]);
   
+  const sortedJobs = useMemo(() => {
+    return [...jobs].sort((a, b) => b.createdAt - a.createdAt);
+  }, [jobs]);
+
   const processingJobsCount = useMemo(() => {
-    return jobs.filter(j => j.status === 'PROCESSING').length;
+    return jobs.filter(j => j.status === 'PROCESSING' || j.status === 'SAVING' || j.status === 'PENDING').length;
   }, [jobs]);
 
   // Debug logging
@@ -264,11 +314,10 @@ export const NotificationBell: React.FC = () => {
           <div className="flex px-5 mb-2 border-b border-gray-50 dark:border-zinc-800/50">
             <button
               onClick={() => setActiveTab('notifications')}
-              className={`pb-3 text-sm font-semibold transition-all relative mr-6 ${
-                activeTab === 'notifications' 
-                ? 'text-fpt-orange' 
+              className={`pb-3 text-sm font-semibold transition-all relative mr-6 ${activeTab === 'notifications'
+                ? 'text-fpt-orange'
                 : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
-              }`}
+                }`}
             >
               Thông báo
               {unreadCount > 0 && (
@@ -280,11 +329,10 @@ export const NotificationBell: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveTab('jobs')}
-              className={`pb-3 text-sm font-semibold transition-all relative ${
-                activeTab === 'jobs' 
-                ? 'text-fpt-orange' 
+              className={`pb-3 text-sm font-semibold transition-all relative ${activeTab === 'jobs'
+                ? 'text-fpt-orange'
                 : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
-              }`}
+                }`}
             >
               Tiến trình
               {processingJobsCount > 0 && (
@@ -311,70 +359,69 @@ export const NotificationBell: React.FC = () => {
                   <div
                     key={n.id}
                     onClick={() => handleNotificationClick(n)}
-                    className={`p-4 flex gap-4 cursor-pointer transition-all relative group hover:bg-gray-50 dark:hover:bg-zinc-800/50 ${
-                      !n.isRead ? 'bg-blue-50/20 dark:bg-blue-900/10' : ''
-                    }`}
+                    className={`p-4 flex gap-4 cursor-pointer transition-all relative group hover:bg-gray-50 dark:hover:bg-zinc-800/50 ${!n.isRead ? 'bg-blue-50/20 dark:bg-blue-900/10' : ''
+                      }`}
                   >
                     {/* Avatar/Icon Circle */}
-          <div className="relative flex-shrink-0">
-            {n.senderName && n.senderName !== 'System' ? (
-              n.senderAvatar ? (
-                <img 
-                  src={n.senderAvatar} 
-                  alt={n.senderName} 
-                  className="w-12 h-12 rounded-full object-cover"
-                />
-              ) : (
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold ${
-                  n.type === 'ALERT' ? 'bg-red-100 text-red-600 dark:bg-red-900/30' :
-                  'bg-blue-100 text-blue-600 dark:bg-blue-900/30'
-                }`}>
-                   {n.senderName.charAt(0)}
-                </div>
-              )
-            ) : (
-              <div className="w-12 h-12 rounded-full bg-white dark:bg-zinc-800 border-2 border-fpt-orange flex items-center justify-center p-2 overflow-hidden">
-                <img 
-                  src="/fams-logo.png" 
-                  alt="FAMS" 
-                  className="w-full h-full object-contain"
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    target.style.display = 'none';
-                    const parent = target.parentElement;
-                    if (parent) {
-                      parent.innerHTML = '<span class="text-fpt-orange font-bold text-xl">F</span>';
-                    }
-                  }}
-                />
-              </div>
-            )}
-            {!n.isRead && (
-              <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-blue-500 rounded-full border-2 border-white dark:border-zinc-900"></div>
-            )}
-          </div>
+                    <div className="relative flex-shrink-0">
+                      {n.senderName && n.senderName !== 'System' ? (
+                        n.senderAvatar ? (
+                          <img
+                            src={n.senderAvatar}
+                            alt={n.senderName}
+                            className="w-12 h-12 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold ${n.type === 'ALERT' ? 'bg-red-100 text-red-600 dark:bg-red-900/30' :
+                            'bg-blue-100 text-blue-600 dark:bg-blue-900/30'
+                            }`}>
+                            {n.senderName.charAt(0)}
+                          </div>
+                        )
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-white dark:bg-zinc-800 border-2 border-fpt-orange flex items-center justify-center p-2 overflow-hidden">
+                          <img
+                            src="/fams-logo.png"
+                            alt="FAMS"
+                            className="w-full h-full object-contain"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              target.style.display = 'none';
+                              const parent = target.parentElement;
+                              if (parent) {
+                                parent.innerHTML = '<span class="text-fpt-orange font-bold text-xl">F</span>';
+                              }
+                            }}
+                          />
+                        </div>
+                      )}
+                      {!n.isRead && (
+                        <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-blue-500 rounded-full border-2 border-white dark:border-zinc-900"></div>
+                      )}
+                    </div>
 
-          <div className="flex-1 min-w-0">
-            <div className="flex justify-between items-start">
-              <div className="flex-1 pr-2">
-                {/* Tiêu đề thông báo - in đậm */}
-                <p className="text-sm font-bold text-gray-900 dark:text-white mb-1 truncate">
-                  {n.title}
-                </p>
-                {/* Nội dung thông báo - bình thường */}
-                <p className={`text-xs line-clamp-2 ${!n.isRead ? 'text-gray-700 dark:text-gray-300' : 'text-gray-500 dark:text-gray-400'}`}>
-                  {stripHtml(n.description)}
-                </p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500">
-                     {n.senderName && n.senderName !== 'System' ? 'Cá nhân' : (n.type === 'SYSTEM' ? 'Hệ thống' : n.type === 'ALERT' ? 'Cảnh báo' : 'Dữ liệu')}
-                  </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1 pr-2">
+                          {/* Tiêu đề thông báo - in đậm */}
+                          <p className="text-sm font-bold text-gray-900 dark:text-white mb-1 truncate">
+                            {n.title}
+                          </p>
+                          {/* Nội dung thông báo - bình thường */}
+                          <div
+                            className={`text-xs line-clamp-1 ${!n.isRead ? 'text-gray-700 dark:text-gray-300' : 'text-gray-500 dark:text-gray-400'}`}
+                            dangerouslySetInnerHTML={{ __html: getFirstLineHtml(n.description) }}
+                          />
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500">
+                              {n.senderName && n.senderName !== 'System' ? 'Cá nhân' : (n.type === 'SYSTEM' ? 'Hệ thống' : n.type === 'ALERT' ? 'Cảnh báo' : 'Dữ liệu')}
+                            </span>
                             <span className="text-[11px] text-gray-400">•</span>
                             <span className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">{n.timestamp}</span>
                           </div>
                         </div>
                         <button className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                           <MoreVertical size={16} />
+                          <MoreVertical size={16} />
                         </button>
                       </div>
                     </div>
@@ -390,28 +437,30 @@ export const NotificationBell: React.FC = () => {
                   <p className="text-sm font-medium">Không có tiến trình nào gần đây</p>
                 </div>
               ) : (
-                jobs.map(job => (
+                sortedJobs.map(job => (
                   <div key={job.jobId} className="p-4 flex gap-4 hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors group">
                     <div className="flex-shrink-0">
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
                         job.status === 'COMPLETED' ? 'bg-orange-100 dark:bg-orange-900/20 text-fpt-orange' :
-                        job.status === 'FAILED' ? 'bg-red-100 text-red-600' :
+                        job.status === 'FAILED' || job.status === 'CANCELLED' ? 'bg-red-100 text-red-600' :
                         'bg-orange-100 text-fpt-orange'
                       }`}>
                         {job.status === 'COMPLETED' ? <CheckCircle2 size={24} /> : 
-                         job.status === 'FAILED' ? <AlertCircle size={24} /> : <Loader2 size={24} className="animate-spin" />}
+                         job.status === 'FAILED' || job.status === 'CANCELLED' ? <AlertCircle size={24} /> : <Loader2 size={24} className="animate-spin" />}
                       </div>
                     </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-center mb-2">
                         <div className="flex-1 min-w-0 pr-2">
-                          <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium truncate">{job.filename}</p>
+                          <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium truncate">
+                            {job.filename} • {new Date(job.createdAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}
+                          </p>
                           <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">Import danh sách người dùng</p>
                         </div>
                         <div className="flex items-center gap-1">
                           {(job.status === 'COMPLETED' || job.status === 'FAILED') && (
-                            <button 
+                            <button
                               onClick={() => removeJob(job.jobId)}
                               className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity"
                             >
@@ -420,14 +469,16 @@ export const NotificationBell: React.FC = () => {
                           )}
                         </div>
                       </div>
-                      
+
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
                           <span className={`text-[10px] font-bold ${
                             job.status === 'COMPLETED' ? 'text-fpt-orange' :
-                            job.status === 'FAILED' ? 'text-red-600' : 'text-fpt-orange'
+                            job.status === 'FAILED' || job.status === 'CANCELLED' ? 'text-red-600' : 'text-fpt-orange'
                           }`}>
-                            {job.status === 'COMPLETED' ? '✓ Hoàn tất' : job.status === 'FAILED' ? '✗ Thất bại' : `${job.percentage}%`}
+                            {job.status === 'COMPLETED' ? '✓ Hoàn tất' : 
+                             job.status === 'FAILED' ? '✗ Thất bại' : 
+                             job.status === 'CANCELLED' ? '✗ Đã dừng' : `${job.percentage}%`}
                           </span>
                           {job.status === 'COMPLETED' && (job.failedCount ?? 0) > 0 && (
                             <span className="text-[9px] font-medium text-red-600 dark:text-red-400">
@@ -439,7 +490,7 @@ export const NotificationBell: React.FC = () => {
                           <div 
                             className={`h-full rounded-full transition-all duration-500 ${
                               job.status === 'COMPLETED' ? 'bg-fpt-orange' :
-                              job.status === 'FAILED' ? 'bg-red-500' : 'bg-fpt-orange'
+                              job.status === 'FAILED' || job.status === 'CANCELLED' ? 'bg-red-500' : 'bg-fpt-orange'
                             }`} 
                             style={{ width: `${job.percentage}%` }}
                           ></div>
@@ -451,14 +502,14 @@ export const NotificationBell: React.FC = () => {
               )
             )}
           </div>
-          
+
           <div className="p-4 flex justify-center bg-white dark:bg-zinc-900">
-             <button 
-               onClick={() => setShowDropdown(false)}
-               className="text-xs font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-             >
-               Ẩn bảng thông báo
-             </button>
+            <button
+              onClick={() => setShowDropdown(false)}
+              className="text-xs font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            >
+              Ẩn bảng thông báo
+            </button>
           </div>
         </div>
       )}

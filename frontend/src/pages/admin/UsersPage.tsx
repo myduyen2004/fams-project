@@ -33,21 +33,30 @@ export const UsersPage = () => {
 
   // WebSocket for real-time updates during import
   
-  useWebSocket(`/topic/import-progress/${authService.getUser()?.username}`, (message) => {
-    console.log('Received WebSocket message:', message.body);
-    const data = JSON.parse(message.body);
+  useWebSocket(`/topic/import-progress/${authService.getUser()?.username}`, (data) => {
+    console.log('Received WebSocket message:', data);
     if (data.newUsers && data.newUsers.length > 0) {
-      console.log('New users received:', data.newUsers.length);
-      // Prepend new users and deduplicate
+      console.log('Users update received:', data.newUsers.length);
+      
       setUsers(prev => {
-        const existingIds = new Set(prev.map(u => u.id));
-        const uniqueNewUsers = data.newUsers.filter((u: UserResponse) => !existingIds.has(u.id));
-        console.log('Unique new users:', uniqueNewUsers.length);
-        if (uniqueNewUsers.length === 0) return prev;
+        const next = [...prev];
+        let hasChanges = false;
         
-        // Update total elements
-        setTotalElements(total => total + uniqueNewUsers.length);
-        return [...uniqueNewUsers, ...prev];
+        data.newUsers.forEach((updatedUser: UserResponse) => {
+          const index = next.findIndex(u => u.id === updatedUser.id);
+          if (index !== -1) {
+            // Update existing user (e.g. background avatar upload)
+            next[index] = { ...next[index], ...updatedUser };
+            hasChanges = true;
+          } else {
+            // Prepend new user
+            next.unshift(updatedUser);
+            setTotalElements(total => total + 1);
+            hasChanges = true;
+          }
+        });
+        
+        return hasChanges ? next : prev;
       });
     }
   });
@@ -61,7 +70,7 @@ export const UsersPage = () => {
         search,
         page,
         size: 30,
-        sort: 'id,asc'
+        sort: 'id,desc'
       });
       setUsers(data.content);
       setTotalElements(data.totalElements);

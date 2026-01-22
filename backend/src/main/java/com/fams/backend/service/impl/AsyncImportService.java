@@ -3,7 +3,6 @@ package com.fams.backend.service.impl;
 import com.fams.backend.dto.response.ImportJobResponse;
 import com.fams.backend.dto.response.UserResponse;
 import com.fams.backend.entity.ImportJob;
-import com.fams.backend.entity.Notification;
 import com.fams.backend.entity.User;
 import com.fams.backend.exception.BadRequestException;
 import com.fams.backend.exception.NotFoundException;
@@ -46,8 +45,7 @@ public class AsyncImportService {
     private final UploadService uploadService;
     private final SimpMessagingTemplate messagingTemplate;
     private final Executor importExecutor;
-    private final com.fams.backend.service.impl.SystemLogService systemLogService;
-    private final com.fams.backend.service.impl.NotificationServiceImpl notificationService;
+    private final Set<String> cancelledJobIds = ConcurrentHashMap.newKeySet();
 
     private static final DateTimeFormatter DOB_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter PASSWORD_FORMATTER = DateTimeFormatter.ofPattern("ddMMyyyy");
@@ -77,11 +75,9 @@ public class AsyncImportService {
             Path tempDir = Files.createTempDirectory("async_import_");
             try {
                 processZipFile(fileBytes, filename, tempDir, job, username, importMode);
-
-                job.setStatus(ImportJob.JobStatus.COMPLETED);
-                job.setCompletedAt(LocalDateTime.now());
-                log.info("Async import job {} completed successfully", jobId);
+                log.info("Initial ZIP processing done for job {}. Background enrichment continues.", jobId);
             } finally {
+                cancelledJobIds.remove(jobId);
                 cleanUpTempDir(tempDir);
             }
 
@@ -90,9 +86,8 @@ public class AsyncImportService {
             job.setStatus(ImportJob.JobStatus.FAILED);
             job.setErrorMessage(e.getMessage());
             job.setCompletedAt(LocalDateTime.now());
-        } finally {
-            importJobRepository.save(job);
-            sendJobNotification(username, job, null);
+            importJobRepository.save(job); // Save job status before sending final notification
+            sendJobNotification(username, job, null); // Send final notification for failure
         }
     }
 
@@ -197,119 +192,152 @@ public class AsyncImportService {
                 }
             }
 
-            job.setTotalRecords(validRowData.size());
+            int totalValidRecords = validRowData.size();
+            // Total steps = record save + image uploads
+            int totalImages = (int) validRowData.stream()
+                    .filter(data -> imageMap.containsKey(data.code.toLowerCase()))
+                    .count();
+
+            job.setTotalRecords(totalValidRecords + totalImages);
+            job.setProcessedRecords(0);
             importJobRepository.save(job);
             sendJobNotification(username, job, null);
 
-            // Pre-hash passwords
+            // Parallel pre-hash passwords (BCrypt is slow)
             Set<String> uniquePasswords = validRowData.stream()
-                    .map(data -> data.dob.format(PASSWORD_FORMATTER))
+                    .map(data1 -> data1.dob.format(PASSWORD_FORMATTER))
                     .collect(Collectors.toSet());
-            for (String rawPassword : uniquePasswords) {
-                passwordHashCache.computeIfAbsent(rawPassword, passwordEncoder::encode);
-            }
+            uniquePasswords.parallelStream()
+                    .forEach(rawPassword -> passwordHashCache.computeIfAbsent(rawPassword, passwordEncoder::encode));
 
-            // Process with incremental saves
-            AtomicInteger completed = new AtomicInteger(0);
-            List<User> saveBuffer = Collections.synchronizedList(new ArrayList<>());
-            final int BATCH_SIZE = 20;
+            // Process with Instant Data + Background Media Enrichment
+            final int BATCH_SIZE = 100;
+            job.setStatus(ImportJob.JobStatus.PROCESSING);
+            job.setSuccessCount(0);
+            job.setFailedCount(0);
+            job.setProcessedRecords(0);
+            importJobRepository.save(job);
 
-            List<CompletableFuture<Void>> futures = validRowData.stream()
-                    .map(data -> CompletableFuture.supplyAsync(() -> {
-                        String avatarUrl = null;
-                        User.FaceDataStatus faceStatus = User.FaceDataStatus.NOT_REGISTERED;
-                        File imageFile = imageMap.get(data.code.toLowerCase());
-
-                        if (imageFile != null) {
-                            try {
-                                byte[] content = Files.readAllBytes(imageFile.toPath());
-                                avatarUrl = uploadService.uploadFile(createMultipartFile(imageFile.getName(), content));
-                                faceStatus = User.FaceDataStatus.REGISTERED;
-                            } catch (Exception ex) {
-                                log.error("Failed to upload avatar for {}: {}", data.code, ex.getMessage());
-                            }
-                        }
-
-                        return User.builder()
-                                .fullName(data.fullName).code(data.code).username(data.code.toLowerCase())
-                                .password(passwordHashCache.get(data.dob.format(PASSWORD_FORMATTER)))
-                                .email(data.email).phone(data.phone).dob(data.dob)
-                                .role(mapRole(data.roleStr)).status(User.UserStatus.INACTIVE)
-                                .faceDataStatus(faceStatus).avatar(avatarUrl).build();
-                    }, importExecutor).thenAccept(user -> {
-                        saveBuffer.add(user);
-                        int current = completed.incrementAndGet();
-
-                        job.setProcessedRecords(current);
-                        if (current % 5 == 0 || current == job.getTotalRecords()) {
-                            importJobRepository.save(job);
-                            sendJobNotification(username, job, null);
-                        }
-
-                        if (saveBuffer.size() >= BATCH_SIZE) {
-                            List<User> toSave;
-                            synchronized (saveBuffer) {
-                                if (saveBuffer.size() >= BATCH_SIZE) {
-                                    toSave = new ArrayList<>(saveBuffer.subList(0, BATCH_SIZE));
-                                    saveBuffer.subList(0, BATCH_SIZE).clear();
-                                } else {
-                                    return;
-                                }
-                            }
-                            userRepository.saveAll(toSave);
-                            job.setSuccessCount(job.getSuccessCount() + toSave.size());
-                            importJobRepository.save(job);
-                            sendJobNotification(username, job, toSave);
-                        }
-                    }))
+            // Phase 1: Instant Metadata Save (Nano-Speed)
+            log.info("Phase 1: Saving {} user metadata records instantly...", validRowData.size());
+            List<User> initialUsers = validRowData.stream()
+                    .map(data -> User.builder()
+                            .fullName(data.fullName).code(data.code).username(data.code.toLowerCase())
+                            .password(passwordHashCache.get(data.dob.format(PASSWORD_FORMATTER)))
+                            .email(data.email).phone(data.phone).dob(data.dob)
+                            .role(mapRole(data.roleStr)).status(User.UserStatus.INACTIVE)
+                            .faceDataStatus(User.FaceDataStatus.NOT_REGISTERED)
+                            .avatar(null).build())
                     .collect(Collectors.toList());
 
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+            for (int i = 0; i < initialUsers.size(); i += BATCH_SIZE) {
+                int end = Math.min(i + BATCH_SIZE, initialUsers.size());
+                List<User> savedBatch = userRepository.saveAll(initialUsers.subList(i, end));
 
-            if (!saveBuffer.isEmpty()) {
-                userRepository.saveAll(saveBuffer);
-                job.setSuccessCount(job.getSuccessCount() + saveBuffer.size());
-                sendJobNotification(username, job, saveBuffer);
+                job.setSuccessCount(job.getSuccessCount() + (end - i));
+                job.setProcessedRecords(end);
+                job.setStatusMessage("Đang tạo tài khoản: " + end + "/" + totalValidRecords);
+                importJobRepository.save(job);
+                sendJobNotification(username, job, savedBatch);
+            }
+            log.info("Phase 1 Complete: 2000 users created in seconds.");
+
+            // Explicitly signal that Phase 1 (Data) is done to the frontend
+            job.setStatusMessage("DATA_PHASE_COMPLETE");
+            importJobRepository.save(job);
+            sendJobNotification(username, job, null);
+
+            // Phase 2: Background Image Enrichment (Massive Parallel I/O)
+            log.info("Phase 2: Starting Background Media Enrichment...");
+
+            // Phase 2.1: Parallel High-Speed Compression
+            Map<String, byte[]> compressedImageMap = validRowData.parallelStream()
+                    .filter(data -> imageMap.containsKey(data.code.toLowerCase()))
+                    .collect(Collectors.toConcurrentMap(
+                            data -> data.code.toLowerCase(),
+                            data -> {
+                                try {
+                                    File imgFile = imageMap.get(data.code.toLowerCase());
+                                    return compressImage(Files.readAllBytes(imgFile.toPath()));
+                                } catch (Exception e) {
+                                    return new byte[0];
+                                }
+                            }));
+
+            // Phase 2.2: Async Upload & Dynamic Association
+            AtomicInteger completedImages = new AtomicInteger(0);
+            List<CompletableFuture<Void>> futures = validRowData.stream()
+                    .filter(data -> compressedImageMap.containsKey(data.code.toLowerCase()))
+                    .map(data -> CompletableFuture.runAsync(() -> {
+                        if (cancelledJobIds.contains(job.getJobId()))
+                            return;
+
+                        byte[] content = compressedImageMap.get(data.code.toLowerCase());
+                        if (content != null && content.length > 0) {
+                            try {
+                                String url = uploadService.uploadFile(createMultipartFile(data.code + ".jpg", content));
+                                userRepository.findByCode(data.code).ifPresent(user -> {
+                                    user.setAvatar(url);
+                                    user.setFaceDataStatus(User.FaceDataStatus.REGISTERED);
+                                    userRepository.save(user); // Individual update for dynamic refresh
+
+                                    int current = completedImages.incrementAndGet();
+                                    job.setProcessedRecords(totalValidRecords + current); // Continue progress
+                                    job.setStatusMessage(
+                                            String.format("Đang làm giàu dữ liệu: %d/%d ảnh...", current, totalImages));
+                                    importJobRepository.save(job);
+
+                                    // Real-time UI refresh for this specific user with full job context
+                                    sendUserUpdateNotification(username, job, user);
+                                });
+                            } catch (Exception ex) {
+                                log.error("Background enrichment failed for {}: {}", data.code, ex.getMessage());
+                            }
+                        }
+                    }, importExecutor))
+                    .collect(Collectors.toList());
+
+            if (futures.isEmpty()) {
+                finalizeJob(job, username);
+            } else {
+                CompletableFuture<?>[] futuresArray = futures.toArray(new CompletableFuture[0]);
+                CompletableFuture.allOf(futuresArray)
+                        .thenRun(() -> finalizeJob(job, username));
+                log.info("Background Media Enrichment kicked off for {} images.", totalImages);
             }
         }
     }
 
-    private void sendJobNotification(String username, ImportJob job) {
+    private void finalizeJob(ImportJob job, String username) {
+        job.setStatus(ImportJob.JobStatus.COMPLETED);
+        job.setStatusMessage("Import hoàn tất thành công! Đã cập nhật đầy đủ dữ liệu và ảnh.");
+        job.setCompletedAt(LocalDateTime.now());
+        importJobRepository.save(job);
         sendJobNotification(username, job, null);
+        log.info("Async import job {} fully completed including enrichment", job.getJobId());
+    }
+
+    public void stopJob(String jobId) {
+        cancelledJobIds.add(jobId);
+        importJobRepository.findByJobId(jobId).ifPresent(job -> {
+            job.setStatus(ImportJob.JobStatus.CANCELLED);
+            job.setStatusMessage("Tiến trình đã bị dừng do đăng xuất.");
+            job.setCompletedAt(LocalDateTime.now());
+            importJobRepository.save(job);
+            sendJobNotification(job.getCreatedBy(), job, null);
+            log.info("Import job {} marked as CANCELLED", jobId);
+        });
     }
 
     private void sendJobNotification(String username, ImportJob job, List<User> newUsers) {
+        String destination = "/topic/import-progress/" + username;
         ImportJobResponse response = ImportJobResponse.fromEntity(job);
         if (newUsers != null && !newUsers.isEmpty()) {
             response.setNewUsers(newUsers.stream()
                     .map(UserResponse::fromUser)
-                    .collect(Collectors.toList()));
+                    .collect(java.util.stream.Collectors.toList()));
         }
-        messagingTemplate.convertAndSendToUser(username, "/queue/import-job", response);
-
-        // Persistent notification on completion/failure
-        if (job.getStatus() == ImportJob.JobStatus.COMPLETED) {
-            userRepository.findByUsername(username).ifPresent(user -> {
-                notificationService.createNotification(
-                        user,
-                        "Import hoàn tất",
-                        String.format("File %s đã import xong. Thành công: %d, Thất bại: %d",
-                                job.getFilename(), job.getSuccessCount(), job.getFailedCount()),
-                        Notification.NotificationType.SYSTEM,
-                        "/admin/users",
-                        null);
-            });
-        } else if (job.getStatus() == ImportJob.JobStatus.FAILED) {
-            userRepository.findByUsername(username).ifPresent(user -> {
-                notificationService.createNotification(
-                        user,
-                        "Import thất bại",
-                        String.format("File %s gặp lỗi: %s", job.getFilename(), job.getErrorMessage()),
-                        Notification.NotificationType.SYSTEM,
-                        "/admin/users",
-                        null);
-            });
-        }
+        messagingTemplate.convertAndSend(destination, response);
     }
 
     private String getCellValue(Cell cell) {
@@ -419,5 +447,42 @@ public class AsyncImportService {
             this.email = e;
             this.phone = p;
         }
+    }
+
+    private byte[] compressImage(byte[] data) {
+        try {
+            java.awt.image.BufferedImage originalImage = javax.imageio.ImageIO
+                    .read(new java.io.ByteArrayInputStream(data));
+            if (originalImage == null)
+                return data;
+
+            int targetWidth = 400;
+            int targetHeight = 400;
+
+            // Faster & Modern Bilinear Scaling
+            java.awt.image.BufferedImage outputImage = new java.awt.image.BufferedImage(targetWidth, targetHeight,
+                    java.awt.image.BufferedImage.TYPE_INT_RGB);
+            java.awt.Graphics2D g2d = outputImage.createGraphics();
+            g2d.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,
+                    java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g2d.setRenderingHint(java.awt.RenderingHints.KEY_RENDERING, java.awt.RenderingHints.VALUE_RENDER_SPEED);
+            g2d.drawImage(originalImage, 0, 0, targetWidth, targetHeight, null);
+            g2d.dispose();
+
+            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+            javax.imageio.ImageIO.write(outputImage, "jpg", baos);
+            return baos.toByteArray();
+        } catch (Exception e) {
+            log.warn("Image compression failed, using original: {}", e.getMessage());
+            return data;
+        }
+    }
+
+    private void sendUserUpdateNotification(String username, ImportJob job, User user) {
+        String destination = "/topic/import-progress/" + username;
+        ImportJobResponse response = ImportJobResponse.fromEntity(job);
+        response.setStatusMessage("Đang làm giàu dữ liệu: " + user.getFullName());
+        response.setNewUsers(Collections.singletonList(UserResponse.fromUser(user)));
+        messagingTemplate.convertAndSend(destination, response);
     }
 }

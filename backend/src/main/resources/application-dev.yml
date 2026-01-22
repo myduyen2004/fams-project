@@ -7,15 +7,21 @@ spring:
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres123}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 100
+      minimum-idle: 20
     
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          batch_size: 100
+          order_inserts: true
+          order_updates: true
 
   data:
     redis:
