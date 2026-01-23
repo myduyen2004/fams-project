@@ -150,6 +150,7 @@ class StagingImportServiceTest {
 
             // Mock staging table operations
             doNothing().when(jdbcTemplate).execute(anyString());
+            when(jdbcTemplate.update(anyString())).thenReturn(0); // For validation updates without params
             when(jdbcTemplate.update(anyString(), any(Object[].class))).thenReturn(0);
             when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class))).thenReturn(2, 0);
             when(jdbcTemplate.queryForList(anyString())).thenReturn(Collections.emptyList());
@@ -215,6 +216,7 @@ class StagingImportServiceTest {
             // Arrange
             when(semesterRepository.findByCode("SP2024")).thenReturn(Optional.of(testSemester));
             doNothing().when(jdbcTemplate).execute(anyString());
+            when(jdbcTemplate.update(anyString())).thenReturn(0); // For validation updates without params
             when(jdbcTemplate.update(anyString(), any(Object[].class))).thenReturn(0);
             when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class))).thenReturn(0, 2); // 0 valid, 2 errors
 
@@ -268,6 +270,7 @@ class StagingImportServiceTest {
             // Arrange
             when(semesterRepository.findByCode("SP2024")).thenReturn(Optional.of(testSemester));
             doNothing().when(jdbcTemplate).execute(anyString());
+            when(jdbcTemplate.update(anyString())).thenReturn(0); // For validation updates without params
             when(jdbcTemplate.update(anyString(), any(Object[].class))).thenReturn(0);
             when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class))).thenReturn(3, 0);
             when(jdbcTemplate.queryForList(anyString())).thenReturn(Collections.emptyList());
@@ -398,6 +401,7 @@ class StagingImportServiceTest {
             // Arrange
             when(semesterRepository.findByCode("SP2024")).thenReturn(Optional.of(testSemester));
             doNothing().when(jdbcTemplate).execute(anyString());
+            when(jdbcTemplate.update(anyString())).thenReturn(0); // For validation updates without params
             when(jdbcTemplate.update(anyString(), any(Object[].class))).thenReturn(0);
             when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class))).thenReturn(1, 1);
 
@@ -427,6 +431,7 @@ class StagingImportServiceTest {
             // Arrange
             when(semesterRepository.findByCode("SP2024")).thenReturn(Optional.of(testSemester));
             doNothing().when(jdbcTemplate).execute(anyString());
+            when(jdbcTemplate.update(anyString())).thenReturn(0); // For validation updates without params
             when(jdbcTemplate.update(anyString(), any(Object[].class))).thenReturn(0);
             when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class))).thenReturn(1, 0);
             when(jdbcTemplate.queryForList(anyString())).thenReturn(Collections.emptyList());
