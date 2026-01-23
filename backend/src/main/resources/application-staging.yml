@@ -34,6 +34,7 @@ spring:
     enabled: true
     baseline-on-migrate: true
     baseline-version: 0
+    ignore-missing-migrations: true
     locations: classpath:db/migration
 
 server:
