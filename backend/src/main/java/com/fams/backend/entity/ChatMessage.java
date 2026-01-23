@@ -16,7 +16,7 @@ import java.util.List;
 @Table(name = "chat_messages", indexes = {
         @Index(name = "idx_chat_message_group", columnList = "chat_group_id"),
         @Index(name = "idx_chat_message_sender", columnList = "sender_id"),
-        @Index(name = "idx_chat_message_sent_at", columnList = "sentAt")
+        @Index(name = "idx_chat_message_sent_at", columnList = "sent_at")
 })
 @Data
 @Builder
@@ -68,7 +68,7 @@ public class ChatMessage {
 
     // Thời gian gửi
     @CreationTimestamp
-    @Column(nullable = false)
+    @Column(name = "sent_at", nullable = false)
     private LocalDateTime sentAt;
 
     // Danh sách đã đọc

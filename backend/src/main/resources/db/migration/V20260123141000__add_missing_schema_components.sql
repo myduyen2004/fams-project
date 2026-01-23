@@ -35,13 +35,30 @@ CREATE TABLE IF NOT EXISTS sub_specialization_courses (
 CREATE TABLE IF NOT EXISTS enrollments (
     id BIGSERIAL PRIMARY KEY,
     class_name VARCHAR(50) NOT NULL REFERENCES class_sections (class_name),
-    studentCode VARCHAR(20) NOT NULL,
+    student_code VARCHAR(20) NOT NULL,
     student_id BIGINT NOT NULL REFERENCES users (id),
     status VARCHAR(20) NOT NULL DEFAULT 'ENROLLED',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (class_name, student_id)
 );
+
+-- Ensure student_code exists if table already existed without it
+ALTER TABLE enrollments
+ADD COLUMN IF NOT EXISTS student_code VARCHAR(20);
+
+UPDATE enrollments e
+SET
+    student_code = (
+        SELECT code
+        FROM users u
+        WHERE
+            u.id = e.student_id
+    )
+WHERE
+    student_code IS NULL;
+
+ALTER TABLE enrollments ALTER COLUMN student_code SET NOT NULL;
 
 -- 3. CHAT SYSTEM
 CREATE TABLE IF NOT EXISTS chat_groups (
@@ -73,7 +90,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     attachment_name VARCHAR(255),
     reply_to_id BIGINT REFERENCES chat_messages (id),
     is_deleted BOOLEAN DEFAULT FALSE,
-    sentAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    sent_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS chat_message_reads (
@@ -223,7 +240,7 @@ ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 -- 9. ADDITIONAL INDEXES
 CREATE INDEX IF NOT EXISTS idx_enrollment_class_name ON enrollments (class_name);
 
-CREATE INDEX IF NOT EXISTS idx_enrollment_student_code ON enrollments (studentCode);
+CREATE INDEX IF NOT EXISTS idx_enrollment_student_code ON enrollments (student_code);
 
 CREATE INDEX IF NOT EXISTS idx_enrollment_student ON enrollments (student_id);
 

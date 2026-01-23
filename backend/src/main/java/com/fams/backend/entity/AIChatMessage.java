@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @Table(name = "ai_chat_messages", indexes = {
         @Index(name = "idx_ai_message_session", columnList = "session_id"),
         @Index(name = "idx_ai_message_role", columnList = "role"),
-        @Index(name = "idx_ai_message_sent_at", columnList = "sentAt")
+        @Index(name = "idx_ai_message_sent_at", columnList = "created_at")
 })
 @Data
 @Builder
@@ -42,7 +42,7 @@ public class AIChatMessage {
 
     // Thời gian gửi
     @CreationTimestamp
-    @Column(nullable = false)
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime sentAt;
 
     // === Metadata for analytics ===
