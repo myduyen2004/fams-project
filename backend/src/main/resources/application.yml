@@ -46,6 +46,8 @@ spring:
       port: 6379
       password:
       timeout: 60000
+      repositories:
+        enabled: false
       jedis:
         pool:
           max-active: 8
