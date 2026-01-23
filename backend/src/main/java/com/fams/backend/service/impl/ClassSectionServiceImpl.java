@@ -1,10 +1,13 @@
 package com.fams.backend.service.impl;
 
+import com.fams.backend.dto.response.ClassDetailResponse;
 import com.fams.backend.dto.response.ClassSectionResponse;
 import com.fams.backend.dto.response.EnrollmentResponse;
 import com.fams.backend.dto.response.LecturerOptionResponse;
+import com.fams.backend.dto.response.StudentEnrollmentDTO;
 import com.fams.backend.entity.ClassSection;
 import com.fams.backend.entity.Enrollment;
+import com.fams.backend.entity.StudentProfile;
 import com.fams.backend.entity.User;
 import com.fams.backend.repository.ClassSectionRepository;
 import com.fams.backend.repository.EnrollmentRepository;
@@ -278,16 +281,86 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                 .build();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public ClassDetailResponse getClassDetail(String className) {
+        ClassSection classSection = classSectionRepository.findByClassNameWithDetails(className)
+                .orElseThrow(() -> new RuntimeException("Lớp học không tồn tại: " + className));
+
+        List<Enrollment> enrollments = enrollmentRepository.findByClassSectionClassName(className);
+
+        List<StudentEnrollmentDTO> studentEnrollments = enrollments.stream()
+                .map(enrollment -> {
+                    User student = enrollment.getStudent();
+                    StudentProfile profile = student.getStudentProfile();
+                    String studentSpecialization = profile != null && profile.getMajor() != null
+                            ? profile.getMajor().getName()
+                            : "";
+                    if (profile != null && profile.getSpecialization() != null) {
+                        studentSpecialization = profile.getSpecialization().getName();
+                    }
+
+                    return StudentEnrollmentDTO.builder()
+                            .studentName(student.getFullName())
+                            .email(student.getEmail())
+                            .phone(student.getPhone())
+                            .idCard("") // Not available in schema
+                            .majorName(studentSpecialization)
+                            .studentCode(student.getCode())
+                            .status(enrollment.getStatus().name())
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        // Assuming k19 and 2019-2023 are placeholders or need logical mapping
+        // For now, using static or derived values to match the screenshot as much as
+        // possible
+
+        // Try to find specialization from course
+        String specializationName = classSection.getCourse().getName(); // Default fallback
+        if (!classSection.getCourse().getSpecializationCourses().isEmpty()) {
+            specializationName = classSection.getCourse().getSpecializationCourses().get(0)
+                    .getSpecialization().getName();
+        }
+
+        return ClassDetailResponse.builder()
+                .className(classSection.getClassName())
+                .courseCode(classSection.getCourse().getCode())
+                .courseName(classSection.getCourse().getName())
+                .semesterName(classSection.getSemester().getName())
+                .majorName(specializationName)
+                .courseYear("k19") // Placeholder
+                .studentCount(classSection.getCurrentEnrollment())
+                .academicYear("2019 - 2023") // Placeholder
+                .status(classSection.getStatus().name())
+                .enrollments(studentEnrollments)
+                .build();
+    }
+
     private ClassSectionResponse convertToResponse(ClassSection classSection) {
         return ClassSectionResponse.builder()
                 .className(classSection.getClassName())
                 .courseCode(classSection.getCourse().getCode())
                 .courseName(classSection.getCourse().getName())
+                .semesterName(classSection.getSemester().getName())
                 .semesterCode(classSection.getSemester().getCode())
                 .lecturerName(classSection.getLecturer() != null ? classSection.getLecturer().getFullName() : null)
                 .enrollmentInfo(classSection.getCurrentEnrollment() + " / " + classSection.getMaxStudents())
                 .slots(classSection.getNumberOfSlots())
                 .status(classSection.getStatus().name())
                 .build();
+    }
+
+    @Override
+    public List<com.fams.backend.dto.response.CourseOptionResponse> getCourseOptionsByLecturerAndSemester(
+            String semesterCode, Long lecturerId) {
+        return classSectionRepository.findDistinctCoursesByLecturerAndSemester(semesterCode, lecturerId)
+                .stream()
+                .map(course -> com.fams.backend.dto.response.CourseOptionResponse.builder()
+                        .id(course.getId())
+                        .code(course.getCode())
+                        .name(course.getName())
+                        .build())
+                .collect(Collectors.toList());
     }
 }
