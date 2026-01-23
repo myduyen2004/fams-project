@@ -245,7 +245,7 @@ class GeneticAlgorithmTest {
                     .periodsPerDay(6)
                     .daysPerWeek(6)
                     .validWeekdays(new HashSet<>(Arrays.asList(0, 1, 2, 3, 4, 5)))
-                    .validSlotIndices(new HashSet<>(Arrays.asList(0, 1, 2, 3, 4, 5)))
+                    .validSlotIndices(new HashSet<>(Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)))
                     .classes(Arrays.asList(
                             TimetableData.ClassInfo.builder().className("C1").slotsPerWeek(2).build(),
                             TimetableData.ClassInfo.builder().className("C2").slotsPerWeek(2).build(),
