@@ -3,7 +3,8 @@ import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import axios from 'axios';
 import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
 import { toast } from 'react-hot-toast';
-import { Calendar, Users, BookOpen, School, Wand2, MoreVertical, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Calendar, Users, BookOpen, School, Wand2, MoreVertical, ChevronLeft, ChevronRight, Loader2, Download, X, Clock, MapPin, User, GraduationCap } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 interface Semester {
   code: string;
@@ -55,6 +56,9 @@ export const SchedulePage: React.FC = () => {
 
   // Confirmation dialog state
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  // Slot detail popup state
+  const [selectedSlot, setSelectedSlot] = useState<TimetableSlotDTO | null>(null);
 
   const fetchSemesters = async () => {
     try {
@@ -337,6 +341,58 @@ export const SchedulePage: React.FC = () => {
     }
   };
 
+  // Export timetable to Excel
+  const handleExportExcel = () => {
+    if (filteredSlots.length === 0) {
+      toast.error('Không có dữ liệu để xuất');
+      return;
+    }
+
+    try {
+      // Prepare data for Excel
+      const exportData = filteredSlots.map(slot => ({
+        'Ngày': slot.date || '',
+        'Thứ': slot.dayOfWeek ? ['', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ Nhật'][slot.dayOfWeek] || '' : '',
+        'Tiết': slot.slotNumber || '',
+        'Giờ bắt đầu': slot.startTime || '',
+        'Giờ kết thúc': slot.endTime || '',
+        'Mã lớp': slot.className || '',
+        'Mã môn': slot.courseCode || '',
+        'Tên môn': slot.courseName || '',
+        'Giảng viên': slot.lecturerName || '',
+        'Phòng': slot.roomCode || slot.roomName || '',
+        'Trạng thái': slot.status || ''
+      }));
+
+      // Create workbook and worksheet
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Thời khóa biểu');
+
+      // Auto-size columns
+      const maxWidth = 30;
+      const colWidths = Object.keys(exportData[0] || {}).map(key => ({
+        wch: Math.min(maxWidth, Math.max(key.length,
+          ...exportData.map(row => String(row[key as keyof typeof row] || '').length)
+        ))
+      }));
+      worksheet['!cols'] = colWidths;
+
+      // Generate filename with semester and date
+      const selectedSemester = semesters.find(s => s.code === selected);
+      const semesterName = selectedSemester?.name || selected || 'timetable';
+      const dateStr = selectedDate || new Date().toISOString().split('T')[0];
+      const filename = `ThoiKhoaBieu_${semesterName}_${dateStr}.xlsx`;
+
+      // Download file
+      XLSX.writeFile(workbook, filename);
+      toast.success(`Đã xuất file ${filename}`);
+    } catch (err) {
+      console.error('Export failed', err);
+      toast.error('Không thể xuất file Excel');
+    }
+  };
+
   // Get unique values for filters
   const uniqueClasses = Array.from(new Set(slots.map(s => s.className).filter(Boolean)));
   const uniqueTeachers = Array.from(new Set(slots.map(s => s.lecturerName).filter(Boolean)));
@@ -510,6 +566,16 @@ export const SchedulePage: React.FC = () => {
                 ))}
               </select>
             </div>
+
+            {/* Export Excel Button */}
+            <button
+              onClick={handleExportExcel}
+              disabled={filteredSlots.length === 0}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              <Download size={16} />
+              Xuất Excel
+            </button>
           </div>
         </div>
 
@@ -632,7 +698,10 @@ export const SchedulePage: React.FC = () => {
                               className="px-4 py-3 border-b border-l border-gray-100 align-top h-24"
                             >
                               {cell ? (
-                                <div className="relative group bg-white border-l-4 border-fpt-orange rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow">
+                                <div
+                                  onClick={() => setSelectedSlot(cell)}
+                                  className="relative group bg-white border-l-4 border-fpt-orange rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                                >
                                   {/* Course Code */}
                                   <div className="text-sm font-bold text-fpt-orange">
                                     {cell.courseCode || cell.courseName}
@@ -690,6 +759,138 @@ export const SchedulePage: React.FC = () => {
                 className="px-4 py-2 bg-fpt-orange text-white rounded-lg hover:bg-orange-600 transition-colors"
               >
                 Tạo lại
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Slot Detail Popup */}
+      {selectedSlot && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={() => setSelectedSlot(null)}
+        >
+          <div
+            className="bg-white rounded-2xl p-6 max-w-lg w-full mx-4 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">
+                  Chi tiết tiết học
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  {selectedSlot.date && new Date(selectedSlot.date).toLocaleDateString('vi-VN', {
+                    weekday: 'long',
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                  })}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedSlot(null)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+
+            {/* Course Info Card */}
+            <div className="bg-gradient-to-r from-fpt-orange/10 to-orange-50 rounded-xl p-4 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-fpt-orange/20 rounded-xl flex items-center justify-center">
+                  <BookOpen size={24} className="text-fpt-orange" />
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-fpt-orange">
+                    {selectedSlot.courseCode || 'N/A'}
+                  </div>
+                  <div className="text-sm text-gray-700">
+                    {selectedSlot.courseName || 'Chưa có tên môn học'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Details Grid */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              {/* Class */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <GraduationCap size={16} className="text-blue-500" />
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Lớp</span>
+                </div>
+                <div className="text-sm font-semibold text-gray-800">
+                  {selectedSlot.className || 'N/A'}
+                </div>
+              </div>
+
+              {/* Lecturer */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <User size={16} className="text-green-500" />
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Giảng viên</span>
+                </div>
+                <div className="text-sm font-semibold text-gray-800">
+                  {selectedSlot.lecturerName || 'Chưa phân công'}
+                </div>
+              </div>
+
+              {/* Room */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <MapPin size={16} className="text-red-500" />
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Phòng</span>
+                </div>
+                <div className="text-sm font-semibold text-gray-800">
+                  {selectedSlot.roomCode || selectedSlot.roomName || 'N/A'}
+                </div>
+              </div>
+
+              {/* Time Slot */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock size={16} className="text-purple-500" />
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Tiết</span>
+                </div>
+                <div className="text-sm font-semibold text-gray-800">
+                  Slot {selectedSlot.slotNumber || 'N/A'}
+                  {selectedSlot.startTime && selectedSlot.endTime && (
+                    <span className="text-xs text-gray-500 ml-2">
+                      ({selectedSlot.startTime} - {selectedSlot.endTime})
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Status */}
+            {selectedSlot.status && (
+              <div className="border-t border-gray-100 pt-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái:</span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${selectedSlot.status === 'ACTIVE' || selectedSlot.status === 'CONFIRMED'
+                      ? 'bg-green-100 text-green-700'
+                      : selectedSlot.status === 'PENDING'
+                        ? 'bg-yellow-100 text-yellow-700'
+                        : 'bg-gray-100 text-gray-700'
+                    }`}>
+                    {selectedSlot.status}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Close Button */}
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setSelectedSlot(null)}
+                className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
+              >
+                Đóng
               </button>
             </div>
           </div>
