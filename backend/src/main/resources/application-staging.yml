@@ -42,6 +42,7 @@ management:
     baseline-version: 0
     ignore-missing-migrations: true
     locations: classpath:db/migration
+    ignore-migration-patterns: "*:missing"
 
 server:
   port: 8080
