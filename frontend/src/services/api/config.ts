@@ -8,7 +8,7 @@ const envApiUrl = import.meta.env.VITE_API_URL;
 // - Khi chạy LOCAL (npm run dev): Sẽ dùng http://localhost:8080
 // - Khi chạy PRODUCTION (Vercel): Dùng '' (đường dẫn tương đối) để đi qua Vercel Proxy
 //   Vercel sẽ proxy /api/* tới EC2 backend (xem vercel.json)
-export const BASE_URL = isProd ? '' : (envApiUrl || 'http://localhost:8080');
+export const BASE_URL = envApiUrl || (isProd ? '' : 'http://localhost:8080');
 
 // API Endpoint (BASE_URL + /api)
 export const API_URL = `${BASE_URL}/api`;
