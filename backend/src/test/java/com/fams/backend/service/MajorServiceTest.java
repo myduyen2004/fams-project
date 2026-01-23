@@ -49,7 +49,7 @@ class MajorServiceTest {
                 .code("SE")
                 .name("Software Engineering")
                 .description("Description")
-                .programDuration("9 ky")
+                .programDuration("9 kỳ")
                 .status(Major.MajorStatus.ACTIVE)
                 .specializations(Collections.emptyList())
                 .build();
@@ -58,7 +58,7 @@ class MajorServiceTest {
                 .code("SE")
                 .name("Software Engineering")
                 .description("Description")
-                .programDuration("9 ky")
+                .programDuration("9 kỳ")
                 .build();
     }
 

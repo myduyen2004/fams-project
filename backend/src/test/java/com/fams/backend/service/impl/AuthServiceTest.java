@@ -73,12 +73,12 @@ class AuthServiceTest {
     void login_Success() {
         // Arrange
         LoginRequest request = new LoginRequest("testuser", "password123");
-        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(activeUser));
+        when(userRepository.findByUsernameWithProfiles("testuser")).thenReturn(Optional.of(activeUser));
         when(passwordEncoder.matches("password123", "encodedPassword")).thenReturn(true);
         when(jwtUtil.generateToken(anyString())).thenReturn("mocked-jwt-token");
         // Mocking IP and GeoLocation to avoid NullPointerException in helper methods
-        when(httpRequest.getHeader("X-Forwarded-For")).thenReturn(null);
-        when(httpRequest.getRemoteAddr()).thenReturn("127.0.0.1");
+        when(httpRequest.getHeader("X-Forwarded-For")).thenReturn("127.0.0.1");
+        when(httpRequest.getHeader("User-Agent")).thenReturn("Test-Agent");
         when(geoLocationService.getLocationFromIP(anyString())).thenReturn(mock(GeoLocationService.LocationData.class));
 
         // Act
@@ -88,7 +88,7 @@ class AuthServiceTest {
         assertNotNull(response);
         assertEquals("mocked-jwt-token", response.getToken());
         verify(dashboardBroadcastService, times(1)).broadcastUpdate();
-        verify(userRepository, times(1)).findByUsername("testuser");
+        verify(userRepository, times(1)).findByUsernameWithProfiles("testuser");
     }
 
     @Test
@@ -96,6 +96,8 @@ class AuthServiceTest {
     void login_EmptyUsername() {
         // Arrange
         LoginRequest request = new LoginRequest("", "password123");
+        when(httpRequest.getHeader("X-Forwarded-For")).thenReturn("127.0.0.1");
+        when(geoLocationService.getLocationFromIP(anyString())).thenReturn(mock(GeoLocationService.LocationData.class));
 
         // Act & Assert
         BadRequestException exception = assertThrows(BadRequestException.class,
@@ -108,8 +110,10 @@ class AuthServiceTest {
     void login_InvalidPassword() {
         // Arrange
         LoginRequest request = new LoginRequest("testuser", "wrong-pass");
-        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(activeUser));
+        when(userRepository.findByUsernameWithProfiles("testuser")).thenReturn(Optional.of(activeUser));
         when(passwordEncoder.matches("wrong-pass", "encodedPassword")).thenReturn(false);
+        when(httpRequest.getHeader("X-Forwarded-For")).thenReturn("127.0.0.1");
+        when(geoLocationService.getLocationFromIP(anyString())).thenReturn(mock(GeoLocationService.LocationData.class));
 
         // Act & Assert
         UnauthorizedException exception = assertThrows(UnauthorizedException.class,
@@ -123,7 +127,9 @@ class AuthServiceTest {
         // Arrange
         activeUser.setStatus(User.UserStatus.LOCKED);
         LoginRequest request = new LoginRequest("testuser", "password123");
-        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(activeUser));
+        when(userRepository.findByUsernameWithProfiles("testuser")).thenReturn(Optional.of(activeUser));
+        when(httpRequest.getHeader("X-Forwarded-For")).thenReturn("127.0.0.1");
+        when(geoLocationService.getLocationFromIP(anyString())).thenReturn(mock(GeoLocationService.LocationData.class));
 
         // Act & Assert
         UnauthorizedException exception = assertThrows(UnauthorizedException.class,

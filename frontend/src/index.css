@@ -12,12 +12,149 @@
   .btn-primary {
     @apply px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium;
   }
-  
+
   .btn-secondary {
     @apply px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium;
   }
-  
+
   .card {
-    @apply bg-white rounded-xl shadow-sm p-6 border border-gray-200;
+    @apply bg-white dark:bg-zinc-900 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-zinc-800;
   }
+}
+
+@layer utilities {
+  .bg-stripes {
+    background-image: repeating-linear-gradient(90deg,
+        transparent,
+        transparent 8px,
+        rgba(255, 255, 255, 0.4) 8px,
+        rgba(255, 255, 255, 0.4) 16px);
+  }
+
+  /* Hide scrollbar for notification popup */
+  .notification-content::-webkit-scrollbar {
+    display: none;
+  }
+
+  .notification-content {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Document-style notification content */
+  .notification-content-document {
+    line-height: 1.6;
+    color: #333;
+  }
+
+  .dark .notification-content-document {
+    color: #e5e5e5;
+  }
+
+  .notification-content-document p {
+    margin-bottom: 1rem;
+    text-align: justify;
+  }
+
+  .notification-content-document h1,
+  .notification-content-document h2,
+  .notification-content-document h3 {
+    font-weight: bold;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    color: #003366;
+  }
+
+  .dark .notification-content-document h1,
+  .dark .notification-content-document h2,
+  .dark .notification-content-document a {
+    color: #60a5fa;
+  }
+
+  /* Standard UI Content Style (Replaces prose) */
+  .ui-content {
+    @apply text-gray-900 dark:text-gray-200 text-base leading-normal;
+  }
+
+  .ui-content p {
+    @apply mb-4;
+  }
+
+  .ui-content h1,
+  .ui-content h2,
+  .ui-content h3 {
+    @apply font-bold text-gray-900 dark:text-white mt-4 mb-2;
+  }
+
+  .ui-content h1 {
+    @apply text-xl;
+  }
+
+  .ui-content h2 {
+    @apply text-lg;
+  }
+
+  .ui-content h3 {
+    @apply text-base;
+  }
+
+  .ui-content ul {
+    @apply list-disc list-outside ml-5 mb-3 space-y-1;
+  }
+
+  .ui-content ol {
+    @apply list-decimal list-outside ml-5 mb-3 space-y-1;
+  }
+
+  .ui-content a {
+    @apply text-primary-600 hover:text-primary-700 underline;
+  }
+
+  .ui-content strong,
+  .ui-content b {
+    @apply font-semibold;
+  }
+
+  .ui-content blockquote {
+    @apply border-l-4 border-gray-200 dark:border-zinc-700 pl-4 py-1 italic text-gray-600 dark:text-gray-400 my-4;
+  }
+
+  .ui-content img {
+    @apply max-w-full h-auto rounded-lg my-4 border border-gray-200 dark:border-zinc-700;
+  }
+}
+
+.notification-content-document ul,
+.notification-content-document ol {
+  margin-left: 2rem;
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+  padding-left: 1rem;
+}
+
+.notification-content-document li {
+  margin-bottom: 0.5rem;
+}
+
+.notification-content-document .highlight,
+.notification-content-document .bold,
+.notification-content-document strong {
+  font-weight: bold;
+}
+
+.notification-content-document .section-title {
+  font-weight: bold;
+  text-decoration: underline;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.notification-content-document a {
+  color: #003366;
+  text-decoration: underline;
+}
+
+.dark .notification-content-document a {
+  color: #60a5fa;
 }

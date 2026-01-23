@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, Pen, Plus, Search, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Settings, Pen, Plus, Search, Trash2 } from 'lucide-react';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { AddSemesterModal } from '../../components/academic-staff/AddSemesterModal';
 import { UpdateSemesterModal } from '../../components/academic-staff/UpdateSemesterModal';
 import { DeleteSemesterModal } from '../../components/academic-staff/DeleteSemesterModal';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 import axios from 'axios';
 
 interface Semester {
@@ -15,6 +17,7 @@ interface Semester {
 }
 
 export const SemestersPage: React.FC = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [semesters, setSemesters] = useState<Semester[]>([]);
@@ -24,6 +27,22 @@ export const SemestersPage: React.FC = () => {
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedSemester, setSelectedSemester] = useState<Semester | null>(null);
+  const [selectedSemesters, setSelectedSemesters] = useState<string[]>([]);
+
+  // Bulk delete confirmation state
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  const [bulkDeleteConfig, setBulkDeleteConfig] = useState<{
+    title: string;
+    message: string;
+    type: 'danger' | 'warning' | 'info';
+    action?: () => Promise<void>;
+    showConfirmButton: boolean;
+  }>({
+    title: '',
+    message: '',
+    type: 'info',
+    showConfirmButton: true
+  });
 
   // Fetch semesters from API
   const fetchSemesters = async () => {
@@ -37,9 +56,15 @@ export const SemestersPage: React.FC = () => {
       console.log('Semesters data:', data);
       setSemesters(data);
       setError(null);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error fetching semesters:', err);
-      setError('Không thể tải danh sách học kỳ. Vui lòng thử lại sau.');
+      let errorMessage = 'Không thể tải danh sách học kỳ';
+      if (axios.isAxiosError(err)) {
+        errorMessage = err.response?.data?.message || err.message || errorMessage;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
       setSemesters([]); // Set empty array on error
     } finally {
       setLoading(false);
@@ -110,6 +135,7 @@ export const SemestersPage: React.FC = () => {
   // Safe filter operations - ensure semesters is always an array
   const upcomingCount = Array.isArray(semesters) ? semesters.filter(s => s.status === 'upcoming').length : 0;
   const activeCount = Array.isArray(semesters) ? semesters.filter(s => s.status === 'active').length : 0;
+  const endedCount = Array.isArray(semesters) ? semesters.filter(s => s.status === 'ended').length : 0;
 
   const filteredSemesters = Array.isArray(semesters) ? semesters.filter(semester =>
     semester.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -191,7 +217,7 @@ export const SemestersPage: React.FC = () => {
             <div className="flex flex-wrap items-center justify-between gap-4 pt-4">
               <div className="flex items-center gap-8 flex-wrap">
                 <span className="font-semibold text-gray-700 text-sm">FPTU - Đà Nẵng</span>
-                
+
                 {/* Search */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
@@ -219,10 +245,14 @@ export const SemestersPage: React.FC = () => {
                     <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
                     Sắp tới: <span className="text-gray-700 font-semibold">{upcomingCount}</span>
                   </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                    Đã kết thúc: <span className="text-gray-700 font-semibold">{endedCount}</span>
+                  </div>
                 </div>
 
                 {/* Add Button */}
-                <button 
+                <button
                   onClick={() => setIsModalOpen(true)}
                   className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-md font-medium text-xs flex items-center gap-2 transition shadow-sm"
                 >
@@ -234,16 +264,95 @@ export const SemestersPage: React.FC = () => {
         </div>
 
         {/* Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-0" >
+          {/* Bulk Delete Button */}
+          {selectedSemesters.length > 0 && (
+            <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-end gap-3">
+              <span className="text-sm text-gray-500">Đã chọn {selectedSemesters.length} học kỳ</span>
+              <button
+                onClick={() => {
+                  // Filter only upcoming semesters for bulk delete
+                  const upcomingSemesters = semesters.filter(
+                    s => selectedSemesters.includes(s.code) && s.status === 'upcoming'
+                  );
+
+                  if (upcomingSemesters.length === 0) {
+                    setBulkDeleteConfig({
+                      title: 'Không thể xóa',
+                      message: 'Chỉ được xóa học kỳ có trạng thái "Sắp diễn ra"',
+                      type: 'warning',
+                      showConfirmButton: false
+                    });
+                    setIsBulkDeleteModalOpen(true);
+                    return;
+                  }
+
+                  const handleBulkDelete = async () => {
+                    try {
+                      const deletePromises = upcomingSemesters.map(s =>
+                        axios.delete(`/api/v1/semesters/${s.code}`)
+                      );
+                      await Promise.all(deletePromises);
+                      // Refresh list after deleting
+                      await fetchSemesters();
+                      setSelectedSemesters([]);
+                    } catch (error) {
+                      console.error('Error bulk deleting semesters:', error);
+                    } finally {
+                      setIsBulkDeleteModalOpen(false);
+                    }
+                  };
+
+                  if (upcomingSemesters.length < selectedSemesters.length) {
+                    setBulkDeleteConfig({
+                      title: 'Xác nhận xóa',
+                      message: `Chỉ có ${upcomingSemesters.length}/${selectedSemesters.length} học kỳ có thể xóa (trạng thái "Sắp diễn ra"). Bạn có muốn tiếp tục?`,
+                      type: 'warning',
+                      action: handleBulkDelete,
+                      showConfirmButton: true
+                    });
+                  } else {
+                    setBulkDeleteConfig({
+                      title: 'Xác nhận xóa',
+                      message: `Bạn có chắc chắn muốn xóa ${upcomingSemesters.length} học kỳ đã chọn?`,
+                      type: 'danger',
+                      action: handleBulkDelete,
+                      showConfirmButton: true
+                    });
+                  }
+                  setIsBulkDeleteModalOpen(true);
+                }}
+                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md font-medium text-xs flex items-center gap-2 transition shadow-sm"
+              >
+                <Trash2 className="w-4 h-4" />
+                Xóa ({selectedSemesters.length})
+              </button>
+            </div>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="text-xs text-gray-400 border-b border-gray-100 font-semibold tracking-wide">
-                  <th className="py-4 pl-2 w-1/4">Tên học kỳ</th>
-                  <th className="py-4 w-1/5">Ngày bắt đầu</th>
-                  <th className="py-4 w-1/5">Ngày kết thúc</th>
-                  <th className="py-4 w-1/5">Trạng thái</th>
-                  <th className="py-4 w-[10%] text-left pr-2">Thao tác</th>
+                <tr className="text-xs text-white bg-orange-500 font-semibold tracking-wide">
+                  <th className="py-4 pl-4 w-[5%]">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 rounded border-2 border-white bg-white/20 checked:bg-white cursor-pointer accent-orange-500"
+                      checked={selectedSemesters.length === paginatedSemesters.length && paginatedSemesters.length > 0}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedSemesters(paginatedSemesters.map(s => s.code));
+                        } else {
+                          setSelectedSemesters([]);
+                        }
+                      }}
+                    />
+                  </th>
+                  <th className="py-4 w-[15%]">Mã học kỳ</th>
+                  <th className="py-4 w-[20%]">Tên học kỳ</th>
+                  <th className="py-4 w-[15%]">Ngày bắt đầu</th>
+                  <th className="py-4 w-[15%]">Ngày kết thúc</th>
+                  <th className="py-4 w-[15%]">Trạng thái</th>
+                  <th className="py-4 w-[15%] text-left pr-2">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="text-sm text-gray-700">
@@ -253,7 +362,22 @@ export const SemestersPage: React.FC = () => {
                       key={semester.code}
                       className="hover:bg-gray-50 transition border-b border-gray-50 group"
                     >
-                      <td className="py-4 pl-2 font-bold text-gray-800">{semester.name}</td>
+                      <td className="py-4 pl-4">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-2 border-gray-300 cursor-pointer accent-orange-500"
+                          checked={selectedSemesters.includes(semester.code)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedSemesters([...selectedSemesters, semester.code]);
+                            } else {
+                              setSelectedSemesters(selectedSemesters.filter(code => code !== semester.code));
+                            }
+                          }}
+                        />
+                      </td>
+                      <td className="py-4 font-medium text-gray-800">{semester.code}</td>
+                      <td className="py-4 font-bold text-gray-800">{semester.name}</td>
                       <td className="py-4">{formatDate(semester.startDate)}</td>
                       <td className="py-4">{formatDate(semester.endDate)}</td>
                       <td className="py-4">
@@ -266,16 +390,20 @@ export const SemestersPage: React.FC = () => {
                         </span>
                       </td>
                       <td className="py-4 text-left pr-2 text-gray-300">
-                        <button className="hover:text-blue-500 mr-3 transition inline-flex">
-                          <Eye className="w-4 h-4" />
+                        <button
+                          onClick={() => navigate(`/academic-staff/semesters/${semester.code}/config`)}
+                          className="hover:text-blue-500 mr-3 transition inline-flex"
+                          title="Cấu hình kỳ học"
+                        >
+                          <Settings className="w-4 h-4" />
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleEditClick(semester)}
                           className="hover:text-orange-500 mr-3 transition inline-flex"
                         >
                           <Pen className="w-4 h-4" />
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleDeleteClick(semester)}
                           className="hover:text-red-500 transition inline-flex"
                         >
@@ -286,7 +414,7 @@ export const SemestersPage: React.FC = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-gray-500">
+                    <td colSpan={6} className="py-8 text-center text-gray-500">
                       Không tìm thấy học kỳ nào
                     </td>
                   </tr>
@@ -297,7 +425,7 @@ export const SemestersPage: React.FC = () => {
 
           {/* Pagination */}
           {filteredSemesters.length > 0 && (
-            <div className="flex justify-between items-center mt-8 text-xs text-gray-500">
+            <div className="flex justify-between items-center mt-4 px-4 pb-4 text-xs text-gray-500">
               <div>
                 Hiển thị {startIndex + 1} đến {Math.min(endIndex, filteredSemesters.length)} trong số{' '}
                 <strong>{filteredSemesters.length}</strong> học kỳ
@@ -314,11 +442,10 @@ export const SemestersPage: React.FC = () => {
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`w-8 h-8 flex items-center justify-center rounded font-medium transition ${
-                      currentPage === page
-                        ? 'bg-orange-500 text-white shadow-sm'
-                        : 'hover:bg-gray-50 text-gray-600'
-                    }`}
+                    className={`w-8 h-8 flex items-center justify-center rounded font-medium transition ${currentPage === page
+                      ? 'bg-orange-500 text-white shadow-sm'
+                      : 'hover:bg-gray-50 text-gray-600'
+                      }`}
                   >
                     {page}
                   </button>
@@ -341,6 +468,7 @@ export const SemestersPage: React.FC = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleAddSemester}
+        existingSemesters={semesters}
       />
 
       {/* Update Semester Modal */}
@@ -352,6 +480,7 @@ export const SemestersPage: React.FC = () => {
         }}
         onSubmit={handleUpdateSemester}
         semester={selectedSemester}
+        existingSemesters={semesters}
       />
 
       {/* Delete Semester Modal */}
@@ -363,6 +492,27 @@ export const SemestersPage: React.FC = () => {
         }}
         onConfirm={handleDeleteSemester}
         semesterName={selectedSemester?.name || ''}
+        semesterStatus={selectedSemester?.status || ''}
+      />
+
+      {/* Bulk Delete Confirm Modal */}
+      <ConfirmModal
+        isOpen={isBulkDeleteModalOpen}
+        onClose={() => setIsBulkDeleteModalOpen(false)}
+        onConfirm={async () => {
+          if (bulkDeleteConfig.action) {
+            await bulkDeleteConfig.action();
+          }
+          // The modal will be closed inside the action or here if no action
+          if (!bulkDeleteConfig.action) {
+            setIsBulkDeleteModalOpen(false);
+          }
+        }}
+        title={bulkDeleteConfig.title}
+        message={bulkDeleteConfig.message}
+        type={bulkDeleteConfig.type}
+        confirmLabel={bulkDeleteConfig.showConfirmButton ? "Xác nhận" : ""}
+        cancelLabel={bulkDeleteConfig.showConfirmButton ? "Hủy" : ""}
       />
     </AcademicStaffLayout>
   );

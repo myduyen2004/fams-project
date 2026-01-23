@@ -51,11 +51,12 @@ services:
       retries: 3
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: maven:3.9.6-eclipse-temurin-21
     container_name: fams-backend
-    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+      - maven-repo:/root/.m2
     ports:
       - "8080:8080"
     env_file: .env
@@ -63,8 +64,10 @@ services:
       - SPRING_PROFILES_ACTIVE=dev
       - DB_HOST=postgres
       - REDIS_HOST=redis
-      - AI_SERVICE_URL=http://ai-service:5001
+      - AI_SERVICE_URL=http://ai-service:5000
       - TZ=Asia/Ho_Chi_Minh
+      - SPRING_DEVTOOLS_RESTART_ENABLED=true
+    command: mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Xms512m -Xmx1024m"
     depends_on:
       postgres:
         condition: service_healthy
@@ -75,23 +78,26 @@ services:
     networks:
       - fams-network
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        - VITE_API_URL=http://localhost:8080/api
-        - VITE_WS_URL=http://localhost:8080/ws
-    container_name: fams-frontend
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
-    networks:
-      - fams-network
+#  frontend:
+#    image: node:18-alpine
+#    container_name: fams-frontend
+#    working_dir: /app
+#    volumes:
+#      - ./frontend:/app
+#      - /app/node_modules # Don't overwrite container node_modules with host ones
+#    ports:
+#      - "5173:5173"
+#    environment:
+#      - VITE_API_URL=http://localhost:8080/api
+#      - VITE_WS_URL=ws://localhost:8080/ws
+#      - CHOKIDAR_USEPOLLING=true
+#    command: npm run dev -- --host
+#    networks:
+#      - fams-network
 
 volumes:
   postgres_data:
+  maven-repo:
 
 
 networks:

@@ -2,12 +2,12 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { NotificationsSection } from '../../components/admin/dashboard/NotificationsSection';
 import { dashboardService } from '../../services/api/dashboardService';
-import { Notification } from '../../types/dashboard';
+import { AppNotification } from '../../types/dashboard';
 import toast from 'react-hot-toast';
 import { useWebSocket } from '../../hooks/useWebSocket';
 
 export const NotificationsPage: React.FC = () => {
-    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [notifications, setNotifications] = useState<AppNotification[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -27,7 +27,7 @@ export const NotificationsPage: React.FC = () => {
         }
     };
 
-    const handleNotificationsUpdate = useCallback((data: Notification[]) => {
+    const handleNotificationsUpdate = useCallback((data: AppNotification[]) => {
         setNotifications(data);
     }, []);
 

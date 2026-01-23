@@ -14,6 +14,7 @@ public class LecturerImportDTO {
     private String code;
     private String fullName;
     private String email;
+    private String phone;
     private String department;
     private String expertise;
     private String bio;

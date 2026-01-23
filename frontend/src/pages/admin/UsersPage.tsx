@@ -8,6 +8,8 @@ import { UserTableRow } from '../../components/admin/users/UserTableRow';
 import { UserFilters } from '../../components/admin/users/UserFilters';
 import { BulkActions } from '../../components/admin/users/BulkActions';
 import { AddUserModal, EditUserModal, ViewUserModal, ImportUserModal } from '../../components/admin/users/UserModals';
+import { useWebSocket } from '../../hooks/useWebSocket';
+import { authService } from '../../services/api/authService';
 
 export const UsersPage = () => {
   const [users, setUsers] = useState<UserResponse[]>([]);
@@ -29,6 +31,36 @@ export const UsersPage = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
 
+  // WebSocket for real-time updates during import
+  
+  useWebSocket(`/topic/import-progress/${authService.getUser()?.username}`, (data) => {
+    console.log('Received WebSocket message:', data);
+    if (data.newUsers && data.newUsers.length > 0) {
+      console.log('Users update received:', data.newUsers.length);
+      
+      setUsers(prev => {
+        const next = [...prev];
+        let hasChanges = false;
+        
+        data.newUsers.forEach((updatedUser: UserResponse) => {
+          const index = next.findIndex(u => u.id === updatedUser.id);
+          if (index !== -1) {
+            // Update existing user (e.g. background avatar upload)
+            next[index] = { ...next[index], ...updatedUser };
+            hasChanges = true;
+          } else {
+            // Prepend new user
+            next.unshift(updatedUser);
+            setTotalElements(total => total + 1);
+            hasChanges = true;
+          }
+        });
+        
+        return hasChanges ? next : prev;
+      });
+    }
+  });
+
   const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
@@ -38,7 +70,7 @@ export const UsersPage = () => {
         search,
         page,
         size: 30,
-        sort: 'id,asc'
+        sort: 'id,desc'
       });
       setUsers(data.content);
       setTotalElements(data.totalElements);

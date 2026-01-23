@@ -5,7 +5,6 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -45,10 +44,6 @@ public class Enrollment {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false)
     private User student;
-
-    // Ngày đăng ký
-    @Column(nullable = false)
-    private LocalDate enrolledAt;
 
     // Trạng thái đăng ký
     @Enumerated(EnumType.STRING)

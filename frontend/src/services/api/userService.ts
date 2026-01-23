@@ -93,5 +93,45 @@ export const userService = {
     getImportJobStatus: async (jobId: string) => {
         const response = await apiClient.get(`/users/import-job/${jobId}`);
         return response.data;
-    }
+    },
+
+    getActiveImportJob: async () => {
+        const response = await apiClient.get('/users/import-job/active');
+        if (response.status === 204) return null;
+        return response.data;
+    },
+
+    cleanupStuckJobs: async () => {
+        await apiClient.post('/users/import-job/cleanup');
+    },
+
+    previewImport: async (formData: FormData) => {
+        const response = await apiClient.post<{
+            totalRows: number;
+            validRows: number;
+            errorRows: number;
+            previewData: {
+                rowNumber: number;
+                fullName: string;
+                code: string;
+                role: string;
+                dob: string;
+                email: string;
+                phone: string;
+                hasImage: boolean;
+                status: string;
+                errorMessage: string | null;
+            }[];
+            validationMessages: string[];
+        }>('/users/import/preview', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        return response.data;
+    },
+    /**
+     * Cancel the current user's active import job
+     */
+    cancelImportJob: async (): Promise<void> => {
+        await apiClient.post('/users/import-job/cancel');
+    },
 };

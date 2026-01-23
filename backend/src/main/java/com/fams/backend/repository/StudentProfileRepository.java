@@ -11,10 +11,12 @@ import java.util.List;
 @Repository
 public interface StudentProfileRepository extends JpaRepository<StudentProfile, Long> {
 
-    @Query("SELECT s FROM StudentProfile s ORDER BY s.gpa DESC")
+    @Query("SELECT s FROM StudentProfile s JOIN FETCH s.user ORDER BY s.gpa DESC")
     List<StudentProfile> findTop100ByOrderByGpaDesc(Pageable pageable);
 
     boolean existsByMajorId(Long majorId);
 
     boolean existsBySpecializationId(Long specializationId);
+
+    boolean existsBySubSpecializationId(Long subSpecializationId);
 }

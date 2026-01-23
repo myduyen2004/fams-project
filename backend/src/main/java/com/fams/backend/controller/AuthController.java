@@ -117,6 +117,7 @@ public class AuthController {
     @GetMapping("/me")
     @Operation(summary = "Lấy thông tin người dùng hiện tại")
     public ResponseEntity<com.fams.backend.dto.response.UserResponse> getCurrentUser() {
+        log.info("GET /auth/me - Hot reload is working!");
         String username = org.springframework.security.core.context.SecurityContextHolder.getContext()
                 .getAuthentication().getName();
         return ResponseEntity.ok(userService.getUserByUsername(username));

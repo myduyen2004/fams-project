@@ -22,9 +22,11 @@ public class ImportJobResponse {
     private Integer successCount;
     private Integer failedCount;
     private String errorMessage;
+    private String statusMessage;
     private LocalDateTime createdAt;
     private LocalDateTime completedAt;
     private Integer percentage;
+    private java.util.List<UserResponse> newUsers;
 
     public static ImportJobResponse fromEntity(ImportJob job) {
         int percentage = 0;
@@ -42,6 +44,7 @@ public class ImportJobResponse {
                 .successCount(job.getSuccessCount())
                 .failedCount(job.getFailedCount())
                 .errorMessage(job.getErrorMessage())
+                .statusMessage(job.getStatusMessage())
                 .createdAt(job.getCreatedAt())
                 .completedAt(job.getCompletedAt())
                 .percentage(percentage)

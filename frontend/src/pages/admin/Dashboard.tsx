@@ -11,7 +11,7 @@ import {
   DashboardStats,
   RecentAccess,
   Alert,
-  Notification,
+  AppNotification,
   SystemLog
 } from '../../types/dashboard';
 import { Users, UserCog, CreditCard, FileText, Activity } from 'lucide-react';
@@ -28,7 +28,7 @@ export const Dashboard: React.FC = () => {
   });
   const [recentAccess, setRecentAccess] = useState<RecentAccess[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -39,7 +39,7 @@ export const Dashboard: React.FC = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      
+
       const [
         statsData,
         recentAccessData,
@@ -83,9 +83,18 @@ export const Dashboard: React.FC = () => {
     setAlerts(data);
   }, []);
 
-  const handleNotificationsUpdate = useCallback((data: Notification[]) => {
+  const handleNotificationsUpdate = useCallback((data: AppNotification[]) => {
     console.log('WS: Received notifications update', data);
-    setNotifications(data);
+    setNotifications(prev => {
+      // Merge new notifications with existing ones, avoiding duplicates
+      const existingIds = new Set(prev.map(n => n.id));
+      const newNotifications = data.filter(n => !existingIds.has(n.id));
+
+      if (newNotifications.length > 0) {
+        return [...newNotifications, ...prev];
+      }
+      return prev;
+    });
   }, []);
 
   const handleSystemLogsUpdate = useCallback((data: SystemLog[]) => {
@@ -119,6 +128,7 @@ export const Dashboard: React.FC = () => {
           iconBgColor="bg-blue-100 dark:bg-blue-900/30"
           value={stats.totalStudents}
           label="Sinh viên"
+          variant="orange"
         />
         <StatCard
           icon={UserCog}
@@ -126,6 +136,7 @@ export const Dashboard: React.FC = () => {
           iconBgColor="bg-green-100 dark:bg-green-900/30"
           value={stats.totalUsers}
           label="Giảng viên"
+          variant="green"
         />
         <StatCard
           icon={CreditCard}
@@ -133,6 +144,7 @@ export const Dashboard: React.FC = () => {
           iconBgColor="bg-purple-100 dark:bg-purple-900/30"
           value={stats.totalAccounts}
           label="Tài khoản"
+          variant="orange"
         />
         <StatCard
           icon={FileText}
@@ -140,6 +152,7 @@ export const Dashboard: React.FC = () => {
           iconBgColor="bg-orange-100 dark:bg-orange-900/30"
           value={stats.totalApplications}
           label="Đơn yêu cầu"
+          variant="green"
         />
         <StatCard
           icon={Activity}
@@ -147,6 +160,7 @@ export const Dashboard: React.FC = () => {
           iconBgColor="bg-red-100 dark:bg-red-900/30"
           value={stats.totalBehaviors}
           label="Cảnh báo"
+          variant="orange"
         />
       </div>
 

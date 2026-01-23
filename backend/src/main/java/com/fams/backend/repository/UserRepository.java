@@ -4,6 +4,7 @@ import com.fams.backend.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -11,14 +12,31 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.Set;
 
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.jpa.repository.Modifying;
+
 @Repository
 public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificationExecutor<User> {
 
     @Query("SELECT u.code FROM User u WHERE u.code IS NOT NULL")
     Set<String> findAllCodes();
 
+    // Batch fetch users by usernames (for import optimization)
+    @Query("SELECT u FROM User u WHERE LOWER(u.username) IN :usernames")
+    List<User> findByUsernameInIgnoreCase(@Param("usernames") java.util.Collection<String> usernames);
+
+    // Batch fetch users by codes (for import optimization)
+    @Query("SELECT u FROM User u WHERE LOWER(u.code) IN :codes")
+    List<User> findByCodeInIgnoreCase(@Param("codes") java.util.Collection<String> codes);
+
     @Query("SELECT u.email FROM User u")
     Set<String> findAllEmails();
+
+    /**
+     * Tìm user theo username kèm theo thông tin profiles
+     */
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.studentProfile LEFT JOIN FETCH u.lecturerProfile WHERE u.username = :username")
+    Optional<User> findByUsernameWithProfiles(String username);
 
     /**
      * Tìm user theo username
@@ -26,10 +44,10 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     Optional<User> findByUsername(String username);
 
     /**
-     * Tìm user theo username với profiles (for login)
+     * Tìm user theo username - case insensitive
      */
-    @Query("SELECT u FROM User u LEFT JOIN FETCH u.studentProfile LEFT JOIN FETCH u.lecturerProfile WHERE u.username = :username")
-    Optional<User> findByUsernameWithProfiles(String username);
+    @Query("SELECT u FROM User u WHERE LOWER(u.username) = LOWER(:username)")
+    Optional<User> findByUsernameIgnoreCase(String username);
 
     Optional<List<User>> findByRole(User.UserRole role);
 
@@ -38,12 +56,16 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
      */
     Optional<User> findByEmail(String email);
 
-    Optional<User> findById(Long id);
-
     /**
      * Tìm user theo mã số (MSSV/MSGV/MSNV)
      */
     Optional<User> findByCode(String code);
+
+    /**
+     * Tìm user theo mã số (MSSV/MSGV/MSNV) - case insensitive
+     */
+    @Query("SELECT u FROM User u WHERE LOWER(u.code) = LOWER(:code)")
+    Optional<User> findByCodeIgnoreCase(String code);
 
     /**
      * Kiểm tra username đã tồn tại
@@ -80,5 +102,8 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     /**
      * Xóa tất cả user có role nằm trong danh sách và trạng thái chỉ định
      */
+
+    @Transactional
+    @Modifying
     long deleteAllByRoleInAndStatus(Collection<User.UserRole> roles, User.UserStatus status);
 }

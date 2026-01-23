@@ -26,4 +26,6 @@ public interface MajorRepository extends JpaRepository<Major, Long> {
     Page<Major> searchMajors(String keyword, Major.MajorStatus status, Pageable pageable);
 
     Optional<Major> findByCode(String code);
+
+    Optional<Major> findByName(String name);
 }

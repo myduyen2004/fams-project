@@ -24,7 +24,7 @@ public class DashboardBroadcastService {
     /**
      * Broadcast all dashboard statistics and logs
      */
-    @Async
+    @org.springframework.scheduling.annotation.Async
     public void broadcastUpdate() {
         log.info("Broadcasting dashboard updates to all topics...");
 
@@ -44,7 +44,7 @@ public class DashboardBroadcastService {
         log.info("Sent /topic/alerts (count: {})", alerts.size());
 
         // 4. Notifications
-        List<NotificationResponse> notifications = dashboardService.getNotifications();
+        List<DashboardNotificationResponse> notifications = dashboardService.getNotifications();
         messagingTemplate.convertAndSend("/topic/notifications", notifications);
         log.info("Sent /topic/notifications (count: {})", notifications.size());
 
