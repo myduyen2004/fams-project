@@ -26,8 +26,14 @@ spring:
 
   data:
     redis:
-      host: redis
+      host: ${SPRING_DATA_REDIS_HOST:redis}
       port: 6379
+
+management:
+  health:
+    redis:
+      enabled: false # Avoid startup crash if Redis is unreachable
+
 
   # Flyway for staging (mirrors production with baseline)
   flyway:
