@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { lecturerClassService, ClassDetailResponse } from '../../services/api/LecturerClass';
-import { Users, BookOpen, GraduationCap, Calendar, Clock, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Users, BookOpen, GraduationCap, Calendar, Clock, ArrowLeft } from 'lucide-react';
 
 export const LeturerClassDetailPage: React.FC = () => {
     const { className } = useParams<{ className: string }>();
