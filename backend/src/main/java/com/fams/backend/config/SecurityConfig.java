@@ -96,6 +96,9 @@ public class SecurityConfig {
                 // Max age preflight
                 configuration.setMaxAge(3600L);
 
+                // Exposed headers
+                configuration.setExposedHeaders(List.of("Content-Disposition"));
+
                 UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
                 source.registerCorsConfiguration("/**", configuration);
 

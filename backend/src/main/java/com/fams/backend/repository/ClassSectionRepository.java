@@ -9,7 +9,10 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface ClassSectionRepository extends JpaRepository<ClassSection, String> {
+public interface ClassSectionRepository extends JpaRepository<ClassSection, Long> {
+
+        // Find by className (primary business key)
+        java.util.Optional<ClassSection> findByClassName(String className);
 
         // Check if className exists (case-insensitive)
         @Query("SELECT CASE WHEN COUNT(cs) > 0 THEN true ELSE false END FROM ClassSection cs WHERE LOWER(cs.className) = LOWER(:className)")
