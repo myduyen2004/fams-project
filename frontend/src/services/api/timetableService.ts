@@ -20,6 +20,20 @@ export interface TimetableSlotDTO {
   startTime?: string;
   endTime?: string;
   status?: string;
+  attendanceStatus?: string;
+}
+
+export interface DailyTimetableDTO {
+  date: string;
+  dayOfWeek: number;
+  dayName: string;
+  slots: TimetableSlotDTO[];
+}
+
+export interface WeeklyTimetableDTO {
+  weekStartDate: string;
+  weekEndDate: string;
+  days: DailyTimetableDTO[];
 }
 
 export const timetableService = {
@@ -72,6 +86,24 @@ export const timetableService = {
       headers: getAuthHeader()
     });
     return resp.data;
+  },
+
+  getStudentTimetable: async (studentId: number, date?: string) => {
+    const params = date ? { date } : {};
+    const resp = await axios.get<WeeklyTimetableDTO>(`${API_URL}/v1/timetable/student/${studentId}`, {
+      headers: getAuthHeader(),
+      params
+    });
+    return resp.data;
+  },
+
+  exportStudentTimetable: async (studentId: number, semesterCode: string) => {
+    const resp = await axios.get(`${API_URL}/v1/timetable/export/student/${studentId}`, {
+      headers: getAuthHeader(),
+      params: { semesterCode },
+      responseType: 'blob' // Important for file download
+    });
+    return resp;
   }
 };
 

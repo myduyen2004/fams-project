@@ -41,6 +41,7 @@ const RoomDetail = lazy(() => import('./pages/academic-staff/RoomDetail').then(m
 
 const StudentDashboard = lazy(() => import('./pages/student/StudentDashboard').then(m => ({ default: m.StudentDashboard })));
 const LecturerDashboard = lazy(() => import('./pages/lecturer/LecturerDashboard').then(m => ({ default: m.LecturerDashboard })));
+const StudentSchedulePage = lazy(() => import('./pages/student/StudentSchedulePage').then(m => ({ default: m.StudentSchedulePage })));
 
 const PageLoader = () => (
   <div className="flex h-screen w-full items-center justify-center bg-gray-50 dark:bg-zinc-950">
@@ -291,7 +292,14 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/student/schedule" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Thời khóa biểu" /></ProtectedRoute>} />
+          <Route
+            path="/student/schedule"
+            element={
+              <ProtectedRoute allowedRoles={['STUDENT']}>
+                <StudentSchedulePage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/student/attendance" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Điểm danh" /></ProtectedRoute>} />
           <Route path="/student/study" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Học tập" /></ProtectedRoute>} />
           <Route path="/student/messages" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Tin nhắn" /></ProtectedRoute>} />

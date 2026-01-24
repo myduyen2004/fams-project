@@ -2,6 +2,8 @@ package com.fams.backend.controller;
 
 import com.fams.backend.dto.timetable.TimetableDTO;
 import com.fams.backend.entity.TimetableSlot;
+import com.fams.backend.entity.StudentAttendance;
+import com.fams.backend.repository.StudentAttendanceRepository;
 import com.fams.backend.repository.TimetableSlotRepository;
 import com.fams.backend.service.timetable.TimetableGenerationService;
 import com.fams.backend.service.timetable.ga.model.GAConfig;
@@ -12,8 +14,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpServletResponse; // Import Response for streaming file
 
+import com.fams.backend.service.ExcelExportService;
+import com.fams.backend.repository.UserRepository;
+import com.fams.backend.repository.SemesterRepository;
+import com.fams.backend.entity.User;
+import com.fams.backend.entity.Semester;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
@@ -33,6 +42,10 @@ public class TimetableController {
 
     private final TimetableGenerationService generationService;
     private final TimetableSlotRepository timetableSlotRepository;
+    private final StudentAttendanceRepository studentAttendanceRepository;
+    private final ExcelExportService excelExportService;
+    private final UserRepository userRepository;
+    private final SemesterRepository semesterRepository;
 
     // ==================== GENERATION APIs ====================
 
@@ -188,14 +201,99 @@ public class TimetableController {
             @PathVariable Long studentId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
-        LocalDate targetDate = date != null ? date : LocalDate.now();
-        LocalDate weekStart = targetDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-        LocalDate weekEnd = weekStart.plusDays(6);
+        try {
+            LocalDate targetDate = date != null ? date : LocalDate.now();
+            LocalDate weekStart = targetDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+            LocalDate weekEnd = weekStart.plusDays(6);
 
+            log.info("Fetching timetable for student {} from {} to {}", studentId, weekStart, weekEnd);
+
+            List<TimetableSlot> slots = timetableSlotRepository.findByStudentIdAndDateBetween(
+                    studentId, weekStart, weekEnd);
+
+            log.info("Found {} slots for student {}", slots.size(), studentId);
+
+            TimetableDTO.WeeklyTimetableDTO response = buildWeeklyTimetable(weekStart, weekEnd, slots);
+
+            // Enrich with attendance data
+            if (!slots.isEmpty()) {
+                List<Long> slotIds = slots.stream().map(TimetableSlot::getId).toList();
+                List<StudentAttendance> attendances = studentAttendanceRepository.findByStudentIdAndSlotIds(studentId,
+                        slotIds);
+                Map<Long, String> attendanceMap = attendances.stream()
+                        .collect(Collectors.toMap(
+                                a -> a.getSession().getTimetableSlot().getId(),
+                                a -> a.getStatus().name(),
+                                (existing, replacement) -> existing));
+
+                response.getDays().forEach(day -> day.getSlots().forEach(slot -> {
+                    if (attendanceMap.containsKey(slot.getId())) {
+                        slot.setAttendanceStatus(attendanceMap.get(slot.getId()));
+                    }
+                }));
+            }
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error fetching timetable for student " + studentId, e);
+            throw e; // Let Spring handle the 500 but now it's logged
+        }
+    }
+
+    @GetMapping("/export/student/{studentId}")
+    @Operation(summary = "Export student timetable to Excel")
+    public void exportStudentTimetable(
+            @PathVariable Long studentId,
+            @RequestParam(required = true) String semesterCode,
+            HttpServletResponse response) throws Exception {
+
+        User student = userRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+
+        // Find semester by code or assume active? Better to pass semesterCode from
+        // frontend
+        Semester semester = semesterRepository.findByCode(semesterCode)
+                .orElseThrow(() -> new RuntimeException("Semester not found"));
+
+        // 1. Fetch ALL slots for this student in this semester context
+        // Using Repository method that filters by DATE RANGE of the semester
         List<TimetableSlot> slots = timetableSlotRepository.findByStudentIdAndDateBetween(
-                studentId, weekStart, weekEnd);
+                studentId, semester.getStartDate(), semester.getEndDate());
 
-        return ResponseEntity.ok(buildWeeklyTimetable(weekStart, weekEnd, slots));
+        // 2. Map to DTOs
+        List<TimetableDTO.TimetableSlotDTO> slotDTOs = slots.stream()
+                .map(this::convertToDTO)
+                .sorted(Comparator.comparing(TimetableDTO.TimetableSlotDTO::getDate)
+                        .thenComparing(TimetableDTO.TimetableSlotDTO::getSlotNumber))
+                .collect(Collectors.toList());
+
+        // 3. Enrich with Attendance
+        if (!slotDTOs.isEmpty()) {
+            List<Long> slotIds = slots.stream().map(TimetableSlot::getId).toList();
+            List<StudentAttendance> attendances = studentAttendanceRepository.findByStudentIdAndSlotIds(studentId,
+                    slotIds);
+            Map<Long, String> attendanceMap = attendances.stream()
+                    .collect(Collectors.toMap(
+                            a -> a.getSession().getTimetableSlot().getId(),
+                            a -> a.getStatus().name(),
+                            (existing, replacement) -> existing));
+
+            slotDTOs.forEach(dto -> {
+                if (attendanceMap.containsKey(dto.getId())) {
+                    dto.setAttendanceStatus(attendanceMap.get(dto.getId()));
+                }
+            });
+        }
+
+        // 4. Set Response Headers
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        String headerKey = "Content-Disposition";
+        String headerValue = "attachment; filename=schedule_" + student.getUsername() + "_" + student.getId() + "_"
+                + semester.getName().replaceAll(" ", "_") + ".xlsx";
+        response.setHeader(headerKey, headerValue);
+
+        // 5. Generate Excel
+        excelExportService.exportStudentScheduleToExcel(response, slotDTOs, student.getFullName(), semester.getName());
     }
 
     @GetMapping("/lecturer/{lecturerId}")
