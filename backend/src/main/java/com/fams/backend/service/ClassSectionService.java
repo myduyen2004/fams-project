@@ -1,5 +1,6 @@
 package com.fams.backend.service;
 
+import com.fams.backend.dto.response.ClassDetailResponse;
 import com.fams.backend.dto.response.ClassSectionResponse;
 import com.fams.backend.dto.response.EnrollmentResponse;
 import com.fams.backend.dto.response.LecturerOptionResponse;
@@ -45,4 +46,15 @@ public interface ClassSectionService {
      * Generate Excel template for importing enrollments.
      */
     byte[] getEnrollmentImportTemplate(String semesterCode);
+
+    /**
+     * Get detailed information for a specific class section.
+     */
+    ClassDetailResponse getClassDetail(String className);
+
+    /**
+     * Get list of unique courses taught by a lecturer in a semester.
+     */
+    List<com.fams.backend.dto.response.CourseOptionResponse> getCourseOptionsByLecturerAndSemester(String semesterCode,
+            Long lecturerId);
 }

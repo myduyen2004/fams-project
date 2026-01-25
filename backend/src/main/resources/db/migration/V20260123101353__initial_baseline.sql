@@ -326,27 +326,72 @@ CREATE TABLE IF NOT EXISTS import_detail (
 );
 
 -- 9. TRIGGERS
+DROP TRIGGER IF EXISTS trg_users_updated_at ON users;
+
 CREATE TRIGGER trg_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_majors_updated_at ON majors;
 
 CREATE TRIGGER trg_majors_updated_at BEFORE UPDATE ON majors FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS trg_specializations_updated_at ON specializations;
+
 CREATE TRIGGER trg_specializations_updated_at BEFORE UPDATE ON specializations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_sub_specializations_updated_at ON sub_specializations;
 
 CREATE TRIGGER trg_sub_specializations_updated_at BEFORE UPDATE ON sub_specializations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS trg_semesters_updated_at ON semesters;
+
 CREATE TRIGGER trg_semesters_updated_at BEFORE UPDATE ON semesters FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_courses_updated_at ON courses;
 
 CREATE TRIGGER trg_courses_updated_at BEFORE UPDATE ON courses FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS trg_rooms_updated_at ON rooms;
+
 CREATE TRIGGER trg_rooms_updated_at BEFORE UPDATE ON rooms FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_class_sections_updated_at ON class_sections;
 
 CREATE TRIGGER trg_class_sections_updated_at BEFORE UPDATE ON class_sections FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS trg_notifications_updated_at ON notifications;
+
 CREATE TRIGGER trg_notifications_updated_at BEFORE UPDATE ON notifications FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_ai_chat_sessions_updated_at ON ai_chat_sessions;
 
 CREATE TRIGGER trg_ai_chat_sessions_updated_at BEFORE UPDATE ON ai_chat_sessions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS trg_timetable_slots_updated_at ON timetable_slots;
+
 CREATE TRIGGER trg_timetable_slots_updated_at BEFORE UPDATE ON timetable_slots FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- 10. INDEXES
+CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
+
+CREATE INDEX IF NOT EXISTS idx_specializations_major ON specializations (major_id);
+
+CREATE INDEX IF NOT EXISTS idx_sub_specializations_spec ON sub_specializations (specialization_id);
+
+CREATE INDEX IF NOT EXISTS idx_semesters_status ON semesters (status);
+
+CREATE INDEX IF NOT EXISTS idx_class_sections_course ON class_sections (course_id);
+
+CREATE INDEX IF NOT EXISTS idx_class_sections_semester ON class_sections (semester_id);
+
+CREATE INDEX IF NOT EXISTS idx_semester_configs_semester ON semester_configs (semester_id);
+
+CREATE INDEX IF NOT EXISTS idx_slot_types_semester ON slot_types (semester_id);
+
+CREATE INDEX IF NOT EXISTS idx_holidays_semester ON holidays (semester_id);
+
+CREATE INDEX IF NOT EXISTS idx_semester_weekdays_semester ON semester_weekdays (semester_id);
 
 -- 10. SEED DATA
 INSERT INTO

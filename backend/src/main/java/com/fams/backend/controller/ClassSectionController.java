@@ -1,5 +1,6 @@
 package com.fams.backend.controller;
 
+import com.fams.backend.dto.response.ClassDetailResponse;
 import com.fams.backend.dto.response.ClassSectionResponse;
 import com.fams.backend.dto.response.EnrollmentResponse;
 import com.fams.backend.dto.response.LecturerOptionResponse;
@@ -59,12 +60,29 @@ public class ClassSectionController {
                 return ResponseEntity.ok(classSectionService.getLecturersBySemester(semesterCode));
         }
 
+        @GetMapping("/semester/{semesterCode}/courses")
+        @Operation(summary = "Get courses by semester and lecturer", description = "Get list of unique courses taught by a lecturer in a semester")
+        public ResponseEntity<List<com.fams.backend.dto.response.CourseOptionResponse>> getCoursesBySemesterAndLecturer(
+                        @PathVariable String semesterCode,
+                        @RequestParam Long lecturerId) {
+                log.info("GET /api/v1/class-sections/semester/{}/courses?lecturerId={}", semesterCode, lecturerId);
+                return ResponseEntity.ok(
+                                classSectionService.getCourseOptionsByLecturerAndSemester(semesterCode, lecturerId));
+        }
+
         @GetMapping("/{className}/enrollments")
         @Operation(summary = "Get enrollments by class section", description = "Get list of student enrollments for a specific class section")
         public ResponseEntity<List<EnrollmentResponse>> getEnrollmentsByClassName(
                         @PathVariable String className) {
                 log.info("GET /api/v1/class-sections/{}/enrollments", className);
                 return ResponseEntity.ok(classSectionService.getEnrollmentsByClassName(className));
+        }
+
+        @GetMapping("/{className}/details")
+        @Operation(summary = "Get class section details", description = "Get detailed information for a specific class section including enrollments")
+        public ResponseEntity<ClassDetailResponse> getClassDetail(@PathVariable String className) {
+                log.info("GET /api/v1/class-sections/{}/details", className);
+                return ResponseEntity.ok(classSectionService.getClassDetail(className));
         }
 
         // ==================== TEMPLATE DOWNLOAD ENDPOINTS ====================
