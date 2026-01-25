@@ -106,4 +106,16 @@ public interface ClassSectionRepository extends JpaRepository<ClassSection, Stri
                         "WHERE cs.semester.code = :semesterCode " +
                         "AND cs.lecturer IS NOT NULL")
         java.util.List<Long> findDistinctLecturerIdsBySemesterCode(@Param("semesterCode") String semesterCode);
+
+        /**
+         * Find distinct courses taught by a lecturer in a semester
+         */
+        @Query("SELECT DISTINCT c FROM ClassSection cs " +
+                        "JOIN cs.course c " +
+                        "JOIN cs.semester s " +
+                        "WHERE s.code = :semesterCode " +
+                        "AND cs.lecturer.id = :lecturerId")
+        java.util.List<com.fams.backend.entity.Course> findDistinctCoursesByLecturerAndSemester(
+                        @Param("semesterCode") String semesterCode,
+                        @Param("lecturerId") Long lecturerId);
 }
