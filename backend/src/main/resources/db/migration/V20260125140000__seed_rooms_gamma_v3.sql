@@ -15,9 +15,8 @@ DECLARE
 BEGIN
     FOR f IN 2..4 LOOP
         FOR r IN 1..20 LOOP
-            INSERT INTO rooms (code, name, capacity, building, floor, type, status)
+            INSERT INTO rooms (name, capacity, building, floor, type, status)
             VALUES (
-                (f * 100 + r)::text,  -- code (201..220, 301..320, 401..420)
                 (f * 100 + r)::text,  -- name
                 30,                  -- capacity
                 'Gamma',             -- building
