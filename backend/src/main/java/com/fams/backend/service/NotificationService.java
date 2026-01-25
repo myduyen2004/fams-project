@@ -189,10 +189,32 @@ public class NotificationService {
 
         // Tạo NotificationRecipient nếu status là SENT
         if (saved.getStatus() == NotificationStatus.SENT) {
-            createNotificationRecipients(saved);
+            if (request.getRecipientId() != null) {
+                // Targeted notification to a specific user
+                User recipient = userRepository.findById(request.getRecipientId())
+                        .orElseThrow(() -> new NotFoundException(
+                                "Không tìm thấy người nhận với ID: " + request.getRecipientId()));
+                createSingleRecipient(saved, recipient);
+            } else {
+                // Broadcast notification based on targetType
+                createNotificationRecipients(saved);
+            }
         }
 
         return mapToResponse(saved);
+    }
+
+    /**
+     * Helper to create a single recipient record
+     */
+    private void createSingleRecipient(Notification notification, User recipient) {
+        NotificationRecipient recipientRecord = NotificationRecipient.builder()
+                .notification(notification)
+                .recipient(recipient)
+                .isRead(false)
+                .build();
+        notificationRecipientRepository.save(recipientRecord);
+        log.info("Created recipient record for user: {} on notification: {}", recipient.getId(), notification.getId());
     }
 
     /**
@@ -410,6 +432,10 @@ public class NotificationService {
                         .filter(u -> u.getStatus() == User.UserStatus.ACTIVE)
                         .filter(u -> !u.equals(notification.getSender()))
                         .collect(java.util.stream.Collectors.toList());
+                break;
+            case USER:
+                // USER case is handled via recipientId in createNotification method
+                // No recipients are created here
                 break;
         }
 
