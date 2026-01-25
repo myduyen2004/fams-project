@@ -44,5 +44,7 @@ public class NotificationRequest {
     @Builder.Default
     private NotificationStatus status = NotificationStatus.DRAFT;
 
+    private Long recipientId;
+
     private java.util.List<String> attachmentUrls;
 }
