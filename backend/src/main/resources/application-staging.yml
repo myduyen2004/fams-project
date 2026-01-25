@@ -2,6 +2,15 @@ spring:
   application:
     name: FAMS Backend Staging
   
+  # Flyway for staging (mirrors production with baseline)
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    ignore-missing-migrations: true
+    locations: classpath:db/migration
+    ignore-migration-patterns: "*:missing"
+
   datasource:
     url: ${NEON_STAGING_DB_URL}
     username: ${NEON_STAGING_DB_USER}
@@ -14,7 +23,7 @@ spring:
     
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     show-sql: false
     properties:
       hibernate:
@@ -26,15 +35,14 @@ spring:
 
   data:
     redis:
-      host: redis
+      host: ${SPRING_DATA_REDIS_HOST:redis}
       port: 6379
 
-  # Flyway for staging (mirrors production with baseline)
-  flyway:
-    enabled: true
-    baseline-on-migrate: true
-    baseline-version: 0
-    locations: classpath:db/migration
+management:
+  health:
+    redis:
+      enabled: false # Avoid startup crash if Redis is unreachable
+
 
 server:
   port: 8080
