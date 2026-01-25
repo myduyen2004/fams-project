@@ -71,11 +71,12 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
          */
         @Query("SELECT ts FROM TimetableSlot ts " +
                         "JOIN FETCH ts.classSection cs " +
+                        "JOIN FETCH cs.course c " +
+                        "LEFT JOIN FETCH cs.lecturer lec " +
                         "JOIN FETCH ts.room r " +
                         "JOIN FETCH ts.slotType st " +
                         "JOIN cs.enrollments e " +
                         "WHERE e.student.id = :studentId " +
-                        "AND e.status = 'ENROLLED' " +
                         "AND ts.date BETWEEN :startDate AND :endDate " +
                         "ORDER BY ts.date, ts.slotNumber")
         List<TimetableSlot> findByStudentIdAndDateBetween(

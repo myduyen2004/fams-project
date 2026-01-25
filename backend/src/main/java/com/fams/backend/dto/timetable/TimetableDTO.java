@@ -103,6 +103,7 @@ public class TimetableDTO {
         private LocalTime startTime;
         private LocalTime endTime;
         private String status;
+        private String attendanceStatus;
     }
 
     @Data
