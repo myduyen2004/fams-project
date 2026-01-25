@@ -1,0 +1,29 @@
+-- ===========================================================
+-- SEED ROOMS FOR BUILDING GAMMA (Clean Migration)
+-- 60 Rooms total: Floors 2, 3, 4 (20 rooms each)
+-- Created: 2026-01-25 14:00:00
+-- ===========================================================
+
+-- 1. Ensure building Gamma rooms are cleared (Idempotency)
+DELETE FROM rooms WHERE building = 'Gamma';
+
+-- 2. SEED DATA
+DO $$
+DECLARE
+    f INTEGER;
+    r INTEGER;
+BEGIN
+    FOR f IN 2..4 LOOP
+        FOR r IN 1..20 LOOP
+            INSERT INTO rooms (name, capacity, building, floor, type, status)
+            VALUES (
+                (f * 100 + r)::text,  -- name
+                30,                  -- capacity
+                'Gamma',             -- building
+                f,                   -- floor
+                'LECTURE',           -- type
+                'ACTIVE'             -- status
+            );
+        END LOOP;
+    END LOOP;
+END $$;
