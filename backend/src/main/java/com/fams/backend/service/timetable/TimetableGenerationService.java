@@ -266,7 +266,7 @@ public class TimetableGenerationService {
             Set<Integer> weeklySlots = chromosome.getSlotsForClass(className);
             Map<Integer, Long> roomMap = roomAssignments.getOrDefault(className, Collections.emptyMap());
 
-            ClassSection classSection = classSectionRepository.findById(className).orElse(null);
+            ClassSection classSection = classSectionRepository.findByClassName(className).orElse(null);
             if (classSection == null)
                 continue;
 
