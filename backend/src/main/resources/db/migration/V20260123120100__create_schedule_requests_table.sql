@@ -26,6 +26,8 @@ CREATE INDEX IF NOT EXISTS idx_schedule_request_class ON schedule_requests (clas
 CREATE INDEX IF NOT EXISTS idx_schedule_request_status ON schedule_requests (status);
 
 -- Trigger for updated_at
+DROP TRIGGER IF EXISTS trg_schedule_requests_updated_at ON schedule_requests;
+
 CREATE TRIGGER trg_schedule_requests_updated_at 
 BEFORE UPDATE ON schedule_requests 
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
