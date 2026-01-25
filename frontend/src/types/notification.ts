@@ -68,6 +68,7 @@ export interface NotificationRequest {
   scheduledAt?: string | null;
   status: NotificationStatus;
   attachmentUrls?: string[];
+  recipientId?: number; // For USER target type
 }
 
 export interface NotificationPageResponse {

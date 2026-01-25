@@ -61,6 +61,9 @@ public class ScheduleRequest {
     @Column(columnDefinition = "TEXT")
     private String reason;
 
+    @Column(columnDefinition = "TEXT")
+    private String file;
+
     // Trạng thái
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
