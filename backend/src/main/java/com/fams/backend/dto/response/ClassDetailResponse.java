@@ -5,18 +5,21 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ClassSectionResponse {
+public class ClassDetailResponse {
     private String className;
     private String courseCode;
     private String courseName;
-    private String semesterCode;
     private String semesterName;
-    private String lecturerName;
-    private String enrollmentInfo; // e.g., "28 / 30"
-    private Integer slots;
-    private String status; // UPCOMING, ONGOING, FINISHED
+    private String majorName;
+    private String courseYear; // e.g., "k19"
+    private Integer studentCount;
+    private String academicYear; // e.g., "2019 - 2023"
+    private String status;
+    private List<StudentEnrollmentDTO> enrollments;
 }
