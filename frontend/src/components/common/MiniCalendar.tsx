@@ -1,7 +1,17 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-export const MiniCalendar: React.FC = () => {
+interface MiniCalendarProps {
+    slotCounts?: Record<string, number>; // Map of date (YYYY-MM-DD) to slot count
+    onDateSelect?: (date: Date) => void; // Callback when a date is clicked
+    selectedDate?: Date; // Currently selected date
+}
+
+export const MiniCalendar: React.FC<MiniCalendarProps> = ({
+    slotCounts = {},
+    onDateSelect,
+    selectedDate
+}) => {
     const [currentDate, setCurrentDate] = useState(new Date());
 
     // Get current month details
@@ -32,9 +42,28 @@ export const MiniCalendar: React.FC = () => {
         "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"
     ];
 
-    const isToday = (day: number) => {
-        const today = new Date();
-        return day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+    const isSelected = (day: number) => {
+        if (!selectedDate) return false;
+        return day === selectedDate.getDate() &&
+            month === selectedDate.getMonth() &&
+            year === selectedDate.getFullYear();
+    };
+
+    const getSlotCount = (day: number): number => {
+        const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        return slotCounts[dateKey] || 0;
+    };
+
+    const getDotColors = (count: number): string[] => {
+        const colors = ['bg-blue-500', 'bg-orange-500', 'bg-green-500', 'bg-red-500'];
+        return colors.slice(0, Math.min(count, 4));
+    };
+
+    const handleDateClick = (day: number) => {
+        if (onDateSelect) {
+            const clickedDate = new Date(year, month, day);
+            onDateSelect(clickedDate);
+        }
     };
 
     return (
@@ -69,16 +98,25 @@ export const MiniCalendar: React.FC = () => {
                 {calendarDays.map((date, index) => (
                     <div key={index} className="aspect-square flex items-center justify-center">
                         {date && (
-                            <div
-                                className={`
-                                    w-8 h-8 flex items-center justify-center rounded-full text-xs font-medium cursor-pointer transition-all
-                                    ${isToday(date)
-                                        ? 'bg-fpt-orange text-white font-bold shadow-md shadow-orange-500/20'
-                                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800'
-                                    }
-                                `}
-                            >
-                                {date}
+                            <div className="flex flex-col items-center gap-0.5">
+                                <div
+                                    onClick={() => handleDateClick(date)}
+                                    className={`
+                                        w-8 h-8 flex items-center justify-center rounded-full text-xs font-medium cursor-pointer transition-all
+                                        ${isSelected(date)
+                                            ? 'bg-fpt-orange text-white font-bold shadow-md shadow-orange-500/20'
+                                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800'
+                                        }
+                                    `}
+                                >
+                                    {date}
+                                </div>
+                                {/* Slot indicator dots */}
+                                <div className="flex gap-0.5 h-1.5">
+                                    {getDotColors(getSlotCount(date)).map((color, i) => (
+                                        <div key={i} className={`w-1 h-1 rounded-full ${color}`} />
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </div>
@@ -87,3 +125,4 @@ export const MiniCalendar: React.FC = () => {
         </div>
     );
 };
+

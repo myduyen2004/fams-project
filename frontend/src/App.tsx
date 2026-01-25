@@ -41,6 +41,7 @@ const ScheduleRequestPage = lazy(() => import('./pages/academic-staff/ScheduleRe
 const RequestDetailPage = lazy(() => import('./pages/academic-staff/RequestDetailPage').then(m => ({ default: m.RequestDetailPage })));
 const StudentDashboard = lazy(() => import('./pages/student/StudentDashboard').then(m => ({ default: m.StudentDashboard })));
 const LecturerDashboard = lazy(() => import('./pages/lecturer/LecturerDashboard').then(m => ({ default: m.LecturerDashboard })));
+const StudentSchedulePage = lazy(() => import('./pages/student/StudentSchedulePage').then(m => ({ default: m.StudentSchedulePage })));
 const LeturerClassManagementPage = lazy(() => import('./pages/lecturer/LeturerClassManagementPage').then(m => ({ default: m.LeturerClassManagementPage })));
 const LeturerClassDetailPage = lazy(() => import('./pages/lecturer/LeturerClassDetailPage').then(m => ({ default: m.LeturerClassDetailPage })));
 
@@ -294,7 +295,14 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/student/schedule" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Thời khóa biểu" /></ProtectedRoute>} />
+          <Route
+            path="/student/schedule"
+            element={
+              <ProtectedRoute allowedRoles={['STUDENT']}>
+                <StudentSchedulePage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/student/attendance" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Điểm danh" /></ProtectedRoute>} />
           <Route path="/student/study" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Học tập" /></ProtectedRoute>} />
           <Route path="/student/messages" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Tin nhắn" /></ProtectedRoute>} />
