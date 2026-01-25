@@ -10,6 +10,33 @@ export interface LecturerResponse extends UserResponse {
     yearsOfExperience?: number;
 }
 
+export interface ScheduleRequestResponse {
+    id: number;
+    requesterId: number;
+    requesterName: string;
+    requesterCode: string;
+    requesterAvatar: string;
+    requesterRole: string;
+    className: string;
+    type: string;
+    typeLabel: string; // Tiếng Việt
+    reason: string;
+    status: 'PENDING' | 'APPROVED' | 'REJECTED';
+    statusLabel: string; // Tiếng Việt
+    approverName?: string;
+    createdAt: string;
+    approvedAt?: string;
+    approverNote?: string;
+    originalSlotId?: number;
+    originalSlotInfo?: string;
+    requestedSlotId?: number;
+    requestedSlotInfo?: string;
+    requestedRoomName?: string;
+    requesterEmail?: string;
+    requesterMajor?: string;
+    file?: string;
+}
+
 export interface LecturerRequest extends Omit<UserRequest, 'role'> {
     department?: string;
     expertise?: string;
@@ -202,6 +229,49 @@ export const academicStaffService = {
 
     getSubSpecializationsBySpecialization: async (specializationName: string): Promise<string[]> => {
         const response = await apiClient.get<string[]>('/academic-staff/sub-specializations-by-specialization', { params: { specializationName } });
+        return response.data;
+    },
+
+    // Schedule Requests APIs
+    getScheduleRequests: async (params: {
+        search?: string;
+        role?: string;
+        reason?: string;
+        status?: string;
+        startDate?: string;
+        endDate?: string;
+        page?: number;
+        size?: number;
+        sort?: string
+    }) => {
+        const response = await apiClient.get<PageResponse<ScheduleRequestResponse>>('/academic-staff/schedule-requests', { params });
+        return response.data;
+    },
+
+    getScheduleRequestStats: async () => {
+        const response = await apiClient.get<Record<string, number>>('/academic-staff/schedule-requests/stats');
+        return response.data;
+    },
+
+    updateScheduleRequestStatus: async (id: number, status: string, note?: string): Promise<ScheduleRequestResponse> => {
+        const response = await apiClient.put<ScheduleRequestResponse>(`/academic-staff/schedule-requests/${id}/status`, { status, note });
+        return response.data;
+    },
+
+    exportScheduleRequests: async (params?: any): Promise<Blob> => {
+        console.log('[Service] Calling export with params:', params);
+        const response = await apiClient.get('/academic-staff/schedule-requests/export', {
+            params,
+            responseType: 'blob'
+        });
+        console.log('[Service] Response received:', response);
+        console.log('[Service] Response data type:', response.data?.constructor?.name);
+        console.log('[Service] Response data:', response.data);
+        return response.data;
+    },
+
+    getScheduleRequestById: async (id: number): Promise<ScheduleRequestResponse> => {
+        const response = await apiClient.get<ScheduleRequestResponse>(`/academic-staff/schedule-requests/${id}`);
         return response.data;
     },
 };
