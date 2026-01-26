@@ -8,7 +8,13 @@ import org.springframework.data.domain.Pageable;
 import java.time.LocalDate;
 import java.util.Map;
 
+import com.fams.backend.dto.request.CreateScheduleRequest; // Need to create this
+import com.fams.backend.dto.response.ScheduleRequestResponse;
+import com.fams.backend.entity.ScheduleRequest; // ...
+
 public interface ScheduleRequestService {
+        ScheduleRequestResponse createRequest(CreateScheduleRequest request, Long requesterId);
+
         Page<ScheduleRequestResponse> getRequests(
                         String search,
                         String role,
@@ -27,4 +33,6 @@ public interface ScheduleRequestService {
 
         byte[] exportRequests(String search, String role, String reason, ScheduleRequest.RequestStatus status,
                         LocalDate startDate, LocalDate endDate);
+
+        Page<ScheduleRequestResponse> getRequestsByRequester(Long requesterId, Pageable pageable);
 }

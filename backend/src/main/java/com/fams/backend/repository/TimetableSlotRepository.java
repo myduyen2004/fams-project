@@ -14,6 +14,19 @@ import java.util.List;
 @Repository
 public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Long> {
 
+        // Derived queries for conflict checking
+        boolean existsByRoomIdAndDateAndSlotTypeIdAndStatusNot(Long roomId, LocalDate date, Long slotTypeId,
+                        TimetableSlot.TimetableSlotStatus status);
+
+        boolean existsByClassSectionLecturerIdAndDateAndSlotTypeIdAndStatusNot(Long lecturerId, LocalDate date,
+                        Long slotTypeId, TimetableSlot.TimetableSlotStatus status);
+
+        boolean existsByClassSectionClassNameAndDateAndSlotTypeIdAndStatusNot(String className, LocalDate date,
+                        Long slotTypeId, TimetableSlot.TimetableSlotStatus status);
+
+        java.util.Optional<TimetableSlot> findByClassSectionClassNameAndDateAndSlotTypeId(String className,
+                        LocalDate date, Long slotTypeId);
+
         /**
          * Find all slots for a class section
          */

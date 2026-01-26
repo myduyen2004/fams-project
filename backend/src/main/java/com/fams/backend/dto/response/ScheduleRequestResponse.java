@@ -31,10 +31,13 @@ public class ScheduleRequestResponse {
 
     // Additional info for original/requested slots
     private Long originalSlotId;
+    private Integer originalSlotNumber; // Added
     private String originalSlotInfo;
     private Long requestedSlotId;
+    private Integer requestedSlotNumber; // Added
     private String requestedSlotInfo;
     private String requestedRoomName;
+    private String originalRoomName; // Added
     private String requesterEmail;
     private String requesterMajor;
     private String file;
