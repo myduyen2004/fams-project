@@ -13,14 +13,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -50,11 +52,14 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final com.fams.backend.service.UploadService uploadService;
-    private final com.fams.backend.service.EmailService emailService;
     private final SimpMessagingTemplate messagingTemplate;
     private final Executor importExecutor;
     private final com.fams.backend.repository.ImportJobRepository importJobRepository;
     private final com.fams.backend.service.impl.SystemLogService systemLogService;
+    private final com.fams.backend.service.impl.AsyncImportService asyncImportService;
+    private final com.fams.backend.service.impl.EmailQueueService emailQueueService;
+    private final StringRedisTemplate redisTemplate;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final String CACHE_USERS = "users";
     private static final String CACHE_USER_DETAILS = "user_details";
@@ -175,26 +180,52 @@ public class UserServiceImpl implements UserService {
     public void activateUsers(List<Long> ids) {
         log.info("Activating users: {}", ids);
         List<User> users = userRepository.findAllById(ids);
+        List<EmailQueueService.EmailTask> emailTasks = new ArrayList<>();
+
         for (User user : users) {
             if (user.getStatus() != User.UserStatus.ACTIVE) {
                 user.setUsername(user.getCode());
                 String unaccentedName = unaccent(
                         user.getFullName().split(" ")[user.getFullName().split(" ").length - 1]);
                 String dobStr = user.getDob().format(PASSWORD_FORMATTER);
-                String rawPassword = unaccentedName + "@" + dobStr;
+                String rawPassword = unaccentedName.toLowerCase() + "@" + dobStr;
 
                 user.setPassword(getHashedPassword(rawPassword));
                 user.setStatus(User.UserStatus.ACTIVE);
                 user.setIsPasswordChanged(false);
-                emailService.sendAccountInfo(user.getEmail(), user.getFullName(), user.getUsername(), rawPassword);
+
+                // Collect email task for batch processing
+                emailTasks.add(new EmailQueueService.EmailTask(
+                        null, // No specific jobId for individual activation
+                        user.getEmail(),
+                        user.getFullName(),
+                        user.getUsername(),
+                        rawPassword));
             }
         }
+
+        // Final database save (all users updated at once)
         userRepository.saveAll(users);
+
+        // Push all emails to Redis queue (asynchronous - very fast)
+        if (!emailTasks.isEmpty()) {
+            emailQueueService.pushEmailTasks(emailTasks);
+            log.info("Pushed {} email tasks for bulk activation.", emailTasks.size());
+        }
+
         log.info("Activated {} users successfully", users.size());
 
         // Audit log
         String adminUsername = SecurityContextHolder.getContext().getAuthentication().getName();
         systemLogService.logUsersActivated(adminUsername, users.size());
+    }
+
+    @Override
+    @Transactional
+    public void activateAllInactiveUsers() {
+        String adminUsername = getCurrentUsername();
+        log.info("Triggering background activation for admin: {}", adminUsername);
+        asyncImportService.activateAllUsersAsync(adminUsername);
     }
 
     private String getHashedPassword(String rawPassword) {
@@ -257,7 +288,7 @@ public class UserServiceImpl implements UserService {
             return "";
         String nfdNormalizedString = java.text.Normalizer.normalize(src, java.text.Normalizer.Form.NFD);
         java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
-        return pattern.matcher(nfdNormalizedString).replaceAll("").replace('đ', 'd').replace('đ', 'd').replace('Đ',
+        return pattern.matcher(nfdNormalizedString).replaceAll("").replace('đ', 'd').replace('Đ',
                 'D');
     }
 
@@ -413,13 +444,32 @@ public class UserServiceImpl implements UserService {
             String progressTopic = "/topic/import-progress/" + requester;
             sendProgress(progressTopic, "VALIDATING", 0, 0, "Đang kiểm tra dữ liệu file Excel...");
 
-            Set<String> existingCodes = userRepository.findAllCodes().stream().map(String::toLowerCase)
-                    .collect(Collectors.toSet());
-            Set<String> existingEmails = userRepository.findAllEmails().stream().map(String::toLowerCase)
+            // EXTREME OPTIMIZATION: Collect all codes/emails from the file first
+            List<Row> allRows = new ArrayList<>();
+            while (rows.hasNext())
+                allRows.add(rows.next());
+
+            Set<String> codesInFile = allRows.stream()
+                    .filter(r -> r.getRowNum() > 0)
+                    .map(r -> getCellValue(r.getCell(1)).toLowerCase())
+                    .filter(c -> !c.isEmpty())
                     .collect(Collectors.toSet());
 
-            while (rows.hasNext()) {
-                Row currentRow = rows.next();
+            Set<String> emailsInFile = allRows.stream()
+                    .filter(r -> r.getRowNum() > 0)
+                    .map(r -> getCellValue(r.getCell(4)).toLowerCase())
+                    .filter(e -> !e.isEmpty())
+                    .collect(Collectors.toSet());
+
+            // Fetch only those that exist in DB
+            Set<String> existingCodes = userRepository.findByCodeInIgnoreCase(codesInFile).stream()
+                    .map(u -> u.getCode().toLowerCase())
+                    .collect(Collectors.toSet());
+            Set<String> existingEmails = userRepository.findByEmailInIgnoreCase(emailsInFile).stream()
+                    .map(u -> u.getEmail().toLowerCase())
+                    .collect(Collectors.toSet());
+
+            for (Row currentRow : allRows) {
                 int currentRowNum = rowNumber + 1;
                 if (rowNumber++ == 0)
                     continue;
@@ -565,13 +615,13 @@ public class UserServiceImpl implements UserService {
     }
 
     private void sendProgress(String topic, String status, int current, int total, String message) {
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("status", status);
-        payload.put("current", current);
-        payload.put("total", total);
-        payload.put("message", message);
-        payload.put("percentage", total > 0 ? (current * 100 / total) : 0);
-        messagingTemplate.convertAndSend(topic, payload);
+        Map<String, Object> progress = new HashMap<>();
+        progress.put("status", status);
+        progress.put("current", current);
+        progress.put("total", total);
+        progress.put("message", message);
+        progress.put("percentage", total > 0 ? (int) ((double) current / total * 100) : 100);
+        messagingTemplate.convertAndSend(topic, progress);
     }
 
     private String getCurrentUsername() {
@@ -621,9 +671,6 @@ public class UserServiceImpl implements UserService {
 
     // ========================= NEW: Background Job Import Methods
     // =========================
-
-    @Autowired
-    private com.fams.backend.service.impl.AsyncImportService asyncImportService;
 
     @Override
     @Transactional
@@ -849,7 +896,6 @@ public class UserServiceImpl implements UserService {
             boolean isZip = filename != null && filename.toLowerCase().endsWith(".zip");
 
             if (isZip) {
-                // Extract ZIP to find Excel and images
                 tempDir = Files.createTempDirectory("preview_import_");
                 try (ZipInputStream zis = new ZipInputStream(file.getInputStream())) {
                     ZipEntry zipEntry;
@@ -881,7 +927,6 @@ public class UserServiceImpl implements UserService {
                 throw new BadRequestException("Không tìm thấy file Excel");
             }
 
-            // Get existing codes and emails for validation
             Set<String> existingCodes = userRepository.findAllCodes().stream()
                     .map(String::toLowerCase).collect(Collectors.toSet());
             Set<String> existingEmails = userRepository.findAllEmails().stream()
@@ -889,7 +934,7 @@ public class UserServiceImpl implements UserService {
             Set<String> seenCodes = new HashSet<>();
             Set<String> seenEmails = new HashSet<>();
 
-            try (Workbook workbook = new XSSFWorkbook(excelStream)) {
+            try (InputStream is = excelStream; Workbook workbook = new XSSFWorkbook(is)) {
                 Sheet sheet = workbook.getSheetAt(0);
                 Iterator<Row> rows = sheet.iterator();
                 int rowNumber = 0;
@@ -897,7 +942,7 @@ public class UserServiceImpl implements UserService {
                 while (rows.hasNext()) {
                     Row currentRow = rows.next();
                     if (rowNumber++ == 0)
-                        continue; // Skip header
+                        continue;
 
                     String fullName = getCellValue(currentRow.getCell(0));
                     String code = getCellValue(currentRow.getCell(1));
@@ -913,7 +958,6 @@ public class UserServiceImpl implements UserService {
                     StringBuilder errorMsg = new StringBuilder();
                     String status = "valid";
 
-                    // Validate code
                     if (code.isEmpty()) {
                         errorMsg.append("Thiếu mã số. ");
                         status = "error";
@@ -925,7 +969,6 @@ public class UserServiceImpl implements UserService {
                         status = "error";
                     }
 
-                    // Validate email
                     if (email.isEmpty()) {
                         errorMsg.append("Thiếu email. ");
                         status = "error";
@@ -937,7 +980,6 @@ public class UserServiceImpl implements UserService {
                         status = "error";
                     }
 
-                    // Validate DOB format
                     if (!dobStr.isEmpty()) {
                         try {
                             LocalDate.parse(dobStr, DOB_FORMATTER);
@@ -956,8 +998,6 @@ public class UserServiceImpl implements UserService {
                     }
 
                     boolean hasImage = imageMap.containsKey(code.toLowerCase());
-
-                    // Add all rows to preview (for complete error reporting)
                     previewRows.add(com.fams.backend.dto.response.PreviewImportResponse.PreviewRow.builder()
                             .rowNumber(rowNumber)
                             .fullName(fullName)
@@ -973,16 +1013,12 @@ public class UserServiceImpl implements UserService {
                 }
             }
 
-            if (errorRows > 0) {
+            if (errorRows > 0)
                 validationMessages.add("Có " + errorRows + " dòng lỗi cần kiểm tra lại.");
-            }
-            if (validRows > 0) {
+            if (validRows > 0)
                 validationMessages.add(validRows + " người dùng hợp lệ sẵn sàng import.");
-            }
-            if (isZip) {
-                int imagesFound = imageMap.size();
-                validationMessages.add("Tìm thấy " + imagesFound + " ảnh trong file ZIP.");
-            }
+            if (isZip)
+                validationMessages.add("Tìm thấy " + imageMap.size() + " ảnh trong file ZIP.");
 
             return com.fams.backend.dto.response.PreviewImportResponse.builder()
                     .totalRows(totalRows)
@@ -992,14 +1028,26 @@ public class UserServiceImpl implements UserService {
                     .validationMessages(validationMessages)
                     .build();
 
-        } catch (
-
-        Exception e) {
+        } catch (Exception e) {
             log.error("Error previewing import file", e);
             throw new BadRequestException("Lỗi khi xem trước file: " + e.getMessage());
         } finally {
             if (tempDir != null)
                 cleanUpTempDir(tempDir);
+        }
+    }
+
+    @Override
+    public Object getActivationProgress(String username) {
+        String key = com.fams.backend.service.impl.AsyncImportService.ACTIVATION_PROGRESS_PREFIX + username;
+        String json = redisTemplate.opsForValue().get(key);
+        if (json == null)
+            return null;
+        try {
+            return objectMapper.readValue(json, Object.class);
+        } catch (Exception e) {
+            log.error("Failed to parse activation progress from Redis", e);
+            return null;
         }
     }
 }

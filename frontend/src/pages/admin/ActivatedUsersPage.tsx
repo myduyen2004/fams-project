@@ -19,6 +19,7 @@ export const ActivatedUsersPage: React.FC = () => {
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [page, setPage] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
@@ -29,15 +30,23 @@ export const ActivatedUsersPage: React.FC = () => {
   const [selectedUserData, setSelectedUserData] = useState<UserResponse | null>(null);
   const navigate = useNavigate();
 
+  // Search debounce effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       const data = await userService.getAllUsers({
-        search,
+        search: debouncedSearch,
         role: roleFilter === 'all' ? undefined : roleFilter,
         status: 'ACTIVE',
         page,
-        size: 30,
+        size: 20,
         sort: 'id,asc'
       });
       setUsers(data.content);
@@ -47,7 +56,7 @@ export const ActivatedUsersPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [search, roleFilter, page]);
+  }, [debouncedSearch, roleFilter, page]);
 
   useEffect(() => {
     fetchUsers();
@@ -217,7 +226,20 @@ export const ActivatedUsersPage: React.FC = () => {
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 dark:bg-zinc-800 flex-shrink-0">
-                        {user.avatar ? <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" /> : <UserIcon size={16} className="m-auto text-gray-400" />}
+                        {user.avatar ? (
+                          <img 
+                            src={typeof user.avatar === 'string' && user.avatar.includes('cloudinary.com') 
+                              ? user.avatar.replace('/upload/', '/upload/c_fill,w_80,h_80,q_auto,f_auto/') 
+                              : user.avatar
+                            } 
+                            alt="avatar" 
+                            className="w-full h-full object-cover" 
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        ) : (
+                          <UserIcon size={16} className="m-auto text-gray-400" />
+                        )}
                       </div>
                       <span className="font-medium text-gray-900 dark:text-white">{user.fullName}</span>
                     </div>
@@ -268,9 +290,9 @@ export const ActivatedUsersPage: React.FC = () => {
 
         <Pagination 
           currentPage={page}
-          totalPages={Math.ceil(totalElements / 30)}
+          totalPages={Math.ceil(totalElements / 20)}
           totalElements={totalElements}
-          pageSize={30}
+          pageSize={20}
           onPageChange={setPage}
         />
       </div>

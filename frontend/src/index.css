@@ -25,6 +25,20 @@
 }
 
 @layer utilities {
+  .animate-shimmer {
+    animation: shimmer 2s linear infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
   .bg-stripes {
     background-image: repeating-linear-gradient(90deg,
         transparent,
