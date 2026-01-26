@@ -20,16 +20,22 @@ public class DataInitializer implements CommandLineRunner {
 
         @Override
         public void run(String... args) throws Exception {
-                log.info("DataInitializer is running. Preparing admin and staff accounts...");
-
-                seedAdminUser();
-                seedAcademicStaffUser();
-
-                log.info("Data initialization completed. Created admin and academic staff accounts.");
+                log.info("DataInitializer is running. Preparing default accounts...");
+                try {
+                        seedAdminUser();
+                        seedAcademicStaffUser();
+                        log.info("Data initialization process completed.");
+                } catch (Exception e) {
+                        log.warn("Data initialization encountered issues: {}. Continuing startup...", e.getMessage());
+                }
         }
 
         private void seedAdminUser() {
-                if (userRepository.findByUsername("admin").isEmpty()) {
+                // Check by both username and email to prevent unique constraint violations
+                boolean existsByUsername = userRepository.findByUsername("admin").isPresent();
+                boolean existsByEmail = userRepository.findByEmail("admin@fams.com").isPresent();
+
+                if (!existsByUsername && !existsByEmail) {
                         User admin = User.builder()
                                         .code("ADMIN001")
                                         .username("admin")
@@ -41,14 +47,22 @@ public class DataInitializer implements CommandLineRunner {
                                         .role(User.UserRole.ADMIN)
                                         .status(User.UserStatus.ACTIVE)
                                         .faceDataStatus(User.FaceDataStatus.NOT_REGISTERED)
+                                        .isPasswordChanged(true)
                                         .build();
                         userRepository.save(admin);
                         log.info("Default admin user created: admin/admin123");
+                } else {
+                        log.info("Admin user already exists, skipping seeding.");
                 }
         }
 
         private void seedAcademicStaffUser() {
-                if (userRepository.findByUsername("academic").isEmpty()) {
+                // Check by username, email, and code to prevent unique constraint violations
+                boolean existsByUsername = userRepository.findByUsername("academic").isPresent();
+                boolean existsByEmail = userRepository.findByEmail("staff@fams.com").isPresent();
+                boolean existsByCode = userRepository.findByCode("STAFF001").isPresent();
+
+                if (!existsByUsername && !existsByEmail && !existsByCode) {
                         User staff = User.builder()
                                         .code("STAFF001")
                                         .username("academic")
@@ -64,6 +78,8 @@ public class DataInitializer implements CommandLineRunner {
                                         .build();
                         userRepository.save(staff);
                         log.info("Default academic staff user created: academic/staff123");
+                } else {
+                        log.info("Academic staff user already exists, skipping seeding.");
                 }
         }
 }

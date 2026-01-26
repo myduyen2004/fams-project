@@ -8,6 +8,8 @@ interface UserFiltersProps {
   onRoleFilterChange: (value: string) => void;
   onImportClick: () => void;
   onAddClick: () => void;
+  onActivateAllClick?: () => void;
+  showActivateAll?: boolean;
 }
 
 export const UserFilters: React.FC<UserFiltersProps> = React.memo(({
@@ -16,7 +18,9 @@ export const UserFilters: React.FC<UserFiltersProps> = React.memo(({
   roleFilter,
   onRoleFilterChange,
   onImportClick,
-  onAddClick
+  onAddClick,
+  onActivateAllClick,
+  showActivateAll = false
 }) => {
   return (
     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -53,6 +57,15 @@ export const UserFilters: React.FC<UserFiltersProps> = React.memo(({
       </div>
 
       <div className="flex items-center gap-2">
+        {showActivateAll && onActivateAllClick && (
+          <button 
+            onClick={onActivateAllClick}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors shadow-sm"
+          >
+            <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+            Kích hoạt tất cả
+          </button>
+        )}
         <button 
           onClick={onImportClick}
           className="flex items-center gap-2 px-4 py-2 border border-fpt-orange text-fpt-orange rounded-lg text-sm font-medium hover:bg-orange-50 transition-colors"

@@ -22,7 +22,6 @@ public class EmailServiceImpl implements EmailService {
     @Value("${spring.mail.username}")
     private String fromEmail;
 
-    @Async
     @Override
     public void sendAccountInfo(String to, String fullName, String username, String password) {
         if (to == null || to.isEmpty()) {

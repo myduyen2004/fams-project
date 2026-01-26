@@ -15,6 +15,7 @@ export const UsersPage = () => {
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [page, setPage] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
@@ -30,6 +31,13 @@ export const UsersPage = () => {
   // Action states
   const [isDeleting, setIsDeleting] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
+  const [activationProgress, setActivationProgress] = useState<{
+    status: string;
+    current: number;
+    total: number;
+    message: string;
+    percentage: number;
+  } | null>(null);
 
   // WebSocket for real-time updates during import
   
@@ -61,28 +69,76 @@ export const UsersPage = () => {
     }
   });
 
-  const fetchUsers = useCallback(async () => {
+  useWebSocket(`/topic/activation-progress/${authService.getUser()?.username}`, (data) => {
+    setActivationProgress(data);
+    
+    // Real-time remove activated users from the list
+    if (data.activatedUserIds && data.activatedUserIds.length > 0) {
+      const activatedSet = new Set(data.activatedUserIds.map(Number));
+      setUsers(prev => {
+        const next = prev.filter(u => !activatedSet.has(Number(u.id)));
+        // If the current page becomes empty and there are more users, refetch silently
+        if (next.length === 0 && totalElements > data.activatedUserIds.length) {
+          fetchUsers(true);
+        }
+        return next;
+      });
+      setTotalElements(prev => Math.max(0, prev - data.activatedUserIds.length));
+    }
+    
+    if (data.status === 'COMPLETED') {
+      setIsActivating(false);
+      fetchUsers(true);
+      setActivationProgress(prev => prev ? { ...prev, percentage: 100, message: 'Đã hoàn tất kích hoạt!' } : null);
+      setTimeout(() => {
+        setActivationProgress(null);
+      }, 3000);
+    }
+  });
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const fetchUsers = useCallback(async (isSilent = false) => {
     try {
-      setLoading(true);
+      if (!isSilent) setLoading(true);
       const data = await userService.getAllUsers({
         status: 'INACTIVE',
         role: roleFilter === 'all' ? undefined : roleFilter,
-        search,
+        search: debouncedSearch,
         page,
-        size: 30,
+        size: 20,
         sort: 'id,desc'
       });
       setUsers(data.content);
       setTotalElements(data.totalElements);
     } catch (error) {
-      toast.error('Không thể tải danh sách tài khoản');
+      if (!isSilent) toast.error('Không thể tải danh sách tài khoản');
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
-  }, [roleFilter, search, page]);
+  }, [roleFilter, debouncedSearch, page]);
 
   useEffect(() => {
     fetchUsers();
+    
+    // Check for existing activation progress on mount (F5 resilience)
+    const checkInitialProgress = async () => {
+      try {
+        const progress = await userService.getActivationProgress();
+        if (progress && progress.status !== 'COMPLETED') {
+          setActivationProgress(progress);
+          setIsActivating(true);
+        }
+      } catch (e) {
+        console.error('Failed to fetch initial activation progress');
+      }
+    };
+    checkInitialProgress();
   }, [fetchUsers]);
 
   // Handlers optimized with useCallback
@@ -137,6 +193,20 @@ export const UsersPage = () => {
     }
   }, [selectedUsers, users, fetchUsers]);
 
+  const handleActivateAll = useCallback(async () => {
+    if (!window.confirm('Bạn có chắc chắn muốn kích hoạt TOÀN BỘ tài khoản chưa kích hoạt? Hệ thống sẽ gửi email thông báo cho từng người dùng.')) return;
+    
+    try {
+      setIsActivating(true);
+      setActivationProgress({ status: 'STARTING', current: 0, total: 0, message: 'Đang khởi tạo...', percentage: 0 });
+      await userService.activateAllUsers();
+    } catch (error) {
+      toast.error('Có lỗi xảy ra khi kích hoạt toàn bộ');
+      setIsActivating(false);
+      setActivationProgress(null);
+    }
+  }, []);
+
   const handleView = useCallback((user: UserResponse) => {
     setSelectedUserData(user);
     setIsViewModalOpen(true);
@@ -184,6 +254,42 @@ export const UsersPage = () => {
     <AdminLayout pageTitle="Tài khoản chưa kích hoạt">
       <div className="p-6 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800">
         
+        {activationProgress && (
+          <div className="mb-6 p-5 bg-green-50 dark:bg-green-950/20 border border-green-100 dark:border-green-900/30 rounded-2xl animate-in fade-in slide-in-from-top-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex flex-col">
+                <h4 className="text-sm font-bold text-green-900 dark:text-green-100 flex items-center gap-2">
+                  Tiến trình kích hoạt hệ thống
+                  {activationProgress.status !== 'COMPLETED' && (
+                    <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                  )}
+                </h4>
+                <p className="text-xs text-green-700 dark:text-green-400 mt-0.5">
+                  {activationProgress.message}
+                </p>
+              </div>
+              <div className="text-right">
+                <span className="text-lg font-black text-green-700 dark:text-green-300">
+                  {activationProgress.percentage}%
+                </span>
+                <p className="text-[10px] font-bold text-green-600/60 dark:text-green-400/50 uppercase tracking-tighter">
+                  {activationProgress.current} / {activationProgress.total} users
+                </p>
+              </div>
+            </div>
+            <div className="w-full bg-green-100 dark:bg-green-900/30 rounded-full h-3 overflow-hidden p-0.5 border border-green-200/30 dark:border-green-800/20">
+              <div 
+                className="bg-green-500 h-full transition-all duration-150 ease-out rounded-full shadow-[0_0_12px_rgba(34,197,94,0.3)] relative overflow-hidden"
+                style={{ width: `${activationProgress.percentage}%` }}
+              >
+                {activationProgress.percentage < 100 && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" style={{ backgroundSize: '200% 100%' }} />
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        
         <UserFilters 
           search={search}
           onSearchChange={setSearch}
@@ -191,6 +297,8 @@ export const UsersPage = () => {
           onRoleFilterChange={setRoleFilter}
           onImportClick={() => setIsImportModalOpen(true)}
           onAddClick={() => setIsAddModalOpen(true)}
+          onActivateAllClick={handleActivateAll}
+          showActivateAll={totalElements > 0}
         />
 
         <BulkActions 
@@ -252,9 +360,9 @@ export const UsersPage = () => {
 
         <Pagination 
           currentPage={page}
-          totalPages={Math.ceil(totalElements / 30)}
+          totalPages={Math.ceil(totalElements / 20)}
           totalElements={totalElements}
-          pageSize={30}
+          pageSize={20}
           onPageChange={setPage}
         />
       </div>

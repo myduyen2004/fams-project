@@ -35,12 +35,13 @@ export const UserTableRow: React.FC<UserTableRowProps> = React.memo(({
             {user.avatar ? (
               <img 
                 src={typeof user.avatar === 'string' && user.avatar.includes('cloudinary.com') 
-                  ? user.avatar.replace('/upload/', '/upload/c_fill,w_100,h_100,q_auto,f_auto/') 
+                  ? user.avatar.replace('/upload/', '/upload/c_fill,w_80,h_80,q_auto,f_auto/') 
                   : user.avatar
                 } 
                 alt="avatar" 
                 className="w-full h-full object-cover"
                 loading="lazy"
+                decoding="async"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = 'https://res.cloudinary.com/dqirhvblt/image/upload/v1711811567/default-avatar_vqc8xq.png';
                 }}
