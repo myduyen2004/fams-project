@@ -9,4 +9,7 @@ import org.springframework.stereotype.Repository;
 public interface ScheduleRequestRepository
         extends JpaRepository<ScheduleRequest, Long>, JpaSpecificationExecutor<ScheduleRequest> {
     long countByStatus(ScheduleRequest.RequestStatus status);
+
+    org.springframework.data.domain.Page<ScheduleRequest> findByRequesterId(Long requesterId,
+            org.springframework.data.domain.Pageable pageable);
 }

@@ -1,11 +1,15 @@
 package com.fams.backend.service.impl;
 
+import com.fams.backend.dto.request.CreateScheduleRequest;
 import com.fams.backend.dto.response.ScheduleRequestResponse;
 import com.fams.backend.entity.ClassSection;
 import com.fams.backend.entity.ScheduleRequest;
 import com.fams.backend.entity.User;
 import com.fams.backend.exception.BadRequestException;
+import com.fams.backend.repository.RoomRepository;
 import com.fams.backend.repository.ScheduleRequestRepository;
+import com.fams.backend.repository.SlotTypeRepository;
+import com.fams.backend.repository.TimetableSlotRepository;
 import com.fams.backend.repository.UserRepository;
 import com.fams.backend.service.ScheduleRequestService;
 import jakarta.persistence.criteria.Join;
@@ -36,6 +40,113 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
     private final ScheduleRequestRepository scheduleRequestRepository;
     private final UserRepository userRepository;
     private final com.fams.backend.service.NotificationService notificationService;
+    private final TimetableSlotRepository timetableSlotRepository;
+    private final RoomRepository roomRepository;
+    private final SlotTypeRepository slotTypeRepository;
+
+    @Override
+    public ScheduleRequestResponse createRequest(CreateScheduleRequest request, Long requesterId) {
+        log.info("Creating schedule request for user {}", requesterId);
+
+        // 1. Get Requester & Original Slot
+        User requester = userRepository.findById(requesterId)
+                .orElseThrow(() -> new BadRequestException("User not found"));
+
+        if (request.getOriginalSlotId() == null) {
+            throw new BadRequestException("Original slot ID is required");
+        }
+        com.fams.backend.entity.TimetableSlot originalSlot = timetableSlotRepository
+                .findById(request.getOriginalSlotId())
+                .orElseThrow(() -> new BadRequestException("Original slot not found"));
+
+        // 2. Validate Requester (Optional strict check)
+        // Ensure requester is related to the class/slot if needed
+
+        // 3. Initialize Target
+        com.fams.backend.entity.TimetableSlot requestedSlot = null;
+        com.fams.backend.entity.Room requestedRoom = null;
+        com.fams.backend.entity.SlotType requestedSlotType = null;
+
+        // 4. Handle based on Type
+        if (request.getType() != ScheduleRequest.RequestType.CANCEL) {
+            // Validate inputs for rescheduling/swap/room_change
+            if (request.getRequestedDate() == null) {
+                // If date not provided for Room Change, assume same date?
+                // Actually frontend logic often sends date. If not, fallback to original date?
+                // Let's assume passed in request or fallback to original.
+                if (request.getType() == ScheduleRequest.RequestType.ROOM_CHANGE
+                        && request.getRequestedDate() == null) {
+                    request.setRequestedDate(originalSlot.getDate());
+                } else if (request.getRequestedDate() == null) {
+                    throw new BadRequestException("Requested date is required for this request type");
+                }
+            }
+            LocalDate targetDate = request.getRequestedDate();
+
+            Long targetRoomId = request.getRequestedRoomId() != null ? request.getRequestedRoomId()
+                    : originalSlot.getRoom().getId();
+            Long targetSlotTypeId = request.getRequestedSlotTypeId() != null ? request.getRequestedSlotTypeId()
+                    : originalSlot.getSlotType().getId();
+
+            requestedRoom = roomRepository.findById(targetRoomId)
+                    .orElseThrow(() -> new BadRequestException("Room not found"));
+
+            requestedSlotType = slotTypeRepository.findById(targetSlotTypeId)
+                    .orElseThrow(() -> new BadRequestException("Slot Type not found"));
+
+            // Check Conflicts
+            // a. Room Conflict
+            boolean roomBusy = timetableSlotRepository.existsByRoomIdAndDateAndSlotTypeIdAndStatusNot(
+                    requestedRoom.getId(), targetDate, requestedSlotType.getId(),
+                    com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.CANCELLED);
+            if (roomBusy) {
+                throw new BadRequestException("Phòng học đã có lớp học khác vào khung giờ này.");
+            }
+
+            // b. Lecturer Conflict
+            boolean lecturerBusy = timetableSlotRepository
+                    .existsByClassSectionLecturerIdAndDateAndSlotTypeIdAndStatusNot(
+                            originalSlot.getClassSection().getLecturer().getId(), targetDate, requestedSlotType.getId(),
+                            com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.CANCELLED);
+            if (lecturerBusy) {
+                throw new BadRequestException("Giảng viên đã có lịch dạy vào khung giờ này.");
+            }
+
+            // c. Class Conflict
+            boolean classBusy = timetableSlotRepository.existsByClassSectionClassNameAndDateAndSlotTypeIdAndStatusNot(
+                    originalSlot.getClassSection().getClassName(), targetDate, requestedSlotType.getId(),
+                    com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.CANCELLED);
+            if (classBusy) {
+                throw new BadRequestException("Lớp học đã có lịch học vào khung giờ này.");
+            }
+
+            // Create NEW Slot (Strict Requirement)
+            com.fams.backend.entity.TimetableSlot newSlot = new com.fams.backend.entity.TimetableSlot();
+            newSlot.setClassSection(originalSlot.getClassSection());
+            newSlot.setRoom(requestedRoom);
+            newSlot.setSlotType(requestedSlotType);
+            newSlot.setDate(targetDate);
+            newSlot.setDayOfWeek(targetDate.getDayOfWeek().getValue());
+            newSlot.setSlotNumber(requestedSlotType.getSlotIndex());
+            newSlot.setStatus(com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.SCHEDULED);
+
+            requestedSlot = timetableSlotRepository.save(newSlot);
+        }
+
+        // 5. Create Request
+        ScheduleRequest scheduleRequest = new ScheduleRequest();
+        scheduleRequest.setRequester(requester);
+        scheduleRequest.setClassSection(originalSlot.getClassSection());
+        scheduleRequest.setOriginalSlot(originalSlot);
+        scheduleRequest.setRequestedSlot(requestedSlot);
+        scheduleRequest.setRequestedRoom(requestedRoom);
+        scheduleRequest.setType(request.getType());
+        scheduleRequest.setReason(request.getReason());
+        scheduleRequest.setStatus(ScheduleRequest.RequestStatus.PENDING);
+        scheduleRequest.setCreatedAt(LocalDateTime.now());
+
+        return mapToResponse(scheduleRequestRepository.save(scheduleRequest));
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -296,6 +407,13 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
                 .orElseThrow(() -> new BadRequestException("Request not found"));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ScheduleRequestResponse> getRequestsByRequester(Long requesterId, Pageable pageable) {
+        return scheduleRequestRepository.findByRequesterId(requesterId, pageable)
+                .map(this::mapToResponse);
+    }
+
     private ScheduleRequestResponse mapToResponse(ScheduleRequest request) {
         User requester = request.getRequester();
         ScheduleRequestResponse response = ScheduleRequestResponse.builder()
@@ -316,11 +434,18 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
                 .approvedAt(request.getApprovedAt())
                 .approverNote(request.getApproverNote())
                 .originalSlotId(request.getOriginalSlot() != null ? request.getOriginalSlot().getId() : null)
+                .originalSlotNumber(
+                        request.getOriginalSlot() != null ? request.getOriginalSlot().getSlotNumber() : null)
                 .originalSlotInfo(request.getOriginalSlot() != null ? formatSlotInfo(request.getOriginalSlot()) : null)
                 .requestedSlotId(request.getRequestedSlot() != null ? request.getRequestedSlot().getId() : null)
+                .requestedSlotNumber(
+                        request.getRequestedSlot() != null ? request.getRequestedSlot().getSlotNumber() : null)
                 .requestedSlotInfo(
                         request.getRequestedSlot() != null ? formatSlotInfo(request.getRequestedSlot()) : null)
                 .requestedRoomName(request.getRequestedRoom() != null ? request.getRequestedRoom().getName() : null)
+                .originalRoomName(request.getOriginalSlot() != null && request.getOriginalSlot().getRoom() != null
+                        ? request.getOriginalSlot().getRoom().getName()
+                        : null)
                 .requesterEmail(requester.getEmail())
                 .file(request.getFile())
                 .build();
