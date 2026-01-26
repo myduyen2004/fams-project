@@ -124,7 +124,11 @@ public class AuthService implements UserDetailsService {
         }
 
         // 4. Verify password
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+        boolean matches = passwordEncoder.matches(request.getPassword(), user.getPassword());
+        log.info("Password verification | username={} | matches={} | hashPrefix={}",
+                username, matches, user.getPassword().substring(0, Math.min(10, user.getPassword().length())));
+
+        if (!matches) {
             log.warn("Login failed | username={} | reason=INVALID_PASSWORD | userId={}",
                     username, user.getId());
             throw new UnauthorizedException("Tài khoản hoặc mật khẩu không đúng");
