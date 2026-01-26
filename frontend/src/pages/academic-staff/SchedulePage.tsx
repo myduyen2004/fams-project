@@ -3,7 +3,7 @@ import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import axios from 'axios';
 import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
 import { toast } from 'react-hot-toast';
-import { Calendar, Users, BookOpen, School, Wand2, MoreVertical, ChevronLeft, ChevronRight, Loader2, Download, X, Clock, MapPin, User, GraduationCap } from 'lucide-react';
+import { Calendar, Users, BookOpen, School, Play, MoreVertical, ChevronLeft, ChevronRight, Loader2, Download, X, Clock, MapPin, User, GraduationCap } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface Semester {
@@ -504,7 +504,7 @@ export const SchedulePage: React.FC = () => {
                 {generating ? (
                   <Loader2 size={18} className="animate-spin" />
                 ) : (
-                  <Wand2 size={18} />
+                  <Play size={18} />
                 )}
                 {generating ? 'Đang tạo...' : 'Tạo tự động'}
               </button>

@@ -13,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -41,14 +43,23 @@ public class AsyncImportService {
 
     private final ImportJobRepository importJobRepository;
     private final UserRepository userRepository;
+    private final com.fams.backend.repository.BulkUserRepository bulkUserRepository;
     private final PasswordEncoder passwordEncoder;
     private final UploadService uploadService;
     private final SimpMessagingTemplate messagingTemplate;
     private final Executor importExecutor;
+    private final EmailQueueService emailQueueService;
+    private final StringRedisTemplate redisTemplate;
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final Set<String> cancelledJobIds = ConcurrentHashMap.newKeySet();
+
+    public static final String ACTIVATION_PROGRESS_PREFIX = "fams:activation:progress:";
+    public static final long CACHE_TTL_SECONDS = 3600; // 1 hour
 
     private static final DateTimeFormatter DOB_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter PASSWORD_FORMATTER = DateTimeFormatter.ofPattern("ddMMyyyy");
+    private static final java.util.regex.Pattern DIACRITICS_PATTERN = java.util.regex.Pattern
+            .compile("\\p{InCombiningDiacriticalMarks}+");
     private final Map<String, String> passwordHashCache = new ConcurrentHashMap<>();
 
     @Async("asyncImportExecutor")
@@ -308,6 +319,184 @@ public class AsyncImportService {
         }
     }
 
+    @Async("asyncImportExecutor")
+    public void activateAllUsersAsync(String adminUsername) {
+        String topic = "/topic/activation-progress/" + adminUsername;
+        log.info("Starting Background Activation Job for admin: {}", adminUsername);
+
+        List<User> inactiveUsers = userRepository.findByStatusOrderByIdDesc(User.UserStatus.INACTIVE);
+        if (inactiveUsers.isEmpty()) {
+            log.info("No inactive users to activate.");
+            sendActivationProgress(topic, "COMPLETED", 0, 0, "Không có tài khoản nào cần kích hoạt", null);
+            return;
+        }
+
+        int total = inactiveUsers.size();
+        log.info("Found {} inactive users. Starting background activation...", total);
+
+        // Send initial notification (job started in background)
+        sendActivationProgress(topic, "STARTED", 0, total, "Đang khởi tạo tiến trình...", null);
+
+        // STEP 1: Optimized Parallel Hashing (Extremely Fast)
+        log.info("Starting extreme parallel hashing for {} users...", total);
+
+        // Group by raw password to avoid any redundant work (even with cache)
+        Map<String, List<User>> usersByPassword = inactiveUsers.parallelStream().collect(Collectors.groupingBy(user -> {
+            String fullName = user.getFullName();
+            int lastSpace = fullName.lastIndexOf(' ');
+            String lastWord = (lastSpace >= 0) ? fullName.substring(lastSpace + 1) : fullName;
+            String unaccentedName = unaccent(lastWord).toLowerCase();
+            String dobStr = user.getDob().format(PASSWORD_FORMATTER);
+            return unaccentedName + "@" + dobStr;
+        }));
+
+        int totalUnique = usersByPassword.size();
+        AtomicInteger uniqueHashed = new AtomicInteger(0);
+
+        usersByPassword.entrySet().parallelStream().forEach(entry -> {
+            String rawPassword = entry.getKey();
+            String hashedPassword = getHashedPassword(rawPassword);
+
+            for (User user : entry.getValue()) {
+                user.setUsername(user.getCode());
+                user.setPassword(hashedPassword);
+                user.setStatus(User.UserStatus.ACTIVE);
+                user.setIsPasswordChanged(false);
+            }
+
+            int current = uniqueHashed.incrementAndGet();
+            if (current % 10 == 0 || current == totalUnique) {
+                // Hashing phase is preparation - only 5% of the total bar
+                int percentage = (int) ((double) current / totalUnique * 5);
+                sendActivationProgressWithPercentage(topic, "HASHING", current, totalUnique,
+                        "Chuẩn bị bảo mật: " + current + "/" + totalUnique + " nhóm", null, percentage);
+            }
+        });
+        log.info("Parallel hashing completed for {} unique password groups.", totalUnique);
+
+        // STEP 2: Large Batch Database Update (I/O Bound)
+        final int BATCH_SIZE = 200; // Increased for less noise
+        int processed = 0;
+
+        for (int i = 0; i < inactiveUsers.size(); i += BATCH_SIZE) {
+            int end = Math.min(i + BATCH_SIZE, inactiveUsers.size());
+            List<User> batch = inactiveUsers.subList(i, end);
+
+            // Update database for this batch
+            bulkUserRepository.bulkActivateUsers(batch);
+            processed = end;
+
+            // Database phase is from 5% to 100%
+            int percentage = 5 + (int) ((double) processed / total * 95);
+
+            // CRITICAL: Evict cache now so any frontend refetch sees fresh data
+            try {
+                java.util.Set<String> keys = redisTemplate.keys("users*");
+                if (keys != null && !keys.isEmpty()) {
+                    redisTemplate.delete(keys);
+                }
+            } catch (Exception e) {
+                log.warn("Soft cache eviction failed in batch: {}", e.getMessage());
+            }
+
+            // Send real-time update
+            List<Long> activatedIds = batch.stream().map(User::getId).collect(Collectors.toList());
+            sendActivationProgressWithPercentage(topic, "PROCESSING", processed, total,
+                    "Đang kích hoạt tài khoản: " + processed + "/" + total, activatedIds, percentage);
+
+            log.info("Batch {}-{} activated successfully.", i, end);
+
+            try {
+                Thread.sleep(100); // Slightly longer delay for UI to settle
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        // STEP 3: Push emails to Redis queue (background - instant return)
+        emailQueueService.resetStats();
+        String activationJobId = "ACTIVATE_" + System.currentTimeMillis();
+        List<EmailQueueService.EmailTask> emailTasks = inactiveUsers.parallelStream()
+                .map(user -> {
+                    String fullName = user.getFullName();
+                    int lastSpace = fullName.lastIndexOf(' ');
+                    String lastWord = (lastSpace >= 0) ? fullName.substring(lastSpace + 1) : fullName;
+                    String unaccentedName = unaccent(lastWord).toLowerCase();
+                    String dobStr = user.getDob().format(PASSWORD_FORMATTER);
+                    String rawPassword = unaccentedName + "@" + dobStr;
+                    return new EmailQueueService.EmailTask(activationJobId, user.getEmail(), user.getFullName(),
+                            user.getUsername(), rawPassword);
+                })
+                .collect(Collectors.toList());
+
+        emailQueueService.pushEmailTasks(emailTasks);
+        log.info("Pushed {} email tasks to Redis queue. Workers processing in background.", emailTasks.size());
+
+        // STEP 4: Final completion notification
+        log.info("Background Activation Job fully completed for {} users.", total);
+
+        // One last cache clear just in case
+        try {
+            java.util.Set<String> keys = redisTemplate.keys("users*");
+            if (keys != null && !keys.isEmpty()) {
+                redisTemplate.delete(keys);
+            }
+        } catch (Exception e) {
+        }
+
+        // Set IDs for final cleanup (last 200 users)
+        List<Long> finalIds = inactiveUsers.size() > 200
+                ? inactiveUsers.subList(inactiveUsers.size() - 200, inactiveUsers.size()).stream().map(User::getId)
+                        .collect(Collectors.toList())
+                : inactiveUsers.stream().map(User::getId).collect(Collectors.toList());
+
+        sendActivationProgress(topic, "COMPLETED", total, total,
+                "Đã kích hoạt toàn bộ " + total + " tài khoản thành công.", finalIds);
+    }
+
+    private void sendActivationProgress(String topic, String status, int current, int total, String message,
+            List<Long> activatedUserIds) {
+        sendActivationProgressWithPercentage(topic, status, current, total, message, activatedUserIds,
+                total > 0 ? (int) ((double) current / total * 100) : 100);
+    }
+
+    private void sendActivationProgressWithPercentage(String topic, String status, int current, int total,
+            String message, List<Long> activatedUserIds, int percentage) {
+        Map<String, Object> progress = new HashMap<>();
+        progress.put("status", status);
+        progress.put("current", current);
+        progress.put("total", total);
+        progress.put("message", message);
+        progress.put("percentage", percentage);
+        if (activatedUserIds != null && !activatedUserIds.isEmpty()) {
+            progress.put("activatedUserIds", activatedUserIds);
+        }
+
+        // Cache in Redis for cross-reload availability
+        String username = topic.substring(topic.lastIndexOf('/') + 1);
+        try {
+            String json = objectMapper.writeValueAsString(progress);
+            redisTemplate.opsForValue().set(ACTIVATION_PROGRESS_PREFIX + username, json,
+                    java.time.Duration.ofSeconds(CACHE_TTL_SECONDS));
+        } catch (Exception e) {
+            log.error("Failed to cache activation progress: {}", e.getMessage());
+        }
+
+        messagingTemplate.convertAndSend(topic, progress);
+    }
+
+    private String getHashedPassword(String rawPassword) {
+        return passwordHashCache.computeIfAbsent(rawPassword, passwordEncoder::encode);
+    }
+
+    private String unaccent(String src) {
+        if (src == null)
+            return "";
+        String nfdNormalizedString = java.text.Normalizer.normalize(src, java.text.Normalizer.Form.NFD);
+        return DIACRITICS_PATTERN.matcher(nfdNormalizedString).replaceAll("").replace('đ', 'd').replace('Đ',
+                'D');
+    }
+
     private void finalizeJob(ImportJob job, String username) {
         job.setStatus(ImportJob.JobStatus.COMPLETED);
         job.setStatusMessage("Import hoàn tất thành công! Đã cập nhật đầy đủ dữ liệu và ảnh.");
@@ -319,6 +508,7 @@ public class AsyncImportService {
 
     public void stopJob(String jobId) {
         cancelledJobIds.add(jobId);
+        emailQueueService.cancelJobEmails(jobId);
         importJobRepository.findByJobId(jobId).ifPresent(job -> {
             job.setStatus(ImportJob.JobStatus.CANCELLED);
             job.setStatusMessage("Tiến trình đã bị dừng do đăng xuất.");
