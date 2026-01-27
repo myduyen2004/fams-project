@@ -104,6 +104,45 @@ export const timetableService = {
       responseType: 'blob' // Important for file download
     });
     return resp;
+  },
+
+  getUnscheduledCount: async (semesterCode: string) => {
+    const resp = await axios.get<{
+      unscheduledCount: number;
+      totalSchedulable: number;
+      scheduledCount: number;
+      unscheduledClassNames: string[];
+    }>(`${API_URL}/v1/timetable/semester/${semesterCode}/unscheduled-count`, {
+      headers: getAuthHeader()
+    });
+    return resp.data;
+  },
+
+  getTimetableByWeek: async (semesterCode: string, startDate: string, endDate: string) => {
+    try {
+      // Use optimized date range API
+      const resp = await axios.get<TimetableSlotDTO[]>(`${API_URL}/v1/timetable/semester/${semesterCode}/range`, {
+        headers: getAuthHeader(),
+        params: { startDate, endDate }
+      });
+      return resp.data || [];
+    } catch (e) {
+      console.error('Error fetching weekly timetable', e);
+      return [];
+    }
+  },
+
+  checkConfigChanged: async (semesterCode: string) => {
+    const resp = await axios.get<{
+      configChanged: boolean;
+      hasTimetable: boolean;
+      timetableCreatedAt?: string;
+      configUpdatedAt?: string;
+      message: string;
+    }>(`${API_URL}/v1/timetable/semester/${semesterCode}/config-changed`, {
+      headers: getAuthHeader()
+    });
+    return resp.data;
   }
 };
 

@@ -1,10 +1,105 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo, Fragment } from 'react';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import axios from 'axios';
 import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
 import { toast } from 'react-hot-toast';
-import { Calendar, Users, BookOpen, School, Play, MoreVertical, ChevronLeft, ChevronRight, Loader2, Download, X, Clock, MapPin, User, GraduationCap } from 'lucide-react';
+import { Calendar, BookOpen, ChevronLeft, ChevronRight, X, Clock, MapPin, User, GraduationCap, AlertTriangle, Check, ChevronsUpDown, Eye, EyeOff, Loader2, Play, Users, School, Download, MoreVertical } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { Combobox, Transition } from '@headlessui/react';
+
+interface FilterComboboxProps {
+  value: string | null; // Changed to allow null
+  onChange: (value: string | null) => void; // Changed to allow null
+  options: { value: string; label: string }[];
+  placeholder: string;
+  icon: React.ElementType;
+}
+
+const FilterCombobox: React.FC<FilterComboboxProps> = ({ value, onChange, options, placeholder, icon: Icon }) => {
+  const [query, setQuery] = useState('');
+
+  const filteredOptions =
+    query === ''
+      ? options
+      : options.filter((option) =>
+        option.label
+          .toLowerCase()
+          .replace(/\s+/g, '')
+          .includes(query.toLowerCase().replace(/\s+/g, ''))
+      );
+
+  return (
+    <div className="relative w-full sm:w-56">
+      <Combobox value={value} onChange={onChange} nullable>
+        <div className="relative">
+          <div className="relative w-full cursor-default overflow-hidden rounded-lg bg-white text-left border border-gray-200 focus-within:border-fpt-orange focus-within:ring-1 focus-within:ring-fpt-orange sm:text-sm flex items-center transition-colors">
+            <div className="pl-3 py-2 text-gray-400">
+              <Icon size={16} />
+            </div>
+            <Combobox.Input
+              className="w-full border-none py-2 pl-2 pr-10 text-sm leading-5 text-gray-900 focus:ring-0 outline-none bg-transparent"
+              displayValue={(val: string | null) => options.find(o => o.value === val)?.label || ''}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={placeholder}
+            />
+            <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-2">
+              <ChevronsUpDown
+                className="h-4 w-4 text-gray-400 hover:text-gray-600"
+                aria-hidden="true"
+              />
+            </Combobox.Button>
+          </div>
+          <Transition
+            as={Fragment}
+            leave="transition ease-in duration-100"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+            afterLeave={() => setQuery('')}
+          >
+            <Combobox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-50 scroller">
+              {filteredOptions.length === 0 && query !== '' ? (
+                <div className="relative cursor-default select-none py-2 px-4 text-gray-700">
+                  Không tìm thấy.
+                </div>
+              ) : (
+                filteredOptions.map((option) => (
+                  <Combobox.Option
+                    key={option.value}
+                    className={({ active }) =>
+                      `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-fpt-orange text-white' : 'text-gray-900'
+                      }`
+                    }
+                    value={option.value}
+                  >
+                    {({ selected, active }) => (
+                      <>
+                        <span
+                          className={`block truncate ${selected ? 'font-medium' : 'font-normal'
+                            }`}
+                        >
+                          {option.label}
+                        </span>
+                        {selected ? (
+                          <span
+                            className={`absolute inset-y-0 left-0 flex items-center pl-3 ${active ? 'text-white' : 'text-fpt-orange'
+                              }`}
+                          >
+                            <Check className="h-5 w-5" aria-hidden="true" />
+                          </span>
+                        ) : null}
+                      </>
+                    )}
+                  </Combobox.Option>
+                ))
+              )}
+            </Combobox.Options>
+          </Transition>
+        </div>
+      </Combobox>
+    </div>
+  );
+};
+
 
 interface Semester {
   code: string;
@@ -28,6 +123,24 @@ const DEFAULT_SLOT_TIMES: SlotTime[] = [
 // LocalStorage key for persisting generation job
 const GENERATION_JOB_KEY = 'timetable_generation_job';
 
+// Helper function to get start of week (Monday)
+const getWeekStart = (date: Date): Date => {
+  const d = new Date(date);
+  const day = d.getUTCDay();
+  const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1);
+  const newDate = new Date(d);
+  newDate.setUTCDate(diff);
+  return newDate;
+};
+
+// Helper function to get end of week (Sunday)
+const getWeekEnd = (date: Date): Date => {
+  const start = getWeekStart(date);
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 6);
+  return end;
+};
+
 export const SchedulePage: React.FC = () => {
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
@@ -40,25 +153,35 @@ export const SchedulePage: React.FC = () => {
   const pollingRef = useRef<number | null>(null);
   const [generationProgress, setGenerationProgress] = useState<number | null>(null);
   const [generationPhase, setGenerationPhase] = useState<string | null>(null);
-  const [currentGeneration, setCurrentGeneration] = useState<number | null>(null);
-  const [bestFitness, setBestFitness] = useState<number | null>(null);
 
   // Toggle for showing locked schedule (isPublished)
   const [showLockedSchedule, setShowLockedSchedule] = useState(false);
 
   // Filters
-  const [selectedClass, setSelectedClass] = useState<string>('');
-  const [selectedTeacher, setSelectedTeacher] = useState<string>('');
-  const [selectedCourse, setSelectedCourse] = useState<string>('');
+  const [selectedClass, setSelectedClass] = useState<string | null>(null);
+  const [selectedTeacher, setSelectedTeacher] = useState<string | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [semesterStartDate, setSemesterStartDate] = useState<string>('');
   const [semesterEndDate, setSemesterEndDate] = useState<string>('');
+
+  // Search terms managed by Combobox components
 
   // Confirmation dialog state
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // Slot detail popup state
   const [selectedSlot, setSelectedSlot] = useState<TimetableSlotDTO | null>(null);
+
+  // Unscheduled class sections count
+  const [unscheduledCount, setUnscheduledCount] = useState<number>(0);
+  const [unscheduledClassNames, setUnscheduledClassNames] = useState<string[]>([]);
+
+  // Config changed after timetable generation
+  const [configChanged, setConfigChanged] = useState<boolean>(false);
+
+  // Export week loading state
+  const [exportingWeek, setExportingWeek] = useState(false);
 
   const fetchSemesters = async () => {
     try {
@@ -147,6 +270,30 @@ export const SchedulePage: React.FC = () => {
     }
   };
 
+  // Fetch unscheduled class sections count
+  const fetchUnscheduledCount = async (semesterCode: string) => {
+    try {
+      const data = await timetableService.getUnscheduledCount(semesterCode);
+      setUnscheduledCount(data.unscheduledCount);
+      setUnscheduledClassNames(data.unscheduledClassNames || []);
+    } catch (err) {
+      console.error('Failed to fetch unscheduled count', err);
+      setUnscheduledCount(0);
+      setUnscheduledClassNames([]);
+    }
+  };
+
+  // Fetch config changed status
+  const fetchConfigChanged = async (semesterCode: string) => {
+    try {
+      const data = await timetableService.checkConfigChanged(semesterCode);
+      setConfigChanged(data.configChanged);
+    } catch (err) {
+      console.error('Failed to check config changed', err);
+      setConfigChanged(false);
+    }
+  };
+
   // Helper function to start polling for job status
   const startPolling = (jobId: string) => {
     pollingRef.current = window.setInterval(async () => {
@@ -161,8 +308,6 @@ export const SchedulePage: React.FC = () => {
 
         // Extract additional info
         if (statusResp?.phase) setGenerationPhase(statusResp.phase);
-        if (statusResp?.currentGeneration != null) setCurrentGeneration(statusResp.currentGeneration);
-        if (statusResp?.bestFitness != null) setBestFitness(statusResp.bestFitness);
 
         if (status === 'COMPLETED' || status === 'FINISHED' || status === 'SUCCESS') {
           if (pollingRef.current) { window.clearInterval(pollingRef.current); pollingRef.current = null; }
@@ -172,6 +317,8 @@ export const SchedulePage: React.FC = () => {
           toast.success('Tạo thời khóa biểu hoàn tất');
           if (selected && selectedDate) {
             fetchTimetable(selected, selectedDate);
+            fetchUnscheduledCount(selected);
+            fetchConfigChanged(selected);
           }
         } else if (status === 'FAILED' || status === 'ERROR' || status === 'CANCELLED') {
           if (pollingRef.current) { window.clearInterval(pollingRef.current); pollingRef.current = null; }
@@ -193,6 +340,8 @@ export const SchedulePage: React.FC = () => {
   useEffect(() => {
     if (selected) {
       fetchSemesterDetails(selected);
+      fetchUnscheduledCount(selected);
+      fetchConfigChanged(selected);
     }
   }, [selected]);
 
@@ -243,8 +392,6 @@ export const SchedulePage: React.FC = () => {
       setGenerating(true);
       setGenerationProgress(0);
       setGenerationPhase(null);
-      setCurrentGeneration(null);
-      setBestFitness(null);
       setGenerationStatus('RUNNING');
 
       const resp = await timetableService.startAsyncGeneration(selected);
@@ -310,7 +457,7 @@ export const SchedulePage: React.FC = () => {
   const handlePreviousDay = () => {
     if (!selectedDate) return;
     const current = new Date(selectedDate);
-    current.setDate(current.getDate() - 1);
+    current.setUTCDate(current.getUTCDate() - 1);
     const newDate = current.toISOString().split('T')[0];
     if (!semesterStartDate || newDate >= semesterStartDate) {
       setSelectedDate(newDate);
@@ -320,7 +467,7 @@ export const SchedulePage: React.FC = () => {
   const handleNextDay = () => {
     if (!selectedDate) return;
     const current = new Date(selectedDate);
-    current.setDate(current.getDate() + 1);
+    current.setUTCDate(current.getUTCDate() + 1);
     const newDate = current.toISOString().split('T')[0];
     if (!semesterEndDate || newDate <= semesterEndDate) {
       setSelectedDate(newDate);
@@ -334,55 +481,103 @@ export const SchedulePage: React.FC = () => {
     try {
       await axios.patch(`/api/v1/semesters/${selected}/publish`, { isPublished: newValue });
       setShowLockedSchedule(newValue);
-      toast.success(newValue ? 'Đã hiển thị thời khóa biểu' : 'Đã ẩn thời khóa biểu');
+      toast.success(newValue ? 'Đã công khai thời khóa biểu cho sinh viên' : 'Đã ẩn thời khóa biểu');
     } catch (err) {
       console.error('Failed to toggle publish status', err);
       toast.error('Không thể cập nhật trạng thái hiển thị');
     }
   };
 
-  // Export timetable to Excel
-  const handleExportExcel = () => {
-    if (filteredSlots.length === 0) {
-      toast.error('Không có dữ liệu để xuất');
+  // Export timetable to Excel - export by week with one sheet per day
+  const handleExportExcel = async () => {
+    if (!selected || !selectedDate) {
+      toast.error('Vui lòng chọn học kỳ và ngày');
       return;
     }
 
+    setExportingWeek(true);
     try {
-      // Prepare data for Excel
-      const exportData = filteredSlots.map(slot => ({
-        'Ngày': slot.date || '',
-        'Thứ': slot.dayOfWeek ? ['', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ Nhật'][slot.dayOfWeek] || '' : '',
-        'Tiết': slot.slotNumber || '',
-        'Giờ bắt đầu': slot.startTime || '',
-        'Giờ kết thúc': slot.endTime || '',
-        'Mã lớp': slot.className || '',
-        'Mã môn': slot.courseCode || '',
-        'Tên môn': slot.courseName || '',
-        'Giảng viên': slot.lecturerName || '',
-        'Phòng': slot.roomCode || slot.roomName || '',
-        'Trạng thái': slot.status || ''
-      }));
+      // Calculate week range
+      const currentDate = new Date(selectedDate);
+      const weekStart = getWeekStart(currentDate);
+      const weekEnd = getWeekEnd(currentDate);
 
-      // Create workbook and worksheet
-      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const startStr = weekStart.toISOString().split('T')[0];
+      const endStr = weekEnd.toISOString().split('T')[0];
+
+      // Fetch all slots for the week
+      const weekData = await timetableService.getTimetableByWeek(selected, startStr, endStr);
+
+      if (weekData.length === 0) {
+        toast.error('Không có dữ liệu để xuất trong tuần này');
+        setExportingWeek(false);
+        return;
+      }
+
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Thời khóa biểu');
+      const dayNames = ['Chủ Nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
 
-      // Auto-size columns
-      const maxWidth = 30;
-      const colWidths = Object.keys(exportData[0] || {}).map(key => ({
-        wch: Math.min(maxWidth, Math.max(key.length,
-          ...exportData.map(row => String(row[key as keyof typeof row] || '').length)
-        ))
-      }));
-      worksheet['!cols'] = colWidths;
+      // Iterate through 7 days of the week
+      for (let i = 0; i < 7; i++) {
+        const dayDate = new Date(weekStart);
+        dayDate.setUTCDate(weekStart.getUTCDate() + i);
+        const dateStr = dayDate.toISOString().split('T')[0];
+        const dayOfWeekIndex = dayDate.getUTCDay();
+        const dayName = dayNames[dayOfWeekIndex];
 
-      // Generate filename with semester and date
+        // Format date for sheet name (e.g., "Thứ 2 (27-01)")
+        // Using replace for date format dd-MM
+        const sheetDateStr = dateStr.split('-').slice(1).reverse().join('-');
+        // Sheet name max length is 31, ensure we fit. Example: "Thứ 2 (27-01)"
+        const sheetName = `${dayName} (${sheetDateStr})`;
+
+        // Filter data for this day
+        const daySlots = weekData.filter(s => s.date === dateStr);
+
+        // Sort by slot number
+        daySlots.sort((a, b) => (a.slotNumber || 0) - (b.slotNumber || 0));
+
+        // Prepare data rows
+        const exportData = daySlots.map(slot => ({
+          'Tiết': slot.slotNumber || '',
+          'Giờ bắt đầu': slot.startTime || '',
+          'Giờ kết thúc': slot.endTime || '',
+          'Mã lớp': slot.className || '',
+          'Mã môn': slot.courseCode || '',
+          'Tên môn': slot.courseName || '',
+          'Giảng viên': slot.lecturerName || '',
+          'Phòng': slot.roomCode || slot.roomName || '',
+          // 'Trạng thái': slot.status || '' 
+        }));
+
+        // If no data for this day, create a placeholder row or just empty
+        if (exportData.length === 0) {
+          // Optional: Add a message row or leave empty
+          // exportData.push({ 'Tiết': 'Không có lịch học' } as any);
+        }
+
+        const worksheet = XLSX.utils.json_to_sheet(exportData.length > 0 ? exportData : [{ 'Thông báo': 'Không có lịch học' }]);
+
+        // Auto-size columns if there is data
+        if (exportData.length > 0) {
+          const maxWidth = 30;
+          const colWidths = Object.keys(exportData[0] || {}).map(key => ({
+            wch: Math.min(maxWidth, Math.max(key.length,
+              ...exportData.map(row => String(row[key as keyof typeof row] || '').length)
+            ))
+          }));
+          worksheet['!cols'] = colWidths;
+        } else {
+          worksheet['!cols'] = [{ wch: 30 }];
+        }
+
+        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+      }
+
+      // Generate filename with semester and week range
       const selectedSemester = semesters.find(s => s.code === selected);
       const semesterName = selectedSemester?.name || selected || 'timetable';
-      const dateStr = selectedDate || new Date().toISOString().split('T')[0];
-      const filename = `ThoiKhoaBieu_${semesterName}_${dateStr}.xlsx`;
+      const filename = `ThoiKhoaBieu_${semesterName}_Tuan_${startStr}_${endStr}.xlsx`;
 
       // Download file
       XLSX.writeFile(workbook, filename);
@@ -390,20 +585,53 @@ export const SchedulePage: React.FC = () => {
     } catch (err) {
       console.error('Export failed', err);
       toast.error('Không thể xuất file Excel');
+    } finally {
+      setExportingWeek(false);
     }
   };
 
-  // Get unique values for filters
-  const uniqueClasses = Array.from(new Set(slots.map(s => s.className).filter(Boolean)));
-  const uniqueTeachers = Array.from(new Set(slots.map(s => s.lecturerName).filter(Boolean)));
-  const uniqueCourses = Array.from(new Set(slots.map(s => s.courseCode || s.courseName).filter(Boolean)));
+  // Get unique values for filters - considering selected class filter
+  const uniqueClasses = useMemo(() => {
+    const classes = Array.from(new Set(slots.map(s => s.className).filter(Boolean)));
+    // Extract class prefix (first part before hyphen)
+    const classMap = new Map<string, string>();
+    classes.forEach(c => {
+      if (c) {
+        const prefix = c.split('-')[0];
+        classMap.set(prefix, c);
+      }
+    });
+    return Array.from(classMap.entries()).map(([prefix, fullName]) => ({
+      prefix,
+      fullName
+    }));
+  }, [slots]);
+
+  // Filter teachers and courses based on selected class
+  const uniqueTeachers = useMemo(() => {
+    let filteredSlots = slots;
+    if (selectedClass) {
+      filteredSlots = slots.filter(s => s.className?.startsWith(selectedClass.split('-')[0]));
+    }
+    return Array.from(new Set(filteredSlots.map(s => s.lecturerName).filter(Boolean)));
+  }, [slots, selectedClass]);
+
+  const uniqueCourses = useMemo(() => {
+    let filteredSlots = slots;
+    if (selectedClass) {
+      filteredSlots = slots.filter(s => s.className?.startsWith(selectedClass.split('-')[0]));
+    }
+    return Array.from(new Set(filteredSlots.map(s => s.courseCode || s.courseName).filter(Boolean)));
+  }, [slots, selectedClass]);
+
+  // Filters logic handled by Combobox components
 
   // Build data structure: rooms -> slotNumber
   const rooms = Array.from(new Set(slots.map(s => s.roomName || s.roomCode || 'Phòng')));
 
   // Filter slots based on selected filters
   const filteredSlots = slots.filter(slot => {
-    if (selectedClass && slot.className !== selectedClass) return false;
+    if (selectedClass && !slot.className?.startsWith(selectedClass.split('-')[0])) return false;
     if (selectedTeacher && slot.lecturerName !== selectedTeacher) return false;
     if (selectedCourse && (slot.courseCode !== selectedCourse && slot.courseName !== selectedCourse)) return false;
     if (selectedDate && slot.date !== selectedDate) return false;
@@ -416,6 +644,14 @@ export const SchedulePage: React.FC = () => {
       (s.slotNumber || 0) === slotNum
     );
   };
+
+  // Reset dependent filters when class is selected
+  useEffect(() => {
+    if (selectedClass) {
+      setSelectedTeacher(null);
+      setSelectedCourse(null);
+    }
+  }, [selectedClass]);
 
   return (
     <AcademicStaffLayout pageTitle="Thời khóa biểu">
@@ -480,16 +716,23 @@ export const SchedulePage: React.FC = () => {
 
             {/* Right controls */}
             <div className="flex items-center gap-4">
-              {/* Toggle - Show locked schedule */}
+              {/* Toggle - Công khai cho sinh viên */}
               <div className="flex items-center gap-3 px-4 py-2 border border-gray-200 rounded-xl">
-                <span className="text-sm text-gray-600">Hiển thị lịch khóa</span>
+                <div className="flex items-center gap-2">
+                  {showLockedSchedule ? (
+                    <Eye size={16} className="text-green-600" />
+                  ) : (
+                    <EyeOff size={16} className="text-gray-400" />
+                  )}
+                  <span className="text-sm text-gray-600">Công khai cho SV</span>
+                </div>
                 <button
                   onClick={handleTogglePublished}
-                  className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${showLockedSchedule ? 'bg-fpt-orange' : 'bg-gray-300'
+                  className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${showLockedSchedule ? 'bg-orange-500' : 'bg-gray-300'
                     }`}
                 >
                   <span
-                    className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${showLockedSchedule ? 'translate-x-7' : 'translate-x-1'
+                    className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${showLockedSchedule ? 'translate-x-6' : 'translate-x-0'
                       }`}
                   />
                 </button>
@@ -523,57 +766,75 @@ export const SchedulePage: React.FC = () => {
           {/* Secondary Filter Row */}
           <div className="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t border-gray-100">
             {/* Class Filter */}
-            <div className="relative flex items-center gap-2 bg-white rounded-lg px-2 border border-gray-200 hover:border-gray-300 transition-colors">
-              <School size={16} className="text-gray-400" />
-              <select
-                value={selectedClass}
-                onChange={(e) => setSelectedClass(e.target.value)}
-                className="appearance-none bg-transparent text-sm text-gray-700 outline-none cursor-pointer pr-6 min-w-[80px] border-none focus:outline-none focus:ring-0"
-              >
-                <option value="">Chọn lớp</option>
-                {uniqueClasses.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
+            <FilterCombobox
+              value={selectedClass}
+              onChange={(val) => setSelectedClass(val)}
+              options={(() => {
+                const baseOptions = uniqueClasses.map(c => ({ value: c.prefix, label: c.prefix })).filter(o => o.label);
+                if (selectedClass && !baseOptions.some(o => o.value === selectedClass)) {
+                  return [...baseOptions, { value: selectedClass, label: selectedClass }];
+                }
+                return baseOptions;
+              })()}
+              placeholder="Tìm lớp..."
+              icon={School}
+            />
 
             {/* Teacher Filter */}
-            <div className="relative flex items-center gap-2 bg-white rounded-lg px-2 border border-gray-200 hover:border-gray-300 transition-colors">
-              <Users size={16} className="text-gray-400" />
-              <select
-                value={selectedTeacher}
-                onChange={(e) => setSelectedTeacher(e.target.value)}
-                className="appearance-none bg-transparent text-sm text-gray-700 outline-none cursor-pointer pr-6 min-w-[100px] border-none focus:outline-none focus:ring-0"
-              >
-                <option value="">Chọn giáo viên</option>
-                {uniqueTeachers.map(t => (
-                  <option key={t} value={t!}>{t}</option>
-                ))}
-              </select>
-            </div>
+            <FilterCombobox
+              value={selectedTeacher}
+              onChange={(val) => setSelectedTeacher(val)}
+              options={(() => {
+                const baseOptions = uniqueTeachers.map(t => ({ value: t!, label: t! })).filter(o => o.label);
+                if (selectedTeacher && !baseOptions.some(o => o.value === selectedTeacher)) {
+                  return [...baseOptions, { value: selectedTeacher, label: selectedTeacher }];
+                }
+                return baseOptions;
+              })()}
+              placeholder="Tìm GV..."
+              icon={Users}
+            />
 
             {/* Course Filter */}
-            <div className="relative flex items-center gap-2 bg-white rounded-lg px-2 border border-gray-200 hover:border-gray-300 transition-colors">
-              <BookOpen size={16} className="text-gray-400" />
-              <select
-                value={selectedCourse}
-                onChange={(e) => setSelectedCourse(e.target.value)}
-                className="appearance-none bg-transparent text-sm text-gray-700 outline-none cursor-pointer pr-6 min-w-[100px] border-none focus:outline-none focus:ring-0"
+            <FilterCombobox
+              value={selectedCourse}
+              onChange={(val) => setSelectedCourse(val)}
+              options={(() => {
+                const baseOptions = uniqueCourses.map(c => ({ value: c!, label: c! })).filter(o => o.label);
+                if (selectedCourse && !baseOptions.some(o => o.value === selectedCourse)) {
+                  return [...baseOptions, { value: selectedCourse, label: selectedCourse }];
+                }
+                return baseOptions;
+              })()}
+              placeholder="Tìm môn..."
+              icon={BookOpen}
+            />
+
+            {/* Clear filters button */}
+            {(selectedClass || selectedTeacher || selectedCourse) && (
+              <button
+                onClick={() => {
+                  setSelectedClass('');
+                  setSelectedTeacher('');
+                  setSelectedCourse('');
+                }}
+                className="text-sm text-fpt-orange hover:text-orange-600 font-medium whitespace-nowrap"
               >
-                <option value="">Môn học</option>
-                {uniqueCourses.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
+                Xóa bộ lọc
+              </button>
+            )}
 
             {/* Export Excel Button */}
             <button
               onClick={handleExportExcel}
-              disabled={filteredSlots.length === 0}
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              disabled={exportingWeek || !selected || !selectedDate}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors ml-auto"
             >
-              <Download size={16} />
+              {exportingWeek ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Download size={16} />
+              )}
               Xuất Excel
             </button>
           </div>
@@ -608,28 +869,29 @@ export const SchedulePage: React.FC = () => {
                 style={{ width: `${generationProgress ?? 0}%` }}
               />
             </div>
+          </div>
+        )}
 
-            {/* Details Grid */}
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                <div>
-                  <div className="text-xs text-gray-500">Thế hệ hiện tại</div>
-                  <div className="text-sm font-semibold text-gray-900">
-                    {currentGeneration != null ? `Gen ${currentGeneration}` : 'N/A'}
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                <div>
-                  <div className="text-xs text-gray-500">Fitness tốt nhất</div>
-                  <div className="text-sm font-semibold text-gray-900">
-                    {bestFitness != null ? bestFitness.toFixed(2) : 'N/A'}
-                  </div>
-                </div>
-              </div>
+        {/* Warning banner for unscheduled class sections */}
+        {unscheduledCount > 0 && !generating && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-amber-800">
+                Hiện tại có <span className="font-bold">{unscheduledCount}</span> lớp học phần chưa được xếp lịch học.
+              </p>
+              {unscheduledClassNames.length > 0 && unscheduledClassNames.length <= 5 && (
+                <p className="text-xs text-amber-600 mt-1">
+                  {unscheduledClassNames.join(', ')}
+                </p>
+              )}
             </div>
+            <button
+              onClick={handleGenerate}
+              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              Tạo lịch mới
+            </button>
           </div>
         )}
 
@@ -873,10 +1135,10 @@ export const SchedulePage: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái:</span>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${selectedSlot.status === 'ACTIVE' || selectedSlot.status === 'CONFIRMED'
-                      ? 'bg-green-100 text-green-700'
-                      : selectedSlot.status === 'PENDING'
-                        ? 'bg-yellow-100 text-yellow-700'
-                        : 'bg-gray-100 text-gray-700'
+                    ? 'bg-green-100 text-green-700'
+                    : selectedSlot.status === 'PENDING'
+                      ? 'bg-yellow-100 text-yellow-700'
+                      : 'bg-gray-100 text-gray-700'
                     }`}>
                     {selectedSlot.status}
                   </span>

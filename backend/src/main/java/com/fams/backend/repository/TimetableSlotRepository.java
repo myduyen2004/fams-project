@@ -54,6 +54,24 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
                         @Param("date") LocalDate date);
 
         /**
+         * Find slots for a semester within a date range (optimized for weekly
+         * view/export)
+         */
+        @Query("SELECT ts FROM TimetableSlot ts " +
+                        "JOIN FETCH ts.classSection cs " +
+                        "LEFT JOIN FETCH cs.course c " +
+                        "LEFT JOIN FETCH cs.lecturer lec " +
+                        "JOIN FETCH ts.room r " +
+                        "JOIN FETCH ts.slotType st " +
+                        "WHERE cs.semester.code = :semesterCode " +
+                        "AND ts.date BETWEEN :startDate AND :endDate " +
+                        "ORDER BY ts.date, ts.slotNumber")
+        List<TimetableSlot> findBySemesterCodeAndDateBetween(
+                        @Param("semesterCode") String semesterCode,
+                        @Param("startDate") LocalDate startDate,
+                        @Param("endDate") LocalDate endDate);
+
+        /**
          * Find slots by date range
          */
         @Query("SELECT ts FROM TimetableSlot ts " +
@@ -154,4 +172,13 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
                         @Param("roomId") Long roomId,
                         @Param("date") LocalDate date,
                         @Param("slotNumber") Integer slotNumber);
+
+        /**
+         * Find the earliest createdAt timestamp for a semester's timetable
+         * This is used to compare with semester config updatedAt to detect config
+         * changes
+         */
+        @Query("SELECT MIN(ts.createdAt) FROM TimetableSlot ts " +
+                        "WHERE ts.classSection.semester.code = :semesterCode")
+        java.time.LocalDateTime findEarliestCreatedAtBySemesterCode(@Param("semesterCode") String semesterCode);
 }
