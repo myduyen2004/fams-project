@@ -80,7 +80,7 @@ export const AttendanceFrequencyChart: React.FC = () => {
   );
 };
 
-export const DailyAttendanceDonut: React.FC<{ stats?: any }> = ({ stats }) => {
+export const DailyAttendanceDonut: React.FC<{ stats?: any }> = () => {
   const percent = 85; // Mock as per image
   const today = new Date();
   const dateStr = today.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
