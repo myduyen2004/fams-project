@@ -392,27 +392,3 @@ CREATE INDEX IF NOT EXISTS idx_slot_types_semester ON slot_types (semester_id);
 CREATE INDEX IF NOT EXISTS idx_holidays_semester ON holidays (semester_id);
 
 CREATE INDEX IF NOT EXISTS idx_semester_weekdays_semester ON semester_weekdays (semester_id);
-
--- 10. SEED DATA
-INSERT INTO
-    users (
-        username,
-        password,
-        email,
-        full_name,
-        code,
-        role,
-        status,
-        is_password_changed
-    )
-VALUES (
-        'admin',
-        '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVymGe07xd00DMxs.TVu4sO/',
-        'admin@fams.edu.vn',
-        'System Administrator',
-        'ADMIN002',
-        'ADMIN',
-        'ACTIVE',
-        true
-    )
-ON CONFLICT DO NOTHING;
