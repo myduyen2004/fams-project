@@ -46,6 +46,8 @@ public class TimetableController {
     private final ExcelExportService excelExportService;
     private final UserRepository userRepository;
     private final SemesterRepository semesterRepository;
+    private final com.fams.backend.repository.ClassSectionRepository classSectionRepository;
+    private final com.fams.backend.repository.SemesterConfigRepository semesterConfigRepository;
 
     // ==================== GENERATION APIs ====================
 
@@ -184,6 +186,22 @@ public class TimetableController {
         return ResponseEntity.ok(dtos);
     }
 
+    @GetMapping("/semester/{semesterCode}/range")
+    @Operation(summary = "Get timetable by semester and date range", description = "Optimized API for weekly view/export")
+    public ResponseEntity<List<TimetableDTO.TimetableSlotDTO>> getTimetableBySemesterAndDateRange(
+            @PathVariable String semesterCode,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+
+        List<TimetableSlot> slots = timetableSlotRepository.findBySemesterCodeAndDateBetween(semesterCode, startDate,
+                endDate);
+        List<TimetableDTO.TimetableSlotDTO> dtos = slots.stream()
+                .map(this::convertToDTO)
+                .toList();
+
+        return ResponseEntity.ok(dtos);
+    }
+
     @GetMapping("/semester/{semesterCode}/exists")
     @Operation(summary = "Check if timetable exists for semester", description = "Returns whether the semester has any timetable slots")
     public ResponseEntity<Map<String, Object>> checkTimetableExists(@PathVariable String semesterCode) {
@@ -191,6 +209,63 @@ public class TimetableController {
         return ResponseEntity.ok(Map.of(
                 "exists", count > 0,
                 "count", count));
+    }
+
+    @GetMapping("/semester/{semesterCode}/unscheduled-count")
+    @Operation(summary = "Count unscheduled class sections", description = "Returns the number of class sections that have not been scheduled yet")
+    public ResponseEntity<Map<String, Object>> countUnscheduledClassSections(@PathVariable String semesterCode) {
+        // Optimized query directly from DB instead of loading all objects
+
+        long totalSchedulable = classSectionRepository.countSchedulableClassSections(semesterCode);
+        long unscheduledCount = classSectionRepository.countUnscheduledClassSections(semesterCode);
+        long scheduledCount = totalSchedulable - unscheduledCount;
+        java.util.List<String> unscheduledClassNames = classSectionRepository.findUnscheduledClassNames(semesterCode);
+
+        return ResponseEntity.ok(Map.of(
+                "unscheduledCount", unscheduledCount,
+                "totalSchedulable", totalSchedulable,
+                "scheduledCount", scheduledCount,
+                "unscheduledClassNames", unscheduledClassNames));
+    }
+
+    @GetMapping("/semester/{semesterCode}/config-changed")
+    @Operation(summary = "Check if semester config changed after timetable generation", description = "Returns whether the semester configuration was modified after the timetable was generated")
+    public ResponseEntity<Map<String, Object>> checkConfigChangedAfterGeneration(@PathVariable String semesterCode) {
+        // Get semester config
+        var configOpt = semesterConfigRepository.findBySemesterCode(semesterCode);
+        if (configOpt.isEmpty()) {
+            return ResponseEntity.ok(Map.of(
+                    "configChanged", false,
+                    "hasTimetable", false,
+                    "message", "No semester config found"));
+        }
+
+        // Get earliest timetable slot creation time
+        java.time.LocalDateTime timetableCreatedAt = timetableSlotRepository
+                .findEarliestCreatedAtBySemesterCode(semesterCode);
+        if (timetableCreatedAt == null) {
+            return ResponseEntity.ok(Map.of(
+                    "configChanged", false,
+                    "hasTimetable", false,
+                    "message", "No timetable exists for this semester"));
+        }
+
+        // Compare timestamps
+        var config = configOpt.get();
+        java.time.LocalDateTime configUpdatedAt = config.getUpdatedAt();
+
+        // If config was updated after the timetable was created, it means config
+        // changed
+        boolean configChanged = configUpdatedAt != null && configUpdatedAt.isAfter(timetableCreatedAt);
+
+        return ResponseEntity.ok(Map.of(
+                "configChanged", configChanged,
+                "hasTimetable", true,
+                "timetableCreatedAt", timetableCreatedAt.toString(),
+                "configUpdatedAt", configUpdatedAt != null ? configUpdatedAt.toString() : "null",
+                "message", configChanged
+                        ? "Cấu hình học kỳ đã thay đổi. Vui lòng tạo thời khóa biểu mới."
+                        : "Semester config is up to date"));
     }
 
     @GetMapping("/class/{className}")
