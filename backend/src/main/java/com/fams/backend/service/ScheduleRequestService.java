@@ -35,4 +35,7 @@ public interface ScheduleRequestService {
                         LocalDate startDate, LocalDate endDate);
 
         Page<ScheduleRequestResponse> getRequestsByRequester(Long requesterId, Pageable pageable);
+
+        java.util.List<com.fams.backend.dto.response.ClassSlotResponse> getSlotsForClass(String className,
+                        Long lecturerId);
 }

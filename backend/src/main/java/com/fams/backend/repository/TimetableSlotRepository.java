@@ -15,17 +15,17 @@ import java.util.List;
 public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Long> {
 
         // Derived queries for conflict checking
-        boolean existsByRoomIdAndDateAndSlotTypeIdAndStatusNot(Long roomId, LocalDate date, Long slotTypeId,
+        boolean existsByRoomIdAndDateAndSlotNumberAndStatusNot(Long roomId, LocalDate date, Integer slotNumber,
                         TimetableSlot.TimetableSlotStatus status);
 
-        boolean existsByClassSectionLecturerIdAndDateAndSlotTypeIdAndStatusNot(Long lecturerId, LocalDate date,
-                        Long slotTypeId, TimetableSlot.TimetableSlotStatus status);
+        boolean existsByClassSectionLecturerIdAndDateAndSlotNumberAndStatusNot(Long lecturerId, LocalDate date,
+                        Integer slotNumber, TimetableSlot.TimetableSlotStatus status);
 
-        boolean existsByClassSectionClassNameAndDateAndSlotTypeIdAndStatusNot(String className, LocalDate date,
-                        Long slotTypeId, TimetableSlot.TimetableSlotStatus status);
+        boolean existsByClassSectionClassNameAndDateAndSlotNumberAndStatusNot(String className, LocalDate date,
+                        Integer slotNumber, TimetableSlot.TimetableSlotStatus status);
 
-        java.util.Optional<TimetableSlot> findByClassSectionClassNameAndDateAndSlotTypeId(String className,
-                        LocalDate date, Long slotTypeId);
+        java.util.Optional<TimetableSlot> findByClassSectionClassNameAndDateAndSlotNumber(String className,
+                        LocalDate date, Integer slotNumber);
 
         /**
          * Find all slots for a class section
@@ -89,11 +89,13 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
                         "JOIN FETCH ts.room r " +
                         "JOIN FETCH ts.slotType st " +
                         "JOIN cs.enrollments e " +
-                        "WHERE e.student.id = :studentId " +
+                        "JOIN e.student s " +
+                        "WHERE s.code = :studentCode " +
+                        "AND e.status != com.fams.backend.entity.Enrollment.EnrollmentStatus.DROPPED " +
                         "AND ts.date BETWEEN :startDate AND :endDate " +
                         "ORDER BY ts.date, ts.slotNumber")
-        List<TimetableSlot> findByStudentIdAndDateBetween(
-                        @Param("studentId") Long studentId,
+        List<TimetableSlot> findByStudentCodeAndDateBetween(
+                        @Param("studentCode") String studentCode,
                         @Param("startDate") LocalDate startDate,
                         @Param("endDate") LocalDate endDate);
 
@@ -111,6 +113,12 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
                         @Param("lecturerId") Long lecturerId,
                         @Param("startDate") LocalDate startDate,
                         @Param("endDate") LocalDate endDate);
+
+        /**
+         * Find slots for a class and lecturer (ordered by date and slot number)
+         */
+        List<TimetableSlot> findByClassSectionClassNameAndClassSectionLecturerIdOrderByDateAscSlotNumberAsc(
+                        String className, Long lecturerId);
 
         /**
          * Find slots for a room

@@ -36,5 +36,22 @@ export const scheduleRequestService = {
     getRequestById: async (id: number): Promise<ScheduleRequest> => {
         const response = await apiClient.get(`/lecturer/requests/${id}`);
         return response.data;
+    },
+    getSlotsForClass: async (className: string): Promise<ClassSlotResponse[]> => {
+        const response = await apiClient.get(`/lecturer/classes/${className}/slots`);
+        return response.data;
+    },
+    getClasses: async (): Promise<string[]> => {
+        const response = await apiClient.get(`/lecturer/classes`);
+        return response.data;
     }
 };
+
+export interface ClassSlotResponse {
+    id: number;
+    slotNumber: number;
+    roomId: number;
+    roomName: string;
+    date: string;
+    dayOfWeek: number;
+}

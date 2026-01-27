@@ -27,6 +27,7 @@ import java.util.List;
 public class ClassSection {
 
     // Mã lớp học phần (e.g., "SE18B02-PRN211") - PRIMARY KEY
+    // Mã lớp học phần (e.g., "SE18B02-PRN211") - PRIMARY KEY
     @Id
     @Column(length = 50)
     private String className;

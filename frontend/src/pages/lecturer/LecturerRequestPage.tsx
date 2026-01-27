@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
-import { Search, Calendar, Eye, Filter, Loader2, ArrowLeft } from 'lucide-react';
+import { REQUEST_TYPE_LABELS } from '../../types/requestType';
+import { Eye, Loader2, ArrowLeft } from 'lucide-react';
 import { Card } from '../../components/common/Card';
 import { scheduleRequestService, ScheduleRequest } from '../../services/api/scheduleRequestService';
 import toast from 'react-hot-toast';
@@ -70,7 +71,7 @@ export const LecturerRequestPage: React.FC = () => {
                     <div className="flex items-center justify-between">
                         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Quản lý yêu cầu</h1>
                         <Link to="/lecturer/requests/create" className="bg-fpt-orange hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-colors flex items-center gap-2">
-                            <span className="text-xl">+</span> Tạo yêu cầu
+                            Tạo yêu cầu
                         </Link>
                     </div>
                 </div>
@@ -79,7 +80,7 @@ export const LecturerRequestPage: React.FC = () => {
 
                 {/* Table */}
                 <Card className="border border-gray-200 dark:border-zinc-800 overflow-hidden shadow-sm">
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto scrollbar-hide">
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-fpt-orange border-b border-fpt-orange">
@@ -123,7 +124,9 @@ export const LecturerRequestPage: React.FC = () => {
                                             {req.requestedSlotNumber ? `Slot ${req.requestedSlotNumber}` : '-'}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className="text-sm font-medium text-gray-700 dark:text-white">{req.typeLabel}</span>
+                                            <span className="text-sm font-medium text-gray-700 dark:text-white">
+                                                {REQUEST_TYPE_LABELS[req.type] || req.typeLabel}
+                                            </span>
                                         </td>
                                         <td className="px-6 py-4">
                                             {getStatusBadge(req.status, req.statusLabel)}
