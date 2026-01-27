@@ -177,9 +177,6 @@ export const SchedulePage: React.FC = () => {
   const [unscheduledCount, setUnscheduledCount] = useState<number>(0);
   const [unscheduledClassNames, setUnscheduledClassNames] = useState<string[]>([]);
 
-  // Config changed after timetable generation
-  const [configChanged, setConfigChanged] = useState<boolean>(false);
-
   // Export week loading state
   const [exportingWeek, setExportingWeek] = useState(false);
 
