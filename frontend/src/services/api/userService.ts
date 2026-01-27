@@ -62,6 +62,11 @@ export const userService = {
         await apiClient.post('/users/activate', ids);
     },
 
+    activateAllUsers: async () => {
+        await apiClient.post('/users/activate-all');
+    },
+
+
     updateUser: async (id: number, data: UserRequest, avatar?: File) => {
         const formData = new FormData();
         formData.append('user', new Blob([JSON.stringify(data)], { type: 'application/json' }));
@@ -133,5 +138,11 @@ export const userService = {
      */
     cancelImportJob: async (): Promise<void> => {
         await apiClient.post('/users/import-job/cancel');
+    },
+
+    getActivationProgress: async () => {
+        const response = await apiClient.get('/users/activation/progress');
+        if (response.status === 204) return null;
+        return response.data;
     },
 };

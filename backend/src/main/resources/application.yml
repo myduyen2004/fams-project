@@ -50,10 +50,10 @@ spring:
         enabled: false
       jedis:
         pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 0
-          max-wait: -1ms
+          max-active: 50
+          max-idle: 20
+          min-idle: 5
+          max-wait: 5000ms
 
   # ---------------- File Upload ----------------
   servlet:
@@ -66,8 +66,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: vtmyduyen3103@gmail.com
-    password: zwytifrdkabedwlu
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
     properties:
       mail:
         smtp:
@@ -81,6 +81,10 @@ server:
     error:
         include-message: always
         include-binding-errors: always
+    compression:
+        enabled: true
+        mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,application/xml
+        min-response-size: 1024
 
 # ---------------- JWT Configuration ----------------
 jwt:
