@@ -57,6 +57,9 @@ public class ScheduleRequest {
     @Column(nullable = false, length = 20)
     private RequestType type;
 
+    // Ngày yêu cầu thay đổi (cho trường hợp đổi lịch, mượn phòng)
+    private java.time.LocalDate requestedDate;
+
     // Lý do
     @Column(columnDefinition = "TEXT")
     private String reason;

@@ -13,6 +13,8 @@ import java.util.List;
 public interface SlotTypeRepository extends JpaRepository<SlotType, Long> {
     List<SlotType> findBySemesterIdOrderBySlotIndexAsc(Long semesterId);
 
+    java.util.Optional<SlotType> findBySemesterIdAndSlotIndex(Long semesterId, Integer slotIndex);
+
     @Modifying
     @Query("DELETE FROM SlotType st WHERE st.semester.id = :semesterId")
     void deleteBySemesterId(@Param("semesterId") Long semesterId);

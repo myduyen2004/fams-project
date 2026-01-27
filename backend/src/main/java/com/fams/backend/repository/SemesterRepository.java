@@ -22,8 +22,12 @@ public interface SemesterRepository extends JpaRepository<Semester, Long> {
     List<Semester> findUpcomingSemesters();
 
     @Query("SELECT s FROM Semester s WHERE (s.startDate <= :endDate AND s.endDate >= :startDate) AND s.code != :excludeCode")
-    List<Semester> findOverlappingSemesters(java.time.LocalDate startDate, java.time.LocalDate endDate, String excludeCode);
+    List<Semester> findOverlappingSemesters(java.time.LocalDate startDate, java.time.LocalDate endDate,
+            String excludeCode);
 
     @Query("SELECT s FROM Semester s WHERE (s.startDate <= :endDate AND s.endDate >= :startDate)")
     List<Semester> findOverlappingSemestersForNew(java.time.LocalDate startDate, java.time.LocalDate endDate);
+
+    @Query("SELECT s FROM Semester s WHERE :date >= s.startDate AND :date <= s.endDate")
+    Optional<Semester> findSemesterByDate(java.time.LocalDate date);
 }
