@@ -16,7 +16,7 @@ export const AcademicStaffLayout: React.FC<AcademicStaffLayoutProps> = ({ childr
     <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-zinc-950">
       {/* Sidebar */}
       <AcademicStaffSidebar />
-      <div className="w-20 flex-shrink-0" />
+      <div className="w-16 flex-shrink-0" />
       
       {/* Main Content */}
       <div className="flex flex-col flex-1 overflow-hidden">
@@ -25,7 +25,9 @@ export const AcademicStaffLayout: React.FC<AcademicStaffLayoutProps> = ({ childr
         
         {/* Content */}
         <main className="flex-1 overflow-auto p-6">
-          {children}
+          <div className="max-w-[1600px] mx-auto">
+            {children}
+          </div>
         </main>
       </div>
     </div>
