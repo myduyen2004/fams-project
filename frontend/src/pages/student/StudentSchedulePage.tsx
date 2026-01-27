@@ -9,15 +9,20 @@ import {
     Loader2,
     X,
     User,
-    BookOpen
+    BookOpen,
+    ChevronLeft,
+    ChevronRight,
+    Lock
 } from 'lucide-react';
+import axios from 'axios';
+import { toast } from 'react-hot-toast';
 import timetableService, { WeeklyTimetableDTO, TimetableSlotDTO } from '../../services/api/timetableService';
 
 const SLOTS = [
-    { id: 1, label: 'Slot 1' },
-    { id: 2, label: 'Slot 2' },
-    { id: 3, label: 'Slot 3' },
-    { id: 4, label: 'Slot 4' },
+    { id: 1, label: 'SLOT 1', time: '07:30 - 09:45' },
+    { id: 2, label: 'SLOT 2', time: '10:00 - 12:15' },
+    { id: 3, label: 'SLOT 3', time: '13:00 - 15:15' },
+    { id: 4, label: 'SLOT 4', time: '15:30 - 17:45' },
 ];
 
 export const StudentSchedulePage: React.FC = () => {
@@ -25,31 +30,53 @@ export const StudentSchedulePage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedSlot, setSelectedSlot] = useState<TimetableSlotDTO | null>(null);
+    const [isScheduleHidden, setIsScheduleHidden] = useState(false);
     const [exporting, setExporting] = useState(false);
-    const [selectedYear, setSelectedYear] = useState(2025); // Default to 2025 as requested
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const YEARS = [2024, 2025, 2026];
+
+    // Helper to get Monday of the week for a given date (Local time)
+    const getStartOfWeek = (date: Date) => {
+        const d = new Date(date);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+        d.setDate(diff);
+        d.setHours(0, 0, 0, 0);
+        return d;
+    };
+
+    // Helper to format date as YYYY-MM-DD (Local time)
+    const formatDateToLocal = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
 
     // Generate weeks for the entire selected year
     const generateWeeks = () => {
         const weeks = [];
         // Start from first Monday of the year (or closest date to Jan 1)
         const d = new Date(selectedYear, 0, 1);
-        const day = d.getDay();
-        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
 
-        // Loop for ~53 weeks to cover full year
+        // Find the first Monday of the year's context
+        // Note: Logic to align with ISO weeks or just Monday-Start weeks
+        const startOfFirstWeek = getStartOfWeek(d);
+
+        // Loop for ~53 weeks to cover full year plan
         for (let i = 0; i < 53; i++) {
-            const startOfWeek = new Date(d);
-            startOfWeek.setDate(diff + (i * 7));
+            const startOfWeek = new Date(startOfFirstWeek);
+            startOfWeek.setDate(startOfFirstWeek.getDate() + (i * 7));
 
-            // Stop if we pushed into next year too far (allow overlap if week starts in Dec)
-            if (startOfWeek.getFullYear() > selectedYear && i > 50) break;
+            // Stop if we pushed into next year too far (allow overlap)
+            // Heuristic: If start of week is far into next year
+            if (startOfWeek.getFullYear() > selectedYear && startOfWeek.getMonth() > 0) break;
 
             const endOfWeek = new Date(startOfWeek);
             endOfWeek.setDate(startOfWeek.getDate() + 6);
 
             weeks.push({
-                value: startOfWeek.toISOString().split('T')[0],
+                value: formatDateToLocal(startOfWeek),
                 label: `${startOfWeek.getDate()}/${startOfWeek.getMonth() + 1}/${startOfWeek.getFullYear()} - ${endOfWeek.getDate()}/${endOfWeek.getMonth() + 1}/${endOfWeek.getFullYear()}`,
                 isCurrent: false
             });
@@ -62,20 +89,41 @@ export const StudentSchedulePage: React.FC = () => {
     // Find current week value for initial selection if needed, but we rely on currentDate state
     // We update currentDate when selection changes
 
-    useEffect(() => {
-        // When year changes, update current date to that year (preserve month/day if possible)
+    const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const year = Number(e.target.value);
+        setSelectedYear(year);
+        // Update current date to same relative date in new year
         const newDate = new Date(currentDate);
-        newDate.setFullYear(selectedYear);
+        newDate.setFullYear(year);
         setCurrentDate(newDate);
-    }, [selectedYear]);
+    };
+
+    const handlePrevWeek = () => {
+        const newDate = new Date(currentDate);
+        newDate.setDate(newDate.getDate() - 7);
+        setCurrentDate(newDate);
+        if (newDate.getFullYear() !== selectedYear) {
+            setSelectedYear(newDate.getFullYear());
+        }
+    };
+
+    const handleNextWeek = () => {
+        const newDate = new Date(currentDate);
+        newDate.setDate(newDate.getDate() + 7);
+        setCurrentDate(newDate);
+        if (newDate.getFullYear() !== selectedYear) {
+            setSelectedYear(newDate.getFullYear());
+        }
+    };
 
     useEffect(() => {
         fetchTimetable();
     }, [currentDate]);
 
     const fetchTimetable = async () => {
+        setLoading(true);
+        setIsScheduleHidden(false);
         try {
-            setLoading(true);
             const userStr = localStorage.getItem('user');
             if (!userStr) return;
 
@@ -86,17 +134,36 @@ export const StudentSchedulePage: React.FC = () => {
             const data = await timetableService.getStudentTimetable(user.id, dateStr);
             console.log('Schedule Data:', data);
             setTimetable(data);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to fetch timetable:', error);
-            // Don't show toast on 404 (just means no schedule yet), only real errors
-            // toast.error('Không thể tải lịch học');
+            // Check for 403 in response
+            if (error.response && error.response.status === 403) {
+                setIsScheduleHidden(true);
+                setTimetable(null);
+                toast.error('Thời khóa biểu chưa được công bố');
+            } else if (axios.isAxiosError(error) && error.response?.status === 403) {
+                // Double check axios error format
+                setIsScheduleHidden(true);
+                setTimetable(null);
+                toast.error('Thời khóa biểu chưa được công bố');
+            } else {
+                const serverMsg = error.response?.data?.message || error.response?.data?.error || null;
+                if (serverMsg) {
+                    toast.error(`Lỗi server: ${serverMsg}`);
+                } else {
+                    toast.error('Không thể tải thời khóa biểu');
+                }
+                setTimetable(null);
+            }
         } finally {
             setLoading(false);
         }
     };
 
     const handleWeekChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const selectedDate = new Date(e.target.value);
+        // e.target.value is YYYY-MM-DD
+        const parts = e.target.value.split('-').map(Number);
+        const selectedDate = new Date(parts[0], parts[1] - 1, parts[2]); // Year, Month (0-idx), Day
         setCurrentDate(selectedDate);
     };
 
@@ -137,11 +204,8 @@ export const StudentSchedulePage: React.FC = () => {
 
     // Helper to get start of current week date string for select value
     const getCurrentWeekValue = () => {
-        const date = new Date(currentDate);
-        const day = date.getDay();
-        const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-        const monday = new Date(date.setDate(diff));
-        return monday.toISOString().split('T')[0];
+        const monday = getStartOfWeek(currentDate);
+        return formatDateToLocal(monday);
     };
 
     const handleExport = async () => {
@@ -151,8 +215,14 @@ export const StudentSchedulePage: React.FC = () => {
             if (!userStr) return;
             const user = JSON.parse(userStr);
 
-            // Hardcoded semester for now or get from context/dropdown
-            const semesterCode = 'SPRING2025';
+            // Determine semester based on current date (Format: SP26, SU26, FA26)
+            const month = currentDate.getMonth() + 1;
+            const yearSuffix = String(currentDate.getFullYear()).slice(-2);
+            let semesterCode = `SP${yearSuffix}`;
+            if (month >= 5 && month <= 8) semesterCode = `SU${yearSuffix}`;
+            if (month >= 9) semesterCode = `FA${yearSuffix}`;
+
+            console.log('Exporting for semester:', semesterCode);
 
             const response = await timetableService.exportStudentTimetable(user.id, semesterCode);
 
@@ -206,7 +276,7 @@ export const StudentSchedulePage: React.FC = () => {
                                 </span>
                                 <select
                                     value={selectedYear}
-                                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                                    onChange={handleYearChange}
                                     className="bg-transparent border-none text-fpt-orange font-bold focus:ring-0 cursor-pointer text-sm p-0 pr-6"
                                     style={{ backgroundImage: 'none' }}
                                 >
@@ -216,21 +286,39 @@ export const StudentSchedulePage: React.FC = () => {
                                 </select>
                             </div>
 
-                            {/* Week Selector */}
-                            <div className="relative">
-                                <div className="flex items-center gap-2 bg-white dark:bg-zinc-800 px-3 py-2 rounded-lg border border-fpt-orange/50 shadow-sm focus-within:ring-2 ring-fpt-orange/20">
-                                    <select
-                                        value={getCurrentWeekValue()}
-                                        onChange={handleWeekChange}
-                                        className="bg-transparent border-none text-gray-700 dark:text-gray-200 font-medium focus:ring-0 cursor-pointer text-sm p-0 w-64"
-                                    >
-                                        {weeks.map((week) => (
-                                            <option key={week.value} value={week.value}>
-                                                {week.label}
-                                            </option>
-                                        ))}
-                                    </select>
+                            {/* Week Selector with Navigation */}
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={handlePrevWeek}
+                                    className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg text-fpt-orange transition-colors"
+                                    title="Tuần trước"
+                                >
+                                    <ChevronLeft size={20} />
+                                </button>
+
+                                <div className="relative">
+                                    <div className="flex items-center gap-2 bg-white dark:bg-zinc-800 px-3 py-2 rounded-lg border border-fpt-orange/50 shadow-sm focus-within:ring-2 ring-fpt-orange/20">
+                                        <select
+                                            value={getCurrentWeekValue()}
+                                            onChange={handleWeekChange}
+                                            className="bg-transparent border-none text-gray-700 dark:text-gray-200 font-medium focus:ring-0 cursor-pointer text-sm p-0 w-64"
+                                        >
+                                            {weeks.map((week) => (
+                                                <option key={week.value} value={week.value}>
+                                                    {week.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
+
+                                <button
+                                    onClick={handleNextWeek}
+                                    className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg text-fpt-orange transition-colors"
+                                    title="Tuần sau"
+                                >
+                                    <ChevronRight size={20} />
+                                </button>
                             </div>
                         </div>
 
@@ -247,85 +335,123 @@ export const StudentSchedulePage: React.FC = () => {
                 </div>
 
                 {/* Calendar Grid Container */}
-                <Card className="min-w-full overflow-x-auto pb-4 border-none shadow-sm dark:shadow-none bg-white dark:bg-zinc-900">
-                    <div className="min-w-[1000px]">
+                <Card className="min-w-full overflow-hidden border-none shadow-sm dark:shadow-none bg-white dark:bg-zinc-900">
+                    <div className="overflow-x-auto">
                         {loading ? (
                             <div className="flex items-center justify-center p-20">
                                 <Loader2 className="w-8 h-8 animate-spin text-fpt-orange" />
                             </div>
-                        ) : timetable && timetable.days ? (
-                            <>
-                                {/* Days Header */}
-                                <div className="grid grid-cols-[100px_repeat(7,1fr)] mb-6">
-                                    <div className="p-4"></div>
-                                    {timetable.days.map((day, index) => (
-                                        <div key={index} className="px-2 py-4 border-b-2 border-transparent hover:border-fpt-orange/30 transition-colors group">
-                                            <div className="font-bold text-gray-900 dark:text-white text-base mb-1">
-                                                {getDayLabel(day.date)}
-                                            </div>
-                                            <div className="text-sm text-gray-400 font-medium group-hover:text-fpt-orange transition-colors">
-                                                {formatDateLabel(day.date)}
-                                            </div>
-                                            {day.date === new Date().toISOString().split('T')[0] && (
-                                                <div className="h-0.5 w-full bg-fpt-orange mt-3 rounded-full"></div>
-                                            )}
-                                        </div>
-                                    ))}
+                        ) : isScheduleHidden ? (
+                            <div className="p-12 text-center text-gray-500">
+                                <div className="bg-orange-50 dark:bg-orange-900/10 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                                    <Lock size={32} className="text-fpt-orange" />
                                 </div>
-
-                                {/* Slots Rows */}
-                                <div className="space-y-4">
-                                    {SLOTS.map((slot) => (
-                                        <div key={slot.id} className="grid grid-cols-[100px_repeat(7,1fr)] gap-0 group">
-                                            <div className="py-2 pr-6 flex items-start justify-end">
-                                                <span className="font-bold text-gray-900 dark:text-white text-base">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Thời khóa biểu chưa được công bố</h3>
+                                <p className="text-gray-500 dark:text-gray-400">
+                                    Vui lòng quay lại sau khi nhà trường công bố lịch học chính thức.
+                                </p>
+                            </div>
+                        ) : timetable && timetable.days ? (
+                            <table className="w-full border-collapse min-w-[1000px]">
+                                <thead>
+                                    <tr className="bg-gray-50 dark:bg-zinc-800/50">
+                                        <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-zinc-800 w-[150px]">
+                                            Thứ / Ngày
+                                        </th>
+                                        {SLOTS.map((slot) => (
+                                            <th
+                                                key={slot.id}
+                                                className="text-center px-4 py-4 border-b border-l border-gray-200 dark:border-zinc-800"
+                                            >
+                                                <div className="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider">
                                                     {slot.label}
-                                                </span>
-                                            </div>
+                                                </div>
+                                                <div className="text-[11px] text-gray-400 mt-1 font-medium">
+                                                    {slot.time}
+                                                </div>
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {timetable.days.map((day, idx) => (
+                                        <tr
+                                            key={day.date}
+                                            className={`${idx % 2 === 0 ? 'bg-white dark:bg-zinc-900' : 'bg-gray-50/30 dark:bg-zinc-800/20'} group`}
+                                        >
+                                            {/* Day Label Cell */}
+                                            <td className="px-6 py-4 border-b border-gray-100 dark:border-zinc-800 align-middle">
+                                                <div className="flex flex-col">
+                                                    <div className="font-bold text-xl text-gray-900 dark:text-white leading-tight">
+                                                        {getDayLabel(day.date)}
+                                                    </div>
+                                                    <div className="text-sm text-gray-500 dark:text-gray-400 font-medium mt-1">
+                                                        {formatDateLabel(day.date)}
+                                                    </div>
+                                                    {day.date === new Date().toISOString().split('T')[0] && (
+                                                        <span className="inline-block mt-2 px-2 py-0.5 bg-fpt-orange/10 text-fpt-orange text-[10px] font-black rounded-full w-fit uppercase tracking-wider">
+                                                            Hôm nay
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
 
-                                            {timetable.days.map((day) => {
+                                            {/* Slot Cells */}
+                                            {SLOTS.map((slot) => {
                                                 const slotData = getSlotForCell(day.slots, slot.id);
-
                                                 return (
-                                                    <div key={`${slot.id}-${day.date}`} className="px-2 relative min-h-[140px]">
-                                                        <div className="absolute left-0 top-2 bottom-2 w-[2px] bg-blue-100 dark:bg-zinc-800 group-hover:bg-blue-200 transition-colors"></div>
+                                                    <td
+                                                        key={`${day.date}-${slot.id}`}
+                                                        className="px-3 py-3 border-b border-l border-gray-100 dark:border-zinc-800 align-middle min-h-[140px]"
+                                                    >
                                                         {slotData ? (
                                                             <div
                                                                 onClick={() => setSelectedSlot(slotData)}
-                                                                className={`
-                                                                h-full rounded-xl p-4 border-l-4 transition-all hover:shadow-md cursor-pointer
-                                                                border-l-fpt-orange bg-white border border-gray-100 dark:bg-zinc-800 dark:border-zinc-700
-                                                            `}>
+                                                                className="relative group bg-white dark:bg-zinc-800 rounded-xl p-3 pl-5 shadow-sm hover:shadow-md transition-all cursor-pointer border border-gray-100 dark:border-zinc-700 overflow-hidden"
+                                                            >
+                                                                {/* Left Orange Accent Bar - Absolute positioned for perfect rounding */}
+                                                                <div className="absolute left-0 top-0 bottom-0 w-[6px] bg-fpt-orange" />
+
+                                                                {/* Status Badge */}
                                                                 {(slotData.status || slotData.attendanceStatus) && (
-                                                                    <span className={`
-                                                                        inline-block px-2 py-0.5 rounded text-[10px] font-bold border mb-2 uppercase
-                                                                        ${getStatusStyle()}
+                                                                    <div className={`
+                                                                        inline-block px-1.5 py-0.5 rounded text-[8px] font-black border mb-1 uppercase tracking-tighter
+                                                                        bg-orange-50 dark:bg-orange-950/30 text-fpt-orange border-orange-100 dark:border-orange-900/50
                                                                     `}>
                                                                         {getStatusLabel(slotData)}
-                                                                    </span>
-                                                                )}
-                                                                <h4 className="font-bold text-gray-900 dark:text-white text-base mb-2">
-                                                                    {slotData.courseCode}
-                                                                </h4>
-                                                                <div className="space-y-1 text-xs text-gray-500 font-medium">
-                                                                    <div className="flex items-center gap-1.5">
-                                                                        <Clock size={12} strokeWidth={2.5} />
-                                                                        {slotData.startTime} - {slotData.endTime}
                                                                     </div>
-                                                                    <div className="flex items-center gap-1.5">
-                                                                        <MapPin size={12} strokeWidth={2.5} />
-                                                                        {slotData.roomCode || slotData.roomName}
+                                                                )}
+
+                                                                {/* Course Code */}
+                                                                <div className="font-bold text-fpt-orange text-sm mb-1 truncate" title={slotData.courseName}>
+                                                                    {slotData.courseCode}
+                                                                </div>
+
+                                                                {/* Details */}
+                                                                <div className="space-y-0.5 text-[11px] font-medium">
+                                                                    <div className="text-gray-500 dark:text-gray-400 leading-tight">
+                                                                        Lớp: {slotData.className}
+                                                                    </div>
+                                                                    <div className="text-gray-500 dark:text-gray-400 truncate">
+                                                                        GV: {slotData.lecturerName || 'Chưa phân công'}
+                                                                    </div>
+                                                                    <div className="text-gray-500 dark:text-gray-400 truncate">
+                                                                        Phòng: {slotData.roomCode || slotData.roomName}
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                        ) : null}
-                                                    </div>
+                                                        ) : (
+                                                            <div className="h-full min-h-[100px] flex items-center justify-center bg-gray-50/30 dark:bg-zinc-800/10 rounded-lg border border-dashed border-gray-100 dark:border-zinc-800/50">
+                                                                <span className="text-gray-300 dark:text-zinc-700 font-black text-xs">-</span>
+                                                            </div>
+                                                        )}
+                                                    </td>
                                                 );
                                             })}
-                                        </div>
+                                        </tr>
                                     ))}
-                                </div>
-                            </>
+                                </tbody>
+                            </table>
                         ) : (
                             <div className="text-center p-20 flex flex-col items-center justify-center">
                                 <CalendarIcon className="w-12 h-12 text-gray-300 mb-4" />
@@ -364,7 +490,7 @@ export const StudentSchedulePage: React.FC = () => {
                                         <p className="font-medium text-gray-900 dark:text-white">
                                             {selectedSlot.date ? (() => {
                                                 const d = new Date(selectedSlot.date);
-                                                return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+                                                return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()} (${getDayLabel(selectedSlot.date)})`;
                                             })() : 'N/A'}
                                         </p>
                                     </div>
@@ -375,9 +501,9 @@ export const StudentSchedulePage: React.FC = () => {
                                         <Clock className="text-gray-400" size={20} />
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">Slot</p>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">Thời gian</p>
                                         <p className="font-medium text-gray-900 dark:text-white">
-                                            {selectedSlot.slotNumber} <span className="text-gray-400 text-sm font-normal">({selectedSlot.startTime} - {selectedSlot.endTime})</span>
+                                            Slot {selectedSlot.slotNumber} <span className="text-gray-400 text-sm font-normal">({selectedSlot.startTime} - {selectedSlot.endTime})</span>
                                         </p>
                                     </div>
                                 </div>
@@ -387,9 +513,24 @@ export const StudentSchedulePage: React.FC = () => {
                                         <BookOpen className="text-gray-400" size={20} />
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">Mã lớp</p>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">Môn học / Lớp</p>
                                         <p className="font-medium text-gray-900 dark:text-white">
-                                            {selectedSlot.className || selectedSlot.courseCode}
+                                            {selectedSlot.courseName}
+                                        </p>
+                                        <p className="text-sm text-fpt-orange font-bold mt-1">
+                                            {selectedSlot.className}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-4">
+                                    <div className="w-8 flex justify-center pt-1">
+                                        <MapPin className="text-gray-400" size={20} />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">Phòng học</p>
+                                        <p className="font-medium text-gray-900 dark:text-white">
+                                            {selectedSlot.roomCode || selectedSlot.roomName}
                                         </p>
                                     </div>
                                 </div>
@@ -406,12 +547,12 @@ export const StudentSchedulePage: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="flex items-start gap-4 pt-2">
+                                <div className="flex items-start gap-4 pt-2 border-t border-gray-100 dark:border-zinc-800 mt-2">
                                     <div className="w-8 flex justify-center pt-1">
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 w-full justify-between">
                                         <p className="text-sm text-gray-500 dark:text-gray-400">Trạng thái điểm danh:</p>
-                                        <span className="font-bold text-gray-900 dark:text-white uppercase">
+                                        <span className={`font-bold uppercase px-3 py-1 rounded-full text-xs border ${getStatusStyle()}`}>
                                             {getStatusLabel(selectedSlot)}
                                         </span>
                                     </div>

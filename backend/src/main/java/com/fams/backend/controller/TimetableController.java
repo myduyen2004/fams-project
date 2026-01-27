@@ -151,6 +151,17 @@ public class TimetableController {
     public ResponseEntity<List<TimetableDTO.TimetableSlotDTO>> getTimetableBySemester(
             @PathVariable String semesterCode) {
 
+        // Check visibility
+        Semester semester = semesterRepository.findByCode(semesterCode)
+                .orElseThrow(() -> new RuntimeException("Semester not found"));
+        com.fams.backend.entity.SemesterConfig config = semester.getConfig();
+        if (config != null && !Boolean.TRUE.equals(config.getIsPublished())) {
+            // For this public/shared endpoint, we might want to return 403 or empty list?
+            // Given it's used by frontend fallback, 403 is consistent.
+            log.warn("Semester {} is not published. Access denied.", semesterCode);
+            return ResponseEntity.status(403).build();
+        }
+
         List<TimetableSlot> slots = timetableSlotRepository.findBySemesterCode(semesterCode);
         List<TimetableDTO.TimetableSlotDTO> dtos = slots.stream()
                 .map(this::convertToDTO)
@@ -206,10 +217,58 @@ public class TimetableController {
             LocalDate weekStart = targetDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
             LocalDate weekEnd = weekStart.plusDays(6);
 
-            log.info("Fetching timetable for student {} from {} to {}", studentId, weekStart, weekEnd);
+            User student = userRepository.findById(studentId)
+                    .orElseThrow(() -> new RuntimeException("Student not found"));
 
-            List<TimetableSlot> slots = timetableSlotRepository.findByStudentIdAndDateBetween(
-                    studentId, weekStart, weekEnd);
+            log.info("Fetching timetable for student {} (code: {}) from {} to {}", studentId, student.getCode(),
+                    weekStart, weekEnd);
+
+            // Check if semester is published for this date
+            Semester semester = semesterRepository.findSemesterByDate(targetDate).orElse(null);
+
+            if (semester != null) {
+                com.fams.backend.entity.SemesterConfig config = semester.getConfig();
+                boolean isPublished = config != null && Boolean.TRUE.equals(config.getIsPublished());
+                log.info("Checking visibility for date {}: Semester={}, Published={}", targetDate, semester.getCode(),
+                        isPublished);
+
+                if (!isPublished) {
+                    log.warn("Timetable for semester {} is not published yet. Access denied for student.",
+                            semester.getCode());
+                    return ResponseEntity.status(403).build();
+                }
+            } else {
+                log.warn("No active semester found for date {}. Skipping visibility check (CAUTION).", targetDate);
+                // Optional: Strict mode - if no semester found, should we block?
+                // For now, logging it.
+            }
+
+            List<TimetableSlot> slots = timetableSlotRepository.findByStudentCodeAndDateBetween(
+                    student.getCode(), weekStart, weekEnd);
+
+            // Fallback: If semester wasn't found by date, check the semester of the found
+            // slots
+            if (semester == null && !slots.isEmpty()) {
+                TimetableSlot firstSlot = slots.get(0);
+                if (firstSlot.getClassSection() != null && firstSlot.getClassSection().getSemester() != null) {
+                    // Fix LazyInitializationException: Get ID from proxy and fetch fresh entity
+                    Long semesterId = firstSlot.getClassSection().getSemester().getId();
+                    semester = semesterRepository.findById(semesterId).orElse(null);
+
+                    if (semester != null) {
+                        log.info("Fallback visibility check: Found semester {} from slots.", semester.getCode());
+
+                        com.fams.backend.entity.SemesterConfig config = semester.getConfig();
+                        boolean isPublished = config != null && Boolean.TRUE.equals(config.getIsPublished());
+
+                        if (!isPublished) {
+                            log.warn("Timetable for semester {} (from slots) is not published. Access denied.",
+                                    semester.getCode());
+                            return ResponseEntity.status(403).build();
+                        }
+                    }
+                }
+            }
 
             log.info("Found {} slots for student {}", slots.size(), studentId);
 
@@ -255,10 +314,17 @@ public class TimetableController {
         Semester semester = semesterRepository.findByCode(semesterCode)
                 .orElseThrow(() -> new RuntimeException("Semester not found"));
 
+        // Check if semester is published
+        com.fams.backend.entity.SemesterConfig config = semester.getConfig();
+        if (config != null && !Boolean.TRUE.equals(config.getIsPublished())) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Schedule is not published");
+            return;
+        }
+
         // 1. Fetch ALL slots for this student in this semester context
         // Using Repository method that filters by DATE RANGE of the semester
-        List<TimetableSlot> slots = timetableSlotRepository.findByStudentIdAndDateBetween(
-                studentId, semester.getStartDate(), semester.getEndDate());
+        List<TimetableSlot> slots = timetableSlotRepository.findByStudentCodeAndDateBetween(
+                student.getCode(), semester.getStartDate(), semester.getEndDate());
 
         // 2. Map to DTOs
         List<TimetableDTO.TimetableSlotDTO> slotDTOs = slots.stream()
