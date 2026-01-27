@@ -121,4 +121,24 @@ public interface ClassSectionRepository extends JpaRepository<ClassSection, Long
         java.util.List<com.fams.backend.entity.Course> findDistinctCoursesByLecturerAndSemester(
                         @Param("semesterCode") String semesterCode,
                         @Param("lecturerId") Long lecturerId);
+
+        /**
+         * Count unscheduled class sections (optimized query)
+         */
+        @Query("SELECT COUNT(cs) FROM ClassSection cs " +
+                        "WHERE cs.semester.code = :semesterCode " +
+                        "AND cs.status IN ('UPCOMING', 'ONGOING') " +
+                        "AND cs.lecturer IS NOT NULL " +
+                        "AND NOT EXISTS (SELECT 1 FROM TimetableSlot ts WHERE ts.classSection = cs)")
+        long countUnscheduledClassSections(@Param("semesterCode") String semesterCode);
+
+        /**
+         * Find unscheduled class names (optimized query)
+         */
+        @Query("SELECT cs.className FROM ClassSection cs " +
+                        "WHERE cs.semester.code = :semesterCode " +
+                        "AND cs.status IN ('UPCOMING', 'ONGOING') " +
+                        "AND cs.lecturer IS NOT NULL " +
+                        "AND NOT EXISTS (SELECT 1 FROM TimetableSlot ts WHERE ts.classSection = cs)")
+        java.util.List<String> findUnscheduledClassNames(@Param("semesterCode") String semesterCode);
 }

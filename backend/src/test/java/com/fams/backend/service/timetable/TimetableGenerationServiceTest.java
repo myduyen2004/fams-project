@@ -1,7 +1,9 @@
 package com.fams.backend.service.timetable;
 
 import com.fams.backend.service.timetable.ga.model.GAConfig;
+import com.fams.backend.service.timetable.ga.model.TimetableData;
 import org.junit.jupiter.api.BeforeEach;
+import java.util.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -184,6 +186,8 @@ class TimetableGenerationServiceTest {
             assertNotNull(TimetableGenerationService.JobStatus.RUNNING);
             assertNotNull(TimetableGenerationService.JobStatus.COMPLETED);
             assertNotNull(TimetableGenerationService.JobStatus.FAILED);
+            assertNotNull(TimetableGenerationService.JobStatus.PENDING);
+            assertNotNull(TimetableGenerationService.JobStatus.CANCELLED);
         }
 
         @Test
@@ -201,18 +205,26 @@ class TimetableGenerationServiceTest {
     @DisplayName("Helper Method Tests")
     class HelperMethodTests {
 
+        private TimetableGenerationService service;
+
+        @BeforeEach
+        void setUpHelper() {
+            // Pass nulls for dependencies as we test pure logic methods
+            service = new TimetableGenerationService(null, null, null, null, null, null);
+        }
+
         @Test
         @DisplayName("Should calculate weeks in semester correctly")
         void testCalculateWeeksLogic() {
             LocalDate start = LocalDate.of(2026, 1, 5);
             LocalDate end = LocalDate.of(2026, 3, 29);
 
-            // Manual calculation: ~12 weeks between dates
-            long days = java.time.temporal.ChronoUnit.DAYS.between(start, end);
-            int expectedWeeks = (int) (days / 7) + 1;
+            int weeks = service.calculateWeeksInSemester(start, end);
 
-            assertTrue(expectedWeeks >= 10 && expectedWeeks <= 15,
-                    "Should be approximately 10-15 weeks");
+            // Manual calculation: ~12 weeks
+            // 84 days strictly, so maybe exactly 12 weeks
+            assertTrue(weeks >= 10 && weeks <= 15, "Should be approximately 10-15 weeks");
+            assertEquals(12, weeks);
         }
 
         @Test
@@ -220,40 +232,66 @@ class TimetableGenerationServiceTest {
         void testCalculateDateForWeekLogic() {
             LocalDate semesterStart = LocalDate.of(2026, 1, 5); // Monday
 
-            // Week 1, Day 0 (Monday) = 2026-01-05
-            LocalDate week1Day0 = semesterStart;
-            assertEquals(LocalDate.of(2026, 1, 5), week1Day0);
+            // Week 0, Day 0 (Monday)
+            LocalDate week0Day0 = service.calculateDateForWeek(semesterStart, 0, 0);
+            assertEquals(LocalDate.of(2026, 1, 5), week0Day0);
 
-            // Week 2, Day 0 (Monday) = 2026-01-12
-            LocalDate week2Day0 = semesterStart.plusWeeks(1);
-            assertEquals(LocalDate.of(2026, 1, 12), week2Day0);
+            // Week 1, Day 0 (Monday)
+            LocalDate week1Day0 = service.calculateDateForWeek(semesterStart, 1, 0);
+            assertEquals(LocalDate.of(2026, 1, 12), week1Day0);
 
-            // Week 1, Day 2 (Wednesday) = 2026-01-07
-            LocalDate week1Day2 = semesterStart.plusDays(2);
-            assertEquals(LocalDate.of(2026, 1, 7), week1Day2);
+            // Week 0, Day 2 (Wednesday)
+            LocalDate week0Day2 = service.calculateDateForWeek(semesterStart, 0, 2);
+            assertEquals(LocalDate.of(2026, 1, 7), week0Day2);
         }
 
         @Test
         @DisplayName("Should distribute extra slots evenly")
         void testDistributeExtraSlotsLogic() {
-            // 10 weeks, 3 slots/week base, 5 extra slots
-            // Expected: [4,4,4,4,4,3,3,3,3,3] = 35 total
             int weeks = 10;
             int baseSlots = 3;
             int extraSlots = 5;
 
-            int totalSlots = (weeks * baseSlots) + extraSlots;
-            assertEquals(35, totalSlots);
+            int[] distribution = service.distributeExtraSlots(weeks, baseSlots, extraSlots);
 
-            // First 5 weeks get 4 slots (base + 1 extra each)
-            int weeksWithExtra = extraSlots;
-            int slotsForWeeksWithExtra = weeksWithExtra * (baseSlots + 1);
+            assertEquals(10, distribution.length);
 
-            // Remaining 5 weeks get 3 slots (base only)
-            int weeksWithBase = weeks - weeksWithExtra;
-            int slotsForWeeksWithBase = weeksWithBase * baseSlots;
+            // First 5 weeks get 4 (3+1)
+            for (int i = 0; i < 5; i++) {
+                assertEquals(4, distribution[i]);
+            }
+            // Last 5 weeks get 3
+            for (int i = 5; i < 10; i++) {
+                assertEquals(3, distribution[i]);
+            }
+        }
 
-            assertEquals(35, slotsForWeeksWithExtra + slotsForWeeksWithBase);
+        @Test
+        @DisplayName("Should filter day gap violations")
+        void testFilterDayGapViolations() {
+            // Setup simple TimetableData mock/stub
+            TimetableData data = TimetableData.builder()
+                    .periodsPerDay(6)
+                    .daysPerWeek(6)
+                    .build();
+
+            Set<Integer> slots = new HashSet<>();
+            // Mon slot 0
+            slots.add(0);
+            // Tue slot 0 (index 6). Consecutive day -> Should be filtered out
+            slots.add(6);
+            // Wed slot 0 (index 12). 2 days gap from Mon -> OK
+            slots.add(12);
+            // Thu slot 0 (index 18). Consecutive to Wed -> Should be filtered out
+            slots.add(18);
+
+            List<Integer> valid = service.filterDayGapViolations(slots, data);
+
+            assertEquals(2, valid.size(), "Should keep 2 slots (Mon, Wed)");
+            assertTrue(valid.contains(0));
+            assertTrue(valid.contains(12));
+            assertFalse(valid.contains(6));
+            assertFalse(valid.contains(18));
         }
     }
 
