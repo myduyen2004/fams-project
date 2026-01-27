@@ -6,6 +6,7 @@ import { LecturerLayout } from '../layouts/LecturerLayout';
 import { StudentLayout } from '../layouts/StudentLayout';
 import { Pagination } from '../components/common/Pagination';
 import { dashboardService } from '../services/api/dashboardService';
+import { academicStaffService } from '../services/api/academicStaffService';
 import { authService } from '../services/api/authService';
 import { AppNotification } from '../types/dashboard';
 import { Loader2, Search, Bell, AlertCircle, CheckCircle2, User, ArrowLeft } from 'lucide-react';
@@ -39,10 +40,27 @@ const getNotificationColor = (type?: string) => {
   }
 };
 
+const parseDateTime = (timestamp: string): Date | null => {
+  if (!timestamp) return null;
+  
+  // Try standard ISO parsing
+  const date = new Date(timestamp);
+  if (!isNaN(date.getTime())) return date;
+  
+  // Custom parsing for "dd/MM/yyyy HH:mm"
+  const match = timestamp.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})$/);
+  if (match) {
+    const [_, day, month, year, hours, minutes] = match;
+    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes));
+  }
+  
+  return null;
+};
+
 const formatDateTime = (timestamp: string): string => {
   try {
-    const date = new Date(timestamp);
-    if (isNaN(date.getTime())) return timestamp;
+    const date = parseDateTime(timestamp);
+    if (!date) return timestamp;
 
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -138,8 +156,31 @@ export const NotificationListPage: React.FC = () => {
     const loadNotifications = async () => {
       try {
         setLoading(true);
-        const data = await dashboardService.getNotifications();
-        setNotifications(data || []);
+        // If user is ACADEMIC_STAFF, we also want to consider the global notifications from the dashboard
+        const dashboardData = await academicStaffService.getDashboardData().catch(() => null);
+        const recipientNotifications = await dashboardService.getNotifications();
+        
+        let allNotifs = [...recipientNotifications];
+        
+        // Add dashboard notifications if they are not already in the list
+        if (dashboardData?.notifications) {
+          const existingIds = new Set(allNotifs.map(n => n.id));
+          dashboardData.notifications.forEach((dn: any) => {
+            if (!existingIds.has(dn.id)) {
+              allNotifs.push(dn);
+            }
+          });
+        }
+        
+        // Sort by timestamp desc (requires proper parsing)
+        allNotifs.sort((a, b) => {
+          const dateA = parseDateTime(a.timestamp);
+          const dateB = parseDateTime(b.timestamp);
+          if (!dateA || !dateB) return 0;
+          return dateB.getTime() - dateA.getTime();
+        });
+
+        setNotifications(allNotifs);
       } catch (error) {
         console.error('Failed to load notifications:', error);
         toast.error('Không thể tải thông báo');

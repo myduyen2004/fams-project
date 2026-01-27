@@ -99,52 +99,59 @@ export const NotificationBell: React.FC = () => {
   useEffect(() => {
     loadNotifications();
 
-    // 1. Fetch active job from backend on mount (covers refresh/new login)
-    const fetchActiveJob = async () => {
-      try {
-        const activeJob = await userService.getActiveImportJob();
-        if (activeJob) {
-          addJob({
-            jobId: activeJob.jobId,
-            filename: activeJob.filename,
-            status: activeJob.status as any,
-            percentage: activeJob.percentage || 0,
-            successCount: activeJob.successCount,
-            failedCount: activeJob.failedCount,
-            createdAt: new Date(activeJob.createdAt).getTime(),
-          });
-        }
-      } catch (error) {
-        console.error('Failed to fetch active job:', error);
-      }
-    };
+    const user = authService.getUser();
+    const isAdmin = user?.role === 'ADMIN';
 
-    fetchActiveJob();
+    loadNotifications();
 
-    // 2. Load existing jobs from local storage for history
-    const storedJobs = JSON.parse(localStorage.getItem('importJobs') || '[]');
-    if (storedJobs.length > 0) {
-      storedJobs.forEach(async (job: any) => {
-        // Only re-fetch if not already added by fetchActiveJob
+    if (isAdmin) {
+      // 1. Fetch active job from backend on mount (covers refresh/new login)
+      const fetchActiveJob = async () => {
         try {
-          const status = await userService.getImportJobStatus(job.jobId);
-          addJob({
-            jobId: job.jobId,
-            filename: job.filename,
-            status: status.status as any,
-            percentage: status.percentage || 0,
-            successCount: status.successCount,
-            failedCount: status.failedCount,
-            createdAt: new Date(status.createdAt).getTime(),
-          });
-        } catch (error: any) {
-          console.error(`Failed to fetch status for job ${job.jobId}:`, error.message);
-          // If job not found (404), it's likely from another environment or database reset
-          if (error.response?.status === 404) {
-            removeJob(job.jobId);
+          const activeJob = await userService.getActiveImportJob();
+          if (activeJob) {
+            addJob({
+              jobId: activeJob.jobId,
+              filename: activeJob.filename,
+              status: activeJob.status as any,
+              percentage: activeJob.percentage || 0,
+              successCount: activeJob.successCount,
+              failedCount: activeJob.failedCount,
+              createdAt: new Date(activeJob.createdAt).getTime(),
+            });
           }
+        } catch (error) {
+          console.error('Failed to fetch active job:', error);
         }
-      });
+      };
+
+      fetchActiveJob();
+
+      // 2. Load existing jobs from local storage for history
+      const storedJobs = JSON.parse(localStorage.getItem('importJobs') || '[]');
+      if (storedJobs.length > 0) {
+        storedJobs.forEach(async (job: any) => {
+          // Only re-fetch if not already added by fetchActiveJob
+          try {
+            const status = await userService.getImportJobStatus(job.jobId);
+            addJob({
+              jobId: job.jobId,
+              filename: job.filename,
+              status: status.status as any,
+              percentage: status.percentage || 0,
+              successCount: status.successCount,
+              failedCount: status.failedCount,
+              createdAt: new Date(status.createdAt).getTime(),
+            });
+          } catch (error: any) {
+            console.error(`Failed to fetch status for job ${job.jobId}:`, error.message);
+            // If job not found (404) or permission denied (403), remove it
+            if (error.response?.status === 404 || error.response?.status === 403) {
+              removeJob(job.jobId);
+            }
+          }
+        });
+      }
     }
   }, []);
 
