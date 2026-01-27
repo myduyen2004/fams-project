@@ -1,12 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Upload, Info } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { REQUEST_TYPE_LABELS } from '../../types/requestType';
+import { scheduleRequestService, ClassSlotResponse } from '../../services/api/scheduleRequestService';
 
 export const LecturerCreateRequestPage: React.FC = () => {
     const navigate = useNavigate();
     const [submitting, setSubmitting] = useState(false);
+
+    const [selectedClass, setSelectedClass] = useState('');
+    const [classes, setClasses] = useState<string[]>([]);
+    const [slots, setSlots] = useState<ClassSlotResponse[]>([]);
+    const [selectedSlotId, setSelectedSlotId] = useState<string>('');
+    const [selectedSlot, setSelectedSlot] = useState<ClassSlotResponse | null>(null);
+
+    // Fetch classes on mount
+    useEffect(() => {
+        const fetchClasses = async () => {
+            try {
+                const data = await scheduleRequestService.getClasses();
+                setClasses(data);
+            } catch (error) {
+                console.error("Error fetching classes:", error);
+                toast.error("Không thể tải danh sách lớp học");
+            }
+        };
+        fetchClasses();
+    }, []);
+
+    useEffect(() => {
+        if (selectedClass) {
+            const fetchSlots = async () => {
+                try {
+                    const data = await scheduleRequestService.getSlotsForClass(selectedClass);
+                    setSlots(data);
+                    // Reset slot selection when class changes
+                    setSelectedSlotId('');
+                    setSelectedSlot(null);
+                } catch (error) {
+                    console.error("Error fetching slots:", error);
+                    toast.error("Không thể tải danh sách slot cho lớp này");
+                }
+            };
+            fetchSlots();
+        } else {
+            setSlots([]);
+            setSelectedSlotId('');
+            setSelectedSlot(null);
+        }
+    }, [selectedClass]);
+
+    const handleSlotChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const slotId = e.target.value;
+        setSelectedSlotId(slotId);
+        const found = slots.find(s => s.id.toString() === slotId) || null;
+        setSelectedSlot(found);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -49,20 +100,26 @@ export const LecturerCreateRequestPage: React.FC = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">LỚP HỌC</label>
-                                <select className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all text-slate-700 dark:text-slate-200">
+                                <select
+                                    className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all text-slate-700 dark:text-slate-200"
+                                    value={selectedClass}
+                                    onChange={(e) => setSelectedClass(e.target.value)}
+                                >
                                     <option value="">Chọn lớp học</option>
-                                    <option value="SE18809">SE18809</option>
-                                    <option value="SE18810">SE18810</option>
-                                    <option value="IA1701">IA1701</option>
+                                    {classes.map((cls) => (
+                                        <option key={cls} value={cls}>{cls}</option>
+                                    ))}
                                 </select>
                             </div>
                             <div>
                                 <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">LOẠI YÊU CẦU</label>
                                 <select className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all text-slate-700 dark:text-slate-200">
-                                    <option value="doi_lich">Đổi lịch</option>
-                                    <option value="huy_buoi">Hủy buổi</option>
-                                    <option value="doi_slot">Đổi slot</option>
-                                    <option value="doi_phong">Đổi phòng</option>
+                                    <option value="">Chọn loại yêu cầu</option>
+                                    {Object.keys(REQUEST_TYPE_LABELS).map((key) => (
+                                        <option key={key} value={key}>
+                                            {REQUEST_TYPE_LABELS[key]}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
                         </div>
@@ -74,11 +131,30 @@ export const LecturerCreateRequestPage: React.FC = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             <div className="bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30">
                                 <label className="block text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-widest mb-1">SLOT BAN ĐẦU</label>
-                                <p className="text-lg font-bold text-slate-800 dark:text-blue-100">Slot 2</p>
+                                {selectedClass ? (
+                                    <select
+                                        className="w-full bg-transparent border-none p-0 text-lg font-bold text-slate-800 dark:text-blue-100 focus:ring-0 cursor-pointer appearance-none"
+                                        value={selectedSlotId}
+                                        onChange={handleSlotChange}
+                                    >
+                                        <option value="" className="text-base font-normal">Chọn slot</option>
+                                        {Array.from(new Map(slots.map(slot => [slot.slotNumber, slot])).values())
+                                            .sort((a, b) => a.slotNumber - b.slotNumber)
+                                            .map(slot => (
+                                                <option key={slot.id} value={slot.id} className="text-base font-normal text-black dark:text-white">
+                                                    Slot {slot.slotNumber}
+                                                </option>
+                                            ))}
+                                    </select>
+                                ) : (
+                                    <p className="text-lg font-bold text-slate-400 dark:text-blue-100/50">Vui lòng chọn lớp</p>
+                                )}
                             </div>
                             <div className="bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30">
                                 <label className="block text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-widest mb-1">PHÒNG BAN ĐẦU</label>
-                                <p className="text-lg font-bold text-slate-800 dark:text-blue-100">Phòng 204</p>
+                                <p className="text-lg font-bold text-slate-800 dark:text-blue-100">
+                                    {selectedSlot ? selectedSlot.roomName : '-'}
+                                </p>
                             </div>
                             <div className="bg-orange-50/50 dark:bg-orange-900/10 p-4 rounded-xl border border-orange-100 dark:border-orange-900/30">
                                 <label className="block text-[10px] font-bold text-orange-500 dark:text-orange-400 uppercase tracking-widest mb-1">NGÀY THAY ĐỔI</label>

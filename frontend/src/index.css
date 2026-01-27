@@ -57,6 +57,16 @@
     scrollbar-width: none;
   }
 
+  /* Universal scrollbar hide utility */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
   /* Document-style notification content */
   .notification-content-document {
     line-height: 1.6;

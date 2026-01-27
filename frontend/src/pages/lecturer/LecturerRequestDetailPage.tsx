@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
+import { REQUEST_TYPE_LABELS } from '../../types/requestType';
 import { scheduleRequestService, ScheduleRequest } from '../../services/api/scheduleRequestService';
 import { Loader2, ArrowLeft, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -84,7 +85,7 @@ export const LecturerRequestDetailPage: React.FC = () => {
                             <div className="flex items-center justify-between mb-6">
                                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Thông tin chung</h2>
                                 <span className="px-3 py-1 bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 rounded-full text-xs font-bold uppercase tracking-wider">
-                                    {request.typeLabel}
+                                    {REQUEST_TYPE_LABELS[request.type] || request.typeLabel}
                                 </span>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">

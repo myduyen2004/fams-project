@@ -7,7 +7,8 @@ import {
     ArrowUpRight,
     Bookmark,
     Clock,
-    MapPin
+    MapPin,
+    Lock
 } from 'lucide-react';
 
 import { StudentNotificationsWidget } from './StudentNotificationsWidget';
@@ -18,6 +19,7 @@ export const StudentDashboard: React.FC = () => {
     const [slotCounts, setSlotCounts] = useState<Record<string, number>>({});
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
     const [selectedDaySchedule, setSelectedDaySchedule] = useState<any>(null);
+    const [isScheduleHidden, setIsScheduleHidden] = useState(false);
 
     useEffect(() => {
         fetchMonthlySlotCounts();
@@ -31,6 +33,7 @@ export const StudentDashboard: React.FC = () => {
 
     const fetchDaySchedule = async (date: Date) => {
         try {
+            setIsScheduleHidden(false);
             const userStr = localStorage.getItem('user');
             if (!userStr) return;
 
@@ -55,8 +58,11 @@ export const StudentDashboard: React.FC = () => {
                 console.log('No days data in response');
                 setSelectedDaySchedule(null);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to fetch day schedule:', error);
+            if (error.response && error.response.status === 403) {
+                setIsScheduleHidden(true);
+            }
             setSelectedDaySchedule(null);
         }
     };
@@ -148,61 +154,114 @@ export const StudentDashboard: React.FC = () => {
                                 {selectedDate.getDate()}/{selectedDate.getMonth() + 1}/{selectedDate.getFullYear()}
                             </p>
                         </div>
-                        <div className="flex gap-4 text-xs">
-                            <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-green-500"></span> Có mặt</div>
-                            <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500"></span> Vắng mặt</div>
-                            <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-500"></span> Chưa diễn ra</div>
-                        </div>
+
                     </div>
 
-
-                    <div className="relative">
-                        {selectedDaySchedule && selectedDaySchedule.slots && selectedDaySchedule.slots.length > 0 ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                {selectedDaySchedule.slots.map((slot: any, index: number) => (
-                                    <div
-                                        key={slot.id || index}
-                                        className="border border-gray-100 dark:border-zinc-800 rounded-xl p-4 hover:shadow-md transition-shadow relative group bg-white dark:bg-zinc-900 h-full flex flex-col justify-between"
-                                    >
-                                        <div className="absolute top-4 right-4 text-xs font-bold text-gray-400">
-                                            {slot.courseCode || 'N/A'}
-                                        </div>
-                                        <div className="mb-6">
-                                            <h4 className="text-lg font-bold text-gray-900 dark:text-white">
-                                                {slot.courseName || slot.courseCode || 'Unknown Course'}
-                                            </h4>
-                                            <p className="text-sm text-gray-500">{slot.className || 'N/A'}</p>
-                                        </div>
-                                        <div>
-                                            <div className="space-y-1.5 text-sm text-gray-500 dark:text-gray-400 mb-3">
-                                                <div className="flex items-center gap-2">
-                                                    <Clock size={16} /> {slot.startTime || '00:00'} - {slot.endTime || '00:00'}
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <MapPin size={16} /> {slot.roomName || slot.roomCode || 'TBA'}
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-xs font-medium text-gray-500">
-                                                <div className={`w-2.5 h-2.5 rounded-full ${slot.attendanceStatus === 'PRESENT' ? 'bg-green-500' :
-                                                        slot.attendanceStatus === 'ABSENT' ? 'bg-red-500' :
-                                                            'bg-blue-500'
-                                                    }`}></div>
-                                                <span>
-                                                    {slot.attendanceStatus === 'PRESENT' ? 'Có mặt' :
-                                                        slot.attendanceStatus === 'ABSENT' ? 'Vắng mặt' :
-                                                            'Chưa diễn ra'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-center py-12">
-                                <p className="text-gray-500 dark:text-gray-400">
-                                    Không có lịch học trong ngày này
+                    <div className="relative mt-2">
+                        {isScheduleHidden ? (
+                            <div className="text-center py-20 flex flex-col items-center justify-center">
+                                <div className="w-16 h-16 bg-gray-50 dark:bg-zinc-800 rounded-full flex items-center justify-center mb-4">
+                                    <Lock className="w-8 h-8 text-gray-400" />
+                                </div>
+                                <div className="text-gray-900 dark:text-white font-bold text-lg">Lịch học chưa được công bố</div>
+                                <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
+                                    Vui lòng quay lại sau khi nhà trường công bố lịch học chính thức.
                                 </p>
                             </div>
+                        ) : (
+                            <>
+                                {/* Timeline Container */}
+                                <div className="overflow-x-auto pb-6 no-scrollbar">
+                                    <div className="min-w-[960px]">
+                                        {/* Timeline Ruler - Evenly spaced */}
+                                        <div className="flex items-center mb-4 border-b border-gray-100 dark:border-zinc-800 pb-2">
+                                            {[7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18].map((hour) => (
+                                                <div key={hour} className="flex-1 text-center">
+                                                    <span className="text-xs text-slate-400 font-medium">{hour}:00</span>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {/* Schedule Cards Container */}
+                                        <div className="relative h-[380px]">
+                                            {/* Vertical grid lines */}
+                                            <div className="absolute inset-0 flex pointer-events-none">
+                                                {[7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18].map((hour, idx) => (
+                                                    <div key={hour} className={`flex-1 h-full ${idx > 0 ? 'border-l border-gray-50 dark:border-zinc-800/30' : ''}`} />
+                                                ))}
+                                            </div>
+
+                                            {selectedDaySchedule && selectedDaySchedule.slots && selectedDaySchedule.slots.length > 0 ? (
+                                                selectedDaySchedule.slots.map((slot: any, index: number) => {
+                                                    const isCurrentlyActive = () => {
+                                                        if (!slot.startTime || !slot.endTime) return false;
+                                                        const now = new Date();
+                                                        const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+                                                        return timeStr >= slot.startTime.substring(0, 5) && timeStr <= slot.endTime.substring(0, 5);
+                                                    };
+                                                    const isActive = isCurrentlyActive();
+
+                                                    // Calculate position based on time (each hour = 1/12 of container width = 8.333%)
+                                                    const startHour = parseInt(slot.startTime?.substring(0, 2) || '7');
+                                                    const startMin = parseInt(slot.startTime?.substring(3, 5) || '0');
+                                                    const endHour = parseInt(slot.endTime?.substring(0, 2) || '9');
+                                                    const endMin = parseInt(slot.endTime?.substring(3, 5) || '0');
+
+                                                    const leftPercent = ((startHour - 7) + startMin / 60) * (100 / 12);
+                                                    const duration = (endHour - startHour) + (endMin - startMin) / 60;
+                                                    const widthPercent = Math.max(duration * (100 / 12), 12); // min 12% width
+
+
+
+                                                    return (
+                                                        <div
+                                                            key={slot.id || index}
+                                                            style={{ left: `${leftPercent}%`, width: `calc(${widthPercent}% - 8px)` }}
+                                                            className={`absolute top-2 bottom-2 rounded-2xl shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-lg hover:z-10 cursor-pointer ${isActive
+                                                                ? 'bg-[#fff7ed] border border-orange-200'
+                                                                : 'bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800'
+                                                                }`}
+                                                        >
+                                                            {/* Left Orange Accent Bar */}
+                                                            <div className="absolute left-0 top-0 bottom-0 w-[6px] bg-fpt-orange rounded-l-2xl" />
+
+                                                            {/* Card Content */}
+                                                            <div className="p-4 pl-5 h-full flex flex-col">
+                                                                {/* Top Section - Course Info */}
+                                                                <div className="mt-1">
+                                                                    <h4 className={`text-lg font-bold leading-none ${isActive ? 'text-orange-800' : 'text-gray-800 dark:text-gray-200'}`}>
+                                                                        {slot.courseCode || 'N/A'}
+                                                                    </h4>
+                                                                    <p className="text-slate-400 text-sm font-medium mt-1.5">{slot.className || 'N/A'}</p>
+                                                                </div>
+
+                                                                {/* Spacer */}
+                                                                <div className="flex-grow" />
+
+                                                                {/* Bottom Section - Time, Room */}
+                                                                <div className="space-y-2 mb-1">
+                                                                    <div className="flex items-center gap-2 text-slate-400">
+                                                                        <Clock size={16} />
+                                                                        <span className="text-sm font-medium">{slot.startTime?.substring(0, 5) || '00:00'} - {slot.endTime?.substring(0, 5) || '00:00'}</span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2 text-slate-400">
+                                                                        <MapPin size={16} />
+                                                                        <span className="text-sm font-medium">{slot.roomName || slot.roomCode || 'TBA'}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })
+                                            ) : (
+                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                    <div className="text-gray-500 font-bold">Không có lịch học trong ngày này</div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
                         )}
                     </div>
                 </Card>
@@ -281,8 +340,8 @@ export const StudentDashboard: React.FC = () => {
                     <div className="h-full">
                         <StudentNotificationsWidget />
                     </div>
-                </div>
-            </div>
-        </StudentLayout>
+                </div >
+            </div >
+        </StudentLayout >
     );
 };

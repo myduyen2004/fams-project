@@ -85,19 +85,30 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
 
             Long targetRoomId = request.getRequestedRoomId() != null ? request.getRequestedRoomId()
                     : originalSlot.getRoom().getId();
-            Long targetSlotTypeId = request.getRequestedSlotTypeId() != null ? request.getRequestedSlotTypeId()
-                    : originalSlot.getSlotType().getId();
+            Integer targetSlotIndex;
+            // requestedSlotType reassignment
+
+            if (request.getRequestedSlotTypeId() != null) {
+                requestedSlotType = slotTypeRepository.findById(request.getRequestedSlotTypeId())
+                        .orElseThrow(() -> new BadRequestException("Slot Type not found"));
+                targetSlotIndex = requestedSlotType.getSlotIndex();
+            } else {
+                // If not requested, use original slot number
+                targetSlotIndex = originalSlot.getSlotNumber();
+                // Find corresponding SlotType if checking duration etc (optional)
+                requestedSlotType = slotTypeRepository
+                        .findBySemesterIdAndSlotIndex(originalSlot.getClassSection().getSemester().getId(),
+                                targetSlotIndex)
+                        .orElseThrow(() -> new BadRequestException("Original Slot Type not found"));
+            }
 
             requestedRoom = roomRepository.findById(targetRoomId)
                     .orElseThrow(() -> new BadRequestException("Room not found"));
 
-            requestedSlotType = slotTypeRepository.findById(targetSlotTypeId)
-                    .orElseThrow(() -> new BadRequestException("Slot Type not found"));
-
             // Check Conflicts
             // a. Room Conflict
-            boolean roomBusy = timetableSlotRepository.existsByRoomIdAndDateAndSlotTypeIdAndStatusNot(
-                    requestedRoom.getId(), targetDate, requestedSlotType.getId(),
+            boolean roomBusy = timetableSlotRepository.existsByRoomIdAndDateAndSlotNumberAndStatusNot(
+                    requestedRoom.getId(), targetDate, targetSlotIndex,
                     com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.CANCELLED);
             if (roomBusy) {
                 throw new BadRequestException("Phòng học đã có lớp học khác vào khung giờ này.");
@@ -105,16 +116,16 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
 
             // b. Lecturer Conflict
             boolean lecturerBusy = timetableSlotRepository
-                    .existsByClassSectionLecturerIdAndDateAndSlotTypeIdAndStatusNot(
-                            originalSlot.getClassSection().getLecturer().getId(), targetDate, requestedSlotType.getId(),
+                    .existsByClassSectionLecturerIdAndDateAndSlotNumberAndStatusNot(
+                            originalSlot.getClassSection().getLecturer().getId(), targetDate, targetSlotIndex,
                             com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.CANCELLED);
             if (lecturerBusy) {
                 throw new BadRequestException("Giảng viên đã có lịch dạy vào khung giờ này.");
             }
 
             // c. Class Conflict
-            boolean classBusy = timetableSlotRepository.existsByClassSectionClassNameAndDateAndSlotTypeIdAndStatusNot(
-                    originalSlot.getClassSection().getClassName(), targetDate, requestedSlotType.getId(),
+            boolean classBusy = timetableSlotRepository.existsByClassSectionClassNameAndDateAndSlotNumberAndStatusNot(
+                    originalSlot.getClassSection().getClassName(), targetDate, targetSlotIndex,
                     com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.CANCELLED);
             if (classBusy) {
                 throw new BadRequestException("Lớp học đã có lịch học vào khung giờ này.");
@@ -124,10 +135,10 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
             com.fams.backend.entity.TimetableSlot newSlot = new com.fams.backend.entity.TimetableSlot();
             newSlot.setClassSection(originalSlot.getClassSection());
             newSlot.setRoom(requestedRoom);
-            newSlot.setSlotType(requestedSlotType);
             newSlot.setDate(targetDate);
             newSlot.setDayOfWeek(targetDate.getDayOfWeek().getValue());
-            newSlot.setSlotNumber(requestedSlotType.getSlotIndex());
+            newSlot.setSlotNumber(targetSlotIndex);
+            newSlot.setSlotType(requestedSlotType);
             newSlot.setStatus(com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.SCHEDULED);
 
             requestedSlot = timetableSlotRepository.save(newSlot);
@@ -414,6 +425,24 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
                 .map(this::mapToResponse);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<com.fams.backend.dto.response.ClassSlotResponse> getSlotsForClass(String className, Long lecturerId) {
+        log.info("Fetching slots for class {} and lecturer {}", className, lecturerId);
+        List<com.fams.backend.entity.TimetableSlot> slots = timetableSlotRepository
+                .findByClassSectionClassNameAndClassSectionLecturerIdOrderByDateAscSlotNumberAsc(className, lecturerId);
+
+        return slots.stream().map(slot -> com.fams.backend.dto.response.ClassSlotResponse.builder()
+                .id(slot.getId())
+                .slotNumber(slot.getSlotNumber())
+                .roomId(slot.getRoom().getId())
+                .roomName(slot.getRoom().getName())
+                .date(slot.getDate())
+                .dayOfWeek(slot.getDayOfWeek())
+                .build())
+                .collect(java.util.stream.Collectors.toList());
+    }
+
     private ScheduleRequestResponse mapToResponse(ScheduleRequest request) {
         User requester = request.getRequester();
         ScheduleRequestResponse response = ScheduleRequestResponse.builder()
@@ -468,8 +497,7 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
                 ? daysOfWeek[slot.getDayOfWeek()]
                 : "Thứ " + slot.getDayOfWeek();
 
-        String slotTypeName = slot.getSlotType() != null ? slot.getSlotType().getName()
-                : "Slot " + slot.getSlotNumber();
+        String slotTypeName = "Slot " + slot.getSlotNumber();
         String roomName = slot.getRoom() != null ? slot.getRoom().getName() : "";
 
         java.time.format.DateTimeFormatter dateFormatter = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");

@@ -65,4 +65,47 @@ public class LecturerController {
                 return ResponseEntity.ok(scheduleRequestService.createRequest(request, lecturer.getId()));
         }
 
+        @GetMapping("/classes/{className}/slots")
+        public ResponseEntity<java.util.List<com.fams.backend.dto.response.ClassSlotResponse>> getSlotsForClass(
+                        @PathVariable String className,
+                        @AuthenticationPrincipal UserDetails userDetails) {
+                User lecturer = userRepository.findByUsername(userDetails.getUsername())
+                                .orElseThrow(() -> new RuntimeException("Logged in user not found"));
+                return ResponseEntity.ok(scheduleRequestService.getSlotsForClass(className, lecturer.getId()));
+        }
+
+        private final com.fams.backend.repository.SemesterRepository semesterRepository;
+        private final com.fams.backend.repository.ClassSectionRepository classSectionRepository;
+
+        @GetMapping("/classes")
+        public ResponseEntity<java.util.List<String>> getClasses(
+                        @AuthenticationPrincipal UserDetails userDetails) {
+                User lecturer = userRepository.findByUsername(userDetails.getUsername())
+                                .orElseThrow(() -> new RuntimeException("Logged in user not found"));
+
+                // 1. Find active semester (assumes only 1 active at a time, or takes the latest
+                // start date)
+                java.util.List<com.fams.backend.entity.Semester> activeSemesters = semesterRepository
+                                .findActiveSemesters();
+                if (activeSemesters.isEmpty()) {
+                        // Fallback: try upcoming if no active
+                        activeSemesters = semesterRepository.findUpcomingSemesters();
+                        if (activeSemesters.isEmpty()) {
+                                return ResponseEntity.ok(java.util.Collections.emptyList());
+                        }
+                }
+                com.fams.backend.entity.Semester currentSemester = activeSemesters.get(0);
+
+                // 2. Find classes for lecturer in this semester
+                java.util.List<com.fams.backend.entity.ClassSection> classes = classSectionRepository
+                                .findByLecturerIdAndSemesterCode(lecturer.getId(), currentSemester.getCode());
+
+                // 3. Map to class names
+                java.util.List<String> classNames = classes.stream()
+                                .map(com.fams.backend.entity.ClassSection::getClassName)
+                                .collect(java.util.stream.Collectors.toList());
+
+                return ResponseEntity.ok(classNames);
+        }
+
 }
