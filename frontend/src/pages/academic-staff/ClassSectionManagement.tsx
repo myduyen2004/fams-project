@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ChevronRight, Search, Download, FileText, Trash2, RefreshCw, Eye } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Search, Download, FileText, Trash2, RefreshCw, Eye, Calendar } from 'lucide-react';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { Pagination } from '../../components/common/Pagination';
 import { ImportClassSectionModal } from '../../components/academic-staff/ImportClassSectionModal';
@@ -91,14 +91,14 @@ export const ClassSectionManagement: React.FC = () => {
         page: currentPage,
         size: pageSize,
       };
-      
+
       if (debouncedSearchTerm) params.search = debouncedSearchTerm;
       if (statusFilter !== 'ALL') params.status = statusFilter;
       if (lecturerFilter !== 'ALL') params.lecturerId = lecturerFilter;
 
       const response = await axios.get(`/api/v1/class-sections/semester/${semesterCode}`, { params });
       const data: PageResponse = response.data;
-      
+
       setClassSections(data.content);
       setTotalElements(data.totalElements);
       setTotalPages(data.totalPages);
@@ -258,16 +258,16 @@ export const ClassSectionManagement: React.FC = () => {
   return (
     <AcademicStaffLayout pageTitle="Quản lý lớp học phần">
       <div className="max-w-7xl mx-auto space-y-6 pb-8 pt-2">
-        
+
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-gray-500">
-          <button 
-            onClick={() => navigate('/academic-staff/semesters')} 
+          <button
+            onClick={() => navigate('/academic-staff/semesters')}
             className="hover:text-orange-600 transition-colors flex items-center gap-1"
           >
             <ArrowLeft className="w-4 h-4" /> Quản lý học kỳ
           </button>
-          <button 
+          <button
             // onClick={() => navigate('/academic-staff/semesters/' + semesterCode)} 
             className="hover:text-orange-600 transition-colors flex items-center gap-1"
           >
@@ -282,13 +282,13 @@ export const ClassSectionManagement: React.FC = () => {
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex gap-3">
-              <button 
+              <button
                 onClick={handleDownloadEnrollmentTemplate}
                 className="px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 bg-white hover:bg-gray-50 transition-all flex items-center gap-2"
               >
                 <Download className="w-4 h-4" /> Tải mẫu danh sách đăng ký
               </button>
-              <button 
+              <button
                 onClick={handleImportEnrollment}
                 className="px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 bg-white hover:bg-gray-50 transition-all flex items-center gap-2"
               >
@@ -297,23 +297,29 @@ export const ClassSectionManagement: React.FC = () => {
             </div>
 
             <div className="flex gap-3">
-              <button 
+              <button
                 onClick={handleDownloadTemplate}
                 className="px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 bg-white hover:bg-gray-50 transition-all flex items-center gap-2"
               >
                 <Download className="w-4 h-4" /> Tải mẫu danh sách lớp học phần
               </button>
-              <button 
+              <button
                 onClick={handleImportList}
                 className="px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 bg-white hover:bg-gray-50 transition-all flex items-center gap-2"
               >
                 <FileText className="w-4 h-4" /> Nhập danh sách lớp học phần
               </button>
-              <button 
+              <button
                 onClick={handleCreateClassSection}
                 className="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg text-xs font-bold text-white shadow-lg shadow-orange-600/20 transition-all flex items-center gap-2"
               >
                 + Tạo lớp học phần
+              </button>
+              <button
+                onClick={() => navigate('/academic-staff/schedule')}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs font-bold text-white shadow-lg shadow-blue-600/20 transition-all flex items-center gap-2"
+              >
+                <Calendar className="w-4 h-4" /> Tạo thời khóa biểu
               </button>
             </div>
           </div>
@@ -456,8 +462,8 @@ export const ClassSectionManagement: React.FC = () => {
                   </tr>
                 ) : (
                   classSections.map((classSection) => (
-                    <tr 
-                      key={classSection.className} 
+                    <tr
+                      key={classSection.className}
                       className={`hover:bg-gray-50 transition-colors cursor-pointer ${selectedRows.has(classSection.className) ? 'bg-orange-50' : ''}`}
                       onClick={() => handleSelectRow(classSection.className)}
                     >

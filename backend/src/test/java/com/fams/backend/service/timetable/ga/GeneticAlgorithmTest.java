@@ -218,6 +218,25 @@ class GeneticAlgorithmTest {
         }
 
         @Test
+        @DisplayName("Should enforce daily gap constraint")
+        void testDayGapConstraint() {
+            // Setup a fresh state
+            ScheduleState state = new ScheduleState(testData);
+
+            // Assign Mon, slot 0
+            // Day 0
+            state.assignSlot("CLASS-A", 0);
+
+            // Try Tue, slot 0 (index 6, assuming 6 slots/day)
+            // Mon=0, Tue=1. Diff = 1. Should fail (gap < 1 day)
+            assertFalse(state.canAssignSlot("CLASS-A", 6), "Should not allow consecutive days");
+
+            // Try Wed, slot 0 (index 12)
+            // Mon=0, Wed=2. Diff = 2. Should pass
+            assertTrue(state.canAssignSlot("CLASS-A", 12), "Should allow skipping one day");
+        }
+
+        @Test
         @DisplayName("Should track student conflicts correctly")
         void testStudentConflicts() {
             ScheduleState state = new ScheduleState(testData);
@@ -364,6 +383,64 @@ class GeneticAlgorithmTest {
             // Saturday schedule should have higher (worse) fitness
             assertTrue(fitWithSat > fitNoSat,
                     "Saturday schedule should have worse fitness");
+        }
+
+        @Test
+        @DisplayName("Should calculate gap penalty correctly")
+        void testGapPenalty() {
+            FitnessEvaluator evaluator = new FitnessEvaluator(testData, testConfig);
+
+            // Chromosome with gaps
+            Chromosome withGaps = new Chromosome();
+            // CLASS-A: Mon slot 0 and Mon slot 4 (gap = 3)
+            withGaps.assignSlot("CLASS-A", 0);
+            withGaps.assignSlot("CLASS-A", 4);
+            // CLASS-B: Tue slot 6 and Tue slot 10 (gap = 3)
+            withGaps.assignSlot("CLASS-B", 6);
+            withGaps.assignSlot("CLASS-B", 10);
+            withGaps.assignSlot("CLASS-C", 12); // Wed 0
+            withGaps.assignSlot("CLASS-C", 13); // Wed 1 (no gap)
+
+            // Chromosome without gaps
+            Chromosome noGaps = new Chromosome();
+            noGaps.assignSlot("CLASS-A", 0);
+            noGaps.assignSlot("CLASS-A", 1);
+            noGaps.assignSlot("CLASS-B", 6);
+            noGaps.assignSlot("CLASS-B", 7);
+            noGaps.assignSlot("CLASS-C", 12);
+            noGaps.assignSlot("CLASS-C", 13);
+
+            double fitWithGaps = evaluator.evaluate(withGaps);
+            double fitNoGaps = evaluator.evaluate(noGaps);
+
+            assertTrue(fitWithGaps > fitNoGaps, "Schedule with gaps should have worse fitness");
+        }
+
+        @Test
+        @DisplayName("Should detect weekly overload")
+        void testOverloadPenalty() {
+            // Use config with low threshold
+            GAConfig lowThresholdConfig = GAConfig.builder()
+                    .studentWeeklyOverloadThreshold(2) // Very low threshold
+                    .lecturerWeeklyOverloadThreshold(2)
+                    .overloadPenaltyWeight(10.0)
+                    .build();
+
+            FitnessEvaluator evaluator = new FitnessEvaluator(testData, lowThresholdConfig);
+
+            Chromosome overloaded = new Chromosome();
+            // Student 1 (in A and B) will have 4 slots (2 from A, 2 from B)
+            overloaded.assignSlot("CLASS-A", 0);
+            overloaded.assignSlot("CLASS-A", 12); // Wed
+            overloaded.assignSlot("CLASS-B", 1);
+            overloaded.assignSlot("CLASS-B", 13); // Wed
+
+            // Dummy C slots
+            overloaded.assignSlot("CLASS-C", 2);
+            overloaded.assignSlot("CLASS-C", 14);
+
+            FitnessEvaluator.FitnessBreakdown breakdown = evaluator.evaluateDetailed(overloaded);
+            assertTrue(breakdown.getOverloadPenalty() > 0, "Should have overload penalty");
         }
     }
 

@@ -77,11 +77,14 @@ public class TimetableGenerationService {
             TimetableData data = dataLoader.loadDataForSemester(semesterCode);
 
             if (data.getClasses().isEmpty()) {
+                job.setStatus(JobStatus.FAILED);
+                job.setErrorMessage("Chưa có lớp học phần. Vui lòng nhập lớp học phần.");
+                job.setEndTime(System.currentTimeMillis());
                 return CompletableFuture.completedFuture(
                         GenerationResult.builder()
                                 .success(false)
                                 .jobId(actualJobId)
-                                .message("No schedulable classes found for semester " + semesterCode)
+                                .message("Chưa có lớp học phần. Vui lòng nhập lớp học phần.")
                                 .build());
             }
 
@@ -440,6 +443,17 @@ public class TimetableGenerationService {
         // Calculate actual date for this week
         LocalDate slotDate = calculateDateForWeek(semesterStart, week, dayIndex);
 
+        // Validate date within semester bounds (prevent slots before start date)
+        if (slotDate.isBefore(semesterStart)) {
+            return null;
+        }
+
+        // Check if this date is a holiday - skip if so
+        if (data.getHolidays() != null && data.getHolidays().contains(slotDate)) {
+            log.debug("Skipping slot on holiday: {} for class {}", slotDate, classSection.getClassName());
+            return null;
+        }
+
         return TimetableSlot.builder()
                 .classSection(classSection)
                 .room(room)
@@ -471,7 +485,7 @@ public class TimetableGenerationService {
      * Filter weekly slots to remove day-gap violations
      * Keeps slots that are at least 1 day apart from each other
      */
-    private List<Integer> filterDayGapViolations(Set<Integer> weeklySlots, TimetableData data) {
+    List<Integer> filterDayGapViolations(Set<Integer> weeklySlots, TimetableData data) {
         if (weeklySlots == null || weeklySlots.isEmpty()) {
             return new ArrayList<>();
         }
@@ -519,7 +533,7 @@ public class TimetableGenerationService {
     /**
      * Tính số tuần trong học kỳ
      */
-    private int calculateWeeksInSemester(LocalDate start, LocalDate end) {
+    int calculateWeeksInSemester(LocalDate start, LocalDate end) {
         long totalDays = java.time.temporal.ChronoUnit.DAYS.between(start, end);
         return (int) Math.ceil(totalDays / 7.0);
     }
@@ -527,7 +541,7 @@ public class TimetableGenerationService {
     /**
      * Tính ngày cho một tuần và ngày cụ thể
      */
-    private LocalDate calculateDateForWeek(LocalDate semesterStart, int weekNumber, int dayIndex) {
+    LocalDate calculateDateForWeek(LocalDate semesterStart, int weekNumber, int dayIndex) {
         // Calculate the Monday of the first week
         int startDayOfWeek = semesterStart.getDayOfWeek().getValue() - 1; // 0=Mon
         LocalDate firstMonday = semesterStart.minusDays(startDayOfWeek);
@@ -540,7 +554,7 @@ public class TimetableGenerationService {
      * Phân bổ slots thừa đều vào các tuần
      * VD: 10 tuần, 3 slots/tuần base, 5 extra → [4,4,4,4,4,3,3,3,3,3]
      */
-    private int[] distributeExtraSlots(int weeks, int baseSlots, int extraSlots) {
+    int[] distributeExtraSlots(int weeks, int baseSlots, int extraSlots) {
         int[] distribution = new int[weeks];
         Arrays.fill(distribution, baseSlots);
 
