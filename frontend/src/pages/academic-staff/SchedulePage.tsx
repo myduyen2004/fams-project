@@ -280,17 +280,6 @@ export const SchedulePage: React.FC = () => {
     }
   };
 
-  // Fetch config changed status
-  const fetchConfigChanged = async (semesterCode: string) => {
-    try {
-      const data = await timetableService.checkConfigChanged(semesterCode);
-      setConfigChanged(data.configChanged);
-    } catch (err) {
-      console.error('Failed to check config changed', err);
-      setConfigChanged(false);
-    }
-  };
-
   // Helper function to start polling for job status
   const startPolling = (jobId: string) => {
     pollingRef.current = window.setInterval(async () => {
@@ -315,7 +304,6 @@ export const SchedulePage: React.FC = () => {
           if (selected && selectedDate) {
             fetchTimetable(selected, selectedDate);
             fetchUnscheduledCount(selected);
-            fetchConfigChanged(selected);
           }
         } else if (status === 'FAILED' || status === 'ERROR' || status === 'CANCELLED') {
           if (pollingRef.current) { window.clearInterval(pollingRef.current); pollingRef.current = null; }
@@ -338,7 +326,6 @@ export const SchedulePage: React.FC = () => {
     if (selected) {
       fetchSemesterDetails(selected);
       fetchUnscheduledCount(selected);
-      fetchConfigChanged(selected);
     }
   }, [selected]);
 
