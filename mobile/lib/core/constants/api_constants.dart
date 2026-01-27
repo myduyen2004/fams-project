@@ -5,10 +5,10 @@ class ApiConstants {
   // Base URLs
   static const String baseUrlLocal = 'http://10.0.2.2:8080'; // Android Emulator
   static const String baseUrlUsb = 'http://localhost:8080'; // Real device via USB (adb reverse)
-  static const String baseUrlLocalDevice = 'http://192.168.1.35:8080'; // Real device via WiFi
+  static const String baseUrlLocalDevice = 'http://192.168.18.72:8080'; // Real device via WiFi
   
   // Current Environment
-  static const String baseUrl = baseUrlLocal; // Use USB (adb reverse)
+  static const String baseUrl = baseUrlUsb; // Use USB (adb reverse)
 
   // Auth Endpoints
   static const String login = '/api/auth/login';
