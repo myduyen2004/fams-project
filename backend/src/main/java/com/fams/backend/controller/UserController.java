@@ -72,11 +72,31 @@ public class UserController {
     }
 
     @PostMapping("/activate")
-    @Operation(summary = "Kích hoạt hàng loạt tài khoản người dùng")
+    @Operation(summary = "Kích hoạt hàng loạt tài khoản người dùng theo ID")
     public ResponseEntity<Void> activateUsers(@RequestBody java.util.List<Long> ids) {
         log.info("POST /users/activate | ids={}", ids);
         userService.activateUsers(ids);
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/activate-all")
+    @Operation(summary = "Kích hoạt tất cả tài khoản người dùng đang ở trạng thái INACTIVE")
+    public ResponseEntity<Void> activateAllUsers() {
+        log.info("POST /users/activate-all");
+        userService.activateAllInactiveUsers();
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/activation/progress")
+    @Operation(summary = "Lấy trạng thái kích hoạt hiện tại")
+    public ResponseEntity<Object> getActivationProgress() {
+        String username = org.springframework.security.core.context.SecurityContextHolder.getContext()
+                .getAuthentication().getName();
+        Object progress = userService.getActivationProgress(username);
+        if (progress == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(progress);
     }
 
     @PostMapping("/import/preview")

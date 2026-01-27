@@ -29,6 +29,10 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     @Query("SELECT u FROM User u WHERE LOWER(u.code) IN :codes")
     List<User> findByCodeInIgnoreCase(@Param("codes") java.util.Collection<String> codes);
 
+    // Batch fetch users by emails (for import optimization)
+    @Query("SELECT u FROM User u WHERE LOWER(u.email) IN :emails")
+    List<User> findByEmailInIgnoreCase(@Param("emails") java.util.Collection<String> emails);
+
     @Query("SELECT u.email FROM User u")
     Set<String> findAllEmails();
 
@@ -50,6 +54,10 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     Optional<User> findByUsernameIgnoreCase(String username);
 
     Optional<List<User>> findByRole(User.UserRole role);
+
+    List<User> findByStatus(User.UserStatus status);
+
+    List<User> findByStatusOrderByIdDesc(User.UserStatus status);
 
     /**
      * Tìm user theo email

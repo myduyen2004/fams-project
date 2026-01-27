@@ -37,6 +37,7 @@ public class DashboardServiceImpl implements DashboardService {
         private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
         @Override
+        @org.springframework.cache.annotation.Cacheable(value = "dashboard_stats", key = "'global'")
         public DashboardStatsResponse getStatistics() {
                 // Count users by role
                 long totalStudents = userRepository.countByRole(User.UserRole.STUDENT);
@@ -105,11 +106,11 @@ public class DashboardServiceImpl implements DashboardService {
                         return Collections.emptyList();
                 }
 
-                // Lấy toàn bộ notification recipients của user hiện tại
+                // Lấy 10 notification recipients gần nhất của user hiện tại để tối ưu dashboard
                 List<NotificationRecipient> recipients = notificationRecipientRepository
                                 .findByRecipientOrderByCreatedAtDesc(user)
                                 .stream()
-                                // .limit(5) Removed limit to show all notifications
+                                .limit(10)
                                 .collect(Collectors.toList());
 
                 return recipients.stream()
