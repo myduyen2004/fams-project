@@ -61,10 +61,7 @@ export const scheduleRequestService = {
         const response = await apiClient.get(`/lecturer/classes`);
         return response.data;
     },
-    createRequest: async (data: any): Promise<ScheduleRequest> => {
-        const response = await apiClient.post(`/lecturer/requests`, data);
-        return response.data;
-    },
+
     getRooms: async (): Promise<any[]> => {
         const response = await apiClient.get(`/v1/rooms`);
         return response.data;

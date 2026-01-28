@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Upload, Info, Check, Trash2 } from 'lucide-react';
+import { ArrowLeft, Upload, Info, Check, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { REQUEST_TYPE_LABELS, RequestType } from '../../types/requestType';
 import { scheduleRequestService, ClassSlotResponse, CreateScheduleRequestPayload } from '../../services/api/scheduleRequestService';
