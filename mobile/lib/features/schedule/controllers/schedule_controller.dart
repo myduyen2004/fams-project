@@ -90,10 +90,18 @@ class ScheduleController extends GetxController {
       isLoading.value = true;
       errorStatusCode.value = -1;
 
-      final timetable = await _scheduleService.getStudentSchedule(
-        user.id,
-        date: date ?? selectedDate.value,
-      );
+      WeeklyTimetable? timetable;
+      if (user.isLecturer) {
+        timetable = await _scheduleService.getLecturerSchedule(
+          user.id,
+          date: date ?? selectedDate.value,
+        );
+      } else {
+        timetable = await _scheduleService.getStudentSchedule(
+          user.id,
+          date: date ?? selectedDate.value,
+        );
+      }
       weeklyTimetable.value = timetable;
     } on DioException catch (e) {
       errorStatusCode.value = e.response?.statusCode ?? 500;
