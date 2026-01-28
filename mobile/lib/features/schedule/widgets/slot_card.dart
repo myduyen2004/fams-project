@@ -4,6 +4,7 @@ import '../models/schedule_model.dart';
 
 import 'package:get/get.dart';
 import '../controllers/schedule_controller.dart';
+import '../../auth/controllers/auth_controller.dart';
 
 class SlotCard extends StatelessWidget {
   final TimetableSlot slot;
@@ -29,19 +30,21 @@ class SlotCard extends StatelessWidget {
   }
 
   Widget _buildActiveCard(BuildContext context, ScheduleController controller) {
+    final isLecturer = Get.find<AuthController>().currentUser.value?.isLecturer ?? false;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 10), // Reduced from 16
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16), // Reduced from 20
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20), // Reduced from 28
-        border: Border.all(color: AppColors.primaryOrange, width: 1.5),
-        boxShadow: [
+        borderRadius: BorderRadius.circular(20),
+        // border: Border.all(color: AppColors.primaryOrange, width: 1.5),
+        boxShadow: const [
           BoxShadow(
-            color: AppColors.primaryOrange.withOpacity(0.15),
-            blurRadius: 20,
-            spreadRadius: 4,
-            offset: const Offset(0, 6),
+            color: Color(0xFFF2721E), // Updated color from request
+            blurRadius: 10,           // Updated blur
+            spreadRadius: 0,          // Updated spread
+            offset: Offset(0, 1),     // Updated offset
           ),
         ],
       ),
@@ -53,20 +56,20 @@ class SlotCard extends StatelessWidget {
             style: const TextStyle(
               color: AppColors.primaryOrange,
               fontWeight: FontWeight.w900,
-              fontSize: 11, // Reduced from 12
+              fontSize: 11,
             ),
           ),
-          const SizedBox(height: 4), // Reduced from 6
+          const SizedBox(height: 4),
           Text(
             slot.courseCode ?? 'COURSE',
             style: const TextStyle(
-              fontSize: 20, // Aggressively reduced from 26
+              fontSize: 20,
               fontWeight: FontWeight.w900,
               color: Color(0xFF2D3436),
               letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 12), // Reduced from 16
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -86,64 +89,68 @@ class SlotCard extends StatelessWidget {
                 style: const TextStyle(
                   color: AppColors.primaryOrange,
                   fontWeight: FontWeight.w900,
-                  fontSize: 11, // Reduced from 12
+                  fontSize: 11,
                 ),
               )),
             ],
           ),
-          const SizedBox(height: 16), // Reduced from 20
+          const SizedBox(height: 16),
+          
+          // Time
           _buildInfoItem(Icons.access_time_filled_rounded, "${_formatTime(slot.startTime)} - ${_formatTime(slot.endTime)}"),
-          const SizedBox(height: 8), // Reduced from 10
+          const SizedBox(height: 8),
+          
+          // Location
+          _buildInfoItem(Icons.location_on_rounded, slot.roomCode ?? 'Online'),
+          const SizedBox(height: 8),
+          
+          // Class
           _buildInfoItem(Icons.people_alt_rounded, slot.className ?? 'N/A'),
-          const SizedBox(height: 8), // Reduced from 10
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildInfoItem(Icons.location_on_rounded, slot.roomCode ?? 'Online'),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F2F6),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Text('s', style: TextStyle(color: Color(0xFF74B9FF), fontWeight: FontWeight.w900, fontSize: 9)),
-                    ),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        slot.lecturerName ?? 'N/A',
-                        style: const TextStyle(color: Color(0xFF2D3436), fontWeight: FontWeight.w800, fontSize: 12),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                      ),
-                    ),
-                  ],
+
+          // Lecturer (Hide if isLecturer)
+          if (!isLecturer) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F2F6),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text('GV', style: TextStyle(color: Color(0xFF74B9FF), fontWeight: FontWeight.w900, fontSize: 9)),
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    slot.lecturerName ?? 'N/A',
+                    style: const TextStyle(color: Color(0xFF2D3436), fontWeight: FontWeight.w800, fontSize: 12),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
 
   Widget _buildStatusCard(BuildContext context, {required bool isNext}) {
+    final isLecturer = Get.find<AuthController>().currentUser.value?.isLecturer ?? false;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 10), // Reduced from 16
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16), // Reduced from 20
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
       decoration: BoxDecoration(
         color: isNext ? Colors.white : Colors.white.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(20), // Reduced from 28
+        borderRadius: BorderRadius.circular(20),
         boxShadow: isNext ? [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
         ] : null,
       ),
@@ -155,7 +162,7 @@ class SlotCard extends StatelessWidget {
             style: TextStyle(
               color: isNext ? const Color(0xFFB2BEC3) : AppColors.primaryOrange, 
               fontWeight: FontWeight.w900, 
-              fontSize: 11, // Reduced from 12
+              fontSize: 11,
             ),
           ),
           const SizedBox(height: 4),
@@ -164,45 +171,31 @@ class SlotCard extends StatelessWidget {
             children: [
               Text(
                 slot.courseCode ?? 'COURSE',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF2D3436), letterSpacing: -0.3), // Reduced from 24
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF2D3436), letterSpacing: -0.3),
               ),
-              if (!isNext) _buildSmallBadge(slot.attendanceStatus ?? 'Có mặt'),
+              if (!isNext && !isLecturer) _buildSmallBadge(slot.attendanceStatus ?? 'Có mặt'),
             ],
           ),
-          const SizedBox(height: 12), // Reduced from 16
-          if (isNext) ...[
-            _buildInfoItem(Icons.access_time_filled_rounded, "${_formatTime(slot.startTime)} - ${_formatTime(slot.endTime)}"),
-            const SizedBox(height: 8),
-            _buildInfoItem(Icons.people_alt_rounded, slot.className ?? 'N/A'),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildInfoItem(Icons.meeting_room_rounded, slot.roomCode ?? 'Online'),
-                Expanded(
-                  child: Text(
-                    slot.lecturerName ?? 'N/A',
-                    style: const TextStyle(color: Color(0xFFB2BEC3), fontSize: 12, fontWeight: FontWeight.w700), // Reduced from 13
-                    textAlign: TextAlign.right,
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  ),
-                ),
-              ],
-            ),
-          ] else ...[
-            _buildInfoItem(Icons.meeting_room_rounded, slot.roomCode ?? 'Online'),
-            const SizedBox(height: 8),
-            _buildInfoItem(Icons.people_alt_rounded, slot.className ?? 'N/A'),
+          const SizedBox(height: 12),
+          
+          // Time
+          _buildInfoItem(Icons.access_time_filled_rounded, "${_formatTime(slot.startTime)} - ${_formatTime(slot.endTime)}"),
+          const SizedBox(height: 8),
+
+          // Location
+          _buildInfoItem(Icons.location_on_rounded, slot.roomCode ?? 'Online'),
+          const SizedBox(height: 8),
+
+          // Class
+          _buildInfoItem(Icons.people_alt_rounded, slot.className ?? 'N/A'),
+
+          // Lecturer (Hide if isLecturer)
+          if (!isLecturer) ...[
             const SizedBox(height: 8),
             Row(
               children: [
-                _buildInfoItem(Icons.access_time_filled_rounded, "${_formatTime(slot.startTime)} - ${_formatTime(slot.endTime)}"),
-                const SizedBox(width: 8),
-                Container(width: 1.5, height: 14, color: const Color(0xFFE9EEF5)),
-                const SizedBox(width: 8),
                 Icon(Icons.person_rounded, size: 15, color: const Color(0xFFB2BEC3)),
-                const SizedBox(width: 6),
+                const SizedBox(width: 8),
                 Flexible(
                   child: Text(
                     slot.lecturerName ?? 'N/A',
