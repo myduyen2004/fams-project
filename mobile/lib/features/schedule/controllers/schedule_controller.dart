@@ -153,22 +153,7 @@ class ScheduleController extends GetxController {
   void _updateActiveStatus() {
     if (selectedDaySlots.isEmpty) return;
 
-    // --- DEBUG: TEST MODE START ---
-    // Force the first slot to be active for UI testing
-    if (selectedDaySlots.isNotEmpty) {
-      activeSlot.value = selectedDaySlots.first;
-      
-      // Mock progress simulation
-      final now = DateTime.now();
-      // Cycle progress 0.0 -> 1.0 every minute for visual effect
-      activeProgress.value = (now.second / 60.0);
-      timeLeftStr.value = "${60 - now.second} phút (Test)";
-      
-      // Clear next slot as we are "in" a slot
-      nextSlot.value = null;
-      return;
-    }
-    // --- DEBUG: TEST MODE END ---
+    // --- DEBUG: TEST MODE END --- (Removed)
 
     final now = DateTime.now();
     if (!_isSameDay(selectedDate.value, now)) {
