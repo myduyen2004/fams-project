@@ -3,9 +3,11 @@ import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import axios from 'axios';
 import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
 import { toast } from 'react-hot-toast';
-import { Calendar, BookOpen, ChevronLeft, ChevronRight, X, Clock, MapPin, User, GraduationCap, AlertTriangle, Check, ChevronsUpDown, Eye, EyeOff, Loader2, Play, Users, School, Download, MoreVertical, RefreshCw, Save } from 'lucide-react';
+import { Calendar, BookOpen, ChevronLeft, ChevronRight, X, Clock, MapPin, User, GraduationCap, AlertTriangle, Check, ChevronsUpDown, Eye, EyeOff, Loader2, Play, Users, School, Download, MoreVertical, Home } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { Combobox, Transition } from '@headlessui/react';
+import { Combobox, Transition, Listbox } from '@headlessui/react';
+import { roomService } from '../../services/api/roomService';
+import { Room } from '../../types/room';
 
 interface FilterComboboxProps {
   value: string | null; // Changed to allow null
@@ -157,10 +159,11 @@ export const SchedulePage: React.FC = () => {
   // Toggle for showing locked schedule (isPublished)
   const [showLockedSchedule, setShowLockedSchedule] = useState(false);
 
-  // Filters
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [selectedTeacher, setSelectedTeacher] = useState<string | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
+  const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
+  const [allRooms, setAllRooms] = useState<Room[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [semesterStartDate, setSemesterStartDate] = useState<string>('');
   const [semesterEndDate, setSemesterEndDate] = useState<string>('');
@@ -180,17 +183,6 @@ export const SchedulePage: React.FC = () => {
   // Export week loading state
   const [exportingWeek, setExportingWeek] = useState(false);
 
-  // Rescheduling state
-  const [isRescheduling, setIsRescheduling] = useState(false);
-  const [rescheduleDate, setRescheduleDate] = useState('');
-  const [rescheduleSlot, setRescheduleSlot] = useState<number | null>(null);
-  const [rescheduleRoom, setRescheduleRoom] = useState<number | null>(null);
-  const [availableSlots, setAvailableSlots] = useState<number[]>([]);
-  const [availableRooms, setAvailableRooms] = useState<any[]>([]);
-  const [rawAvailability, setRawAvailability] = useState<any>(null);
-  const [loadingAvailability, setLoadingAvailability] = useState(false);
-  const [isSubmittingReschedule, setIsSubmittingReschedule] = useState(false);
-
   const fetchSemesters = async () => {
     try {
       const resp = await axios.get('/api/v1/semesters/active');
@@ -200,6 +192,17 @@ export const SchedulePage: React.FC = () => {
     } catch (err) {
       console.error('Failed to load semesters', err);
       toast.error('Không thể tải danh sách học kỳ');
+    }
+  };
+
+  const fetchAllRooms = async () => {
+    try {
+      const data = await roomService.getAllRooms();
+      // Sort rooms by code ascending
+      const sorted = data.sort((a, b) => a.code.localeCompare(b.code, 'vi', { numeric: true }));
+      setAllRooms(sorted);
+    } catch (err) {
+      console.error('Failed to load rooms', err);
     }
   };
 
@@ -331,6 +334,7 @@ export const SchedulePage: React.FC = () => {
 
   useEffect(() => {
     fetchSemesters();
+    fetchAllRooms();
   }, []);
 
   useEffect(() => {
@@ -378,54 +382,6 @@ export const SchedulePage: React.FC = () => {
       }
     };
   }, []);
-
-  // Fetch availability when rescheduling date changes
-  useEffect(() => {
-    if (isRescheduling && rescheduleDate && selected) {
-      const fetchAvailability = async () => {
-        setLoadingAvailability(true);
-        try {
-          const data = await timetableService.getAvailability(rescheduleDate, selected);
-          setRawAvailability(data);
-          setAvailableSlots(data.availableSlots);
-          // Initial room list if slot already selected
-          if (rescheduleSlot) {
-            const occupiedIds = data.occupiedRoomIdsBySlot[rescheduleSlot] || [];
-            setAvailableRooms(data.allRooms.filter((r: any) => !occupiedIds.includes(r.id)));
-          } else {
-            setAvailableRooms([]);
-          }
-        } catch (err) {
-          console.error('Failed to fetch availability', err);
-          toast.error('Không thể tải thông tin phòng trống');
-        } finally {
-          setLoadingAvailability(false);
-        }
-      };
-      fetchAvailability();
-    }
-  }, [isRescheduling, rescheduleDate, selected]);
-
-  // Update available rooms when rescheduleSlot changes
-  useEffect(() => {
-    if (rawAvailability && rescheduleSlot) {
-      const occupiedIds = rawAvailability.occupiedRoomIdsBySlot[rescheduleSlot] || [];
-      setAvailableRooms(rawAvailability.allRooms.filter((r: any) => !occupiedIds.includes(r.id)));
-    } else {
-      setAvailableRooms([]);
-    }
-  }, [rescheduleSlot, rawAvailability]);
-
-  // Reset rescheduling state when modal closes
-  useEffect(() => {
-    if (!selectedSlot) {
-      setIsRescheduling(false);
-      setRescheduleDate('');
-      setRescheduleSlot(null);
-      setRescheduleRoom(null);
-      setRawAvailability(null);
-    }
-  }, [selectedSlot]);
 
   // Main generation start function
   const startGeneration = async () => {
@@ -670,7 +626,22 @@ export const SchedulePage: React.FC = () => {
   // Filters logic handled by Combobox components
 
   // Build data structure: rooms -> slotNumber
-  const rooms = Array.from(new Set(slots.map(s => s.roomName || s.roomCode || 'Phòng')));
+  // Use allRooms from API, sorted ascending. If empty, fall back to unique rooms from slots.
+  const displayRooms = useMemo(() => {
+    const roomCodes = allRooms.map(r => r.code);
+    if (roomCodes.length === 0) {
+      // Fallback: unique rooms from slots, sorted
+      const fromSlots = Array.from(new Set(slots.map(s => s.roomCode || s.roomName || 'Phòng'))).sort((a, b) => a.localeCompare(b, 'vi', { numeric: true }));
+      return fromSlots;
+    }
+    return roomCodes;
+  }, [allRooms, slots]);
+
+  // Filter rooms by selected room filter
+  const filteredDisplayRooms = useMemo(() => {
+    if (selectedRooms.length === 0) return displayRooms;
+    return displayRooms.filter(r => selectedRooms.includes(r));
+  }, [displayRooms, selectedRooms]);
 
   // Filter slots based on selected filters
   const filteredSlots = slots.filter(slot => {
@@ -678,12 +649,16 @@ export const SchedulePage: React.FC = () => {
     if (selectedTeacher && slot.lecturerName !== selectedTeacher) return false;
     if (selectedCourse && (slot.courseCode !== selectedCourse && slot.courseName !== selectedCourse)) return false;
     if (selectedDate && slot.date !== selectedDate) return false;
+    if (selectedRooms.length > 0) {
+      const slotRoom = slot.roomCode || slot.roomName || 'Phòng';
+      if (!selectedRooms.includes(slotRoom)) return false;
+    }
     return true;
   });
 
   const getCell = (room: string, slotNum: number) => {
     return filteredSlots.find(s =>
-      (s.roomName || s.roomCode || 'Phòng') === room &&
+      (s.roomCode || s.roomName || 'Phòng') === room &&
       (s.slotNumber || 0) === slotNum
     );
   };
@@ -853,13 +828,64 @@ export const SchedulePage: React.FC = () => {
               icon={BookOpen}
             />
 
+            {/* Room Filter - Multi-select */}
+            <div className="relative w-full sm:w-56">
+              <Listbox value={selectedRooms} onChange={setSelectedRooms} multiple>
+                <div className="relative">
+                  <Listbox.Button className="relative w-full cursor-default overflow-hidden rounded-lg bg-white text-left border border-gray-200 focus-within:border-fpt-orange focus-within:ring-1 focus-within:ring-fpt-orange sm:text-sm flex items-center transition-colors py-2 px-3">
+                    <Home size={16} className="text-gray-400 mr-2 flex-shrink-0" />
+                    <span className="block truncate flex-1 text-sm text-gray-700">
+                      {selectedRooms.length === 0
+                        ? 'Chọn phòng...'
+                        : selectedRooms.length === 1
+                          ? selectedRooms[0]
+                          : `${selectedRooms.length} phòng`}
+                    </span>
+                    <ChevronsUpDown className="h-4 w-4 text-gray-400 flex-shrink-0" aria-hidden="true" />
+                  </Listbox.Button>
+                  <Transition
+                    as={Fragment}
+                    leave="transition ease-in duration-100"
+                    leaveFrom="opacity-100"
+                    leaveTo="opacity-0"
+                  >
+                    <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-50 scroller">
+                      {displayRooms.map((room) => (
+                        <Listbox.Option
+                          key={room}
+                          className={({ active }) =>
+                            `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-fpt-orange text-white' : 'text-gray-900'}`
+                          }
+                          value={room}
+                        >
+                          {({ selected, active }) => (
+                            <>
+                              <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                                {room}
+                              </span>
+                              {selected && (
+                                <span className={`absolute inset-y-0 left-0 flex items-center pl-3 ${active ? 'text-white' : 'text-fpt-orange'}`}>
+                                  <Check className="h-5 w-5" aria-hidden="true" />
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </Listbox.Option>
+                      ))}
+                    </Listbox.Options>
+                  </Transition>
+                </div>
+              </Listbox>
+            </div>
+
             {/* Clear filters button */}
-            {(selectedClass || selectedTeacher || selectedCourse) && (
+            {(selectedClass || selectedTeacher || selectedCourse || selectedRooms.length > 0) && (
               <button
                 onClick={() => {
-                  setSelectedClass('');
-                  setSelectedTeacher('');
-                  setSelectedCourse('');
+                  setSelectedClass(null);
+                  setSelectedTeacher(null);
+                  setSelectedCourse(null);
+                  setSelectedRooms([]);
                 }}
                 className="text-sm text-fpt-orange hover:text-orange-600 font-medium whitespace-nowrap"
               >
@@ -960,7 +986,7 @@ export const SchedulePage: React.FC = () => {
               </div>
             )}
 
-            {rooms.length === 0 ? (
+            {filteredSlots.length === 0 ? (
               <div className="p-12 text-center text-gray-500">
                 {selectedDate
                   ? `Không có lịch học vào ${new Date(selectedDate).toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}`
@@ -990,7 +1016,7 @@ export const SchedulePage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {rooms.map((room, idx) => (
+                    {filteredDisplayRooms.map((room, idx) => (
                       <tr key={room} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
                         <td className="px-6 py-4 text-sm font-semibold text-gray-800 border-b border-gray-100">
                           {room}
@@ -1173,7 +1199,7 @@ export const SchedulePage: React.FC = () => {
             </div>
 
             {/* Status */}
-            {selectedSlot.status && !isRescheduling && (
+            {selectedSlot.status && (
               <div className="border-t border-gray-100 pt-4">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái:</span>
@@ -1189,134 +1215,14 @@ export const SchedulePage: React.FC = () => {
               </div>
             )}
 
-            {/* Rescheduling Form */}
-            {isRescheduling && (
-              <div className="border-t border-gray-100 pt-4 mt-4 space-y-4">
-                <h4 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <RefreshCw size={16} className="text-fpt-orange" />
-                  Thay đổi lịch học
-                </h4>
-
-                <div className="grid grid-cols-1 gap-4">
-                  {/* Date Input */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Ngày đổi</label>
-                    <input
-                      type="date"
-                      value={rescheduleDate}
-                      min={semesterStartDate}
-                      max={semesterEndDate}
-                      onChange={(e) => {
-                        setRescheduleDate(e.target.value);
-                        setRescheduleSlot(null);
-                        setRescheduleRoom(null);
-                      }}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-fpt-orange focus:border-fpt-orange outline-none"
-                    />
-                  </div>
-
-                  {/* Slot Selection */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Tiết đổi</label>
-                    <select
-                      value={rescheduleSlot || ''}
-                      onChange={(e) => setRescheduleSlot(Number(e.target.value))}
-                      disabled={!rescheduleDate || loadingAvailability}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-fpt-orange focus:border-fpt-orange outline-none disabled:bg-gray-50"
-                    >
-                      <option value="">Chọn tiết học</option>
-                      {availableSlots.map(num => (
-                        <option key={num} value={num}>Slot {num}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Room Selection */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Phòng đổi</label>
-                    <select
-                      value={rescheduleRoom || ''}
-                      onChange={(e) => setRescheduleRoom(Number(e.target.value))}
-                      disabled={!rescheduleSlot}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-fpt-orange focus:border-fpt-orange outline-none disabled:bg-gray-50"
-                    >
-                      <option value="">Chọn phòng học</option>
-                      {availableRooms.map(r => (
-                        <option key={r.id} value={r.id}>{r.name} ({r.capacity} chỗ)</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="mt-6 flex justify-end gap-3">
-              {!isRescheduling ? (
-                <>
-                  <button
-                    onClick={() => {
-                      setIsRescheduling(true);
-                      setRescheduleDate(selectedSlot.date || '');
-                      setRescheduleSlot(selectedSlot.slotNumber || null);
-                      setRescheduleRoom(null); // Force re-select room or keep current?
-                      // If keeping current, we need its ID. selectedSlot has roomCode/roomName but maybe not roomId.
-                      // Let's assume we re-select room for safety.
-                    }}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-fpt-orange hover:bg-orange-600 text-white rounded-xl font-medium transition-colors"
-                  >
-                    <RefreshCw size={18} />
-                    Cập nhật
-                  </button>
-                  <button
-                    onClick={() => setSelectedSlot(null)}
-                    className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
-                  >
-                    Đóng
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => setIsRescheduling(false)}
-                    className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
-                  >
-                    Hủy
-                  </button>
-                  <button
-                    onClick={async () => {
-                      if (!rescheduleDate || !rescheduleSlot || !rescheduleRoom) {
-                        toast.error('Vui lòng chọn đầy đủ thông tin');
-                        return;
-                      }
-                      setIsSubmittingReschedule(true);
-                      try {
-                        await timetableService.updateSlot(selectedSlot.id, {
-                          date: rescheduleDate,
-                          slotNumber: rescheduleSlot,
-                          roomId: rescheduleRoom
-                        });
-                        toast.success('Đã cập nhật lịch học');
-                        setIsRescheduling(false);
-                        setSelectedSlot(null);
-                        // Refresh timetable
-                        if (selected && selectedDate) {
-                          fetchTimetable(selected, selectedDate);
-                        }
-                      } catch (err: any) {
-                        toast.error(err.response?.data?.message || 'Không thể cập nhật lịch học');
-                      } finally {
-                        setIsSubmittingReschedule(false);
-                      }
-                    }}
-                    disabled={isSubmittingReschedule}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
-                  >
-                    {isSubmittingReschedule ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                    Xác nhận đổi
-                  </button>
-                </>
-              )}
+            {/* Close Button */}
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setSelectedSlot(null)}
+                className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
+              >
+                Đóng
+              </button>
             </div>
           </div>
         </div>
