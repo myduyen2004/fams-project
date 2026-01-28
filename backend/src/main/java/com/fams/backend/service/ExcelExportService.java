@@ -123,6 +123,110 @@ public class ExcelExportService {
         }
     }
 
+    public void exportLecturerScheduleToExcel(
+            HttpServletResponse response,
+            List<TimetableDTO.TimetableSlotDTO> slots,
+            String lecturerName,
+            String semesterName) throws IOException {
+
+        try (SXSSFWorkbook workbook = new SXSSFWorkbook(100)) { // Keep 100 rows in memory
+            Sheet sheet = workbook.createSheet("Lecturer Schedule");
+            ((org.apache.poi.xssf.streaming.SXSSFSheet) sheet).trackAllColumnsForAutoSizing();
+
+            // 2. Define Styles
+            CellStyle headerStyle = createHeaderStyle(workbook);
+            CellStyle normalStyle = createNormalStyle(workbook);
+            CellStyle dateStyle = createDateStyle(workbook);
+            CellStyle statusFuture = createStatusStyle(workbook, IndexedColors.GREY_50_PERCENT);
+            CellStyle titleStyle = createTitleStyle(workbook);
+
+            // 3. Create Title & Info Headers
+            createLecturerTitleRow(sheet, titleStyle, lecturerName, semesterName);
+
+            // 4. Create Table Header (Row 6 -> Index 5)
+            String[] columns = { "No.", "Date", "Day", "Slot", "Class/Course", "Room", "Status" };
+            Row headerRow = sheet.createRow(5);
+            for (int i = 0; i < columns.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(columns[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            // 5. Populate Data
+            int rowIdx = 6;
+            int serialNo = 1;
+
+            for (TimetableDTO.TimetableSlotDTO slot : slots) {
+                Row row = sheet.createRow(rowIdx++);
+
+                // No.
+                createCell(row, 0, String.valueOf(serialNo++), normalStyle);
+
+                // Date
+                String dateStr = slot.getDate() != null ? slot.getDate().format(DATE_FORMATTER) : "";
+                createCell(row, 1, dateStr, normalStyle);
+
+                // Day
+                String dayStr = getDayName(slot.getDayOfWeek());
+                createCell(row, 2, dayStr, normalStyle);
+
+                // Slot
+                String slotStr = String.format("Slot %d (%s-%s)",
+                        slot.getSlotNumber(),
+                        slot.getStartTime() != null ? slot.getStartTime().toString() : "",
+                        slot.getEndTime() != null ? slot.getEndTime().toString() : "");
+                createCell(row, 3, slotStr, normalStyle);
+
+                // Class/Course
+                String classStr = (slot.getClassName() != null ? slot.getClassName() : "") +
+                        (slot.getCourseCode() != null ? "\n(" + slot.getCourseCode() + ")" : "");
+                createCell(row, 4, classStr, normalStyle);
+
+                // Room
+                createCell(row, 5, slot.getRoomCode(), normalStyle);
+
+                // Status logic
+                String statusText = "";
+                CellStyle statusStyle = normalStyle;
+
+                if ("CANCELLED".equalsIgnoreCase(slot.getStatus())) {
+                    statusText = "Đã hủy";
+                    statusStyle = statusFuture;
+                } else {
+                    statusText = "Chưa diễn ra";
+                    statusStyle = statusFuture;
+                }
+
+                createCell(row, 6, statusText, statusStyle);
+            }
+
+            // 6. Auto-size columns
+            for (int i = 0; i < columns.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            // 7. Write to Output Stream
+            ServletOutputStream outputStream = response.getOutputStream();
+            workbook.write(outputStream);
+            outputStream.close();
+        }
+    }
+
+    private void createLecturerTitleRow(Sheet sheet, CellStyle titleStyle, String lecturerName, String semesterName) {
+        Row titleRow = sheet.createRow(0);
+        Cell titleCell = titleRow.createCell(0);
+        titleCell.setCellValue("Lecturer Schedule Report");
+        titleCell.setCellStyle(titleStyle);
+
+        Row semesterRow = sheet.createRow(2);
+        semesterRow.createCell(0).setCellValue("Semester:");
+        semesterRow.createCell(1).setCellValue(semesterName);
+
+        Row lecturerRow = sheet.createRow(3);
+        lecturerRow.createCell(0).setCellValue("Lecturer:");
+        lecturerRow.createCell(1).setCellValue(lecturerName);
+    }
+
     private void createCell(Row row, int colIndex, String value, CellStyle style) {
         Cell cell = row.createCell(colIndex);
         cell.setCellValue(value != null ? value : "");
