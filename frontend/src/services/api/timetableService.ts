@@ -143,6 +143,28 @@ export const timetableService = {
       headers: getAuthHeader()
     });
     return resp.data;
+  },
+
+  getLecturerTimetable: async (lecturerId: number, date?: string) => {
+    const params = date ? { date } : {};
+    const resp = await axios.get<WeeklyTimetableDTO>(`${API_URL}/v1/timetable/lecturer/${lecturerId}`, {
+      headers: getAuthHeader(),
+      params
+    });
+    return resp.data;
+  },
+
+  exportLecturerTimetable: async (lecturerId: number, semesterCode?: string, date?: string) => {
+    const params: any = {};
+    if (semesterCode) params.semesterCode = semesterCode;
+    if (date) params.date = date;
+
+    const resp = await axios.get(`${API_URL}/v1/timetable/export/lecturer/${lecturerId}`, {
+      headers: getAuthHeader(),
+      params,
+      responseType: 'blob' // Important for file download
+    });
+    return resp;
   }
 };
 

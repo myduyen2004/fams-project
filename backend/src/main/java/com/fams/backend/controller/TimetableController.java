@@ -453,6 +453,55 @@ public class TimetableController {
         return ResponseEntity.ok(buildWeeklyTimetable(weekStart, weekEnd, slots));
     }
 
+    @GetMapping("/export/lecturer/{lecturerId}")
+    @Operation(summary = "Export lecturer timetable to Excel")
+    public void exportLecturerTimetable(
+            @PathVariable Long lecturerId,
+            @RequestParam(required = false) String semesterCode,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            HttpServletResponse response) throws Exception {
+
+        User lecturer = userRepository.findById(lecturerId)
+                .orElseThrow(() -> new RuntimeException("Lecturer not found"));
+
+        Semester semester = null;
+        if (semesterCode != null && !semesterCode.isEmpty()) {
+            semester = semesterRepository.findByCode(semesterCode).orElse(null);
+        }
+
+        if (semester == null && date != null) {
+            semester = semesterRepository.findSemesterByDate(date).orElse(null);
+        }
+
+        if (semester == null) {
+            // Fallback to current date semester if still null
+            semester = semesterRepository.findSemesterByDate(LocalDate.now())
+                    .orElseThrow(() -> new RuntimeException("Semester not found for the given criteria"));
+        }
+
+        // 1. Fetch ALL slots for this lecturer in this semester
+        List<TimetableSlot> slots = timetableSlotRepository.findByLecturerIdAndDateBetween(
+                lecturer.getId(), semester.getStartDate(), semester.getEndDate());
+
+        // 2. Map to DTOs
+        List<TimetableDTO.TimetableSlotDTO> slotDTOs = slots.stream()
+                .map(this::convertToDTO)
+                .sorted(Comparator.comparing(TimetableDTO.TimetableSlotDTO::getDate)
+                        .thenComparing(TimetableDTO.TimetableSlotDTO::getSlotNumber))
+                .collect(Collectors.toList());
+
+        // 3. Set Response Headers
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        String headerKey = "Content-Disposition";
+        String headerValue = "attachment; filename=schedule_lecturer_" + lecturer.getUsername() + "_"
+                + semester.getCode() + ".xlsx";
+        response.setHeader(headerKey, headerValue);
+
+        // 4. Generate Excel
+        excelExportService.exportLecturerScheduleToExcel(response, slotDTOs, lecturer.getFullName(),
+                semester.getName());
+    }
+
     @GetMapping("/room/{roomId}")
     @Operation(summary = "Get timetable for a room")
     public ResponseEntity<TimetableDTO.WeeklyTimetableDTO> getRoomTimetable(
