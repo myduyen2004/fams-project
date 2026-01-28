@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Upload, Info } from 'lucide-react';
+import { ArrowLeft, Save, Upload, Info, Check, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { REQUEST_TYPE_LABELS } from '../../types/requestType';
-import { scheduleRequestService, ClassSlotResponse } from '../../services/api/scheduleRequestService';
+import { REQUEST_TYPE_LABELS, RequestType } from '../../types/requestType';
+import { scheduleRequestService, ClassSlotResponse, CreateScheduleRequestPayload } from '../../services/api/scheduleRequestService';
+import { RoomSelectionCard } from '../../components/lecturer/request/RoomSelectionCard';
+import { Room } from '../../types/room';
+import { uploadFile } from '../../services/utils/fileUploadService';
 
 export const LecturerCreateRequestPage: React.FC = () => {
     const navigate = useNavigate();
@@ -15,6 +18,69 @@ export const LecturerCreateRequestPage: React.FC = () => {
     const [slots, setSlots] = useState<ClassSlotResponse[]>([]);
     const [selectedSlotId, setSelectedSlotId] = useState<string>('');
     const [selectedSlot, setSelectedSlot] = useState<ClassSlotResponse | null>(null);
+    const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+    const [newDate, setNewDate] = useState<string>('');
+    const [newSlot, setNewSlot] = useState<number | null>(null);
+    const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+    const [dateError, setDateError] = useState<string>('');
+    const [reason, setReason] = useState<string>('');
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Get today's date in YYYY-MM-DD format
+    const getTodayString = () => {
+        const today = new Date();
+        return today.toISOString().split('T')[0];
+    };
+
+    // Handle date change with validation
+    const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedDate = e.target.value;
+        const today = getTodayString();
+
+        if (selectedDate && selectedDate < today) {
+            setDateError('Ngày thay đổi phải từ hôm nay trở đi');
+            setNewDate('');
+        } else {
+            setDateError('');
+            setNewDate(selectedDate);
+        }
+    };
+
+    // Handle file upload
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (files) {
+            const newFiles = Array.from(files).filter(file => {
+                // Check file size (max 10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    toast.error(`File ${file.name} vượt quá 10MB`);
+                    return false;
+                }
+                // Check if file already exists
+                if (uploadedFiles.some(f => f.name === file.name)) {
+                    toast.error(`File ${file.name} đã được thêm`);
+                    return false;
+                }
+                return true;
+            });
+            setUploadedFiles(prev => [...prev, ...newFiles]);
+        }
+        // Reset input value to allow re-uploading same file
+        if (e.target) e.target.value = '';
+    };
+
+
+    const [selectedSlotNumber, setSelectedSlotNumber] = useState<number | null>(null);
+
+    // Format Date: dd/MM/yyyy
+    const formatDateDDMMYYYY = (dateString: string) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+    };
 
     // Fetch classes on mount
     useEffect(() => {
@@ -39,6 +105,7 @@ export const LecturerCreateRequestPage: React.FC = () => {
                     // Reset slot selection when class changes
                     setSelectedSlotId('');
                     setSelectedSlot(null);
+                    setSelectedSlotNumber(null);
                 } catch (error) {
                     console.error("Error fetching slots:", error);
                     toast.error("Không thể tải danh sách slot cho lớp này");
@@ -49,24 +116,89 @@ export const LecturerCreateRequestPage: React.FC = () => {
             setSlots([]);
             setSelectedSlotId('');
             setSelectedSlot(null);
+            setSelectedSlotNumber(null);
         }
     }, [selectedClass]);
 
-    const handleSlotChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const handleSlotNumberChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const num = e.target.value ? parseInt(e.target.value) : null;
+        setSelectedSlotNumber(num);
+        setSelectedSlotId('');
+        setSelectedSlot(null);
+    };
+
+    const handleOriginalDateSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const slotId = e.target.value;
         setSelectedSlotId(slotId);
         const found = slots.find(s => s.id.toString() === slotId) || null;
         setSelectedSlot(found);
     };
 
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Validation
+        if (!selectedSlotId) {
+            toast.error('Vui lòng chọn slot cần thay đổi');
+            return;
+        }
+        if (!newDate) {
+            toast.error('Vui lòng chọn ngày cần đổi');
+            return;
+        }
+        if (!newSlot) {
+            toast.error('Vui lòng chọn slot mới');
+            return;
+        }
+        if (!selectedRoom) {
+            toast.error('Vui lòng chọn phòng học mới');
+            return;
+        }
+        if (!reason.trim()) {
+            toast.error('Vui lòng nhập lý do thay đổi');
+            return;
+        }
+
         setSubmitting(true);
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        toast.success('Yêu cầu đã được gửi thành công!');
-        setSubmitting(false);
-        navigate('/lecturer/requests');
+        try {
+            // Upload ALL files to Cloudinary
+            let fileUrls: string[] = [];
+            if (uploadedFiles.length > 0) {
+                try {
+                    for (const file of uploadedFiles) {
+                        const uploadResult = await uploadFile(file);
+                        const url = uploadResult.url || uploadResult.secure_url;
+                        if (url) fileUrls.push(url);
+                    }
+                } catch (uploadError) {
+                    console.error('File upload failed:', uploadError);
+                    toast.error('Không thể upload file. Vui lòng thử lại.');
+                    setSubmitting(false);
+                    return;
+                }
+            }
+
+            const payload: CreateScheduleRequestPayload = {
+                originalSlotId: parseInt(selectedSlotId),
+                type: 'RESCHEDULE',
+                reason: reason.trim(),
+                requestedDate: newDate,
+                requestedSlotTypeId: newSlot,
+                requestedRoomId: selectedRoom.id,
+                file: fileUrls.length > 0 ? JSON.stringify(fileUrls) : undefined
+            };
+
+            await scheduleRequestService.createRequest(payload);
+            toast.success('Yêu cầu đã được gửi thành công!');
+            navigate('/lecturer/requests');
+        } catch (error: any) {
+            console.error('Error creating request:', error);
+            const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi gửi yêu cầu';
+            toast.error(errorMessage);
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     return (
@@ -115,11 +247,13 @@ export const LecturerCreateRequestPage: React.FC = () => {
                                 <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">LOẠI YÊU CẦU</label>
                                 <select className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all text-slate-700 dark:text-slate-200">
                                     <option value="">Chọn loại yêu cầu</option>
-                                    {Object.keys(REQUEST_TYPE_LABELS).map((key) => (
-                                        <option key={key} value={key}>
-                                            {REQUEST_TYPE_LABELS[key]}
-                                        </option>
-                                    ))}
+                                    {Object.keys(REQUEST_TYPE_LABELS)
+                                        .filter(key => key !== RequestType.CANCEL && key !== RequestType.SWAP)
+                                        .map((key) => (
+                                            <option key={key} value={key}>
+                                                {REQUEST_TYPE_LABELS[key]}
+                                            </option>
+                                        ))}
                                 </select>
                             </div>
                         </div>
@@ -128,102 +262,194 @@ export const LecturerCreateRequestPage: React.FC = () => {
                     {/* Change Details */}
                     <section className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-8">
                         <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Chi tiết thay đổi</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <div className="bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30">
-                                <label className="block text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-widest mb-1">SLOT BAN ĐẦU</label>
-                                {selectedClass ? (
-                                    <select
-                                        className="w-full bg-transparent border-none p-0 text-lg font-bold text-slate-800 dark:text-blue-100 focus:ring-0 cursor-pointer appearance-none"
-                                        value={selectedSlotId}
-                                        onChange={handleSlotChange}
-                                    >
-                                        <option value="" className="text-base font-normal">Chọn slot</option>
-                                        {Array.from(new Map(slots.map(slot => [slot.slotNumber, slot])).values())
-                                            .sort((a, b) => a.slotNumber - b.slotNumber)
-                                            .map(slot => (
-                                                <option key={slot.id} value={slot.id} className="text-base font-normal text-black dark:text-white">
-                                                    Slot {slot.slotNumber}
-                                                </option>
-                                            ))}
-                                    </select>
-                                ) : (
-                                    <p className="text-lg font-bold text-slate-400 dark:text-blue-100/50">Vui lòng chọn lớp</p>
-                                )}
-                            </div>
-                            <div className="bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30">
-                                <label className="block text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-widest mb-1">PHÒNG BAN ĐẦU</label>
-                                <p className="text-lg font-bold text-slate-800 dark:text-blue-100">
-                                    {selectedSlot ? selectedSlot.roomName : '-'}
-                                </p>
-                            </div>
-                            <div className="bg-orange-50/50 dark:bg-orange-900/10 p-4 rounded-xl border border-orange-100 dark:border-orange-900/30">
-                                <label className="block text-[10px] font-bold text-orange-500 dark:text-orange-400 uppercase tracking-widest mb-1">NGÀY THAY ĐỔI</label>
-                                <input className="w-full bg-transparent border-none p-0 text-lg font-bold text-orange-600 dark:text-orange-400 placeholder:text-orange-300 focus:ring-0 cursor-pointer" type="date" />
-                            </div>
-                            <div className="bg-orange-50/50 dark:bg-orange-900/10 p-4 rounded-xl border border-orange-100 dark:border-orange-900/30">
-                                <label className="block text-[10px] font-bold text-orange-500 dark:text-orange-400 uppercase tracking-widest mb-1">SLOT MỚI</label>
-                                <select className="w-full bg-transparent border-none p-0 text-lg font-bold text-orange-600 dark:text-orange-400 focus:ring-0 cursor-pointer appearance-none">
-                                    <option className="text-slate-900 dark:text-slate-100 bg-white dark:bg-zinc-800" value="">Chọn slot mới</option>
-                                    <option className="text-slate-900 dark:text-slate-100 bg-white dark:bg-zinc-800" value="1">Slot 1</option>
-                                    <option className="text-slate-900 dark:text-slate-100 bg-white dark:bg-zinc-800" value="2">Slot 2</option>
-                                    <option className="text-slate-900 dark:text-slate-100 bg-white dark:bg-zinc-800" value="3">Slot 3</option>
-                                    <option className="text-slate-900 dark:text-slate-100 bg-white dark:bg-zinc-800" value="4">Slot 4</option>
-                                    <option className="text-slate-900 dark:text-slate-100 bg-white dark:bg-zinc-800" value="5">Slot 5</option>
-                                    <option className="text-slate-900 dark:text-slate-100 bg-white dark:bg-zinc-800" value="6">Slot 6</option>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+                            <div>
+                                <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">SLOT BAN ĐẦU</label>
+                                <select
+                                    className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all text-slate-700 dark:text-slate-200 font-bold"
+                                    value={selectedSlotNumber || ''}
+                                    onChange={handleSlotNumberChange}
+                                    disabled={!selectedClass}
+                                >
+                                    <option value="">Chọn slot</option>
+                                    {Array.from(new Set(slots.map(s => s.slotNumber)))
+                                        .sort((a, b) => a - b)
+                                        .map(num => (
+                                            <option key={num} value={num}>
+                                                Slot {num}
+                                            </option>
+                                        ))}
                                 </select>
                             </div>
-                            <div className="bg-orange-50/50 dark:bg-orange-900/10 p-4 rounded-xl border border-orange-100 dark:border-orange-900/30">
-                                <label className="block text-[10px] font-bold text-orange-500 dark:text-orange-400 uppercase tracking-widest mb-1">PHÒNG MỚI</label>
-                                <select className="w-full bg-transparent border-none p-0 text-lg font-bold text-orange-600 dark:text-orange-400 focus:ring-0 cursor-pointer appearance-none">
-                                    <option className="text-slate-900 dark:text-slate-100 bg-white dark:bg-zinc-800" value="">Chọn phòng mới</option>
-                                    <option className="text-slate-900 dark:text-slate-100 bg-white dark:bg-zinc-800" value="201">Phòng 201</option>
-                                    <option className="text-slate-900 dark:text-slate-100 bg-white dark:bg-zinc-800" value="202">Phòng 202</option>
-                                    <option className="text-slate-900 dark:text-slate-100 bg-white dark:bg-zinc-800" value="203">Phòng 203</option>
-                                    <option className="text-slate-900 dark:text-slate-100 bg-white dark:bg-zinc-800" value="301">Phòng 301</option>
+                            <div>
+                                <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">NGÀY BAN ĐẦU</label>
+                                <select
+                                    className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all text-slate-700 dark:text-slate-200 font-bold"
+                                    value={selectedSlotId}
+                                    onChange={handleOriginalDateSelect}
+                                    disabled={!selectedSlotNumber}
+                                >
+                                    <option value="">Chọn ngày</option>
+                                    {slots
+                                        .filter(s => s.slotNumber === selectedSlotNumber)
+                                        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                                        .map(slot => (
+                                            <option key={slot.id} value={slot.id}>
+                                                {formatDateDDMMYYYY(slot.date)}
+                                            </option>
+                                        ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">PHÒNG BAN ĐẦU</label>
+                                <div className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm text-slate-700 dark:text-slate-200 font-bold min-h-[46px] flex items-center">
+                                    {selectedSlot ? selectedSlot.roomName : '-'}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">NGÀY CẦN ĐỔI</label>
+                                <input
+                                    className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all text-slate-700 dark:text-slate-200 font-bold"
+                                    type="date"
+                                    value={newDate}
+                                    min={getTodayString()}
+                                    onChange={handleDateChange}
+                                />
+                                {dateError && (
+                                    <p className="text-xs text-red-500 mt-1">{dateError}</p>
+                                )}
+                            </div>
+                            <div>
+                                <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">SLOT MỚI</label>
+                                <select
+                                    className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all text-slate-700 dark:text-slate-200 font-bold"
+                                    value={newSlot || ''}
+                                    onChange={(e) => setNewSlot(e.target.value ? parseInt(e.target.value) : null)}
+                                >
+                                    <option value="">Chọn slot mới</option>
+                                    <option value="1">Slot 1</option>
+                                    <option value="2">Slot 2</option>
+                                    <option value="3">Slot 3</option>
+                                    <option value="4">Slot 4</option>
                                 </select>
                             </div>
                         </div>
                     </section>
 
+                    {/* Room Selection */}
+                    <RoomSelectionCard
+                        selectedRoom={selectedRoom}
+                        onRoomSelect={setSelectedRoom}
+                        selectedDate={newDate}
+                        selectedSlot={newSlot}
+                    />
+
                     {/* Content & Docs */}
                     <section className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-8">
                         <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Nội dung & Tài liệu</h3>
-                        <div className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div>
-                                <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">LÝ DO THAY ĐỔI</label>
+                                <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">LÝ DO THAY ĐỔI <span className="text-red-500">*</span></label>
                                 <textarea
-                                    className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all italic text-slate-700 dark:text-slate-200"
+                                    className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all text-slate-700 dark:text-slate-200"
                                     placeholder="Nhập lý do chi tiết..."
-                                    rows={4}
+                                    rows={8}
+                                    value={reason}
+                                    onChange={(e) => setReason(e.target.value)}
+                                    required
                                 ></textarea>
                             </div>
                             <div>
                                 <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">TỆP ĐÍNH KÈM</label>
-                                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-200 dark:border-slate-800 border-dashed rounded-lg hover:border-fpt-orange transition-colors cursor-pointer group">
+                                <div
+                                    className="flex justify-center px-6 pt-5 pb-6 border-2 border-slate-200 dark:border-slate-800 border-dashed rounded-lg hover:border-fpt-orange transition-colors cursor-pointer group h-[190px] flex-col"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                    onDrop={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        const files = e.dataTransfer.files;
+                                        if (files.length) {
+                                            const event = { target: { files, value: '' } } as unknown as React.ChangeEvent<HTMLInputElement>;
+                                            handleFileChange(event);
+                                        }
+                                    }}
+                                >
                                     <div className="space-y-1 text-center">
-                                        <Upload className="mx-auto h-12 w-12 text-slate-400 group-hover:text-fpt-orange transition-colors" />
+                                        <Upload className="mx-auto h-10 w-10 text-slate-400 group-hover:text-fpt-orange transition-colors" />
                                         <div className="flex text-sm text-slate-600 dark:text-slate-400 justify-center">
-                                            <label className="relative cursor-pointer font-medium text-fpt-orange hover:underline">
-                                                <span>Tải tệp lên</span>
-                                                <input className="sr-only" type="file" />
-                                            </label>
+                                            <span className="font-medium text-fpt-orange hover:underline">Tải tệp lên</span>
                                             <p className="pl-1">hoặc kéo và thả vào đây</p>
                                         </div>
                                         <p className="text-xs text-slate-500">PNG, JPG, PDF lên đến 10MB</p>
                                     </div>
                                 </div>
+                                <input
+                                    ref={fileInputRef}
+                                    className="hidden"
+                                    type="file"
+                                    multiple
+                                    accept="image/*,.pdf"
+                                    onChange={handleFileChange}
+                                />
+
+                                {/* Display uploaded files */}
+                                {uploadedFiles.length > 0 && (
+                                    <div className="mt-4 space-y-2 max-h-[150px] overflow-y-auto pr-2">
+                                        {uploadedFiles.map((file, index) => (
+                                            <div
+                                                key={index}
+                                                className="flex items-center justify-between p-3 bg-slate-50 dark:bg-zinc-800/50 rounded-xl border border-slate-100 dark:border-slate-800/50 hover:border-fpt-orange/50 transition-colors group"
+                                            >
+                                                <div className="flex flex-col min-w-0 pr-4">
+                                                    <span className="text-xs font-bold text-slate-800 dark:text-gray-100 truncate mb-1" title={file.name}>
+                                                        {file.name}
+                                                    </span>
+                                                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                                                        {(file.size / 1024).toFixed(2)} KB
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex items-center gap-3 flex-shrink-0">
+                                                    <div className="flex items-center justify-center w-5 h-5 rounded-full border border-green-500 text-green-500 bg-green-50 dark:bg-green-900/10">
+                                                        <Check size={12} strokeWidth={3} />
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const newFiles = [...uploadedFiles];
+                                                            newFiles.splice(index, 1);
+                                                            setUploadedFiles(newFiles);
+                                                        }}
+                                                        className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded-md hover:bg-slate-200 dark:hover:bg-zinc-700"
+                                                        title="Xóa file"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </section>
 
-                    <div className="flex pt-4 mb-12">
+                    <div className="flex pt-4 mb-12 justify-end">
                         <button
                             type="submit"
                             disabled={submitting}
-                            className={`w-full bg-fpt-orange hover:bg-orange-600 text-white font-bold py-5 rounded-xl shadow-lg shadow-orange-500/20 transition-all active:scale-[0.99] flex items-center justify-center gap-3 text-lg uppercase tracking-wider ${submitting ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            className={`w-auto min-w-[200px] px-8 bg-fpt-orange hover:bg-orange-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-500/20 transition-all active:scale-[0.95] flex items-center justify-center gap-2 text-base uppercase tracking-wider ${submitting ? 'opacity-70 cursor-not-allowed' : ''}`}
                         >
-                            <Save size={24} />
-                            {submitting ? 'Đang gửi...' : 'Gửi yêu cầu'}
+                            {submitting ? (
+                                <>
+                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    Đang gửi...
+                                </>
+                            ) : (
+                                "Gửi yêu cầu"
+                            )}
                         </button>
                     </div>
                 </form>

@@ -37,6 +37,7 @@ public class ScheduleRequestResponse {
     private Integer requestedSlotNumber; // Added
     private String requestedSlotInfo;
     private String requestedRoomName;
+    private java.time.LocalDate requestedDate; // Ngày yêu cầu thay đổi
     private String originalRoomName; // Added
     private String requesterEmail;
     private String requesterMajor;

@@ -25,6 +25,13 @@ const SLOTS = [
     { id: 4, label: 'SLOT 4', time: '15:30 - 17:45' },
 ];
 
+interface Semester {
+    code: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+}
+
 export const StudentSchedulePage: React.FC = () => {
     const [timetable, setTimetable] = useState<WeeklyTimetableDTO | null>(null);
     const [loading, setLoading] = useState(true);
@@ -32,8 +39,12 @@ export const StudentSchedulePage: React.FC = () => {
     const [selectedSlot, setSelectedSlot] = useState<TimetableSlotDTO | null>(null);
     const [isScheduleHidden, setIsScheduleHidden] = useState(false);
     const [exporting, setExporting] = useState(false);
-    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-    const YEARS = [2024, 2025, 2026];
+
+    // Semester State
+    const [semesters, setSemesters] = useState<Semester[]>([]);
+    const [selectedSemester, setSelectedSemester] = useState<string>('');
+    const [semesterStartDate, setSemesterStartDate] = useState<string>('');
+    const [semesterEndDate, setSemesterEndDate] = useState<string>('');
 
     // Helper to get Monday of the week for a given date (Local time)
     const getStartOfWeek = (date: Date) => {
@@ -53,34 +64,38 @@ export const StudentSchedulePage: React.FC = () => {
         return `${year}-${month}-${day}`;
     };
 
-    // Generate weeks for the entire selected year
+    // Generate weeks based on semester start/end dates
     const generateWeeks = () => {
+        if (!semesterStartDate || !semesterEndDate) return [];
+
         const weeks = [];
-        // Start from first Monday of the year (or closest date to Jan 1)
-        const d = new Date(selectedYear, 0, 1);
+        const startSem = new Date(semesterStartDate);
+        const endSem = new Date(semesterEndDate);
 
-        // Find the first Monday of the year's context
-        // Note: Logic to align with ISO weeks or just Monday-Start weeks
-        const startOfFirstWeek = getStartOfWeek(d);
+        // Start from the Monday of the week containing the semester start date
+        // or just the semester start date if we want strict cutoff?
+        // Usually weeks are full weeks. Let's align to Monday.
+        const startOfFirstWeek = getStartOfWeek(startSem);
 
-        // Loop for ~53 weeks to cover full year plan
-        for (let i = 0; i < 53; i++) {
-            const startOfWeek = new Date(startOfFirstWeek);
-            startOfWeek.setDate(startOfFirstWeek.getDate() + (i * 7));
+        // Loop until we pass the end date
+        let currentStart = new Date(startOfFirstWeek);
 
-            // Stop if we pushed into next year too far (allow overlap)
-            // Heuristic: If start of week is far into next year
-            if (startOfWeek.getFullYear() > selectedYear && startOfWeek.getMonth() > 0) break;
-
-            const endOfWeek = new Date(startOfWeek);
-            endOfWeek.setDate(startOfWeek.getDate() + 6);
+        while (currentStart <= endSem) {
+            const currentEnd = new Date(currentStart);
+            currentEnd.setDate(currentStart.getDate() + 6);
 
             weeks.push({
-                value: formatDateToLocal(startOfWeek),
-                label: `${startOfWeek.getDate()}/${startOfWeek.getMonth() + 1}/${startOfWeek.getFullYear()} - ${endOfWeek.getDate()}/${endOfWeek.getMonth() + 1}/${endOfWeek.getFullYear()}`,
+                value: formatDateToLocal(currentStart),
+                label: `${currentStart.getDate()}/${currentStart.getMonth() + 1} - ${currentEnd.getDate()}/${currentEnd.getMonth() + 1}`,
                 isCurrent: false
             });
+
+            // Move to next week
+            const nextWeek = new Date(currentStart);
+            nextWeek.setDate(currentStart.getDate() + 7);
+            currentStart = nextWeek;
         }
+
         return weeks;
     };
 
@@ -89,32 +104,85 @@ export const StudentSchedulePage: React.FC = () => {
     // Find current week value for initial selection if needed, but we rely on currentDate state
     // We update currentDate when selection changes
 
-    const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const year = Number(e.target.value);
-        setSelectedYear(year);
-        // Update current date to same relative date in new year
-        const newDate = new Date(currentDate);
-        newDate.setFullYear(year);
-        setCurrentDate(newDate);
+    const handleSemesterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const semesterCode = e.target.value;
+        setSelectedSemester(semesterCode);
+        const sem = semesters.find(s => s.code === semesterCode);
+        if (sem) {
+            setSemesterStartDate(sem.startDate);
+            setSemesterEndDate(sem.endDate);
+
+            // Auto select start date of semester
+            const newDate = new Date(sem.startDate);
+            setCurrentDate(newDate);
+        }
     };
 
     const handlePrevWeek = () => {
         const newDate = new Date(currentDate);
         newDate.setDate(newDate.getDate() - 7);
-        setCurrentDate(newDate);
-        if (newDate.getFullYear() !== selectedYear) {
-            setSelectedYear(newDate.getFullYear());
+
+        // Prevent going before semester start
+        if (semesterStartDate) {
+            const startLimit = new Date(semesterStartDate);
+            // Adjust to start of week for fair comparison
+            const startOfWeekLimit = getStartOfWeek(startLimit);
+            if (newDate < startOfWeekLimit) {
+                return; // Or toast user
+            }
         }
+
+        setCurrentDate(newDate);
     };
 
     const handleNextWeek = () => {
         const newDate = new Date(currentDate);
         newDate.setDate(newDate.getDate() + 7);
+
+        // Prevent going after semester end
+        if (semesterEndDate) {
+            const endLimit = new Date(semesterEndDate);
+            if (newDate > endLimit) {
+                return;
+            }
+        }
+
         setCurrentDate(newDate);
-        if (newDate.getFullYear() !== selectedYear) {
-            setSelectedYear(newDate.getFullYear());
+    };
+
+    const fetchSemesters = async () => {
+        try {
+            const resp = await axios.get('/api/v1/semesters/active');
+            const data = Array.isArray(resp.data) ? resp.data : [];
+            setSemesters(data);
+
+            if (data.length > 0) {
+                // Default to first semester
+                const defaultSem = data[0];
+                setSelectedSemester(defaultSem.code);
+                setSemesterStartDate(defaultSem.startDate);
+                setSemesterEndDate(defaultSem.endDate);
+
+                // If today is within this semester, use today. Else use start date
+                const today = new Date();
+                const start = new Date(defaultSem.startDate);
+                const end = new Date(defaultSem.endDate);
+
+                if (today >= start && today <= end) {
+                    setCurrentDate(today);
+                } else {
+                    setCurrentDate(start);
+                }
+            }
+        } catch (err) {
+            console.error('Failed to load semesters', err);
+            toast.error('Không thể tải danh sách học kỳ');
         }
     };
+
+    useEffect(() => {
+        fetchSemesters();
+    }, []);
 
     useEffect(() => {
         fetchTimetable();
@@ -215,12 +283,8 @@ export const StudentSchedulePage: React.FC = () => {
             if (!userStr) return;
             const user = JSON.parse(userStr);
 
-            // Determine semester based on current date (Format: SP26, SU26, FA26)
-            const month = currentDate.getMonth() + 1;
-            const yearSuffix = String(currentDate.getFullYear()).slice(-2);
-            let semesterCode = `SP${yearSuffix}`;
-            if (month >= 5 && month <= 8) semesterCode = `SU${yearSuffix}`;
-            if (month >= 9) semesterCode = `FA${yearSuffix}`;
+            // Determine semester based on selectedSemester
+            const semesterCode = selectedSemester;
 
             console.log('Exporting for semester:', semesterCode);
 
@@ -259,7 +323,7 @@ export const StudentSchedulePage: React.FC = () => {
                 <div className="flex flex-col gap-4">
                     <div>
                         <div className="flex items-center gap-2 text-fpt-orange font-bold text-sm mb-1">
-                            <CalendarIcon size={16} /> Năm học {selectedYear}-{selectedYear + 1}
+                            <CalendarIcon size={16} /> {semesters.find(s => s.code === selectedSemester)?.name || 'Học kỳ'}
                         </div>
                         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
                             Lịch học theo tuần
@@ -269,19 +333,19 @@ export const StudentSchedulePage: React.FC = () => {
                     {/* Toolbar: Filters (Left) and Export Button (Far Right) */}
                     <div className="flex items-center justify-between gap-4 p-2 rounded-xl">
                         <div className="flex items-center gap-3">
-                            {/* Year Filter */}
+                            {/* Semester Filter */}
                             <div className="flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 px-3 py-2 rounded-lg border border-orange-100 dark:border-orange-800">
                                 <span className="text-gray-500 dark:text-gray-400 text-sm font-medium flex items-center gap-1 whitespace-nowrap">
-                                    <span className="text-xs">▼</span> Lọc:
+                                    <span className="text-xs">▼</span> Học kỳ:
                                 </span>
                                 <select
-                                    value={selectedYear}
-                                    onChange={handleYearChange}
+                                    value={selectedSemester}
+                                    onChange={handleSemesterChange}
                                     className="bg-transparent border-none text-fpt-orange font-bold focus:ring-0 cursor-pointer text-sm p-0 pr-6"
                                     style={{ backgroundImage: 'none' }}
                                 >
-                                    {YEARS.map(y => (
-                                        <option key={y} value={y}>{y}</option>
+                                    {semesters.map(s => (
+                                        <option key={s.code} value={s.code}>{s.name || s.code}</option>
                                     ))}
                                 </select>
                             </div>

@@ -197,6 +197,17 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
                         @Param("slotNumber") Integer slotNumber);
 
         /**
+         * Find all busy room IDs for a specific date and slot
+         */
+        @Query("SELECT DISTINCT ts.room.id FROM TimetableSlot ts " +
+                        "WHERE ts.date = :date " +
+                        "AND ts.slotNumber = :slotNumber " +
+                        "AND ts.status = 'SCHEDULED'")
+        List<Long> findBusyRoomIds(
+                        @Param("date") LocalDate date,
+                        @Param("slotNumber") Integer slotNumber);
+
+        /**
          * Find the earliest createdAt timestamp for a semester's timetable
          * This is used to compare with semester config updatedAt to detect config
          * changes
