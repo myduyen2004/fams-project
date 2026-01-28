@@ -23,13 +23,38 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _navigateToNext() async {
-    await Future.delayed(const Duration(seconds: 3));
+    debugPrint('SplashScreen: Starting _navigateToNext');
+    // Wait for at least 1 second to show the brand
+    final minDelay = Future.delayed(const Duration(milliseconds: 1000));
+    
+    debugPrint('SplashScreen: Waiting for AuthController initialization...');
+    await _waitForInitialization();
+    debugPrint('SplashScreen: AuthController initialized.');
+    
+    await minDelay;
+    debugPrint('SplashScreen: Minimum delay completed. Navigating...');
 
     // Check authentication status
     if (_authController.isAuthenticated.value) {
+      debugPrint('SplashScreen: Authenticated, going to Home');
       Get.offAllNamed(AppRoutes.home);
     } else {
+      debugPrint('SplashScreen: Not authenticated, going to Login');
       Get.offAllNamed(AppRoutes.login);
+    }
+  }
+
+  Future<void> _waitForInitialization() async {
+    int attempts = 0;
+    const maxAttempts = 100; // 5 seconds max (100 * 50ms)
+    
+    while (!_authController.isInitialized.value && attempts < maxAttempts) {
+      await Future.delayed(const Duration(milliseconds: 50));
+      attempts++;
+    }
+    
+    if (attempts >= maxAttempts) {
+      debugPrint('SplashScreen: WARNING: Initialization timed out after 5 seconds');
     }
   }
 

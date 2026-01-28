@@ -17,29 +17,50 @@ class AuthController extends GetxController {
   final isLoading = false.obs;
   final Rx<User?> currentUser = Rx<User?>(null);
   final isAuthenticated = false.obs;
+  final isInitialized = false.obs;
 
   @override
   void onInit() {
     super.onInit();
     apiService.init();
-    checkAuthStatus();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    debugPrint('AuthController: Starting _initializeApp...');
+    try {
+      await checkAuthStatus();
+    } catch (e) {
+      debugPrint('AuthController: Error during _initializeApp: $e');
+    } finally {
+      debugPrint('AuthController: Initialization complete. Setting isInitialized to true.');
+      isInitialized.value = true;
+    }
   }
 
   /// Check if user is already logged in
   Future<void> checkAuthStatus() async {
     try {
+      debugPrint('AuthController: Reading token from storage...');
       final token = await apiService.getToken();
+      debugPrint('AuthController: Token read result: ${token != null ? "FOUND" : "NOT FOUND"}');
+
+      debugPrint('AuthController: Reading user data from storage...');
       final userData = await apiService.getUserData();
+      debugPrint('AuthController: User data read result: ${userData != null ? "FOUND" : "NOT FOUND"}');
 
       if (token != null && userData != null) {
         currentUser.value = User.fromJson(userData);
         isAuthenticated.value = true;
+        debugPrint('AuthController: User authenticated from local storage.');
         
-        // Refresh user data from server to get latest fields
-        await fetchCurrentUser();
+        // Refresh user data from server in background to get latest fields
+        fetchCurrentUser();
+      } else {
+        debugPrint('AuthController: No local session found.');
       }
     } catch (e) {
-      debugPrint('Check auth status error: $e');
+      debugPrint('AuthController: Check auth status CRITICAL error: $e');
     }
   }
 
