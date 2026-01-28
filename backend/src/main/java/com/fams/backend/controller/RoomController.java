@@ -1,12 +1,15 @@
 package com.fams.backend.controller;
 
 import com.fams.backend.dto.request.RoomRequest;
+import com.fams.backend.dto.response.RoomAvailabilityResponse;
 import com.fams.backend.dto.response.RoomResponse;
 import com.fams.backend.service.RoomService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -19,6 +22,13 @@ public class RoomController {
     @GetMapping
     public ResponseEntity<List<RoomResponse>> getAllRooms() {
         return ResponseEntity.ok(roomService.getAllRooms());
+    }
+
+    @GetMapping("/availability")
+    public ResponseEntity<List<RoomAvailabilityResponse>> getRoomAvailability(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam Integer slotNumber) {
+        return ResponseEntity.ok(roomService.getRoomAvailability(date, slotNumber));
     }
 
     @GetMapping("/{id}")

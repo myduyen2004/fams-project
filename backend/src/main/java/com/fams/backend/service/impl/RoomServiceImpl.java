@@ -1,15 +1,20 @@
 package com.fams.backend.service.impl;
 
 import com.fams.backend.dto.request.RoomRequest;
+import com.fams.backend.dto.response.RoomAvailabilityResponse;
 import com.fams.backend.dto.response.RoomResponse;
 import com.fams.backend.entity.Room;
 import com.fams.backend.repository.RoomRepository;
+import com.fams.backend.repository.TimetableSlotRepository;
 import com.fams.backend.service.RoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.stream.Collectors;
 
 @Service
@@ -18,6 +23,7 @@ import java.util.stream.Collectors;
 public class RoomServiceImpl implements RoomService {
 
     private final RoomRepository roomRepository;
+    private final TimetableSlotRepository timetableSlotRepository;
 
     @Override
     public List<RoomResponse> getAllRooms() {
@@ -91,6 +97,19 @@ public class RoomServiceImpl implements RoomService {
         roomRepository.deleteById(id);
     }
 
+    @Override
+    public List<RoomAvailabilityResponse> getRoomAvailability(LocalDate date, Integer slotNumber) {
+        // Get all busy room IDs for the given date and slot
+        List<Long> busyRoomIds = timetableSlotRepository.findBusyRoomIds(date, slotNumber);
+        Set<Long> busyRoomIdSet = new HashSet<>(busyRoomIds);
+
+        // Get all active rooms and mark availability
+        return roomRepository.findAll().stream()
+                .filter(room -> room.getStatus() == Room.RoomStatus.ACTIVE)
+                .map(room -> convertToAvailabilityResponse(room, !busyRoomIdSet.contains(room.getId())))
+                .collect(Collectors.toList());
+    }
+
     private RoomResponse convertToResponse(Room room) {
         return RoomResponse.builder()
                 .id(room.getId())
@@ -107,6 +126,26 @@ public class RoomServiceImpl implements RoomService {
                 .gridColSpan(room.getGridColSpan())
                 .createdAt(room.getCreatedAt())
                 .updatedAt(room.getUpdatedAt())
+                .build();
+    }
+
+    private RoomAvailabilityResponse convertToAvailabilityResponse(Room room, boolean isAvailable) {
+        return RoomAvailabilityResponse.builder()
+                .id(room.getId())
+                .code(room.getCode())
+                .name(room.getName())
+                .capacity(room.getCapacity())
+                .building(room.getBuilding())
+                .floor(room.getFloor())
+                .type(room.getType())
+                .status(room.getStatus())
+                .gridRow(room.getGridRow())
+                .gridCol(room.getGridCol())
+                .gridRowSpan(room.getGridRowSpan())
+                .gridColSpan(room.getGridColSpan())
+                .createdAt(room.getCreatedAt())
+                .updatedAt(room.getUpdatedAt())
+                .isAvailable(isAvailable)
                 .build();
     }
 }
