@@ -29,21 +29,6 @@ public class TimetableDTO {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class UpdateSlotRequest {
-        @jakarta.validation.constraints.NotNull(message = "Date is required")
-        private LocalDate date;
-
-        @jakarta.validation.constraints.NotNull(message = "Slot number is required")
-        private Integer slotNumber;
-
-        @jakarta.validation.constraints.NotNull(message = "Room ID is required")
-        private Long roomId;
-    }
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
     public static class GAConfigDTO {
         private Integer populationSize;
         private Integer eliteCount;
@@ -180,26 +165,5 @@ public class TimetableDTO {
         private int softViolations;
         private double fitness;
         private List<String> violations;
-    }
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class AvailabilityResponse {
-        private List<Integer> availableSlots;
-        private List<RoomDTO> allRooms;
-        private java.util.Map<Integer, List<Long>> occupiedRoomIdsBySlot;
-    }
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class RoomDTO {
-        private Long id;
-        private String code;
-        private String name;
-        private Integer capacity;
     }
 }
