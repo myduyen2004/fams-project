@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, Upload, Mail, Phone, Calendar, GraduationCap, BookOpen, Stars } from 'lucide-react';
-import { StudentResponse, StudentUpdateRequest, academicStaffService, StudentImportDTO } from '../../../services/api/academicStaffService';
+import { StudentResponse, academicStaffService, StudentImportDTO } from '../../../services/api/academicStaffService';
 import toast from 'react-hot-toast';
 
 // --- Helper functions ---
@@ -139,7 +139,7 @@ export const ViewStudentModal: React.FC<{
                                     <p className="text-gray-400">GPA</p>
                                     <p className="font-medium text-green-600 flex items-center gap-1">
                                         <Stars size={14} className="fill-green-600" />
-                                        {student.gpa !== undefined ? student.gpa.toFixed(2) : '---'}
+                                        {student.gpa !== null && student.gpa !== undefined ? student.gpa.toFixed(2) : '---'}
                                     </p>
                                 </div>
                                 {student.subSpecialization && (
@@ -181,7 +181,21 @@ export const EditStudentModal: React.FC<{ student: StudentResponse; onClose: () 
     const [specializations, setSpecializations] = useState<string[]>([]);
     const [subSpecializations, setSubSpecializations] = useState<string[]>([]);
 
-    const [formData, setFormData] = useState<StudentUpdateRequest>({
+    const ensureStringDate = (d: unknown): string => {
+        if (Array.isArray(d)) {
+            const [year, month, day] = d as unknown[];
+            return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        }
+        return (d as string) || '';
+    };
+
+    const [formData, setFormData] = useState({
+        fullName: student.fullName,
+        code: student.code,
+        email: student.email,
+        dob: ensureStringDate(student.dob),
+        phone: student.phone || '',
+        status: student.status,
         major: student.major || '',
         specialization: student.specialization || '',
         subSpecialization: student.subSpecialization || '',
@@ -239,7 +253,20 @@ export const EditStudentModal: React.FC<{ student: StudentResponse; onClose: () 
         e.preventDefault();
         try {
             setLoading(true);
-            await academicStaffService.updateStudent(student.id, formData);
+            await academicStaffService.updateStudent(student.id, {
+                fullName: formData.fullName,
+                code: formData.code,
+                email: formData.email,
+                dob: formData.dob,
+                phone: formData.phone,
+                status: formData.status as any,
+                role: 'STUDENT',
+                major: formData.major,
+                specialization: formData.specialization,
+                subSpecialization: formData.subSpecialization,
+                course: formData.course,
+                gpa: formData.gpa
+            });
             toast.success('Cập nhật thông tin sinh viên thành công');
             onSuccess();
         } catch (error: unknown) {
@@ -261,13 +288,74 @@ export const EditStudentModal: React.FC<{ student: StudentResponse; onClose: () 
                 </div>
                 <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
                     <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-2 text-center mb-2">
+                            <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-fpt-orange mx-auto bg-gray-50 dark:bg-zinc-800 flex items-center justify-center">
+                                {student.avatar ? <img src={student.avatar} alt="avatar" className="w-full h-full object-cover" /> : <GraduationCap size={32} className="text-gray-300" />}
+                            </div>
+                        </div>
+
+                        <div className="col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Họ và tên</label>
+                            <input
+                                disabled
+                                type="text"
+                                className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none text-gray-900 dark:text-white"
+                                value={formData.fullName}
+                                onChange={e => setFormData({ ...formData, fullName: e.target.value })}
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Số điện thoại</label>
+                            <input
+                                disabled
+                                type="text"
+                                className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none text-gray-900 dark:text-white"
+                                value={formData.phone}
+                                onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Ngày sinh</label>
+                            <input
+                                disabled
+                                type="date"
+                                className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none text-gray-900 dark:text-white"
+                                value={formData.dob}
+                                onChange={e => setFormData({ ...formData, dob: e.target.value })}
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Trạng thái</label>
+                            <select
+                                disabled
+                                className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none text-gray-900 dark:text-white"
+                                value={formData.status}
+                                onChange={e => setFormData({ ...formData, status: e.target.value as any })}
+                            >
+                                <option value="ACTIVE">Hoạt động</option>
+                                <option value="LOCKED">Đã khóa</option>
+                                <option value="INACTIVE">Chưa kích hoạt</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Mã sinh viên</label>
+                            <input readOnly type="text" className="w-full px-4 py-2 bg-gray-100 dark:bg-zinc-800/50 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm outline-none cursor-not-allowed text-gray-500" value={formData.code} />
+                        </div>
+
+                        <div className="col-span-2 pt-2 pb-1">
+                            <div className="h-px bg-gray-100 dark:bg-zinc-800 w-full"></div>
+                        </div>
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Ngành học</label>
                             <select
                                 className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none text-gray-900 dark:text-white"
                                 value={formData.major}
-                                onChange={e => setFormData({ ...formData, major: e.target.value })}
+                                onChange={e => setFormData({ ...formData, major: e.target.value, specialization: '', subSpecialization: '' })}
                             >
                                 <option value="">Chọn ngành</option>
                                 {majors.map(m => <option key={m} value={m}>{m}</option>)}
@@ -314,6 +402,7 @@ export const EditStudentModal: React.FC<{ student: StudentResponse; onClose: () 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">GPA Hiện tại</label>
                             <input
+                                disabled
                                 type="number"
                                 step="0.01"
                                 min="0"
