@@ -5,6 +5,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../controllers/home_controller.dart';
 import '../../profile/views/profile_screen.dart'; // Import ProfileScreen
+import '../../schedule/views/schedule_screen.dart'; // Import ScheduleScreen
 
 /// Home Screen - Dashboard for Students and Lecturers
 class HomeScreen extends StatelessWidget {
@@ -25,7 +26,7 @@ class HomeScreen extends StatelessWidget {
             case 0:
               return _buildHomeContent(context, authController, homeController);
             case 1:
-              return const Center(child: Text("Lịch học (Coming Soon)"));
+              return const ScheduleScreen(); // Replace with ScheduleScreen
             case 3:
                return const Center(child: Text("Tin nhắn (Coming Soon)"));
             case 4:
