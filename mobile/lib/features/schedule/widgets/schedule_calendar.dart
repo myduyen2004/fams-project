@@ -16,9 +16,13 @@ class ScheduleCalendar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          IconButton(
-            onPressed: () => _changeWeek(controller, -7),
-            icon: Icon(Icons.chevron_left_rounded, color: Colors.orange[400], size: 26),
+          SizedBox(
+            width: 40,
+            child: IconButton(
+              onPressed: () => _changeWeek(controller, -7),
+              padding: EdgeInsets.zero,
+              icon: Icon(Icons.chevron_left_rounded, color: Colors.orange[400], size: 32),
+            ),
           ),
           Expanded(
             child: SizedBox(
@@ -29,7 +33,7 @@ class ScheduleCalendar extends StatelessWidget {
                 return ListView.builder(
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
-                  itemCount: 7,
+                  itemCount: 7, // Allow all 7 days of the week
                   itemBuilder: (context, index) {
                     return _buildDayCard(controller, index);
                   },
@@ -37,9 +41,13 @@ class ScheduleCalendar extends StatelessWidget {
               }),
             ),
           ),
-          IconButton(
-            onPressed: () => _changeWeek(controller, 7),
-            icon: Icon(Icons.chevron_right_rounded, color: Colors.orange[400], size: 26),
+          SizedBox(
+            width: 40,
+            child: IconButton(
+              onPressed: () => _changeWeek(controller, 7),
+              padding: EdgeInsets.zero,
+              icon: const Icon(Icons.chevron_right_rounded, color: AppColors.primaryOrange, size: 32),
+            ),
           ),
         ],
       ),
@@ -48,28 +56,21 @@ class ScheduleCalendar extends StatelessWidget {
 
   Widget _buildDayCard(ScheduleController controller, int index) {
     final now = controller.selectedDate.value;
+    // Always start from Monday of the current week
     final monday = now.subtract(Duration(days: now.weekday - 1));
     final date = monday.add(Duration(days: index));
     final isSelected = _isSameDay(date, controller.selectedDate.value);
-    final isToday = _isSameDay(date, DateTime.now());
 
-    final double screenWidth = Get.width;
-    final double cardWidth = (screenWidth - 32 - 32) / 5; // 32 for padding, 32 for buttons space (approx) -> Actually buttons take more space.
-    // Buttons are outside expanded.
-    // Expanded width is (Screen - 2*48 (icon buttons)).
-    // So card width = (Screen - 96) / 5.
-    
     return GestureDetector(
       onTap: () => controller.selectDate(date),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        width: (Get.width - 110) / 5, // Dynamically calculate width to fit 5 items. 
-        // 110 approx = 2*IconBtn(48) + Padding(16)
-        margin: const EdgeInsets.symmetric(horizontal: 2.5, vertical: 5),
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        width: (Get.width - 80) / 5, // Width - 2*40(buttons) / 5
+        margin: const EdgeInsets.symmetric(horizontal: 0), // Removed horizontal margin to fit perfectly or rely on padding inside
+        padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primaryOrange : Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
               color: isSelected 
@@ -101,17 +102,31 @@ class ScheduleCalendar extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 2),
-            if (isToday)
-              Container(
-                width: 4,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.white : AppColors.primaryOrange,
-                  shape: BoxShape.circle,
-                ),
-              )
-            else
-              const SizedBox(height: 4),
+            // Dot for slots
+            Obx(() {
+               bool hasSlots = false;
+               if (controller.weeklyTimetable.value != null) {
+                 final dayData = controller.weeklyTimetable.value!.days.firstWhereOrNull(
+                   (d) => _isSameDay(d.date, date),
+                 );
+                 if (dayData != null && dayData.slots.isNotEmpty) {
+                   hasSlots = true;
+                 }
+               }
+
+               if (hasSlots) {
+                 return Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: isSelected ? Colors.white : const Color(0xFFF2721E),
+                      shape: BoxShape.circle,
+                    ),
+                 );
+               } else {
+                 return const SizedBox(height: 6);
+               }
+            }),
           ],
         ),
       ),
