@@ -98,7 +98,6 @@ export const LecturerFilters: React.FC<LecturerFiltersProps> = React.memo(({
           >
             <option value="all">Tất cả trạng thái</option>
             <option value="ACTIVE">🟢 Đang hoạt động</option>
-            <option value="INACTIVE">🟡 Chưa kích hoạt</option>
             <option value="LOCKED">🔴 Đã khóa</option>
           </select>
         </div>
