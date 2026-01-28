@@ -60,6 +60,9 @@ public class ScheduleRequest {
     // Ngày yêu cầu thay đổi (cho trường hợp đổi lịch, mượn phòng)
     private java.time.LocalDate requestedDate;
 
+    // Slot yêu cầu (số từ 1-4)
+    private Integer requestedSlotNumber;
+
     // Lý do
     @Column(columnDefinition = "TEXT")
     private String reason;
