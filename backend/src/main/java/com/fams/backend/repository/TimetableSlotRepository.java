@@ -122,6 +122,8 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
          */
         @Query("SELECT ts FROM TimetableSlot ts " +
                         "JOIN FETCH ts.classSection cs " +
+                        "JOIN FETCH cs.course c " +
+                        "LEFT JOIN FETCH cs.lecturer lec " +
                         "JOIN FETCH ts.room r " +
                         "JOIN FETCH ts.slotType st " +
                         "WHERE cs.lecturer.id = :lecturerId " +
