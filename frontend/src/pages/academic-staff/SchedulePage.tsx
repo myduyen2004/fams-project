@@ -3,7 +3,7 @@ import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import axios from 'axios';
 import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
 import { toast } from 'react-hot-toast';
-import { Calendar, BookOpen, ChevronLeft, ChevronRight, X, Clock, MapPin, User, GraduationCap, AlertTriangle, Check, ChevronsUpDown, Eye, EyeOff, Loader2, Play, Users, School, Download, MoreVertical } from 'lucide-react';
+import { Calendar, BookOpen, ChevronLeft, ChevronRight, X, Clock, MapPin, User, GraduationCap, AlertTriangle, Check, ChevronsUpDown, Eye, EyeOff, Loader2, Play, Users, School, Download, MoreVertical, RefreshCw, Save } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Combobox, Transition } from '@headlessui/react';
 
@@ -179,6 +179,17 @@ export const SchedulePage: React.FC = () => {
 
   // Export week loading state
   const [exportingWeek, setExportingWeek] = useState(false);
+
+  // Rescheduling state
+  const [isRescheduling, setIsRescheduling] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [rescheduleSlot, setRescheduleSlot] = useState<number | null>(null);
+  const [rescheduleRoom, setRescheduleRoom] = useState<number | null>(null);
+  const [availableSlots, setAvailableSlots] = useState<number[]>([]);
+  const [availableRooms, setAvailableRooms] = useState<any[]>([]);
+  const [rawAvailability, setRawAvailability] = useState<any>(null);
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
+  const [isSubmittingReschedule, setIsSubmittingReschedule] = useState(false);
 
   const fetchSemesters = async () => {
     try {
@@ -367,6 +378,54 @@ export const SchedulePage: React.FC = () => {
       }
     };
   }, []);
+
+  // Fetch availability when rescheduling date changes
+  useEffect(() => {
+    if (isRescheduling && rescheduleDate && selected) {
+      const fetchAvailability = async () => {
+        setLoadingAvailability(true);
+        try {
+          const data = await timetableService.getAvailability(rescheduleDate, selected);
+          setRawAvailability(data);
+          setAvailableSlots(data.availableSlots);
+          // Initial room list if slot already selected
+          if (rescheduleSlot) {
+            const occupiedIds = data.occupiedRoomIdsBySlot[rescheduleSlot] || [];
+            setAvailableRooms(data.allRooms.filter((r: any) => !occupiedIds.includes(r.id)));
+          } else {
+            setAvailableRooms([]);
+          }
+        } catch (err) {
+          console.error('Failed to fetch availability', err);
+          toast.error('Không thể tải thông tin phòng trống');
+        } finally {
+          setLoadingAvailability(false);
+        }
+      };
+      fetchAvailability();
+    }
+  }, [isRescheduling, rescheduleDate, selected]);
+
+  // Update available rooms when rescheduleSlot changes
+  useEffect(() => {
+    if (rawAvailability && rescheduleSlot) {
+      const occupiedIds = rawAvailability.occupiedRoomIdsBySlot[rescheduleSlot] || [];
+      setAvailableRooms(rawAvailability.allRooms.filter((r: any) => !occupiedIds.includes(r.id)));
+    } else {
+      setAvailableRooms([]);
+    }
+  }, [rescheduleSlot, rawAvailability]);
+
+  // Reset rescheduling state when modal closes
+  useEffect(() => {
+    if (!selectedSlot) {
+      setIsRescheduling(false);
+      setRescheduleDate('');
+      setRescheduleSlot(null);
+      setRescheduleRoom(null);
+      setRawAvailability(null);
+    }
+  }, [selectedSlot]);
 
   // Main generation start function
   const startGeneration = async () => {
@@ -1114,7 +1173,7 @@ export const SchedulePage: React.FC = () => {
             </div>
 
             {/* Status */}
-            {selectedSlot.status && (
+            {selectedSlot.status && !isRescheduling && (
               <div className="border-t border-gray-100 pt-4">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái:</span>
@@ -1130,14 +1189,134 @@ export const SchedulePage: React.FC = () => {
               </div>
             )}
 
-            {/* Close Button */}
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={() => setSelectedSlot(null)}
-                className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
-              >
-                Đóng
-              </button>
+            {/* Rescheduling Form */}
+            {isRescheduling && (
+              <div className="border-t border-gray-100 pt-4 mt-4 space-y-4">
+                <h4 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <RefreshCw size={16} className="text-fpt-orange" />
+                  Thay đổi lịch học
+                </h4>
+
+                <div className="grid grid-cols-1 gap-4">
+                  {/* Date Input */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Ngày đổi</label>
+                    <input
+                      type="date"
+                      value={rescheduleDate}
+                      min={semesterStartDate}
+                      max={semesterEndDate}
+                      onChange={(e) => {
+                        setRescheduleDate(e.target.value);
+                        setRescheduleSlot(null);
+                        setRescheduleRoom(null);
+                      }}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-fpt-orange focus:border-fpt-orange outline-none"
+                    />
+                  </div>
+
+                  {/* Slot Selection */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Tiết đổi</label>
+                    <select
+                      value={rescheduleSlot || ''}
+                      onChange={(e) => setRescheduleSlot(Number(e.target.value))}
+                      disabled={!rescheduleDate || loadingAvailability}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-fpt-orange focus:border-fpt-orange outline-none disabled:bg-gray-50"
+                    >
+                      <option value="">Chọn tiết học</option>
+                      {availableSlots.map(num => (
+                        <option key={num} value={num}>Slot {num}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Room Selection */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Phòng đổi</label>
+                    <select
+                      value={rescheduleRoom || ''}
+                      onChange={(e) => setRescheduleRoom(Number(e.target.value))}
+                      disabled={!rescheduleSlot}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-fpt-orange focus:border-fpt-orange outline-none disabled:bg-gray-50"
+                    >
+                      <option value="">Chọn phòng học</option>
+                      {availableRooms.map(r => (
+                        <option key={r.id} value={r.id}>{r.name} ({r.capacity} chỗ)</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="mt-6 flex justify-end gap-3">
+              {!isRescheduling ? (
+                <>
+                  <button
+                    onClick={() => {
+                      setIsRescheduling(true);
+                      setRescheduleDate(selectedSlot.date || '');
+                      setRescheduleSlot(selectedSlot.slotNumber || null);
+                      setRescheduleRoom(null); // Force re-select room or keep current?
+                      // If keeping current, we need its ID. selectedSlot has roomCode/roomName but maybe not roomId.
+                      // Let's assume we re-select room for safety.
+                    }}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-fpt-orange hover:bg-orange-600 text-white rounded-xl font-medium transition-colors"
+                  >
+                    <RefreshCw size={18} />
+                    Cập nhật
+                  </button>
+                  <button
+                    onClick={() => setSelectedSlot(null)}
+                    className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
+                  >
+                    Đóng
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setIsRescheduling(false)}
+                    className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!rescheduleDate || !rescheduleSlot || !rescheduleRoom) {
+                        toast.error('Vui lòng chọn đầy đủ thông tin');
+                        return;
+                      }
+                      setIsSubmittingReschedule(true);
+                      try {
+                        await timetableService.updateSlot(selectedSlot.id, {
+                          date: rescheduleDate,
+                          slotNumber: rescheduleSlot,
+                          roomId: rescheduleRoom
+                        });
+                        toast.success('Đã cập nhật lịch học');
+                        setIsRescheduling(false);
+                        setSelectedSlot(null);
+                        // Refresh timetable
+                        if (selected && selectedDate) {
+                          fetchTimetable(selected, selectedDate);
+                        }
+                      } catch (err: any) {
+                        toast.error(err.response?.data?.message || 'Không thể cập nhật lịch học');
+                      } finally {
+                        setIsSubmittingReschedule(false);
+                      }
+                    }}
+                    disabled={isSubmittingReschedule}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
+                  >
+                    {isSubmittingReschedule ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                    Xác nhận đổi
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
