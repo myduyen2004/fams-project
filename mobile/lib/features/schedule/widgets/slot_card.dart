@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../models/schedule_model.dart';
+import 'package:add_2_calendar/add_2_calendar.dart';
 
 import 'package:get/get.dart';
 import '../controllers/schedule_controller.dart';
@@ -173,7 +174,13 @@ class SlotCard extends StatelessWidget {
                 slot.courseCode ?? 'COURSE',
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF2D3436), letterSpacing: -0.3),
               ),
-              if (!isNext && !isLecturer) _buildSmallBadge(slot.attendanceStatus ?? 'Có mặt'),
+              Row(
+                children: [
+                  _buildCalendarButton(),
+                  const SizedBox(width: 8),
+                  if (!isNext && !isLecturer) _buildSmallBadge(slot.attendanceStatus ?? 'Có mặt'),
+                ],
+              )
             ],
           ),
           const SizedBox(height: 12),
@@ -251,5 +258,69 @@ class SlotCard extends StatelessWidget {
         style: const TextStyle(color: Color(0xFFB2BEC3), fontSize: 10, fontWeight: FontWeight.w900),
       ),
     );
+  }
+
+  Widget _buildCalendarButton() {
+    return InkWell(
+      onTap: () => _addToCalendar(slot),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: Colors.orange.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Icon(Icons.calendar_month_outlined, size: 16, color: AppColors.primaryOrange),
+      ),
+    );
+  }
+
+  void _addToCalendar(TimetableSlot slot) {
+    if (slot.startTime == null || slot.endTime == null || slot.date == null) return;
+    
+    // Parse date and time
+    // Assuming slot.date is in ISO format (yyyy-MM-dd) or DateTime object
+    // And slot.startTime is "HH:mm:ss" or "HH:mm"
+    
+    try {
+      final date = DateTime.parse(slot.date!.toString());
+      final startParts = slot.startTime!.split(':');
+      final endParts = slot.endTime!.split(':');
+      
+      final start = DateTime(
+        date.year, 
+        date.month, 
+        date.day, 
+        int.parse(startParts[0]), 
+        int.parse(startParts[1])
+      );
+      
+      final end = DateTime(
+        date.year, 
+        date.month, 
+        date.day, 
+        int.parse(endParts[0]), 
+        int.parse(endParts[1])
+      );
+
+      final event = Event(
+        title: "${slot.courseCode} - ${slot.courseName ?? ''}",
+        description: "Class: ${slot.className}\nLecturer: ${slot.lecturerName}\nRoom: ${slot.roomCode}",
+        location: slot.roomCode ?? 'Online',
+        startDate: start,
+        endDate: end,
+        iosParams: const IOSParams(
+          reminder: Duration(minutes: 15),
+        ),
+        androidParams: const AndroidParams(
+          emailInvites: [],
+        ),
+      );
+
+      Add2Calendar.addEvent2Cal(event);
+    } catch (e) {
+      print("Error adding to calendar: $e");
+      Get.snackbar("Lỗi", "Không thể thêm vào lịch", snackPosition: SnackPosition.BOTTOM);
+    }
   }
 }

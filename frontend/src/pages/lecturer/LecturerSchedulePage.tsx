@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import timetableService, { WeeklyTimetableDTO, TimetableSlotDTO } from '../../services/api/timetableService';
+import attendanceService from '../../services/api/attendanceService';
+import { useNavigate } from 'react-router-dom';
 
 const SLOTS = [
     { id: 1, label: 'SLOT 1', time: '07:30 - 09:45' },
@@ -199,6 +201,24 @@ export const LecturerSchedulePage: React.FC = () => {
             alert('Xuất file thất bại. Vui lòng thử lại.');
         } finally {
             setExporting(false);
+        }
+    };
+
+    const navigate = useNavigate();
+    
+    const handleStartAttendance = async () => {
+        if (!selectedSlot) return;
+        try {
+            // Check cache or just go to start flow?
+            // Start logic usually checks if session exists or creates new one
+            // We use the startSession API which handles both
+            const response = await attendanceService.startSession({
+                slotId: selectedSlot.id
+            });
+            navigate(`/lecturer/attendance/session/${response.sessionId}`);
+        } catch (error) {
+            console.error(error);
+            toast.error("Không thể tạo phiên điểm danh");
         }
     };
 
@@ -458,13 +478,19 @@ export const LecturerSchedulePage: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="flex items-start gap-4 pt-2 border-t border-gray-100 dark:border-zinc-800 mt-2">
-                                <div className="flex items-center gap-2 w-full justify-between">
+                            <div className="flex items-center gap-4 pt-2 border-t border-gray-100 dark:border-zinc-800 mt-2">
+                                <div className="flex items-center gap-2 flex-1 justify-between">
                                     <p className="text-sm text-gray-500 dark:text-gray-400">Trạng thái:</p>
                                     <span className={`font-bold uppercase px-3 py-1 rounded-full text-xs border ${getStatusStyle(selectedSlot.status)}`}>
                                         {getStatusLabel(selectedSlot)}
                                     </span>
                                 </div>
+                                <button
+                                    onClick={handleStartAttendance}
+                                    className="px-4 py-2 bg-fpt-orange text-white rounded-lg text-sm font-bold shadow-md hover:bg-orange-600 transition-colors flex items-center gap-2"
+                                >
+                                    <Clock size={16} /> Điểm danh
+                                </button>
                             </div>
                         </div>
                     </div>

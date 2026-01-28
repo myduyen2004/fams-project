@@ -6,6 +6,7 @@ import '../../auth/controllers/auth_controller.dart';
 import '../controllers/schedule_controller.dart';
 import '../widgets/schedule_calendar.dart';
 import '../widgets/slot_card.dart';
+import 'qr_scanner_screen.dart';
 
 class ScheduleScreen extends StatelessWidget {
   const ScheduleScreen({super.key});
