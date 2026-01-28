@@ -38,25 +38,38 @@ class HomeScreen extends StatelessWidget {
       ),
 
       // Floating QR Button and Bottom Bar
-      floatingActionButton: Container(
-        height: 70,
-        width: 70,
-         margin: const EdgeInsets.only(top: 40), // Push FAB down slightly
-        child: FloatingActionButton(
-          backgroundColor: Colors.white,
-          elevation: 4,
-          onPressed: () {},
-          shape: const CircleBorder(),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: const BoxDecoration(
-              color: Color(0xFFFFF0E0),
-              shape: BoxShape.circle,
+      floatingActionButton: Obx(() {
+        final isLecturer = authController.currentUser.value?.isLecturer ?? false;
+        return Container(
+          height: 70,
+          width: 70,
+          margin: const EdgeInsets.only(top: 40), // Push FAB down slightly
+          child: FloatingActionButton(
+            backgroundColor: Colors.white,
+            elevation: 4,
+            onPressed: () {
+              if (isLecturer) {
+                 // Open Evaluation
+              } else {
+                 // Open QR Scanner
+              }
+            },
+            shape: const CircleBorder(),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFFF0E0),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isLecturer ? Icons.reviews_rounded : Icons.qr_code_scanner_rounded,
+                color: AppColors.primaryOrange, 
+                size: 32
+              ),
             ),
-            child: const Icon(Icons.qr_code_scanner_rounded, color: AppColors.primaryOrange, size: 32),
           ),
-        ),
-      ),
+        );
+      }),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
@@ -73,7 +86,12 @@ class HomeScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildNavItem(icon: Icons.home_rounded, label: 'Trang chủ', isActive: controller.currentIndex == 0, onTap: () => controller.changeTab(0)),
-                _buildNavItem(icon: Icons.calendar_month_rounded, label: 'Lịch học', isActive: controller.currentIndex == 1, onTap: () => controller.changeTab(1)),
+                Obx(() => _buildNavItem(
+                  icon: Icons.calendar_month_rounded, 
+                  label: authController.currentUser.value?.isLecturer == true ? 'Lịch dạy' : 'Lịch học', 
+                  isActive: controller.currentIndex == 1, 
+                  onTap: () => controller.changeTab(1)
+                )),
                 const SizedBox(width: 48), // Space for FAB
                 _buildNavItem(icon: Icons.chat_bubble_rounded, label: 'Tin nhắn', isActive: controller.currentIndex == 3, onTap: () => controller.changeTab(3)),
                 _buildNavItem(icon: Icons.account_circle_rounded, label: 'Tài khoản', isActive: controller.currentIndex == 4, onTap: () => controller.changeTab(4)),
@@ -145,7 +163,7 @@ class HomeScreen extends StatelessWidget {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
-                                    user?.fullName ?? 'Học viên',
+                                    user?.fullName ?? (user?.role == 'LECTURER' ? 'Giảng viên' : 'Học viên'),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: GoogleFonts.roboto(
@@ -155,7 +173,7 @@ class HomeScreen extends StatelessWidget {
                                     ),
                                   ),
                                   Text(
-                                    user?.username ?? 'DE181818',
+                                    user?.username ?? 'ID: ...',
                                     style: GoogleFonts.roboto(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w500,
@@ -183,113 +201,159 @@ class HomeScreen extends StatelessWidget {
                     physics: const BouncingScrollPhysics(),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Column(
-                        children: [
-                          // Section 1: Thông báo và đơn từ (White Card Container)
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(30),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 15,
-                                  offset: const Offset(0, 5),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              children: [
-                                const Text(
-                                  'Thông báo và đơn từ',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF2D3436),
+                      child: Obx(() {
+                        final isLecturer = authController.currentUser.value?.isLecturer ?? false;
+
+                        return Column(
+                          children: [
+                            // Section 1: Thông báo và đơn từ (White Card Container)
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(30),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 5),
                                   ),
-                                ),
-                                Container(
-                                  height: 4,
-                                  width: 30,
-                                  margin: const EdgeInsets.only(top: 8, bottom: 20),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primaryOrange,
-                                    borderRadius: BorderRadius.circular(2),
+                                ],
+                              ),
+                              child: Column(
+                                children: [
+                                  const Text(
+                                    'Thông báo và đơn từ',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF2D3436),
+                                    ),
                                   ),
-                                ),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: _buildSquareCard(
-                                        icon: Icons.notifications_active_rounded,
-                                        title: 'Thông báo',
-                                        iconBgColor: const Color(0xFFFFE0B2),
-                                        iconColor: const Color(0xFFE65100),
-                                        onTap: () {},
-                                      ),
+                                  Container(
+                                    height: 4,
+                                    width: 30,
+                                    margin: const EdgeInsets.only(top: 8, bottom: 20),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primaryOrange,
+                                      borderRadius: BorderRadius.circular(2),
                                     ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: _buildSquareCard(
-                                        icon: Icons.person_search_rounded,
-                                        title: 'Đơn yêu cầu',
-                                        iconBgColor: const Color(0xFFFFE0B2), 
-                                        iconColor: const Color(0xFFE65100),
-                                        onTap: () {},
+                                  ),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: _buildSquareCard(
+                                          icon: Icons.notifications_active_rounded,
+                                          title: 'Thông báo',
+                                          iconBgColor: const Color(0xFFFFE0B2),
+                                          iconColor: const Color(0xFFE65100),
+                                          onTap: () {},
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: _buildSquareCard(
+                                          icon: Icons.person_search_rounded,
+                                          title: 'Đơn yêu cầu',
+                                          iconBgColor: const Color(0xFFFFE0B2), 
+                                          iconColor: const Color(0xFFE65100),
+                                          onTap: () {},
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
 
-                          const SizedBox(height: 24),
+                            const SizedBox(height: 24),
 
-                          // Section 2: Thông tin học vụ
-                          Column(
-                            children: [
-                              const Text(
-                                'Thông tin học vụ',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF2D3436),
-                                ),
+                            // Section 2: Role Specific Content
+                            if (isLecturer) ...[
+                              // LECTURER DASHBOARD
+                              Column(
+                                children: [
+                                  const Text(
+                                    'Quản lý lớp học',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF2D3436),
+                                    ),
+                                  ),
+                                  Container(
+                                    height: 4,
+                                    width: 30,
+                                    margin: const EdgeInsets.symmetric(vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primaryOrange,
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  
+                                  // Vertical Cards for Lecturers
+                                  _buildBigCard(
+                                    icon: Icons.school_rounded,
+                                    title: 'Danh sách lớp giảng dạy',
+                                    onTap: () {},
+                                  ),
+
+                                  const SizedBox(height: 16),
+
+                                  _buildBigCard(
+                                    icon: Icons.grade_rounded,
+                                    title: 'Quản lý điểm',
+                                    onTap: () {},
+                                  ),
+                                ],
                               ),
-                              Container(
-                                height: 4,
-                                width: 30,
-                                margin: const EdgeInsets.symmetric(vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primaryOrange,
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              
-                              // Vertical Cards (Big, Centered)
-                              _buildBigCard(
-                                icon: Icons.calendar_month_rounded,
-                                title: 'Xem điểm danh',
-                                onTap: () {},
-                              ),
+                            ] else ...[
+                               // STUDENT DASHBOARD
+                               Column(
+                                children: [
+                                  const Text(
+                                    'Thông tin học vụ',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF2D3436),
+                                    ),
+                                  ),
+                                  Container(
+                                    height: 4,
+                                    width: 30,
+                                    margin: const EdgeInsets.symmetric(vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primaryOrange,
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  
+                                  // Vertical Cards for Students
+                                  _buildBigCard(
+                                    icon: Icons.calendar_month_rounded,
+                                    title: 'Xem điểm danh',
+                                    onTap: () {},
+                                  ),
 
-                              const SizedBox(height: 16),
+                                  const SizedBox(height: 16),
 
-                              _buildBigCard(
-                                icon: Icons.assignment_rounded,
-                                title: 'Báo cáo điểm',
-                                onTap: () {},
+                                  _buildBigCard(
+                                    icon: Icons.assignment_rounded,
+                                    title: 'Báo cáo điểm',
+                                    onTap: () {},
+                                  ),
+                                ],
                               ),
                             ],
-                          ),
 
-                          const SizedBox(height: 100), // Space for FAB
-                        ],
-                      ),
+                            const SizedBox(height: 100), // Space for FAB
+                          ],
+                        );
+                      }),
                     ),
                   ),
                 ),

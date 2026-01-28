@@ -12,6 +12,13 @@ import java.util.Optional;
 public interface SemesterRepository extends JpaRepository<Semester, Long> {
     Optional<Semester> findByCode(String code);
 
+    @Query("SELECT s FROM Semester s " +
+            "LEFT JOIN FETCH s.weekdays " +
+            "LEFT JOIN FETCH s.holidays " +
+            "LEFT JOIN FETCH s.config " +
+            "WHERE s.code = :code")
+    Optional<Semester> findByCodeWithDetails(String code);
+
     @Query("SELECT s FROM Semester s ORDER BY s.startDate DESC")
     List<Semester> findAllOrderByStartDateDesc();
 
