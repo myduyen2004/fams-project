@@ -165,6 +165,21 @@ export const timetableService = {
       responseType: 'blob' // Important for file download
     });
     return resp;
+  },
+
+  updateSlot: async (slotId: number, data: { date: string, slotNumber: number, roomId: number }) => {
+    const resp = await axios.put(`${API_URL}/v1/timetable/slot/${slotId}`, data, {
+      headers: getAuthHeader()
+    });
+    return resp.data;
+  },
+
+  getAvailability: async (date: string, semesterCode: string) => {
+    const resp = await axios.get(`${API_URL}/v1/timetable/availability`, {
+      headers: getAuthHeader(),
+      params: { date, semesterCode }
+    });
+    return resp.data;
   }
 };
 
