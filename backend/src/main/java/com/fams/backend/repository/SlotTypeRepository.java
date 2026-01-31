@@ -13,6 +13,8 @@ import java.util.List;
 public interface SlotTypeRepository extends JpaRepository<SlotType, Long> {
     List<SlotType> findBySemesterIdOrderBySlotIndexAsc(Long semesterId);
 
+    List<SlotType> findBySemesterCodeOrderBySlotIndexAsc(String semesterCode);
+
     java.util.Optional<SlotType> findBySemesterIdAndSlotIndex(Long semesterId, Integer slotIndex);
 
     @Modifying

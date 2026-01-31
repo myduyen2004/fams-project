@@ -24,6 +24,17 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
         boolean existsByClassSectionClassNameAndDateAndSlotNumberAndStatusNot(String className, LocalDate date,
                         Integer slotNumber, TimetableSlot.TimetableSlotStatus status);
 
+        List<TimetableSlot> findByRoomIdAndDateAndSlotNumberAndStatusNot(Long roomId, LocalDate date,
+                        Integer slotNumber, TimetableSlot.TimetableSlotStatus status);
+
+        List<TimetableSlot> findByClassSectionLecturerIdAndDateAndSlotNumberAndStatusNot(Long lecturerId,
+                        LocalDate date,
+                        Integer slotNumber, TimetableSlot.TimetableSlotStatus status);
+
+        List<TimetableSlot> findByClassSectionClassNameAndDateAndSlotNumberAndStatusNot(String className,
+                        LocalDate date,
+                        Integer slotNumber, TimetableSlot.TimetableSlotStatus status);
+
         java.util.Optional<TimetableSlot> findByClassSectionClassNameAndDateAndSlotNumber(String className,
                         LocalDate date, Integer slotNumber);
 

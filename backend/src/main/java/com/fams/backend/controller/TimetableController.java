@@ -14,7 +14,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletResponse; // Import Response for streaming file
 
@@ -48,6 +47,7 @@ public class TimetableController {
     private final SemesterRepository semesterRepository;
     private final com.fams.backend.repository.ClassSectionRepository classSectionRepository;
     private final com.fams.backend.repository.SemesterConfigRepository semesterConfigRepository;
+    private final com.fams.backend.service.timetable.TimetableSlotService timetableSlotService;
 
     // ==================== GENERATION APIs ====================
 
@@ -279,6 +279,27 @@ public class TimetableController {
                 .toList();
 
         return ResponseEntity.ok(dtos);
+    }
+
+    @RequestMapping(value = "/slot/{id}", method = { RequestMethod.PATCH, RequestMethod.PUT })
+    @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
+    @Operation(summary = "Update a timetable slot", description = "Reschedule a session to a different date, slot, or room")
+    public ResponseEntity<TimetableDTO.TimetableSlotDTO> updateSlot(
+            @PathVariable Long id,
+            @RequestBody @jakarta.validation.Valid TimetableDTO.UpdateSlotRequest request) {
+        log.info("Updating timetable slot {}: date={}, slot={}, room={}", id, request.getDate(),
+                request.getSlotNumber(), request.getRoomId());
+        return ResponseEntity.ok(timetableSlotService.updateSlot(id, request));
+    }
+
+    @GetMapping("/availability")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
+    @Operation(summary = "Get available slots and rooms for a date")
+    public ResponseEntity<TimetableDTO.AvailabilityResponse> getAvailability(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam String semesterCode) {
+        log.info("[Controller] Get availability: date={}, semesterCode={}", date, semesterCode);
+        return ResponseEntity.ok(timetableSlotService.getAvailability(date, semesterCode));
     }
 
     @GetMapping("/student/{studentId}")
