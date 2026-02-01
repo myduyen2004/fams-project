@@ -67,11 +67,19 @@ public class LecturerServiceImpl implements LecturerService {
             // Filter by LECTURER role
             predicates.add(cb.equal(root.get("role"), User.UserRole.LECTURER));
 
-            // Filter by status
+            // ALWAYS exclude INACTIVE users
+            predicates.add(cb.notEqual(root.get("status"), User.UserStatus.INACTIVE));
+
+            // Filter by status (if provided, and not INACTIVE)
             if (status != null && !status.isEmpty() && !status.equalsIgnoreCase("all")) {
                 try {
                     User.UserStatus userStatus = User.UserStatus.valueOf(status.toUpperCase());
-                    predicates.add(cb.equal(root.get("status"), userStatus));
+                    if (userStatus != User.UserStatus.INACTIVE) {
+                        predicates.add(cb.equal(root.get("status"), userStatus));
+                    } else {
+                        // If someone explicitly asks for INACTIVE, they get nothing
+                        predicates.add(cb.disjunction());
+                    }
                 } catch (Exception e) {
                     log.error("Invalid status filter: {}", status);
                 }
