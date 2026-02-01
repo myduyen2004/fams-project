@@ -1,6 +1,5 @@
 package com.fams.backend.service.timetable.ga.fitness;
 
-import com.fams.backend.service.timetable.ga.datastructure.ScheduleState;
 import com.fams.backend.service.timetable.ga.model.Chromosome;
 import com.fams.backend.service.timetable.ga.model.GAConfig;
 import com.fams.backend.service.timetable.ga.model.TimetableData;
@@ -53,25 +52,21 @@ public class FitnessEvaluator {
     }
 
     /**
-     * Đánh giá chi tiết
+     * Đánh giá chi tiết - OPTIMIZED: No ScheduleState creation
      */
     public FitnessBreakdown evaluateDetailed(Chromosome chromosome) {
         FitnessBreakdown breakdown = new FitnessBreakdown();
 
-        // Build state để tính toán
-        ScheduleState state = new ScheduleState(data);
-        state.loadFromChromosome(chromosome);
-
-        // SC-1: Saturday penalty
+        // SC-1: Saturday penalty - direct calculation
         breakdown.saturdayPenalty = calculateSaturdayPenalty(chromosome)
                 * config.getSaturdayPenaltyWeight();
 
-        // SC-2: Gap penalty
-        breakdown.gapPenalty = calculateGapPenalty(state)
+        // SC-2: Gap penalty - direct calculation from chromosome
+        breakdown.gapPenalty = calculateGapPenaltyDirect(chromosome)
                 * config.getGapPenaltyWeight();
 
-        // SC-3: Overload penalty
-        breakdown.overloadPenalty = calculateOverloadPenalty(state)
+        // SC-3: Overload penalty - direct calculation from chromosome
+        breakdown.overloadPenalty = calculateOverloadPenaltyDirect(chromosome)
                 * config.getOverloadPenaltyWeight();
 
         return breakdown;
@@ -97,16 +92,52 @@ public class FitnessEvaluator {
     }
 
     /**
-     * SC-2: Tính penalty cho khoảng trống trong ngày
+     * SC-2: Tính penalty cho khoảng trống trong ngày - OPTIMIZED
      * Gap = số slot trống giữa slot đầu và slot cuối trong ngày của mỗi sinh viên
+     * Direct calculation from Chromosome without ScheduleState
      */
-    private double calculateGapPenalty(ScheduleState state) {
+    private double calculateGapPenaltyDirect(Chromosome chromosome) {
         double totalGaps = 0;
 
-        for (Long studentId : data.getStudentEnrollments().keySet()) {
-            for (int dayIndex = 0; dayIndex < data.getDaysPerWeek(); dayIndex++) {
-                int gaps = calculateStudentGapsInDay(state, studentId, dayIndex);
-                totalGaps += gaps;
+        // Pre-compute student -> slots mapping from chromosome
+        Map<Long, List<Integer>> studentSlots = new HashMap<>();
+
+        for (Map.Entry<String, Set<Integer>> entry : chromosome.getGenes().entrySet()) {
+            String className = entry.getKey();
+            Set<Integer> slots = entry.getValue();
+            Set<Long> students = data.getStudentsOfClass(className);
+
+            for (Long studentId : students) {
+                studentSlots.computeIfAbsent(studentId, k -> new ArrayList<>()).addAll(slots);
+            }
+        }
+
+        // Calculate gaps for each student
+        for (Map.Entry<Long, List<Integer>> entry : studentSlots.entrySet()) {
+            List<Integer> slots = entry.getValue();
+
+            // Group slots by day
+            Map<Integer, List<Integer>> slotsByDay = new HashMap<>();
+            for (Integer slot : slots) {
+                int day = data.getDayFromSlot(slot);
+                slotsByDay.computeIfAbsent(day, k -> new ArrayList<>()).add(slot);
+            }
+
+            // Calculate gaps for each day
+            for (List<Integer> daySlots : slotsByDay.values()) {
+                if (daySlots.size() < 2)
+                    continue;
+
+                // Sort by period
+                daySlots.sort(Comparator.comparingInt(s -> data.getPeriodFromSlot(s)));
+
+                for (int i = 1; i < daySlots.size(); i++) {
+                    int periodDiff = data.getPeriodFromSlot(daySlots.get(i))
+                            - data.getPeriodFromSlot(daySlots.get(i - 1));
+                    if (periodDiff > 1) {
+                        totalGaps += (periodDiff - 1);
+                    }
+                }
             }
         }
 
@@ -114,44 +145,38 @@ public class FitnessEvaluator {
     }
 
     /**
-     * Tính số gap của sinh viên trong một ngày
+     * SC-3: Tính penalty cho quá tải tuần - OPTIMIZED
+     * - Sinh viên học > 15 slot/tuần
+     * - Giảng viên dạy > 20 slot/tuần
+     * Direct calculation from Chromosome without ScheduleState
      */
-    private int calculateStudentGapsInDay(ScheduleState state, Long studentId, int dayIndex) {
-        int[] slotsInDay = state.getStudentSlotMasks().get(studentId)
-                .getOccupiedSlotsInDay(dayIndex, data.getPeriodsPerDay());
+    private double calculateOverloadPenaltyDirect(Chromosome chromosome) {
+        double penalty = 0;
 
-        if (slotsInDay.length < 2) {
-            return 0; // Không có gap nếu < 2 slots
-        }
+        // Pre-compute student -> slot count and lecturer -> slot count
+        Map<Long, Integer> studentSlotCount = new HashMap<>();
+        Map<Long, Integer> lecturerSlotCount = new HashMap<>();
 
-        // Sắp xếp các slot
-        Arrays.sort(slotsInDay);
+        for (Map.Entry<String, Set<Integer>> entry : chromosome.getGenes().entrySet()) {
+            String className = entry.getKey();
+            int slotCount = entry.getValue().size();
 
-        // Đếm gaps
-        int gaps = 0;
-        for (int i = 1; i < slotsInDay.length; i++) {
-            int periodDiff = (slotsInDay[i] % data.getPeriodsPerDay())
-                    - (slotsInDay[i - 1] % data.getPeriodsPerDay());
-            if (periodDiff > 1) {
-                gaps += (periodDiff - 1);
+            // Student slots
+            Set<Long> students = data.getStudentsOfClass(className);
+            for (Long studentId : students) {
+                studentSlotCount.merge(studentId, slotCount, Integer::sum);
+            }
+
+            // Lecturer slots
+            Long lecturerId = data.getLecturerOfClass(className);
+            if (lecturerId != null) {
+                lecturerSlotCount.merge(lecturerId, slotCount, Integer::sum);
             }
         }
 
-        return gaps;
-    }
-
-    /**
-     * SC-3: Tính penalty cho quá tải tuần
-     * - Sinh viên học > 15 slot/tuần
-     * - Giảng viên dạy > 20 slot/tuần
-     */
-    private double calculateOverloadPenalty(ScheduleState state) {
-        double penalty = 0;
-
         // Student overload
         int studentThreshold = config.getStudentWeeklyOverloadThreshold();
-        for (Long studentId : data.getStudentEnrollments().keySet()) {
-            int weeklySlots = state.getStudentWeeklySlots(studentId);
+        for (int weeklySlots : studentSlotCount.values()) {
             if (weeklySlots > studentThreshold) {
                 penalty += (weeklySlots - studentThreshold);
             }
@@ -159,8 +184,7 @@ public class FitnessEvaluator {
 
         // Lecturer overload
         int lecturerThreshold = config.getLecturerWeeklyOverloadThreshold();
-        for (Long lecturerId : data.getLecturerClasses().keySet()) {
-            int weeklySlots = state.getLecturerWeeklySlots(lecturerId);
+        for (int weeklySlots : lecturerSlotCount.values()) {
             if (weeklySlots > lecturerThreshold) {
                 penalty += (weeklySlots - lecturerThreshold) * 2; // Giảng viên có weight cao hơn
             }

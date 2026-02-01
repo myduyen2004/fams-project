@@ -24,6 +24,17 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
         boolean existsByClassSectionClassNameAndDateAndSlotNumberAndStatusNot(String className, LocalDate date,
                         Integer slotNumber, TimetableSlot.TimetableSlotStatus status);
 
+        List<TimetableSlot> findByRoomIdAndDateAndSlotNumberAndStatusNot(Long roomId, LocalDate date,
+                        Integer slotNumber, TimetableSlot.TimetableSlotStatus status);
+
+        List<TimetableSlot> findByClassSectionLecturerIdAndDateAndSlotNumberAndStatusNot(Long lecturerId,
+                        LocalDate date,
+                        Integer slotNumber, TimetableSlot.TimetableSlotStatus status);
+
+        List<TimetableSlot> findByClassSectionClassNameAndDateAndSlotNumberAndStatusNot(String className,
+                        LocalDate date,
+                        Integer slotNumber, TimetableSlot.TimetableSlotStatus status);
+
         java.util.Optional<TimetableSlot> findByClassSectionClassNameAndDateAndSlotNumber(String className,
                         LocalDate date, Integer slotNumber);
 
@@ -177,7 +188,7 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
                         "WHERE ts.room.id = :roomId " +
                         "AND ts.date = :date " +
                         "AND ts.slotNumber = :slotNumber " +
-                        "AND ts.status != 'CANCELLED'")
+                        "AND ts.status = 'SCHEDULED'")
         boolean isRoomAvailable(
                         @Param("roomId") Long roomId,
                         @Param("date") LocalDate date,
@@ -197,6 +208,17 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
                         @Param("slotNumber") Integer slotNumber);
 
         /**
+         * Find all busy room IDs for a specific date and slot
+         */
+        @Query("SELECT DISTINCT ts.room.id FROM TimetableSlot ts " +
+                        "WHERE ts.date = :date " +
+                        "AND ts.slotNumber = :slotNumber " +
+                        "AND ts.status = 'SCHEDULED'")
+        List<Long> findBusyRoomIds(
+                        @Param("date") LocalDate date,
+                        @Param("slotNumber") Integer slotNumber);
+
+        /**
          * Find the earliest createdAt timestamp for a semester's timetable
          * This is used to compare with semester config updatedAt to detect config
          * changes
@@ -204,43 +226,4 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
         @Query("SELECT MIN(ts.createdAt) FROM TimetableSlot ts " +
                         "WHERE ts.classSection.semester.code = :semesterCode")
         java.time.LocalDateTime findEarliestCreatedAtBySemesterCode(@Param("semesterCode") String semesterCode);
-
-        /**
-         * [HC-1] Find students of a class who have a conflict at a specific slot
-         */
-        @Query("SELECT DISTINCT s.code FROM TimetableSlot ts " +
-                        "JOIN ts.classSection cs " +
-                        "JOIN cs.enrollments e " +
-                        "JOIN e.student s " +
-                        "WHERE s.id IN (SELECT e2.student.id FROM ClassSection cs2 JOIN cs2.enrollments e2 WHERE cs2.className = :className) "
-                        +
-                        "AND ts.date = :date " +
-                        "AND ts.slotNumber = :slotNumber " +
-                        "AND ts.status != 'CANCELLED' " +
-                        "AND ts.id != :excludeSlotId")
-        List<String> findStudentsWithConflict(
-                        @Param("className") String className,
-                        @Param("date") LocalDate date,
-                        @Param("slotNumber") Integer slotNumber,
-                        @Param("excludeSlotId") Long excludeSlotId);
-
-        /**
-         * [HC-2] Find students of a class who would exceed max slots on a specific date
-         */
-        @Query("SELECT s.code FROM TimetableSlot ts " +
-                        "JOIN ts.classSection cs " +
-                        "JOIN cs.enrollments e " +
-                        "JOIN e.student s " +
-                        "WHERE s.id IN (SELECT e2.student.id FROM ClassSection cs2 JOIN cs2.enrollments e2 WHERE cs2.className = :className) "
-                        +
-                        "AND ts.date = :date " +
-                        "AND ts.status != 'CANCELLED' " +
-                        "AND ts.id != :excludeSlotId " +
-                        "GROUP BY s.code " +
-                        "HAVING COUNT(ts.id) >= :maxSlots")
-        List<String> findStudentsExceedingMaxSlots(
-                        @Param("className") String className,
-                        @Param("date") LocalDate date,
-                        @Param("maxSlots") long maxSlots,
-                        @Param("excludeSlotId") Long excludeSlotId);
 }
