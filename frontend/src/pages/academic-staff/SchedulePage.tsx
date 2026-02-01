@@ -3,9 +3,11 @@ import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import axios from 'axios';
 import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
 import { toast } from 'react-hot-toast';
-import { Calendar, BookOpen, ChevronLeft, ChevronRight, X, Clock, MapPin, User, GraduationCap, AlertTriangle, Check, ChevronsUpDown, Eye, EyeOff, Loader2, Play, Users, School, Download, MoreVertical, RefreshCw, Save } from 'lucide-react';
+import { Calendar, BookOpen, ChevronLeft, ChevronRight, X, Clock, MapPin, User, GraduationCap, AlertTriangle, Check, ChevronsUpDown, Eye, EyeOff, Loader2, Play, Users, School, Download, MoreVertical, Home, RefreshCw, Save } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { Combobox, Transition } from '@headlessui/react';
+import { Combobox, Transition, Listbox } from '@headlessui/react';
+import { roomService } from '../../services/api/roomService';
+import { Room } from '../../types/room';
 
 interface FilterComboboxProps {
   value: string | null; // Changed to allow null
@@ -157,10 +159,11 @@ export const SchedulePage: React.FC = () => {
   // Toggle for showing locked schedule (isPublished)
   const [showLockedSchedule, setShowLockedSchedule] = useState(false);
 
-  // Filters
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [selectedTeacher, setSelectedTeacher] = useState<string | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
+  const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
+  const [allRooms, setAllRooms] = useState<Room[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [semesterStartDate, setSemesterStartDate] = useState<string>('');
   const [semesterEndDate, setSemesterEndDate] = useState<string>('');
@@ -200,6 +203,17 @@ export const SchedulePage: React.FC = () => {
     } catch (err) {
       console.error('Failed to load semesters', err);
       toast.error('Không thể tải danh sách học kỳ');
+    }
+  };
+
+  const fetchAllRooms = async () => {
+    try {
+      const data = await roomService.getAllRooms();
+      // Sort rooms by code ascending
+      const sorted = data.sort((a, b) => a.code.localeCompare(b.code, 'vi', { numeric: true }));
+      setAllRooms(sorted);
+    } catch (err) {
+      console.error('Failed to load rooms', err);
     }
   };
 
@@ -331,6 +345,7 @@ export const SchedulePage: React.FC = () => {
 
   useEffect(() => {
     fetchSemesters();
+    fetchAllRooms();
   }, []);
 
   useEffect(() => {
@@ -346,38 +361,6 @@ export const SchedulePage: React.FC = () => {
       fetchTimetable(selected, selectedDate);
     }
   }, [selected, selectedDate]);
-
-  // Restore generation job from localStorage on mount
-  useEffect(() => {
-    const savedJob = localStorage.getItem(GENERATION_JOB_KEY);
-    if (savedJob) {
-      try {
-        const { jobId, semesterCode, timestamp } = JSON.parse(savedJob);
-        // Check if job is not too old (< 1 hour)
-        if (Date.now() - timestamp < 3600000) {
-          setGenerationJobId(jobId);
-          setGenerating(true);
-          setSelected(semesterCode);
-          startPolling(jobId);
-        } else {
-          localStorage.removeItem(GENERATION_JOB_KEY);
-        }
-      } catch (err) {
-        console.error('Failed to restore generation job', err);
-        localStorage.removeItem(GENERATION_JOB_KEY);
-      }
-    }
-  }, []);
-
-  // Cleanup polling on unmount
-  useEffect(() => {
-    return () => {
-      if (pollingRef.current) {
-        window.clearInterval(pollingRef.current);
-        pollingRef.current = null;
-      }
-    };
-  }, []);
 
   // Fetch availability when rescheduling date changes
   useEffect(() => {
@@ -426,6 +409,38 @@ export const SchedulePage: React.FC = () => {
       setRawAvailability(null);
     }
   }, [selectedSlot]);
+
+  // Restore generation job from localStorage on mount
+  useEffect(() => {
+    const savedJob = localStorage.getItem(GENERATION_JOB_KEY);
+    if (savedJob) {
+      try {
+        const { jobId, semesterCode, timestamp } = JSON.parse(savedJob);
+        // Check if job is not too old (< 1 hour)
+        if (Date.now() - timestamp < 3600000) {
+          setGenerationJobId(jobId);
+          setGenerating(true);
+          setSelected(semesterCode);
+          startPolling(jobId);
+        } else {
+          localStorage.removeItem(GENERATION_JOB_KEY);
+        }
+      } catch (err) {
+        console.error('Failed to restore generation job', err);
+        localStorage.removeItem(GENERATION_JOB_KEY);
+      }
+    }
+  }, []);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) {
+        window.clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, []);
 
   // Main generation start function
   const startGeneration = async () => {
@@ -670,7 +685,22 @@ export const SchedulePage: React.FC = () => {
   // Filters logic handled by Combobox components
 
   // Build data structure: rooms -> slotNumber
-  const rooms = Array.from(new Set(slots.map(s => s.roomName || s.roomCode || 'Phòng')));
+  // Use allRooms from API, sorted ascending. If empty, fall back to unique rooms from slots.
+  const displayRooms = useMemo(() => {
+    const roomCodes = allRooms.map(r => r.code);
+    if (roomCodes.length === 0) {
+      // Fallback: unique rooms from slots, sorted
+      const fromSlots = Array.from(new Set(slots.map(s => s.roomCode || s.roomName || 'Phòng'))).sort((a, b) => a.localeCompare(b, 'vi', { numeric: true }));
+      return fromSlots;
+    }
+    return roomCodes;
+  }, [allRooms, slots]);
+
+  // Filter rooms by selected room filter
+  const filteredDisplayRooms = useMemo(() => {
+    if (selectedRooms.length === 0) return displayRooms;
+    return displayRooms.filter(r => selectedRooms.includes(r));
+  }, [displayRooms, selectedRooms]);
 
   // Filter slots based on selected filters
   const filteredSlots = slots.filter(slot => {
@@ -678,12 +708,16 @@ export const SchedulePage: React.FC = () => {
     if (selectedTeacher && slot.lecturerName !== selectedTeacher) return false;
     if (selectedCourse && (slot.courseCode !== selectedCourse && slot.courseName !== selectedCourse)) return false;
     if (selectedDate && slot.date !== selectedDate) return false;
+    if (selectedRooms.length > 0) {
+      const slotRoom = slot.roomCode || slot.roomName || 'Phòng';
+      if (!selectedRooms.includes(slotRoom)) return false;
+    }
     return true;
   });
 
   const getCell = (room: string, slotNum: number) => {
     return filteredSlots.find(s =>
-      (s.roomName || s.roomCode || 'Phòng') === room &&
+      (s.roomCode || s.roomName || 'Phòng') === room &&
       (s.slotNumber || 0) === slotNum
     );
   };
@@ -853,13 +887,64 @@ export const SchedulePage: React.FC = () => {
               icon={BookOpen}
             />
 
+            {/* Room Filter - Multi-select */}
+            <div className="relative w-full sm:w-56">
+              <Listbox value={selectedRooms} onChange={setSelectedRooms} multiple>
+                <div className="relative">
+                  <Listbox.Button className="relative w-full cursor-default overflow-hidden rounded-lg bg-white text-left border border-gray-200 focus-within:border-fpt-orange focus-within:ring-1 focus-within:ring-fpt-orange sm:text-sm flex items-center transition-colors py-2 px-3">
+                    <Home size={16} className="text-gray-400 mr-2 flex-shrink-0" />
+                    <span className="block truncate flex-1 text-sm text-gray-700">
+                      {selectedRooms.length === 0
+                        ? 'Chọn phòng...'
+                        : selectedRooms.length === 1
+                          ? selectedRooms[0]
+                          : `${selectedRooms.length} phòng`}
+                    </span>
+                    <ChevronsUpDown className="h-4 w-4 text-gray-400 flex-shrink-0" aria-hidden="true" />
+                  </Listbox.Button>
+                  <Transition
+                    as={Fragment}
+                    leave="transition ease-in duration-100"
+                    leaveFrom="opacity-100"
+                    leaveTo="opacity-0"
+                  >
+                    <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-50 scroller">
+                      {displayRooms.map((room) => (
+                        <Listbox.Option
+                          key={room}
+                          className={({ active }) =>
+                            `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-fpt-orange text-white' : 'text-gray-900'}`
+                          }
+                          value={room}
+                        >
+                          {({ selected, active }) => (
+                            <>
+                              <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                                {room}
+                              </span>
+                              {selected && (
+                                <span className={`absolute inset-y-0 left-0 flex items-center pl-3 ${active ? 'text-white' : 'text-fpt-orange'}`}>
+                                  <Check className="h-5 w-5" aria-hidden="true" />
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </Listbox.Option>
+                      ))}
+                    </Listbox.Options>
+                  </Transition>
+                </div>
+              </Listbox>
+            </div>
+
             {/* Clear filters button */}
-            {(selectedClass || selectedTeacher || selectedCourse) && (
+            {(selectedClass || selectedTeacher || selectedCourse || selectedRooms.length > 0) && (
               <button
                 onClick={() => {
-                  setSelectedClass('');
-                  setSelectedTeacher('');
-                  setSelectedCourse('');
+                  setSelectedClass(null);
+                  setSelectedTeacher(null);
+                  setSelectedCourse(null);
+                  setSelectedRooms([]);
                 }}
                 className="text-sm text-fpt-orange hover:text-orange-600 font-medium whitespace-nowrap"
               >
@@ -960,7 +1045,7 @@ export const SchedulePage: React.FC = () => {
               </div>
             )}
 
-            {rooms.length === 0 ? (
+            {filteredSlots.length === 0 ? (
               <div className="p-12 text-center text-gray-500">
                 {selectedDate
                   ? `Không có lịch học vào ${new Date(selectedDate).toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}`
@@ -990,7 +1075,7 @@ export const SchedulePage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {rooms.map((room, idx) => (
+                    {filteredDisplayRooms.map((room, idx) => (
                       <tr key={room} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
                         <td className="px-6 py-4 text-sm font-semibold text-gray-800 border-b border-gray-100">
                           {room}
@@ -1259,9 +1344,7 @@ export const SchedulePage: React.FC = () => {
                       setIsRescheduling(true);
                       setRescheduleDate(selectedSlot.date || '');
                       setRescheduleSlot(selectedSlot.slotNumber || null);
-                      setRescheduleRoom(null); // Force re-select room or keep current?
-                      // If keeping current, we need its ID. selectedSlot has roomCode/roomName but maybe not roomId.
-                      // Let's assume we re-select room for safety.
+                      setRescheduleRoom(null);
                     }}
                     className="flex items-center gap-2 px-6 py-2.5 bg-fpt-orange hover:bg-orange-600 text-white rounded-xl font-medium transition-colors"
                   >

@@ -15,6 +15,8 @@ export interface ScheduleRequest {
     createdAt: string;
     approverNote?: string;
     originalRoomName?: string;
+    requestedRoomName?: string;
+    requestedDate?: string;
     file?: string;
     approverName?: string;
     approvedAt?: string;
@@ -28,6 +30,16 @@ export interface PageResponse<T> {
     number: number;
 }
 
+export interface CreateScheduleRequestPayload {
+    originalSlotId: number;
+    type: 'RESCHEDULE' | 'CANCEL' | 'SWAP' | 'ROOM_CHANGE';
+    reason: string;
+    file?: string;
+    requestedDate?: string; // YYYY-MM-DD
+    requestedSlotTypeId?: number; // Slot number (1-4)
+    requestedRoomId?: number;
+}
+
 export const scheduleRequestService = {
     getMyRequests: async (page = 0, size = 10): Promise<PageResponse<ScheduleRequest>> => {
         const response = await apiClient.get(`/lecturer/requests?page=${page}&size=${size}`);
@@ -35,6 +47,10 @@ export const scheduleRequestService = {
     },
     getRequestById: async (id: number): Promise<ScheduleRequest> => {
         const response = await apiClient.get(`/lecturer/requests/${id}`);
+        return response.data;
+    },
+    createRequest: async (payload: CreateScheduleRequestPayload): Promise<ScheduleRequest> => {
+        const response = await apiClient.post('/lecturer/requests', payload);
         return response.data;
     },
     getSlotsForClass: async (className: string): Promise<ClassSlotResponse[]> => {
@@ -45,10 +61,7 @@ export const scheduleRequestService = {
         const response = await apiClient.get(`/lecturer/classes`);
         return response.data;
     },
-    createRequest: async (data: any): Promise<ScheduleRequest> => {
-        const response = await apiClient.post(`/lecturer/requests`, data);
-        return response.data;
-    },
+
     getRooms: async (): Promise<any[]> => {
         const response = await apiClient.get(`/v1/rooms`);
         return response.data;

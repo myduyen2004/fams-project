@@ -88,24 +88,28 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
             Integer targetSlotIndex;
             // requestedSlotType reassignment
 
+            // Get semester ID from original slot
+            Long semesterId = originalSlot.getClassSection().getSemester().getId();
+
             if (request.getRequestedSlotTypeId() != null) {
-                requestedSlotType = slotTypeRepository.findById(request.getRequestedSlotTypeId())
-                        .orElseThrow(() -> new BadRequestException("Slot Type not found"));
-                targetSlotIndex = requestedSlotType.getSlotIndex();
+                // requestedSlotTypeId is actually the slot INDEX (1-4), not the SlotType ID
+                targetSlotIndex = request.getRequestedSlotTypeId().intValue();
+                requestedSlotType = slotTypeRepository
+                        .findBySemesterIdAndSlotIndex(semesterId, targetSlotIndex)
+                        .orElseThrow(() -> new BadRequestException("Slot Type not found for slot " + targetSlotIndex));
             } else {
                 // If not requested, use original slot number
                 targetSlotIndex = originalSlot.getSlotNumber();
                 // Find corresponding SlotType if checking duration etc (optional)
                 requestedSlotType = slotTypeRepository
-                        .findBySemesterIdAndSlotIndex(originalSlot.getClassSection().getSemester().getId(),
-                                targetSlotIndex)
+                        .findBySemesterIdAndSlotIndex(semesterId, targetSlotIndex)
                         .orElseThrow(() -> new BadRequestException("Original Slot Type not found"));
             }
 
             requestedRoom = roomRepository.findById(targetRoomId)
                     .orElseThrow(() -> new BadRequestException("Room not found"));
 
-            // Check Conflicts
+            // Check Conflicts - chỉ kiểm tra, không tạo slot mới
             // a. Room Conflict
             boolean roomBusy = timetableSlotRepository.existsByRoomIdAndDateAndSlotNumberAndStatusNot(
                     requestedRoom.getId(), targetDate, targetSlotIndex,
@@ -131,17 +135,19 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
                 throw new BadRequestException("Lớp học đã có lịch học vào khung giờ này.");
             }
 
-            // Create NEW Slot (Strict Requirement)
-            com.fams.backend.entity.TimetableSlot newSlot = new com.fams.backend.entity.TimetableSlot();
-            newSlot.setClassSection(originalSlot.getClassSection());
-            newSlot.setRoom(requestedRoom);
-            newSlot.setDate(targetDate);
-            newSlot.setDayOfWeek(targetDate.getDayOfWeek().getValue());
-            newSlot.setSlotNumber(targetSlotIndex);
-            newSlot.setSlotType(requestedSlotType);
-            newSlot.setStatus(com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.SCHEDULED);
+            // d. Pending Request Conflict - Check if there's already a PENDING request for
+            // same room/date/slot
+            boolean pendingConflict = scheduleRequestRepository
+                    .existsByRequestedRoomIdAndRequestedDateAndRequestedSlotNumberAndStatus(
+                            requestedRoom.getId(), targetDate, targetSlotIndex,
+                            ScheduleRequest.RequestStatus.PENDING);
+            if (pendingConflict) {
+                throw new BadRequestException("Đã có yêu cầu đang chờ duyệt cho phòng/ngày/slot này.");
+            }
 
-            requestedSlot = timetableSlotRepository.save(newSlot);
+            // KHÔNG tạo TimetableSlot mới ở đây
+            // TimetableSlot sẽ được tạo khi yêu cầu được APPROVED
+            requestedSlot = null;
         }
 
         // 5. Create Request
@@ -153,6 +159,14 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
         scheduleRequest.setRequestedRoom(requestedRoom);
         scheduleRequest.setType(request.getType());
         scheduleRequest.setReason(request.getReason());
+        scheduleRequest.setFile(request.getFile()); // Lưu URL file từ Cloudinary
+        scheduleRequest.setRequestedDate(request.getRequestedDate()); // Lưu ngày yêu cầu thay đổi
+        scheduleRequest.setRequestedSlotNumber(
+                request.getRequestedSlotTypeId() != null ? request.getRequestedSlotTypeId().intValue() : null); // Lưu
+                                                                                                                // slot
+                                                                                                                // number
+                                                                                                                // yêu
+                                                                                                                // cầu
         scheduleRequest.setStatus(ScheduleRequest.RequestStatus.PENDING);
         scheduleRequest.setCreatedAt(LocalDateTime.now());
 
@@ -468,10 +482,16 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
                 .originalSlotInfo(request.getOriginalSlot() != null ? formatSlotInfo(request.getOriginalSlot()) : null)
                 .requestedSlotId(request.getRequestedSlot() != null ? request.getRequestedSlot().getId() : null)
                 .requestedSlotNumber(
-                        request.getRequestedSlot() != null ? request.getRequestedSlot().getSlotNumber() : null)
+                        request.getRequestedSlotNumber() != null ? request.getRequestedSlotNumber()
+                                : (request.getRequestedSlot() != null ? request.getRequestedSlot().getSlotNumber()
+                                        : null))
                 .requestedSlotInfo(
-                        request.getRequestedSlot() != null ? formatSlotInfo(request.getRequestedSlot()) : null)
+                        request.getRequestedSlotNumber() != null ? "Slot " + request.getRequestedSlotNumber()
+                                : (request.getRequestedSlot() != null ? formatSlotInfo(request.getRequestedSlot())
+                                        : null))
                 .requestedRoomName(request.getRequestedRoom() != null ? request.getRequestedRoom().getName() : null)
+                .requestedDate(request.getRequestedSlot() != null ? request.getRequestedSlot().getDate()
+                        : request.getRequestedDate())
                 .originalRoomName(request.getOriginalSlot() != null && request.getOriginalSlot().getRoom() != null
                         ? request.getOriginalSlot().getRoom().getName()
                         : null)

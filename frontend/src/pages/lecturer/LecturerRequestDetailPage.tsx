@@ -104,7 +104,7 @@ export const LecturerRequestDetailPage: React.FC = () => {
                         <section className="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-800">
                             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Chi tiết thay đổi</h2>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                 {/* Original Room */}
                                 <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-100 dark:border-slate-800">
                                     <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">PHÒNG BAN ĐẦU</p>
@@ -121,9 +121,27 @@ export const LecturerRequestDetailPage: React.FC = () => {
                                     </p>
                                 </div>
 
-                                {/* New Slot */}
+                                {/* Requested Date */}
                                 <div className="bg-orange-50 dark:bg-orange-900/10 p-4 rounded-lg border border-orange-100 dark:border-orange-900/20">
-                                    <p className="text-xs font-bold text-fpt-orange uppercase tracking-wide mb-2">SLOT YÊU CẦU MỚI</p>
+                                    <p className="text-xs font-bold text-fpt-orange uppercase tracking-wide mb-2">NGÀY YÊU CẦU</p>
+                                    <p className="font-bold text-fpt-orange text-xl">
+                                        {request.requestedDate ? new Date(request.requestedDate).toLocaleDateString('vi-VN') : 'Không có'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {/* Requested Room */}
+                                <div className="bg-orange-50 dark:bg-orange-900/10 p-4 rounded-lg border border-orange-100 dark:border-orange-900/20">
+                                    <p className="text-xs font-bold text-fpt-orange uppercase tracking-wide mb-2">PHÒNG YÊU CẦU</p>
+                                    <p className="font-bold text-fpt-orange text-xl">
+                                        {request.requestedRoomName || 'Không đổi'}
+                                    </p>
+                                </div>
+
+                                {/* Requested Slot */}
+                                <div className="bg-orange-50 dark:bg-orange-900/10 p-4 rounded-lg border border-orange-100 dark:border-orange-900/20">
+                                    <p className="text-xs font-bold text-fpt-orange uppercase tracking-wide mb-2">SLOT YÊU CẦU</p>
                                     <p className="font-bold text-fpt-orange text-xl">
                                         {request.requestedSlotNumber ? `Slot ${request.requestedSlotNumber}` : 'Không có'}
                                     </p>
@@ -137,24 +155,61 @@ export const LecturerRequestDetailPage: React.FC = () => {
                             <div className="space-y-4">
                                 <div>
                                     <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Lý do thay đổi</p>
-                                    <div className="p-4 bg-gray-50 dark:bg-zinc-800/50 rounded-lg text-gray-600 dark:text-gray-300 italic text-sm leading-relaxed border border-gray-100 dark:border-zinc-700">
-                                        "{request.reason}"
+                                    <div className="p-4 bg-gray-50 dark:bg-zinc-800/50 rounded-lg text-gray-600 dark:text-gray-300 text-sm leading-relaxed border border-gray-100 dark:border-zinc-700">
+                                        {request.reason}
                                     </div>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Tệp đính kèm</p>
-                                    {request.file ? (
-                                        <a
-                                            href="#"
-                                            className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors w-fit group"
-                                            onClick={(e) => { e.preventDefault(); toast.success('Đã tải xuống: ' + request.file); }}
-                                        >
-                                            <div className="p-2 bg-white dark:bg-zinc-900 rounded-md shadow-sm">
-                                                <FileText size={18} />
+                                    <h3 className="text-base font-bold text-slate-800 dark:text-white mb-4">
+                                        Tài liệu đính kèm ({request.file ? (request.file.startsWith('[') ? JSON.parse(request.file).length : 1) : 0})
+                                    </h3>
+                                    {request.file ? (() => {
+                                        // Try to parse as JSON array, fallback to single file
+                                        let fileUrls: string[] = [];
+                                        try {
+                                            const parsed = JSON.parse(request.file);
+                                            fileUrls = Array.isArray(parsed) ? parsed : [request.file];
+                                        } catch {
+                                            fileUrls = [request.file];
+                                        }
+
+                                        return (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                {fileUrls.map((url, index) => {
+                                                    let fileName = 'unknown-file';
+                                                    try {
+                                                        const decodedUrl = decodeURIComponent(url);
+                                                        fileName = decodedUrl.split('/').pop()?.split('?')[0] || 'unknown-file';
+                                                    } catch (e) {
+                                                        fileName = url.split('/').pop() || 'unknown-file';
+                                                    }
+                                                    const extension = fileName.split('.').pop()?.toUpperCase() || 'FILE';
+
+                                                    return (
+                                                        <a
+                                                            key={index}
+                                                            href={url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg p-4 hover:border-fpt-orange hover:shadow-md transition-all cursor-pointer group flex items-start gap-4"
+                                                        >
+                                                            <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 group-hover:bg-orange-50 dark:group-hover:bg-orange-900/20 group-hover:text-fpt-orange transition-colors">
+                                                                <FileText size={24} />
+                                                            </div>
+                                                            <div className="flex flex-col gap-1 min-w-0 flex-1">
+                                                                <span className="text-slate-900 dark:text-white font-semibold text-sm truncate group-hover:text-fpt-orange transition-colors" title={fileName}>
+                                                                    {fileName}
+                                                                </span>
+                                                                <span className="text-slate-400 text-xs font-medium">
+                                                                    {extension} File
+                                                                </span>
+                                                            </div>
+                                                        </a>
+                                                    );
+                                                })}
                                             </div>
-                                            <span className="font-medium text-sm underlineDecoration-blue-300 group-hover:underline">{request.file}</span>
-                                        </a>
-                                    ) : (
+                                        );
+                                    })() : (
                                         <div className="text-sm text-gray-500 dark:text-gray-400 italic">Không có file đính kèm</div>
                                     )}
                                 </div>

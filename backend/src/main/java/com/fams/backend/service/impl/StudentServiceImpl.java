@@ -42,14 +42,22 @@ public class StudentServiceImpl implements StudentService {
         Specification<User> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // Filter by STUDENT role
+            // Filter by role
             predicates.add(cb.equal(root.get("role"), User.UserRole.STUDENT));
 
-            // Filter by status
+            // ALWAYS exclude INACTIVE users
+            predicates.add(cb.notEqual(root.get("status"), User.UserStatus.INACTIVE));
+
+            // Filter by status (if provided, and not INACTIVE)
             if (status != null && !status.isEmpty() && !status.equalsIgnoreCase("all")) {
                 try {
                     User.UserStatus userStatus = User.UserStatus.valueOf(status.toUpperCase());
-                    predicates.add(cb.equal(root.get("status"), userStatus));
+                    if (userStatus != User.UserStatus.INACTIVE) {
+                        predicates.add(cb.equal(root.get("status"), userStatus));
+                    } else {
+                        // If someone explicitly asks for INACTIVE, they get nothing
+                        predicates.add(cb.disjunction());
+                    }
                 } catch (Exception e) {
                     log.error("Invalid status filter: {}", status);
                 }
@@ -172,71 +180,92 @@ public class StudentServiceImpl implements StudentService {
             throw new NotFoundException("Người dùng này không phải là sinh viên");
         }
 
-        StudentProfile profile = studentProfileRepository.findById(id).orElse(null);
-
-        // GPA Validation: Report error if GPA is changed
-        if (request.getGpa() != null && profile != null && profile.getGpa() != null) {
-            if (!request.getGpa().equals(profile.getGpa())) {
-                throw new BadRequestException("GPA không được phép thay đổi (Hiện tại: " + profile.getGpa() + ")");
-            }
+        // --- Update User Entity fields ---
+        if (request.getFullName() != null && !request.getFullName().isBlank()) {
+            user.setFullName(request.getFullName().trim());
         }
+        if (request.getPhone() != null) {
+            user.setPhone(request.getPhone().trim());
+        }
+        if (request.getDob() != null) {
+            user.setDob(request.getDob());
+        }
+        if (request.getStatus() != null) {
+            user.setStatus(request.getStatus());
+        }
+
+        // --- Update StudentProfile Entity fields ---
+        // Get it from user since we have CascadeType.ALL
+        StudentProfile profile = user.getStudentProfile();
+
         if (profile == null) {
             profile = StudentProfile.builder()
                     .userId(user.getId())
                     .user(user)
                     .build();
+            user.setStudentProfile(profile);
         }
 
-        // Hierarchical Validation
-        Major major = null;
-        if (request.getMajor() != null && !request.getMajor().isEmpty()) {
-            major = majorRepository.findByName(request.getMajor().trim())
-                    .orElseThrow(() -> new BadRequestException("Ngành học không tồn tại: " + request.getMajor()));
-        }
-
-        Specialization spec = null;
-        if (request.getSpecialization() != null && !request.getSpecialization().isEmpty()) {
-            if (major == null) {
-                throw new BadRequestException("Cần chọn Ngành học trước khi chọn Chuyên ngành");
+        // Hierarchical Validation for Academic fields
+        Major major = profile.getMajor();
+        if (request.getMajor() != null) {
+            if (request.getMajor().isEmpty()) {
+                major = null;
+            } else {
+                final String majorNameReq = request.getMajor().trim();
+                major = majorRepository.findByName(majorNameReq)
+                        .orElseThrow(() -> new BadRequestException("Ngành học không tồn tại: " + majorNameReq));
             }
-            spec = specializationRepository.findByNameAndMajor(request.getSpecialization().trim(), major)
-                    .orElseThrow(() -> new BadRequestException("Chuyên ngành '" + request.getSpecialization()
-                            + "' không thuộc Ngành '" + request.getMajor() + "'"));
         }
 
-        SubSpecialization subSpec = null;
-        if (request.getSubSpecialization() != null && !request.getSubSpecialization().isEmpty()) {
-            if (spec == null) {
-                throw new BadRequestException("Cần chọn Chuyên ngành trước khi chọn Combo");
+        final Major finalMajor = major;
+        Specialization spec = profile.getSpecialization();
+        if (request.getSpecialization() != null) {
+            if (request.getSpecialization().isEmpty()) {
+                spec = null;
+            } else {
+                if (finalMajor == null) {
+                    throw new BadRequestException("Cần chọn Ngành học trước khi chọn Chuyên ngành");
+                }
+                final String specNameReq = request.getSpecialization().trim();
+                spec = specializationRepository.findByNameAndMajor(specNameReq, finalMajor)
+                        .orElseThrow(() -> new BadRequestException("Chuyên ngành '" + specNameReq
+                                + "' không thuộc Ngành '" + (finalMajor != null ? finalMajor.getName() : "") + "'"));
             }
-            subSpec = subSpecializationRepository
-                    .findByNameAndSpecialization(request.getSubSpecialization().trim(), spec)
-                    .orElseThrow(() -> new BadRequestException("Combo '" + request.getSubSpecialization()
-                            + "' không thuộc Chuyên ngành '" + request.getSpecialization() + "'"));
         }
 
-        if (profile == null) {
-            profile = StudentProfile.builder()
-                    .user(user)
-                    .build();
+        final Specialization finalSpec = spec;
+        SubSpecialization subSpec = profile.getSubSpecialization();
+        if (request.getSubSpecialization() != null) {
+            if (request.getSubSpecialization().isEmpty()) {
+                subSpec = null;
+            } else {
+                if (finalSpec == null) {
+                    throw new BadRequestException("Cần chọn Chuyên ngành trước khi chọn Combo");
+                }
+                final String subSpecNameReq = request.getSubSpecialization().trim();
+                subSpec = subSpecializationRepository
+                        .findByNameAndSpecialization(subSpecNameReq, finalSpec)
+                        .orElseThrow(() -> new BadRequestException("Combo '" + subSpecNameReq
+                                + "' không thuộc Chuyên ngành '" + (finalSpec != null ? finalSpec.getName() : "")
+                                + "'"));
+            }
         }
 
-        if (request.getMajor() != null)
-            profile.setMajor(major);
-        if (request.getSpecialization() != null)
-            profile.setSpecialization(spec);
-        if (request.getSubSpecialization() != null)
-            profile.setSubSpecialization(subSpec);
+        profile.setMajor(major);
+        profile.setSpecialization(spec);
+        profile.setSubSpecialization(subSpec);
+
         if (request.getCourse() != null)
-            profile.setCourse(request.getCourse());
+            profile.setCourse(request.getCourse().trim());
+        if (request.getGpa() != null)
+            profile.setGpa(request.getGpa());
 
-        StudentProfile savedProfile = studentProfileRepository.save(profile);
+        // Save User - this will cascade down to Profile
+        User savedUser = userRepository.save(user);
 
-        // Note: We ignore User fields (fullName, email, phone, status, code) as they
-        // are immutable via this update.
-        // We also ignore the avatar as it belongs to the User entity.
-
-        return StudentResponse.fromUserAndProfile(user, savedProfile);
+        log.info("Updated student with ID: {} and its profile", id);
+        return StudentResponse.fromUserAndProfile(savedUser, savedUser.getStudentProfile());
     }
 
     @Override
@@ -426,10 +455,14 @@ public class StudentServiceImpl implements StudentService {
                         dto.setStatus("ERROR");
                         dto.setErrorMessage("Không tìm thấy student với mã này");
                     } else {
+                        // Update profile only for existing students
+                        // We don't update user fields as per requirement
                         User user = userOpt.get();
                         dto.setFullName(user.getFullName());
                         dto.setEmail(user.getEmail());
-                        dto.setPhone(phone);
+                        // The phone from Excel is used for validation, not for setting on the DTO for
+                        // display
+                        // dto.setPhone(phone); // Removed as per strict profile update
 
                         if (user.getRole() != User.UserRole.STUDENT) {
                             dto.setStatus("ERROR");
@@ -439,6 +472,7 @@ public class StudentServiceImpl implements StudentService {
                             StringBuilder errorMsg = new StringBuilder();
                             boolean hasError = false;
 
+                            // User fields are not updated, but we validate them for consistency
                             if (fullName != null && !fullName.trim().equalsIgnoreCase(user.getFullName())) {
                                 errorMsg.append("Tên không trùng khớp (Excel: ").append(fullName).append(" vs DB: ")
                                         .append(user.getFullName()).append("). ");
@@ -502,16 +536,7 @@ public class StudentServiceImpl implements StudentService {
                                 }
                             }
 
-                            // GPA Validation: Check if GPA in Excel matches DB
-                            StudentProfile existingProfile = studentProfileRepository.findById(user.getId())
-                                    .orElse(null);
-                            if (gpa != null && existingProfile != null && existingProfile.getGpa() != null) {
-                                if (!gpa.equals(existingProfile.getGpa())) {
-                                    errorMsg.append("GPA không trùng khớp với hệ thống (Excel: ").append(gpa)
-                                            .append(" vs DB: ").append(existingProfile.getGpa()).append("). ");
-                                    hasError = true;
-                                }
-                            }
+                            // GPA validation removed to allow updates via import
 
                             if (hasError) {
                                 dto.setStatus("ERROR");
@@ -588,6 +613,8 @@ public class StudentServiceImpl implements StudentService {
                         profile.setSubSpecialization(subSpecialization);
                     if (dto.getCourse() != null)
                         profile.setCourse(dto.getCourse());
+                    if (dto.getGpa() != null)
+                        profile.setGpa(dto.getGpa());
                     updatedCount++;
                 }
                 studentProfileRepository.save(profile);
