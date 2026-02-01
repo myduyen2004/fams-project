@@ -41,4 +41,6 @@ public interface SubSpecializationRepository extends JpaRepository<SubSpecializa
         long countActiveBySpecializationId(@Param("specId") Long specId);
 
         Optional<SubSpecialization> findByNameAndSpecialization(String name, Specialization specialization);
+
+        Optional<SubSpecialization> findByNameIgnoreCaseAndSpecialization(String name, Specialization specialization);
 }
