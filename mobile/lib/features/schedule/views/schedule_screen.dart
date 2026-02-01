@@ -17,82 +17,65 @@ class ScheduleScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8EDE4), // Updated beige background
-      body: Column(
-        children: [
-          // White Header Container
-          Container(
-            // padding: const EdgeInsets.only(bottom: 10),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(32),
-                bottomRight: Radius.circular(32),
-              ),
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Column(
+      body: SafeArea(
+        child: Column(
+          children: [
+            // 1. Header with Semester Selector
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 28, 24, 10), // Restored padding
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // 1. Header with Semester Selector
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center, // Align center vertically
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Kì học',
+                        style: TextStyle(fontSize: 13, color: Colors.grey[500], fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8), // Restored from 4
+                      GestureDetector(
+                        onTap: () => _showSemesterPicker(context, controller),
+                        child: Row(
                           children: [
-                            Text(
-                              'Kì học',
-                              style: TextStyle(fontSize: 13, color: Colors.grey[500], fontWeight: FontWeight.w600),
-                            ),
-                            const SizedBox(height: 4),
-                            GestureDetector(
-                              onTap: () => _showSemesterPicker(context, controller),
-                              child: Row(
-                                children: [
-                                  Obx(() => Text(
-                                    controller.selectedSemester.value?.code ?? 'CHỌN KỲ',
-                                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF2D3436)),
-                                  )),
-                                  const SizedBox(width: 4),
-                                  Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey[800], size: 28),
-                                ],
-                              ),
-                            ),
+                            Obx(() => Text(
+                              controller.selectedSemester.value?.code ?? 'CHỌN KỲ',
+                              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF2D3436)), // Restored 22
+                            )),
+                            const SizedBox(width: 4),
+                            Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey[800], size: 24), // Restored 24
                           ],
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryOrange,
-                            borderRadius: BorderRadius.circular(14),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.primaryOrange.withOpacity(0.3),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: const Text(
-                            'Lưu vào lịch',
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13),
-                          ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), // Restored
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryOrange,
+                      borderRadius: BorderRadius.circular(14), // Restored
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primaryOrange.withOpacity(0.2),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
                       ],
+                    ),
+                    child: const Text(
+                      'Lưu vào lịch',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13),
                     ),
                   ),
                 ],
               ),
             ),
-          ),
 
-          const SizedBox(height: 10),
-
-          // 2. Calendar (Moved outside)
-          const ScheduleCalendar(),
+            // 2. Redesigned Calendar
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16), // Restored
+              child: ScheduleCalendar(),
+            ),
 
             const SizedBox(height: 10), // Restored
 
@@ -102,9 +85,9 @@ class ScheduleScreen extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    Get.find<AuthController>().currentUser.value?.isLecturer == true ? 'Lịch dạy' : 'Lịch học',
-                    style: const TextStyle(
+                  const Text(
+                    'Lịch học',
+                    style: TextStyle(
                       fontSize: 24, // Restored
                       fontWeight: FontWeight.w900,
                       color: Color(0xFF2D3436),
@@ -184,6 +167,7 @@ class ScheduleScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
     );
   }
 

@@ -281,7 +281,7 @@ public class TimetableController {
         return ResponseEntity.ok(dtos);
     }
 
-    @PatchMapping("/slot/{id}")
+    @RequestMapping(value = "/slot/{id}", method = { RequestMethod.PATCH, RequestMethod.PUT })
     @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
     @Operation(summary = "Update a timetable slot", description = "Reschedule a session to a different date, slot, or room")
     public ResponseEntity<TimetableDTO.TimetableSlotDTO> updateSlot(

@@ -1,4 +1,10 @@
-import apiClient from './authService';
+import axios from 'axios';
+import { API_URL } from './config';
+
+const getAuthHeader = () => {
+  const token = localStorage.getItem('token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
 
 export interface TimetableSlotDTO {
   id: number;
@@ -32,52 +38,68 @@ export interface WeeklyTimetableDTO {
 
 export const timetableService = {
   getTimetableBySemester: async (semesterCode: string) => {
-    const resp = await apiClient.get<TimetableSlotDTO[]>(`/v1/timetable/semester/${semesterCode}`);
+    const resp = await axios.get<TimetableSlotDTO[]>(`${API_URL}/v1/timetable/semester/${semesterCode}`, {
+      headers: getAuthHeader()
+    });
     return resp.data || [];
   },
 
   getTimetableByDate: async (semesterCode: string, date: string) => {
-    const resp = await apiClient.get<TimetableSlotDTO[]>(`/v1/timetable/semester/${semesterCode}/date/${date}`);
+    const resp = await axios.get<TimetableSlotDTO[]>(`${API_URL}/v1/timetable/semester/${semesterCode}/date/${date}`, {
+      headers: getAuthHeader()
+    });
     return resp.data || [];
   },
 
   checkTimetableExists: async (semesterCode: string) => {
-    const resp = await apiClient.get<{ exists: boolean, count: number }>(`/v1/timetable/semester/${semesterCode}/exists`);
+    const resp = await axios.get<{ exists: boolean, count: number }>(`${API_URL}/v1/timetable/semester/${semesterCode}/exists`, {
+      headers: getAuthHeader()
+    });
     return resp.data;
   },
 
   startAsyncGeneration: async (semesterCode: string) => {
     const payload = { semesterCode };
-    const resp = await apiClient.post(`/v1/timetable/generate/async`, payload);
+    const resp = await axios.post(`${API_URL}/v1/timetable/generate/async`, payload, {
+      headers: getAuthHeader()
+    });
     return resp.data;
   },
 
   getGenerationStatus: async (jobId: string) => {
-    const resp = await apiClient.get(`/v1/timetable/generate/status/${jobId}`);
+    const resp = await axios.get(`${API_URL}/v1/timetable/generate/status/${jobId}`, {
+      headers: getAuthHeader()
+    });
     return resp.data;
   },
 
   cancelGeneration: async (jobId: string) => {
-    const resp = await apiClient.post(`/v1/timetable/generate/cancel/${jobId}`, {});
+    const resp = await axios.post(`${API_URL}/v1/timetable/generate/cancel/${jobId}`, {}, {
+      headers: getAuthHeader()
+    });
     return resp.data;
   },
 
   generateSync: async (semesterCode: string, config?: any) => {
     const payload = { semesterCode, config };
-    const resp = await apiClient.post(`/v1/timetable/generate`, payload);
+    const resp = await axios.post(`${API_URL}/v1/timetable/generate`, payload, {
+      headers: getAuthHeader()
+    });
     return resp.data;
   },
 
   getStudentTimetable: async (studentId: number, date?: string) => {
     const params = date ? { date } : {};
-    const resp = await apiClient.get<WeeklyTimetableDTO>(`/v1/timetable/student/${studentId}`, {
+    const resp = await axios.get<WeeklyTimetableDTO>(`${API_URL}/v1/timetable/student/${studentId}`, {
+      headers: getAuthHeader(),
       params
     });
     return resp.data;
   },
 
   exportStudentTimetable: async (studentId: number, semesterCode: string) => {
-    const resp = await apiClient.get(`/v1/timetable/export/student/${studentId}`, {
+    const resp = await axios.get(`${API_URL}/v1/timetable/export/student/${studentId}`, {
+      headers: getAuthHeader(),
       params: { semesterCode },
       responseType: 'blob' // Important for file download
     });
@@ -85,19 +107,22 @@ export const timetableService = {
   },
 
   getUnscheduledCount: async (semesterCode: string) => {
-    const resp = await apiClient.get<{
+    const resp = await axios.get<{
       unscheduledCount: number;
       totalSchedulable: number;
       scheduledCount: number;
       unscheduledClassNames: string[];
-    }>(`/v1/timetable/semester/${semesterCode}/unscheduled-count`);
+    }>(`${API_URL}/v1/timetable/semester/${semesterCode}/unscheduled-count`, {
+      headers: getAuthHeader()
+    });
     return resp.data;
   },
 
   getTimetableByWeek: async (semesterCode: string, startDate: string, endDate: string) => {
     try {
       // Use optimized date range API
-      const resp = await apiClient.get<TimetableSlotDTO[]>(`/v1/timetable/semester/${semesterCode}/range`, {
+      const resp = await axios.get<TimetableSlotDTO[]>(`${API_URL}/v1/timetable/semester/${semesterCode}/range`, {
+        headers: getAuthHeader(),
         params: { startDate, endDate }
       });
       return resp.data || [];
@@ -108,19 +133,22 @@ export const timetableService = {
   },
 
   checkConfigChanged: async (semesterCode: string) => {
-    const resp = await apiClient.get<{
+    const resp = await axios.get<{
       configChanged: boolean;
       hasTimetable: boolean;
       timetableCreatedAt?: string;
       configUpdatedAt?: string;
       message: string;
-    }>(`/v1/timetable/semester/${semesterCode}/config-changed`);
+    }>(`${API_URL}/v1/timetable/semester/${semesterCode}/config-changed`, {
+      headers: getAuthHeader()
+    });
     return resp.data;
   },
 
   getLecturerTimetable: async (lecturerId: number, date?: string) => {
     const params = date ? { date } : {};
-    const resp = await apiClient.get<WeeklyTimetableDTO>(`/v1/timetable/lecturer/${lecturerId}`, {
+    const resp = await axios.get<WeeklyTimetableDTO>(`${API_URL}/v1/timetable/lecturer/${lecturerId}`, {
+      headers: getAuthHeader(),
       params
     });
     return resp.data;
@@ -131,20 +159,24 @@ export const timetableService = {
     if (semesterCode) params.semesterCode = semesterCode;
     if (date) params.date = date;
 
-    const resp = await apiClient.get(`/v1/timetable/export/lecturer/${lecturerId}`, {
+    const resp = await axios.get(`${API_URL}/v1/timetable/export/lecturer/${lecturerId}`, {
+      headers: getAuthHeader(),
       params,
       responseType: 'blob' // Important for file download
     });
     return resp;
   },
 
-  updateSlot: async (id: number, data: { date: string, slotNumber: number, roomId: number }) => {
-    const resp = await apiClient.patch<TimetableSlotDTO>(`/v1/timetable/slot/${id}`, data);
+  updateSlot: async (slotId: number, data: { date: string, slotNumber: number, roomId: number }) => {
+    const resp = await axios.put(`${API_URL}/v1/timetable/slot/${slotId}`, data, {
+      headers: getAuthHeader()
+    });
     return resp.data;
   },
 
   getAvailability: async (date: string, semesterCode: string) => {
-    const resp = await apiClient.get<{ availableSlots: number[], allRooms: any[], occupiedRoomIdsBySlot: any }>(`/v1/timetable/availability`, {
+    const resp = await axios.get(`${API_URL}/v1/timetable/availability`, {
+      headers: getAuthHeader(),
       params: { date, semesterCode }
     });
     return resp.data;

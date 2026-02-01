@@ -297,7 +297,7 @@ export interface StudentResponse extends UserResponse {
     gpa?: number;
 }
 
-export interface StudentUpdateRequest extends Partial<Omit<UserRequest, 'role'>> {
+export interface StudentUpdateRequest extends UserRequest {
     major?: string;
     specialization?: string;
     subSpecialization?: string;
