@@ -29,10 +29,10 @@ const pieData = [
 
 export const AttendanceFrequencyChart: React.FC = () => {
   return (
-    <div className="bg-white dark:bg-zinc-900 rounded-[32px] p-8 shadow-[0_12px_40px_rgba(0,0,0,0.12)] border border-gray-100/80 dark:border-zinc-800 h-[400px] flex flex-col">
-      <div className="flex justify-between items-center mb-6">
+    <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-zinc-800 h-[400px] flex flex-col">
+      <div className="flex justify-between items-center mb-6 pb-2 border-b border-gray-100 dark:border-zinc-800">
         <div>
-          <h3 className="text-[11px] font-black text-zinc-900 dark:text-white tracking-[0.2em] uppercase">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Thống kê tần suất nghỉ học
           </h3>
           <p className="text-[10px] text-gray-400 mt-1">Dữ liệu tổng hợp chuyên cần trong 7 ngày gần nhất</p>
@@ -86,9 +86,11 @@ export const DailyAttendanceDonut: React.FC<{ stats?: any }> = () => {
   const dateStr = today.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
 
   return (
-    <div className="bg-white dark:bg-zinc-900 rounded-[32px] p-8 shadow-[0_12px_40px_rgba(0,0,0,0.12)] border border-gray-100/80 dark:border-zinc-800 flex flex-col h-[400px]">
-      <h3 className="text-[11px] font-black text-zinc-800 dark:text-white tracking-[0.2em] uppercase">TỶ LỆ CHUYÊN CẦN NGÀY</h3>
-      <p className="text-[10px] text-gray-400 font-bold uppercase mt-1 tracking-wider">{dateStr}</p>
+    <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-zinc-800 flex flex-col h-[400px]">
+      <div className="pb-2 mb-2 border-b border-gray-100 dark:border-zinc-800">
+         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Tỷ lệ chuyên cần ngày</h3>
+         <p className="text-[10px] text-gray-400 font-bold uppercase mt-1 tracking-wider">{dateStr}</p>
+      </div>
       
       <div className="flex-1 flex items-center justify-center relative mt-2">
         <div className="w-52 h-52 relative flex items-center justify-center">
