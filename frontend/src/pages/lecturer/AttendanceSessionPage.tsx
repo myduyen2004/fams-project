@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
-import { Card } from '../../components/common/Card';
+
 import QRCode from "react-qr-code";
 import attendanceService, { SessionDetailResponse } from '../../services/api/attendanceService';
 import { toast } from 'react-hot-toast';
-import { Loader2, Users, Clock, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 
 export const AttendanceSessionPage: React.FC = () => {
     const { sessionId } = useParams<{ sessionId: string }>();
@@ -53,7 +53,7 @@ export const AttendanceSessionPage: React.FC = () => {
     };
 
     const getTimerData = () => {
-        if (!session || !session.qrExpiresAt) return { text: "00:00", percent: 0, seconds: 0 };
+        if (!session || !session.qrExpiresAt) return { text: "00:00", percent: 0, seconds: 0, minutes: 0 };
         const expires = new Date(session.qrExpiresAt).getTime();
         const now = currentTime.getTime();
         const diff = Math.max(0, Math.floor((expires - now) / 1000)); // seconds remaining
