@@ -22,6 +22,8 @@ class ApiConstants {
 
   // Timetable Endpoints
   static const String studentSchedule = '/api/v1/timetable/student';
+  static const String lecturerSchedule = '/api/v1/timetable/lecturer';
+  static const String checkIn = '/api/v1/attendance/check-in';
 
   // Timeouts
   static const Duration connectTimeout = Duration(seconds: 30);

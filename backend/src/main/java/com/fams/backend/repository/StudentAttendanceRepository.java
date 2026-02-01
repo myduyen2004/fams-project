@@ -8,16 +8,21 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface StudentAttendanceRepository extends JpaRepository<StudentAttendance, Long> {
 
-    @Query("SELECT sa FROM StudentAttendance sa " +
-            "JOIN FETCH sa.session s " +
-            "JOIN FETCH s.timetableSlot ts " +
-            "WHERE sa.student.id = :studentId " +
-            "AND ts.id IN :slotIds")
-    List<StudentAttendance> findByStudentIdAndSlotIds(
-            @Param("studentId") Long studentId,
-            @Param("slotIds") Collection<Long> slotIds);
+        @Query("SELECT sa FROM StudentAttendance sa " +
+                        "JOIN FETCH sa.session s " +
+                        "JOIN FETCH s.timetableSlot ts " +
+                        "WHERE sa.student.id = :studentId " +
+                        "AND ts.id IN :slotIds")
+        List<StudentAttendance> findByStudentIdAndSlotIds(
+                        @Param("studentId") Long studentId,
+                        @Param("slotIds") Collection<Long> slotIds);
+
+        List<StudentAttendance> findBySessionId(Long sessionId);
+
+        Optional<StudentAttendance> findBySessionIdAndStudentId(Long sessionId, Long studentId);
 }

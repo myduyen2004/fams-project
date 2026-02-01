@@ -84,18 +84,18 @@ class ScheduleCalendar extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              "${_getDayName(date.weekday)}/${date.month}",
+              _getDayName(date.weekday),
               style: TextStyle(
-                fontSize: 10, // Slightly reduced to fit
+                fontSize: 11,
                 color: isSelected ? Colors.white70 : Colors.grey[500],
                 fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
               ),
             ),
             const SizedBox(height: 4),
             Text(
-              date.day.toString(),
+              "${date.day}/${date.month}",
               style: TextStyle(
-                fontSize: 20, // Reduced from 22
+                fontSize: 16,
                 color: isSelected ? Colors.white : const Color(0xFF2D3436),
                 fontWeight: FontWeight.w900,
               ),
