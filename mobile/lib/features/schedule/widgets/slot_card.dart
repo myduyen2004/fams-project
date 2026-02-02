@@ -4,6 +4,7 @@ import '../models/schedule_model.dart';
 import 'package:add_2_calendar/add_2_calendar.dart';
 
 import 'package:get/get.dart';
+import '../../auth/controllers/auth_controller.dart';
 import '../controllers/schedule_controller.dart';
 
 class SlotCard extends StatelessWidget {
@@ -171,7 +172,7 @@ class SlotCard extends StatelessWidget {
                 children: [
                   _buildCalendarButton(),
                   const SizedBox(width: 8),
-                  if (!isNext && !isLecturer) _buildSmallBadge(slot.attendanceStatus ?? 'Có mặt'),
+                  if (!isNext && Get.find<AuthController>().currentUser.value?.role != 'LECTURER') _buildSmallBadge(slot.attendanceStatus ?? 'Có mặt'),
                 ],
               )
             ],
