@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
-import { Loader2, Search as SearchIcon } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { academicStaffService } from '../../services/api/academicStaffService';
 import { dashboardService } from '../../services/api/dashboardService';
 import { AcademicStaffDashboardResponse } from '../../types/dashboard';
@@ -78,7 +78,7 @@ export const AcademicStaffDashboard: React.FC = () => {
         <div className="flex items-center gap-4">
           <div className="relative group">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <SearchIcon size={18} className="text-zinc-300 group-focus-within:text-orange-500 transition-colors" />
+              {/* <SearchIcon size={18} className="text-zinc-300 group-focus-within:text-orange-500 transition-colors" /> */}
             </div>
             <input
               type="text"
