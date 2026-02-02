@@ -32,17 +32,26 @@ export const LecturerCreateRequestPage: React.FC = () => {
         return today.toISOString().split('T')[0];
     };
 
-    // Handle date change with validation
+    // Get tomorrow's date in YYYY-MM-DD format
+    const getTomorrowString = () => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return tomorrow.toISOString().split('T')[0];
+    };
+
+    // Handle date change with validation (must be tomorrow or later)
     const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedDate = e.target.value;
-        const today = getTodayString();
+        const tomorrow = getTomorrowString();
 
-        if (selectedDate && selectedDate < today) {
-            setDateError('Ngày thay đổi phải từ hôm nay trở đi');
+        if (selectedDate && selectedDate < tomorrow) {
+            setDateError('Ngày thay đổi phải từ ngày mai trở đi');
             setNewDate('');
         } else {
             setDateError('');
             setNewDate(selectedDate);
+            // Reset selected room when date changes
+            setSelectedRoom(null);
         }
     };
 
@@ -263,43 +272,73 @@ export const LecturerCreateRequestPage: React.FC = () => {
                     <section className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-8">
                         <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Chi tiết thay đổi</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-                            <div>
-                                <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">SLOT BAN ĐẦU</label>
-                                <select
-                                    className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all text-slate-700 dark:text-slate-200 font-bold"
-                                    value={selectedSlotNumber || ''}
-                                    onChange={handleSlotNumberChange}
-                                    disabled={!selectedClass}
-                                >
-                                    <option value="">Chọn slot</option>
-                                    {Array.from(new Set(slots.map(s => s.slotNumber)))
-                                        .sort((a, b) => a - b)
-                                        .map(num => (
-                                            <option key={num} value={num}>
-                                                Slot {num}
-                                            </option>
-                                        ))}
-                                </select>
-                            </div>
+                            {/* NGÀY BAN ĐẦU - First (filter dates >= tomorrow) */}
                             <div>
                                 <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">NGÀY BAN ĐẦU</label>
                                 <select
                                     className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all text-slate-700 dark:text-slate-200 font-bold"
                                     value={selectedSlotId}
-                                    onChange={handleOriginalDateSelect}
-                                    disabled={!selectedSlotNumber}
+                                    onChange={(e) => {
+                                        const slotId = e.target.value;
+                                        setSelectedSlotId(slotId);
+                                        const found = slots.find(s => s.id.toString() === slotId) || null;
+                                        setSelectedSlot(found);
+                                        // Reset slot number when changing date
+                                        if (found) {
+                                            setSelectedSlotNumber(found.slotNumber);
+                                        }
+                                    }}
+                                    disabled={!selectedClass}
                                 >
                                     <option value="">Chọn ngày</option>
-                                    {slots
-                                        .filter(s => s.slotNumber === selectedSlotNumber)
-                                        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                                    {(() => {
+                                        const tomorrow = getTomorrowString();
+                                        // Get unique dates that are >= tomorrow
+                                        const uniqueDates = Array.from(new Set(
+                                            slots
+                                                .filter(s => s.date >= tomorrow)
+                                                .map(s => s.date)
+                                        )).sort();
+
+                                        return uniqueDates.map(date => {
+                                            // Find the first slot for this date to get the slot id
+                                            const slot = slots.find(s => s.date === date);
+                                            if (!slot) return null;
+                                            return (
+                                                <option key={slot.id} value={slot.id}>
+                                                    {formatDateDDMMYYYY(date)}
+                                                </option>
+                                            );
+                                        });
+                                    })()}
+                                </select>
+                            </div>
+                            {/* SLOT BAN ĐẦU - Second (shows slots for selected date) */}
+                            <div>
+                                <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">SLOT BAN ĐẦU</label>
+                                <select
+                                    className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all text-slate-700 dark:text-slate-200 font-bold"
+                                    value={selectedSlotId}
+                                    onChange={(e) => {
+                                        const slotId = e.target.value;
+                                        setSelectedSlotId(slotId);
+                                        const found = slots.find(s => s.id.toString() === slotId) || null;
+                                        setSelectedSlot(found);
+                                    }}
+                                    disabled={!selectedSlot}
+                                >
+                                    <option value="">Chọn slot</option>
+                                    {selectedSlot && slots
+                                        .filter(s => s.date === selectedSlot.date)
+                                        .sort((a, b) => a.slotNumber - b.slotNumber)
                                         .map(slot => (
                                             <option key={slot.id} value={slot.id}>
-                                                {formatDateDDMMYYYY(slot.date)}
+                                                Slot {slot.slotNumber}
                                             </option>
                                         ))}
                                 </select>
                             </div>
+                            {/* PHÒNG BAN ĐẦU - Third (auto-display) */}
                             <div>
                                 <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">PHÒNG BAN ĐẦU</label>
                                 <div className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm text-slate-700 dark:text-slate-200 font-bold min-h-[46px] flex items-center">
@@ -324,7 +363,11 @@ export const LecturerCreateRequestPage: React.FC = () => {
                                 <select
                                     className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all text-slate-700 dark:text-slate-200 font-bold"
                                     value={newSlot || ''}
-                                    onChange={(e) => setNewSlot(e.target.value ? parseInt(e.target.value) : null)}
+                                    onChange={(e) => {
+                                        setNewSlot(e.target.value ? parseInt(e.target.value) : null);
+                                        // Reset selected room when new slot changes
+                                        setSelectedRoom(null);
+                                    }}
                                 >
                                     <option value="">Chọn slot mới</option>
                                     <option value="1">Slot 1</option>
