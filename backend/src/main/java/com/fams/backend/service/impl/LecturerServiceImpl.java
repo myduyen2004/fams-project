@@ -643,6 +643,32 @@ public class LecturerServiceImpl implements LecturerService {
         int updatedCount = 0;
         int failedCount = 0;
 
+        if (dtos.isEmpty()) {
+            result.put("created", 0);
+            result.put("updated", 0);
+            result.put("failed", 0);
+            result.put("errors", errors);
+            return result;
+        }
+
+        // Phase 1: Pre-fetch & Cache for O(1) performance
+        log.info("Starting high-speed lecturer import processing for {} records", dtos.size());
+
+        List<String> codes = dtos.stream()
+                .filter(d -> !"ERROR".equals(d.getStatus()))
+                .map(d -> d.getCode().trim().toLowerCase())
+                .collect(Collectors.toList());
+
+        Map<String, User> userMap = userRepository.findByCodeInIgnoreCase(codes).stream()
+                .collect(Collectors.toMap(u -> u.getCode().trim().toLowerCase(), u -> u));
+
+        List<Long> userIds = userMap.values().stream().map(User::getId).collect(Collectors.toList());
+        Map<Long, LecturerProfile> profileMap = lecturerProfileRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(LecturerProfile::getUserId, p -> p));
+
+        List<LecturerProfile> profilesToSave = new ArrayList<>();
+
+        // Phase 2: In-memory Transformation with strict change detection
         for (LecturerImportDTO dto : dtos) {
             if ("ERROR".equals(dto.getStatus())) {
                 failedCount++;
@@ -651,39 +677,58 @@ public class LecturerServiceImpl implements LecturerService {
             }
 
             try {
-                User user = userRepository.findByCode(dto.getCode())
-                        .orElseThrow(() -> new NotFoundException("Not found user: " + dto.getCode()));
-
-                Optional<LecturerProfile> existingProfile = lecturerProfileRepository.findByUser(user);
-
-                if (existingProfile.isPresent()) {
-                    LecturerProfile profile = existingProfile.get();
-                    if (dto.getDepartment() != null && !dto.getDepartment().isEmpty())
-                        profile.setDepartment(dto.getDepartment().trim());
-                    if (dto.getExpertise() != null && !dto.getExpertise().isEmpty())
-                        profile.setExpertise(dto.getExpertise().trim());
-                    if (dto.getBio() != null && !dto.getBio().isEmpty())
-                        profile.setBio(dto.getBio().trim());
-
-                    lecturerProfileRepository.save(profile);
-                    updatedCount++;
-                } else {
-                    LecturerProfile profile = LecturerProfile.builder()
-                            .user(user)
-                            .department(dto.getDepartment() != null ? dto.getDepartment().trim() : null)
-                            .expertise(dto.getExpertise() != null ? dto.getExpertise().trim() : null)
-                            .bio(dto.getBio() != null ? dto.getBio().trim() : null)
-                            .build();
-
-                    lecturerProfileRepository.save(profile);
-                    createdCount++;
+                User user = userMap.get(dto.getCode().trim().toLowerCase());
+                if (user == null) {
+                    throw new NotFoundException("Không tìm thấy user với mã: " + dto.getCode());
                 }
 
+                LecturerProfile profile = profileMap.get(user.getId());
+
+                String newDept = dto.getDepartment() != null ? dto.getDepartment().trim() : null;
+                String newExp = dto.getExpertise() != null ? dto.getExpertise().trim() : null;
+                String newBio = dto.getBio() != null ? dto.getBio().trim() : null;
+
+                if (profile == null) {
+                    profile = LecturerProfile.builder()
+                            .userId(user.getId())
+                            .user(user)
+                            .department(newDept)
+                            .expertise(newExp)
+                            .bio(newBio)
+                            .build();
+                    createdCount++;
+                    profilesToSave.add(profile);
+                } else {
+                    boolean changed = false;
+                    if (!java.util.Objects.equals(profile.getDepartment(), newDept)) {
+                        profile.setDepartment(newDept);
+                        changed = true;
+                    }
+                    if (!java.util.Objects.equals(profile.getExpertise(), newExp)) {
+                        profile.setExpertise(newExp);
+                        changed = true;
+                    }
+                    if (!java.util.Objects.equals(profile.getBio(), newBio)) {
+                        profile.setBio(newBio);
+                        changed = true;
+                    }
+
+                    if (changed) {
+                        updatedCount++;
+                        profilesToSave.add(profile);
+                    }
+                }
             } catch (Exception e) {
                 failedCount++;
-                errors.add("Lỗi xử lý giảng viên " + dto.getCode() + ": " + e.getMessage());
-                log.error("Error saving imported lecturer {}", dto.getCode(), e);
+                errors.add("Lỗi xử lý GV " + dto.getCode() + ": " + e.getMessage());
+                log.error("Internal error processing imported lecturer {}", dto.getCode(), e);
             }
+        }
+
+        // Phase 3: Optimized Batch Persistence
+        if (!profilesToSave.isEmpty()) {
+            lecturerProfileRepository.saveAll(profilesToSave);
+            log.info("Batch saved {} modified lecturer profiles successfully", profilesToSave.size());
         }
 
         result.put("created", createdCount);

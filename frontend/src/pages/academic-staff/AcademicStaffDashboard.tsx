@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { academicStaffService } from '../../services/api/academicStaffService';
 import { dashboardService } from '../../services/api/dashboardService';
 import { AcademicStaffDashboardResponse } from '../../types/dashboard';
@@ -153,24 +153,20 @@ export const AcademicStaffDashboard: React.FC = () => {
 
         {/* Row 2: Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-           <div className="lg:col-span-8 h-full">
-              <AttendanceFrequencyChart />
-           </div>
-           <div className="lg:col-span-4 h-full">
-              <DailyAttendanceDonut stats={data?.attendanceStats} />
-           </div>
+          <div className="lg:col-span-8 h-full">
+            <AttendanceFrequencyChart />
+          </div>
+          <div className="lg:col-span-4 h-full">
+            <DailyAttendanceDonut stats={data?.attendanceStats} />
+          </div>
         </div>
 
         {/* Row 3: Lists & Analysis Card */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-           <div className="lg:col-span-8">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
-                 <div className="lg:col-span-7 h-full">
-                    <PendingRequests />
-                 </div>
-                 <div className="lg:col-span-5 h-full">
-                    <AttendanceLog />
-                 </div>
+          <div className="lg:col-span-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+              <div className="lg:col-span-7 h-full">
+                <PendingRequests />
               </div>
            </div>
            
@@ -198,7 +194,34 @@ export const AcademicStaffDashboard: React.FC = () => {
                     </button>
                  </div>
               </div>
-           </div>
+            </div>
+          </div>
+
+          <div className="lg:col-span-4">
+            <div className="bg-[#FDF2EC] dark:bg-orange-950/20 rounded-[32px] p-8 h-full border border-orange-100/50 dark:border-orange-500/10 shadow-[0_12px_40px_rgba(0,0,0,0.12)]">
+              <h4 className="text-[10px] font-bold text-orange-400 uppercase tracking-[0.2em] mb-4">PHÂN TÍCH CHUYÊN CẦN</h4>
+              <div className="space-y-6">
+                <div>
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase mb-1">LỚP VẮNG NHIỀU NHẤT</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-bold text-zinc-800 dark:text-white">IT001, BA202</p>
+                    <span className="text-[9px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded uppercase">Báo động</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase mb-1">SINH VIÊN CÓ NGUY CƠ</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-bold text-zinc-800 dark:text-white">12 Sinh viên</p>
+                    <span className="text-[9px] font-bold text-orange-500">+5.2%</span>
+                  </div>
+                </div>
+
+                <button className="w-full bg-white dark:bg-zinc-800 py-3 rounded-2xl text-[11px] font-bold text-zinc-900 dark:text-white shadow-[0_4px_15px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] transition-all mt-4 border border-gray-100 dark:border-zinc-700">
+                  Xem báo cáo chi tiết
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </AcademicStaffLayout>

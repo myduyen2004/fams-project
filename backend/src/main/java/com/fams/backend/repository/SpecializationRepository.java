@@ -33,5 +33,9 @@ public interface SpecializationRepository extends JpaRepository<Specialization, 
 
         Optional<Specialization> findByName(String name);
 
+        Optional<Specialization> findByNameIgnoreCase(String name);
+
         Optional<Specialization> findByNameAndMajor(String name, Major major);
+
+        Optional<Specialization> findByNameIgnoreCaseAndMajor(String name, Major major);
 }
