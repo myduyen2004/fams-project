@@ -237,7 +237,7 @@ class HomeScreen extends StatelessWidget {
                                         title: 'Đơn yêu cầu',
                                         iconBgColor: const Color(0xFFFFE0B2), 
                                         iconColor: const Color(0xFFE65100),
-                                        onTap: () {},
+                                        onTap: () => Get.toNamed('/lecturer/requests'),
                                       ),
                                     ),
                                   ],
