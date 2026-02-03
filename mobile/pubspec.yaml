@@ -63,6 +63,9 @@ dependencies:
 
   # Image Picker
   image_picker: ^1.0.7
+  
+  # URL Launcher (for opening attachments)
+  url_launcher: ^6.2.5
 
   # Calendar Integration
   add_2_calendar: ^3.0.1
