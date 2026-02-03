@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/widgets/app_background.dart';
 import '../controllers/schedule_request_controller.dart';
 import '../utils/request_type_labels.dart';
 import '../widgets/request_status_badge.dart';
@@ -55,17 +56,19 @@ class _ScheduleRequestDetailScreenState extends State<ScheduleRequestDetailScree
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text(
           'Chi tiết Yêu cầu',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2D3436)),
         ),
-        backgroundColor: const Color(0xFFF36F21),
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
+        foregroundColor: const Color(0xFF2D3436),
         elevation: 0,
       ),
-      body: Obx(() {
+      body: AppBackground(
+        child: SafeArea(
+          child: Obx(() {
         if (controller.isLoadingDetail.value) {
           return const Center(
             child: CircularProgressIndicator(
@@ -299,6 +302,8 @@ class _ScheduleRequestDetailScreenState extends State<ScheduleRequestDetailScree
           ),
         );
       }),
+        ),
+      ),
     );
   }
 

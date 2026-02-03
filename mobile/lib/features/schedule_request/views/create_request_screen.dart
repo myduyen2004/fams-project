@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../controllers/create_request_controller.dart';
 import '../widgets/room_selection_widget.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/widgets/app_background.dart';
 
 /// Screen for creating a new schedule request
 class CreateRequestScreen extends StatelessWidget {
@@ -13,9 +14,9 @@ class CreateRequestScreen extends StatelessWidget {
     final controller = Get.put(CreateRequestController());
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF2D3436)),
@@ -31,10 +32,12 @@ class CreateRequestScreen extends StatelessWidget {
         ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      body: AppBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
             const SizedBox(height: 16),
 
             // Info warning box
@@ -442,7 +445,9 @@ class CreateRequestScreen extends StatelessWidget {
             ),
 
             const SizedBox(height: 32),
-          ],
+              ],
+            ),
+          ),
         ),
       ),
     );

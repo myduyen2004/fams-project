@@ -25,9 +25,9 @@ class SlotCard extends StatelessWidget {
       if (isActive) {
         return _buildActiveCard(context, controller);
       } else if (isNext) {
-        return _buildStatusCard(context, controller, isNext: true);
+        return _buildStatusCard(context, isNext: true);
       } else {
-        return _buildStatusCard(context, controller, isNext: false);
+        return _buildStatusCard(context, isNext: false);
       }
     });
   }
@@ -228,7 +228,7 @@ class SlotCard extends StatelessWidget {
               ],
             ),
           ],
-        ),
+        ],
       ),
     );
   }
