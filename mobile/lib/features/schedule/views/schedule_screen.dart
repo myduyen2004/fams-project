@@ -8,6 +8,8 @@ import '../widgets/schedule_calendar.dart';
 import '../widgets/slot_card.dart';
 import 'qr_scanner_screen.dart';
 
+import '../../../core/widgets/app_background.dart';
+
 class ScheduleScreen extends StatelessWidget {
   const ScheduleScreen({super.key});
 
@@ -16,8 +18,8 @@ class ScheduleScreen extends StatelessWidget {
     final ScheduleController controller = Get.put(ScheduleController());
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8EDE4), // Updated beige background
-      body: SafeArea(
+      body: AppBackground(
+        child: SafeArea(
         child: Column(
           children: [
             // 1. Header with Semester Selector
@@ -49,24 +51,42 @@ class ScheduleScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), // Restored
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryOrange,
-                      borderRadius: BorderRadius.circular(14), // Restored
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primaryOrange.withOpacity(0.2),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                  Obx(() => GestureDetector(
+                    onTap: controller.isSavingToCalendar.value 
+                        ? null 
+                        : () => controller.saveAllSemesterToCalendar(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: controller.isSavingToCalendar.value 
+                            ? AppColors.primaryOrange.withOpacity(0.6) 
+                            : AppColors.primaryOrange,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primaryOrange.withOpacity(0.2),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: controller.isSavingToCalendar.value
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              'Lưu vào lịch',
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13),
+                            ),
                     ),
-                    child: const Text(
-                      'Lưu vào lịch',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13),
-                    ),
-                  ),
+                  )),
+                  
+
                 ],
               ),
             ),
@@ -85,15 +105,15 @@ class ScheduleScreen extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Lịch học',
-                    style: TextStyle(
-                      fontSize: 24, // Restored
+                  Obx(() => Text(
+                    controller.isLecturer ? 'Lịch dạy' : 'Lịch học',
+                    style: const TextStyle(
+                      fontSize: 24,
                       fontWeight: FontWeight.w900,
                       color: Color(0xFF2D3436),
                       letterSpacing: -0.5,
                     ),
-                  ),
+                  )),
                   Obx(() => Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6), // Restored
                     decoration: BoxDecoration(
@@ -138,9 +158,11 @@ class ScheduleScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            isNotPublished 
-                              ? 'Lịch học học kỳ này chưa được công bố.' 
-                              : 'Nghỉ ngơi thôi, hông có lịch học đâu!',
+                            isNotPublished && !controller.isLecturer
+                              ? 'Lịch học học kỳ này chưa được công bố.'
+                              : controller.isLecturer
+                                ? 'Không có lịch dạy trong ngày này!'
+                                : 'Nghỉ ngơi thôi, hông có lịch học đâu!',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Colors.grey[400], 
@@ -167,6 +189,7 @@ class ScheduleScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
