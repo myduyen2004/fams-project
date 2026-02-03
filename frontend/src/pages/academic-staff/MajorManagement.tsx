@@ -9,6 +9,7 @@ import { majorService } from '../../services/api/majorService';
 import { StatusFilter, Pagination, SelectionActionBar } from '../../components/academic-staff';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { Major, MajorImportDTO } from '../../types/major';
+import { usePagination } from '../../hooks/usePagination';
 
 // --- Types ---
 
@@ -567,9 +568,11 @@ export const MajorManagement: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
-    const [page, setPage] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+    // Use custom pagination hook - auto resets to page 0 when filters change
+    const { page, setPage } = usePagination({ resetDependencies: [debouncedSearchTerm, statusFilter] });
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -631,7 +634,7 @@ export const MajorManagement: React.FC = () => {
 
     const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(e.target.value);
-        setPage(0);
+        // Note: page reset is now handled by usePagination hook
     };
 
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {

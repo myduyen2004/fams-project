@@ -34,6 +34,7 @@ const SlotTypePage = lazy(() => import('./pages/academic-staff/SlotTypePage').th
 const ClassSectionManagement = lazy(() => import('./pages/academic-staff/ClassSectionManagement').then(m => ({ default: m.ClassSectionManagement })));
 const SpecializationDetail = lazy(() => import('./pages/academic-staff/SpecializationDetail').then(m => ({ default: m.SpecializationDetail })));
 const CourseManagement = lazy(() => import('./pages/academic-staff/CourseManagement').then(m => ({ default: m.CourseManagement })));
+const GradeConfigurationPage = lazy(() => import('./pages/academic-staff/GradeConfigurationPage').then(m => ({ default: m.GradeConfigurationPage })));
 const ManagerStudentsPage = lazy(() => import('./pages/academic-staff/ManagerStudentsPage').then(m => ({ default: m.ManagerStudentsPage })));
 const RoomManagement = lazy(() => import('./pages/academic-staff/RoomManagement').then(m => ({ default: m.RoomManagement })));
 const RoomDetail = lazy(() => import('./pages/academic-staff/RoomDetail').then(m => ({ default: m.RoomDetail })));
@@ -394,6 +395,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
                 <CourseManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/academic-staff/courses/:courseId/grades"
+            element={
+              <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
+                <GradeConfigurationPage />
               </ProtectedRoute>
             }
           />

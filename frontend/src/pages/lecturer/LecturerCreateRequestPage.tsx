@@ -78,8 +78,8 @@ export const LecturerCreateRequestPage: React.FC = () => {
         if (e.target) e.target.value = '';
     };
 
-
-    const [selectedSlotNumber, setSelectedSlotNumber] = useState<number | null>(null);
+    // State for slot number selection (used for resetting only)
+    const [, setSelectedSlotNumber] = useState<number | null>(null);
 
     // Format Date: dd/MM/yyyy
     const formatDateDDMMYYYY = (dateString: string) => {
@@ -128,20 +128,6 @@ export const LecturerCreateRequestPage: React.FC = () => {
             setSelectedSlotNumber(null);
         }
     }, [selectedClass]);
-
-    const handleSlotNumberChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const num = e.target.value ? parseInt(e.target.value) : null;
-        setSelectedSlotNumber(num);
-        setSelectedSlotId('');
-        setSelectedSlot(null);
-    };
-
-    const handleOriginalDateSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const slotId = e.target.value;
-        setSelectedSlotId(slotId);
-        const found = slots.find(s => s.id.toString() === slotId) || null;
-        setSelectedSlot(found);
-    };
 
 
     const handleSubmit = async (e: React.FormEvent) => {

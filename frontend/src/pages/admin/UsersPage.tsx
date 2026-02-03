@@ -10,6 +10,7 @@ import { BulkActions } from '../../components/admin/users/BulkActions';
 import { AddUserModal, EditUserModal, ViewUserModal, ImportUserModal } from '../../components/admin/users/UserModals';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { authService } from '../../services/api/authService';
+import { usePagination } from '../../hooks/usePagination';
 
 export const UsersPage = () => {
   const [users, setUsers] = useState<UserResponse[]>([]);
@@ -17,10 +18,12 @@ export const UsersPage = () => {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
-  const [page, setPage] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
-  
+
+  // Use custom pagination hook - auto resets to page 0 when filters change
+  const { page, setPage } = usePagination({ resetDependencies: [debouncedSearch, roleFilter] });
+
   // Modal states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -40,16 +43,16 @@ export const UsersPage = () => {
   } | null>(null);
 
   // WebSocket for real-time updates during import
-  
+
   useWebSocket(`/topic/import-progress/${authService.getUser()?.username}`, (data) => {
     console.log('Received WebSocket message:', data);
     if (data.newUsers && data.newUsers.length > 0) {
       console.log('Users update received:', data.newUsers.length);
-      
+
       setUsers(prev => {
         const next = [...prev];
         let hasChanges = false;
-        
+
         data.newUsers.forEach((updatedUser: UserResponse) => {
           const index = next.findIndex(u => u.id === updatedUser.id);
           if (index !== -1) {
@@ -63,7 +66,7 @@ export const UsersPage = () => {
             hasChanges = true;
           }
         });
-        
+
         return hasChanges ? next : prev;
       });
     }
@@ -71,7 +74,7 @@ export const UsersPage = () => {
 
   useWebSocket(`/topic/activation-progress/${authService.getUser()?.username}`, (data) => {
     setActivationProgress(data);
-    
+
     // Real-time remove activated users from the list
     if (data.activatedUserIds && data.activatedUserIds.length > 0) {
       const activatedSet = new Set(data.activatedUserIds.map(Number));
@@ -85,7 +88,7 @@ export const UsersPage = () => {
       });
       setTotalElements(prev => Math.max(0, prev - data.activatedUserIds.length));
     }
-    
+
     if (data.status === 'COMPLETED') {
       setIsActivating(false);
       fetchUsers(true);
@@ -125,7 +128,7 @@ export const UsersPage = () => {
 
   useEffect(() => {
     fetchUsers();
-    
+
     // Check for existing activation progress on mount (F5 resilience)
     const checkInitialProgress = async () => {
       try {
@@ -151,7 +154,7 @@ export const UsersPage = () => {
   }, [users]);
 
   const handleSelectUser = useCallback((id: number) => {
-    setSelectedUsers(prev => 
+    setSelectedUsers(prev =>
       prev.includes(id) ? prev.filter(uid => uid !== id) : [...prev, id]
     );
   }, []);
@@ -174,7 +177,7 @@ export const UsersPage = () => {
   const handleBulkActivate = useCallback(async () => {
     const usersToActivate = users.filter(u => selectedUsers.includes(u.id));
     const missingAvatars = usersToActivate.some(u => !u.avatar);
-    
+
     if (missingAvatars) {
       toast.error('Một số tài khoản chưa có ảnh đại diện. Vui lòng cập nhật trước khi kích hoạt!');
       return;
@@ -195,7 +198,7 @@ export const UsersPage = () => {
 
   const handleActivateAll = useCallback(async () => {
     if (!window.confirm('Bạn có chắc chắn muốn kích hoạt TOÀN BỘ tài khoản chưa kích hoạt? Hệ thống sẽ gửi email thông báo cho từng người dùng.')) return;
-    
+
     try {
       setIsActivating(true);
       setActivationProgress({ status: 'STARTING', current: 0, total: 0, message: 'Đang khởi tạo...', percentage: 0 });
@@ -227,7 +230,7 @@ export const UsersPage = () => {
   // Memoized date formatter to avoid re-creating it
   const formatDateTime = useCallback((date: any) => {
     if (!date) return '---';
-    
+
     try {
       let d: Date;
       if (Array.isArray(date)) {
@@ -236,7 +239,7 @@ export const UsersPage = () => {
       } else {
         d = new Date(date);
       }
-      
+
       if (isNaN(d.getTime())) return '---';
       return d.toLocaleString('vi-VN', {
         day: '2-digit',
@@ -253,7 +256,7 @@ export const UsersPage = () => {
   return (
     <AdminLayout pageTitle="Tài khoản chưa kích hoạt">
       <div className="p-6 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800">
-        
+
         {activationProgress && (
           <div className="mb-6 p-5 bg-green-50 dark:bg-green-950/20 border border-green-100 dark:border-green-900/30 rounded-2xl animate-in fade-in slide-in-from-top-4">
             <div className="flex items-center justify-between mb-3">
@@ -278,7 +281,7 @@ export const UsersPage = () => {
               </div>
             </div>
             <div className="w-full bg-green-100 dark:bg-green-900/30 rounded-full h-3 overflow-hidden p-0.5 border border-green-200/30 dark:border-green-800/20">
-              <div 
+              <div
                 className="bg-green-500 h-full transition-all duration-150 ease-out rounded-full shadow-[0_0_12px_rgba(34,197,94,0.3)] relative overflow-hidden"
                 style={{ width: `${activationProgress.percentage}%` }}
               >
@@ -289,8 +292,8 @@ export const UsersPage = () => {
             </div>
           </div>
         )}
-        
-        <UserFilters 
+
+        <UserFilters
           search={search}
           onSearchChange={setSearch}
           roleFilter={roleFilter}
@@ -301,7 +304,7 @@ export const UsersPage = () => {
           showActivateAll={totalElements > 0}
         />
 
-        <BulkActions 
+        <BulkActions
           selectedCount={selectedUsers.length}
           onDelete={handleBulkDelete}
           onActivate={handleBulkActivate}
@@ -314,8 +317,8 @@ export const UsersPage = () => {
             <thead>
               <tr className="bg-fpt-orange text-white">
                 <th className="px-4 py-3 text-left rounded-tl-lg">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     className="w-4 h-4 rounded border-white/20 text-white focus:ring-0 focus:ring-offset-0 bg-transparent cursor-pointer"
                     onChange={handleSelectAll}
                     checked={users.length > 0 && selectedUsers.length === users.length}
@@ -343,7 +346,7 @@ export const UsersPage = () => {
                 </tr>
               ) : (
                 users.map((user) => (
-                  <UserTableRow 
+                  <UserTableRow
                     key={user.id}
                     user={user}
                     isSelected={selectedUsers.includes(user.id)}
@@ -358,7 +361,7 @@ export const UsersPage = () => {
           </table>
         </div>
 
-        <Pagination 
+        <Pagination
           currentPage={page}
           totalPages={Math.ceil(totalElements / 20)}
           totalElements={totalElements}

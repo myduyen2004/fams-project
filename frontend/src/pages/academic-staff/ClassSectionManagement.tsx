@@ -6,6 +6,7 @@ import { Pagination } from '../../components/common/Pagination';
 import { ImportClassSectionModal } from '../../components/academic-staff/ImportClassSectionModal';
 import { EnrollmentListModal } from '../../components/academic-staff/EnrollmentListModal';
 import { ImportEnrollmentModal } from '../../components/academic-staff/ImportEnrollmentModal';
+import { usePagination } from '../../hooks/usePagination';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
@@ -58,7 +59,6 @@ export const ClassSectionManagement: React.FC = () => {
   const [lecturers, setLecturers] = useState<LecturerOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(0);
   const [pageSize] = useState(10);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -72,6 +72,11 @@ export const ClassSectionManagement: React.FC = () => {
 
   // Debounce search term to avoid excessive API calls
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+  // Use custom pagination hook - auto resets to page 0 when filters change
+  const { page: currentPage, setPage: setCurrentPage } = usePagination({
+    resetDependencies: [debouncedSearchTerm, statusFilter, lecturerFilter]
+  });
 
   // Fetch lecturers for filter dropdown
   const fetchLecturers = async () => {
@@ -122,13 +127,7 @@ export const ClassSectionManagement: React.FC = () => {
     }
   }, [fetchClassSections]);
 
-  // Reset to first page when search/filter changes (only if not already on first page)
-  useEffect(() => {
-    if (currentPage !== 0) {
-      setCurrentPage(0);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearchTerm, statusFilter, lecturerFilter]);
+  // Note: Page reset is now handled by usePagination hook
 
   const getStatusBadge = (status: string) => {
     const statusConfig: { [key: string]: { label: string; className: string } } = {

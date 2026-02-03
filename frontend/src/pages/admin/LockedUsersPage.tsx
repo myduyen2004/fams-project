@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
-import { 
+import {
   Search,
   Loader2,
   User as UserIcon,
@@ -11,17 +11,20 @@ import { userService, UserResponse } from '../../services/api/userService';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { Pagination } from '../../components/common/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 
 export const LockedUsersPage: React.FC = () => {
   const [users, setUsers] = useState<UserResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [page, setPage] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
   const [isUnlocking, setIsUnlocking] = useState(false);
   const navigate = useNavigate();
+
+  // Use custom pagination hook - auto resets to page 0 when filters change
+  const { page, setPage } = usePagination({ resetDependencies: [debouncedSearch] });
 
   // Search debounce effect
   useEffect(() => {
@@ -55,7 +58,7 @@ export const LockedUsersPage: React.FC = () => {
   }, [fetchUsers]);
 
   const handleSelectUser = (id: number) => {
-    setSelectedUsers(prev => 
+    setSelectedUsers(prev =>
       prev.includes(id) ? prev.filter(uid => uid !== id) : [...prev, id]
     );
   };
@@ -106,30 +109,30 @@ export const LockedUsersPage: React.FC = () => {
     <AdminLayout pageTitle="Tài khoản bị khóa">
       <div className="p-6 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-           <button 
+          <button
             onClick={() => navigate('/admin/activated-users')}
             className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors"
-           >
-             <ChevronLeft size={20} />
-             <span>Quay lại danh sách đã kích hoạt</span>
-           </button>
+          >
+            <ChevronLeft size={20} />
+            <span>Quay lại danh sách đã kích hoạt</span>
+          </button>
 
-           <div className="flex-1 max-w-md relative">
+          <div className="flex-1 max-w-md relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input 
+            <input
               type="text"
               placeholder="Tìm kiếm tài khoản bị khóa..."
               className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-full text-sm outline-none focus:ring-2 focus:ring-fpt-orange/20"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-           </div>
+          </div>
         </div>
 
         {selectedUsers.length > 0 && (
           <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/20 rounded-lg flex items-center justify-between animate-in fade-in slide-in-from-top-2">
             <span className="text-sm font-medium text-green-600">Đã chọn {selectedUsers.length} tài khoản</span>
-            <button 
+            <button
               onClick={handleBulkUnlock}
               disabled={isUnlocking}
               className="px-4 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
@@ -145,8 +148,8 @@ export const LockedUsersPage: React.FC = () => {
             <thead>
               <tr className="bg-red-600 text-white">
                 <th className="px-4 py-3 text-left rounded-tl-lg w-10">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     className="w-4 h-4 rounded border-white/20 text-white focus:ring-0 focus:ring-offset-0 bg-transparent cursor-pointer"
                     onChange={handleSelectAll}
                     checked={users.length > 0 && selectedUsers.length === users.length}
@@ -174,8 +177,8 @@ export const LockedUsersPage: React.FC = () => {
               ) : users.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors text-sm">
                   <td className="px-4 py-4">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       className="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
                       checked={selectedUsers.includes(user.id)}
                       onChange={() => handleSelectUser(user.id)}
@@ -185,13 +188,13 @@ export const LockedUsersPage: React.FC = () => {
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 dark:bg-zinc-800 flex-shrink-0">
                         {user.avatar ? (
-                          <img 
-                            src={typeof user.avatar === 'string' && user.avatar.includes('cloudinary.com') 
-                              ? user.avatar.replace('/upload/', '/upload/c_fill,w_80,h_80,q_auto,f_auto/') 
+                          <img
+                            src={typeof user.avatar === 'string' && user.avatar.includes('cloudinary.com')
+                              ? user.avatar.replace('/upload/', '/upload/c_fill,w_80,h_80,q_auto,f_auto/')
                               : user.avatar
-                            } 
-                            alt="avatar" 
-                            className="w-full h-full object-cover" 
+                            }
+                            alt="avatar"
+                            className="w-full h-full object-cover"
                             loading="lazy"
                             decoding="async"
                           />
@@ -211,7 +214,7 @@ export const LockedUsersPage: React.FC = () => {
                   <td className="px-4 py-4 text-gray-500 italic">Vi phạm quy định hệ thống</td>
                   <td className="px-4 py-4 text-center">
                     <div className="flex items-center justify-center gap-2">
-                       <button 
+                      <button
                         onClick={() => handleUnlock(user.id)}
                         className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors" title="Mở khóa"
                       >
@@ -225,7 +228,7 @@ export const LockedUsersPage: React.FC = () => {
           </table>
         </div>
 
-        <Pagination 
+        <Pagination
           currentPage={page}
           totalPages={Math.ceil(totalElements / 20)}
           totalElements={totalElements}
