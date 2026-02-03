@@ -14,6 +14,9 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
 
         @Query("SELECT e FROM Enrollment e " +
                         "JOIN FETCH e.student s " +
+                        "LEFT JOIN FETCH s.studentProfile sp " +
+                        "LEFT JOIN FETCH sp.major m " +
+                        "LEFT JOIN FETCH sp.specialization spec " +
                         "JOIN FETCH e.classSection cs " +
                         "WHERE cs.className = :className " +
                         "ORDER BY e.studentCode ASC")
