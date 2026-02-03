@@ -7,6 +7,7 @@ import '../../auth/controllers/auth_controller.dart';
 import '../controllers/home_controller.dart';
 import '../../profile/views/profile_screen.dart'; // Import ProfileScreen
 import '../../schedule/views/schedule_screen.dart'; // Import ScheduleScreen
+import '../../lecturer/views/class_list_screen.dart'; // Import ClassListScreen
 
 /// Home Screen - Dashboard for Students and Lecturers
 class HomeScreen extends StatelessWidget {
@@ -70,16 +71,20 @@ class HomeScreen extends StatelessWidget {
         padding: EdgeInsets.zero,
         child: GetBuilder<HomeController>(
           builder: (controller) {
-            return Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(icon: Icons.home_rounded, label: 'Trang chủ', isActive: controller.currentIndex == 0, onTap: () => controller.changeTab(0)),
-                _buildNavItem(icon: Icons.calendar_month_rounded, label: 'Lịch học', isActive: controller.currentIndex == 1, onTap: () => controller.changeTab(1)),
-                const SizedBox(width: 48), // Space for FAB
-                _buildNavItem(icon: Icons.chat_bubble_rounded, label: 'Tin nhắn', isActive: controller.currentIndex == 3, onTap: () => controller.changeTab(3)),
-                _buildNavItem(icon: Icons.account_circle_rounded, label: 'Tài khoản', isActive: controller.currentIndex == 4, onTap: () => controller.changeTab(4)),
-              ],
-            );
+            final authController = Get.find<AuthController>();
+            return Obx(() {
+              final isLecturer = authController.currentUser.value?.isLecturer == true;
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildNavItem(icon: Icons.home_rounded, label: 'Trang chủ', isActive: controller.currentIndex == 0, onTap: () => controller.changeTab(0)),
+                  _buildNavItem(icon: Icons.calendar_month_rounded, label: isLecturer ? 'Lịch dạy' : 'Lịch học', isActive: controller.currentIndex == 1, onTap: () => controller.changeTab(1)),
+                  const SizedBox(width: 48), // Space for FAB
+                  _buildNavItem(icon: Icons.chat_bubble_rounded, label: 'Tin nhắn', isActive: controller.currentIndex == 3, onTap: () => controller.changeTab(3)),
+                  _buildNavItem(icon: Icons.account_circle_rounded, label: 'Tài khoản', isActive: controller.currentIndex == 4, onTap: () => controller.changeTab(4)),
+                ],
+              );
+            });
           }
         ),
       ),
@@ -272,6 +277,22 @@ class HomeScreen extends StatelessWidget {
                               const SizedBox(height: 8),
                               
                               // Vertical Cards (Big, Centered)
+                              // Show "Lớp học" card for lecturers only
+                              Obx(() {
+                                final isLecturer = authController.currentUser.value?.isLecturer == true;
+                                if (!isLecturer) return const SizedBox.shrink();
+                                return Column(
+                                  children: [
+                                    _buildBigCard(
+                                      icon: Icons.class_rounded,
+                                      title: 'Danh sách lớp dạy',
+                                      onTap: () => Get.to(() => ClassListScreen()),
+                                    ),
+                                    const SizedBox(height: 16),
+                                  ],
+                                );
+                              }),
+                              
                               _buildBigCard(
                                 icon: Icons.calendar_month_rounded,
                                 title: 'Xem điểm danh',

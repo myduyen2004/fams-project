@@ -61,6 +61,8 @@ public interface ClassSectionRepository extends JpaRepository<ClassSection, Long
         // LazyInitializationException)
         @Query("SELECT cs FROM ClassSection cs " +
                         "JOIN FETCH cs.course c " +
+                        "LEFT JOIN FETCH c.specializationCourses sc " +
+                        "LEFT JOIN FETCH sc.specialization sp " +
                         "JOIN FETCH cs.semester s " +
                         "LEFT JOIN FETCH cs.lecturer l " +
                         "WHERE cs.className = :className")

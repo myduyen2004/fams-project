@@ -95,7 +95,7 @@ export const LeturerClassManagementPage: React.FC = () => {
     };
 
     return (
-        <LecturerLayout pageTitle="Danh sách môn học giảng dạy">
+        <LecturerLayout pageTitle="Danh sách lớp học giảng dạy">
             <div className="mt-5 ml-10 mr-10 space-y-6">
                 <ClassFilters
                     semesters={semesters}

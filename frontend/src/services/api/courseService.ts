@@ -52,7 +52,7 @@ export const courseService = {
         });
     },
 
-    searchCourses: async (keyword: string, limit: number = 20): Promise<Course[]> => {
+    searchCourses: async (keyword: string, limit: number = 1000): Promise<Course[]> => {
         const response = await axios.get(`${API_URL}/courses/search`, {
             params: { keyword, limit },
             headers: getAuthHeader()
@@ -60,7 +60,7 @@ export const courseService = {
         return response.data;
     },
 
-    searchCoursesNotInSpecialization: async (specId: number, keyword: string, limit: number = 20): Promise<Course[]> => {
+    searchCoursesNotInSpecialization: async (specId: number, keyword: string, limit: number = 1000): Promise<Course[]> => {
         const response = await axios.get(`${API_URL}/courses/search/not-in-specialization/${specId}`, {
             params: { keyword, limit },
             headers: getAuthHeader()
@@ -68,7 +68,7 @@ export const courseService = {
         return response.data;
     },
 
-    searchCoursesNotInSubSpecialization: async (subSpecId: number, keyword: string, limit: number = 20): Promise<Course[]> => {
+    searchCoursesNotInSubSpecialization: async (subSpecId: number, keyword: string, limit: number = 1000): Promise<Course[]> => {
         const response = await axios.get(`${API_URL}/courses/search/not-in-sub-specialization/${subSpecId}`, {
             params: { keyword, limit },
             headers: getAuthHeader()

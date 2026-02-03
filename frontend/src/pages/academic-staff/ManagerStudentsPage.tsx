@@ -10,6 +10,7 @@ import {
     EditStudentModal,
     ImportStudentModal
 } from '../../components/academic-staff/students';
+import { usePagination } from '../../hooks/usePagination';
 
 export const ManagerStudentsPage = () => {
     const [students, setStudents] = useState<StudentResponse[]>([]);
@@ -22,9 +23,13 @@ export const ManagerStudentsPage = () => {
     const [majors, setMajors] = useState<string[]>([]);
     const [specializations, setSpecializations] = useState<string[]>([]);
 
-    const [page, setPage] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
     const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
+
+    // Use custom pagination hook - auto resets to page 0 when filters change
+    const { page, setPage } = usePagination({
+        resetDependencies: [statusFilter, majorFilter, specializationFilter, search]
+    });
 
     const [isExporting, setIsExporting] = useState(false);
 
@@ -233,7 +238,7 @@ export const ManagerStudentsPage = () => {
                         </div>
                         <div className="flex items-center gap-1">
                             <button
-                                onClick={() => setPage(p => Math.max(0, p - 1))}
+                                onClick={() => setPage(Math.max(0, page - 1))}
                                 disabled={page === 0}
                                 className="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50 text-gray-500"
                             >
@@ -260,7 +265,7 @@ export const ManagerStudentsPage = () => {
                                 );
                             })}
                             <button
-                                onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                                onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
                                 disabled={page >= totalPages - 1}
                                 className="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50 text-gray-500"
                             >

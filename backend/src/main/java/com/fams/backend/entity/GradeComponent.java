@@ -30,24 +30,35 @@ public class GradeComponent {
     @Column(nullable = false, length = 100)
     private String name;
 
+    // Mô tả chi tiết
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
     // Loại điểm (e.g., PROGRESS_TEST, ASSIGNMENT, PRACTICAL_EXAM, FINAL_EXAM)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     private GradeType type;
 
-    // Trọng số (weight) của điểm này (e.g., 0.1 = 10%, 0.3 = 30%)
+    // Trọng số (weight) của điểm này (e.g., 10 = 10%, 30 = 30%)
     @Column(nullable = false)
     private Double weight;
-
-    // Số lượng (e.g., có 2 progress test, 3 assignments)
-    @Column(nullable = false)
-    @Builder.Default
-    private Integer quantity = 1;
 
     // Bắt buộc hay không
     @Column(nullable = false)
     @Builder.Default
     private Boolean isRequired = true;
+
+    // Là điểm thi lại hay không
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isResit = false;
+
+    // Reference đến component gốc (nếu là resit)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reference_component_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private GradeComponent referenceComponent;
 
     // Thuộc môn học nào
     @ManyToOne(fetch = FetchType.LAZY)
@@ -69,10 +80,14 @@ public class GradeComponent {
         PROGRESS_TEST, // Bài kiểm tra tiến độ
         ASSIGNMENT, // Bài tập
         QUIZ, // Bài kiểm tra nhanh
+        WORKSHOP, // Workshop
+        PARTICIPATION, // Điểm chuyên cần
+        MID_TERM, // Thi giữa kỳ
         PRACTICAL_EXAM, // Thi thực hành (PE)
         FINAL_EXAM, // Thi cuối kỳ (FE)
         PROJECT, // Đồ án
         PRESENTATION, // Thuyết trình
+        RESIT, // Thi lại
         OTHER // Khác
     }
 }
