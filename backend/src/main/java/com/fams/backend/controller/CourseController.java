@@ -65,7 +65,7 @@ public class CourseController {
     @GetMapping("/search")
     public ResponseEntity<List<CourseResponse>> searchCourses(
             @RequestParam(required = false) String keyword,
-            @RequestParam(defaultValue = "20") int limit) {
+            @RequestParam(defaultValue = "1000") int limit) {
         return ResponseEntity.ok(courseService.searchCourses(keyword, limit));
     }
 
@@ -73,7 +73,7 @@ public class CourseController {
     public ResponseEntity<List<CourseResponse>> searchCoursesNotInSpecialization(
             @PathVariable Long specId,
             @RequestParam(required = false) String keyword,
-            @RequestParam(defaultValue = "20") int limit) {
+            @RequestParam(defaultValue = "1000") int limit) {
         return ResponseEntity.ok(courseService.searchCoursesNotInSpecialization(specId, keyword, limit));
     }
 
@@ -81,7 +81,7 @@ public class CourseController {
     public ResponseEntity<List<CourseResponse>> searchCoursesNotInSubSpecialization(
             @PathVariable Long subSpecId,
             @RequestParam(required = false) String keyword,
-            @RequestParam(defaultValue = "20") int limit) {
+            @RequestParam(defaultValue = "1000") int limit) {
         return ResponseEntity.ok(courseService.searchCoursesNotInSubSpecialization(subSpecId, keyword, limit));
     }
 

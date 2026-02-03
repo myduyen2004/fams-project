@@ -6,6 +6,7 @@ import { AddSemesterModal } from '../../components/academic-staff/AddSemesterMod
 import { UpdateSemesterModal } from '../../components/academic-staff/UpdateSemesterModal';
 import { DeleteSemesterModal } from '../../components/academic-staff/DeleteSemesterModal';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
+import { usePagination } from '../../hooks/usePagination';
 import axios from 'axios';
 
 interface Semester {
@@ -19,7 +20,6 @@ interface Semester {
 export const SemestersPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,6 +28,10 @@ export const SemestersPage: React.FC = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedSemester, setSelectedSemester] = useState<Semester | null>(null);
   const [selectedSemesters, setSelectedSemesters] = useState<string[]>([]);
+
+  // Use custom pagination hook - auto resets to page 0 when filters change (offset by 1 for display)
+  const { page, setPage } = usePagination({ initialPage: 1, resetDependencies: [searchTerm] });
+  const currentPage = page; // alias for clarity
 
   // Bulk delete confirmation state
   const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
@@ -227,7 +231,7 @@ export const SemestersPage: React.FC = () => {
                     value={searchTerm}
                     onChange={(e) => {
                       setSearchTerm(e.target.value);
-                      setCurrentPage(1);
+                      // Note: Page reset is now handled by usePagination hook
                     }}
                     className="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-full w-80 text-sm focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition placeholder-gray-400"
                   />
@@ -432,26 +436,26 @@ export const SemestersPage: React.FC = () => {
               </div>
               <div className="flex items-center gap-1">
                 <button
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  onClick={() => setPage(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
                   className="px-2 py-1 hover:text-orange-500 transition disabled:text-gray-300"
                 >
                   Trước
                 </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => (
                   <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`w-8 h-8 flex items-center justify-center rounded font-medium transition ${currentPage === page
+                    key={pg}
+                    onClick={() => setPage(pg)}
+                    className={`w-8 h-8 flex items-center justify-center rounded font-medium transition ${currentPage === pg
                       ? 'bg-orange-500 text-white shadow-sm'
                       : 'hover:bg-gray-50 text-gray-600'
                       }`}
                   >
-                    {page}
+                    {pg}
                   </button>
                 ))}
                 <button
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage >= totalPages}
                   className="px-2 py-1 hover:text-orange-500 transition disabled:text-gray-300"
                 >

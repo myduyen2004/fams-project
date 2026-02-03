@@ -277,6 +277,18 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                 .className(enrollment.getClassSection().getClassName())
                 .studentCode(enrollment.getStudentCode())
                 .studentName(enrollment.getStudent().getFullName())
+                .avatar(enrollment.getStudent().getAvatar())
+                .email(enrollment.getStudent().getEmail())
+                .phone(enrollment.getStudent().getPhone())
+                .dob(enrollment.getStudent().getDob() != null ? enrollment.getStudent().getDob().toString() : null)
+                .major(enrollment.getStudent().getStudentProfile() != null
+                        && enrollment.getStudent().getStudentProfile().getMajor() != null
+                                ? enrollment.getStudent().getStudentProfile().getMajor().getName()
+                                : "")
+                .specialization(enrollment.getStudent().getStudentProfile() != null
+                        && enrollment.getStudent().getStudentProfile().getSpecialization() != null
+                                ? enrollment.getStudent().getStudentProfile().getSpecialization().getName()
+                                : "")
                 .status(enrollment.getStatus().name())
                 .build();
     }

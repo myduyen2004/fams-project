@@ -150,6 +150,7 @@ public class CourseServiceImpl implements CourseService {
                 .description(course.getDescription())
                 .credits(course.getCredits())
                 .numberOfSlots(course.getNumberOfSlots())
+                .totalWeight(course.getTotalWeight())
                 .status(course.getStatus())
                 .canDelete(canDelete)
                 .build();

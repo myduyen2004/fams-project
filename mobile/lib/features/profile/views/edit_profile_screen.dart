@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../auth/models/user_model.dart';
 import '../../../core/constants/app_colors.dart'; // Assuming this exists or hardcode colors
+import '../../../core/widgets/app_background.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -118,14 +119,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
       child: Scaffold(
         resizeToAvoidBottomInset: true, // Ensure screen resizes when keyboard opens
-        backgroundColor: const Color(0xFFFFE8D6),
         appBar: AppBar(
           title: const Text('Chỉnh sửa hồ sơ'),
           backgroundColor: Colors.transparent,
           elevation: 0,
           centerTitle: true,
         ),
-        body: SingleChildScrollView(
+        body: AppBackground(
+          child: SingleChildScrollView(
           physics: const ClampingScrollPhysics(), // Better scrolling behavior
           padding: const EdgeInsets.all(20),
         child: Form(
@@ -249,6 +250,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
             ],
           ),
+        ),
         ),
       ),
     ),
