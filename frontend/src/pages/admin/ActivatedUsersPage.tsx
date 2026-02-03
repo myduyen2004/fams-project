@@ -62,6 +62,11 @@ export const ActivatedUsersPage: React.FC = () => {
     fetchUsers();
   }, [fetchUsers]);
 
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch, roleFilter]);
+
   const formatDateTime = (date: any) => {
     if (!date) return '---';
     
