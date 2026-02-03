@@ -101,13 +101,19 @@ export const AdminSidebar: React.FC = () => {
       return true;
     }
 
+    // Highlighting 'Activated Accounts' when on 'Locked Accounts' page
+    if (path === '/admin/activated-users' && location.pathname === '/admin/locked-users') {
+      return true;
+    }
+
     return location.pathname === path;
   };
 
   // Check if any submenu item is active
   const isSubmenuActive = (submenu?: SubMenuItem[]) => {
     if (!submenu) return false;
-    return submenu.some(subItem => location.pathname === subItem.path);
+    // Use isActive to check sub-items so that custom logic (like locked-users) bubbles up to parent
+    return submenu.some(subItem => isActive(subItem.path));
   };
 
   // Auto-expand submenu if current route matches a submenu item

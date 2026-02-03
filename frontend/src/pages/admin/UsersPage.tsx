@@ -144,6 +144,11 @@ export const UsersPage = () => {
     checkInitialProgress();
   }, [fetchUsers]);
 
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch, roleFilter]);
+
   // Handlers optimized with useCallback
   const handleSelectAll = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
