@@ -31,6 +31,10 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Localization
+  flutter_localizations:
+    sdk: flutter
+
   # State Management & Navigation (GetX - fastest & most efficient)
   get: ^4.6.6
 
@@ -63,6 +67,9 @@ dependencies:
 
   # Image Picker
   image_picker: ^1.0.7
+  
+  # URL Launcher (for opening attachments)
+  url_launcher: ^6.2.5
 
   # Calendar Integration
   add_2_calendar: ^3.0.1
