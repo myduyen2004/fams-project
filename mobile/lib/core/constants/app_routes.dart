@@ -9,4 +9,8 @@ class AppRoutes {
   static const String resetPassword = '/reset-password';
   static const String home = '/home';
   static const String changePasswordRequired = '/change-password-required';
+  
+  // Lecturer Routes
+  static const String lecturerRequests = '/lecturer/requests';
+  static const String lecturerRequestDetail = '/lecturer/requests/:id';
 }
