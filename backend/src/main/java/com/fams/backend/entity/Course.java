@@ -49,6 +49,11 @@ public class Course {
     @Column(nullable = false)
     private Integer numberOfSlots;
 
+    // Tổng trọng số điểm thành phần (Calculated)
+    // Chỉ tính các thành phần KHÔNG phải là RESIT
+    @org.hibernate.annotations.Formula("(SELECT COALESCE(SUM(gc.weight), 0) FROM grade_components gc WHERE gc.course_id = id AND gc.is_resit = false)")
+    private Double totalWeight;
+
     // Trạng thái môn học
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

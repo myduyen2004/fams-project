@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
-import { 
-  Search, 
+import {
+  Search,
   Eye,
   Loader2,
   User as UserIcon,
@@ -14,6 +14,7 @@ import { userService, UserResponse } from '../../services/api/userService';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { Pagination } from '../../components/common/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 
 export const ActivatedUsersPage: React.FC = () => {
   const [users, setUsers] = useState<UserResponse[]>([]);
@@ -21,7 +22,6 @@ export const ActivatedUsersPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
-  const [page, setPage] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
   const [isLocking, setIsLocking] = useState(false);
@@ -29,6 +29,9 @@ export const ActivatedUsersPage: React.FC = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedUserData, setSelectedUserData] = useState<UserResponse | null>(null);
   const navigate = useNavigate();
+
+  // Use custom pagination hook - auto resets to page 0 when filters change
+  const { page, setPage } = usePagination({ resetDependencies: [debouncedSearch, roleFilter] });
 
   // Search debounce effect
   useEffect(() => {
@@ -64,7 +67,7 @@ export const ActivatedUsersPage: React.FC = () => {
 
   const formatDateTime = (date: any) => {
     if (!date) return '---';
-    
+
     try {
       let d: Date;
       if (Array.isArray(date)) {
@@ -73,7 +76,7 @@ export const ActivatedUsersPage: React.FC = () => {
       } else {
         d = new Date(date);
       }
-      
+
       if (isNaN(d.getTime())) return '---';
       return d.toLocaleString('vi-VN', {
         day: '2-digit',
@@ -88,7 +91,7 @@ export const ActivatedUsersPage: React.FC = () => {
   };
 
   const handleSelectUser = (id: number) => {
-    setSelectedUsers(prev => 
+    setSelectedUsers(prev =>
       prev.includes(id) ? prev.filter(uid => uid !== id) : [...prev, id]
     );
   };
@@ -126,9 +129,9 @@ export const ActivatedUsersPage: React.FC = () => {
     <AdminLayout pageTitle="Tài khoản đã kích hoạt">
       <div className="p-6 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-           <div className="flex items-center gap-3">
-             <div className="relative">
-              <select 
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <select
                 className="appearance-none pl-3 pr-10 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-fpt-orange/20"
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
@@ -142,41 +145,41 @@ export const ActivatedUsersPage: React.FC = () => {
               <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
               </div>
-             </div>
-           </div>
-
-            <div className="flex-1 max-w-md relative">
-             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-             <input 
-               type="text"
-               placeholder="Tìm kiếm..."
-               className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-full text-sm outline-none focus:ring-2 focus:ring-fpt-orange/20"
-               value={search}
-               onChange={(e) => setSearch(e.target.value)}
-             />
             </div>
+          </div>
 
-            <button 
-              onClick={() => navigate('/admin/locked-users')}
-              className="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/10 text-red-600 border border-red-100 dark:border-red-900/20 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"
-            >
-              <ShieldAlert size={18} />
-              Danh sách tài khoản bị khóa
-            </button>
-         </div>
+          <div className="flex-1 max-w-md relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              placeholder="Tìm kiếm..."
+              className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-full text-sm outline-none focus:ring-2 focus:ring-fpt-orange/20"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          <button
+            onClick={() => navigate('/admin/locked-users')}
+            className="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/10 text-red-600 border border-red-100 dark:border-red-900/20 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"
+          >
+            <ShieldAlert size={18} />
+            Danh sách tài khoản bị khóa
+          </button>
+        </div>
 
         {selectedUsers.length > 0 && (
           <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-lg flex items-center justify-between animate-in fade-in slide-in-from-top-2">
             <span className="text-sm font-medium text-red-600">Đã chọn {selectedUsers.length} tài khoản</span>
             <div className="flex gap-2">
-               <button 
+              <button
                 onClick={handleBulkLock}
                 disabled={isLocking}
                 className="px-4 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
-               >
-                 {isLocking && <Loader2 size={14} className="animate-spin" />}
-                 {selectedUsers.length === 1 ? 'Khóa tài khoản' : 'Khóa hàng loạt'}
-               </button>
+              >
+                {isLocking && <Loader2 size={14} className="animate-spin" />}
+                {selectedUsers.length === 1 ? 'Khóa tài khoản' : 'Khóa hàng loạt'}
+              </button>
             </div>
           </div>
         )}
@@ -186,8 +189,8 @@ export const ActivatedUsersPage: React.FC = () => {
             <thead>
               <tr className="bg-fpt-orange text-white">
                 <th className="px-4 py-3 text-left rounded-tl-lg">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     className="w-4 h-4 rounded border-white/20 text-white focus:ring-0 focus:ring-offset-0 bg-transparent cursor-pointer"
                     onChange={handleSelectAll}
                     checked={users.length > 0 && selectedUsers.length === users.length}
@@ -216,8 +219,8 @@ export const ActivatedUsersPage: React.FC = () => {
               ) : users.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors text-sm">
                   <td className="px-4 py-4">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       className="w-4 h-4 rounded border-gray-300 text-fpt-orange focus:ring-fpt-orange cursor-pointer"
                       checked={selectedUsers.includes(user.id)}
                       onChange={() => handleSelectUser(user.id)}
@@ -227,13 +230,13 @@ export const ActivatedUsersPage: React.FC = () => {
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 dark:bg-zinc-800 flex-shrink-0">
                         {user.avatar ? (
-                          <img 
-                            src={typeof user.avatar === 'string' && user.avatar.includes('cloudinary.com') 
-                              ? user.avatar.replace('/upload/', '/upload/c_fill,w_80,h_80,q_auto,f_auto/') 
+                          <img
+                            src={typeof user.avatar === 'string' && user.avatar.includes('cloudinary.com')
+                              ? user.avatar.replace('/upload/', '/upload/c_fill,w_80,h_80,q_auto,f_auto/')
                               : user.avatar
-                            } 
-                            alt="avatar" 
-                            className="w-full h-full object-cover" 
+                            }
+                            alt="avatar"
+                            className="w-full h-full object-cover"
                             loading="lazy"
                             decoding="async"
                           />
@@ -245,16 +248,15 @@ export const ActivatedUsersPage: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-4 py-4 text-gray-600 dark:text-gray-400">{user.code}</td>
-                   <td className="px-4 py-4 text-gray-600 dark:text-gray-400">{user.roleName}</td>
-                   <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4 text-gray-600 dark:text-gray-400">{user.roleName}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     {user.status === 'ACTIVE' ? (
-                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                           user.isPasswordChanged 
-                           ? 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400'
-                           : 'bg-blue-100 text-blue-800 dark:bg-blue-800/20 dark:text-blue-400'
-                       }`}>
-                           {user.isPasswordChanged ? 'Đang hoạt động' : 'Đã kích hoạt'}
-                       </span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.isPasswordChanged
+                          ? 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400'
+                          : 'bg-blue-100 text-blue-800 dark:bg-blue-800/20 dark:text-blue-400'
+                        }`}>
+                        {user.isPasswordChanged ? 'Đang hoạt động' : 'Đã kích hoạt'}
+                      </span>
                     ) : user.status === 'LOCKED' ? (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-800/20 dark:text-red-400">
                         Đã khóa
@@ -265,16 +267,16 @@ export const ActivatedUsersPage: React.FC = () => {
                       </span>
                     )}
                   </td>
-                   <td className="px-4 py-4 text-gray-500 dark:text-gray-500">{formatDateTime(user.createdAt)}</td>
+                  <td className="px-4 py-4 text-gray-500 dark:text-gray-500">{formatDateTime(user.createdAt)}</td>
                   <td className="px-4 py-4 text-center">
                     <div className="flex items-center justify-center gap-2">
-                      <button 
+                      <button
                         onClick={() => { setSelectedUserData(user); setIsViewModalOpen(true); }}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors" title="Xem chi tiết"
                       >
                         <Eye size={18} />
                       </button>
-                      <button 
+                      <button
                         onClick={() => { setSelectedUserData(user); setIsEditModalOpen(true); }}
                         className="p-1.5 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors" title="Chỉnh sửa"
                       >
@@ -288,7 +290,7 @@ export const ActivatedUsersPage: React.FC = () => {
           </table>
         </div>
 
-        <Pagination 
+        <Pagination
           currentPage={page}
           totalPages={Math.ceil(totalElements / 20)}
           totalElements={totalElements}
@@ -298,16 +300,16 @@ export const ActivatedUsersPage: React.FC = () => {
       </div>
 
       {isEditModalOpen && selectedUserData && (
-        <EditUserModal 
-          user={selectedUserData as UserResponse} 
-          onClose={() => setIsEditModalOpen(false)} 
-          onSuccess={() => { setIsEditModalOpen(false); fetchUsers(); }} 
+        <EditUserModal
+          user={selectedUserData as UserResponse}
+          onClose={() => setIsEditModalOpen(false)}
+          onSuccess={() => { setIsEditModalOpen(false); fetchUsers(); }}
         />
       )}
       {isViewModalOpen && selectedUserData && (
-        <ViewUserModal 
-          user={selectedUserData as UserResponse} 
-          onClose={() => setIsViewModalOpen(false)} 
+        <ViewUserModal
+          user={selectedUserData as UserResponse}
+          onClose={() => setIsViewModalOpen(false)}
         />
       )}
     </AdminLayout>
@@ -326,10 +328,10 @@ const EditUserModal: React.FC<{ user: UserResponse; onClose: () => void; onSucce
       return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     }
     if (typeof d === 'string' && d.includes('/')) {
-        const parts = d.split('/');
-        if (parts.length === 3) {
-            return `${parts[2]}-${parts[1]}-${parts[0]}`;
-        }
+      const parts = d.split('/');
+      if (parts.length === 3) {
+        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+      }
     }
     return d || '';
   };
@@ -358,14 +360,14 @@ const EditUserModal: React.FC<{ user: UserResponse; onClose: () => void; onSucce
     e.preventDefault();
     try {
       setLoading(true);
-      
+
       // Ensure date is in YYYY-MM-DD format before sending
       let submitDob = formData.dob;
       if (submitDob && submitDob.includes('/')) {
-         const parts = submitDob.split('/');
-         if (parts.length === 3) {
-             submitDob = `${parts[2]}-${parts[1]}-${parts[0]}`;
-         }
+        const parts = submitDob.split('/');
+        if (parts.length === 3) {
+          submitDob = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
       }
 
       await userService.updateUser(user.id, { ...formData, dob: submitDob }, avatar || undefined);
@@ -387,42 +389,42 @@ const EditUserModal: React.FC<{ user: UserResponse; onClose: () => void; onSucce
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="flex flex-col items-center mb-4">
-             <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800 flex items-center justify-center">
-                {preview ? <img src={preview} alt="preview" className="w-full h-full object-cover" /> : <UserIcon size={32} className="text-gray-300" />}
-                <label className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/20 transition-colors cursor-pointer group">
-                   <Camera size={20} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                   <input type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} />
-                </label>
-             </div>
-             <span className="text-xs text-gray-400 mt-2">Ảnh đại diện</span>
+            <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800 flex items-center justify-center">
+              {preview ? <img src={preview} alt="preview" className="w-full h-full object-cover" /> : <UserIcon size={32} className="text-gray-300" />}
+              <label className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/20 transition-colors cursor-pointer group">
+                <Camera size={20} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                <input type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} />
+              </label>
+            </div>
+            <span className="text-xs text-gray-400 mt-2">Ảnh đại diện</span>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Họ và tên</label>
-              <input required type="text" className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none" value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} />
+              <input required type="text" className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none" value={formData.fullName} onChange={e => setFormData({ ...formData, fullName: e.target.value })} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Mã số <span className="text-red-500">*</span></label>
-              <input 
+              <input
                 readOnly={!!user.code}
-                type="text" 
-                className={`w-full px-4 py-2 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-fpt-orange/20 ${!!user.code ? 'bg-gray-100 dark:bg-zinc-800/50 cursor-not-allowed text-gray-500' : 'bg-gray-50 dark:bg-zinc-800'}`} 
-                value={formData.code || ''} 
-                onChange={e => !user.code && setFormData({...formData, code: e.target.value})}
+                type="text"
+                className={`w-full px-4 py-2 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-fpt-orange/20 ${!!user.code ? 'bg-gray-100 dark:bg-zinc-800/50 cursor-not-allowed text-gray-500' : 'bg-gray-50 dark:bg-zinc-800'}`}
+                value={formData.code || ''}
+                onChange={e => !user.code && setFormData({ ...formData, code: e.target.value })}
                 placeholder={!user.code ? "Nhập mã số cho Admin..." : ""}
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Ngày sinh</label>
-              <input required type="date" className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none" value={formData.dob} onChange={e => setFormData({...formData, dob: e.target.value})} />
+              <input required type="date" className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none" value={formData.dob} onChange={e => setFormData({ ...formData, dob: e.target.value })} />
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Email</label>
-              <input required type="email" className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+              <input required type="email" className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Số điện thoại</label>
-              <input type="text" className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
+              <input type="text" className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Trạng thái</label>
@@ -434,7 +436,7 @@ const EditUserModal: React.FC<{ user: UserResponse; onClose: () => void; onSucce
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Vai trò</label>
-              <select className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none" value={formData.role} onChange={e => setFormData({...formData, role: e.target.value as any})}>
+              <select className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value as any })}>
                 <option value="STUDENT">Sinh viên</option>
                 <option value="LECTURER">Giảng viên</option>
                 <option value="ACADEMIC_STAFF">Phòng đào tạo</option>
@@ -445,7 +447,7 @@ const EditUserModal: React.FC<{ user: UserResponse; onClose: () => void; onSucce
           <div className="flex justify-end gap-3 mt-8">
             <button type="button" onClick={onClose} className="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Hủy</button>
             <button type="submit" disabled={loading} className="px-6 py-2 bg-fpt-orange text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center gap-2">
-               {loading && <Loader2 size={16} className="animate-spin" />} Lưu thay đổi
+              {loading && <Loader2 size={16} className="animate-spin" />} Lưu thay đổi
             </button>
           </div>
         </form>
@@ -481,52 +483,52 @@ const ViewUserModal: React.FC<{ user: UserResponse; onClose: () => void }> = ({ 
           <button onClick={onClose}><X size={20} className="text-gray-400 hover:text-gray-600" /></button>
         </div>
         <div className="p-6 space-y-6">
-           <div className="flex items-center gap-6">
-              <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-100 dark:bg-zinc-800 border-2 border-orange-100 dark:border-fpt-orange/20">
-                 {user.avatar ? <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" /> : <UserIcon size={40} className="m-auto text-gray-300 dark:text-zinc-600 mt-6" />}
-              </div>
-              <div>
-                 <h4 className="text-xl font-bold text-gray-900 dark:text-white">{user.fullName}</h4>
-                 <p className="text-gray-500 dark:text-zinc-400">{user.roleName}</p>
-                 <span className="inline-block mt-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
-                    Đã kích hoạt
-                 </span>
-              </div>
-           </div>
-           <div className="grid grid-cols-2 gap-y-4 text-sm">
-              <div>
-                 <p className="text-gray-500 dark:text-zinc-400">Mã số</p>
-                 <p className="font-medium text-gray-900 dark:text-white">{user.code}</p>
-              </div>
-              <div>
-                 <p className="text-gray-500 dark:text-zinc-400">Ngày sinh</p>
-                 <p className="font-medium text-gray-900 dark:text-white">{user.dob}</p>
-              </div>
-              <div className="col-span-2">
-                 <p className="text-gray-500 dark:text-zinc-400">Email</p>
-                 <p className="font-medium text-gray-900 dark:text-white">{user.email}</p>
-              </div>
-              <div>
-                 <p className="text-gray-500 dark:text-zinc-400">Số điện thoại</p>
-                 <p className="font-medium text-gray-900 dark:text-white">{user.phone || 'Chưa cập nhật'}</p>
-              </div>
-              <div>
-                 <p className="text-gray-500 dark:text-zinc-400">Khuôn mặt</p>
-                 <p className={`font-medium ${user.faceDataStatus === 'REGISTERED' ? 'text-green-600' : 'text-red-500'}`}>
-                    {user.faceDataStatus === 'REGISTERED' ? 'Đã đăng ký' : 'Chưa đăng ký'}
-                 </p>
-              </div>
-              <div className="col-span-2 p-3 bg-gray-50 dark:bg-zinc-800/50 rounded-xl border border-gray-100 dark:border-zinc-800">
-                 <p className="text-xs text-gray-500 dark:text-zinc-400 mb-1">Cập nhật lần cuối</p>
-                 <p className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                    {formatDateTime(user.updatedAt || user.createdAt)}
-                 </p>
-              </div>
-           </div>
-           <div className="flex justify-end mt-4">
-              <button onClick={onClose} className="px-6 py-2 bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors">Đóng</button>
-           </div>
+          <div className="flex items-center gap-6">
+            <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-100 dark:bg-zinc-800 border-2 border-orange-100 dark:border-fpt-orange/20">
+              {user.avatar ? <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" /> : <UserIcon size={40} className="m-auto text-gray-300 dark:text-zinc-600 mt-6" />}
+            </div>
+            <div>
+              <h4 className="text-xl font-bold text-gray-900 dark:text-white">{user.fullName}</h4>
+              <p className="text-gray-500 dark:text-zinc-400">{user.roleName}</p>
+              <span className="inline-block mt-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                Đã kích hoạt
+              </span>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-y-4 text-sm">
+            <div>
+              <p className="text-gray-500 dark:text-zinc-400">Mã số</p>
+              <p className="font-medium text-gray-900 dark:text-white">{user.code}</p>
+            </div>
+            <div>
+              <p className="text-gray-500 dark:text-zinc-400">Ngày sinh</p>
+              <p className="font-medium text-gray-900 dark:text-white">{user.dob}</p>
+            </div>
+            <div className="col-span-2">
+              <p className="text-gray-500 dark:text-zinc-400">Email</p>
+              <p className="font-medium text-gray-900 dark:text-white">{user.email}</p>
+            </div>
+            <div>
+              <p className="text-gray-500 dark:text-zinc-400">Số điện thoại</p>
+              <p className="font-medium text-gray-900 dark:text-white">{user.phone || 'Chưa cập nhật'}</p>
+            </div>
+            <div>
+              <p className="text-gray-500 dark:text-zinc-400">Khuôn mặt</p>
+              <p className={`font-medium ${user.faceDataStatus === 'REGISTERED' ? 'text-green-600' : 'text-red-500'}`}>
+                {user.faceDataStatus === 'REGISTERED' ? 'Đã đăng ký' : 'Chưa đăng ký'}
+              </p>
+            </div>
+            <div className="col-span-2 p-3 bg-gray-50 dark:bg-zinc-800/50 rounded-xl border border-gray-100 dark:border-zinc-800">
+              <p className="text-xs text-gray-500 dark:text-zinc-400 mb-1">Cập nhật lần cuối</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                {formatDateTime(user.updatedAt || user.createdAt)}
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end mt-4">
+            <button onClick={onClose} className="px-6 py-2 bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors">Đóng</button>
+          </div>
         </div>
       </div>
     </div>

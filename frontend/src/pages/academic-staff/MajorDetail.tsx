@@ -11,6 +11,7 @@ import { StatusFilter, Pagination, SelectionActionBar, StatusBadge } from '../..
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { Major } from '../../types/major';
 import { Specialization, SpecializationImportDTO } from '../../types/specialization';
+import { usePagination } from '../../hooks/usePagination';
 
 // --- Types ---
 
@@ -550,9 +551,11 @@ export const MajorDetail: React.FC = () => {
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
-    const [page, setPage] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+    // Use custom pagination hook - auto resets to page 0 when filters change
+    const { page, setPage } = usePagination({ resetDependencies: [debouncedSearchTerm, statusFilter] });
 
     // Confirm Modal states
     const [confirmModal, setConfirmModal] = useState({

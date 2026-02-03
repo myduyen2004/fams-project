@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Upload, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
@@ -8,15 +9,19 @@ import { CourseFormModal } from '../../components/academic-staff/CourseFormModal
 import { ImportCourseModal } from '../../components/academic-staff/ImportCourseModal';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { Course } from '../../types/course';
+import { usePagination } from '../../hooks/usePagination';
 
 export const CourseManagement: React.FC = () => {
+    const navigate = useNavigate();
     const [courses, setCourses] = useState<Course[]>([]);
     const [loading, setLoading] = useState(true);
-    const [page, setPage] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
     const [status, setStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+    // Use custom pagination hook - auto resets to page 0 when filters change
+    const { page, setPage } = usePagination({ resetDependencies: [status, searchTerm] });
 
     // Modals
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -83,43 +88,33 @@ export const CourseManagement: React.FC = () => {
     // State for range selection
     const [lastSelectedId, setLastSelectedId] = useState<number | null>(null);
 
-    const handleSelectOne = (id: number) => {
-        if (selectedIds.includes(id)) {
-            setSelectedIds(selectedIds.filter(itemId => itemId !== id));
-        } else {
-            setSelectedIds([...selectedIds, id]);
-        }
-        setLastSelectedId(id);
-    };
-
-    const handleRowClick = (course: Course, e: React.MouseEvent) => {
-        // Prevent text selection
-        if (e.shiftKey) {
-            document.getSelection()?.removeAllRanges();
-        }
-
+    const handleSelectOne = (id: number, e: React.MouseEvent) => {
+        // Handle shift+click for range selection
         if (e.shiftKey && lastSelectedId !== null) {
-            const currentIndex = courses.findIndex(c => c.id === course.id);
+            const currentIndex = courses.findIndex(c => c.id === id);
             const lastIndex = courses.findIndex(c => c.id === lastSelectedId);
 
             if (currentIndex !== -1 && lastIndex !== -1) {
                 const start = Math.min(currentIndex, lastIndex);
                 const end = Math.max(currentIndex, lastIndex);
                 const rangeIds = courses.slice(start, end + 1).map(c => c.id);
-
-                // Union with existing selectedIds
                 const newSelected = Array.from(new Set([...selectedIds, ...rangeIds]));
                 setSelectedIds(newSelected);
             }
         } else {
-            // Toggle selection: add if not selected, remove if selected
-            if (selectedIds.includes(course.id)) {
-                setSelectedIds(selectedIds.filter(id => id !== course.id));
+            // Toggle single selection
+            if (selectedIds.includes(id)) {
+                setSelectedIds(selectedIds.filter(itemId => itemId !== id));
             } else {
-                setSelectedIds([...selectedIds, course.id]);
+                setSelectedIds([...selectedIds, id]);
             }
-            setLastSelectedId(course.id);
         }
+        setLastSelectedId(id);
+    };
+
+    const handleRowClick = (course: Course) => {
+        // Navigate to grade configuration page
+        navigate(`/academic-staff/courses/${course.id}/grades`);
     };
 
     const handleBulkStatusChange = (newStatus: 'ACTIVE' | 'INACTIVE') => {
@@ -301,6 +296,7 @@ export const CourseManagement: React.FC = () => {
                                     <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Mã môn</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Tên môn học</th>
                                     <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Số tín chỉ</th>
+                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Tổng trọng số</th>
                                     <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-lg">Trạng thái</th>
                                 </tr>
                             </thead>
@@ -328,14 +324,15 @@ export const CourseManagement: React.FC = () => {
                                         <tr
                                             key={course.id}
                                             className={`border-b transition-colors cursor-pointer ${selectedIds.includes(course.id) ? 'bg-orange-50 dark:bg-orange-900/20' : 'bg-white hover:bg-gray-50 dark:bg-zinc-900 dark:hover:bg-zinc-800/50'} dark:border-zinc-800 ${loading ? 'opacity-50' : ''}`}
-                                            onClick={(e) => handleRowClick(course, e)}
+                                            onClick={() => handleRowClick(course)}
                                         >
                                             <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                                                 <input
                                                     type="checkbox"
                                                     className="w-4 h-4 rounded border-gray-300 text-fpt-orange focus:ring-fpt-orange dark:border-zinc-600 dark:bg-zinc-700 cursor-pointer"
                                                     checked={selectedIds.includes(course.id)}
-                                                    onChange={() => handleSelectOne(course.id)}
+                                                    onClick={(e) => handleSelectOne(course.id, e)}
+                                                    onChange={() => { }} // controlled by onClick
                                                 />
                                             </td>
                                             <td className="px-4 py-3 text-center font-medium font-semibold text-gray-900 dark:text-white">{course.code}</td>
@@ -344,6 +341,13 @@ export const CourseManagement: React.FC = () => {
                                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
                                                     {course.credits} TC
                                                 </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-center">
+                                                {course.totalWeight !== undefined && (
+                                                    <span className={`text-sm font-semibold ${Math.abs(course.totalWeight - 100) < 0.01 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                                                        {course.totalWeight}%
+                                                    </span>
+                                                )}
                                             </td>
                                             <td className="px-4 py-3 text-center">
                                                 {course.status === 'ACTIVE' ? (
