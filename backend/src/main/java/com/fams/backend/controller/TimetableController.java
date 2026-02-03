@@ -395,6 +395,65 @@ public class TimetableController {
         }
     }
 
+    @GetMapping("/student/{studentId}/semester")
+    @Operation(summary = "Get all timetable slots for a student in a semester (for calendar export)")
+    public ResponseEntity<List<TimetableDTO.TimetableSlotDTO>> getSemesterSlotsForStudent(
+            @PathVariable Long studentId,
+            @RequestParam String semesterCode) {
+
+        User student = userRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+
+        Semester semester = semesterRepository.findByCode(semesterCode)
+                .orElseThrow(() -> new RuntimeException("Semester not found"));
+
+        // Check if semester is published
+        com.fams.backend.entity.SemesterConfig config = semester.getConfig();
+        if (config != null && !Boolean.TRUE.equals(config.getIsPublished())) {
+            return ResponseEntity.status(403).build();
+        }
+
+        // Fetch ALL slots for this student in this semester
+        List<TimetableSlot> slots = timetableSlotRepository.findByStudentCodeAndDateBetween(
+                student.getCode(), semester.getStartDate(), semester.getEndDate());
+
+        // Map to DTOs and sort
+        List<TimetableDTO.TimetableSlotDTO> slotDTOs = slots.stream()
+                .map(this::convertToDTO)
+                .sorted(Comparator.comparing(TimetableDTO.TimetableSlotDTO::getDate)
+                        .thenComparing(TimetableDTO.TimetableSlotDTO::getSlotNumber))
+                .collect(Collectors.toList());
+
+        log.info("Returning {} slots for student {} in semester {}", slotDTOs.size(), studentId, semesterCode);
+        return ResponseEntity.ok(slotDTOs);
+    }
+
+    @GetMapping("/lecturer/{lecturerId}/semester")
+    @Operation(summary = "Get all timetable slots for a lecturer in a semester (for calendar export)")
+    public ResponseEntity<List<TimetableDTO.TimetableSlotDTO>> getSemesterSlotsForLecturer(
+            @PathVariable Long lecturerId,
+            @RequestParam String semesterCode) {
+
+        User lecturer = userRepository.findById(lecturerId)
+                .orElseThrow(() -> new RuntimeException("Lecturer not found"));
+
+        Semester semester = semesterRepository.findByCode(semesterCode)
+                .orElseThrow(() -> new RuntimeException("Semester not found"));
+
+        // Lecturers can always see their schedule
+        List<TimetableSlot> slots = timetableSlotRepository.findByLecturerIdAndDateBetween(
+                lecturerId, semester.getStartDate(), semester.getEndDate());
+
+        List<TimetableDTO.TimetableSlotDTO> slotDTOs = slots.stream()
+                .map(this::convertToDTO)
+                .sorted(Comparator.comparing(TimetableDTO.TimetableSlotDTO::getDate)
+                        .thenComparing(TimetableDTO.TimetableSlotDTO::getSlotNumber))
+                .collect(Collectors.toList());
+
+        log.info("Returning {} slots for lecturer {} in semester {}", slotDTOs.size(), lecturerId, semesterCode);
+        return ResponseEntity.ok(slotDTOs);
+    }
+
     @GetMapping("/export/student/{studentId}")
     @Operation(summary = "Export student timetable to Excel")
     public void exportStudentTimetable(
