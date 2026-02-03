@@ -14,5 +14,12 @@ public class EnrollmentResponse {
     private String className;
     private String studentCode;
     private String studentName;
+    private String avatar;
+    private String email;
+    private String phone;
+    private String dob;
+    private String major;
+    private String specialization;
+    private String subSpecialization;
     private String status;
 }
