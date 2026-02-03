@@ -54,6 +54,11 @@ export const LockedUsersPage: React.FC = () => {
     fetchUsers();
   }, [fetchUsers]);
 
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch]);
+
   const handleSelectUser = (id: number) => {
     setSelectedUsers(prev => 
       prev.includes(id) ? prev.filter(uid => uid !== id) : [...prev, id]

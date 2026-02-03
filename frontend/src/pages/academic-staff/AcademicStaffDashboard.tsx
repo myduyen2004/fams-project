@@ -10,7 +10,7 @@ import toast from 'react-hot-toast';
 // New Components
 import { AnalyticalCards } from '../../components/academic-staff/dashboard/AnalyticalCards';
 import { AttendanceFrequencyChart, DailyAttendanceDonut } from '../../components/academic-staff/dashboard/DashboardCharts';
-import { PendingRequests, AttendanceLog, RunningRooms } from '../../components/academic-staff/dashboard/DashboardLists';
+import { PendingRequests, RunningRooms } from '../../components/academic-staff/dashboard/DashboardLists';
 
 export const AcademicStaffDashboard: React.FC = () => {
   const navigate = useNavigate();
