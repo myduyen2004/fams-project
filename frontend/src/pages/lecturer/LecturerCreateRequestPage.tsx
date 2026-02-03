@@ -79,7 +79,7 @@ export const LecturerCreateRequestPage: React.FC = () => {
     };
 
     // State for slot number selection (used for resetting only)
-    const [, setSelectedSlotNumber] = useState<number | null>(null);
+
 
     // Format Date: dd/MM/yyyy
     const formatDateDDMMYYYY = (dateString: string) => {
@@ -114,7 +114,7 @@ export const LecturerCreateRequestPage: React.FC = () => {
                     // Reset slot selection when class changes
                     setSelectedSlotId('');
                     setSelectedSlot(null);
-                    setSelectedSlotNumber(null);
+
                 } catch (error) {
                     console.error("Error fetching slots:", error);
                     toast.error("Không thể tải danh sách slot cho lớp này");
@@ -125,7 +125,7 @@ export const LecturerCreateRequestPage: React.FC = () => {
             setSlots([]);
             setSelectedSlotId('');
             setSelectedSlot(null);
-            setSelectedSlotNumber(null);
+
         }
     }, [selectedClass]);
 
@@ -269,10 +269,7 @@ export const LecturerCreateRequestPage: React.FC = () => {
                                         setSelectedSlotId(slotId);
                                         const found = slots.find(s => s.id.toString() === slotId) || null;
                                         setSelectedSlot(found);
-                                        // Reset slot number when changing date
-                                        if (found) {
-                                            setSelectedSlotNumber(found.slotNumber);
-                                        }
+
                                     }}
                                     disabled={!selectedClass}
                                 >
