@@ -19,6 +19,7 @@ import {
   NotificationTableRow,
   NotificationFormModal
 } from '../../components/admin/notifications';
+import { usePagination } from '../../hooks/usePagination';
 
 export const NotificationManagementPage = () => {
   const navigate = useNavigate();
@@ -46,8 +47,12 @@ export const NotificationManagementPage = () => {
   const [search, setSearch] = useState('');
   const [targetTypeFilter, setTargetTypeFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
-  const [page, setPage] = useState(0);
   const pageSize = 10;
+
+  // Use custom pagination hook - auto resets to page 0 when filters change
+  const { page, setPage } = usePagination({
+    resetDependencies: [search, targetTypeFilter, statusFilter]
+  });
 
   // Selection states
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -114,9 +119,8 @@ export const NotificationManagementPage = () => {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  // Reset page when filters change
+  // Note: Page reset is now handled by usePagination hook
   useEffect(() => {
-    setPage(0);
     setSelectedIds([]);
   }, [search, targetTypeFilter, statusFilter]);
 

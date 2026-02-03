@@ -78,6 +78,7 @@ export const LecturerCreateRequestPage: React.FC = () => {
         if (e.target) e.target.value = '';
     };
 
+    // State for slot number selection (used for resetting only)
 
 
     // Format Date: dd/MM/yyyy
@@ -127,8 +128,6 @@ export const LecturerCreateRequestPage: React.FC = () => {
 
         }
     }, [selectedClass]);
-
-
 
 
     const handleSubmit = async (e: React.FormEvent) => {
