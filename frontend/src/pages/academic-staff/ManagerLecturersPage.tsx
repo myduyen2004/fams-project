@@ -11,6 +11,7 @@ import {
   AddLecturerModal,
   ImportLecturerModal
 } from '../../components/academic-staff/lecturers';
+import { usePagination } from '../../hooks/usePagination';
 
 export const ManagerLecturersPage = () => {
   const [lecturers, setLecturers] = useState<LecturerResponse[]>([]);
@@ -19,9 +20,13 @@ export const ManagerLecturersPage = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [departmentFilter, setDepartmentFilter] = useState('all');
   const [departments, setDepartments] = useState<string[]>([]);
-  const [page, setPage] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [selectedLecturers, setSelectedLecturers] = useState<number[]>([]);
+
+  // Use custom pagination hook - auto resets to page 0 when filters change
+  const { page, setPage } = usePagination({
+    resetDependencies: [statusFilter, departmentFilter, search]
+  });
 
   const [isExporting, setIsExporting] = useState(false);
 
@@ -240,7 +245,7 @@ export const ManagerLecturersPage = () => {
             </div>
             <div className="flex items-center gap-1">
               <button
-                onClick={() => setPage(p => Math.max(0, p - 1))}
+                onClick={() => setPage(Math.max(0, page - 1))}
                 disabled={page === 0}
                 className="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50 text-gray-500"
               >
@@ -271,7 +276,7 @@ export const ManagerLecturersPage = () => {
                 );
               })}
               <button
-                onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
                 disabled={page >= totalPages - 1}
                 className="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50 text-gray-500"
               >

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Search, Loader2, X, Check } from 'lucide-react';
 import { Course } from '../../types/course';
 import { courseService } from '../../services/api/courseService';
+import { SemesterFilter } from './SemesterFilter';
 
 interface CourseSelectionModalProps {
     isOpen: boolean;
@@ -23,6 +24,7 @@ export const CourseSelectionModal: React.FC<CourseSelectionModalProps> = ({
     const [loading, setLoading] = useState(false);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [semester, setSemester] = useState<number>(1);
+    const [isSemesterFilterOpen, setIsSemesterFilterOpen] = useState(false);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -31,6 +33,7 @@ export const CourseSelectionModal: React.FC<CourseSelectionModalProps> = ({
         setSelectedIds([]);
         setSemester(1);
         setSearchTerm('');
+        setIsSemesterFilterOpen(false);
 
         const fetchCourses = async () => {
             setLoading(true);
@@ -119,15 +122,12 @@ export const CourseSelectionModal: React.FC<CourseSelectionModalProps> = ({
                             />
                         </div>
                         <div className="w-48">
-                            <select
+                            <SemesterFilter
                                 value={semester}
-                                onChange={(e) => setSemester(Number(e.target.value))}
-                                className="w-full rounded-lg border border-gray-300 py-2 px-3 text-sm focus:border-fpt-orange focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
-                            >
-                                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(sem => (
-                                    <option key={sem} value={sem}>Học kỳ {sem}</option>
-                                ))}
-                            </select>
+                                onChange={setSemester}
+                                isOpen={isSemesterFilterOpen}
+                                onToggle={() => setIsSemesterFilterOpen(!isSemesterFilterOpen)}
+                            />
                         </div>
                     </div>
                 </div>
@@ -148,14 +148,14 @@ export const CourseSelectionModal: React.FC<CourseSelectionModalProps> = ({
                                         key={course.id}
                                         onClick={() => handleSelect(course.id)}
                                         className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${isSelected
-                                                ? 'border-fpt-orange bg-orange-50 dark:bg-orange-900/20'
-                                                : 'border-gray-200 hover:border-fpt-orange/50 hover:bg-gray-50 dark:border-zinc-700 dark:hover:bg-zinc-800'
+                                            ? 'border-fpt-orange bg-orange-50 dark:bg-orange-900/20'
+                                            : 'border-gray-200 hover:border-fpt-orange/50 hover:bg-gray-50 dark:border-zinc-700 dark:hover:bg-zinc-800'
                                             }`}
                                     >
                                         <div className="flex items-center gap-3">
                                             <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isSelected
-                                                    ? 'bg-fpt-orange border-fpt-orange text-white'
-                                                    : 'border-gray-300 dark:border-zinc-600'
+                                                ? 'bg-fpt-orange border-fpt-orange text-white'
+                                                : 'border-gray-300 dark:border-zinc-600'
                                                 }`}>
                                                 {isSelected && <Check className="h-3 w-3" />}
                                             </div>
