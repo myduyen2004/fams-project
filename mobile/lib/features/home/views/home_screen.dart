@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_routes.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../controllers/home_controller.dart';
 import '../../profile/views/profile_screen.dart'; // Import ProfileScreen
@@ -237,7 +238,7 @@ class HomeScreen extends StatelessWidget {
                                         title: 'Đơn yêu cầu',
                                         iconBgColor: const Color(0xFFFFE0B2), 
                                         iconColor: const Color(0xFFE65100),
-                                        onTap: () {},
+                                        onTap: () => Get.toNamed('/lecturer/requests'),
                                       ),
                                     ),
                                   ],
@@ -284,6 +285,24 @@ class HomeScreen extends StatelessWidget {
                                 title: 'Báo cáo điểm',
                                 onTap: () {},
                               ),
+
+                              // "Gửi đơn yêu cầu" card - only for lecturers
+                              Obx(() {
+                                final user = authController.currentUser.value;
+                                if (user?.role == 'LECTURER') {
+                                  return Column(
+                                    children: [
+                                      const SizedBox(height: 16),
+                                      _buildBigCard(
+                                        icon: Icons.send_rounded,
+                                        title: 'Gửi đơn yêu cầu',
+                                        onTap: () => Get.toNamed(AppRoutes.lecturerCreateRequest),
+                                      ),
+                                    ],
+                                  );
+                                }
+                                return const SizedBox.shrink();
+                              }),
                             ],
                           ),
 
