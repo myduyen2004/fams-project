@@ -420,162 +420,198 @@ public class StudentServiceImpl implements StudentService {
     @Transactional(readOnly = true)
     public List<StudentImportDTO> previewImportStudents(MultipartFile file) {
         List<StudentImportDTO> previewList = new ArrayList<>();
+        List<Map<String, String>> rowDataList = new ArrayList<>();
 
+        // Phase 1: Read Excel into memory and extract codes
         try (InputStream is = file.getInputStream();
                 Workbook workbook = new XSSFWorkbook(is)) {
 
             Sheet sheet = workbook.getSheetAt(0);
             Iterator<Row> rows = sheet.iterator();
-            int rowNumber = 0;
-            Set<String> seenCodes = new HashSet<>();
+            int rowIndex = 0;
 
             while (rows.hasNext()) {
                 Row currentRow = rows.next();
-                int currentRowNum = rowNumber + 1;
-
-                if (rowNumber == 0) {
-                    rowNumber++;
+                if (rowIndex == 0) {
+                    rowIndex++;
                     continue;
                 }
+
                 // Format: STT, Code, FullName, Email, Phone, Major, Spec, SubSpec, Course, GPA
                 String code = getCellValueAsString(currentRow.getCell(1));
-                String fullName = getCellValueAsString(currentRow.getCell(2));
-                String email = getCellValueAsString(currentRow.getCell(3));
-                String phone = getCellValueAsString(currentRow.getCell(4));
-                String major = getCellValueAsString(currentRow.getCell(5));
-                String specialization = getCellValueAsString(currentRow.getCell(6));
-                String subSpecialization = getCellValueAsString(currentRow.getCell(7));
-                String course = getCellValueAsString(currentRow.getCell(8));
-                String gpaStr = getCellValueAsString(currentRow.getCell(9));
-                Double gpa = null;
-                if (gpaStr != null) {
-                    try {
-                        gpa = Double.parseDouble(gpaStr);
-                    } catch (NumberFormatException e) {
-                    }
-                }
-
-                if (code == null || code.isEmpty()) {
-                    rowNumber++;
+                if (code == null || code.trim().isEmpty()) {
+                    rowIndex++;
                     continue;
                 }
 
-                StudentImportDTO dto = StudentImportDTO.builder()
-                        .rowNumber(currentRowNum)
-                        .code(code)
-                        .major(major)
-                        .specialization(specialization)
-                        .subSpecialization(subSpecialization)
-                        .course(course)
-                        .gpa(gpa)
-                        .status("VALID")
-                        .build();
+                Map<String, String> data = new HashMap<>();
+                data.put("rowNumber", String.valueOf(rowIndex + 1));
+                data.put("code", code.trim());
+                data.put("fullName", getCellValueAsString(currentRow.getCell(2)));
+                data.put("email", getCellValueAsString(currentRow.getCell(3)));
+                data.put("phone", getCellValueAsString(currentRow.getCell(4)));
+                data.put("major", getCellValueAsString(currentRow.getCell(5)));
+                data.put("specialization", getCellValueAsString(currentRow.getCell(6)));
+                data.put("subSpecialization", getCellValueAsString(currentRow.getCell(7)));
+                data.put("course", getCellValueAsString(currentRow.getCell(8)));
+                data.put("gpa", getCellValueAsString(currentRow.getCell(9)));
 
-                if (seenCodes.contains(code.toLowerCase())) {
-                    dto.setStatus("ERROR");
-                    dto.setErrorMessage("Mã SV bị trùng trong file");
-                } else {
-                    seenCodes.add(code.toLowerCase());
-
-                    Optional<User> userOpt = userRepository.findByCodeIgnoreCase(code.trim());
-                    if (userOpt.isEmpty()) {
-                        dto.setStatus("ERROR");
-                        dto.setErrorMessage("Không tìm thấy student với mã này");
-                    } else {
-                        User user = userOpt.get();
-                        dto.setFullName(user.getFullName());
-                        dto.setEmail(user.getEmail());
-
-                        if (user.getRole() != User.UserRole.STUDENT) {
-                            dto.setStatus("ERROR");
-                            dto.setErrorMessage("User không phải là Sinh viên");
-                        } else {
-                            StringBuilder errorMsg = new StringBuilder();
-                            boolean hasError = false;
-
-                            // Metadata Matching is now strict to align with lecturer import
-                            if (fullName != null && !fullName.trim().isEmpty()
-                                    && !fullName.trim().equalsIgnoreCase(user.getFullName())) {
-                                errorMsg.append("Tên không trùng khớp (Excel: ").append(fullName)
-                                        .append(" vs DB: ").append(user.getFullName()).append("). ");
-                                hasError = true;
-                            }
-                            if (email != null && !email.trim().isEmpty()
-                                    && !email.trim().equalsIgnoreCase(user.getEmail())) {
-                                errorMsg.append("Email không trùng khớp (Excel: ").append(email)
-                                        .append(" vs DB: ").append(user.getEmail()).append("). ");
-                                hasError = true;
-                            }
-
-                            // Validate Phone
-                            String dbPhone = user.getPhone() != null ? user.getPhone() : "";
-                            String excelPhone = phone != null ? phone : "";
-                            if (phone != null && !phone.trim().isEmpty() && !excelPhone.trim().equals(dbPhone)) {
-                                errorMsg.append("Số điện thoại không trùng khớp (Excel: ").append(phone)
-                                        .append(" vs DB: ").append(dbPhone).append("). ");
-                                hasError = true;
-                            }
-
-                            // Hierarchical Validation - Using Case Insensitive Lookups
-                            Major foundMajor = null;
-                            if (major != null && !major.trim().isEmpty()) {
-                                foundMajor = majorRepository.findByNameIgnoreCase(major.trim()).orElse(null);
-                                if (foundMajor == null) {
-                                    errorMsg.append("Ngành học không tồn tại: ").append(major).append(". ");
-                                    hasError = true;
-                                }
-                            }
-
-                            Specialization foundSpec = null;
-                            if (specialization != null && !specialization.trim().isEmpty()) {
-                                if (foundMajor == null) {
-                                    errorMsg.append("Chuyên ngành '").append(specialization)
-                                            .append("' yêu cầu Ngành học hợp lệ. ");
-                                    hasError = true;
-                                } else {
-                                    foundSpec = specializationRepository
-                                            .findByNameIgnoreCaseAndMajor(specialization.trim(),
-                                                    foundMajor)
-                                            .orElse(null);
-                                    if (foundSpec == null) {
-                                        errorMsg.append("Chuyên ngành '").append(specialization)
-                                                .append("' không thuộc Ngành '").append(major).append("'. ");
-                                        hasError = true;
-                                    }
-                                }
-                            }
-
-                            if (subSpecialization != null && !subSpecialization.trim().isEmpty()) {
-                                if (foundSpec == null) {
-                                    errorMsg.append("Combo '").append(subSpecialization)
-                                            .append("' yêu cầu Chuyên ngành hợp lệ. ");
-                                    hasError = true;
-                                } else {
-                                    SubSpecialization foundSub = subSpecializationRepository
-                                            .findByNameIgnoreCaseAndSpecialization(subSpecialization.trim(), foundSpec)
-                                            .orElse(null);
-                                    if (foundSub == null) {
-                                        errorMsg.append("Combo '").append(subSpecialization)
-                                                .append("' không thuộc Chuyên ngành '").append(specialization)
-                                                .append("'. ");
-                                        hasError = true;
-                                    }
-                                }
-                            }
-
-                            if (hasError) {
-                                dto.setStatus("ERROR");
-                                dto.setErrorMessage(errorMsg.toString().trim());
-                            }
-                        }
-                    }
-                }
-                previewList.add(dto);
-                rowNumber++;
+                rowDataList.add(data);
+                rowIndex++;
             }
         } catch (Exception e) {
             log.error("Error reading student import file", e);
             throw new RuntimeException("Lỗi đọc file: " + e.getMessage());
+        }
+
+        if (rowDataList.isEmpty()) {
+            return previewList;
+        }
+
+        // Phase 2: Batch Pre-fetch data
+        Set<String> codesInFile = rowDataList.stream()
+                .map(d -> d.get("code").toLowerCase())
+                .collect(Collectors.toSet());
+
+        Map<String, User> userMap = userRepository.findByCodeInIgnoreCase(codesInFile).stream()
+                .collect(Collectors.toMap(u -> u.getCode().trim().toLowerCase(), u -> u, (a, b) -> a));
+
+        Map<String, Major> majorMap = majorRepository.findAll().stream()
+                .collect(Collectors.toMap(m -> m.getName().trim().toLowerCase(), m -> m, (a, b) -> a));
+
+        Map<String, Specialization> specMap = specializationRepository.findAll().stream()
+                .collect(Collectors.toMap(s -> s.getName().trim().toLowerCase() + "|" + s.getMajor().getId(), s -> s,
+                        (a, b) -> a));
+
+        Map<String, SubSpecialization> subSpecMap = subSpecializationRepository.findAll().stream()
+                .collect(Collectors.toMap(
+                        ss -> ss.getName().trim().toLowerCase() + "|" + ss.getSpecialization().getId(),
+                        ss -> ss, (a, b) -> a));
+
+        // Phase 3: Process rows in-memory
+        Set<String> seenCodes = new HashSet<>();
+        for (Map<String, String> data : rowDataList) {
+            String code = data.get("code");
+            int currentRowNum = Integer.parseInt(data.get("rowNumber"));
+
+            Double gpa = null;
+            if (data.get("gpa") != null) {
+                try {
+                    gpa = Double.parseDouble(data.get("gpa"));
+                } catch (NumberFormatException e) {
+                }
+            }
+
+            StudentImportDTO dto = StudentImportDTO.builder()
+                    .rowNumber(currentRowNum)
+                    .code(code)
+                    .major(data.get("major"))
+                    .specialization(data.get("specialization"))
+                    .subSpecialization(data.get("subSpecialization"))
+                    .course(data.get("course"))
+                    .gpa(gpa)
+                    .status("VALID")
+                    .build();
+
+            if (seenCodes.contains(code.toLowerCase())) {
+                dto.setStatus("ERROR");
+                dto.setErrorMessage("Mã SV bị trùng trong file");
+            } else {
+                seenCodes.add(code.toLowerCase());
+
+                User user = userMap.get(code.toLowerCase());
+                if (user == null) {
+                    dto.setStatus("ERROR");
+                    dto.setErrorMessage("Không tìm thấy student với mã này");
+                } else {
+                    dto.setFullName(user.getFullName());
+                    dto.setEmail(user.getEmail());
+
+                    if (user.getRole() != User.UserRole.STUDENT) {
+                        dto.setStatus("ERROR");
+                        dto.setErrorMessage("User không phải là Sinh viên");
+                    } else {
+                        StringBuilder errorMsg = new StringBuilder();
+                        boolean hasError = false;
+
+                        String fullName = data.get("fullName");
+                        String email = data.get("email");
+                        String phone = data.get("phone");
+
+                        if (fullName != null && !fullName.trim().isEmpty()
+                                && !fullName.trim().equalsIgnoreCase(user.getFullName())) {
+                            errorMsg.append("Tên không trùng khớp (Excel: ").append(fullName)
+                                    .append(" vs DB: ").append(user.getFullName()).append("). ");
+                            hasError = true;
+                        }
+                        if (email != null && !email.trim().isEmpty()
+                                && !email.trim().equalsIgnoreCase(user.getEmail())) {
+                            errorMsg.append("Email không trùng khớp (Excel: ").append(email)
+                                    .append(" vs DB: ").append(user.getEmail()).append("). ");
+                            hasError = true;
+                        }
+
+                        String dbPhone = user.getPhone() != null ? user.getPhone() : "";
+                        String excelPhone = phone != null ? phone : "";
+                        if (phone != null && !phone.trim().isEmpty() && !excelPhone.trim().equals(dbPhone)) {
+                            errorMsg.append("Số điện thoại không trùng khớp (Excel: ").append(phone)
+                                    .append(" vs DB: ").append(dbPhone).append("). ");
+                            hasError = true;
+                        }
+
+                        Major foundMajor = null;
+                        String majorName = data.get("major");
+                        if (majorName != null && !majorName.trim().isEmpty()) {
+                            foundMajor = majorMap.get(majorName.trim().toLowerCase());
+                            if (foundMajor == null) {
+                                errorMsg.append("Ngành học không tồn tại: ").append(majorName).append(". ");
+                                hasError = true;
+                            }
+                        }
+
+                        Specialization foundSpec = null;
+                        String specName = data.get("specialization");
+                        if (specName != null && !specName.trim().isEmpty()) {
+                            if (foundMajor == null) {
+                                errorMsg.append("Chuyên ngành '").append(specName)
+                                        .append("' yêu cầu Ngành học hợp lệ. ");
+                                hasError = true;
+                            } else {
+                                foundSpec = specMap.get(specName.trim().toLowerCase() + "|" + foundMajor.getId());
+                                if (foundSpec == null) {
+                                    errorMsg.append("Chuyên ngành '").append(specName)
+                                            .append("' không thuộc Ngành '").append(majorName).append("'. ");
+                                    hasError = true;
+                                }
+                            }
+                        }
+
+                        String subSpecName = data.get("subSpecialization");
+                        if (subSpecName != null && !subSpecName.trim().isEmpty()) {
+                            if (foundSpec == null) {
+                                errorMsg.append("Combo '").append(subSpecName)
+                                        .append("' yêu cầu Chuyên ngành hợp lệ. ");
+                                hasError = true;
+                            } else {
+                                SubSpecialization foundSub = subSpecMap
+                                        .get(subSpecName.trim().toLowerCase() + "|" + foundSpec.getId());
+                                if (foundSub == null) {
+                                    errorMsg.append("Combo '").append(subSpecName)
+                                            .append(" không thuộc Chuyên ngành '").append(specName)
+                                            .append("'. ");
+                                    hasError = true;
+                                }
+                            }
+                        }
+
+                        if (hasError) {
+                            dto.setStatus("ERROR");
+                            dto.setErrorMessage(errorMsg.toString().trim());
+                        }
+                    }
+                }
+            }
+            previewList.add(dto);
         }
         return previewList;
     }
