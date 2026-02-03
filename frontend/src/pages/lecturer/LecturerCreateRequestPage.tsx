@@ -129,20 +129,6 @@ export const LecturerCreateRequestPage: React.FC = () => {
         }
     }, [selectedClass]);
 
-    const handleSlotNumberChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const num = e.target.value ? parseInt(e.target.value) : null;
-        setSelectedSlotNumber(num);
-        setSelectedSlotId('');
-        setSelectedSlot(null);
-    };
-
-    const handleOriginalDateSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const slotId = e.target.value;
-        setSelectedSlotId(slotId);
-        const found = slots.find(s => s.id.toString() === slotId) || null;
-        setSelectedSlot(found);
-    };
-
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
