@@ -11,6 +11,7 @@ import { authService } from '../services/api/authService';
 import { AppNotification } from '../types/dashboard';
 import { Loader2, Search, Bell, AlertCircle, CheckCircle2, User, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { usePagination } from '../hooks/usePagination';
 
 type FilterType = 'all' | 'unread' | 'system';
 
@@ -42,18 +43,18 @@ const getNotificationColor = (type?: string) => {
 
 const parseDateTime = (timestamp: string): Date | null => {
   if (!timestamp) return null;
-  
+
   // Try standard ISO parsing
   const date = new Date(timestamp);
   if (!isNaN(date.getTime())) return date;
-  
+
   // Custom parsing for "dd/MM/yyyy HH:mm"
   const match = timestamp.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})$/);
   if (match) {
     const [_, day, month, year, hours, minutes] = match;
     return new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes));
   }
-  
+
   return null;
 };
 
@@ -132,9 +133,13 @@ export const NotificationListPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(0);
   const pageSize = 10;
   const user = authService.getUser();
+
+  // Use custom pagination hook - auto resets to page 0 when filters change
+  const { page: currentPage, setPage: setCurrentPage } = usePagination({
+    resetDependencies: [filter, searchTerm]
+  });
 
   const getLayout = (role?: string) => {
     switch (role) {
@@ -159,9 +164,9 @@ export const NotificationListPage: React.FC = () => {
         // If user is ACADEMIC_STAFF, we also want to consider the global notifications from the dashboard
         const dashboardData = await academicStaffService.getDashboardData().catch(() => null);
         const recipientNotifications = await dashboardService.getNotifications();
-        
+
         let allNotifs = [...recipientNotifications];
-        
+
         // Add dashboard notifications if they are not already in the list
         if (dashboardData?.notifications) {
           const existingIds = new Set(allNotifs.map(n => n.id));
@@ -171,7 +176,7 @@ export const NotificationListPage: React.FC = () => {
             }
           });
         }
-        
+
         // Sort by timestamp desc (requires proper parsing)
         allNotifs.sort((a, b) => {
           const dateA = parseDateTime(a.timestamp);
@@ -216,10 +221,7 @@ export const NotificationListPage: React.FC = () => {
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
-  // Reset to page 0 when filter or search changes
-  useEffect(() => {
-    setCurrentPage(0);
-  }, [filter, searchTerm]);
+  // Note: Page reset is now handled by usePagination hook
 
   // Mark all as read
   const handleMarkAllAsRead = async () => {

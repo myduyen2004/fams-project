@@ -12,6 +12,8 @@ import 'features/auth/views/reset_password_screen.dart';
 import 'features/auth/views/change_password_required_screen.dart';
 import 'features/home/views/home_screen.dart';
 import 'features/home/bindings/home_binding.dart';
+import 'features/schedule_request/views/schedule_request_list_screen.dart';
+import 'features/schedule_request/views/schedule_request_detail_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -73,6 +75,15 @@ class MyApp extends StatelessWidget {
           name: AppRoutes.home,
           page: () => const HomeScreen(),
           binding: HomeBinding(),
+        ),
+        // Lecturer Routes
+        GetPage(
+          name: AppRoutes.lecturerRequests,
+          page: () => const ScheduleRequestListScreen(),
+        ),
+        GetPage(
+          name: AppRoutes.lecturerRequestDetail,
+          page: () => const ScheduleRequestDetailScreen(),
         ),
       ],
     );

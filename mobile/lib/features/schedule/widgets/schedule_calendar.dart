@@ -26,6 +26,7 @@ class ScheduleCalendar extends StatelessWidget {
               child: Obx(() {
                 // Accessing this ensures GetX registers the dependency
                 final _ = controller.selectedDate.value;
+                final __ = controller.weeklyTimetable.value; // Subscribe to schedule updates
                 return ListView.builder(
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
@@ -51,20 +52,19 @@ class ScheduleCalendar extends StatelessWidget {
     final monday = now.subtract(Duration(days: now.weekday - 1));
     final date = monday.add(Duration(days: index));
     final isSelected = _isSameDay(date, controller.selectedDate.value);
-    final isToday = _isSameDay(date, DateTime.now());
+    
+    // Check if this day has any slots
+    final hasSchedule = controller.weeklyTimetable.value?.days.any((d) => 
+      _isSameDay(d.date, date) && d.slots.isNotEmpty
+    ) ?? false;
 
     final double screenWidth = Get.width;
-    final double cardWidth = (screenWidth - 32 - 32) / 5; // 32 for padding, 32 for buttons space (approx) -> Actually buttons take more space.
-    // Buttons are outside expanded.
-    // Expanded width is (Screen - 2*48 (icon buttons)).
-    // So card width = (Screen - 96) / 5.
     
     return GestureDetector(
       onTap: () => controller.selectDate(date),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        width: (Get.width - 110) / 5, // Dynamically calculate width to fit 5 items. 
-        // 110 approx = 2*IconBtn(48) + Padding(16)
+        width: (Get.width - 110) / 5, 
         margin: const EdgeInsets.symmetric(horizontal: 2.5, vertical: 5),
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
@@ -84,24 +84,24 @@ class ScheduleCalendar extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              "${_getDayName(date.weekday)}/${date.month}",
+              _getDayName(date.weekday),
               style: TextStyle(
-                fontSize: 10, // Slightly reduced to fit
+                fontSize: 11,
                 color: isSelected ? Colors.white70 : Colors.grey[500],
                 fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
               ),
             ),
             const SizedBox(height: 4),
             Text(
-              date.day.toString(),
+              "${date.day}/${date.month}",
               style: TextStyle(
-                fontSize: 20, // Reduced from 22
+                fontSize: 16,
                 color: isSelected ? Colors.white : const Color(0xFF2D3436),
                 fontWeight: FontWeight.w900,
               ),
             ),
             const SizedBox(height: 2),
-            if (isToday)
+            if (hasSchedule)
               Container(
                 width: 4,
                 height: 4,

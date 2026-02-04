@@ -63,6 +63,14 @@ dependencies:
 
   # Image Picker
   image_picker: ^1.0.7
+  
+  # URL Launcher (for opening attachments)
+  url_launcher: ^6.2.5
+
+  # Calendar Integration
+  add_2_calendar: ^3.0.1
+  open_filex: ^4.3.4
+  path_provider: ^2.1.1
 
 dev_dependencies:
   flutter_test:
