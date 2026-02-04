@@ -5,6 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../../core/constants/app_colors.dart';
 import 'edit_profile_screen.dart';
+import '../../../core/widgets/app_background.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -16,12 +17,11 @@ class ProfileScreen extends StatelessWidget {
     // Using Obx to listen to changes in currentUser
     return Obx(() {
         final user = authController.currentUser.value;
-        const backgroundColor = Color(0xFFFFE8D6); // Pale orange/beige background
         const cardColor = Colors.white;
 
         return Scaffold(
-          backgroundColor: backgroundColor,
-          body: SafeArea(
+          body: AppBackground(
+            child: SafeArea(
             child: Stack(
               children: [
                 // Fixed Layout - No Scrolling as requested ("cố định không trượt lên trượt xuống đc")
@@ -43,7 +43,6 @@ class ProfileScreen extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min, // Wrap content
                       children: [
-                        // ... content ...
                         // 1. Avatar
                         Container(
                           decoration: BoxDecoration(
@@ -57,34 +56,7 @@ class ProfileScreen extends StatelessWidget {
                             child: SizedBox(
                               width: 130, // 2 * radius 65
                               height: 130,
-                              child: (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty)
-                                  ? Image.network(
-                                      authController.getOptimizedAvatarUrl(user.avatarUrl),
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) {
-                                        return Image.asset(
-                                          'assets/images/logo.png',
-                                          fit: BoxFit.cover,
-                                        );
-                                      },
-                                      loadingBuilder: (context, child, loadingProgress) {
-                                        if (loadingProgress == null) return child;
-                                        return Center(
-                                          child: CircularProgressIndicator(
-                                            value: loadingProgress.expectedTotalBytes != null
-                                                ? loadingProgress.cumulativeBytesLoaded / 
-                                                  loadingProgress.expectedTotalBytes!
-                                                : null,
-                                              strokeWidth: 2,
-                                              color: Colors.orange,
-                                          ),
-                                        );
-                                      },
-                                    )
-                                  : Image.asset(
-                                      'assets/images/logo.png', 
-                                      fit: BoxFit.cover,
-                                    ),
+                              child: _buildAvatarImage(authController, user?.avatarUrl),
                             ),
                           ),
                         ),
@@ -154,6 +126,36 @@ class ProfileScreen extends StatelessWidget {
                             iconColor: const Color(0xFFFF6B00),
                           ),
                         ],
+
+
+                        const SizedBox(height: 30),
+
+                        // Logout Button
+                        SizedBox(
+                          width: double.infinity,
+                          height: 54,
+                          child: ElevatedButton.icon(
+                            onPressed: () => authController.logout(),
+                            icon: const Icon(Icons.logout_rounded, color: Colors.white),
+                            label: Text(
+                              'Đăng xuất',
+                              style: GoogleFonts.roboto(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryOrange,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              elevation: 4,
+                              shadowColor: AppColors.primaryOrange.withOpacity(0.4),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -180,6 +182,7 @@ class ProfileScreen extends StatelessWidget {
               ],
             ),
           ),
+          ),
         );
     });
   }
@@ -203,6 +206,50 @@ class ProfileScreen extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAvatarImage(AuthController authController, String? avatarUrl) {
+    // Debug: Print avatar URL to console
+    debugPrint('Avatar URL: $avatarUrl');
+    
+    // Default fallback avatar with person icon
+    Widget fallbackAvatar = Container(
+      color: const Color(0xFFFFE0B2),
+      child: const Icon(
+        Icons.person,
+        size: 80,
+        color: Color(0xFFFF6B00),
+      ),
+    );
+    
+    if (avatarUrl == null || avatarUrl.isEmpty) {
+      debugPrint('Avatar URL is null or empty, using fallback');
+      return fallbackAvatar;
+    }
+
+    final optimizedUrl = authController.getOptimizedAvatarUrl(avatarUrl);
+    debugPrint('Optimized Avatar URL: $optimizedUrl');
+
+    return Image.network(
+      optimizedUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        debugPrint('Avatar load error: $error');
+        return fallbackAvatar;
+      },
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Center(
+          child: CircularProgressIndicator(
+            value: loadingProgress.expectedTotalBytes != null
+                ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                : null,
+            strokeWidth: 2,
+            color: Colors.orange,
+          ),
+        );
+      },
     );
   }
 }

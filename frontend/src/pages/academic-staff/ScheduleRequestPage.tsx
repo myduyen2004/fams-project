@@ -6,13 +6,13 @@ import { academicStaffService, ScheduleRequestResponse } from '../../services/ap
 import toast from 'react-hot-toast';
 import RequestFilters from '../../components/academic-staff/request/RequestFilters';
 import RequestTableRow from '../../components/academic-staff/request/RequestTableRow';
+import { usePagination } from '../../hooks/usePagination';
 
 export const ScheduleRequestPage = () => {
     const navigate = useNavigate();
     const [requests, setRequests] = useState<ScheduleRequestResponse[]>([]);
     const [loading, setLoading] = useState(true);
     const [totalElements, setTotalElements] = useState(0);
-    const [page, setPage] = useState(0);
     const [size] = useState(10);
     const [filters, setFilters] = useState({
         search: '',
@@ -24,6 +24,11 @@ export const ScheduleRequestPage = () => {
     });
     const [isExporting, setIsExporting] = useState(false);
     const [stats, setStats] = useState({ pending: 0, processed: 0 });
+
+    // Use custom pagination hook - auto resets to page 0 when filters change
+    const { page, setPage } = usePagination({
+        resetDependencies: [filters.search, filters.role, filters.reason, filters.status, filters.startDate, filters.endDate]
+    });
 
     const fetchRequests = useCallback(async () => {
         try {
@@ -56,7 +61,7 @@ export const ScheduleRequestPage = () => {
 
     const handleFilterChange = (newFilters: Partial<typeof filters>) => {
         setFilters(prev => ({ ...prev, ...newFilters }));
-        setPage(0);
+        // Note: Page reset is now handled by usePagination hook
     };
 
     const handleViewRequest = (request: ScheduleRequestResponse) => {
@@ -234,7 +239,7 @@ export const ScheduleRequestPage = () => {
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <button
-                                        onClick={() => setPage(p => Math.max(0, p - 1))}
+                                        onClick={() => setPage(Math.max(0, page - 1))}
                                         disabled={page === 0}
                                         className="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50 text-gray-500"
                                     >
@@ -261,7 +266,7 @@ export const ScheduleRequestPage = () => {
                                         );
                                     })}
                                     <button
-                                        onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                                        onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
                                         disabled={page >= totalPages - 1}
                                         className="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50 text-gray-500"
                                     >

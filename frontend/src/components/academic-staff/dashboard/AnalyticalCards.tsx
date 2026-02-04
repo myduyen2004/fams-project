@@ -13,15 +13,27 @@ interface StatCardProps {
 }
 
 const StatCard: React.FC<Omit<StatCardProps, 'icon'>> = ({ title, value, trend, variant = 'orange', chartData }) => {
+  const isOrange = variant === 'orange';
+  
   return (
-    <div className="bg-white dark:bg-zinc-900 rounded-[32px] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.12)] border border-gray-100 dark:border-zinc-800 flex flex-col h-full hover:shadow-[0_20px_60px_rgba(0,0,0,0.15)] transition-all duration-500 group/card">
+    <div className={`group/card relative rounded-2xl p-5 shadow-sm border transition-all duration-300 flex flex-col h-full ${
+      isOrange 
+        ? 'bg-gradient-to-br from-orange-50/80 to-amber-50/80 dark:from-orange-900/5 dark:to-amber-900/5 border-orange-100/50 dark:border-orange-800/20'
+        : 'bg-gradient-to-br from-blue-50/80 to-sky-50/80 dark:from-blue-900/5 dark:to-sky-900/5 border-blue-100/50 dark:border-blue-800/20'
+    } hover:shadow-md`}>
       <div className="flex justify-between items-start mb-2">
         <div>
-          <p className="text-[11px] font-black text-zinc-800 dark:text-white tracking-[0.2em] uppercase">{title}</p>
+          <p className={`text-xs font-bold tracking-wide uppercase ${
+            isOrange ? 'text-zinc-500 dark:text-zinc-400' : 'text-zinc-500 dark:text-zinc-400'
+          }`}>{title}</p>
         </div>
         <div>
           {trend && (
-            <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-500 bg-emerald-50 px-2 py-1 rounded-full">
+            <div className={`flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-full ${
+              isOrange 
+               ? 'text-emerald-600 bg-emerald-100/50 dark:bg-emerald-500/10 dark:text-emerald-400'
+               : 'text-emerald-600 bg-emerald-100/50 dark:bg-emerald-500/10 dark:text-emerald-400'
+            }`}>
               <TrendingUp size={12} />
               {trend}
             </div>
@@ -30,7 +42,7 @@ const StatCard: React.FC<Omit<StatCardProps, 'icon'>> = ({ title, value, trend, 
       </div>
       
       <div className="mb-2">
-        <h3 className="text-2xl font-black text-zinc-900 dark:text-white tabular-nums tracking-tight">{value}</h3>
+        <h3 className="text-2xl font-black text-zinc-800 dark:text-white tabular-nums tracking-tight">{value}</h3>
       </div>
 
       <div className="mt-auto h-64 w-full">
@@ -44,7 +56,7 @@ const StatCard: React.FC<Omit<StatCardProps, 'icon'>> = ({ title, value, trend, 
                   return (
                     <div className="bg-zinc-900 text-white px-3 py-1.5 rounded-xl text-[10px] shadow-xl border border-zinc-800">
                       <span className="font-bold text-gray-400 mr-2 uppercase tracking-wider">{data.name}:</span>
-                      <span className="font-black text-orange-500">{payload[0].value?.toLocaleString()}</span>
+                      <span className={`font-black ${isOrange ? 'text-orange-500' : 'text-blue-500'}`}>{payload[0].value?.toLocaleString()}</span>
                     </div>
                   );
                 }

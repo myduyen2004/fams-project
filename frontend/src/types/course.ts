@@ -9,6 +9,7 @@ export interface Course {
     status: 'ACTIVE' | 'INACTIVE';
     orderIndex?: number;
     canDelete?: boolean;
+    totalWeight?: number;
 }
 
 export interface CourseSearchParams {

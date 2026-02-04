@@ -42,14 +42,22 @@ public class StudentServiceImpl implements StudentService {
         Specification<User> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // Filter by STUDENT role
+            // Filter by role
             predicates.add(cb.equal(root.get("role"), User.UserRole.STUDENT));
 
-            // Filter by status
+            // ALWAYS exclude INACTIVE users
+            predicates.add(cb.notEqual(root.get("status"), User.UserStatus.INACTIVE));
+
+            // Filter by status (if provided, and not INACTIVE)
             if (status != null && !status.isEmpty() && !status.equalsIgnoreCase("all")) {
                 try {
                     User.UserStatus userStatus = User.UserStatus.valueOf(status.toUpperCase());
-                    predicates.add(cb.equal(root.get("status"), userStatus));
+                    if (userStatus != User.UserStatus.INACTIVE) {
+                        predicates.add(cb.equal(root.get("status"), userStatus));
+                    } else {
+                        // If someone explicitly asks for INACTIVE, they get nothing
+                        predicates.add(cb.disjunction());
+                    }
                 } catch (Exception e) {
                     log.error("Invalid status filter: {}", status);
                 }
@@ -172,71 +180,116 @@ public class StudentServiceImpl implements StudentService {
             throw new NotFoundException("Người dùng này không phải là sinh viên");
         }
 
-        StudentProfile profile = studentProfileRepository.findById(id).orElse(null);
-
-        // GPA Validation: Report error if GPA is changed
-        if (request.getGpa() != null && profile != null && profile.getGpa() != null) {
-            if (!request.getGpa().equals(profile.getGpa())) {
-                throw new BadRequestException("GPA không được phép thay đổi (Hiện tại: " + profile.getGpa() + ")");
-            }
+        // --- Update User Entity fields ---
+        boolean userChanged = false;
+        if (request.getFullName() != null && !request.getFullName().isBlank()
+                && !request.getFullName().trim().equals(user.getFullName())) {
+            user.setFullName(request.getFullName().trim());
+            userChanged = true;
         }
+        if (request.getPhone() != null && !request.getPhone().trim().equals(user.getPhone())) {
+            user.setPhone(request.getPhone().trim());
+            userChanged = true;
+        }
+        if (request.getDob() != null && !request.getDob().equals(user.getDob())) {
+            user.setDob(request.getDob());
+            userChanged = true;
+        }
+        if (request.getStatus() != null && !request.getStatus().equals(user.getStatus())) {
+            user.setStatus(request.getStatus());
+            userChanged = true;
+        }
+
+        // --- Update StudentProfile Entity fields ---
+        StudentProfile profile = user.getStudentProfile();
+
         if (profile == null) {
             profile = StudentProfile.builder()
                     .userId(user.getId())
                     .user(user)
                     .build();
+            user.setStudentProfile(profile);
+            userChanged = true;
         }
 
-        // Hierarchical Validation
-        Major major = null;
-        if (request.getMajor() != null && !request.getMajor().isEmpty()) {
-            major = majorRepository.findByName(request.getMajor().trim())
-                    .orElseThrow(() -> new BadRequestException("Ngành học không tồn tại: " + request.getMajor()));
-        }
+        boolean profileChanged = false;
 
-        Specialization spec = null;
-        if (request.getSpecialization() != null && !request.getSpecialization().isEmpty()) {
-            if (major == null) {
-                throw new BadRequestException("Cần chọn Ngành học trước khi chọn Chuyên ngành");
+        // Hierarchical Validation for Academic fields
+        Major major = profile.getMajor();
+        if (request.getMajor() != null) {
+            if (request.getMajor().isEmpty()) {
+                major = null;
+            } else {
+                final String majorNameReq = request.getMajor().trim();
+                major = majorRepository.findByName(majorNameReq)
+                        .orElseThrow(() -> new BadRequestException("Ngành học không tồn tại: " + majorNameReq));
             }
-            spec = specializationRepository.findByNameAndMajor(request.getSpecialization().trim(), major)
-                    .orElseThrow(() -> new BadRequestException("Chuyên ngành '" + request.getSpecialization()
-                            + "' không thuộc Ngành '" + request.getMajor() + "'"));
         }
 
-        SubSpecialization subSpec = null;
-        if (request.getSubSpecialization() != null && !request.getSubSpecialization().isEmpty()) {
-            if (spec == null) {
-                throw new BadRequestException("Cần chọn Chuyên ngành trước khi chọn Combo");
+        final Major finalMajor = major;
+        Specialization spec = profile.getSpecialization();
+        if (request.getSpecialization() != null) {
+            if (request.getSpecialization().isEmpty()) {
+                spec = null;
+            } else {
+                if (finalMajor == null) {
+                    throw new BadRequestException("Cần chọn Ngành học trước khi chọn Chuyên ngành");
+                }
+                final String specNameReq = request.getSpecialization().trim();
+                spec = specializationRepository.findByNameAndMajor(specNameReq, finalMajor)
+                        .orElseThrow(() -> new BadRequestException("Chuyên ngành '" + specNameReq
+                                + "' không thuộc Ngành '" + (finalMajor != null ? finalMajor.getName() : "") + "'"));
             }
-            subSpec = subSpecializationRepository
-                    .findByNameAndSpecialization(request.getSubSpecialization().trim(), spec)
-                    .orElseThrow(() -> new BadRequestException("Combo '" + request.getSubSpecialization()
-                            + "' không thuộc Chuyên ngành '" + request.getSpecialization() + "'"));
         }
 
-        if (profile == null) {
-            profile = StudentProfile.builder()
-                    .user(user)
-                    .build();
+        final Specialization finalSpec = spec;
+        SubSpecialization subSpec = profile.getSubSpecialization();
+        if (request.getSubSpecialization() != null) {
+            if (request.getSubSpecialization().isEmpty()) {
+                subSpec = null;
+            } else {
+                if (finalSpec == null) {
+                    throw new BadRequestException("Cần chọn Chuyên ngành trước khi chọn Combo");
+                }
+                final String subSpecNameReq = request.getSubSpecialization().trim();
+                subSpec = subSpecializationRepository
+                        .findByNameAndSpecialization(subSpecNameReq, finalSpec)
+                        .orElseThrow(() -> new BadRequestException("Combo '" + subSpecNameReq
+                                + "' không thuộc Chuyên ngành '" + (finalSpec != null ? finalSpec.getName() : "")
+                                + "'"));
+            }
         }
 
-        if (request.getMajor() != null)
+        if (major != profile.getMajor()) {
             profile.setMajor(major);
-        if (request.getSpecialization() != null)
+            profileChanged = true;
+        }
+        if (spec != profile.getSpecialization()) {
             profile.setSpecialization(spec);
-        if (request.getSubSpecialization() != null)
+            profileChanged = true;
+        }
+        if (subSpec != profile.getSubSpecialization()) {
             profile.setSubSpecialization(subSpec);
-        if (request.getCourse() != null)
-            profile.setCourse(request.getCourse());
+            profileChanged = true;
+        }
 
-        StudentProfile savedProfile = studentProfileRepository.save(profile);
+        if (request.getCourse() != null && !request.getCourse().trim().equals(profile.getCourse())) {
+            profile.setCourse(request.getCourse().trim());
+            profileChanged = true;
+        }
+        if (request.getGpa() != null && !request.getGpa().equals(profile.getGpa())) {
+            profile.setGpa(request.getGpa());
+            profileChanged = true;
+        }
 
-        // Note: We ignore User fields (fullName, email, phone, status, code) as they
-        // are immutable via this update.
-        // We also ignore the avatar as it belongs to the User entity.
+        if (userChanged || profileChanged) {
+            userRepository.save(user); // Cascade saves profile
+            log.info("Updated student with ID: {} and its profile", id);
+        } else {
+            log.info("No changes detected for student with ID: {}, skipping save", id);
+        }
 
-        return StudentResponse.fromUserAndProfile(user, savedProfile);
+        return StudentResponse.fromUserAndProfile(user, user.getStudentProfile());
     }
 
     @Override
@@ -367,164 +420,198 @@ public class StudentServiceImpl implements StudentService {
     @Transactional(readOnly = true)
     public List<StudentImportDTO> previewImportStudents(MultipartFile file) {
         List<StudentImportDTO> previewList = new ArrayList<>();
-        try (InputStream is = file.getInputStream(); Workbook workbook = new XSSFWorkbook(is)) {
+        List<Map<String, String>> rowDataList = new ArrayList<>();
+
+        // Phase 1: Read Excel into memory and extract codes
+        try (InputStream is = file.getInputStream();
+                Workbook workbook = new XSSFWorkbook(is)) {
+
             Sheet sheet = workbook.getSheetAt(0);
             Iterator<Row> rows = sheet.iterator();
-            int rowNumber = 0;
-            Set<String> seenCodes = new HashSet<>();
+            int rowIndex = 0;
 
             while (rows.hasNext()) {
                 Row currentRow = rows.next();
-                int currentRowNum = rowNumber + 1;
-
-                if (rowNumber == 0) {
-                    rowNumber++;
+                if (rowIndex == 0) {
+                    rowIndex++;
                     continue;
                 }
+
                 // Format: STT, Code, FullName, Email, Phone, Major, Spec, SubSpec, Course, GPA
                 String code = getCellValueAsString(currentRow.getCell(1));
-                String fullName = getCellValueAsString(currentRow.getCell(2));
-                String email = getCellValueAsString(currentRow.getCell(3));
-                String phone = getCellValueAsString(currentRow.getCell(4));
-                String major = getCellValueAsString(currentRow.getCell(5));
-                String specialization = getCellValueAsString(currentRow.getCell(6));
-                String subSpecialization = getCellValueAsString(currentRow.getCell(7));
-                String course = getCellValueAsString(currentRow.getCell(8));
-                String gpaStr = getCellValueAsString(currentRow.getCell(9));
-                Double gpa = null;
-                if (gpaStr != null) {
-                    try {
-                        gpa = Double.parseDouble(gpaStr);
-                    } catch (NumberFormatException e) {
-                    }
-                }
-
-                if (code == null || code.isEmpty()) {
-                    rowNumber++;
+                if (code == null || code.trim().isEmpty()) {
+                    rowIndex++;
                     continue;
                 }
 
-                StudentImportDTO dto = StudentImportDTO.builder()
-                        .rowNumber(currentRowNum)
-                        .code(code)
-                        .major(major)
-                        .specialization(specialization)
-                        .subSpecialization(subSpecialization)
-                        .course(course)
-                        .gpa(gpa)
-                        .status("VALID")
-                        .build();
+                Map<String, String> data = new HashMap<>();
+                data.put("rowNumber", String.valueOf(rowIndex + 1));
+                data.put("code", code.trim());
+                data.put("fullName", getCellValueAsString(currentRow.getCell(2)));
+                data.put("email", getCellValueAsString(currentRow.getCell(3)));
+                data.put("phone", getCellValueAsString(currentRow.getCell(4)));
+                data.put("major", getCellValueAsString(currentRow.getCell(5)));
+                data.put("specialization", getCellValueAsString(currentRow.getCell(6)));
+                data.put("subSpecialization", getCellValueAsString(currentRow.getCell(7)));
+                data.put("course", getCellValueAsString(currentRow.getCell(8)));
+                data.put("gpa", getCellValueAsString(currentRow.getCell(9)));
 
-                if (seenCodes.contains(code.toLowerCase())) {
+                rowDataList.add(data);
+                rowIndex++;
+            }
+        } catch (Exception e) {
+            log.error("Error reading student import file", e);
+            throw new RuntimeException("Lỗi đọc file: " + e.getMessage());
+        }
+
+        if (rowDataList.isEmpty()) {
+            return previewList;
+        }
+
+        // Phase 2: Batch Pre-fetch data
+        Set<String> codesInFile = rowDataList.stream()
+                .map(d -> d.get("code").toLowerCase())
+                .collect(Collectors.toSet());
+
+        Map<String, User> userMap = userRepository.findByCodeInIgnoreCase(codesInFile).stream()
+                .collect(Collectors.toMap(u -> u.getCode().trim().toLowerCase(), u -> u, (a, b) -> a));
+
+        Map<String, Major> majorMap = majorRepository.findAll().stream()
+                .collect(Collectors.toMap(m -> m.getName().trim().toLowerCase(), m -> m, (a, b) -> a));
+
+        Map<String, Specialization> specMap = specializationRepository.findAll().stream()
+                .collect(Collectors.toMap(s -> s.getName().trim().toLowerCase() + "|" + s.getMajor().getId(), s -> s,
+                        (a, b) -> a));
+
+        Map<String, SubSpecialization> subSpecMap = subSpecializationRepository.findAll().stream()
+                .collect(Collectors.toMap(
+                        ss -> ss.getName().trim().toLowerCase() + "|" + ss.getSpecialization().getId(),
+                        ss -> ss, (a, b) -> a));
+
+        // Phase 3: Process rows in-memory
+        Set<String> seenCodes = new HashSet<>();
+        for (Map<String, String> data : rowDataList) {
+            String code = data.get("code");
+            int currentRowNum = Integer.parseInt(data.get("rowNumber"));
+
+            Double gpa = null;
+            if (data.get("gpa") != null) {
+                try {
+                    gpa = Double.parseDouble(data.get("gpa"));
+                } catch (NumberFormatException e) {
+                }
+            }
+
+            StudentImportDTO dto = StudentImportDTO.builder()
+                    .rowNumber(currentRowNum)
+                    .code(code)
+                    .major(data.get("major"))
+                    .specialization(data.get("specialization"))
+                    .subSpecialization(data.get("subSpecialization"))
+                    .course(data.get("course"))
+                    .gpa(gpa)
+                    .status("VALID")
+                    .build();
+
+            if (seenCodes.contains(code.toLowerCase())) {
+                dto.setStatus("ERROR");
+                dto.setErrorMessage("Mã SV bị trùng trong file");
+            } else {
+                seenCodes.add(code.toLowerCase());
+
+                User user = userMap.get(code.toLowerCase());
+                if (user == null) {
                     dto.setStatus("ERROR");
-                    dto.setErrorMessage("Mã SV bị trùng trong file");
+                    dto.setErrorMessage("Không tìm thấy student với mã này");
                 } else {
-                    seenCodes.add(code.toLowerCase());
+                    dto.setFullName(user.getFullName());
+                    dto.setEmail(user.getEmail());
 
-                    Optional<User> userOpt = userRepository.findByCode(code);
-                    if (userOpt.isEmpty()) {
+                    if (user.getRole() != User.UserRole.STUDENT) {
                         dto.setStatus("ERROR");
-                        dto.setErrorMessage("Không tìm thấy student với mã này");
+                        dto.setErrorMessage("User không phải là Sinh viên");
                     } else {
-                        User user = userOpt.get();
-                        dto.setFullName(user.getFullName());
-                        dto.setEmail(user.getEmail());
-                        dto.setPhone(phone);
+                        StringBuilder errorMsg = new StringBuilder();
+                        boolean hasError = false;
 
-                        if (user.getRole() != User.UserRole.STUDENT) {
-                            dto.setStatus("ERROR");
-                            dto.setErrorMessage("User không phải là Sinh viên");
-                        } else {
-                            // Strict check
-                            StringBuilder errorMsg = new StringBuilder();
-                            boolean hasError = false;
+                        String fullName = data.get("fullName");
+                        String email = data.get("email");
+                        String phone = data.get("phone");
 
-                            if (fullName != null && !fullName.trim().equalsIgnoreCase(user.getFullName())) {
-                                errorMsg.append("Tên không trùng khớp (Excel: ").append(fullName).append(" vs DB: ")
-                                        .append(user.getFullName()).append("). ");
+                        if (fullName != null && !fullName.trim().isEmpty()
+                                && !fullName.trim().equalsIgnoreCase(user.getFullName())) {
+                            errorMsg.append("Tên không trùng khớp (Excel: ").append(fullName)
+                                    .append(" vs DB: ").append(user.getFullName()).append("). ");
+                            hasError = true;
+                        }
+                        if (email != null && !email.trim().isEmpty()
+                                && !email.trim().equalsIgnoreCase(user.getEmail())) {
+                            errorMsg.append("Email không trùng khớp (Excel: ").append(email)
+                                    .append(" vs DB: ").append(user.getEmail()).append("). ");
+                            hasError = true;
+                        }
+
+                        String dbPhone = user.getPhone() != null ? user.getPhone() : "";
+                        String excelPhone = phone != null ? phone : "";
+                        if (phone != null && !phone.trim().isEmpty() && !excelPhone.trim().equals(dbPhone)) {
+                            errorMsg.append("Số điện thoại không trùng khớp (Excel: ").append(phone)
+                                    .append(" vs DB: ").append(dbPhone).append("). ");
+                            hasError = true;
+                        }
+
+                        Major foundMajor = null;
+                        String majorName = data.get("major");
+                        if (majorName != null && !majorName.trim().isEmpty()) {
+                            foundMajor = majorMap.get(majorName.trim().toLowerCase());
+                            if (foundMajor == null) {
+                                errorMsg.append("Ngành học không tồn tại: ").append(majorName).append(". ");
                                 hasError = true;
                             }
-                            if (email != null && !email.trim().equalsIgnoreCase(user.getEmail())) {
-                                errorMsg.append("Email không trùng khớp (Excel: ").append(email).append(" vs DB: ")
-                                        .append(user.getEmail()).append("). ");
+                        }
+
+                        Specialization foundSpec = null;
+                        String specName = data.get("specialization");
+                        if (specName != null && !specName.trim().isEmpty()) {
+                            if (foundMajor == null) {
+                                errorMsg.append("Chuyên ngành '").append(specName)
+                                        .append("' yêu cầu Ngành học hợp lệ. ");
                                 hasError = true;
-                            }
-                            String dbPhone = user.getPhone() != null ? user.getPhone() : "";
-                            String xlsPhone = phone != null ? phone : "";
-                            if (!xlsPhone.trim().equals(dbPhone)) {
-                                errorMsg.append("SĐT không trùng khớp (Excel: ").append(xlsPhone).append(" vs DB: ")
-                                        .append(dbPhone).append("). ");
-                                hasError = true;
-                            }
-
-                            // Hierarchical Validation
-                            Major foundMajor = null;
-                            if (major != null && !major.trim().isEmpty()) {
-                                foundMajor = majorRepository.findByName(major.trim()).orElse(null);
-                                if (foundMajor == null) {
-                                    errorMsg.append("Ngành học không tồn tại: ").append(major).append(". ");
-                                    hasError = true;
-                                }
-                            }
-
-                            Specialization foundSpec = null;
-                            if (specialization != null && !specialization.trim().isEmpty()) {
-                                if (foundMajor == null) {
-                                    errorMsg.append("Chuyên ngành '").append(specialization)
-                                            .append("' yêu cầu Ngành học hợp lệ. ");
-                                    hasError = true;
-                                } else {
-                                    foundSpec = specializationRepository.findByNameAndMajor(specialization.trim(),
-                                            foundMajor).orElse(null);
-                                    if (foundSpec == null) {
-                                        errorMsg.append("Chuyên ngành '").append(specialization)
-                                                .append("' không thuộc Ngành '").append(major).append("'. ");
-                                        hasError = true;
-                                    }
-                                }
-                            }
-
-                            if (subSpecialization != null && !subSpecialization.trim().isEmpty()) {
+                            } else {
+                                foundSpec = specMap.get(specName.trim().toLowerCase() + "|" + foundMajor.getId());
                                 if (foundSpec == null) {
-                                    errorMsg.append("Combo '").append(subSpecialization)
-                                            .append("' yêu cầu Chuyên ngành hợp lệ. ");
-                                    hasError = true;
-                                } else {
-                                    SubSpecialization foundSub = subSpecializationRepository
-                                            .findByNameAndSpecialization(subSpecialization.trim(), foundSpec)
-                                            .orElse(null);
-                                    if (foundSub == null) {
-                                        errorMsg.append("Combo '").append(subSpecialization)
-                                                .append("' không thuộc Chuyên ngành '").append(specialization)
-                                                .append("'. ");
-                                        hasError = true;
-                                    }
-                                }
-                            }
-
-                            // GPA Validation: Check if GPA in Excel matches DB
-                            StudentProfile existingProfile = studentProfileRepository.findById(user.getId())
-                                    .orElse(null);
-                            if (gpa != null && existingProfile != null && existingProfile.getGpa() != null) {
-                                if (!gpa.equals(existingProfile.getGpa())) {
-                                    errorMsg.append("GPA không trùng khớp với hệ thống (Excel: ").append(gpa)
-                                            .append(" vs DB: ").append(existingProfile.getGpa()).append("). ");
+                                    errorMsg.append("Chuyên ngành '").append(specName)
+                                            .append("' không thuộc Ngành '").append(majorName).append("'. ");
                                     hasError = true;
                                 }
                             }
+                        }
 
-                            if (hasError) {
-                                dto.setStatus("ERROR");
-                                dto.setErrorMessage(errorMsg.toString().trim());
+                        String subSpecName = data.get("subSpecialization");
+                        if (subSpecName != null && !subSpecName.trim().isEmpty()) {
+                            if (foundSpec == null) {
+                                errorMsg.append("Combo '").append(subSpecName)
+                                        .append("' yêu cầu Chuyên ngành hợp lệ. ");
+                                hasError = true;
+                            } else {
+                                SubSpecialization foundSub = subSpecMap
+                                        .get(subSpecName.trim().toLowerCase() + "|" + foundSpec.getId());
+                                if (foundSub == null) {
+                                    errorMsg.append("Combo '").append(subSpecName)
+                                            .append(" không thuộc Chuyên ngành '").append(specName)
+                                            .append("'. ");
+                                    hasError = true;
+                                }
                             }
+                        }
+
+                        if (hasError) {
+                            dto.setStatus("ERROR");
+                            dto.setErrorMessage(errorMsg.toString().trim());
                         }
                     }
                 }
-                previewList.add(dto);
-                rowNumber++;
             }
-        } catch (Exception e) {
-            throw new RuntimeException("Lỗi đọc file: " + e.getMessage());
+            previewList.add(dto);
         }
         return previewList;
     }
@@ -538,6 +625,45 @@ public class StudentServiceImpl implements StudentService {
         int updatedCount = 0;
         int failedCount = 0;
 
+        if (dtos.isEmpty()) {
+            result.put("created", 0);
+            result.put("updated", 0);
+            result.put("failed", 0);
+            result.put("errors", errors);
+            return result;
+        }
+
+        // Phase 1: Pre-fetch & Cache for O(1) performance
+        log.info("Starting high-speed import processing for {} students", dtos.size());
+
+        // Cache Academic Entities with case-insensitive keys
+        Map<String, Major> majorMap = majorRepository.findAll().stream()
+                .collect(Collectors.toMap(m -> m.getName().trim().toLowerCase(), m -> m, (a, b) -> a));
+
+        Map<String, Specialization> specMap = specializationRepository.findAll().stream()
+                .collect(Collectors.toMap(s -> s.getName().trim().toLowerCase() + "|" + s.getMajor().getId(), s -> s,
+                        (a, b) -> a));
+
+        Map<String, SubSpecialization> subSpecMap = subSpecializationRepository.findAll().stream()
+                .collect(
+                        Collectors.toMap(ss -> ss.getName().trim().toLowerCase() + "|" + ss.getSpecialization().getId(),
+                                ss -> ss, (a, b) -> a));
+
+        List<String> codes = dtos.stream()
+                .filter(d -> !"ERROR".equals(d.getStatus()))
+                .map(d -> d.getCode().trim().toLowerCase()) // MUST lowercase for the LOWER(u.code) IN :codes query
+                .collect(Collectors.toList());
+
+        Map<String, User> userMap = userRepository.findByCodeInIgnoreCase(codes).stream()
+                .collect(Collectors.toMap(u -> u.getCode().trim().toLowerCase(), u -> u));
+
+        List<Long> userIds = userMap.values().stream().map(User::getId).collect(Collectors.toList());
+        Map<Long, StudentProfile> profileMap = studentProfileRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(StudentProfile::getUserId, p -> p));
+
+        List<StudentProfile> profilesToSave = new ArrayList<>();
+
+        // Phase 2: In-memory Transformation
         for (StudentImportDTO dto : dtos) {
             if ("ERROR".equals(dto.getStatus())) {
                 failedCount++;
@@ -545,58 +671,85 @@ public class StudentServiceImpl implements StudentService {
                 continue;
             }
             try {
-                User user = userRepository.findByCode(dto.getCode())
-                        .orElseThrow(() -> new NotFoundException("Not found: " + dto.getCode()));
+                User user = userMap.get(dto.getCode().trim().toLowerCase());
+                if (user == null) {
+                    throw new NotFoundException("Không tìm thấy user với mã: " + dto.getCode());
+                }
 
-                StudentProfile profile = studentProfileRepository.findById(user.getId()).orElse(null);
+                StudentProfile profile = profileMap.get(user.getId());
 
                 Major major = null;
-                if (dto.getMajor() != null && !dto.getMajor().isEmpty()) {
-                    major = majorRepository.findByName(dto.getMajor().trim()).orElse(null);
+                if (dto.getMajor() != null && !dto.getMajor().trim().isEmpty()) {
+                    major = majorMap.get(dto.getMajor().trim().toLowerCase());
                 }
 
                 Specialization specialization = null;
-                if (dto.getSpecialization() != null && !dto.getSpecialization().isEmpty() && major != null) {
-                    specialization = specializationRepository.findByNameAndMajor(dto.getSpecialization().trim(), major)
-                            .orElse(null);
+                if (dto.getSpecialization() != null && !dto.getSpecialization().trim().isEmpty() && major != null) {
+                    specialization = specMap.get(dto.getSpecialization().trim().toLowerCase() + "|" + major.getId());
                 }
 
                 SubSpecialization subSpecialization = null;
-                if (dto.getSubSpecialization() != null && !dto.getSubSpecialization().isEmpty()
+                if (dto.getSubSpecialization() != null && !dto.getSubSpecialization().trim().isEmpty()
                         && specialization != null) {
-                    subSpecialization = subSpecializationRepository
-                            .findByNameAndSpecialization(dto.getSubSpecialization().trim(), specialization)
-                            .orElse(null);
+                    subSpecialization = subSpecMap
+                            .get(dto.getSubSpecialization().trim().toLowerCase() + "|" + specialization.getId());
                 }
 
                 if (profile == null) {
                     profile = StudentProfile.builder()
+                            .userId(user.getId())
                             .user(user)
                             .major(major)
                             .specialization(specialization)
                             .subSpecialization(subSpecialization)
-                            .course(dto.getCourse())
+                            .course(dto.getCourse() != null ? dto.getCourse().trim() : null)
                             .gpa(dto.getGpa())
                             .build();
                     createdCount++;
+                    profilesToSave.add(profile);
                 } else {
-                    if (dto.getMajor() != null)
+                    boolean changed = false;
+
+                    if (!java.util.Objects.equals(profile.getMajor(), major)) {
                         profile.setMajor(major);
-                    if (dto.getSpecialization() != null)
+                        changed = true;
+                    }
+                    if (!java.util.Objects.equals(profile.getSpecialization(), specialization)) {
                         profile.setSpecialization(specialization);
-                    if (dto.getSubSpecialization() != null)
+                        changed = true;
+                    }
+                    if (!java.util.Objects.equals(profile.getSubSpecialization(), subSpecialization)) {
                         profile.setSubSpecialization(subSpecialization);
-                    if (dto.getCourse() != null)
-                        profile.setCourse(dto.getCourse());
-                    updatedCount++;
+                        changed = true;
+                    }
+
+                    String newCourse = dto.getCourse() != null ? dto.getCourse().trim() : null;
+                    if (!java.util.Objects.equals(profile.getCourse(), newCourse)) {
+                        profile.setCourse(newCourse);
+                        changed = true;
+                    }
+                    if (!java.util.Objects.equals(profile.getGpa(), dto.getGpa())) {
+                        profile.setGpa(dto.getGpa());
+                        changed = true;
+                    }
+
+                    if (changed) {
+                        updatedCount++;
+                        profilesToSave.add(profile);
+                    }
                 }
-                studentProfileRepository.save(profile);
 
             } catch (Exception e) {
                 failedCount++;
-                errors.add("Lỗi SV " + dto.getCode() + ": " + e.getMessage());
-                log.error("Error saving {}", dto.getCode(), e);
+                errors.add("Lỗi xử lý SV " + dto.getCode() + ": " + e.getMessage());
+                log.error("Internal error processing imported student {}", dto.getCode(), e);
             }
+        }
+
+        // Phase 3: Optimized Batch Persistence
+        if (!profilesToSave.isEmpty()) {
+            studentProfileRepository.saveAll(profilesToSave);
+            log.info("Batch saved {} modified student profiles successfully", profilesToSave.size());
         }
 
         result.put("created", createdCount);

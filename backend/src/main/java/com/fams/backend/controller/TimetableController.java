@@ -14,7 +14,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletResponse; // Import Response for streaming file
 
@@ -48,6 +47,7 @@ public class TimetableController {
     private final SemesterRepository semesterRepository;
     private final com.fams.backend.repository.ClassSectionRepository classSectionRepository;
     private final com.fams.backend.repository.SemesterConfigRepository semesterConfigRepository;
+    private final com.fams.backend.service.timetable.TimetableSlotService timetableSlotService;
 
     // ==================== GENERATION APIs ====================
 
@@ -281,6 +281,27 @@ public class TimetableController {
         return ResponseEntity.ok(dtos);
     }
 
+    @RequestMapping(value = "/slot/{id}", method = { RequestMethod.PATCH, RequestMethod.PUT })
+    @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
+    @Operation(summary = "Update a timetable slot", description = "Reschedule a session to a different date, slot, or room")
+    public ResponseEntity<TimetableDTO.TimetableSlotDTO> updateSlot(
+            @PathVariable Long id,
+            @RequestBody @jakarta.validation.Valid TimetableDTO.UpdateSlotRequest request) {
+        log.info("Updating timetable slot {}: date={}, slot={}, room={}", id, request.getDate(),
+                request.getSlotNumber(), request.getRoomId());
+        return ResponseEntity.ok(timetableSlotService.updateSlot(id, request));
+    }
+
+    @GetMapping("/availability")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
+    @Operation(summary = "Get available slots and rooms for a date")
+    public ResponseEntity<TimetableDTO.AvailabilityResponse> getAvailability(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam String semesterCode) {
+        log.info("[Controller] Get availability: date={}, semesterCode={}", date, semesterCode);
+        return ResponseEntity.ok(timetableSlotService.getAvailability(date, semesterCode));
+    }
+
     @GetMapping("/student/{studentId}")
     @Operation(summary = "Get timetable for a student")
     public ResponseEntity<TimetableDTO.WeeklyTimetableDTO> getStudentTimetable(
@@ -372,6 +393,65 @@ public class TimetableController {
             log.error("Error fetching timetable for student " + studentId, e);
             throw e; // Let Spring handle the 500 but now it's logged
         }
+    }
+
+    @GetMapping("/student/{studentId}/semester")
+    @Operation(summary = "Get all timetable slots for a student in a semester (for calendar export)")
+    public ResponseEntity<List<TimetableDTO.TimetableSlotDTO>> getSemesterSlotsForStudent(
+            @PathVariable Long studentId,
+            @RequestParam String semesterCode) {
+
+        User student = userRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+
+        Semester semester = semesterRepository.findByCode(semesterCode)
+                .orElseThrow(() -> new RuntimeException("Semester not found"));
+
+        // Check if semester is published
+        com.fams.backend.entity.SemesterConfig config = semester.getConfig();
+        if (config != null && !Boolean.TRUE.equals(config.getIsPublished())) {
+            return ResponseEntity.status(403).build();
+        }
+
+        // Fetch ALL slots for this student in this semester
+        List<TimetableSlot> slots = timetableSlotRepository.findByStudentCodeAndDateBetween(
+                student.getCode(), semester.getStartDate(), semester.getEndDate());
+
+        // Map to DTOs and sort
+        List<TimetableDTO.TimetableSlotDTO> slotDTOs = slots.stream()
+                .map(this::convertToDTO)
+                .sorted(Comparator.comparing(TimetableDTO.TimetableSlotDTO::getDate)
+                        .thenComparing(TimetableDTO.TimetableSlotDTO::getSlotNumber))
+                .collect(Collectors.toList());
+
+        log.info("Returning {} slots for student {} in semester {}", slotDTOs.size(), studentId, semesterCode);
+        return ResponseEntity.ok(slotDTOs);
+    }
+
+    @GetMapping("/lecturer/{lecturerId}/semester")
+    @Operation(summary = "Get all timetable slots for a lecturer in a semester (for calendar export)")
+    public ResponseEntity<List<TimetableDTO.TimetableSlotDTO>> getSemesterSlotsForLecturer(
+            @PathVariable Long lecturerId,
+            @RequestParam String semesterCode) {
+
+        User lecturer = userRepository.findById(lecturerId)
+                .orElseThrow(() -> new RuntimeException("Lecturer not found"));
+
+        Semester semester = semesterRepository.findByCode(semesterCode)
+                .orElseThrow(() -> new RuntimeException("Semester not found"));
+
+        // Lecturers can always see their schedule
+        List<TimetableSlot> slots = timetableSlotRepository.findByLecturerIdAndDateBetween(
+                lecturerId, semester.getStartDate(), semester.getEndDate());
+
+        List<TimetableDTO.TimetableSlotDTO> slotDTOs = slots.stream()
+                .map(this::convertToDTO)
+                .sorted(Comparator.comparing(TimetableDTO.TimetableSlotDTO::getDate)
+                        .thenComparing(TimetableDTO.TimetableSlotDTO::getSlotNumber))
+                .collect(Collectors.toList());
+
+        log.info("Returning {} slots for lecturer {} in semester {}", slotDTOs.size(), lecturerId, semesterCode);
+        return ResponseEntity.ok(slotDTOs);
     }
 
     @GetMapping("/export/student/{studentId}")

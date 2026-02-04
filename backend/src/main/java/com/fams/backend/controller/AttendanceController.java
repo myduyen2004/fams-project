@@ -1,0 +1,62 @@
+package com.fams.backend.controller;
+
+import com.fams.backend.dto.attendance.AttendanceDTO;
+import com.fams.backend.entity.User;
+import com.fams.backend.repository.UserRepository;
+import com.fams.backend.service.AttendanceService;
+import io.swagger.v3.oas.annotations.Operation;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/v1/attendance")
+@RequiredArgsConstructor
+public class AttendanceController {
+
+    private final AttendanceService attendanceService;
+    private final UserRepository userRepository;
+
+    @PostMapping("/session/start")
+    @PreAuthorize("hasRole('LECTURER')")
+    @Operation(summary = "Start attendance session", description = "For lecturer to start check-in session")
+    public ResponseEntity<AttendanceDTO.SessionDetailResponse> startSession(
+            @RequestBody AttendanceDTO.StartSessionRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        User user = userRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return ResponseEntity.ok(attendanceService.startSession(user.getId(), request));
+    }
+
+    @GetMapping("/session/{sessionId}")
+    @PreAuthorize("hasAnyRole('LECTURER', 'STUDENT')")
+    @Operation(summary = "Get session detail")
+    public ResponseEntity<AttendanceDTO.SessionDetailResponse> getSession(@PathVariable Long sessionId) {
+        return ResponseEntity.ok(attendanceService.getSessionDetail(sessionId));
+    }
+
+    @GetMapping("/session/slot/{slotId}")
+    @PreAuthorize("hasRole('LECTURER')")
+    @Operation(summary = "Get session by slot")
+    public ResponseEntity<AttendanceDTO.SessionDetailResponse> getSessionBySlot(@PathVariable Long slotId) {
+        return ResponseEntity.ok(attendanceService.getSessionBySlot(slotId));
+    }
+
+    @PostMapping("/check-in")
+    @PreAuthorize("hasRole('STUDENT')")
+    @Operation(summary = "Student Check-in")
+    public ResponseEntity<AttendanceDTO.CheckInResponse> checkIn(
+            @RequestBody AttendanceDTO.CheckInRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        User user = userRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return ResponseEntity.ok(attendanceService.checkIn(user.getId(), request));
+    }
+}
