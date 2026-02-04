@@ -249,6 +249,9 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
 
         ScheduleRequest savedRequest = scheduleRequestRepository.saveAndFlush(request);
 
+        // Gửi thông báo đến người yêu cầu sau khi cập nhật trạng thái
+        sendNotificationAsync(savedRequest, status, note);
+
         ScheduleRequestResponse response = mapToResponse(savedRequest);
         return response;
     }
@@ -257,13 +260,19 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
     protected void sendNotificationAsync(ScheduleRequest savedRequest, ScheduleRequest.RequestStatus status,
             String note) {
         try {
-            String statusVN = status == ScheduleRequest.RequestStatus.APPROVED ? "được Duyệt" : "bị Từ chối";
-            String title = "Cập nhật trạng thái yêu cầu thay đổi lịch học";
-            String content = String.format("Yêu cầu thay đổi lịch học cho lớp %s của bạn đã %s.",
-                    savedRequest.getClassSection() != null ? savedRequest.getClassSection().getClassName() : "",
-                    statusVN);
+            String statusVN = status == ScheduleRequest.RequestStatus.APPROVED ? "Đã duyệt" : "Từ chối";
+            String className = savedRequest.getClassSection() != null ? savedRequest.getClassSection().getClassName()
+                    : "";
+            String title = "Yêu cầu thay đổi lịch học lớp " + className;
+            // Hidden status marker for frontend detection (not visible to user)
+            String hiddenStatusMarker = "<span style=\"display:none;\">" + statusVN + "</span>";
+            String content;
             if (note != null && !note.isEmpty()) {
-                content += "\nPhản hồi từ người duyệt: " + note;
+                // Chỉ hiển thị ghi chú của người duyệt
+                content = hiddenStatusMarker + note;
+            } else {
+                // Không có ghi chú, chỉ lưu hidden status marker
+                content = hiddenStatusMarker;
             }
 
             com.fams.backend.dto.request.NotificationRequest notifRequest = com.fams.backend.dto.request.NotificationRequest
