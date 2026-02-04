@@ -4,32 +4,15 @@ import {
     ArrowLeft,
     Printer,
     User,
-    Clock,
     CheckCircle,
     Loader2,
     MessageSquare,
-    Paperclip
+    FileText
 } from 'lucide-react';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { academicStaffService, ScheduleRequestResponse } from '../../services/api/academicStaffService';
 import dayjs from 'dayjs';
 import toast from 'react-hot-toast';
-
-// Helper function to generate request title based on type
-const getRequestTitle = (request: ScheduleRequestResponse): string => {
-    switch (request.type) {
-        case 'ROOM_CHANGE':
-            return `Đơn yêu cầu đổi phòng - Lớp ${request.className}${request.requestedRoomName ? ` - Phòng muốn đổi: ${request.requestedRoomName}` : ''}`;
-        case 'RESCHEDULE':
-            return `Đơn yêu cầu đổi lịch - Lớp ${request.className}${request.requestedSlotInfo ? ` - ${request.requestedSlotInfo}` : ''}`;
-        case 'CANCEL':
-            return `Đơn yêu cầu hủy buổi học - Lớp ${request.className}${request.originalSlotInfo ? ` - ${request.originalSlotInfo}` : ''}`;
-        case 'SWAP':
-            return `Đơn yêu cầu đổi slot với giảng viên khác - Lớp ${request.className}`;
-        default:
-            return `Đơn yêu cầu ${request.typeLabel} - Lớp ${request.className}`;
-    }
-};
 
 export const RequestDetailPage = () => {
     const { id } = useParams<{ id: string }>();
@@ -96,36 +79,21 @@ export const RequestDetailPage = () => {
     };
 
     return (
-        <AcademicStaffLayout pageTitle="Chi tiết yêu cầu">
+        <AcademicStaffLayout pageTitle="Chi tiết yêu cầu thay đổi lịch dạy">
             <div className="max-w-7xl mx-auto space-y-6">
-                {/* Print Header */}
-                <div className="print-header hidden">
-                    <div>
-                        <h1 className="text-xl font-bold">TRƯỜNG ĐẠI HỌC FPT</h1>
-                        <p className="text-xs">Phòng Quản lý Đào tạo - Academic Staff</p>
-                    </div>
-                    <div className="text-right text-xs">
-                        <p>Số: #REQ-{dayjs(request.createdAt).format('YYYY')}-{request.id.toString().padStart(4, '0')}</p>
-                        <p>Ngày: {dayjs().format('DD/MM/YYYY')}</p>
-                    </div>
-                </div>
+
 
                 {/* Top Actions */}
-                <div className="flex items-center justify-between bg-white dark:bg-zinc-900 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-zinc-800">
-                    <div className="flex items-center gap-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 no-print">
+                    <div className="flex flex-col gap-2">
                         <button
                             onClick={() => navigate('/academic-staff/requests')}
-                            className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                            className="flex items-center gap-2 text-sm text-gray-500 hover:text-fpt-orange transition-colors w-fit"
                         >
-                            <ArrowLeft size={20} />
+                            <ArrowLeft size={16} />
+                            Quay lại danh sách
                         </button>
-                        <div>
-                            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Chi tiết yêu cầu</h1>
-                            <p className="text-xs text-gray-500 mt-0.5">
-                                Quản lý yêu cầu {request.requesterRole === 'STUDENT' ? 'sinh viên' : 'giảng viên'} /
-                                <span className="text-fpt-orange font-mono font-medium ml-1">#REQ-{dayjs(request.createdAt).format('YYYY')}-{request.id.toString().padStart(4, '0')}</span>
-                            </p>
-                        </div>
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Chi tiết yêu cầu thay đổi lịch dạy</h1>
                     </div>
                     <button
                         onClick={() => window.print()}
@@ -139,48 +107,129 @@ export const RequestDetailPage = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Main Content (Left) */}
                     <div className="lg:col-span-2 space-y-6">
-                        {/* Content Card */}
-                        <div className="bg-white dark:bg-zinc-900 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 relative overflow-hidden">
+                        {/* Section 1: Thông tin chung */}
+                        <section className="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-800">
                             <div className="flex items-center justify-between mb-6">
-                                <span className="px-3 py-1 bg-red-50 text-red-600 text-[10px] font-bold uppercase tracking-wider rounded-full border border-red-100">
+                                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Thông tin chung</h2>
+                                <span className="px-3 py-1 bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 rounded-full text-xs font-bold uppercase tracking-wider">
                                     {request.typeLabel}
                                 </span>
-                                <div className="flex items-center gap-2 text-gray-500 text-sm">
-                                    <Clock size={16} />
-                                    <span>{dayjs(request.createdAt).format('DD/MM/YYYY - HH:mm')}</span>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
+                                <div>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Lớp học</p>
+                                    <p className="font-semibold text-gray-700 dark:text-gray-200">{request.className}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Ngày tạo</p>
+                                    <p className="font-semibold text-gray-700 dark:text-gray-200">{dayjs(request.createdAt).format('DD/MM/YYYY HH:mm')}</p>
                                 </div>
                             </div>
+                        </section>
 
-                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-                                {getRequestTitle(request)}
-                            </h2>
-
-                            <div className="prose dark:prose-invert max-w-none text-gray-600 dark:text-gray-400 mb-8 whitespace-pre-wrap leading-relaxed">
-                                {request.reason}
-                            </div>
-
-                            {/* Additional Info Grid */}
-                            <div className="grid grid-cols-2 gap-4 border-t border-gray-100 dark:border-zinc-800 pt-8 mt-8">
-
+                        {/* Section 2: Chi tiết thay đổi */}
+                        <section className="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-800">
+                            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Chi tiết thay đổi</h2>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-4">
                                 <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">File/ tệp đính kèm</p>
-                                    {request.file ? (
-                                        <a
-                                            href={request.file}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                                        >
-                                            <Paperclip size={16} />
-                                            Xem tệp đính kèm
-                                        </a>
-                                    ) : (
-                                        <p className="text-sm font-semibold text-gray-400 italic">Không có tệp đính kèm</p>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Phòng ban đầu</p>
+                                    <p className="font-semibold text-gray-700 dark:text-gray-200">
+                                        {request.originalRoomName || 'Không có'}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Slot ban đầu</p>
+                                    <p className="font-semibold text-gray-700 dark:text-gray-200">
+                                        {request.originalSlotNumber ? `Slot ${request.originalSlotNumber}` : (request.originalSlotInfo || 'Không có')}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Ngày yêu cầu</p>
+                                    <p className="font-semibold text-gray-700 dark:text-gray-200">
+                                        {request.requestedDate ? dayjs(request.requestedDate).format('DD/MM/YYYY') : 'Không có'}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Phòng yêu cầu</p>
+                                    <p className="font-semibold text-gray-700 dark:text-gray-200">
+                                        {request.requestedRoomName || 'Không đổi'}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Slot yêu cầu</p>
+                                    <p className="font-semibold text-gray-700 dark:text-gray-200">
+                                        {request.requestedSlotNumber ? `Slot ${request.requestedSlotNumber}` : (request.requestedSlotInfo || 'Không có')}
+                                    </p>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* Section 3: Nội dung & Tài liệu */}
+                        <section className="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-800">
+                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Nội dung & Tài liệu</h2>
+                            <div className="space-y-4">
+                                <div>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Lý do thay đổi</p>
+                                    <div className="p-4 bg-gray-50 dark:bg-zinc-800/50 rounded-lg text-gray-600 dark:text-gray-300 text-sm leading-relaxed border border-gray-100 dark:border-zinc-700">
+                                        {request.reason}
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-bold text-slate-800 dark:text-white mb-4">
+                                        Tài liệu đính kèm ({request.file ? (request.file.startsWith('[') ? JSON.parse(request.file).length : 1) : 0})
+                                    </h3>
+                                    {request.file ? (() => {
+                                        // Try to parse as JSON array, fallback to single file
+                                        let fileUrls: string[] = [];
+                                        try {
+                                            const parsed = JSON.parse(request.file);
+                                            fileUrls = Array.isArray(parsed) ? parsed : [request.file];
+                                        } catch {
+                                            fileUrls = [request.file];
+                                        }
+
+                                        return (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                {fileUrls.map((url, index) => {
+                                                    let fileName = 'unknown-file';
+                                                    try {
+                                                        const decodedUrl = decodeURIComponent(url);
+                                                        fileName = decodedUrl.split('/').pop()?.split('?')[0] || 'unknown-file';
+                                                    } catch (e) {
+                                                        fileName = url.split('/').pop() || 'unknown-file';
+                                                    }
+                                                    const extension = fileName.split('.').pop()?.toUpperCase() || 'FILE';
+
+                                                    return (
+                                                        <a
+                                                            key={index}
+                                                            href={url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-zinc-800 dark:to-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl p-4 hover:border-fpt-orange hover:shadow-md transition-all cursor-pointer group flex items-center gap-3"
+                                                        >
+                                                            <div className="p-2.5 bg-white dark:bg-zinc-800 rounded-lg border border-slate-200 dark:border-zinc-700 text-slate-400 dark:text-slate-500 group-hover:text-fpt-orange transition-colors">
+                                                                <FileText size={22} />
+                                                            </div>
+                                                            <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                                                                <span className="text-slate-800 dark:text-white font-medium text-sm truncate group-hover:text-fpt-orange transition-colors" title={fileName}>
+                                                                    {fileName.length > 18 ? fileName.substring(0, 15) + '...' : fileName}
+                                                                </span>
+                                                                <span className="text-blue-500 dark:text-blue-400 text-xs font-medium">
+                                                                    {extension} File
+                                                                </span>
+                                                            </div>
+                                                        </a>
+                                                    );
+                                                })}
+                                            </div>
+                                        );
+                                    })() : (
+                                        <div className="text-sm text-gray-500 dark:text-gray-400 italic">Không có file đính kèm</div>
                                     )}
                                 </div>
-
                             </div>
-                        </div>
+                        </section>
 
                         {/* History Card */}
                         <div className="bg-white dark:bg-zinc-900 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800">
@@ -224,17 +273,61 @@ export const RequestDetailPage = () => {
                             </div>
                         </div>
 
-                        {/* Print Signature Box */}
-                        <div className="print-signature hidden">
-                            <div className="print-signature-box">
-                                <p className="font-bold mb-16">Người gửi yêu cầu</p>
-                                <p>{request.requesterName}</p>
+                        {/* Xử lý yêu cầu */}
+                        <section className="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-800">
+                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Xử lý yêu cầu</h2>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Trạng thái hiện tại</p>
+                                    <div className={`p-3 rounded-xl border flex items-center gap-3 ${statusInfo.color}`}>
+                                        <div className={`w-2 h-2 rounded-full ${statusInfo.dot} animate-pulse`} />
+                                        <span className="font-bold text-sm tracking-wide">{statusInfo.label}</span>
+                                    </div>
+                                </div>
+
+                                {isPending ? (
+                                    <>
+                                        <div>
+                                            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Ghi chú / Phản hồi</p>
+                                            <textarea
+                                                value={note}
+                                                onChange={(e) => setNote(e.target.value)}
+                                                placeholder="Nhập lý do phê duyệt hoặc từ chối..."
+                                                className="w-full h-24 p-4 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-fpt-orange focus:border-transparent outline-none transition-all resize-none"
+                                            />
+                                        </div>
+
+                                        <div className="flex gap-3">
+                                            <button
+                                                onClick={() => handleUpdateStatus('APPROVED')}
+                                                disabled={updating}
+                                                className="flex-1 py-3 bg-fpt-orange text-white font-bold rounded-xl shadow-lg border border-orange-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                            >
+                                                {updating ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
+                                                Phê duyệt
+                                            </button>
+                                            <button
+                                                onClick={() => handleUpdateStatus('REJECTED')}
+                                                disabled={updating}
+                                                className="flex-1 py-3 bg-white dark:bg-zinc-800 text-red-600 font-bold rounded-xl border border-red-200 dark:border-red-900/30 hover:bg-red-50 dark:hover:bg-red-900/10 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                            >
+                                                Từ chối
+                                            </button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="p-4 bg-gray-50 dark:bg-zinc-800/50 rounded-xl border border-gray-100 dark:border-zinc-700">
+                                        <p className="text-xs text-gray-500 mb-2">Ghi chú từ người phê duyệt</p>
+                                        <p className="text-sm font-medium text-gray-700 dark:text-zinc-300">
+                                            {request.approverNote || 'Không có ghi chú.'}
+                                        </p>
+                                    </div>
+                                )}
                             </div>
-                            <div className="print-signature-box">
-                                <p className="font-bold mb-16">Người phê duyệt</p>
-                                <p>{request.approverName || '................................'}</p>
-                            </div>
-                        </div>
+                        </section>
+
+
                     </div>
 
                     {/* Sidebar (Right) */}
@@ -268,7 +361,7 @@ export const RequestDetailPage = () => {
                                     <span className="font-semibold text-gray-900 dark:text-white text-right max-w-[150px]">{request.requesterMajor || '---'}</span>
                                 </div>
                                 <div className=" flex-col gap-1 text-sm">
-                                    <span className="text-gray-500">Email</span>
+                                    <span className="text-gray-500">Email: </span>
                                     <span className="ml-30 font-semibold text-fpt-orange truncate">{request.requesterEmail || '---'}</span>
                                 </div>
                             </div>
@@ -336,64 +429,129 @@ export const RequestDetailPage = () => {
                 __html: `
                 @media print {
                     @page {
-                        margin: 2cm;
+                        margin: 0.5cm 1cm;
+                        size: A4;
                     }
-                    nav, aside, button, .no-print {
-                        display: none !important;
-                    }
-                    body {
+                    
+                    /* Reset body and html */
+                    html, body {
+                        height: auto !important;
+                        overflow: visible !important;
                         background: white !important;
                         color: black !important;
-                        font-family: "Times New Roman", serif;
+                        font-family: Arial, sans-serif !important;
+                        font-size: 12px !important;
                     }
-                    .max-w-7xl {
+                    
+                    /* Hide the entire sidebar component */
+                    .fixed.left-0.top-0.h-screen,
+                    [class*="Sidebar"],
+                    nav {
+                        display: none !important;
+                    }
+                    
+                    /* Hide sidebar spacer */
+                    .w-16.flex-shrink-0 {
+                        display: none !important;
+                    }
+                    
+                    /* Hide CommonHeader */
+                    .sticky.top-0.z-30,
+                    header,
+                    [class*="Header"] {
+                        display: none !important;
+                    }
+                    
+                    /* Hide buttons, no-print elements */
+                    button, .no-print {
+                        display: none !important;
+                    }
+                    
+                    /* Fix layout container - remove flex and overflow */
+                    .flex.h-screen.overflow-hidden {
+                        display: block !important;
+                        height: auto !important;
+                        overflow: visible !important;
+                    }
+                    
+                    /* Fix main content container */
+                    .flex.flex-col.flex-1.overflow-hidden {
+                        display: block !important;
+                        overflow: visible !important;
+                    }
+                    
+                    /* Fix main element - remove overflow scrollbar */
+                    main.flex-1.overflow-auto {
+                        overflow: visible !important;
+                        padding: 0 !important;
+                    }
+                    
+                    /* Hide right sidebar column */
+                    .grid.grid-cols-1.lg\\:grid-cols-3 > div:last-child:not(.lg\\:col-span-2) {
+                        display: none !important;
+                    }
+                    
+                    .max-w-7xl, .max-w-\\[1600px\\] {
                         max-width: 100% !important;
                         margin: 0 !important;
+                        padding: 0 !important;
                     }
+                    
                     .shadow-sm, .shadow-lg {
                         box-shadow: none !important;
                     }
                     .rounded-2xl, .rounded-xl {
-                        border-radius: 0 !important;
+                        border-radius: 4px !important;
                     }
-                    .bg-white, .dark\\:bg-zinc-900 {
+                    .bg-white, .dark\\:bg-zinc-900, .bg-gray-50, .dark\\:bg-zinc-950 {
                         background: white !important;
                     }
-                    .text-gray-900, .text-gray-600, .dark\\:text-white, .dark\\:text-zinc-400 {
+                    .text-gray-900, .text-gray-600, .text-gray-700, .dark\\:text-white, .dark\\:text-zinc-400, .dark\\:text-gray-200 {
                         color: black !important;
                     }
-                    .border {
-                        border: 1px solid #eee !important;
+                    .text-gray-400, .text-gray-500, .dark\\:text-gray-500 {
+                        color: #666 !important;
                     }
-                    .grid {
+                    .border, .border-gray-200, .border-gray-100, .dark\\:border-zinc-800 {
+                        border: 1px solid #ddd !important;
+                    }
+                    
+                    /* Grid layout for print */
+                    .grid.grid-cols-1.lg\\:grid-cols-3 {
                         display: block !important;
                     }
                     .lg\\:col-span-2 {
                         width: 100% !important;
                     }
-                    /* Custom Header for Print */
-                    .print-header {
-                        display: flex !important;
-                        justify-content: space-between;
-                        align-items: center;
-                        border-bottom: 2px solid #333;
-                        padding-bottom: 20px;
-                        margin-bottom: 30px;
+                    
+                    /* Section spacing */
+                    section, .space-y-6 > div {
+                        margin-bottom: 16px !important;
+                        page-break-inside: avoid !important;
                     }
-                    .print-signature {
-                        display: flex !important;
-                        justify-content: space-between;
-                        margin-top: 50px;
-                        gap: 40px;
-                    }
-                    .print-signature-box {
-                        text-align: center;
-                        flex: 1;
-                    }
-                }
-                @media screen {
-                    .print-header, .print-signature {
+                    
+                    /* Hide avatar */
+                    .w-20.h-20, .w-10.h-10 {
                         display: none !important;
+                    }
+                    
+                    /* Badges */
+                    .bg-amber-50, .bg-green-50, .bg-red-50, .bg-blue-100 {
+                        background: #f5f5f5 !important;
+                    }
+                    .text-fpt-orange, .text-amber-600, .text-green-600, .text-red-600, .text-blue-600 {
+                        color: black !important;
+                        font-weight: bold !important;
+                    }
+                    
+                    h2, h3 {
+                        color: black !important;
+                        font-weight: bold !important;
+                        font-size: 14px !important;
+                    }
+                    
+                    .p-6, .p-8 {
+                        padding: 12px !important;
                     }
                 }
             `}} />

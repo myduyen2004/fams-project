@@ -29,9 +29,13 @@ export interface ScheduleRequestResponse {
     approverNote?: string;
     originalSlotId?: number;
     originalSlotInfo?: string;
+    originalSlotNumber?: number;
+    originalRoomName?: string;
     requestedSlotId?: number;
     requestedSlotInfo?: string;
+    requestedSlotNumber?: number;
     requestedRoomName?: string;
+    requestedDate?: string;
     requesterEmail?: string;
     requesterMajor?: string;
     file?: string;
