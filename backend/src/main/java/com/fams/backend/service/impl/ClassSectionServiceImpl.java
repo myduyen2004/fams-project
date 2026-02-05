@@ -1,16 +1,26 @@
 package com.fams.backend.service.impl;
 
+import com.fams.backend.dto.request.ClassSectionRequest;
+import com.fams.backend.dto.request.EnrollmentRequest;
 import com.fams.backend.dto.response.ClassDetailResponse;
 import com.fams.backend.dto.response.ClassSectionResponse;
 import com.fams.backend.dto.response.EnrollmentResponse;
 import com.fams.backend.dto.response.LecturerOptionResponse;
 import com.fams.backend.dto.response.StudentEnrollmentDTO;
+import com.fams.backend.dto.response.StudentOptionResponse;
 import com.fams.backend.entity.ClassSection;
+import com.fams.backend.entity.Course;
 import com.fams.backend.entity.Enrollment;
+import com.fams.backend.entity.Semester;
 import com.fams.backend.entity.StudentProfile;
 import com.fams.backend.entity.User;
 import com.fams.backend.repository.ClassSectionRepository;
+import com.fams.backend.repository.CourseRepository;
 import com.fams.backend.repository.EnrollmentRepository;
+import com.fams.backend.repository.SemesterRepository;
+import com.fams.backend.repository.SpecializationCourseRepository;
+import com.fams.backend.repository.SubSpecializationCourseRepository;
+import com.fams.backend.repository.UserRepository;
 import com.fams.backend.service.ClassSectionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +48,11 @@ public class ClassSectionServiceImpl implements ClassSectionService {
 
     private final ClassSectionRepository classSectionRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final SemesterRepository semesterRepository;
+    private final CourseRepository courseRepository;
+    private final UserRepository userRepository;
+    private final SpecializationCourseRepository specializationCourseRepository;
+    private final SubSpecializationCourseRepository subSpecializationCourseRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -48,7 +63,6 @@ public class ClassSectionServiceImpl implements ClassSectionService {
             Long lecturerId,
             Pageable pageable) {
 
-        // Convert status from string to enum if provided
         String statusValue = null;
         if (status != null && !status.isEmpty() && !status.equalsIgnoreCase("ALL")) {
             try {
@@ -103,6 +117,325 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                 .collect(Collectors.toList());
     }
 
+    // ==================== CRUD OPERATIONS ====================
+
+    @Override
+    @Transactional
+    public ClassSectionResponse createClassSection(ClassSectionRequest request) {
+        log.info("Creating class section: {}", request.getClassName());
+
+        Semester semester = semesterRepository.findByCode(request.getSemesterCode())
+                .orElseThrow(() -> new RuntimeException("Học kỳ không tồn tại: " + request.getSemesterCode()));
+
+        if (semester.getStatus() != Semester.SemesterStatus.UPCOMING) {
+            throw new RuntimeException("Chỉ có thể tạo lớp học phần khi học kỳ chưa bắt đầu");
+        }
+
+        if (classSectionRepository.existsByClassNameIgnoreCase(request.getClassName())) {
+            throw new RuntimeException("Mã lớp học phần đã tồn tại: " + request.getClassName());
+        }
+
+        Course course = courseRepository.findByCode(request.getCourseCode())
+                .orElseThrow(() -> new RuntimeException("Môn học không tồn tại: " + request.getCourseCode()));
+
+        User lecturer = null;
+        if (request.getLecturerUsername() != null && !request.getLecturerUsername().isEmpty()) {
+            lecturer = userRepository.findByUsernameIgnoreCase(request.getLecturerUsername())
+                    .orElseThrow(
+                            () -> new RuntimeException("Giảng viên không tồn tại: " + request.getLecturerUsername()));
+            if (lecturer.getRole() != User.UserRole.LECTURER) {
+                throw new RuntimeException("Người dùng không phải là giảng viên: " + request.getLecturerUsername());
+            }
+        }
+
+        ClassSection classSection = ClassSection.builder()
+                .className(request.getClassName())
+                .course(course)
+                .semester(semester)
+                .lecturer(lecturer)
+                .numberOfSlots(
+                        request.getNumberOfSlots() != null ? request.getNumberOfSlots() : course.getNumberOfSlots())
+                .maxStudents(request.getMaxStudents() != null ? request.getMaxStudents() : 30)
+                .currentEnrollment(0)
+                .status(ClassSection.ClassStatus.UPCOMING)
+                .build();
+
+        classSection = classSectionRepository.save(classSection);
+        log.info("Created class section: {}", classSection.getClassName());
+
+        return convertToResponse(classSection);
+    }
+
+    @Override
+    @Transactional
+    public ClassSectionResponse updateClassSection(String className, ClassSectionRequest request) {
+        log.info("Updating class section: {}", className);
+
+        ClassSection classSection = classSectionRepository.findByClassNameWithDetails(className)
+                .orElseThrow(() -> new RuntimeException("Lớp học phần không tồn tại: " + className));
+
+        if (classSection.getSemester().getStatus() != Semester.SemesterStatus.UPCOMING) {
+            throw new RuntimeException("Chỉ có thể cập nhật lớp học phần khi học kỳ chưa bắt đầu");
+        }
+
+        if (request.getCourseCode() != null && !request.getCourseCode().equals(classSection.getCourse().getCode())) {
+            Course course = courseRepository.findByCode(request.getCourseCode())
+                    .orElseThrow(() -> new RuntimeException("Môn học không tồn tại: " + request.getCourseCode()));
+            classSection.setCourse(course);
+        }
+
+        if (request.getLecturerUsername() != null) {
+            if (request.getLecturerUsername().isEmpty()) {
+                classSection.setLecturer(null);
+            } else {
+                User lecturer = userRepository.findByUsernameIgnoreCase(request.getLecturerUsername())
+                        .orElseThrow(() -> new RuntimeException(
+                                "Giảng viên không tồn tại: " + request.getLecturerUsername()));
+                if (lecturer.getRole() != User.UserRole.LECTURER) {
+                    throw new RuntimeException("Người dùng không phải là giảng viên: " + request.getLecturerUsername());
+                }
+                classSection.setLecturer(lecturer);
+            }
+        }
+
+        if (request.getNumberOfSlots() != null) {
+            classSection.setNumberOfSlots(request.getNumberOfSlots());
+        }
+        if (request.getMaxStudents() != null) {
+            classSection.setMaxStudents(request.getMaxStudents());
+        }
+
+        classSection = classSectionRepository.save(classSection);
+        log.info("Updated class section: {}", classSection.getClassName());
+
+        return convertToResponse(classSection);
+    }
+
+    @Override
+    @Transactional
+    public void deleteClassSection(String className) {
+        log.info("Deleting class section: {}", className);
+
+        ClassSection classSection = classSectionRepository.findByClassNameWithDetails(className)
+                .orElseThrow(() -> new RuntimeException("Lớp học phần không tồn tại: " + className));
+
+        if (classSection.getSemester().getStatus() != Semester.SemesterStatus.UPCOMING) {
+            throw new RuntimeException("Chỉ có thể xóa lớp học phần khi học kỳ chưa bắt đầu");
+        }
+
+        classSectionRepository.delete(classSection);
+        log.info("Deleted class section: {}", className);
+    }
+
+    @Override
+    @Transactional
+    public void deleteClassSections(List<String> classNames) {
+        log.info("Deleting {} class sections", classNames.size());
+        for (String className : classNames) {
+            deleteClassSection(className);
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<LecturerOptionResponse> getAllLecturers() {
+        return userRepository.findByRole(User.UserRole.LECTURER)
+                .orElse(Collections.emptyList())
+                .stream()
+                .map(user -> LecturerOptionResponse.builder()
+                        .id(user.getId())
+                        .fullName(user.getFullName())
+                        .username(user.getUsername())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    // ==================== ENROLLMENT CRUD ====================
+
+    @Override
+    @Transactional
+    public EnrollmentResponse createEnrollment(EnrollmentRequest request) {
+        log.info("Creating enrollment for student {} in class {}", request.getStudentCode(), request.getClassName());
+
+        // Use pessimistic lock to prevent race condition when multiple requests try to
+        // add students simultaneously
+        ClassSection classSection = classSectionRepository.findByClassNameWithLock(request.getClassName())
+                .orElseThrow(() -> new RuntimeException("Lớp học phần không tồn tại: " + request.getClassName()));
+
+        if (classSection.getSemester().getStatus() != Semester.SemesterStatus.UPCOMING) {
+            throw new RuntimeException("Chỉ có thể thêm đăng ký khi học kỳ chưa bắt đầu");
+        }
+
+        // Count actual enrollments from database (more reliable than currentEnrollment
+        // field)
+        long actualEnrollmentCount = enrollmentRepository.countByClassSectionClassName(request.getClassName());
+        if (actualEnrollmentCount >= classSection.getMaxStudents()) {
+            throw new RuntimeException(String.format(
+                    "Lớp học phần đã đủ sinh viên (%d/%d). Không thể thêm sinh viên mới.",
+                    actualEnrollmentCount, classSection.getMaxStudents()));
+        }
+
+        User student = userRepository.findByCodeIgnoreCase(request.getStudentCode())
+                .orElseThrow(() -> new RuntimeException("Sinh viên không tồn tại: " + request.getStudentCode()));
+
+        if (student.getRole() != User.UserRole.STUDENT) {
+            throw new RuntimeException("Người dùng không phải là sinh viên: " + request.getStudentCode());
+        }
+
+        // Validate course belongs to student's specialization
+        // StudentProfile studentProfile = student.getStudentProfile();
+        // Long courseId = classSection.getCourse().getId();
+        // boolean courseInSpecialization = false;
+
+        // if (studentProfile != null) {
+        // // Check sub-specialization first (more specific)
+        // if (studentProfile.getSubSpecialization() != null) {
+        // courseInSpecialization = subSpecializationCourseRepository
+        // .existsBySubSpecializationIdAndCourseId(
+        // studentProfile.getSubSpecialization().getId(), courseId);
+        // }
+
+        // // If not found in sub-specialization, check main specialization
+        // if (!courseInSpecialization && studentProfile.getSpecialization() != null) {
+        // courseInSpecialization = specializationCourseRepository
+        // .existsBySpecializationIdAndCourseId(
+        // studentProfile.getSpecialization().getId(), courseId);
+        // }
+        // }
+
+        // if (!courseInSpecialization) {
+        // String specializationName = studentProfile != null &&
+        // studentProfile.getSpecialization() != null
+        // ? studentProfile.getSpecialization().getName()
+        // : "không xác định";
+        // throw new RuntimeException(String.format(
+        // "Môn học '%s' không nằm trong chuyên ngành '%s' của sinh viên %s",
+        // classSection.getCourse().getName(), specializationName,
+        // request.getStudentCode()));
+        // }
+
+        if (enrollmentRepository.existsByClassNameAndStudentCodeIgnoreCase(request.getClassName(),
+                request.getStudentCode())) {
+            throw new RuntimeException("Sinh viên đã đăng ký lớp học phần này");
+        }
+
+        Enrollment enrollment = Enrollment.builder()
+                .classSection(classSection)
+                .student(student)
+                .studentCode(student.getCode())
+                .status(Enrollment.EnrollmentStatus.ENROLLED)
+                .build();
+
+        enrollment = enrollmentRepository.save(enrollment);
+
+        classSection.setCurrentEnrollment(classSection.getCurrentEnrollment() + 1);
+        classSectionRepository.save(classSection);
+
+        log.info("Created enrollment for student {} in class {}", request.getStudentCode(), request.getClassName());
+
+        return convertToEnrollmentResponse(enrollment);
+    }
+
+    @Override
+    @Transactional
+    public EnrollmentResponse updateEnrollment(Long enrollmentId, EnrollmentRequest request) {
+        log.info("Updating enrollment: {}", enrollmentId);
+
+        Enrollment enrollment = enrollmentRepository.findById(enrollmentId)
+                .orElseThrow(() -> new RuntimeException("Đăng ký không tồn tại: " + enrollmentId));
+
+        ClassSection classSection = enrollment.getClassSection();
+        Semester semester = semesterRepository.findByCode(classSection.getSemester().getCode())
+                .orElseThrow(() -> new RuntimeException("Học kỳ không tồn tại"));
+
+        if (semester.getStatus() != Semester.SemesterStatus.UPCOMING) {
+            throw new RuntimeException("Chỉ có thể cập nhật đăng ký khi học kỳ chưa bắt đầu");
+        }
+
+        if (request.getStatus() != null && !request.getStatus().isEmpty()) {
+            try {
+                Enrollment.EnrollmentStatus newStatus = Enrollment.EnrollmentStatus
+                        .valueOf(request.getStatus().toUpperCase());
+                Enrollment.EnrollmentStatus oldStatus = enrollment.getStatus();
+
+                enrollment.setStatus(newStatus);
+
+                if (oldStatus == Enrollment.EnrollmentStatus.ENROLLED
+                        && newStatus != Enrollment.EnrollmentStatus.ENROLLED) {
+                    classSection.setCurrentEnrollment(Math.max(0, classSection.getCurrentEnrollment() - 1));
+                    classSectionRepository.save(classSection);
+                } else if (oldStatus != Enrollment.EnrollmentStatus.ENROLLED
+                        && newStatus == Enrollment.EnrollmentStatus.ENROLLED) {
+                    classSection.setCurrentEnrollment(classSection.getCurrentEnrollment() + 1);
+                    classSectionRepository.save(classSection);
+                }
+            } catch (IllegalArgumentException e) {
+                throw new RuntimeException("Trạng thái không hợp lệ: " + request.getStatus());
+            }
+        }
+
+        enrollment = enrollmentRepository.save(enrollment);
+        log.info("Updated enrollment: {}", enrollmentId);
+
+        return convertToEnrollmentResponse(enrollment);
+    }
+
+    @Override
+    @Transactional
+    public void deleteEnrollment(Long enrollmentId) {
+        log.info("Deleting enrollment: {}", enrollmentId);
+
+        Enrollment enrollment = enrollmentRepository.findById(enrollmentId)
+                .orElseThrow(() -> new RuntimeException("Đăng ký không tồn tại: " + enrollmentId));
+
+        ClassSection classSection = enrollment.getClassSection();
+        Semester semester = semesterRepository.findByCode(classSection.getSemester().getCode())
+                .orElseThrow(() -> new RuntimeException("Học kỳ không tồn tại"));
+
+        if (semester.getStatus() != Semester.SemesterStatus.UPCOMING) {
+            throw new RuntimeException("Chỉ có thể xóa đăng ký khi học kỳ chưa bắt đầu");
+        }
+
+        if (enrollment.getStatus() == Enrollment.EnrollmentStatus.ENROLLED) {
+            classSection.setCurrentEnrollment(Math.max(0, classSection.getCurrentEnrollment() - 1));
+            classSectionRepository.save(classSection);
+        }
+
+        enrollmentRepository.delete(enrollment);
+        log.info("Deleted enrollment: {}", enrollmentId);
+    }
+
+    @Override
+    @Transactional
+    public void deleteEnrollments(List<Long> enrollmentIds) {
+        log.info("Deleting {} enrollments", enrollmentIds.size());
+        for (Long enrollmentId : enrollmentIds) {
+            deleteEnrollment(enrollmentId);
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<StudentOptionResponse> getAvailableStudentsForClassSection(String className) {
+        // Use optimized query with JOIN FETCH to avoid N+1 problem
+        return userRepository.findStudentsNotEnrolledInClassSection(className)
+                .stream()
+                .map(user -> {
+                    StudentProfile profile = user.getStudentProfile();
+                    return StudentOptionResponse.builder()
+                            .id(user.getId())
+                            .code(user.getCode())
+                            .fullName(user.getFullName())
+                            .email(user.getEmail())
+                            .major(profile != null && profile.getMajor() != null ? profile.getMajor().getName() : "")
+                            .specialization(profile != null && profile.getSpecialization() != null
+                                    ? profile.getSpecialization().getName()
+                                    : "")
+                            .build();
+                })
+                .collect(Collectors.toList());
+    }
+
     // ==================== TEMPLATE METHODS ====================
 
     @Override
@@ -110,7 +443,6 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet dataSheet = workbook.createSheet("Template Import Lớp học phần");
 
-            // Create header style
             CellStyle headerStyle = workbook.createCellStyle();
             headerStyle.setFillForegroundColor(IndexedColors.ORANGE.getIndex());
             headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
@@ -119,7 +451,6 @@ public class ClassSectionServiceImpl implements ClassSectionService {
             headerFont.setColor(IndexedColors.WHITE.getIndex());
             headerStyle.setFont(headerFont);
 
-            // Create headers
             Row headerRow = dataSheet.createRow(0);
             String[] headers = { "Class Name", "Course Code", "Lecturer Code", "Max Students" };
             for (int i = 0; i < headers.length; i++) {
@@ -128,7 +459,6 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                 cell.setCellStyle(headerStyle);
             }
 
-            // Sample row
             Row sampleRow = dataSheet.createRow(1);
             sampleRow.createCell(0).setCellValue("SE18B02-PRN211");
             sampleRow.createCell(1).setCellValue("PRN211");
@@ -139,7 +469,6 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                 dataSheet.autoSizeColumn(i);
             }
 
-            // Create instruction sheet
             Sheet instructionSheet = workbook.createSheet("Hướng dẫn");
             String[] instructions = {
                     "HƯỚNG DẪN IMPORT LỚP HỌC PHẦN",
@@ -180,7 +509,6 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Danh sách đăng ký");
 
-            // Create header style
             CellStyle headerStyle = workbook.createCellStyle();
             headerStyle.setFillForegroundColor(IndexedColors.ORANGE.getIndex());
             headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
@@ -189,7 +517,6 @@ public class ClassSectionServiceImpl implements ClassSectionService {
             headerFont.setColor(IndexedColors.WHITE.getIndex());
             headerStyle.setFont(headerFont);
 
-            // Create header row
             Row headerRow = sheet.createRow(0);
             String[] headers = { "MSSV", "Mã lớp + Mã môn" };
             for (int i = 0; i < headers.length; i++) {
@@ -198,7 +525,6 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                 cell.setCellStyle(headerStyle);
             }
 
-            // Sample rows
             Row sampleRow1 = sheet.createRow(1);
             sampleRow1.createCell(0).setCellValue("SE180001");
             sampleRow1.createCell(1).setCellValue("SE18B02-PRN211");
@@ -211,7 +537,6 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                 sheet.autoSizeColumn(i);
             }
 
-            // Create instruction sheet
             Sheet instructionSheet = workbook.createSheet("Hướng dẫn");
             String[] instructions = {
                     "HƯỚNG DẪN IMPORT ĐĂNG KÝ HỌC",
@@ -233,7 +558,6 @@ public class ClassSectionServiceImpl implements ClassSectionService {
             }
             instructionSheet.setColumnWidth(0, 60 * 256);
 
-            // Create class list sheet for reference
             Sheet classListSheet = workbook.createSheet("Danh sách lớp học phần");
             Row classHeaderRow = classListSheet.createRow(0);
             Cell classCell0 = classHeaderRow.createCell(0);
@@ -316,7 +640,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                             .studentName(student.getFullName())
                             .email(student.getEmail())
                             .phone(student.getPhone())
-                            .idCard("") // Not available in schema
+                            .idCard("")
                             .majorName(studentSpecialization)
                             .studentCode(student.getCode())
                             .status(enrollment.getStatus().name())
@@ -324,12 +648,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                 })
                 .collect(Collectors.toList());
 
-        // Assuming k19 and 2019-2023 are placeholders or need logical mapping
-        // For now, using static or derived values to match the screenshot as much as
-        // possible
-
-        // Try to find specialization from course
-        String specializationName = classSection.getCourse().getName(); // Default fallback
+        String specializationName = classSection.getCourse().getName();
         if (!classSection.getCourse().getSpecializationCourses().isEmpty()) {
             specializationName = classSection.getCourse().getSpecializationCourses().get(0)
                     .getSpecialization().getName();
@@ -341,9 +660,9 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                 .courseName(classSection.getCourse().getName())
                 .semesterName(classSection.getSemester().getName())
                 .majorName(specializationName)
-                .courseYear("k19") // Placeholder
+                .courseYear("k19")
                 .studentCount(classSection.getCurrentEnrollment())
-                .academicYear("2019 - 2023") // Placeholder
+                .academicYear("2019 - 2023")
                 .status(classSection.getStatus().name())
                 .enrollments(studentEnrollments)
                 .build();
@@ -357,9 +676,12 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                 .semesterName(classSection.getSemester().getName())
                 .semesterCode(classSection.getSemester().getCode())
                 .lecturerName(classSection.getLecturer() != null ? classSection.getLecturer().getFullName() : null)
+                .lecturerUsername(classSection.getLecturer() != null ? classSection.getLecturer().getUsername() : null)
                 .enrollmentInfo(classSection.getCurrentEnrollment() + " / " + classSection.getMaxStudents())
                 .slots(classSection.getNumberOfSlots())
+                .maxStudents(classSection.getMaxStudents())
                 .status(classSection.getStatus().name())
+                .semesterStatus(classSection.getSemester().getStatus().name())
                 .build();
     }
 

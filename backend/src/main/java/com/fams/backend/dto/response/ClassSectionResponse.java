@@ -16,7 +16,10 @@ public class ClassSectionResponse {
     private String semesterCode;
     private String semesterName;
     private String lecturerName;
+    private String lecturerUsername;
     private String enrollmentInfo; // e.g., "28 / 30"
     private Integer slots;
+    private Integer maxStudents;
     private String status; // UPCOMING, ONGOING, FINISHED
+    private String semesterStatus; // UPCOMING, ONGOING, COMPLETED
 }
