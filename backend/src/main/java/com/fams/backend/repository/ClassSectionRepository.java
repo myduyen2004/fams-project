@@ -143,4 +143,16 @@ public interface ClassSectionRepository extends JpaRepository<ClassSection, Long
                         "AND cs.lecturer IS NOT NULL " +
                         "AND NOT EXISTS (SELECT 1 FROM TimetableSlot ts WHERE ts.classSection = cs)")
         java.util.List<String> findUnscheduledClassNames(@Param("semesterCode") String semesterCode);
+
+        /**
+         * Find by className with pessimistic write lock to prevent race condition
+         * when adding enrollments
+         */
+        @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+        @Query("SELECT cs FROM ClassSection cs " +
+                        "JOIN FETCH cs.course c " +
+                        "JOIN FETCH cs.semester s " +
+                        "LEFT JOIN FETCH cs.lecturer l " +
+                        "WHERE cs.className = :className")
+        java.util.Optional<ClassSection> findByClassNameWithLock(@Param("className") String className);
 }

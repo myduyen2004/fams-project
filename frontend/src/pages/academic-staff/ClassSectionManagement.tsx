@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ChevronRight, Search, Download, FileText, Trash2, RefreshCw, Eye, Calendar } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Search, Download, FileText, Trash2, RefreshCw, Calendar, Plus, Edit } from 'lucide-react';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { Pagination } from '../../components/common/Pagination';
 import { ImportClassSectionModal } from '../../components/academic-staff/ImportClassSectionModal';
 import { EnrollmentListModal } from '../../components/academic-staff/EnrollmentListModal';
 import { ImportEnrollmentModal } from '../../components/academic-staff/ImportEnrollmentModal';
+import { ClassSectionFormModal } from '../../components/academic-staff/ClassSectionFormModal';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { usePagination } from '../../hooks/usePagination';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -32,10 +34,14 @@ interface ClassSection {
   courseCode: string;
   courseName: string;
   semesterCode: string;
+  semesterName: string;
   lecturerName: string | null;
+  lecturerUsername: string | null;
   enrollmentInfo: string;
   slots: number;
+  maxStudents: number;
   status: string;
+  semesterStatus: string; // UPCOMING, ONGOING, COMPLETED
 }
 
 interface LecturerOption {
@@ -67,8 +73,14 @@ export const ClassSectionManagement: React.FC = () => {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isEnrollmentModalOpen, setIsEnrollmentModalOpen] = useState(false);
   const [isImportEnrollmentModalOpen, setIsImportEnrollmentModalOpen] = useState(false);
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [selectedClassName, setSelectedClassName] = useState('');
+  const [selectedMaxStudents, setSelectedMaxStudents] = useState(0);
+  const [selectedClassSection, setSelectedClassSection] = useState<ClassSection | null>(null);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [semesterStatus, setSemesterStatus] = useState<string>('');
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Debounce search term to avoid excessive API calls
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -87,6 +99,22 @@ export const ClassSectionManagement: React.FC = () => {
       console.error('Error fetching lecturers:', error);
     }
   };
+
+  // Fetch semester info to get status even if no class sections exist
+  const fetchSemesterInfo = useCallback(async () => {
+    try {
+      const response = await axios.get(`/api/v1/semesters/get-by-code/${semesterCode}`);
+      // Map back to uppercase values used in this component
+      const statusMap: { [key: string]: string } = {
+        'upcoming': 'UPCOMING',
+        'active': 'ONGOING',
+        'ended': 'COMPLETED'
+      };
+      setSemesterStatus(statusMap[response.data.status] || response.data.status);
+    } catch (error) {
+      console.error('Error fetching semester info:', error);
+    }
+  }, [semesterCode]);
 
   // Fetch class sections from API
   const fetchClassSections = useCallback(async () => {
@@ -107,6 +135,8 @@ export const ClassSectionManagement: React.FC = () => {
       setClassSections(data.content);
       setTotalElements(data.totalElements);
       setTotalPages(data.totalPages);
+
+      // Note: Semester status is now fetched via fetchSemesterInfo
     } catch (error) {
       console.error('Error fetching class sections:', error);
       toast.error('Không thể tải danh sách lớp học phần');
@@ -118,8 +148,9 @@ export const ClassSectionManagement: React.FC = () => {
   useEffect(() => {
     if (semesterCode) {
       fetchLecturers();
+      fetchSemesterInfo();
     }
-  }, [semesterCode]);
+  }, [semesterCode, fetchSemesterInfo]);
 
   useEffect(() => {
     if (semesterCode) {
@@ -127,7 +158,8 @@ export const ClassSectionManagement: React.FC = () => {
     }
   }, [fetchClassSections]);
 
-  // Note: Page reset is now handled by usePagination hook
+  // Check if semester allows editing
+  const canEdit = semesterStatus === 'UPCOMING';
 
   const getStatusBadge = (status: string) => {
     const statusConfig: { [key: string]: { label: string; className: string } } = {
@@ -164,16 +196,35 @@ export const ClassSectionManagement: React.FC = () => {
   };
 
   const handleImportList = () => {
+    if (!canEdit) {
+      toast.error('Chỉ có thể nhập danh sách khi học kỳ chưa bắt đầu');
+      return;
+    }
     setIsImportModalOpen(true);
   };
 
   const handleImportSuccess = () => {
     setIsImportModalOpen(false);
     fetchClassSections();
+    fetchLecturers();
   };
 
   const handleCreateClassSection = () => {
-    toast('Chức năng tạo lớp học phần đang được phát triển', { icon: 'ℹ️' });
+    if (!canEdit) {
+      toast.error('Chỉ có thể tạo lớp học phần khi học kỳ chưa bắt đầu');
+      return;
+    }
+    setSelectedClassSection(null);
+    setIsFormModalOpen(true);
+  };
+
+  const handleEditClassSection = (classSection: ClassSection) => {
+    if (!canEdit) {
+      toast.error('Chỉ có thể sửa lớp học phần khi học kỳ chưa bắt đầu');
+      return;
+    }
+    setSelectedClassSection(classSection);
+    setIsFormModalOpen(true);
   };
 
   // Handle row selection
@@ -199,22 +250,38 @@ export const ClassSectionManagement: React.FC = () => {
   };
 
   // Handle bulk delete
-  const handleBulkDelete = () => {
-    toast(`Xóa ${selectedRows.size} lớp học phần đang được phát triển`, { icon: 'ℹ️' });
-  };
-
-  // Handle bulk update
-  const handleBulkUpdate = () => {
-    toast(`Cập nhật ${selectedRows.size} lớp học phần đang được phát triển`, { icon: 'ℹ️' });
-  };
-
-  // Handle view enrollment list
-  const handleViewEnrollment = () => {
-    if (selectedRows.size === 1) {
-      const className = Array.from(selectedRows)[0];
-      setSelectedClassName(className);
-      setIsEnrollmentModalOpen(true);
+  const handleBulkDelete = async () => {
+    if (!canEdit) {
+      toast.error('Chỉ có thể xóa lớp học phần khi học kỳ chưa bắt đầu');
+      return;
     }
+    setShowDeleteConfirm(true);
+  };
+
+  // Confirm delete action
+  const confirmDelete = async () => {
+    setShowDeleteConfirm(false);
+    try {
+      setDeleting(true);
+      await axios.delete('/api/v1/class-sections/bulk', {
+        data: Array.from(selectedRows)
+      });
+      toast.success(`Đã xóa ${selectedRows.size} lớp học phần`);
+      setSelectedRows(new Set());
+      fetchClassSections();
+    } catch (error: any) {
+      console.error('Error deleting class sections:', error);
+      toast.error(error.response?.data?.message || 'Không thể xóa lớp học phần');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // Handle double-click to view enrollment list
+  const handleRowDoubleClick = (classSection: ClassSection) => {
+    setSelectedClassName(classSection.className);
+    setSelectedMaxStudents(classSection.maxStudents);
+    setIsEnrollmentModalOpen(true);
   };
 
   // Handle download enrollment template
@@ -240,6 +307,10 @@ export const ClassSectionManagement: React.FC = () => {
 
   // Handle import enrollment (open modal)
   const handleImportEnrollment = () => {
+    if (!canEdit) {
+      toast.error('Chỉ có thể nhập danh sách đăng ký khi học kỳ chưa bắt đầu');
+      return;
+    }
     setIsImportEnrollmentModalOpen(true);
   };
 
@@ -247,6 +318,14 @@ export const ClassSectionManagement: React.FC = () => {
   const handleImportEnrollmentSuccess = () => {
     setIsImportEnrollmentModalOpen(false);
     fetchClassSections();
+  };
+
+  // Handle form modal success
+  const handleFormSuccess = () => {
+    setIsFormModalOpen(false);
+    setSelectedClassSection(null);
+    fetchClassSections();
+    fetchLecturers();
   };
 
   // Clear selection when data changes
@@ -267,7 +346,6 @@ export const ClassSectionManagement: React.FC = () => {
             <ArrowLeft className="w-4 h-4" /> Quản lý học kỳ
           </button>
           <button
-            // onClick={() => navigate('/academic-staff/semesters/' + semesterCode)} 
             className="hover:text-orange-600 transition-colors flex items-center gap-1"
           >
             <ChevronRight className="w-4 h-4 text-gray-300" />
@@ -277,42 +355,89 @@ export const ClassSectionManagement: React.FC = () => {
           <span className="text-gray-900 font-bold">Quản lý lớp học phần</span>
         </div>
 
+        {/* Semester Status Banner */}
+        {!canEdit && semesterStatus && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-center gap-3">
+            <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+              <span className="text-yellow-600 text-lg">⚠️</span>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-yellow-800">
+                Học kỳ đang trong trạng thái "{semesterStatus === 'ONGOING' ? 'Đang diễn ra' : 'Đã kết thúc'}"
+              </p>
+              <p className="text-xs text-yellow-600">
+                Không thể thêm, sửa hoặc xóa lớp học phần và đăng ký trong thời gian này.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex gap-3">
-              <button
-                onClick={handleDownloadEnrollmentTemplate}
-                className="px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 bg-white hover:bg-gray-50 transition-all flex items-center gap-2"
-              >
-                <Download className="w-4 h-4" /> Tải mẫu danh sách đăng ký
-              </button>
+              <div className="relative group">
+                <button
+                  onClick={handleDownloadEnrollmentTemplate}
+                  className="px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 bg-white hover:bg-gray-50 transition-all flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
+                {/* Tooltip */}
+                <div
+                  className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2
+                            whitespace-nowrap rounded bg-gray-800 px-2 py-1
+                            text-[10px] text-white opacity-0
+                            group-hover:opacity-100 transition-opacity pointer-events-none"
+                >
+                  Tải mẫu danh sách đăng ký
+                </div>
+              </div>
               <button
                 onClick={handleImportEnrollment}
-                className="px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 bg-white hover:bg-gray-50 transition-all flex items-center gap-2"
+                disabled={!canEdit}
+                className={`px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold transition-all flex items-center gap-2
+                  ${canEdit ? 'text-gray-600 bg-white hover:bg-gray-50' : 'text-gray-400 bg-gray-100 cursor-not-allowed'}`}
               >
                 <FileText className="w-4 h-4" /> Nhập danh sách đăng ký
+              </button>
+              <div className="relative group">
+                <button
+                  onClick={handleDownloadTemplate}
+                  className="px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 bg-white hover:bg-gray-50 transition-all flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
+                {/* Tooltip */}
+                <div
+                  className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2
+                            whitespace-nowrap rounded bg-gray-800 px-2 py-1
+                            text-[10px] text-white opacity-0
+                            group-hover:opacity-100 transition-opacity pointer-events-none"
+                >
+                  Tải mẫu danh sách lớp học phần
+                </div>
+              </div>
+              <button
+                onClick={handleImportList}
+                disabled={!canEdit}
+                className={`px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold transition-all flex items-center gap-2
+                  ${canEdit ? 'text-gray-600 bg-white hover:bg-gray-50' : 'text-gray-400 bg-gray-100 cursor-not-allowed'}`}
+              >
+                <FileText className="w-4 h-4" /> Nhập danh sách lớp học phần
               </button>
             </div>
 
             <div className="flex gap-3">
               <button
-                onClick={handleDownloadTemplate}
-                className="px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 bg-white hover:bg-gray-50 transition-all flex items-center gap-2"
-              >
-                <Download className="w-4 h-4" /> Tải mẫu danh sách lớp học phần
-              </button>
-              <button
-                onClick={handleImportList}
-                className="px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 bg-white hover:bg-gray-50 transition-all flex items-center gap-2"
-              >
-                <FileText className="w-4 h-4" /> Nhập danh sách lớp học phần
-              </button>
-              <button
                 onClick={handleCreateClassSection}
-                className="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg text-xs font-bold text-white shadow-lg shadow-orange-600/20 transition-all flex items-center gap-2"
+                disabled={!canEdit}
+                className={`px-4 py-2 rounded-lg text-xs font-bold shadow-lg transition-all flex items-center gap-2
+                  ${canEdit
+                    ? 'bg-orange-600 hover:bg-orange-700 text-white shadow-orange-600/20'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'}`}
               >
-                + Tạo lớp học phần
+                <Plus className="w-4 h-4" /> Tạo lớp học phần
               </button>
               <button
                 onClick={() => navigate('/academic-staff/schedule')}
@@ -399,34 +524,40 @@ export const ClassSectionManagement: React.FC = () => {
                 Đã chọn <span className="font-bold">{selectedRows.size}</span> lớp học phần
               </span>
               <div className="flex gap-2">
-                {selectedRows.size === 1 && (
+                {selectedRows.size === 1 && canEdit && (
                   <button
-                    onClick={handleViewEnrollment}
-                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-2"
+                    onClick={() => {
+                      const className = Array.from(selectedRows)[0];
+                      const classSection = classSections.find(cs => cs.className === className);
+                      if (classSection) handleEditClassSection(classSection);
+                    }}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-2"
                   >
-                    <Eye className="w-4 h-4" /> Xem danh sách đăng ký
+                    <Edit className="w-4 h-4" /> Sửa
                   </button>
                 )}
-                <button
-                  onClick={handleBulkUpdate}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-2"
-                >
-                  <RefreshCw className="w-4 h-4" /> Cập nhật
-                </button>
-                <button
-                  onClick={handleBulkDelete}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-2"
-                >
-                  <Trash2 className="w-4 h-4" /> Xóa
-                </button>
+                {canEdit && (
+                  <button
+                    onClick={handleBulkDelete}
+                    disabled={deleting}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {deleting ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
+                    Xóa
+                  </button>
+                )}
               </div>
             </div>
           )}
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-orange-600 text-white">
+              <thead className="bg-orange-500 text-white">
                 <tr>
-                  <th className="px-4 py-4 text-center">
+                  <th className="px-4 py-4 text-center w-8">
                     <input
                       type="checkbox"
                       checked={classSections.length > 0 && selectedRows.size === classSections.length}
@@ -434,13 +565,13 @@ export const ClassSectionManagement: React.FC = () => {
                       className="w-4 h-4 rounded border-white/30 text-orange-600 focus:ring-orange-500 focus:ring-offset-orange-600 cursor-pointer"
                     />
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase">Mã lớp</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase">Môn học</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase">Học kỳ</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase">Giảng viên</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase">Đăng ký</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase">Số slot</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase">Trạng thái</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase w-36">Mã lớp</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase w-56">Môn học</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase w-16">Học kỳ</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase w-44">Giảng viên</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase w-24">Đăng ký</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase w-20">Số slot</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase w-28">Trạng thái</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -464,9 +595,9 @@ export const ClassSectionManagement: React.FC = () => {
                     <tr
                       key={classSection.className}
                       className={`hover:bg-gray-50 transition-colors cursor-pointer ${selectedRows.has(classSection.className) ? 'bg-orange-50' : ''}`}
-                      onClick={() => handleSelectRow(classSection.className)}
+                      onDoubleClick={() => handleRowDoubleClick(classSection)}
                     >
-                      <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-4 py-4 text-center">
                         <input
                           type="checkbox"
                           checked={selectedRows.has(classSection.className)}
@@ -505,6 +636,15 @@ export const ClassSectionManagement: React.FC = () => {
             </table>
           </div>
 
+          {/* Hint for double-click */}
+          {!loading && classSections.length > 0 && (
+            <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 text-center">
+              <span className="text-xs text-gray-500">
+                💡 Double-click vào một lớp học phần để xem danh sách sinh viên đăng ký
+              </span>
+            </div>
+          )}
+
           {/* Pagination */}
           {!loading && totalElements > 0 && (
             <div className="px-6 pb-6">
@@ -532,7 +672,10 @@ export const ClassSectionManagement: React.FC = () => {
       <EnrollmentListModal
         isOpen={isEnrollmentModalOpen}
         className={selectedClassName}
+        semesterStatus={semesterStatus}
+        maxStudents={selectedMaxStudents}
         onClose={() => setIsEnrollmentModalOpen(false)}
+        onUpdate={fetchClassSections}
       />
 
       {/* Import Enrollment Modal */}
@@ -541,6 +684,30 @@ export const ClassSectionManagement: React.FC = () => {
         semesterCode={semesterCode || ''}
         onClose={() => setIsImportEnrollmentModalOpen(false)}
         onSuccess={handleImportEnrollmentSuccess}
+      />
+
+      {/* Class Section Form Modal */}
+      <ClassSectionFormModal
+        isOpen={isFormModalOpen}
+        classSection={selectedClassSection}
+        semesterCode={semesterCode || ''}
+        onClose={() => {
+          setIsFormModalOpen(false);
+          setSelectedClassSection(null);
+        }}
+        onSuccess={handleFormSuccess}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={confirmDelete}
+        title="Xóa lớp học phần"
+        message={`Bạn có chắc chắn muốn xóa ${selectedRows.size} lớp học phần? Hành động này không thể hoàn tác.`}
+        confirmLabel="Xóa"
+        cancelLabel="Hủy"
+        type="danger"
       />
     </AcademicStaffLayout>
   );

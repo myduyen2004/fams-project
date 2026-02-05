@@ -62,8 +62,9 @@ public class SecurityConfig {
                                                                 "/swagger-ui.html",
                                                                 "/v3/api-docs/**",
                                                                 "/actuator/health",
-                                                                "/ws/**" // WebSocket endpoint
-                                                ).permitAll()
+                                                                "/ws/**", // WebSocket endpoint
+                                                                "/api/courses/**")
+                                                .permitAll()
 
                                                 // All other endpoints require authentication
                                                 .anyRequest().authenticated())
