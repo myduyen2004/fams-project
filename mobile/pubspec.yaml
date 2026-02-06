@@ -31,6 +31,10 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Localization
+  flutter_localizations:
+    sdk: flutter
+
   # State Management & Navigation (GetX - fastest & most efficient)
   get: ^4.6.6
 
