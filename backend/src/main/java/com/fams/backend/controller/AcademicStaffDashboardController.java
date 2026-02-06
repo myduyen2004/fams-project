@@ -160,6 +160,15 @@ public class AcademicStaffDashboardController {
         return ResponseEntity.ok(studentService.importStudents(file));
     }
 
+    @PostMapping("/students/import/fast-preview")
+    @Operation(summary = "Fast preview - Chỉ trả về số lượng hợp lệ/lỗi, không chi tiết từng dòng")
+    public ResponseEntity<java.util.Map<String, Object>> fastPreviewImportStudents(
+            @RequestParam("file") MultipartFile file) {
+        log.info("POST /academic-staff/students/import/fast-preview | filename={}, size={}KB",
+                file.getOriginalFilename(), file.getSize() / 1024);
+        return ResponseEntity.ok(studentService.fastPreviewImportStudents(file));
+    }
+
     @PostMapping("/students/import/preview")
     @Operation(summary = "Xem trước import sinh viên từ file Excel")
     public ResponseEntity<List<com.fams.backend.dto.StudentImportDTO>> previewImportStudents(

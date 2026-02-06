@@ -426,16 +426,28 @@ export const EditStudentModal: React.FC<{ student: StudentResponse; onClose: () 
     );
 };
 
+// Fast Preview Response type
+interface FastPreviewResponse {
+    success: boolean;
+    totalRows: number;
+    validRows: number;
+    errorRows: number;
+    canImport: boolean;
+    sampleErrors: Array<{ row: string; code: string; error: string }>;
+    durationMs: number;
+    message: string;
+}
+
 // --- ImportStudentModal ---
 export const ImportStudentModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = ({ onClose, onSuccess }) => {
     const [file, setFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
-    const [previewData, setPreviewData] = useState<StudentImportDTO[] | null>(null);
+    const [previewResult, setPreviewResult] = useState<FastPreviewResponse | null>(null);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             setFile(e.target.files[0]);
-            setPreviewData(null);
+            setPreviewResult(null);
         }
     };
 
@@ -448,12 +460,14 @@ export const ImportStudentModal: React.FC<{ onClose: () => void; onSuccess: () =
 
         try {
             setLoading(true);
-            const data = await academicStaffService.previewImportStudents(file);
-            setPreviewData(data);
-            if (data.length === 0) {
+            const result = await academicStaffService.fastPreviewImportStudents(file);
+            setPreviewResult(result);
+            if (result.canImport) {
+                toast.success(`${result.validRows} dòng hợp lệ, sẵn sàng import!`);
+            } else if (result.errorRows > 0) {
+                toast.error(`Có ${result.errorRows} lỗi. Vui lòng sửa file và thử lại.`);
+            } else if (result.totalRows === 0) {
                 toast('File không có dữ liệu hợp lệ', { icon: '⚠️' });
-            } else {
-                toast.success(`Đã đọc ${data.length} dòng`);
             }
         } catch (error: unknown) {
             toast.error(getErrorMessage(error, 'Lỗi khi đọc file'));
@@ -463,11 +477,11 @@ export const ImportStudentModal: React.FC<{ onClose: () => void; onSuccess: () =
     };
 
     const handleConfirmImport = async () => {
-        if (!previewData || previewData.length === 0) return;
+        if (!file || !previewResult?.canImport) return;
 
         try {
             setLoading(true);
-            const result = await academicStaffService.saveImportedStudents(previewData);
+            const result = await academicStaffService.importStudents(file);
 
             const totalSuccess = result.created + result.updated;
             if (totalSuccess > 0) {
@@ -486,18 +500,15 @@ export const ImportStudentModal: React.FC<{ onClose: () => void; onSuccess: () =
         }
     };
 
-    const validCount = previewData?.filter(item => item.status === 'VALID').length || 0;
-    const errorCount = previewData?.filter(item => item.status === 'ERROR').length || 0;
-
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className={`bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full ${previewData ? 'max-w-6xl' : 'max-w-md'} border border-gray-100 dark:border-zinc-800 overflow-hidden transition-all duration-300 flex flex-col max-h-[90vh]`}>
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-lg border border-gray-100 dark:border-zinc-800 overflow-hidden transition-all duration-300 flex flex-col max-h-[90vh]">
                 <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800 shrink-0">
                     <div>
                         <h3 className="text-xl font-bold text-gray-900 dark:text-white">Import hồ sơ sinh viên</h3>
-                        {previewData && (
+                        {previewResult && (
                             <p className="text-sm text-gray-500 mt-1">
-                                Xem trước: <span className="text-green-600 font-medium">{validCount} hợp lệ</span> • <span className="text-red-500 font-medium">{errorCount} lỗi</span>
+                                Kiểm tra: <span className="text-green-600 font-medium">{previewResult.validRows} hợp lệ</span> • <span className="text-red-500 font-medium">{previewResult.errorRows} lỗi</span>
                             </p>
                         )}
                     </div>
@@ -505,7 +516,7 @@ export const ImportStudentModal: React.FC<{ onClose: () => void; onSuccess: () =
                 </div>
 
                 <div className="p-6 overflow-y-auto flex-1">
-                    {!previewData ? (
+                    {!previewResult ? (
                         <form onSubmit={handlePreview} className="space-y-4">
                             <div className="p-4 bg-orange-50 dark:bg-orange-900/10 text-orange-800 dark:text-orange-300 rounded-lg text-sm">
                                 <p className="font-semibold mb-1">Lưu ý khi import:</p>
@@ -520,7 +531,10 @@ export const ImportStudentModal: React.FC<{ onClose: () => void; onSuccess: () =
                                 <input required type="file" accept=".xlsx, .xls" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileChange} />
                                 <Upload size={32} className="text-fpt-orange mb-2" />
                                 {file ? (
-                                    <p className="text-sm font-medium text-gray-900 dark:text-white">{file.name}</p>
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-900 dark:text-white">{file.name}</p>
+                                        <p className="text-xs text-gray-500 mt-1">{(file.size / 1024).toFixed(1)} KB</p>
+                                    </div>
                                 ) : (
                                     <>
                                         <p className="text-sm font-medium text-gray-900 dark:text-white">Chọn file Excel (.xlsx)</p>
@@ -532,67 +546,96 @@ export const ImportStudentModal: React.FC<{ onClose: () => void; onSuccess: () =
                             <div className="flex justify-end gap-3 mt-6">
                                 <button type="button" onClick={onClose} className="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Hủy</button>
                                 <button type="submit" disabled={loading} className="px-6 py-2 bg-fpt-orange text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center gap-2">
-                                    {loading && <Loader2 size={16} className="animate-spin" />} Xem trước
+                                    {loading && <Loader2 size={16} className="animate-spin" />} Kiểm tra file
                                 </button>
                             </div>
                         </form>
                     ) : (
                         <div className="space-y-4">
-                            <div className="border rounded-lg overflow-hidden border-gray-200 dark:border-zinc-700">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="bg-gray-50 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 font-medium border-b border-gray-200 dark:border-zinc-700">
-                                        <tr>
-                                            <th className="px-4 py-3 w-12 text-center">#</th>
-                                            <th className="px-4 py-3">MSSV</th>
-                                            <th className="px-4 py-3">Họ tên</th>
-                                            <th className="px-4 py-3">Ngành / Chuyên ngành</th>
-                                            <th className="px-4 py-3">Khóa</th>
-                                            <th className="px-4 py-3">GPA</th>
-                                            <th className="px-4 py-3">Combo</th>
-                                            <th className="px-4 py-3">Ghi chú lỗi</th>
-                                            <th className="px-4 py-3 text-center">Trạng thái</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
-                                        {previewData.map((row, index) => (
-                                            <tr key={index} className={row.status === 'ERROR' ? 'bg-red-50 dark:bg-red-900/10' : ''}>
-                                                <td className="px-4 py-3 text-center text-gray-400">{row.rowNumber}</td>
-                                                <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{row.code}</td>
-                                                <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{row.fullName || '---'}</td>
-                                                <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                                                    <div>{row.major || '---'}</div>
-                                                    <div className="text-xs text-gray-400">{row.specialization || ''}</div>
-                                                </td>
-                                                <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{row.course || '---'}</td>
-                                                <td className="px-4 py-3 text-gray-600 dark:text-gray-400 font-mono">{row.gpa?.toFixed(2) || '0.00'}</td>
-                                                <td className="px-4 py-3 text-gray-600 dark:text-gray-400 font-mono">{row.subSpecialization || '---'}</td>
-                                                <td className="px-4 py-3 text-red-500 text-xs italic max-w-xs">{row.errorMessage || ''}</td>
-                                                <td className="px-4 py-3 text-center">
-                                                    {row.status === 'VALID' ? (
-                                                        <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">Khớp dữ liệu</span>
-                                                    ) : (
-                                                        <span className="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">Lỗi</span>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                            {/* Summary Stats */}
+                            <div className="grid grid-cols-3 gap-4">
+                                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 text-center">
+                                    <p className="text-2xl font-bold text-blue-600">{previewResult.totalRows}</p>
+                                    <p className="text-xs text-blue-600/70">Tổng dòng</p>
+                                </div>
+                                <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 text-center">
+                                    <p className="text-2xl font-bold text-green-600">{previewResult.validRows}</p>
+                                    <p className="text-xs text-green-600/70">Hợp lệ</p>
+                                </div>
+                                <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 text-center">
+                                    <p className="text-2xl font-bold text-red-600">{previewResult.errorRows}</p>
+                                    <p className="text-xs text-red-600/70">Lỗi</p>
+                                </div>
                             </div>
 
+                            {/* Duration */}
+                            <p className="text-xs text-gray-500 text-center">
+                                Thời gian kiểm tra: {(previewResult.durationMs / 1000).toFixed(2)}s
+                            </p>
+
+                            {/* Sample Errors */}
+                            {previewResult.sampleErrors.length > 0 && (
+                                <div className="border border-red-200 dark:border-red-800 rounded-lg overflow-hidden">
+                                    <div className="bg-red-50 dark:bg-red-900/20 px-4 py-2 border-b border-red-200 dark:border-red-800">
+                                        <p className="text-sm font-medium text-red-700 dark:text-red-400">
+                                            Mẫu lỗi (tối đa 10 dòng đầu)
+                                        </p>
+                                    </div>
+                                    <div className="max-h-48 overflow-y-auto">
+                                        <table className="w-full text-xs">
+                                            <thead className="bg-red-50/50 dark:bg-red-900/10 sticky top-0">
+                                                <tr>
+                                                    <th className="px-3 py-2 text-left text-red-600">Dòng</th>
+                                                    <th className="px-3 py-2 text-left text-red-600">MSSV</th>
+                                                    <th className="px-3 py-2 text-left text-red-600">Lỗi</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-red-100 dark:divide-red-800">
+                                                {previewResult.sampleErrors.map((err, idx) => (
+                                                    <tr key={idx} className="text-red-700 dark:text-red-300">
+                                                        <td className="px-3 py-2">{err.row}</td>
+                                                        <td className="px-3 py-2 font-mono">{err.code}</td>
+                                                        <td className="px-3 py-2">{err.error}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Can Import Message */}
+                            {previewResult.canImport && (
+                                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 flex items-center gap-3">
+                                    <div className="text-green-600">✓</div>
+                                    <p className="text-sm text-green-700 dark:text-green-400">
+                                        Tất cả {previewResult.validRows} dòng đều hợp lệ. Sẵn sàng import!
+                                    </p>
+                                </div>
+                            )}
+
+                            {previewResult.errorRows > 0 && (
+                                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center gap-3">
+                                    <div className="text-red-600">✗</div>
+                                    <p className="text-sm text-red-700 dark:text-red-400">
+                                        Có {previewResult.errorRows} dòng lỗi. Vui lòng sửa file và thử lại.
+                                    </p>
+                                </div>
+                            )}
+
                             <div className="flex justify-between items-center pt-4 border-t border-gray-100 dark:border-zinc-800">
-                                <button onClick={() => setPreviewData(null)} className="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2">
+                                <button onClick={() => setPreviewResult(null)} className="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2">
                                     <Upload size={16} className="rotate-180" /> Thử file khác
                                 </button>
                                 <div className="flex gap-3">
                                     <button onClick={onClose} className="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Hủy</button>
                                     <button
                                         onClick={handleConfirmImport}
-                                        disabled={loading || validCount === 0 || errorCount > 0}
+                                        disabled={loading || !previewResult.canImport}
                                         className="px-6 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                                     >
                                         {loading && <Loader2 size={16} className="animate-spin" />}
-                                        Cập nhật ({validCount}) sinh viên
+                                        Import {previewResult.validRows} sinh viên
                                     </button>
                                 </div>
                             </div>

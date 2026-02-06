@@ -199,6 +199,26 @@ export const academicStaffService = {
         return response.data;
     },
 
+    fastPreviewImportStudents: async (file: File): Promise<{
+        success: boolean;
+        totalRows: number;
+        validRows: number;
+        errorRows: number;
+        canImport: boolean;
+        sampleErrors: Array<{ row: string; code: string; error: string }>;
+        durationMs: number;
+        message: string;
+    }> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await apiClient.post('/academic-staff/students/import/fast-preview', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+        return response.data;
+    },
+
     saveImportedStudents: async (dtos: StudentImportDTO[]): Promise<{ created: number; updated: number; failed: number; errors?: string[] }> => {
         const response = await apiClient.post<{ created: number; updated: number; failed: number; errors?: string[] }>('/academic-staff/students/import/save', dtos);
         return response.data;

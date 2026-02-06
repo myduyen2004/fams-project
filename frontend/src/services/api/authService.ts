@@ -56,7 +56,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000,
+  timeout: 120000, // Tăng lên 120s cho các tác vụ import lớn
 });
 
 // Request Interceptor - Add token to headers

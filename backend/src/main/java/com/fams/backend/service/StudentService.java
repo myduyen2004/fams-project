@@ -29,6 +29,13 @@ public interface StudentService {
 
     List<StudentImportDTO> previewImportStudents(MultipartFile file);
 
+    /**
+     * Fast preview - chỉ trả về số lượng hợp lệ/lỗi, không trả về chi tiết từng
+     * dòng
+     * Dùng để hiển thị nhanh tổng hợp trước khi import
+     */
+    Map<String, Object> fastPreviewImportStudents(MultipartFile file);
+
     Map<String, Object> saveImportedStudents(List<StudentImportDTO> dtos);
 
     List<String> getAllMajors();

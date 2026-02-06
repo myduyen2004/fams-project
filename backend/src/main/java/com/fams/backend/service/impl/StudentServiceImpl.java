@@ -479,17 +479,24 @@ public class StudentServiceImpl implements StudentService {
         Map<String, User> userMap = userRepository.findByCodeInIgnoreCase(codesInFile).stream()
                 .collect(Collectors.toMap(u -> u.getCode().trim().toLowerCase(), u -> u, (a, b) -> a));
 
-        Map<String, Major> majorMap = majorRepository.findAll().stream()
-                .collect(Collectors.toMap(m -> m.getName().trim().toLowerCase(), m -> m, (a, b) -> a));
+        // Academic Maps: Support both Code and Name (Case-insensitive)
+        Map<String, Major> majorMap = new HashMap<>();
+        majorRepository.findAll().forEach(m -> {
+            majorMap.put(m.getName().trim().toLowerCase(), m);
+            majorMap.put(m.getCode().trim().toLowerCase(), m);
+        });
 
-        Map<String, Specialization> specMap = specializationRepository.findAll().stream()
-                .collect(Collectors.toMap(s -> s.getName().trim().toLowerCase() + "|" + s.getMajor().getId(), s -> s,
-                        (a, b) -> a));
+        Map<String, Specialization> specMap = new HashMap<>();
+        specializationRepository.findAll().forEach(s -> {
+            specMap.put(s.getName().trim().toLowerCase() + "|" + s.getMajor().getId(), s);
+            specMap.put(s.getCode().trim().toLowerCase() + "|" + s.getMajor().getId(), s);
+        });
 
-        Map<String, SubSpecialization> subSpecMap = subSpecializationRepository.findAll().stream()
-                .collect(Collectors.toMap(
-                        ss -> ss.getName().trim().toLowerCase() + "|" + ss.getSpecialization().getId(),
-                        ss -> ss, (a, b) -> a));
+        Map<String, SubSpecialization> subSpecMap = new HashMap<>();
+        subSpecializationRepository.findAll().forEach(ss -> {
+            subSpecMap.put(ss.getName().trim().toLowerCase() + "|" + ss.getSpecialization().getId(), ss);
+            subSpecMap.put(ss.getCode().trim().toLowerCase() + "|" + ss.getSpecialization().getId(), ss);
+        });
 
         // Phase 3: Process rows in-memory
         Set<String> seenCodes = new HashSet<>();
@@ -620,6 +627,185 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> fastPreviewImportStudents(MultipartFile file) {
+        long startTime = System.currentTimeMillis();
+        Map<String, Object> result = new HashMap<>();
+        List<Map<String, String>> sampleErrors = new ArrayList<>();
+        int totalRows = 0;
+        int validRows = 0;
+        int errorRows = 0;
+
+        try (InputStream is = file.getInputStream();
+                Workbook workbook = new XSSFWorkbook(is)) {
+
+            Sheet sheet = workbook.getSheetAt(0);
+
+            // Collect all codes from file first to batch fetch users
+            List<String> codesInFile = new ArrayList<>();
+            List<Row> rowsToProcess = new ArrayList<>();
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null)
+                    continue;
+                String code = getCellValueAsString(row.getCell(1));
+                if (code != null && !code.trim().isEmpty()) {
+                    codesInFile.add(code.trim().toLowerCase());
+                    rowsToProcess.add(row);
+                }
+            }
+
+            if (rowsToProcess.isEmpty()) {
+                result.put("success", true);
+                result.put("totalRows", 0);
+                result.put("validRows", 0);
+                result.put("errorRows", 0);
+                result.put("message", "File không có dữ liệu hoặc sai định dạng");
+                return result;
+            }
+
+            // Batch fetch ONLY required users
+            Map<String, User> userMap = userRepository.findByCodeInIgnoreCase(codesInFile)
+                    .stream()
+                    .filter(u -> u.getRole() == User.UserRole.STUDENT)
+                    .filter(u -> u.getStatus() != User.UserStatus.INACTIVE)
+                    .collect(Collectors.toMap(u -> u.getCode().trim().toLowerCase(), u -> u, (a, b) -> a));
+
+            // Cache Academic Maps: Support both Code and Name (Case-insensitive)
+            Map<String, Major> majorMap = new HashMap<>();
+            majorRepository.findAll().forEach(m -> {
+                majorMap.put(m.getName().trim().toLowerCase(), m);
+                majorMap.put(m.getCode().trim().toLowerCase(), m);
+            });
+
+            Map<String, Specialization> specMap = new HashMap<>();
+            specializationRepository.findAll().forEach(s -> {
+                specMap.put(s.getName().trim().toLowerCase() + "|" + s.getMajor().getId(), s);
+                specMap.put(s.getCode().trim().toLowerCase() + "|" + s.getMajor().getId(), s);
+            });
+
+            Map<String, SubSpecialization> subSpecMap = new HashMap<>();
+            subSpecializationRepository.findAll().forEach(ss -> {
+                subSpecMap.put(ss.getName().trim().toLowerCase() + "|" + ss.getSpecialization().getId(), ss);
+                subSpecMap.put(ss.getCode().trim().toLowerCase() + "|" + ss.getSpecialization().getId(), ss);
+            });
+
+            Set<String> seenCodes = new HashSet<>();
+
+            for (Row currentRow : rowsToProcess) {
+                totalRows++;
+                String code = getCellValueAsString(currentRow.getCell(1)).trim();
+
+                StringBuilder errorMsg = new StringBuilder();
+                boolean hasError = false;
+
+                if (seenCodes.contains(code.toLowerCase())) {
+                    errorMsg.append("Mã SV bị trùng trong file. ");
+                    hasError = true;
+                } else {
+                    seenCodes.add(code.toLowerCase());
+
+                    User user = userMap.get(code.toLowerCase());
+                    if (user == null) {
+                        errorMsg.append("Không tìm thấy SV active với mã này. ");
+                        hasError = true;
+                    } else {
+                        // Check basic matches
+                        String fullName = getCellValueAsString(currentRow.getCell(2));
+                        String email = getCellValueAsString(currentRow.getCell(3));
+
+                        // Optional match checks - only if provided
+                        if (fullName != null && !fullName.trim().isEmpty()
+                                && !fullName.trim().equalsIgnoreCase(user.getFullName())) {
+                            errorMsg.append("Tên không khớp hồ sơ. ");
+                            hasError = true;
+                        }
+                        if (email != null && !email.trim().isEmpty()
+                                && !email.trim().equalsIgnoreCase(user.getEmail())) {
+                            errorMsg.append("Email không khớp hồ sơ. ");
+                            hasError = true;
+                        }
+
+                        // Validate Major/Spec/SubSpec if provided
+                        String majorName = getCellValueAsString(currentRow.getCell(5));
+                        Major foundMajor = null;
+                        if (majorName != null && !majorName.trim().isEmpty()) {
+                            foundMajor = majorMap.get(majorName.trim().toLowerCase());
+                            if (foundMajor == null) {
+                                errorMsg.append("Ngành không tồn tại. ");
+                                hasError = true;
+                            }
+                        }
+
+                        if (!hasError) {
+                            String specName = getCellValueAsString(currentRow.getCell(6));
+                            Specialization foundSpec = null;
+                            if (specName != null && !specName.trim().isEmpty()) {
+                                if (foundMajor == null) {
+                                    errorMsg.append("Cần ngành để xác định chuyên ngành. ");
+                                    hasError = true;
+                                } else {
+                                    foundSpec = specMap.get(specName.trim().toLowerCase() + "|" + foundMajor.getId());
+                                    if (foundSpec == null) {
+                                        errorMsg.append("Chuyên ngành không thuộc ngành. ");
+                                        hasError = true;
+                                    }
+                                }
+                            }
+
+                            if (!hasError) {
+                                String subSpecName = getCellValueAsString(currentRow.getCell(7));
+                                if (subSpecName != null && !subSpecName.trim().isEmpty()) {
+                                    if (foundSpec == null) {
+                                        errorMsg.append("Cần chuyên ngành để xác định combo. ");
+                                        hasError = true;
+                                    } else {
+                                        SubSpecialization foundSub = subSpecMap
+                                                .get(subSpecName.trim().toLowerCase() + "|" + foundSpec.getId());
+                                        if (foundSub == null) {
+                                            errorMsg.append("Combo không thuộc chuyên ngành. ");
+                                            hasError = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (hasError) {
+                    errorRows++;
+                    if (sampleErrors.size() < 5) {
+                        Map<String, String> err = new HashMap<>();
+                        err.put("row", String.valueOf(currentRow.getRowNum() + 1));
+                        err.put("code", code);
+                        err.put("error", errorMsg.toString().trim());
+                        sampleErrors.add(err);
+                    }
+                } else {
+                    validRows++;
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error in fast preview student import", e);
+            throw new RuntimeException("Lỗi đọc file: " + e.getMessage());
+        }
+
+        long duration = System.currentTimeMillis() - startTime;
+        result.put("success", true);
+        result.put("totalRows", totalRows);
+        result.put("validRows", validRows);
+        result.put("errorRows", errorRows);
+        result.put("canImport", validRows > 0); // Allow import if there are valid rows, even if some have errors
+        result.put("sampleErrors", sampleErrors);
+        result.put("durationMs", duration);
+        result.put("message", String.format("Đã kiểm tra %d dòng (%.1fs). %d hợp lệ, %d lỗi.",
+                totalRows, duration / 1000.0, validRows, errorRows));
+
+        return result;
+    }
+
+    @Override
     @Transactional
     public Map<String, Object> saveImportedStudents(List<StudentImportDTO> dtos) {
         Map<String, Object> result = new HashMap<>();
@@ -639,18 +825,24 @@ public class StudentServiceImpl implements StudentService {
         // Phase 1: Pre-fetch & Cache for O(1) performance
         log.info("Starting high-speed import processing for {} students", dtos.size());
 
-        // Cache Academic Entities with case-insensitive keys
-        Map<String, Major> majorMap = majorRepository.findAll().stream()
-                .collect(Collectors.toMap(m -> m.getName().trim().toLowerCase(), m -> m, (a, b) -> a));
+        // Cache Academic Maps: Support both Code and Name (Case-insensitive)
+        Map<String, Major> majorMap = new HashMap<>();
+        majorRepository.findAll().forEach(m -> {
+            majorMap.put(m.getName().trim().toLowerCase(), m);
+            majorMap.put(m.getCode().trim().toLowerCase(), m);
+        });
 
-        Map<String, Specialization> specMap = specializationRepository.findAll().stream()
-                .collect(Collectors.toMap(s -> s.getName().trim().toLowerCase() + "|" + s.getMajor().getId(), s -> s,
-                        (a, b) -> a));
+        Map<String, Specialization> specMap = new HashMap<>();
+        specializationRepository.findAll().forEach(s -> {
+            specMap.put(s.getName().trim().toLowerCase() + "|" + s.getMajor().getId(), s);
+            specMap.put(s.getCode().trim().toLowerCase() + "|" + s.getMajor().getId(), s);
+        });
 
-        Map<String, SubSpecialization> subSpecMap = subSpecializationRepository.findAll().stream()
-                .collect(
-                        Collectors.toMap(ss -> ss.getName().trim().toLowerCase() + "|" + ss.getSpecialization().getId(),
-                                ss -> ss, (a, b) -> a));
+        Map<String, SubSpecialization> subSpecMap = new HashMap<>();
+        subSpecializationRepository.findAll().forEach(ss -> {
+            subSpecMap.put(ss.getName().trim().toLowerCase() + "|" + ss.getSpecialization().getId(), ss);
+            subSpecMap.put(ss.getCode().trim().toLowerCase() + "|" + ss.getSpecialization().getId(), ss);
+        });
 
         List<String> codes = dtos.stream()
                 .filter(d -> !"ERROR".equals(d.getStatus()))
@@ -664,8 +856,8 @@ public class StudentServiceImpl implements StudentService {
         Map<Long, StudentProfile> profileMap = studentProfileRepository.findAllById(userIds).stream()
                 .collect(Collectors.toMap(StudentProfile::getUserId, p -> p));
 
-        List<StudentProfile> newProfilesToSave = new ArrayList<>();
-        List<StudentProfile> existingProfilesToSave = new ArrayList<>();
+        List<User> allUsersToSave = new ArrayList<>();
+        Set<Long> processedUserIds = new HashSet<>();
 
         // Phase 2: In-memory Transformation
         for (StudentImportDTO dto : dtos) {
@@ -678,6 +870,10 @@ public class StudentServiceImpl implements StudentService {
                 User user = userMap.get(dto.getCode().trim().toLowerCase());
                 if (user == null) {
                     throw new NotFoundException("Không tìm thấy user với mã: " + dto.getCode());
+                }
+
+                if (processedUserIds.contains(user.getId())) {
+                    continue; // Tránh xử lý trùng lặp nếu file có lỗi logic nào đó
                 }
 
                 StudentProfile profile = profileMap.get(user.getId());
@@ -699,6 +895,7 @@ public class StudentServiceImpl implements StudentService {
                             .get(dto.getSubSpecialization().trim().toLowerCase() + "|" + specialization.getId());
                 }
 
+                boolean changed = false;
                 if (profile == null) {
                     profile = StudentProfile.builder()
                             .user(user)
@@ -708,11 +905,11 @@ public class StudentServiceImpl implements StudentService {
                             .course(dto.getCourse() != null ? dto.getCourse().trim() : null)
                             .gpa(dto.getGpa())
                             .build();
-                    createdCount++;
-                    newProfilesToSave.add(profile);
-                } else {
-                    boolean changed = false;
 
+                    user.setStudentProfile(profile);
+                    createdCount++;
+                    changed = true;
+                } else {
                     if (!java.util.Objects.equals(profile.getMajor(), major)) {
                         profile.setMajor(major);
                         changed = true;
@@ -738,8 +935,12 @@ public class StudentServiceImpl implements StudentService {
 
                     if (changed) {
                         updatedCount++;
-                        existingProfilesToSave.add(profile);
                     }
+                }
+
+                if (changed) {
+                    allUsersToSave.add(user);
+                    processedUserIds.add(user.getId());
                 }
 
             } catch (Exception e) {
@@ -750,22 +951,11 @@ public class StudentServiceImpl implements StudentService {
         }
 
         // Phase 3: Optimized Batch Persistence
-        // Save new profiles one by one to ensure proper persist semantics with @MapsId
-        for (StudentProfile newProfile : newProfilesToSave) {
-            try {
-                studentProfileRepository.save(newProfile);
-            } catch (Exception e) {
-                createdCount--;
-                failedCount++;
-                errors.add("Lỗi lưu profile mới cho SV: " + e.getMessage());
-                log.error("Error saving new profile", e);
-            }
-        }
-
-        // Save existing profiles in batch (these are already managed entities)
-        if (!existingProfilesToSave.isEmpty()) {
-            studentProfileRepository.saveAll(existingProfilesToSave);
-            log.info("Batch saved {} updated student profiles successfully", existingProfilesToSave.size());
+        if (!allUsersToSave.isEmpty()) {
+            // Lưu qua UserRepository để tận dụng CascadeType.ALL và đảm bảo bi-directional
+            // mapping
+            userRepository.saveAll(allUsersToSave);
+            log.info("Batch saved {} users (with profiles) successfully", allUsersToSave.size());
         }
 
         result.put("created", createdCount);
@@ -776,6 +966,7 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
+    @Transactional
     public Map<String, Object> importStudents(MultipartFile file) {
         // Direct import without preview (optional, or similar to preview+save)
         // Implementing similar to LecturerService's direct import which reads and saves
