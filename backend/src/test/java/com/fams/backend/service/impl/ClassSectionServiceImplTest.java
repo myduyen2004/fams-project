@@ -36,6 +36,15 @@ public class ClassSectionServiceImplTest {
     @Mock
     private EnrollmentRepository enrollmentRepository;
 
+    @Mock
+    private SemesterRepository semesterRepository;
+
+    @Mock
+    private CourseRepository courseRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
     @InjectMocks
     private ClassSectionServiceImpl classSectionService;
 
@@ -283,11 +292,20 @@ public class ClassSectionServiceImplTest {
                 .maxStudents(30)
                 .build();
 
-        when(classSectionService.getClass()).thenCallRealMethod();
+        when(semesterRepository.findByCode("FA23")).thenReturn(Optional.of(semester));
+        when(classSectionRepository.existsByClassNameIgnoreCase("SE18B03-PRN211")).thenReturn(false);
+        when(courseRepository.findByCode("PRN211")).thenReturn(Optional.of(course));
+        when(userRepository.findByUsernameIgnoreCase("sonnt5")).thenReturn(Optional.of(lecturer));
+        lecturer.setRole(User.UserRole.LECTURER);
+        when(classSectionRepository.save(any(ClassSection.class))).thenAnswer(i -> i.getArguments()[0]);
 
-        // Then - Test structure only (full test requires all dependencies mocked)
-        assertNotNull(request);
-        assertEquals("SE18B03-PRN211", request.getClassName());
+        // When
+        ClassSectionResponse response = classSectionService.createClassSection(request);
+
+        // Then
+        assertNotNull(response);
+        assertEquals("SE18B03-PRN211", response.getClassName());
+        verify(classSectionRepository).save(any(ClassSection.class));
     }
 
     @Test
@@ -324,9 +342,18 @@ public class ClassSectionServiceImplTest {
         when(classSectionRepository.save(any(ClassSection.class)))
                 .thenReturn(classSection);
 
-        // Then - verify classSection structure
-        assertNotNull(classSection);
-        assertEquals("SE18B02-PRN211", classSection.getClassName());
+        // When - verify updated via service
+        com.fams.backend.dto.request.ClassSectionRequest request = com.fams.backend.dto.request.ClassSectionRequest
+                .builder()
+                .lecturerUsername("sonnt5")
+                .build();
+        when(userRepository.findByUsernameIgnoreCase("sonnt5")).thenReturn(Optional.of(lecturer));
+        lecturer.setRole(User.UserRole.LECTURER);
+
+        classSectionService.updateClassSection(classSection.getClassName(), request);
+
+        // Then
+        verify(classSectionRepository).save(any(ClassSection.class));
     }
 
     @Test
@@ -533,7 +560,11 @@ public class ClassSectionServiceImplTest {
         when(enrollmentRepository.findByClassSectionClassName(classSection.getClassName()))
                 .thenReturn(Collections.singletonList(enrollment));
 
+        // When
+        List<EnrollmentResponse> result = classSectionService.getEnrollmentsByClassName(classSection.getClassName());
+
         // Then - enrolled student code should match
-        assertEquals("SE180001", enrollment.getStudentCode());
+        assertFalse(result.isEmpty());
+        assertEquals("SE180001", result.get(0).getStudentCode());
     }
 }

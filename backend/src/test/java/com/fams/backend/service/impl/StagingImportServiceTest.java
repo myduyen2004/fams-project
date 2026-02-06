@@ -323,6 +323,8 @@ class StagingImportServiceTest {
             String stagingTable = "staging_cs_test123";
             when(jdbcTemplate.update(anyString(), eq(1L), eq(1L))).thenReturn(5);
             when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class))).thenReturn(0);
+            testSemester.setStatus(com.fams.backend.entity.Semester.SemesterStatus.UPCOMING);
+            when(semesterRepository.findById(1L)).thenReturn(Optional.of(testSemester));
             doNothing().when(jdbcTemplate).execute(anyString());
 
             // Act
@@ -342,6 +344,8 @@ class StagingImportServiceTest {
             String stagingTable = "staging_enr_test123";
             when(jdbcTemplate.update(anyString(), eq(1L))).thenReturn(10);
             when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class))).thenReturn(0);
+            testSemester.setStatus(com.fams.backend.entity.Semester.SemesterStatus.UPCOMING);
+            when(semesterRepository.findById(1L)).thenReturn(Optional.of(testSemester));
             doNothing().when(jdbcTemplate).execute(anyString());
 
             // Act
