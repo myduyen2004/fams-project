@@ -78,8 +78,7 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
   const [addingStudent, setAddingStudent] = useState(false);
   const [loadingStudents, setLoadingStudents] = useState(false);
 
-  // Status update
-  const [updatingStatus, setUpdatingStatus] = useState<number | null>(null);
+
 
   // Delete confirm modal
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -254,29 +253,7 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
     }
   };
 
-  const handleUpdateStatus = async (enrollmentId: number, newStatus: string, studentCode: string) => {
-    if (!canEdit) {
-      toast.error('Chỉ có thể cập nhật trạng thái khi học kỳ chưa bắt đầu');
-      return;
-    }
 
-    try {
-      setUpdatingStatus(enrollmentId);
-      await axios.put(`/api/v1/class-sections/enrollments/${enrollmentId}`, {
-        className,
-        studentCode: studentCode,
-        status: newStatus
-      });
-      toast.success('Cập nhật trạng thái thành công');
-      fetchEnrollments();
-      onUpdate?.();
-    } catch (error: any) {
-      console.error('Error updating enrollment status:', error);
-      toast.error(error.response?.data?.message || 'Không thể cập nhật trạng thái');
-    } finally {
-      setUpdatingStatus(null);
-    }
-  };
 
   const handleAddStudent = async () => {
     if (selectedStudents.size === 0) {
