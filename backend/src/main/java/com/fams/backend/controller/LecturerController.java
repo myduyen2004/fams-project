@@ -108,4 +108,61 @@ public class LecturerController {
                 return ResponseEntity.ok(classNames);
         }
 
+        private final com.fams.backend.repository.TimetableSlotRepository timetableSlotRepository;
+        private final com.fams.backend.repository.ScheduleRequestRepository scheduleRequestRepository;
+
+        @GetMapping("/check-conflicts")
+        public ResponseEntity<java.util.Map<String, Object>> checkConflicts(
+                        @RequestParam String className,
+                        @RequestParam String date,
+                        @RequestParam Integer slotNumber,
+                        @RequestParam Long originalSlotId,
+                        @AuthenticationPrincipal UserDetails userDetails) {
+
+                User lecturer = userRepository.findByUsername(userDetails.getUsername())
+                                .orElseThrow(() -> new RuntimeException("Logged in user not found"));
+
+                java.time.LocalDate targetDate = java.time.LocalDate.parse(date);
+                java.util.Map<String, Object> result = new java.util.HashMap<>();
+                java.util.List<java.util.Map<String, Object>> conflicts = new java.util.ArrayList<>();
+
+                // 1. Check Lecturer Conflict
+                boolean lecturerBusy = timetableSlotRepository.existsByLecturerIdAndDateAndSlotNumberExcludingSlot(
+                                lecturer.getId(), targetDate, slotNumber,
+                                com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.CANCELLED,
+                                originalSlotId);
+                if (lecturerBusy) {
+                        java.util.Map<String, Object> conflict = new java.util.HashMap<>();
+                        conflict.put("type", "LECTURER");
+                        conflict.put("message", "Bạn đã có lịch dạy lớp khác vào khung giờ này.");
+                        conflicts.add(conflict);
+                }
+
+                // 2. Check Pending Request Conflict
+                boolean pendingConflict = scheduleRequestRepository
+                                .existsPendingRequestForDateAndSlot(targetDate, slotNumber);
+                if (pendingConflict) {
+                        java.util.Map<String, Object> conflict = new java.util.HashMap<>();
+                        conflict.put("type", "PENDING_REQUEST");
+                        conflict.put("message", "Đã có yêu cầu thay đổi lịch đang chờ duyệt cho khung giờ này.");
+                        conflicts.add(conflict);
+                }
+
+                // 3. Check Student Conflict
+                long studentConflictCount = timetableSlotRepository.countStudentConflicts(
+                                className, targetDate, slotNumber, originalSlotId);
+                if (studentConflictCount > 0) {
+                        java.util.Map<String, Object> conflict = new java.util.HashMap<>();
+                        conflict.put("type", "STUDENT");
+                        conflict.put("message", "Có " + studentConflictCount
+                                        + " sinh viên trong lớp bị trùng lịch học vào khung giờ này.");
+                        conflict.put("count", studentConflictCount);
+                        conflicts.add(conflict);
+                }
+
+                result.put("conflicts", conflicts);
+                result.put("hasConflict", !conflicts.isEmpty());
+                return ResponseEntity.ok(result);
+        }
+
 }
