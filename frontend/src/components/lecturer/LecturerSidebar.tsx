@@ -1,49 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Settings, LogOut, ChevronDown, ChevronRight } from 'lucide-react';
+import {
+    Home,
+    Calendar,
+    ScanFace,
+    FolderOpen,
+    MessageCircle,
+    Send,
+    Settings,
+    LogOut,
+    ChevronDown,
+    KeyRound
+} from 'lucide-react';
 import { authService } from '../../services/api/authService';
 import { ConfirmModal } from '../common/ConfirmModal';
-
-// --- Custom Solid Icons (Reuse from StudentSidebar for consistency) ---
-const DashboardIcon = ({ size = 20, className = "" }: { size?: number, className?: string }) => (
-    <svg width={size} height={size} viewBox="0 0 576 512" fill="currentColor" className={className}>
-        <path d="M575.8 255.5c0 18-15 32.1-32 32.1h-32l.7 160.2c0 2.7-.2 5.4-.5 8.1V472c0 22.1-17.9 40-40 40H456c-1.1 0-2.2 0-3.3-.1c-1.4 .1-2.8 .1-4.2 .1H416 392c-22.1 0-40-17.9-40-40V448 384c0-17.7-14.3-32-32-32H256c-17.7 0-32 14.3-32 32v64 24c0 22.1-17.9 40-40 40H160 128.1c-1.5 0-3-.1-4.5-.2c-1.2 .1-2.4 .2-3.6 .2H104c-22.1 0-40-17.9-40-40V360c0-.9 0-1.9 .1-2.8V287.6H32c-18 0-32-14-32-32.1c0-9 3-17 10-24L266.4 8c7-7 15-8 22-8s15 2 21 7L564.8 231.5c8 7 12 15 11 24z" />
-    </svg>
-);
-
-const ScheduleIcon = ({ size = 20, className = "" }: { size?: number, className?: string }) => (
-    <svg width={size} height={size} viewBox="0 0 448 512" fill="currentColor" className={className}>
-        <path d="M152 24c0-13.3-10.7-24-24-24s-24 10.7-24 24V64H64C28.7 64 0 92.7 0 128v16 48V448c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V192 144 128c0-35.3-28.7-64-64-64H344V24c0-13.3-10.7-24-24-24s-24 10.7-24 24V64H152V24zM48 192h80v56H48V192zm0 104h80v64H48V296zm128 0h96v64H176V296zm144 0h80v64H320V296zm80-48H320V192h80v56zm0 160v40c0 8.8-7.2 16-16 16H320V408h80zm-128 0v56H176V408h96zm-128 0v56H64c-8.8 0-16-7.2-16-16V408h80zM272 248H176V192h96v56z" />
-    </svg>
-);
-
-const AttendanceIcon = ({ size = 20, className = "" }: { size?: number, className?: string }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <path d="M9 10h.01M15 10h.01M9.5 15a3.5 3.5 0 0 0 5 0" />
-        <path d="M3 7V5a2 2 0 0 1 2-2h2 M17 3h2a2 2 0 0 1 2 2v2 M21 17v2a2 2 0 0 1-2 2h-2 M7 21H5a2 2 0 0 1-2-2v-2" />
-    </svg>
-);
-
-const ManagementIcon = ({ size = 20, className = "" }: { size?: number, className?: string }) => (
-    <svg width={size} height={size} viewBox="0 0 448 512" fill="currentColor" className={className}>
-        <path d="M96 0C43 0 0 43 0 96V416c0 53 43 96 96 96H384h32c17.7 0 32-14.3 32-32s-14.3-32-32-32V384c17.7 0 32-14.3 32-32V32c0-17.7-14.3-32-32-32H384 96zm0 384H352v64H96c-17.7 0-32-14.3-32-32s14.3-32 32-32zm32-240c0-8.8 7.2-16 16-16H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16zm0 48c0-8.8 7.2-16 16-16H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16z" />
-    </svg>
-);
-
-const MessagesIcon = ({ size = 20, className = "" }: { size?: number, className?: string }) => (
-    <svg width={size} height={size} viewBox="0 0 512 512" fill="currentColor" className={className}>
-        <path d="M512 240c0 114.9-114.6 208-256 208c-37.1 0-72.3-6.4-104.1-18.1c-32.3 26.5-72.4 46.5-115.9 59.5c-44 13.2-56.1-9.9-25.2-36.2C46.8 418.8 69.3 381.7 82.3 349c-31.5-31.9-50.3-73.4-50.3-118C32 105.1 146.6 24 256 24s256 81.1 256 216zm-361.6-16c0 17.7 14.3 32 32 32s32-14.3 32-32s-14.3-32-32-32s-32 14.3-32 32zm88 0c0 17.7 14.3 32 32 32s32-14.3 32-32s-14.3-32-32-32s-32 14.3-32 32zm88 0c0 17.7 14.3 32 32 32s32-14.3 32-32s-14.3-32-32-32s-32 14.3-32 32z" />
-    </svg>
-);
-
-const RequestsIcon = ({ size = 20, className = "" }: { size?: number, className?: string }) => (
-    <svg width={size} height={size} viewBox="0 0 512 512" fill="currentColor" className={className}>
-        <path d="M498.1 5.6c10.1 7 15.4 19.1 13.5 31.2l-64 416c-1.5 9.7-7.4 18.2-16 23s-18.9 5.4-28 1.6L284 427.7l-68.5 74.1c-8.9 9.7-22.9 12.9-35.2 8.1S160 493.2 160 480V396.4c0-4 1.5-7.8 4.2-10.7L331.8 202.8c5.8-6.3 5.6-16-.4-22s-15.7-6.4-22-.7L106 360.8 17.7 316.6C7.1 311.3 .3 300.7 0 288.9s5.9-22.8 16.1-28.7l448-256c10.7-6.1 23.9-5.5 34 1.4z" />
-    </svg>
-);
+import { OtpSetupModal } from './OtpSetupModal';
+import { OtpChangeModal } from './OtpChangeModal';
+import { lecturerOtpService } from '../../services/api/lecturerOtpService';
 
 interface SubMenuItem {
-    id: string;
     label: string;
     path: string;
 }
@@ -53,7 +28,7 @@ interface MenuItem {
     label: string;
     icon: React.ReactNode;
     path?: string;
-    subItems?: SubMenuItem[];
+    submenu?: SubMenuItem[];
 }
 
 export const LecturerSidebar: React.FC = () => {
@@ -62,55 +37,73 @@ export const LecturerSidebar: React.FC = () => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
-
-    // Initial check for open submenu based on current path
-    React.useEffect(() => {
-        if (location.pathname.includes('/lecturer/grades') || location.pathname.includes('/lecturer/classes')) {
-            setOpenSubmenu('management');
-        }
-    }, []);
+    const [showOtpModal, setShowOtpModal] = useState(false);
+    const [hasOtp, setHasOtp] = useState(true); // Assume has OTP by default
 
     const menuItems: MenuItem[] = [
         {
             id: 'dashboard',
             label: 'Dashboard',
-            icon: <DashboardIcon size={20} />,
+            icon: <Home size={20} />,
             path: '/lecturer/dashboard'
         },
         {
             id: 'schedule',
             label: 'Lịch giảng dạy',
-            icon: <ScheduleIcon size={20} />,
+            icon: <Calendar size={20} />,
             path: '/lecturer/schedule'
         },
         {
             id: 'attendance',
             label: 'Điểm danh',
-            icon: <AttendanceIcon size={20} />,
+            icon: <ScanFace size={20} />,
             path: '/lecturer/attendance'
         },
         {
             id: 'management',
             label: 'Quản lý',
-            icon: <ManagementIcon size={20} />,
-            subItems: [
-                { id: 'grades', label: 'Điểm', path: '/lecturer/grades' },
-                { id: 'classes', label: 'Lớp học', path: '/lecturer/classes' }
+            icon: <FolderOpen size={20} />,
+            submenu: [
+                { label: 'Điểm', path: '/lecturer/grades' },
+                { label: 'Lớp học', path: '/lecturer/classes' }
             ]
         },
         {
             id: 'messages',
             label: 'Tin nhắn',
-            icon: <MessagesIcon size={20} />,
+            icon: <MessageCircle size={20} />,
             path: '/lecturer/messages'
         },
         {
             id: 'requests',
             label: 'Gửi đơn yêu cầu',
-            icon: <RequestsIcon size={20} />,
+            icon: <Send size={20} />,
             path: '/lecturer/requests'
         }
     ];
+
+    // Auto-expand submenu if current route matches
+    useEffect(() => {
+        const activeMenuItem = menuItems.find(item =>
+            item.submenu && isSubmenuActive(item.submenu)
+        );
+        if (activeMenuItem) {
+            setOpenSubmenu(activeMenuItem.id);
+        }
+    }, [location.pathname]);
+
+    // Check OTP status on mount
+    useEffect(() => {
+        const checkOtp = async () => {
+            try {
+                const status = await lecturerOtpService.getOtpStatus();
+                setHasOtp(status.hasOtp);
+            } catch (err) {
+                console.error('Failed to check OTP status', err);
+            }
+        };
+        checkOtp();
+    }, []);
 
     const handleLogout = async () => {
         setShowLogoutModal(false);
@@ -122,18 +115,22 @@ export const LecturerSidebar: React.FC = () => {
         navigate('/login');
     };
 
-    const toggleSubmenu = (id: string) => {
-        if (openSubmenu === id) {
-            setOpenSubmenu(null);
-        } else {
-            setOpenSubmenu(id);
-            setIsExpanded(true); // Auto expand sidebar when opening submenu
-        }
-    };
-
     const isActive = (path?: string) => {
         if (!path) return false;
         return location.pathname === path || (path !== '/lecturer/dashboard' && location.pathname.startsWith(path + '/'));
+    };
+
+    const isSubmenuActive = (submenu?: SubMenuItem[]) => {
+        if (!submenu) return false;
+        return submenu.some(subItem => isActive(subItem.path));
+    };
+
+    const handleMenuClick = (item: MenuItem) => {
+        if (item.submenu) {
+            setOpenSubmenu(openSubmenu === item.id ? null : item.id);
+        } else if (item.path) {
+            navigate(item.path);
+        }
     };
 
     return (
@@ -142,14 +139,15 @@ export const LecturerSidebar: React.FC = () => {
             onMouseEnter={() => setIsExpanded(true)}
             onMouseLeave={() => {
                 setIsExpanded(false);
-                setOpenSubmenu(null); // Optional: close submenu on collapse
+                setOpenSubmenu(null);
             }}
         >
-            <div className="flex flex-col h-full overflow-hidden">
+            <div className="flex flex-col h-full">
                 {/* Logo Section */}
                 <div
                     onClick={() => navigate('/lecturer/dashboard')}
                     className="h-16 flex items-center justify-center border-b border-gray-200 dark:border-zinc-800 px-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors select-none"
+                    title="Về trang chủ"
                 >
                     {isExpanded ? (
                         <img
@@ -175,72 +173,52 @@ export const LecturerSidebar: React.FC = () => {
                 </div>
 
                 {/* Menu Items */}
-                <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2">
+                <nav className="flex-1 overflow-y-auto py-4 px-2">
                     {menuItems.map((item) => (
                         <div key={item.id} className="mb-1">
-                            {item.subItems ? (
-                                // Dropdown Menu Item
-                                <div>
-                                    <button
-                                        onClick={() => toggleSubmenu(item.id)}
-                                        className={`w-full flex items-center justify-between px-3 py-3 rounded-lg transition-all duration-200 group ${openSubmenu === item.id
-                                            ? 'text-fpt-orange bg-fpt-orange/10 font-bold'
-                                            : 'text-fpt-orange hover:bg-fpt-orange hover:text-white'
-                                            }`}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex-shrink-0 transition-colors duration-200">
-                                                {item.icon}
-                                            </div>
-                                            {isExpanded && (
-                                                <span className="text-sm font-medium whitespace-nowrap transition-colors duration-200">
-                                                    {item.label}
-                                                </span>
-                                            )}
-                                        </div>
-                                        {isExpanded && (
-                                            <div className="transition-transform duration-200">
-                                                {openSubmenu === item.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                                            </div>
-                                        )}
-                                    </button>
-
-                                    {/* Submenu Items */}
-                                    {openSubmenu === item.id && isExpanded && (
-                                        <div className="ml-9 mt-1 space-y-1">
-                                            {item.subItems.map((sub) => (
-                                                <button
-                                                    key={sub.id}
-                                                    onClick={() => navigate(sub.path)}
-                                                    className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${isActive(sub.path)
-                                                        ? 'text-fpt-orange font-bold bg-fpt-orange/10'
-                                                        : 'text-gray-600 dark:text-gray-400 hover:text-fpt-orange hover:bg-fpt-orange/5'
-                                                        }`}
-                                                >
-                                                    {sub.label}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
+                            <button
+                                onClick={() => handleMenuClick(item)}
+                                className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group ${isActive(item.path) || isSubmenuActive(item.submenu)
+                                    ? 'bg-fpt-orange text-white'
+                                    : 'text-fpt-orange hover:bg-fpt-orange hover:text-white'
+                                    }`}
+                                title={!isExpanded ? item.label : ''}
+                            >
+                                <div className={`flex-shrink-0 transition-colors duration-200 ${isActive(item.path) || isSubmenuActive(item.submenu) ? 'text-white' : 'text-fpt-orange group-hover:text-white'}`}>
+                                    {item.icon}
                                 </div>
-                            ) : (
-                                // Standard Menu Item
-                                <button
-                                    onClick={() => navigate(item.path!)}
-                                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group ${isActive(item.path)
-                                        ? 'bg-fpt-orange text-white'
-                                        : 'text-fpt-orange hover:bg-fpt-orange hover:text-white'
-                                        }`}
-                                >
-                                    <div className={`flex-shrink-0 transition-colors duration-200 ${isActive(item.path) ? 'text-white' : 'text-fpt-orange group-hover:text-white'}`}>
-                                        {item.icon}
-                                    </div>
-                                    {isExpanded && (
-                                        <span className={`flex-1 text-left text-sm whitespace-nowrap transition-colors duration-200 ${isActive(item.path) ? 'text-white font-bold' : 'font-medium group-hover:text-white'}`}>
+                                {isExpanded && (
+                                    <>
+                                        <span className={`flex-1 text-left text-sm whitespace-nowrap transition-colors duration-200 ${isActive(item.path) || isSubmenuActive(item.submenu) ? 'text-white font-bold' : 'font-medium group-hover:text-white'}`}>
                                             {item.label}
                                         </span>
-                                    )}
-                                </button>
+                                        {item.submenu && (
+                                            <ChevronDown
+                                                size={16}
+                                                className={`transition-transform duration-200 ${openSubmenu === item.id ? 'rotate-180' : ''}`}
+                                            />
+                                        )}
+                                    </>
+                                )}
+                            </button>
+
+                            {/* Submenu */}
+                            {isExpanded && item.submenu && openSubmenu === item.id && (
+                                <div className="mt-1 ml-4 space-y-1">
+                                    {item.submenu.map((subItem) => (
+                                        <button
+                                            key={subItem.path}
+                                            onClick={() => navigate(subItem.path)}
+                                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 group ${isActive(subItem.path)
+                                                ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange font-medium'
+                                                : 'text-fpt-orange hover:bg-fpt-orange hover:text-white'
+                                                }`}
+                                        >
+                                            <div className={`w-1.5 h-1.5 rounded-full transition-colors duration-200 ${isActive(subItem.path) ? 'bg-current' : 'bg-fpt-orange group-hover:bg-white'}`}></div>
+                                            <span className="whitespace-nowrap">{subItem.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
                             )}
                         </div>
                     ))}
@@ -248,9 +226,22 @@ export const LecturerSidebar: React.FC = () => {
 
                 {/* Bottom Actions */}
                 <div className="border-t border-gray-200 dark:border-zinc-800 p-2 space-y-1">
+                    {/* Change OTP Button */}
+                    <button
+                        onClick={() => setShowOtpModal(true)}
+                        className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-fpt-orange hover:bg-fpt-orange hover:text-white transition-all duration-200 group"
+                        title={!isExpanded ? 'Đổi OTP điểm' : ''}
+                    >
+                        <div className="flex-shrink-0 text-fpt-orange group-hover:text-white transition-colors duration-200">
+                            <KeyRound size={20} />
+                        </div>
+                        {isExpanded && <span className="text-sm font-medium whitespace-nowrap">Đổi OTP điểm</span>}
+                    </button>
+
                     <button
                         onClick={() => navigate('/lecturer/settings')}
                         className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-fpt-orange hover:bg-fpt-orange hover:text-white transition-all duration-200 group ${isActive('/lecturer/settings') ? 'bg-fpt-orange text-white' : ''}`}
+                        title={!isExpanded ? 'Cài đặt' : ''}
                     >
                         <div className={`flex-shrink-0 transition-colors duration-200 ${isActive('/lecturer/settings') ? 'text-white' : 'text-fpt-orange group-hover:text-white'}`}>
                             <Settings size={20} />
@@ -261,6 +252,7 @@ export const LecturerSidebar: React.FC = () => {
                     <button
                         onClick={() => setShowLogoutModal(true)}
                         className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-fpt-orange hover:bg-fpt-orange hover:text-white transition-all duration-200 group"
+                        title={!isExpanded ? 'Đăng xuất' : ''}
                     >
                         <div className="flex-shrink-0 text-fpt-orange group-hover:text-white transition-colors duration-200">
                             <LogOut size={20} />
@@ -280,6 +272,30 @@ export const LecturerSidebar: React.FC = () => {
                 cancelLabel="Ở lại"
                 type="danger"
             />
+
+            {/* OTP Setup Modal (for first-time) */}
+            {!hasOtp && (
+                <OtpSetupModal
+                    isOpen={showOtpModal}
+                    onClose={() => setShowOtpModal(false)}
+                    onSuccess={() => {
+                        setShowOtpModal(false);
+                        setHasOtp(true);
+                    }}
+                    isRegenerate={false}
+                />
+            )}
+
+            {/* OTP Change Modal (for changing existing OTP) */}
+            {hasOtp && (
+                <OtpChangeModal
+                    isOpen={showOtpModal}
+                    onClose={() => setShowOtpModal(false)}
+                    onSuccess={() => {
+                        setShowOtpModal(false);
+                    }}
+                />
+            )}
         </div>
     );
 };
