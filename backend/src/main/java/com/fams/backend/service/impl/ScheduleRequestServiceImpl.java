@@ -150,6 +150,18 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
                 throw new BadRequestException("Đã có yêu cầu đang chờ duyệt cho phòng/ngày/slot này.");
             }
 
+            // e. Student Conflict - Check if students in this class have other classes at
+            // the same time
+            long studentConflictCount = timetableSlotRepository.countStudentConflicts(
+                    originalSlot.getClassSection().getClassName(),
+                    targetDate,
+                    targetSlotIndex,
+                    originalSlotId);
+            if (studentConflictCount > 0) {
+                throw new BadRequestException(
+                        "Có " + studentConflictCount + " sinh viên trong lớp bị trùng lịch học vào khung giờ này.");
+            }
+
             // KHÔNG tạo TimetableSlot mới ở đây
             // TimetableSlot sẽ được tạo khi yêu cầu được APPROVED
             requestedSlot = null;

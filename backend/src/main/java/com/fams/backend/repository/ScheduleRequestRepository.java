@@ -19,4 +19,14 @@ public interface ScheduleRequestRepository
                         java.time.LocalDate date,
                         Integer slotNumber,
                         ScheduleRequest.RequestStatus status);
+
+        // Check if there's a pending request for a specific date and slot (any room)
+        @org.springframework.data.jpa.repository.Query("SELECT CASE WHEN COUNT(sr) > 0 THEN true ELSE false END " +
+                        "FROM ScheduleRequest sr " +
+                        "WHERE sr.requestedDate = :date " +
+                        "AND sr.requestedSlotNumber = :slotNumber " +
+                        "AND sr.status = 'PENDING'")
+        boolean existsPendingRequestForDateAndSlot(
+                        @org.springframework.data.repository.query.Param("date") java.time.LocalDate date,
+                        @org.springframework.data.repository.query.Param("slotNumber") Integer slotNumber);
 }
