@@ -24,6 +24,7 @@ export const LecturerCreateRequestPage: React.FC = () => {
     const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
     const [dateError, setDateError] = useState<string>('');
     const [reason, setReason] = useState<string>('');
+    const [requestType, setRequestType] = useState<string>('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Get today's date in YYYY-MM-DD format
@@ -133,11 +134,22 @@ export const LecturerCreateRequestPage: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Validation
-        if (!selectedSlotId) {
-            toast.error('Vui lòng chọn slot cần thay đổi');
+        // Validation - Thông tin ban đầu
+        if (!selectedClass) {
+            toast.error('Vui lòng chọn lớp học');
             return;
         }
+        if (!requestType) {
+            toast.error('Vui lòng chọn loại yêu cầu');
+            return;
+        }
+        if (!selectedSlotId || !selectedSlot) {
+            toast.error('Vui lòng chọn ngày và slot ban đầu');
+            return;
+        }
+        // Phòng ban đầu tự động hiển thị từ selectedSlot.roomName
+
+        // Validation - Thông tin thay đổi
         if (!newDate) {
             toast.error('Vui lòng chọn ngày cần đổi');
             return;
@@ -240,7 +252,11 @@ export const LecturerCreateRequestPage: React.FC = () => {
                             </div>
                             <div>
                                 <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">LOẠI YÊU CẦU</label>
-                                <select className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all text-slate-700 dark:text-slate-200">
+                                <select
+                                    className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all text-slate-700 dark:text-slate-200"
+                                    value={requestType}
+                                    onChange={(e) => setRequestType(e.target.value)}
+                                >
                                     <option value="">Chọn loại yêu cầu</option>
                                     {Object.keys(REQUEST_TYPE_LABELS)
                                         .filter(key => key !== RequestType.CANCEL && key !== RequestType.SWAP)

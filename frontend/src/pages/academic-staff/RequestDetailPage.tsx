@@ -132,9 +132,9 @@ export const RequestDetailPage = () => {
                             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Chi tiết thay đổi</h2>
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-4">
                                 <div>
-                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Phòng ban đầu</p>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Ngày ban đầu</p>
                                     <p className="font-semibold text-gray-700 dark:text-gray-200">
-                                        {request.originalRoomName || 'Không có'}
+                                        {request.originalDate ? dayjs(request.originalDate).format('DD/MM/YYYY') : 'Không có'}
                                     </p>
                                 </div>
                                 <div>
@@ -144,21 +144,27 @@ export const RequestDetailPage = () => {
                                     </p>
                                 </div>
                                 <div>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Phòng ban đầu</p>
+                                    <p className="font-semibold text-gray-700 dark:text-gray-200">
+                                        {request.originalRoomName || 'Không có'}
+                                    </p>
+                                </div>
+                                <div>
                                     <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Ngày yêu cầu</p>
                                     <p className="font-semibold text-gray-700 dark:text-gray-200">
                                         {request.requestedDate ? dayjs(request.requestedDate).format('DD/MM/YYYY') : 'Không có'}
                                     </p>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Phòng yêu cầu</p>
-                                    <p className="font-semibold text-gray-700 dark:text-gray-200">
-                                        {request.requestedRoomName || 'Không đổi'}
-                                    </p>
-                                </div>
-                                <div>
                                     <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Slot yêu cầu</p>
                                     <p className="font-semibold text-gray-700 dark:text-gray-200">
                                         {request.requestedSlotNumber ? `Slot ${request.requestedSlotNumber}` : (request.requestedSlotInfo || 'Không có')}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Phòng yêu cầu</p>
+                                    <p className="font-semibold text-gray-700 dark:text-gray-200">
+                                        {request.requestedRoomName || 'Không đổi'}
                                     </p>
                                 </div>
                             </div>
@@ -302,10 +308,10 @@ export const RequestDetailPage = () => {
                                             <button
                                                 onClick={() => handleUpdateStatus('APPROVED')}
                                                 disabled={updating}
-                                                className="flex-1 py-3 bg-fpt-orange text-white font-bold rounded-xl shadow-lg border border-orange-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                                className="flex-1 py-3 bg-fpt-orange hover:bg-orange-600 text-white font-bold rounded-xl shadow-lg border border-orange-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
                                             >
                                                 {updating ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
-                                                Phê duyệt
+                                                Duyệt
                                             </button>
                                             <button
                                                 onClick={() => handleUpdateStatus('REJECTED')}
@@ -396,10 +402,10 @@ export const RequestDetailPage = () => {
                                             <button
                                                 onClick={() => handleUpdateStatus('APPROVED')}
                                                 disabled={updating}
-                                                className="w-full py-3 bg-fpt-orange text-white font-bold rounded-xl shadow-lg border border-orange-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                                className="w-full py-3 bg-fpt-orange hover:bg-orange-600 text-white font-bold rounded-xl shadow-lg border border-orange-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
                                             >
                                                 {updating ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
-                                                Cập nhật trạng thái
+                                                Duyệt
                                             </button>
                                             <button
                                                 onClick={() => handleUpdateStatus('REJECTED')}

@@ -105,43 +105,42 @@ export const LecturerRequestDetailPage: React.FC = () => {
                             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Chi tiết thay đổi</h2>
 
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-4">
-                                {/* Original Room */}
+                                {/* Row 1: Thông tin ban đầu */}
                                 <div>
-                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Phòng ban đầu</p>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Ngày ban đầu</p>
                                     <p className="font-semibold text-gray-700 dark:text-gray-200">
-                                        {request.originalRoomName || 'Không có'}
+                                        {request.originalDate ? new Date(request.originalDate).toLocaleDateString('vi-VN') : 'Không có'}
                                     </p>
                                 </div>
-
-                                {/* Original Slot */}
                                 <div>
                                     <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Slot ban đầu</p>
                                     <p className="font-semibold text-gray-700 dark:text-gray-200">
                                         {request.originalSlotNumber ? `Slot ${request.originalSlotNumber}` : 'Không có'}
                                     </p>
                                 </div>
-
-                                {/* Requested Date */}
+                                <div>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Phòng ban đầu</p>
+                                    <p className="font-semibold text-gray-700 dark:text-gray-200">
+                                        {request.originalRoomName || 'Không có'}
+                                    </p>
+                                </div>
+                                {/* Row 2: Thông tin yêu cầu */}
                                 <div>
                                     <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Ngày yêu cầu</p>
                                     <p className="font-semibold text-gray-700 dark:text-gray-200">
                                         {request.requestedDate ? new Date(request.requestedDate).toLocaleDateString('vi-VN') : 'Không có'}
                                     </p>
                                 </div>
-
-                                {/* Requested Room */}
-                                <div>
-                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Phòng yêu cầu</p>
-                                    <p className="font-semibold text-gray-700 dark:text-gray-200">
-                                        {request.requestedRoomName || 'Không đổi'}
-                                    </p>
-                                </div>
-
-                                {/* Requested Slot */}
                                 <div>
                                     <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Slot yêu cầu</p>
                                     <p className="font-semibold text-gray-700 dark:text-gray-200">
                                         {request.requestedSlotNumber ? `Slot ${request.requestedSlotNumber}` : 'Không có'}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Phòng yêu cầu</p>
+                                    <p className="font-semibold text-gray-700 dark:text-gray-200">
+                                        {request.requestedRoomName || 'Không đổi'}
                                     </p>
                                 </div>
                             </div>

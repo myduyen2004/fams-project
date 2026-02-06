@@ -31,6 +31,7 @@ export interface ScheduleRequestResponse {
     originalSlotInfo?: string;
     originalSlotNumber?: number;
     originalRoomName?: string;
+    originalDate?: string;
     requestedSlotId?: number;
     requestedSlotInfo?: string;
     requestedSlotNumber?: number;

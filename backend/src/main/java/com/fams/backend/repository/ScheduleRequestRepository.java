@@ -36,4 +36,13 @@ public interface ScheduleRequestRepository
                         @Param("date") LocalDate date,
                         @Param("slotNumber") Integer slotNumber,
                         @Param("statuses") List<ScheduleRequest.RequestStatus> statuses);
+
+        // Find request with all associations needed for approval processing
+        @Query("SELECT sr FROM ScheduleRequest sr " +
+                        "LEFT JOIN FETCH sr.originalSlot os " +
+                        "LEFT JOIN FETCH os.slotType " +
+                        "LEFT JOIN FETCH sr.classSection " +
+                        "LEFT JOIN FETCH sr.requestedRoom " +
+                        "WHERE sr.id = :id")
+        java.util.Optional<ScheduleRequest> findByIdWithSlots(@Param("id") Long id);
 }
