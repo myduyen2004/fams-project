@@ -16,4 +16,6 @@ public interface DashboardService {
     DashboardNotificationResponse getNotificationById(Long id);
 
     List<SystemLogResponse> getSystemLogs();
+
+    int getUnreadNotificationCount();
 }
