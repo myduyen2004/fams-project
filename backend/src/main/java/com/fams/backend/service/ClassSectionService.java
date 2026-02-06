@@ -122,4 +122,16 @@ public interface ClassSectionService {
          * Get all students (for dropdown in enrollment form).
          */
         List<com.fams.backend.dto.response.StudentOptionResponse> getAvailableStudentsForClassSection(String className);
+
+        /**
+         * Get available class sections with same course for enrollment transfer.
+         * Only returns class sections that have available slots.
+         */
+        List<ClassSectionResponse> getAvailableClassSectionsForTransfer(String currentClassName);
+
+        /**
+         * Transfer enrollments to a different class section.
+         * Only allowed when semester has not started (status = UPCOMING).
+         */
+        void transferEnrollments(List<Long> enrollmentIds, String targetClassName);
 }

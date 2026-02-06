@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, Trash2, Plus, Search, UserPlus } from 'lucide-react';
+import { X, Loader2, Trash2, Plus, Search, UserPlus, ArrowRightLeft } from 'lucide-react';
 import { ConfirmModal } from '../common/ConfirmModal';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -24,6 +24,14 @@ interface StudentOption {
   specialization: string;
 }
 
+interface TransferTarget {
+  className: string;
+  courseCode: string;
+  courseName: string;
+  enrollmentInfo: string;
+  maxStudents: number;
+  slots: number;
+}
 interface EnrollmentListModalProps {
   isOpen: boolean;
   className: string;
@@ -75,6 +83,13 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
 
   // Delete confirm modal
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Transfer modal
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferTargets, setTransferTargets] = useState<TransferTarget[]>([]);
+  const [loadingTransferTargets, setLoadingTransferTargets] = useState(false);
+  const [selectedTransferTarget, setSelectedTransferTarget] = useState<string>('');
+  const [transferring, setTransferring] = useState(false);
 
   const canEdit = semesterStatus === 'UPCOMING';
 
@@ -180,6 +195,62 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
       toast.error(error.response?.data?.message || 'Không thể xóa đăng ký');
     } finally {
       setDeleting(false);
+    }
+  };
+
+  // Fetch available transfer targets
+  const fetchTransferTargets = async () => {
+    try {
+      setLoadingTransferTargets(true);
+      const response = await axios.get(`/api/v1/class-sections/${encodeURIComponent(className)}/transfer-targets`);
+      setTransferTargets(response.data);
+      setSelectedTransferTarget('');
+    } catch (error) {
+      console.error('Error fetching transfer targets:', error);
+      toast.error('Không thể tải danh sách lớp đích');
+    } finally {
+      setLoadingTransferTargets(false);
+    }
+  };
+
+  // Handle opening transfer modal
+  const handleOpenTransfer = () => {
+    if (!canEdit) {
+      toast.error('Chỉ có thể chuyển sinh viên khi học kỳ chưa bắt đầu');
+      return;
+    }
+    if (selectedRows.size === 0) {
+      toast.error('Vui lòng chọn sinh viên để chuyển');
+      return;
+    }
+    setShowTransferModal(true);
+    fetchTransferTargets();
+  };
+
+  // Handle transfer enrollments
+  const handleTransfer = async () => {
+    if (!selectedTransferTarget) {
+      toast.error('Vui lòng chọn lớp đích');
+      return;
+    }
+
+    try {
+      setTransferring(true);
+      await axios.post('/api/v1/class-sections/enrollments/transfer', {
+        enrollmentIds: Array.from(selectedRows),
+        targetClassName: selectedTransferTarget
+      });
+      toast.success(`Đã chuyển ${selectedRows.size} sinh viên sang lớp ${selectedTransferTarget}`);
+      setShowTransferModal(false);
+      setSelectedRows(new Set());
+      setSelectedTransferTarget('');
+      fetchEnrollments();
+      onUpdate?.();
+    } catch (error: any) {
+      console.error('Error transferring enrollments:', error);
+      toast.error(error.response?.data?.message || 'Không thể chuyển sinh viên');
+    } finally {
+      setTransferring(false);
     }
   };
 
@@ -343,6 +414,18 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
             </span>
             <div className="flex gap-2">
               <button
+                onClick={handleOpenTransfer}
+                disabled={transferring}
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-1 disabled:opacity-50"
+              >
+                {transferring ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <ArrowRightLeft className="w-3 h-3" />
+                )}
+                Chuyển lớp
+              </button>
+              <button
                 onClick={handleBulkDelete}
                 disabled={deleting}
                 className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-1 disabled:opacity-50"
@@ -426,26 +509,7 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
                       <span className="text-sm text-gray-500">{enrollment.specialization || enrollment.major || '-'}</span>
                     </td>
                     <td className="px-4 py-3">
-                      {canEdit ? (
-                        <select
-                          value={enrollment.status}
-                          onChange={(e) => handleUpdateStatus(enrollment.id, e.target.value, enrollment.studentCode)}
-                          disabled={updatingStatus === enrollment.id}
-                          className={`text-xs font-bold pl-4 pr-10 py-1.5 rounded-full border-0 cursor-pointer focus:ring-2 focus:ring-orange-500 min-w-[130px] appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236b7280%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:10px] bg-[position:right_12px_center] bg-no-repeat ${enrollment.status === 'ENROLLED' ? 'bg-green-100 text-green-700' :
-                            enrollment.status === 'DROPPED' ? 'bg-red-100 text-red-700' :
-                              enrollment.status === 'COMPLETED' ? 'bg-blue-100 text-blue-700' :
-                                enrollment.status === 'FAILED' ? 'bg-gray-100 text-gray-700' :
-                                  'bg-gray-100 text-gray-600'
-                            }`}
-                        >
-                          <option value="ENROLLED">Đang học</option>
-                          <option value="DROPPED">Đã hủy</option>
-                          <option value="COMPLETED">Hoàn thành</option>
-                          <option value="FAILED">Không đạt</option>
-                        </select>
-                      ) : (
-                        getStatusLabel(enrollment.status)
-                      )}
+                      {getStatusLabel(enrollment.status)}
                     </td>
                   </tr>
                 ))
@@ -507,7 +571,7 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
               </div>
 
               {/* Student List */}
-              <div className="max-h-72 overflow-auto border border-gray-200 rounded-lg">
+              <div className="max-h-96 overflow-auto border border-gray-200 rounded-lg">
                 {loadingStudents ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="w-5 h-5 text-orange-600 animate-spin" />
@@ -598,6 +662,93 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
         cancelLabel="Hủy"
         type="danger"
       />
+
+      {/* Transfer Modal */}
+      {showTransferModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/30">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg border border-gray-100 overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+              <div>
+                <h4 className="text-lg font-bold text-gray-900">Chuyển sinh viên sang lớp khác</h4>
+                <p className="text-sm text-gray-500">
+                  Chuyển <span className="font-bold text-orange-600">{selectedRows.size}</span> sinh viên
+                </p>
+              </div>
+              <button
+                onClick={() => { setShowTransferModal(false); setSelectedTransferTarget(''); }}
+                className="p-1 hover:bg-gray-100 rounded-lg"
+              >
+                <X size={18} className="text-gray-400" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              {loadingTransferTargets ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-5 h-5 text-orange-600 animate-spin" />
+                  <span className="ml-2 text-sm text-gray-500">Đang tải danh sách lớp...</span>
+                </div>
+              ) : transferTargets.length === 0 ? (
+                <div className="py-8 text-center">
+                  <p className="text-sm text-gray-500">Không có lớp nào cùng môn học còn chỗ trống</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-auto">
+                  {transferTargets.map((target) => (
+                    <label
+                      key={target.className}
+                      className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors
+                        ${selectedTransferTarget === target.className
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="radio"
+                          name="transferTarget"
+                          value={target.className}
+                          checked={selectedTransferTarget === target.className}
+                          onChange={(e) => setSelectedTransferTarget(e.target.value)}
+                          className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                        />
+                        <div>
+                          <div className="text-sm font-bold text-gray-900">{target.className}</div>
+                          <div className="text-xs text-gray-500">{target.courseCode} - {target.courseName}</div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-bold text-gray-700">{target.enrollmentInfo}</div>
+                        <div className="text-xs text-gray-400">Sĩ số</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 p-4 border-t border-gray-100">
+              <button
+                onClick={() => { setShowTransferModal(false); setSelectedTransferTarget(''); }}
+                className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleTransfer}
+                disabled={!selectedTransferTarget || transferring}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg flex items-center gap-2 disabled:opacity-50"
+              >
+                {transferring ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <ArrowRightLeft className="w-4 h-4" />
+                )}
+                Chuyển
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

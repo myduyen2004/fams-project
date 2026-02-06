@@ -90,7 +90,7 @@ const SearchableDropdown: React.FC<{
             </button>
 
             {isOpen && !disabled && (
-                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-hidden">
+                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-[400px] overflow-hidden">
                     {/* Search Input */}
                     <div className="p-2 border-b border-gray-100">
                         <div className="relative">
@@ -107,7 +107,7 @@ const SearchableDropdown: React.FC<{
                     </div>
 
                     {/* Options List */}
-                    <div className="max-h-48 overflow-auto">
+                    <div className="max-h-[340px] overflow-auto">
                         {loading ? (
                             <div className="p-4 text-center text-sm text-gray-500">
                                 <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
@@ -140,7 +140,7 @@ const SearchableDropdown: React.FC<{
                                             setIsOpen(false);
                                             setSearch('');
                                         }}
-                                        className={`w-full px-4 py-2.5 text-left text-sm hover:bg-orange-50 transition-colors
+                                        className={`w-full px-4 py-2 text-left text-xs hover:bg-orange-50 transition-colors
                                             ${value === opt.value ? 'bg-orange-50 text-orange-600 font-medium' : 'text-gray-700'}`}
                                     >
                                         <div>{opt.label}</div>
@@ -292,13 +292,12 @@ export const ClassSectionFormModal: React.FC<ClassSectionFormModalProps> = ({
 
     const lecturerOptions = lecturers.map(l => ({
         value: l.username,
-        label: `${l.fullName} (${l.username})`,
-        sublabel: l.username
+        label: `${l.fullName} (${l.username})`
     }));
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg border border-gray-100 overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg border border-gray-100 overflow-visible">
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-100">
                     <div>

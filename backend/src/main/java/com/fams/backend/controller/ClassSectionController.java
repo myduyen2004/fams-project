@@ -174,6 +174,28 @@ public class ClassSectionController {
                 return ResponseEntity.noContent().build();
         }
 
+        @GetMapping("/{className}/transfer-targets")
+        @Operation(summary = "Get available class sections for transfer", description = "Get list of class sections with same course that have available slots")
+        public ResponseEntity<List<ClassSectionResponse>> getAvailableClassSectionsForTransfer(
+                        @PathVariable String className) {
+                log.info("GET /api/v1/class-sections/{}/transfer-targets", className);
+                return ResponseEntity.ok(classSectionService.getAvailableClassSectionsForTransfer(className));
+        }
+
+        @PostMapping("/enrollments/transfer")
+        @Operation(summary = "Transfer enrollments to another class section", description = "Transfer selected enrollments to a different class section with the same course. Only allowed when semester is UPCOMING.")
+        public ResponseEntity<Void> transferEnrollments(
+                        @RequestBody Map<String, Object> request) {
+                @SuppressWarnings("unchecked")
+                List<Integer> enrollmentIdInts = (List<Integer>) request.get("enrollmentIds");
+                List<Long> enrollmentIds = enrollmentIdInts.stream().map(Long::valueOf).toList();
+                String targetClassName = (String) request.get("targetClassName");
+                log.info("POST /api/v1/class-sections/enrollments/transfer | count={}, target={}",
+                                enrollmentIds.size(), targetClassName);
+                classSectionService.transferEnrollments(enrollmentIds, targetClassName);
+                return ResponseEntity.ok().build();
+        }
+
         // ==================== TEMPLATE DOWNLOAD ENDPOINTS ====================
 
         @GetMapping("/import/template")
