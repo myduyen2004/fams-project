@@ -12,6 +12,8 @@ import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.streaming.SXSSFSheet;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -297,8 +299,9 @@ public class StudentServiceImpl implements StudentService {
     public byte[] exportStudents(String majorStr, String specializationStr, String subSpecializationStr,
             String status) {
         try {
-            org.apache.poi.ss.usermodel.Workbook workbook = new org.apache.poi.xssf.usermodel.XSSFWorkbook();
-            org.apache.poi.ss.usermodel.Sheet sheet = workbook.createSheet("Danh sách Sinh viên");
+            Workbook workbook = new SXSSFWorkbook();
+            Sheet sheet = workbook.createSheet("Danh sách Sinh viên");
+            ((SXSSFSheet) sheet).trackAllColumnsForAutoSizing();
 
             // Header Style
             CellStyle headerStyle = workbook.createCellStyle();
@@ -661,7 +664,8 @@ public class StudentServiceImpl implements StudentService {
         Map<Long, StudentProfile> profileMap = studentProfileRepository.findAllById(userIds).stream()
                 .collect(Collectors.toMap(StudentProfile::getUserId, p -> p));
 
-        List<StudentProfile> profilesToSave = new ArrayList<>();
+        List<StudentProfile> newProfilesToSave = new ArrayList<>();
+        List<StudentProfile> existingProfilesToSave = new ArrayList<>();
 
         // Phase 2: In-memory Transformation
         for (StudentImportDTO dto : dtos) {
@@ -697,7 +701,6 @@ public class StudentServiceImpl implements StudentService {
 
                 if (profile == null) {
                     profile = StudentProfile.builder()
-                            .userId(user.getId())
                             .user(user)
                             .major(major)
                             .specialization(specialization)
@@ -706,7 +709,7 @@ public class StudentServiceImpl implements StudentService {
                             .gpa(dto.getGpa())
                             .build();
                     createdCount++;
-                    profilesToSave.add(profile);
+                    newProfilesToSave.add(profile);
                 } else {
                     boolean changed = false;
 
@@ -735,7 +738,7 @@ public class StudentServiceImpl implements StudentService {
 
                     if (changed) {
                         updatedCount++;
-                        profilesToSave.add(profile);
+                        existingProfilesToSave.add(profile);
                     }
                 }
 
@@ -747,9 +750,22 @@ public class StudentServiceImpl implements StudentService {
         }
 
         // Phase 3: Optimized Batch Persistence
-        if (!profilesToSave.isEmpty()) {
-            studentProfileRepository.saveAll(profilesToSave);
-            log.info("Batch saved {} modified student profiles successfully", profilesToSave.size());
+        // Save new profiles one by one to ensure proper persist semantics with @MapsId
+        for (StudentProfile newProfile : newProfilesToSave) {
+            try {
+                studentProfileRepository.save(newProfile);
+            } catch (Exception e) {
+                createdCount--;
+                failedCount++;
+                errors.add("Lỗi lưu profile mới cho SV: " + e.getMessage());
+                log.error("Error saving new profile", e);
+            }
+        }
+
+        // Save existing profiles in batch (these are already managed entities)
+        if (!existingProfilesToSave.isEmpty()) {
+            studentProfileRepository.saveAll(existingProfilesToSave);
+            log.info("Batch saved {} updated student profiles successfully", existingProfilesToSave.size());
         }
 
         result.put("created", createdCount);
