@@ -2,9 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { lecturerClassService, SemesterResponse, ClassSectionResponse } from '../../services/api/LecturerClass';
 import { studentGradeService, GradeOverviewResponse, GradeComponentInfo } from '../../services/api/studentGradeService';
+import { lecturerOtpService } from '../../services/api/lecturerOtpService';
 import { authService } from '../../services/api/authService';
 import { ChevronDown, FileSpreadsheet, Download, Users, TrendingUp, Award, Check, Loader2, Edit3, Save, X } from 'lucide-react';
 import { ImportGradeModal } from '../../components/lecturer/ImportGradeModal';
+import { OtpSetupModal } from '../../components/lecturer/OtpSetupModal';
+import { OtpVerificationModal } from '../../components/lecturer/OtpVerificationModal';
 import toast from 'react-hot-toast';
 
 export const LecturerGradeManagementPage: React.FC = () => {
@@ -30,6 +33,14 @@ export const LecturerGradeManagementPage: React.FC = () => {
     const [editedGrades, setEditedGrades] = useState<{ [key: string]: string }>({});
     const [saving, setSaving] = useState(false);
 
+    // OTP state
+    const [hasOtp, setHasOtp] = useState<boolean | null>(null);
+    const [otpVerified, setOtpVerified] = useState(false);
+    const [showOtpSetupModal, setShowOtpSetupModal] = useState(false);
+    const [showOtpVerifyModal, setShowOtpVerifyModal] = useState(false);
+    const [isRegenerateMode, setIsRegenerateMode] = useState(false);
+    const [pendingAction, setPendingAction] = useState<'edit' | 'import' | null>(null);
+
     const user = authService.getUser();
 
     // Close dropdowns when clicking outside
@@ -47,6 +58,25 @@ export const LecturerGradeManagementPage: React.FC = () => {
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
+    }, []);
+
+    // Check OTP status on mount
+    useEffect(() => {
+        const checkOtpStatus = async () => {
+            try {
+                const status = await lecturerOtpService.getOtpStatus();
+                setHasOtp(status.hasOtp);
+
+                // Also check if session is valid
+                if (status.hasOtp) {
+                    const session = await lecturerOtpService.checkSession();
+                    setOtpVerified(session.hasValidSession);
+                }
+            } catch (error) {
+                console.error('Failed to check OTP status', error);
+            }
+        };
+        checkOtpStatus();
     }, []);
 
     // Load semesters on mount
@@ -189,9 +219,40 @@ export const LecturerGradeManagementPage: React.FC = () => {
     // Generate key for edited grades map
     const gradeKey = (enrollmentId: number, componentId: number) => `${enrollmentId}_${componentId}`;
 
-    // Start edit mode
+    // Check OTP before action
+    const requireOtpForAction = (action: 'edit' | 'import') => {
+        // If no OTP set up, show setup modal
+        if (!hasOtp) {
+            setPendingAction(action);
+            setShowOtpSetupModal(true);
+            return false;
+        }
+
+        // If not verified yet, show verify modal
+        if (!otpVerified) {
+            setPendingAction(action);
+            setShowOtpVerifyModal(true);
+            return false;
+        }
+
+        return true;
+    };
+
+    // Start edit mode - checks OTP first
     const handleStartEdit = () => {
         if (!gradeOverview) return;
+
+        // Require OTP verification
+        if (!requireOtpForAction('edit')) return;
+
+        // Initialize edit mode
+        initializeEditMode();
+    };
+
+    // Initialize edit mode directly (after OTP verified)
+    const initializeEditMode = () => {
+        if (!gradeOverview) return;
+
         // Initialize edited grades with current values as strings
         const initial: { [key: string]: string } = {};
         gradeOverview.studentGrades.forEach(student => {
@@ -204,6 +265,42 @@ export const LecturerGradeManagementPage: React.FC = () => {
         });
         setEditedGrades(initial);
         setIsEditMode(true);
+    };
+
+    // Handle import button click
+    const handleImportClick = () => {
+        if (!requireOtpForAction('import')) return;
+        setShowImportModal(true);
+    };
+
+    // Handle OTP setup success
+    const handleOtpSetupSuccess = () => {
+        setShowOtpSetupModal(false);
+        setHasOtp(true);
+        setOtpVerified(true); // After creating OTP, auto-verify for this session
+        setIsRegenerateMode(false);
+
+        // Continue with pending action - use direct functions to avoid OTP re-check
+        if (pendingAction === 'edit') {
+            initializeEditMode();
+        } else if (pendingAction === 'import') {
+            setShowImportModal(true);
+        }
+        setPendingAction(null);
+    };
+
+    // Handle OTP verify success
+    const handleOtpVerifySuccess = () => {
+        setShowOtpVerifyModal(false);
+        setOtpVerified(true);
+
+        // Continue with pending action - use direct functions to avoid OTP re-check
+        if (pendingAction === 'edit') {
+            initializeEditMode();
+        } else if (pendingAction === 'import') {
+            setShowImportModal(true);
+        }
+        setPendingAction(null);
     };
 
     // Cancel edit mode
@@ -308,16 +405,16 @@ export const LecturerGradeManagementPage: React.FC = () => {
                             <div className="relative">
                                 <button
                                     onClick={() => setIsSemesterOpen(!isSemesterOpen)}
-                                    className="flex items-center justify-between w-full rounded-xl border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-fpt-orange transition-all"
+                                    className="flex items-center justify-between w-full rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 px-3 py-2 text-left focus:outline-none focus:ring-2 focus:ring-fpt-orange transition-all"
                                 >
-                                    <span className="font-medium text-gray-900 dark:text-white truncate">
+                                    <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
                                         {getSelectedSemesterName()}
                                     </span>
-                                    <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform ${isSemesterOpen ? 'rotate-180' : ''}`} />
+                                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isSemesterOpen ? 'rotate-180' : ''}`} />
                                 </button>
 
                                 {isSemesterOpen && (
-                                    <div className="absolute z-10 mt-1 w-full rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-lg max-h-60 overflow-y-auto">
+                                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-lg max-h-60 overflow-y-auto">
                                         {semesters.map((semester) => (
                                             <button
                                                 key={semester.id}
@@ -325,13 +422,13 @@ export const LecturerGradeManagementPage: React.FC = () => {
                                                     setSelectedSemester(semester.code);
                                                     setIsSemesterOpen(false);
                                                 }}
-                                                className={`flex w-full items-center justify-between px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition-colors ${selectedSemester === semester.code
+                                                className={`flex w-full items-center justify-between px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition-colors ${selectedSemester === semester.code
                                                     ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange'
                                                     : 'text-gray-900 dark:text-white'
                                                     }`}
                                             >
-                                                <span className="font-medium">{semester.name}</span>
-                                                {selectedSemester === semester.code && <Check size={18} />}
+                                                <span className="text-sm font-medium">{semester.name}</span>
+                                                {selectedSemester === semester.code && <Check size={16} />}
                                             </button>
                                         ))}
                                     </div>
@@ -348,31 +445,31 @@ export const LecturerGradeManagementPage: React.FC = () => {
                                 <button
                                     onClick={() => !classes.length ? null : setIsClassOpen(!isClassOpen)}
                                     disabled={classes.length === 0}
-                                    className={`flex items-center justify-between w-full rounded-xl border border-gray-200 dark:border-zinc-700 px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-fpt-orange transition-all ${classes.length === 0
+                                    className={`flex items-center justify-between w-full rounded-lg border border-gray-200 dark:border-zinc-700 px-3 py-2 text-left focus:outline-none focus:ring-2 focus:ring-fpt-orange transition-all ${classes.length === 0
                                         ? 'bg-gray-100 dark:bg-zinc-800 text-gray-400 cursor-not-allowed'
                                         : 'bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white'
                                         }`}
                                 >
-                                    <span className="font-medium truncate">
+                                    <span className="text-sm font-medium truncate">
                                         {getSelectedClassName()}
                                     </span>
-                                    <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform ${isClassOpen ? 'rotate-180' : ''}`} />
+                                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isClassOpen ? 'rotate-180' : ''}`} />
                                 </button>
 
                                 {isClassOpen && (
-                                    <div className="absolute z-10 mt-1 w-full rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-lg max-h-60 overflow-y-auto">
+                                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-lg max-h-60 overflow-y-auto">
                                         <button
                                             onClick={() => {
                                                 setSelectedClass('');
                                                 setIsClassOpen(false);
                                             }}
-                                            className={`flex w-full items-center justify-between px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition-colors ${!selectedClass
+                                            className={`flex w-full items-center justify-between px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition-colors ${!selectedClass
                                                 ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange'
                                                 : 'text-gray-900 dark:text-white'
                                                 }`}
                                         >
-                                            <span className="font-medium">-- Chọn lớp học --</span>
-                                            {!selectedClass && <Check size={18} />}
+                                            <span className="text-sm font-medium">-- Chọn lớp học --</span>
+                                            {!selectedClass && <Check size={16} />}
                                         </button>
                                         {classes.map((cls) => (
                                             <button
@@ -381,13 +478,13 @@ export const LecturerGradeManagementPage: React.FC = () => {
                                                     setSelectedClass(cls.className);
                                                     setIsClassOpen(false);
                                                 }}
-                                                className={`flex w-full items-center justify-between px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition-colors ${selectedClass === cls.className
+                                                className={`flex w-full items-center justify-between px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition-colors ${selectedClass === cls.className
                                                     ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange'
                                                     : 'text-gray-900 dark:text-white'
                                                     }`}
                                             >
-                                                <span className="font-medium">{cls.className} - {cls.courseName}</span>
-                                                {selectedClass === cls.className && <Check size={18} />}
+                                                <span className="text-sm font-medium">{cls.className}</span>
+                                                {selectedClass === cls.className && <Check size={16} />}
                                             </button>
                                         ))}
                                     </div>
@@ -402,18 +499,18 @@ export const LecturerGradeManagementPage: React.FC = () => {
                                 <>
                                     <button
                                         onClick={handleCancelEdit}
-                                        className="flex items-center gap-2 px-4 py-3 bg-gray-100 dark:bg-zinc-700 border border-gray-200 dark:border-zinc-600 rounded-xl text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-zinc-600 transition-all"
+                                        className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-zinc-700 border border-gray-200 dark:border-zinc-600 rounded-lg text-sm text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-zinc-600 transition-all"
                                         disabled={saving}
                                     >
-                                        <X size={18} />
+                                        <X size={16} />
                                         Hủy
                                     </button>
                                     <button
                                         onClick={handleSaveGrades}
-                                        className="flex items-center gap-2 px-4 py-3 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 transition-all disabled:opacity-50"
+                                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-all disabled:opacity-50"
                                         disabled={saving}
                                     >
-                                        {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                                        {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                                         Lưu thay đổi
                                     </button>
                                 </>
@@ -421,26 +518,26 @@ export const LecturerGradeManagementPage: React.FC = () => {
                                 <>
                                     <button
                                         onClick={handleStartEdit}
-                                        className="flex items-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-all disabled:opacity-50"
+                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all disabled:opacity-50"
                                         disabled={!gradeOverview}
                                     >
-                                        <Edit3 size={18} />
+                                        <Edit3 size={16} />
                                         Chỉnh sửa
                                     </button>
                                     <button
                                         onClick={handleExport}
-                                        className="flex items-center gap-2 px-4 py-3 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-zinc-700 transition-all disabled:opacity-50"
+                                        className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-zinc-700 transition-all disabled:opacity-50"
                                         disabled={!gradeOverview || exporting}
                                     >
-                                        {exporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+                                        {exporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
                                         Xuất Excel
                                     </button>
                                     <button
-                                        onClick={() => setShowImportModal(true)}
-                                        className="flex items-center gap-2 px-4 py-3 bg-fpt-orange text-white rounded-xl font-medium hover:bg-orange-600 transition-all disabled:opacity-50"
+                                        onClick={handleImportClick}
+                                        className="flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-all disabled:opacity-50"
                                         disabled={!gradeOverview}
                                     >
-                                        <FileSpreadsheet size={18} />
+                                        <FileSpreadsheet size={16} />
                                         Nhập điểm
                                     </button>
                                 </>
@@ -646,6 +743,28 @@ export const LecturerGradeManagementPage: React.FC = () => {
                     courseName={gradeOverview.courseName}
                 />
             )}
+
+            {/* OTP Setup Modal */}
+            <OtpSetupModal
+                isOpen={showOtpSetupModal}
+                onClose={() => {
+                    setShowOtpSetupModal(false);
+                    setIsRegenerateMode(false);
+                    setPendingAction(null);
+                }}
+                onSuccess={handleOtpSetupSuccess}
+                isRegenerate={isRegenerateMode}
+            />
+
+            {/* OTP Verification Modal */}
+            <OtpVerificationModal
+                isOpen={showOtpVerifyModal}
+                onClose={() => {
+                    setShowOtpVerifyModal(false);
+                    setPendingAction(null);
+                }}
+                onSuccess={handleOtpVerifySuccess}
+            />
         </LecturerLayout>
     );
 };
