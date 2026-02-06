@@ -49,7 +49,8 @@ public interface ClassSectionRepository extends JpaRepository<ClassSection, Long
                         "LOWER(c.code) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
                         "LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%'))) " +
                         "AND (:status IS NULL OR :status = '' OR CAST(cs.status AS string) = :status) " +
-                        "AND (:lecturerId IS NULL OR l.id = :lecturerId)")
+                        "AND (:lecturerId IS NULL OR l.id = :lecturerId) " +
+                        "ORDER BY cs.createdAt DESC")
         Page<ClassSection> findBySemesterCodeWithFilters(
                         @Param("semesterCode") String semesterCode,
                         @Param("search") String search,

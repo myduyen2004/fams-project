@@ -283,36 +283,34 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         }
 
         // Validate course belongs to student's specialization
-        // StudentProfile studentProfile = student.getStudentProfile();
-        // Long courseId = classSection.getCourse().getId();
-        // boolean courseInSpecialization = false;
+        StudentProfile studentProfile = student.getStudentProfile();
+        Long courseId = classSection.getCourse().getId();
+        boolean courseInSpecialization = false;
 
-        // if (studentProfile != null) {
-        // // Check sub-specialization first (more specific)
-        // if (studentProfile.getSubSpecialization() != null) {
-        // courseInSpecialization = subSpecializationCourseRepository
-        // .existsBySubSpecializationIdAndCourseId(
-        // studentProfile.getSubSpecialization().getId(), courseId);
-        // }
+        if (studentProfile != null) {
+            // Check sub-specialization first (more specific)
+            if (studentProfile.getSubSpecialization() != null) {
+                courseInSpecialization = subSpecializationCourseRepository
+                        .existsBySubSpecializationIdAndCourseId(
+                                studentProfile.getSubSpecialization().getId(), courseId);
+            }
 
-        // // If not found in sub-specialization, check main specialization
-        // if (!courseInSpecialization && studentProfile.getSpecialization() != null) {
-        // courseInSpecialization = specializationCourseRepository
-        // .existsBySpecializationIdAndCourseId(
-        // studentProfile.getSpecialization().getId(), courseId);
-        // }
-        // }
+            // If not found in sub-specialization, check main specialization
+            if (!courseInSpecialization && studentProfile.getSpecialization() != null) {
+                courseInSpecialization = specializationCourseRepository
+                        .existsBySpecializationIdAndCourseId(
+                                studentProfile.getSpecialization().getId(), courseId);
+            }
+        }
 
-        // if (!courseInSpecialization) {
-        // String specializationName = studentProfile != null &&
-        // studentProfile.getSpecialization() != null
-        // ? studentProfile.getSpecialization().getName()
-        // : "không xác định";
-        // throw new RuntimeException(String.format(
-        // "Môn học '%s' không nằm trong chuyên ngành '%s' của sinh viên %s",
-        // classSection.getCourse().getName(), specializationName,
-        // request.getStudentCode()));
-        // }
+        if (!courseInSpecialization) {
+            String specializationName = studentProfile != null && studentProfile.getSpecialization() != null
+                    ? studentProfile.getSpecialization().getName()
+                    : "không xác định";
+            throw new RuntimeException(String.format(
+                    "Môn học '%s' không nằm trong chuyên ngành '%s' của sinh viên %s",
+                    classSection.getCourse().getName(), specializationName, request.getStudentCode()));
+        }
 
         if (enrollmentRepository.existsByClassNameAndStudentCodeIgnoreCase(request.getClassName(),
                 request.getStudentCode())) {
@@ -417,8 +415,15 @@ public class ClassSectionServiceImpl implements ClassSectionService {
     @Override
     @Transactional(readOnly = true)
     public List<StudentOptionResponse> getAvailableStudentsForClassSection(String className) {
-        // Use optimized query with JOIN FETCH to avoid N+1 problem
-        return userRepository.findStudentsNotEnrolledInClassSection(className)
+        // First get IDs of eligible students (filtered by specialization)
+        List<Long> studentIds = userRepository.findStudentIdsNotEnrolledInClassSection(className);
+
+        if (studentIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // Then load users with their profiles
+        return userRepository.findStudentsWithProfilesByIds(studentIds)
                 .stream()
                 .map(user -> {
                     StudentProfile profile = user.getStudentProfile();
@@ -434,6 +439,90 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                             .build();
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ClassSectionResponse> getAvailableClassSectionsForTransfer(String currentClassName) {
+        log.info("Getting available class sections for transfer from: {}", currentClassName);
+
+        ClassSection currentClassSection = classSectionRepository.findByClassNameWithDetails(currentClassName)
+                .orElseThrow(() -> new RuntimeException("Lớp học phần không tồn tại: " + currentClassName));
+
+        String courseCode = currentClassSection.getCourse().getCode();
+        String semesterCode = currentClassSection.getSemester().getCode();
+
+        // Get all class sections with the same course in same semester
+        List<ClassSection> classSections = classSectionRepository.findBySemesterCode(semesterCode);
+
+        return classSections.stream()
+                .filter(cs -> cs.getCourse().getCode().equals(courseCode)) // Same course
+                .filter(cs -> !cs.getClassName().equals(currentClassName)) // Exclude current class
+                .filter(cs -> cs.getCurrentEnrollment() < cs.getMaxStudents()) // Has available slots
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void transferEnrollments(List<Long> enrollmentIds, String targetClassName) {
+        log.info("Transferring {} enrollments to class: {}", enrollmentIds.size(), targetClassName);
+
+        if (enrollmentIds.isEmpty()) {
+            throw new RuntimeException("Vui lòng chọn ít nhất một sinh viên để chuyển");
+        }
+
+        // Get target class section with lock
+        ClassSection targetClassSection = classSectionRepository.findByClassNameWithLock(targetClassName)
+                .orElseThrow(() -> new RuntimeException("Lớp học phần đích không tồn tại: " + targetClassName));
+
+        if (targetClassSection.getSemester().getStatus() != Semester.SemesterStatus.UPCOMING) {
+            throw new RuntimeException("Chỉ có thể chuyển sinh viên khi học kỳ chưa bắt đầu");
+        }
+
+        // Check available slots
+        long currentEnrollment = enrollmentRepository.countByClassSectionClassName(targetClassName);
+        long availableSlots = targetClassSection.getMaxStudents() - currentEnrollment;
+
+        if (enrollmentIds.size() > availableSlots) {
+            throw new RuntimeException(String.format(
+                    "Lớp đích chỉ còn %d chỗ trống, không thể chuyển %d sinh viên",
+                    availableSlots, enrollmentIds.size()));
+        }
+
+        // Get enrollments and validate
+        List<Enrollment> enrollments = enrollmentRepository.findAllById(enrollmentIds);
+        if (enrollments.size() != enrollmentIds.size()) {
+            throw new RuntimeException("Một số đăng ký không tồn tại");
+        }
+
+        // Validate all enrollments are from classes with same course
+        String targetCourseId = targetClassSection.getCourse().getId().toString();
+        for (Enrollment enrollment : enrollments) {
+            if (!enrollment.getClassSection().getCourse().getId().toString().equals(targetCourseId)) {
+                throw new RuntimeException(
+                        "Sinh viên " + enrollment.getStudentCode() + " không thể chuyển vì môn học không khớp");
+            }
+        }
+
+        // Transfer enrollments
+        for (Enrollment enrollment : enrollments) {
+            ClassSection oldClassSection = enrollment.getClassSection();
+
+            // Update old class section enrollment count
+            oldClassSection.setCurrentEnrollment(Math.max(0, oldClassSection.getCurrentEnrollment() - 1));
+            classSectionRepository.save(oldClassSection);
+
+            // Update enrollment - only need to update classSection reference
+            enrollment.setClassSection(targetClassSection);
+            enrollmentRepository.save(enrollment);
+        }
+
+        // Update target class section enrollment count
+        targetClassSection.setCurrentEnrollment((int) (currentEnrollment + enrollmentIds.size()));
+        classSectionRepository.save(targetClassSection);
+
+        log.info("Successfully transferred {} enrollments to {}", enrollmentIds.size(), targetClassName);
     }
 
     // ==================== TEMPLATE METHODS ====================

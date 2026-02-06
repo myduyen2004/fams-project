@@ -582,9 +582,7 @@ public class StagingImportService {
                         """
                         .formatted(stagingTable, stagingTable));
 
-        // Mark rows where enrollment already exists
-        // Note: enrollments table uses class_name as FK to class_sections (not
-        // class_section_id)
+        // Mark rows where enrollment already exists (enrollments uses class_name as FK)
         jdbcTemplate
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Sinh viên đã đăng ký lớp này rồi'
@@ -597,6 +595,32 @@ public class StagingImportService {
                             AND cs.semester_id = ?
                         )
                         AND s.error_message IS NULL
+                        """
+                        .formatted(stagingTable), semesterId);
+
+        // Mark rows where course is not in student's specialization or
+        // sub-specialization
+        jdbcTemplate
+                .update("""
+                        UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Môn học không nằm trong chuyên ngành của sinh viên'
+                        WHERE s.error_message IS NULL
+                        AND EXISTS (
+                            SELECT 1 FROM users u
+                            JOIN student_profiles sp ON sp.user_id = u.id
+                            JOIN class_sections cs ON TRIM(s.class_name) = cs.class_name AND cs.semester_id = ?
+                            WHERE UPPER(TRIM(s.student_code)) = UPPER(u.code)
+                            AND u.role = 'STUDENT'
+                            AND NOT EXISTS (
+                                SELECT 1 FROM specialization_courses sc
+                                WHERE sc.specialization_id = sp.specialization_id
+                                AND sc.course_id = cs.course_id
+                            )
+                            AND NOT EXISTS (
+                                SELECT 1 FROM sub_specialization_courses ssc
+                                WHERE ssc.sub_specialization_id = sp.sub_specialization_id
+                                AND ssc.course_id = cs.course_id
+                            )
+                        )
                         """
                         .formatted(stagingTable), semesterId);
 
