@@ -5,10 +5,12 @@ import com.fams.backend.dto.response.ClassSectionResponse;
 import com.fams.backend.dto.response.EnrollmentResponse;
 import com.fams.backend.dto.response.LecturerOptionResponse;
 import com.fams.backend.dto.response.StudentEnrollmentDTO;
+import com.fams.backend.entity.ChatGroup;
 import com.fams.backend.entity.ClassSection;
 import com.fams.backend.entity.Enrollment;
 import com.fams.backend.entity.StudentProfile;
 import com.fams.backend.entity.User;
+import com.fams.backend.repository.ChatGroupRepository;
 import com.fams.backend.repository.ClassSectionRepository;
 import com.fams.backend.repository.EnrollmentRepository;
 import com.fams.backend.service.ClassSectionService;
@@ -38,6 +40,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
 
     private final ClassSectionRepository classSectionRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final ChatGroupRepository chatGroupRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -324,16 +327,17 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                 })
                 .collect(Collectors.toList());
 
-        // Assuming k19 and 2019-2023 are placeholders or need logical mapping
-        // For now, using static or derived values to match the screenshot as much as
-        // possible
-
         // Try to find specialization from course
         String specializationName = classSection.getCourse().getName(); // Default fallback
         if (!classSection.getCourse().getSpecializationCourses().isEmpty()) {
             specializationName = classSection.getCourse().getSpecializationCourses().get(0)
                     .getSpecialization().getName();
         }
+
+        // Check if chat group exists for this class
+        Optional<ChatGroup> chatGroupOpt = chatGroupRepository.findByClassSectionClassName(className);
+        Boolean hasChatGroup = chatGroupOpt.isPresent();
+        Long chatGroupId = chatGroupOpt.map(ChatGroup::getId).orElse(null);
 
         return ClassDetailResponse.builder()
                 .className(classSection.getClassName())
@@ -345,6 +349,8 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                 .studentCount(classSection.getCurrentEnrollment())
                 .academicYear("2019 - 2023") // Placeholder
                 .status(classSection.getStatus().name())
+                .hasChatGroup(hasChatGroup)
+                .chatGroupId(chatGroupId)
                 .enrollments(studentEnrollments)
                 .build();
     }
