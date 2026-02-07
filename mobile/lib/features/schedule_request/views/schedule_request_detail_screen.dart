@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/widgets/app_background.dart';
 import '../controllers/schedule_request_controller.dart';
 import '../utils/request_type_labels.dart';
 import '../widgets/request_status_badge.dart';
@@ -55,17 +56,19 @@ class _ScheduleRequestDetailScreenState extends State<ScheduleRequestDetailScree
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text(
           'Chi tiết Yêu cầu',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2D3436)),
         ),
-        backgroundColor: const Color(0xFFF36F21),
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
+        foregroundColor: const Color(0xFF2D3436),
         elevation: 0,
       ),
-      body: Obx(() {
+      body: AppBackground(
+        child: SafeArea(
+          child: Obx(() {
         if (controller.isLoadingDetail.value) {
           return const Center(
             child: CircularProgressIndicator(
@@ -135,56 +138,56 @@ class _ScheduleRequestDetailScreenState extends State<ScheduleRequestDetailScree
               _SectionCard(
                 title: 'Chi tiết thay đổi',
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _DetailBox(
-                            label: 'PHÒNG BAN ĐẦU',
-                            value: request.originalRoomName ?? 'Không có',
-                            isOriginal: true,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _DetailBox(
-                            label: 'SLOT BAN ĐẦU',
-                            value: request.originalSlotNumber != null
-                                ? 'Slot ${request.originalSlotNumber}'
-                                : 'Không có',
-                            isOriginal: true,
-                          ),
-                        ),
-                      ],
+                    // Ban đầu section
+                    Text(
+                      'BAN ĐẦU',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[500],
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _InfoRow(
+                      label: 'Slot:',
+                      value: request.originalSlotNumber != null
+                          ? 'Slot ${request.originalSlotNumber}'
+                          : 'Không có',
+                    ),
+                    _InfoRow(
+                      label: 'Phòng:',
+                      value: request.originalRoomName ?? 'Không có',
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _DetailBox(
-                            label: 'PHÒNG YÊU CẦU',
-                            value: request.requestedRoomName ?? 'Không đổi',
-                            isOriginal: false,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _DetailBox(
-                            label: 'SLOT YÊU CẦU',
-                            value: request.requestedSlotNumber != null
-                                ? 'Slot ${request.requestedSlotNumber}'
-                                : 'Không có',
-                            isOriginal: false,
-                          ),
-                        ),
-                      ],
-                    ),
+                    const Divider(),
                     const SizedBox(height: 12),
-                    _DetailBox(
-                      label: 'NGÀY YÊU CẦU',
+                    // Yêu cầu đổi sang section
+                    Text(
+                      'YÊU CẦU ĐỔI SANG',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFFF36F21),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _InfoRow(
+                      label: 'Ngày:',
                       value: _formatDateOnly(request.requestedDate),
-                      isOriginal: false,
-                      fullWidth: true,
+                    ),
+                    _InfoRow(
+                      label: 'Slot:',
+                      value: request.requestedSlotNumber != null
+                          ? 'Slot ${request.requestedSlotNumber}'
+                          : 'Không đổi',
+                    ),
+                    _InfoRow(
+                      label: 'Phòng:',
+                      value: request.requestedRoomName ?? 'Không đổi',
                     ),
                   ],
                 ),
@@ -299,6 +302,8 @@ class _ScheduleRequestDetailScreenState extends State<ScheduleRequestDetailScree
           ),
         );
       }),
+        ),
+      ),
     );
   }
 
