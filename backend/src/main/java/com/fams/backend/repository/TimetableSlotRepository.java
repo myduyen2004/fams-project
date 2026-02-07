@@ -24,6 +24,40 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
         boolean existsByClassSectionClassNameAndDateAndSlotNumberAndStatusNot(String className, LocalDate date,
                         Integer slotNumber, TimetableSlot.TimetableSlotStatus status);
 
+        // Conflict checking while excluding specific slot ID (for reschedule/room
+        // change)
+        @Query("SELECT CASE WHEN COUNT(ts) > 0 THEN true ELSE false END FROM TimetableSlot ts " +
+                        "WHERE ts.room.id = :roomId AND ts.date = :date AND ts.slotNumber = :slotNumber " +
+                        "AND ts.status != :status AND ts.id != :excludeSlotId")
+        boolean existsByRoomIdAndDateAndSlotNumberExcludingSlot(
+                        @Param("roomId") Long roomId,
+                        @Param("date") LocalDate date,
+                        @Param("slotNumber") Integer slotNumber,
+                        @Param("status") TimetableSlot.TimetableSlotStatus status,
+                        @Param("excludeSlotId") Long excludeSlotId);
+
+        @Query("SELECT CASE WHEN COUNT(ts) > 0 THEN true ELSE false END FROM TimetableSlot ts " +
+                        "WHERE ts.classSection.lecturer.id = :lecturerId AND ts.date = :date AND ts.slotNumber = :slotNumber "
+                        +
+                        "AND ts.status != :status AND ts.id != :excludeSlotId")
+        boolean existsByLecturerIdAndDateAndSlotNumberExcludingSlot(
+                        @Param("lecturerId") Long lecturerId,
+                        @Param("date") LocalDate date,
+                        @Param("slotNumber") Integer slotNumber,
+                        @Param("status") TimetableSlot.TimetableSlotStatus status,
+                        @Param("excludeSlotId") Long excludeSlotId);
+
+        @Query("SELECT CASE WHEN COUNT(ts) > 0 THEN true ELSE false END FROM TimetableSlot ts " +
+                        "WHERE ts.classSection.className = :className AND ts.date = :date AND ts.slotNumber = :slotNumber "
+                        +
+                        "AND ts.status != :status AND ts.id != :excludeSlotId")
+        boolean existsByClassNameAndDateAndSlotNumberExcludingSlot(
+                        @Param("className") String className,
+                        @Param("date") LocalDate date,
+                        @Param("slotNumber") Integer slotNumber,
+                        @Param("status") TimetableSlot.TimetableSlotStatus status,
+                        @Param("excludeSlotId") Long excludeSlotId);
+
         List<TimetableSlot> findByRoomIdAndDateAndSlotNumberAndStatusNot(Long roomId, LocalDate date,
                         Integer slotNumber, TimetableSlot.TimetableSlotStatus status);
 

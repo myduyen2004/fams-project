@@ -5,6 +5,7 @@ import '../models/schedule_model.dart';
 import 'package:add_2_calendar/add_2_calendar.dart';
 
 import 'package:get/get.dart';
+import '../../auth/controllers/auth_controller.dart';
 import '../controllers/schedule_controller.dart';
 import '../views/slot_detail_screen.dart';
 
@@ -24,9 +25,9 @@ class SlotCard extends StatelessWidget {
       if (isActive) {
         return _buildActiveCard(context, controller);
       } else if (isNext) {
-        return _buildStatusCard(context, controller, isNext: true);
+        return _buildStatusCard(context, isNext: true);
       } else {
-        return _buildStatusCard(context, controller, isNext: false);
+        return _buildStatusCard(context, isNext: false);
       }
     });
   }
@@ -139,73 +140,71 @@ class SlotCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusCard(BuildContext context, ScheduleController controller, {required bool isNext}) {
-    return GestureDetector(
-      onTap: () => Get.to(() => SlotDetailScreen(slot: slot)),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-        decoration: BoxDecoration(
-          color: isNext ? Colors.white : Colors.white.withOpacity(0.6),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: isNext ? [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.02),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+  Widget _buildStatusCard(BuildContext context, {required bool isNext}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10), // Reduced from 16
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16), // Reduced from 20
+      decoration: BoxDecoration(
+        color: isNext ? Colors.white : Colors.white.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(20), // Reduced from 28
+        boxShadow: isNext ? [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ] : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            isNext ? 'Tiếp theo' : 'Slot ${slot.slotNumber ?? '?' }',
+            style: TextStyle(
+              color: isNext ? const Color(0xFFB2BEC3) : AppColors.primaryOrange, 
+              fontWeight: FontWeight.w900, 
+              fontSize: 11, // Reduced from 12
             ),
-          ] : null,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  'Slot ${slot.slotNumber ?? ''}',
-                  style: GoogleFonts.roboto(
-                    color: AppColors.primaryOrange,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-                if (isNext) ...[
+          ),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                slot.courseCode ?? 'COURSE',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF2D3436), letterSpacing: -0.3), // Reduced from 24
+              ),
+              Row(
+                children: [
+                  _buildCalendarButton(),
                   const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryOrange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      'Tiếp theo',
-                      style: GoogleFonts.roboto(
-                        color: AppColors.primaryOrange,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ),
+                  if (!isNext && Get.find<AuthController>().currentUser.value?.role != 'LECTURER') _buildSmallBadge(slot.attendanceStatus ?? 'Có mặt'),
                 ],
-              ],
-            ),
-            const SizedBox(height: 4),
+              )
+            ],
+          ),
+          const SizedBox(height: 12), // Reduced from 16
+          if (isNext) ...[
+            _buildInfoItem(Icons.access_time_filled_rounded, "${_formatTime(slot.startTime)} - ${_formatTime(slot.endTime)}"),
+            const SizedBox(height: 8),
+            _buildInfoItem(Icons.people_alt_rounded, slot.className ?? 'N/A'),
+            const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  slot.courseCode ?? 'COURSE',
-                  style: GoogleFonts.roboto(fontSize: 18, fontWeight: FontWeight.w900, color: const Color(0xFF2D3436), letterSpacing: -0.3),
+                _buildInfoItem(Icons.meeting_room_rounded, slot.roomCode ?? 'Online'),
+                Expanded(
+                  child: Text(
+                    slot.lecturerName ?? 'N/A',
+                    style: const TextStyle(color: Color(0xFFB2BEC3), fontSize: 12, fontWeight: FontWeight.w700), // Reduced from 13
+                    textAlign: TextAlign.right,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
                 ),
-                Row(
-                  children: [
-                    _buildCalendarButton(),
-                  ],
-                )
               ],
             ),
-            const SizedBox(height: 12),
+          ] else ...[
             _buildInfoItem(Icons.meeting_room_rounded, slot.roomCode ?? 'Online'),
             const SizedBox(height: 8),
             _buildInfoItem(Icons.people_alt_rounded, slot.className ?? 'N/A'),
@@ -229,7 +228,7 @@ class SlotCard extends StatelessWidget {
               ],
             ),
           ],
-        ),
+        ],
       ),
     );
   }

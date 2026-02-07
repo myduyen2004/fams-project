@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/widgets/app_background.dart';
 import '../../home/controllers/home_controller.dart';
 import '../controllers/schedule_request_controller.dart';
 import '../utils/request_type_labels.dart';
@@ -13,13 +14,16 @@ class ScheduleRequestListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(ScheduleRequestController());
+    // Initialize controller - use existing if available, otherwise create new
+    final controller = Get.isRegistered<ScheduleRequestController>()
+        ? Get.find<ScheduleRequestController>()
+        : Get.put(ScheduleRequestController());
     final homeController = Get.find<HomeController>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8EDE4), // Beige background like schedule screen
-      body: SafeArea(
-        child: Column(
+      body: AppBackground(
+        child: SafeArea(
+          child: Column(
           children: [
             // Header
             _buildHeader(context, controller),
@@ -57,9 +61,10 @@ class ScheduleRequestListScreen extends StatelessWidget {
                     },
                   ),
                 );
-              }),
-            ),
-          ],
+                }),
+              ),
+            ],
+          ),
         ),
       ),
       
@@ -152,8 +157,8 @@ class ScheduleRequestListScreen extends StatelessWidget {
                 const Text(
                   'Quản lý Yêu cầu',
                   style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w900,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                     color: Color(0xFF2D3436),
                     letterSpacing: -0.5,
                   ),
