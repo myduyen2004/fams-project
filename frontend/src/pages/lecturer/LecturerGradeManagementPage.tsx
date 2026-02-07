@@ -4,7 +4,7 @@ import { lecturerClassService, SemesterResponse, ClassSectionResponse } from '..
 import { studentGradeService, GradeOverviewResponse, GradeComponentInfo } from '../../services/api/studentGradeService';
 import { lecturerOtpService } from '../../services/api/lecturerOtpService';
 import { authService } from '../../services/api/authService';
-import { ChevronDown, FileSpreadsheet, Download, Users, TrendingUp, Award, Check, Loader2, Edit3, Save, X } from 'lucide-react';
+import { ChevronDown, FileSpreadsheet, Download, Users, TrendingUp, Award, Check, Loader2, Edit3, Save, X, Search, Send } from 'lucide-react';
 import { ImportGradeModal } from '../../components/lecturer/ImportGradeModal';
 import { OtpSetupModal } from '../../components/lecturer/OtpSetupModal';
 import { OtpVerificationModal } from '../../components/lecturer/OtpVerificationModal';
@@ -39,7 +39,12 @@ export const LecturerGradeManagementPage: React.FC = () => {
     const [showOtpSetupModal, setShowOtpSetupModal] = useState(false);
     const [showOtpVerifyModal, setShowOtpVerifyModal] = useState(false);
     const [isRegenerateMode, setIsRegenerateMode] = useState(false);
-    const [pendingAction, setPendingAction] = useState<'edit' | 'import' | null>(null);
+    const [pendingAction, setPendingAction] = useState<'edit' | 'import' | 'submit' | null>(null);
+
+    // Search and submit state
+    const [searchTerm, setSearchTerm] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
 
     const user = authService.getUser();
 
@@ -220,7 +225,7 @@ export const LecturerGradeManagementPage: React.FC = () => {
     const gradeKey = (enrollmentId: number, componentId: number) => `${enrollmentId}_${componentId}`;
 
     // Check OTP before action
-    const requireOtpForAction = (action: 'edit' | 'import') => {
+    const requireOtpForAction = (action: 'edit' | 'import' | 'submit') => {
         // If no OTP set up, show setup modal
         if (!hasOtp) {
             setPendingAction(action);
@@ -285,6 +290,8 @@ export const LecturerGradeManagementPage: React.FC = () => {
             initializeEditMode();
         } else if (pendingAction === 'import') {
             setShowImportModal(true);
+        } else if (pendingAction === 'submit') {
+            setShowSubmitConfirm(true);
         }
         setPendingAction(null);
     };
@@ -299,8 +306,32 @@ export const LecturerGradeManagementPage: React.FC = () => {
             initializeEditMode();
         } else if (pendingAction === 'import') {
             setShowImportModal(true);
+        } else if (pendingAction === 'submit') {
+            setShowSubmitConfirm(true);
         }
         setPendingAction(null);
+    };
+
+    // Handle submit grades button click
+    const handleSubmitClick = () => {
+        if (!requireOtpForAction('submit')) return;
+        setShowSubmitConfirm(true);
+    };
+
+    // Execute grade submission
+    const handleConfirmSubmit = async () => {
+        if (!gradeOverview) return;
+        setSubmitting(true);
+        try {
+            await studentGradeService.submitGrades(gradeOverview.className);
+            toast.success('Đã gửi điểm cho phòng đào tạo thành công!');
+            setShowSubmitConfirm(false);
+            fetchGrades(); // Refresh to update submission status
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Không thể gửi điểm');
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     // Cancel edit mode
@@ -492,56 +523,24 @@ export const LecturerGradeManagementPage: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Action Buttons */}
+                        {/* Action Buttons - Export and Import only, Edit moved to table toolbar */}
                         <div className="flex items-end gap-2">
-                            {/* Edit Mode Buttons */}
-                            {isEditMode ? (
-                                <>
-                                    <button
-                                        onClick={handleCancelEdit}
-                                        className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-zinc-700 border border-gray-200 dark:border-zinc-600 rounded-lg text-sm text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-zinc-600 transition-all"
-                                        disabled={saving}
-                                    >
-                                        <X size={16} />
-                                        Hủy
-                                    </button>
-                                    <button
-                                        onClick={handleSaveGrades}
-                                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-all disabled:opacity-50"
-                                        disabled={saving}
-                                    >
-                                        {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                                        Lưu thay đổi
-                                    </button>
-                                </>
-                            ) : (
-                                <>
-                                    <button
-                                        onClick={handleStartEdit}
-                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all disabled:opacity-50"
-                                        disabled={!gradeOverview}
-                                    >
-                                        <Edit3 size={16} />
-                                        Chỉnh sửa
-                                    </button>
-                                    <button
-                                        onClick={handleExport}
-                                        className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-zinc-700 transition-all disabled:opacity-50"
-                                        disabled={!gradeOverview || exporting}
-                                    >
-                                        {exporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-                                        Xuất Excel
-                                    </button>
-                                    <button
-                                        onClick={handleImportClick}
-                                        className="flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-all disabled:opacity-50"
-                                        disabled={!gradeOverview}
-                                    >
-                                        <FileSpreadsheet size={16} />
-                                        Nhập điểm
-                                    </button>
-                                </>
-                            )}
+                            <button
+                                onClick={handleExport}
+                                className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-zinc-700 transition-all disabled:opacity-50"
+                                disabled={!gradeOverview || exporting}
+                            >
+                                {exporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                                Xuất Excel
+                            </button>
+                            <button
+                                onClick={handleImportClick}
+                                className="flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-all disabled:opacity-50"
+                                disabled={!gradeOverview || gradeOverview?.gradesSubmitted}
+                            >
+                                <FileSpreadsheet size={16} />
+                                Nhập điểm
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -561,14 +560,30 @@ export const LecturerGradeManagementPage: React.FC = () => {
                                         }`}>
                                         {gradeOverview.status === 'IN_PROGRESS' ? 'Đang học' : gradeOverview.status}
                                     </span>
+                                    {/* Submission Status Badge */}
+                                    {gradeOverview.gradesSubmitted && (
+                                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 flex items-center gap-1">
+                                            <Check size={10} />
+                                            Đã gửi điểm
+                                        </span>
+                                    )}
                                 </div>
-                                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-xs font-medium">
+                                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-xs font-medium flex-wrap">
                                     <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-zinc-800 px-2 py-1 rounded-md border border-gray-100 dark:border-zinc-700">
                                         <div className="w-1.5 h-1.5 rounded-full bg-fpt-orange"></div>
                                         {gradeOverview.courseName}
                                     </span>
                                     <span>•</span>
                                     <span>{gradeOverview.totalStudents} sinh viên</span>
+                                    {gradeOverview.gradesSubmittedAt && (
+                                        <>
+                                            <span>•</span>
+                                            <span className="text-blue-600 dark:text-blue-400">
+                                                Gửi lúc: {new Date(gradeOverview.gradesSubmittedAt).toLocaleString('vi-VN')}
+                                                {gradeOverview.gradesSubmittedByName && ` bởi ${gradeOverview.gradesSubmittedByName}`}
+                                            </span>
+                                        </>
+                                    )}
                                 </div>
                             </div>
 
@@ -597,6 +612,68 @@ export const LecturerGradeManagementPage: React.FC = () => {
                     </div>
                 )}
 
+                {/* Table Toolbar - Search and Edit/Submit Buttons */}
+                {gradeOverview && (
+                    <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
+                        {/* Search Input */}
+                        <div className="relative w-full sm:w-1/2">
+                            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Tìm sinh viên theo tên hoặc MSSV..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-fpt-orange focus:border-transparent"
+                            />
+                        </div>
+
+                        {/* Edit/Submit Buttons */}
+                        <div className="flex items-center gap-2">
+                            {isEditMode ? (
+                                <>
+                                    <button
+                                        onClick={handleCancelEdit}
+                                        className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-zinc-700 border border-gray-200 dark:border-zinc-600 rounded-lg text-sm text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-zinc-600 transition-all"
+                                        disabled={saving}
+                                    >
+                                        <X size={18} />
+                                        Hủy
+                                    </button>
+                                    <button
+                                        onClick={handleSaveGrades}
+                                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-all disabled:opacity-50"
+                                        disabled={saving}
+                                    >
+                                        {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                                        Lưu thay đổi
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <button
+                                        onClick={handleStartEdit}
+                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all disabled:opacity-50"
+                                        disabled={gradeOverview.gradesSubmitted}
+                                        title={gradeOverview.gradesSubmitted ? 'Điểm đã được gửi, không thể chỉnh sửa' : ''}
+                                    >
+                                        <Edit3 size={18} />
+                                        Chỉnh sửa
+                                    </button>
+                                    {!gradeOverview.gradesSubmitted && (
+                                        <button
+                                            onClick={handleSubmitClick}
+                                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-all disabled:opacity-50"
+                                            disabled={submitting}
+                                        >
+                                            {submitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                                            Gửi điểm
+                                        </button>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    </div>
+                )}
 
                 {/* Grade Table */}
                 {loadingGrades ? (
@@ -641,55 +718,62 @@ export const LecturerGradeManagementPage: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50 dark:divide-zinc-800">
-                                    {gradeOverview.studentGrades.map((student, index) => (
-                                        <tr key={student.enrollmentId} className="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
-                                            <td className="px-4 py-2 text-center text-sm text-gray-500 dark:text-zinc-400">
-                                                {(index + 1).toString().padStart(2, '0')}
-                                            </td>
-                                            <td className="px-4 py-2">
-                                                <div className="flex items-center gap-3">
-                                                    <div>
-                                                        <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                                                            {student.studentName}
-                                                        </div>
-                                                        <div className="text-xs text-gray-500 dark:text-zinc-500 font-mono">
-                                                            {student.studentCode}
+                                    {gradeOverview.studentGrades
+                                        .filter(student => {
+                                            if (!searchTerm.trim()) return true;
+                                            const term = searchTerm.toLowerCase();
+                                            return student.studentName.toLowerCase().includes(term) ||
+                                                student.studentCode.toLowerCase().includes(term);
+                                        })
+                                        .map((student, index) => (
+                                            <tr key={student.enrollmentId} className="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
+                                                <td className="px-4 py-2 text-center text-sm text-gray-500 dark:text-zinc-400">
+                                                    {(index + 1).toString().padStart(2, '0')}
+                                                </td>
+                                                <td className="px-4 py-2">
+                                                    <div className="flex items-center gap-3">
+                                                        <div>
+                                                            <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                                                                {student.studentName}
+                                                            </div>
+                                                            <div className="text-xs text-gray-500 dark:text-zinc-500 font-mono">
+                                                                {student.studentCode}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            </td>
-                                            {sortedGradeComponents.map((component) => {
-                                                const score = student.grades[component.id];
-                                                const key = gradeKey(student.enrollmentId, component.id);
-                                                const isComponentEditable = isEditable(component);
-                                                const editValue = editedGrades[key];
+                                                </td>
+                                                {sortedGradeComponents.map((component) => {
+                                                    const score = student.grades[component.id];
+                                                    const key = gradeKey(student.enrollmentId, component.id);
+                                                    const isComponentEditable = isEditable(component);
+                                                    const editValue = editedGrades[key];
 
-                                                return (
-                                                    <td key={component.id} className="px-2 py-2 text-center">
-                                                        {isEditMode && isComponentEditable ? (
-                                                            <input
-                                                                type="text"
-                                                                inputMode="decimal"
-                                                                value={editValue ?? ''}
-                                                                onChange={(e) => handleGradeChange(student.enrollmentId, component.id, e.target.value)}
-                                                                className="w-14 text-center px-1 py-1 rounded-lg border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-gray-900 dark:text-white font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                                placeholder="--"
-                                                            />
-                                                        ) : (
-                                                            <span className={`inline-block px-2 py-1 rounded-lg font-semibold text-sm border ${getScoreBgColor(score)} ${getScoreColor(score)} ${isComponentEditable ? '' : 'opacity-60'}`}>
-                                                                {formatScore(score)}
-                                                            </span>
-                                                        )}
-                                                    </td>
-                                                );
-                                            })}
-                                            <td className="px-2 py-2 text-center">
-                                                <span className={`inline-block px-2 py-1 rounded-lg font-bold text-sm border ${getFinalGradeColor(student.finalGrade)}`}>
-                                                    {formatScore(student.finalGrade)}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                    return (
+                                                        <td key={component.id} className="px-2 py-2 text-center">
+                                                            {isEditMode && isComponentEditable ? (
+                                                                <input
+                                                                    type="text"
+                                                                    inputMode="decimal"
+                                                                    value={editValue ?? ''}
+                                                                    onChange={(e) => handleGradeChange(student.enrollmentId, component.id, e.target.value)}
+                                                                    className="w-14 text-center px-1 py-1 rounded-lg border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-gray-900 dark:text-white font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                                    placeholder="--"
+                                                                />
+                                                            ) : (
+                                                                <span className={`inline-block px-2 py-1 rounded-lg font-semibold text-sm border ${getScoreBgColor(score)} ${getScoreColor(score)} ${isComponentEditable ? '' : 'opacity-60'}`}>
+                                                                    {formatScore(score)}
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                    );
+                                                })}
+                                                <td className="px-2 py-2 text-center">
+                                                    <span className={`inline-block px-2 py-1 rounded-lg font-bold text-sm border ${getFinalGradeColor(student.finalGrade)}`}>
+                                                        {formatScore(student.finalGrade)}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
 
                                     {gradeOverview.studentGrades.length === 0 && (
                                         <tr>
@@ -765,6 +849,46 @@ export const LecturerGradeManagementPage: React.FC = () => {
                 }}
                 onSuccess={handleOtpVerifySuccess}
             />
+
+            {/* Submit Confirmation Modal */}
+            {showSubmitConfirm && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
+                        <div className="text-center mb-6">
+                            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Send size={28} className="text-green-600 dark:text-green-400" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                                Xác nhận gửi điểm
+                            </h3>
+                            <p className="text-gray-500 dark:text-gray-400 text-sm">
+                                Bạn có chắc muốn gửi điểm cho phòng đào tạo?
+                                Sau khi gửi, bạn sẽ <span className="font-semibold text-red-600">không thể chỉnh sửa</span> điểm nữa.
+                            </p>
+                        </div>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowSubmitConfirm(false)}
+                                className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-zinc-700 transition-all"
+                                disabled={submitting}
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={handleConfirmSubmit}
+                                className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                disabled={submitting}
+                            >
+                                {submitting ? (
+                                    <><Loader2 size={16} className="animate-spin" /> Đang gửi...</>
+                                ) : (
+                                    <><Send size={16} /> Xác nhận gửi</>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </LecturerLayout>
     );
 };

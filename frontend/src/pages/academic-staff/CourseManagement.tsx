@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Upload, Download } from 'lucide-react';
+import { Plus, Search, Upload, Download, Layers } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { courseService } from '../../services/api/courseService';
 import { StatusFilter, Pagination, SelectionActionBar } from '../../components/academic-staff';
 import { CourseFormModal } from '../../components/academic-staff/CourseFormModal';
 import { ImportCourseModal } from '../../components/academic-staff/ImportCourseModal';
+import { ImportGradeComponentModal } from '../../components/academic-staff/ImportGradeComponentModal';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { Course } from '../../types/course';
 import { usePagination } from '../../hooks/usePagination';
@@ -27,6 +28,7 @@ export const CourseManagement: React.FC = () => {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingCourse, setEditingCourse] = useState<Course | null>(null);
     const [isImportOpen, setIsImportOpen] = useState(false);
+    const [isImportGradeComponentOpen, setIsImportGradeComponentOpen] = useState(false);
 
     // Selection
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -242,6 +244,13 @@ export const CourseManagement: React.FC = () => {
                             Import môn học
                         </button>
                         <button
+                            onClick={() => setIsImportGradeComponentOpen(true)}
+                            className="flex items-center gap-2 rounded-lg border border-blue-500 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-100"
+                        >
+                            <Layers className="h-4 w-4" />
+                            Import thành phần điểm
+                        </button>
+                        <button
                             onClick={() => { setEditingCourse(null); setIsFormOpen(true); }}
                             className="flex items-center gap-2 rounded-lg bg-fpt-orange px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
                         >
@@ -384,6 +393,13 @@ export const CourseManagement: React.FC = () => {
             <ImportCourseModal
                 isOpen={isImportOpen}
                 onClose={() => setIsImportOpen(false)}
+                onSuccess={fetchData}
+            />
+
+            {/* Import Grade Component Modal */}
+            <ImportGradeComponentModal
+                isOpen={isImportGradeComponentOpen}
+                onClose={() => setIsImportGradeComponentOpen(false)}
                 onSuccess={fetchData}
             />
 
