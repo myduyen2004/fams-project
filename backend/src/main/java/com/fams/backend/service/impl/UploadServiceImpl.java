@@ -25,10 +25,30 @@ public class UploadServiceImpl implements UploadService {
         }
 
         try {
-            log.info("Uploading file to Cloudinary: {}", file.getOriginalFilename());
+            String filename = file.getOriginalFilename();
+            log.info("Uploading file to Cloudinary: {}", filename);
+
+            // Determine resource type based on file extension
+            String resourceType = "auto";
+            if (filename != null) {
+                String lowerFilename = filename.toLowerCase();
+                if (lowerFilename.endsWith(".pdf") ||
+                        lowerFilename.endsWith(".doc") ||
+                        lowerFilename.endsWith(".docx") ||
+                        lowerFilename.endsWith(".xls") ||
+                        lowerFilename.endsWith(".xlsx") ||
+                        lowerFilename.endsWith(".txt") ||
+                        lowerFilename.endsWith(".zip") ||
+                        lowerFilename.endsWith(".rar")) {
+                    resourceType = "raw"; // Use raw for documents and archives
+                }
+            }
+
+            log.info("Using resource_type: {} for file: {}", resourceType, filename);
             Map<Object, Object> uploadResult = (Map<Object, Object>) cloudinary.uploader().upload(file.getBytes(),
                     ObjectUtils.asMap(
-                            "resource_type", "auto",
+                            "resource_type", resourceType,
+                            "type", "upload", // Make files publicly accessible
                             "folder", "fams_notifications",
                             "use_filename", true,
                             "unique_filename", true,

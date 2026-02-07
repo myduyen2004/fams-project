@@ -57,6 +57,10 @@ public class Notification {
     @EqualsAndHashCode.Exclude
     private User sender;
 
+    // URL để redirect khi nhấn vào thông báo
+    @Column(length = 255)
+    private String targetUrl;
+
     // === Target filtering ===
     // Loại đối tượng nhận
     @Enumerated(EnumType.STRING)

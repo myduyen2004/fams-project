@@ -47,9 +47,6 @@ public class LecturerController {
                         @PathVariable Long id,
                         @AuthenticationPrincipal UserDetails userDetails) {
 
-                User lecturer = userRepository.findByUsername(userDetails.getUsername())
-                                .orElseThrow(() -> new RuntimeException("Logged in user not found"));
-
                 ScheduleRequestResponse response = scheduleRequestService.getRequestById(id);
                 return ResponseEntity.ok(response);
         }

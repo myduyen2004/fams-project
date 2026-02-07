@@ -23,6 +23,8 @@ public class DashboardNotificationResponse {
     private String senderName;
     private String senderFullName;
     private String senderAvatar;
+    private String targetUrl;
 
+    // private String targetUrl;
     private java.util.List<String> attachmentUrls;
 }
