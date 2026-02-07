@@ -127,11 +127,6 @@ export const ExamGradeManagementPage: React.FC = () => {
         toast.success('Nhập điểm thành công!');
     };
 
-    const handlePublishClick = () => {
-        if (!gradeOverview) return;
-        setShowPublishConfirm(true);
-    };
-
     const handleConfirmPublish = async () => {
         if (!selectedCourse || !selectedSemester) return;
 
