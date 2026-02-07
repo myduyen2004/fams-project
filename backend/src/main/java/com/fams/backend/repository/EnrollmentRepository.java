@@ -114,4 +114,18 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
         boolean hasCommonStudents(
                         @Param("class1") String class1,
                         @Param("class2") String class2);
+
+        /**
+         * Find all enrollments for a course in a semester (across all class sections)
+         */
+        @Query("SELECT e FROM Enrollment e " +
+                        "JOIN FETCH e.student s " +
+                        "JOIN FETCH e.classSection cs " +
+                        "WHERE cs.course.code = :courseCode " +
+                        "AND cs.semester.code = :semesterCode " +
+                        "AND e.status = 'ENROLLED' " +
+                        "ORDER BY e.studentCode ASC")
+        List<Enrollment> findByCourseAndSemester(
+                        @Param("courseCode") String courseCode,
+                        @Param("semesterCode") String semesterCode);
 }
