@@ -13,7 +13,7 @@ import java.util.Map;
 public interface StudentService {
 
     Page<StudentResponse> getAllStudents(String search, String status, String major, String specialization,
-            Pageable pageable);
+            String subSpecialization, Pageable pageable);
 
     StudentResponse getStudentById(Long id);
 
