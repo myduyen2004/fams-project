@@ -151,7 +151,7 @@ export const ScheduleRequestPage = () => {
                             <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{stats.processed}</h3>
                         </div>
                     </div>
-                    <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 flex items-center gap-4 opacity-50">
+                    <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 flex items-center gap-4">
                         <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600">
                             <FileText size={24} />
                         </div>

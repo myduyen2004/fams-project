@@ -74,4 +74,5 @@ public class SemesterController {
         boolean isPublished = semesterService.isPublished(code);
         return ResponseEntity.ok(java.util.Map.of("isPublished", isPublished));
     }
+
 }

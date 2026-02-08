@@ -15,6 +15,7 @@ export interface ScheduleRequest {
     createdAt: string;
     approverNote?: string;
     originalRoomName?: string;
+    originalDate?: string;
     requestedRoomName?: string;
     requestedDate?: string;
     file?: string;

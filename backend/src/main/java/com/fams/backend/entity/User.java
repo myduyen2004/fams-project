@@ -15,13 +15,18 @@ import java.time.LocalDateTime;
         @Index(name = "idx_user_role", columnList = "role"),
         @Index(name = "idx_user_status_role", columnList = "status, role")
 })
-@Data
+@Getter
+@Setter
+@ToString(exclude = { "studentProfile", "lecturerProfile", "accessLogs", "userSessions", "aiChatSessions",
+        "attendanceSessions", "studentAttendances" })
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class User {
 
     @Id
+    @EqualsAndHashCode.Include
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 

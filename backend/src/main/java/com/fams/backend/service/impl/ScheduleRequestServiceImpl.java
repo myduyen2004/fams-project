@@ -43,6 +43,7 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
     private final TimetableSlotRepository timetableSlotRepository;
     private final RoomRepository roomRepository;
     private final SlotTypeRepository slotTypeRepository;
+    private final com.fams.backend.repository.EnrollmentRepository enrollmentRepository;
 
     @Override
     public ScheduleRequestResponse createRequest(CreateScheduleRequest request, Long requesterId) {
@@ -110,27 +111,32 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
                     .orElseThrow(() -> new BadRequestException("Room not found"));
 
             // Check Conflicts - chỉ kiểm tra, không tạo slot mới
-            // a. Room Conflict
-            boolean roomBusy = timetableSlotRepository.existsByRoomIdAndDateAndSlotNumberAndStatusNot(
+            // Lấy ID của slot gốc để loại trừ khi kiểm tra conflict
+            Long originalSlotId = originalSlot.getId();
+
+            // a. Room Conflict (loại trừ slot gốc)
+            boolean roomBusy = timetableSlotRepository.existsByRoomIdAndDateAndSlotNumberExcludingSlot(
                     requestedRoom.getId(), targetDate, targetSlotIndex,
-                    com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.CANCELLED);
+                    com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.CANCELLED,
+                    originalSlotId);
             if (roomBusy) {
                 throw new BadRequestException("Phòng học đã có lớp học khác vào khung giờ này.");
             }
 
-            // b. Lecturer Conflict
-            boolean lecturerBusy = timetableSlotRepository
-                    .existsByClassSectionLecturerIdAndDateAndSlotNumberAndStatusNot(
-                            originalSlot.getClassSection().getLecturer().getId(), targetDate, targetSlotIndex,
-                            com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.CANCELLED);
+            // b. Lecturer Conflict (loại trừ slot gốc)
+            boolean lecturerBusy = timetableSlotRepository.existsByLecturerIdAndDateAndSlotNumberExcludingSlot(
+                    originalSlot.getClassSection().getLecturer().getId(), targetDate, targetSlotIndex,
+                    com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.CANCELLED,
+                    originalSlotId);
             if (lecturerBusy) {
                 throw new BadRequestException("Giảng viên đã có lịch dạy vào khung giờ này.");
             }
 
-            // c. Class Conflict
-            boolean classBusy = timetableSlotRepository.existsByClassSectionClassNameAndDateAndSlotNumberAndStatusNot(
+            // c. Class Conflict (loại trừ slot gốc)
+            boolean classBusy = timetableSlotRepository.existsByClassNameAndDateAndSlotNumberExcludingSlot(
                     originalSlot.getClassSection().getClassName(), targetDate, targetSlotIndex,
-                    com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.CANCELLED);
+                    com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.CANCELLED,
+                    originalSlotId);
             if (classBusy) {
                 throw new BadRequestException("Lớp học đã có lịch học vào khung giờ này.");
             }
@@ -143,6 +149,17 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
                             ScheduleRequest.RequestStatus.PENDING);
             if (pendingConflict) {
                 throw new BadRequestException("Đã có yêu cầu đang chờ duyệt cho phòng/ngày/slot này.");
+            }
+
+            // e. Student Conflict - Check if any students in the class have schedule
+            // conflicts
+            String className = originalSlot.getClassSection().getClassName();
+            long studentConflictCount = timetableSlotRepository.countStudentConflicts(
+                    className, targetDate, targetSlotIndex);
+            if (studentConflictCount > 0) {
+                throw new BadRequestException(
+                        String.format("Có %d sinh viên trong lớp bị trùng lịch học vào khung giờ này.",
+                                studentConflictCount));
             }
 
             // KHÔNG tạo TimetableSlot mới ở đây
@@ -232,7 +249,9 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
         if (id == null) {
             throw new BadRequestException("Request ID must not be null");
         }
-        ScheduleRequest request = scheduleRequestRepository.findById(id)
+        // Use findByIdWithSlots to load originalSlot and slotType for approval
+        // processing
+        ScheduleRequest request = scheduleRequestRepository.findByIdWithSlots(id)
                 .orElseThrow(() -> new BadRequestException("Request not found"));
 
         if (request.getStatus() != ScheduleRequest.RequestStatus.PENDING) {
@@ -247,23 +266,141 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
         request.setApprovedAt(LocalDateTime.now());
         request.setApproverNote(note);
 
+        // Xử lý tạo TimetableSlot mới khi APPROVED
+        if (status == ScheduleRequest.RequestStatus.APPROVED) {
+            handleApprovedRequest(request);
+        }
+
         ScheduleRequest savedRequest = scheduleRequestRepository.saveAndFlush(request);
+
+        // Gửi thông báo đến người yêu cầu sau khi cập nhật trạng thái
+        sendNotificationAsync(savedRequest, status, note);
 
         ScheduleRequestResponse response = mapToResponse(savedRequest);
         return response;
+    }
+
+    /**
+     * Xử lý khi yêu cầu được APPROVED:
+     * - Tạo TimetableSlot mới với thông tin từ request
+     * - Cập nhật slot cũ → RESCHEDULED
+     */
+    private void handleApprovedRequest(ScheduleRequest request) {
+        log.info("handleApprovedRequest called for request ID: {}, type: {}", request.getId(), request.getType());
+
+        if (request.getType() != ScheduleRequest.RequestType.RESCHEDULE
+                && request.getType() != ScheduleRequest.RequestType.ROOM_CHANGE) {
+            log.info("Request type {} is not RESCHEDULE or ROOM_CHANGE, skipping slot creation", request.getType());
+            return;
+        }
+
+        com.fams.backend.entity.TimetableSlot originalSlot = request.getOriginalSlot();
+        if (originalSlot == null) {
+            log.warn("Original slot is null for request ID: {}, cannot create new slot", request.getId());
+            return;
+        }
+
+        log.info("Original slot ID: {}, creating new slot...", originalSlot.getId());
+
+        // 1. Tạo TimetableSlot mới
+        com.fams.backend.entity.TimetableSlot newSlot = com.fams.backend.entity.TimetableSlot.builder()
+                .classSection(request.getClassSection())
+                .room(request.getRequestedRoom())
+                .date(request.getRequestedDate())
+                .slotNumber(request.getRequestedSlotNumber())
+                .dayOfWeek(request.getRequestedDate().getDayOfWeek().getValue())
+                .slotType(originalSlot.getSlotType())
+                .status(com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.SCHEDULED)
+                .build();
+        com.fams.backend.entity.TimetableSlot savedNewSlot = timetableSlotRepository.save(newSlot);
+        log.info("Created new TimetableSlot with ID: {}", savedNewSlot.getId());
+
+        // 2. Liên kết với ScheduleRequest
+        request.setRequestedSlot(savedNewSlot);
+
+        // 3. Cập nhật slot cũ → RESCHEDULED (giữ lại lịch sử)
+        originalSlot.setStatus(com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.RESCHEDULED);
+        originalSlot.setNote("Đã đổi lịch theo yêu cầu #" + request.getId());
+        timetableSlotRepository.save(originalSlot);
+        log.info("Marked original slot {} as RESCHEDULED", originalSlot.getId());
+
+        // 4. Gửi thông báo đến tất cả sinh viên trong lớp
+        sendNotificationToStudentsInClass(request);
+    }
+
+    /**
+     * Gửi thông báo đến tất cả sinh viên trong lớp khi lịch học thay đổi
+     */
+    private void sendNotificationToStudentsInClass(ScheduleRequest request) {
+        try {
+            String className = request.getClassSection() != null ? request.getClassSection().getClassName() : null;
+            if (className == null) {
+                log.warn("Cannot send notification to students: className is null for request {}", request.getId());
+                return;
+            }
+
+            List<Long> studentIds = enrollmentRepository.findEnrolledStudentIdsByClassName(className);
+            if (studentIds.isEmpty()) {
+                log.info("No enrolled students found for class {}", className);
+                return;
+            }
+
+            String title = "Lịch học lớp " + className + " đã thay đổi";
+
+            // Format dates as dd-MM-yyyy
+            java.time.format.DateTimeFormatter dateFormatter = java.time.format.DateTimeFormatter
+                    .ofPattern("dd-MM-yyyy");
+            String originalDateFormatted = request.getOriginalSlot() != null
+                    ? request.getOriginalSlot().getDate().format(dateFormatter)
+                    : "N/A";
+            String requestedDateFormatted = request.getRequestedDate() != null
+                    ? request.getRequestedDate().format(dateFormatter)
+                    : "N/A";
+            String roomName = request.getRequestedRoom() != null ? request.getRequestedRoom().getName() : "Không đổi";
+            Integer slotNumber = request.getRequestedSlotNumber();
+
+            String content = String.format(
+                    "Dear em,<br><br>Buổi học ngày %s đã được đổi sang ngày %s, Slot %d, Phòng %s. " +
+                            "Em lưu ý kiểm tra và cập nhật thêm thông tin ở trang thời khóa biểu.<br><br>" +
+                            "Thân mến,<br>Phòng đào tạo",
+                    originalDateFormatted, requestedDateFormatted, slotNumber != null ? slotNumber : 0, roomName);
+
+            for (Long studentId : studentIds) {
+                com.fams.backend.dto.request.NotificationRequest notifRequest = com.fams.backend.dto.request.NotificationRequest
+                        .builder()
+                        .title(title)
+                        .content(content)
+                        .type(com.fams.backend.entity.Notification.NotificationType.SCHEDULE)
+                        .targetType(com.fams.backend.entity.Notification.TargetType.USER)
+                        .status(com.fams.backend.entity.Notification.NotificationStatus.SENT)
+                        .recipientId(studentId)
+                        .build();
+                notificationService.createNotification(notifRequest);
+            }
+
+            log.info("Sent schedule change notification to {} students in class {}", studentIds.size(), className);
+        } catch (Exception e) {
+            log.error("Error sending notification to students: {}", e.getMessage(), e);
+        }
     }
 
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     protected void sendNotificationAsync(ScheduleRequest savedRequest, ScheduleRequest.RequestStatus status,
             String note) {
         try {
-            String statusVN = status == ScheduleRequest.RequestStatus.APPROVED ? "được Duyệt" : "bị Từ chối";
-            String title = "Cập nhật trạng thái yêu cầu thay đổi lịch học";
-            String content = String.format("Yêu cầu thay đổi lịch học cho lớp %s của bạn đã %s.",
-                    savedRequest.getClassSection() != null ? savedRequest.getClassSection().getClassName() : "",
-                    statusVN);
+            String statusVN = status == ScheduleRequest.RequestStatus.APPROVED ? "Đã duyệt" : "Từ chối";
+            String className = savedRequest.getClassSection() != null ? savedRequest.getClassSection().getClassName()
+                    : "";
+            String title = "Yêu cầu thay đổi lịch học lớp " + className;
+            // Hidden status marker for frontend detection (not visible to user)
+            String hiddenStatusMarker = "<span style=\"display:none;\">" + statusVN + "</span>";
+            String content;
             if (note != null && !note.isEmpty()) {
-                content += "\nPhản hồi từ người duyệt: " + note;
+                // Chỉ hiển thị ghi chú của người duyệt
+                content = hiddenStatusMarker + note;
+            } else {
+                // Không có ghi chú, chỉ lưu hidden status marker
+                content = hiddenStatusMarker;
             }
 
             com.fams.backend.dto.request.NotificationRequest notifRequest = com.fams.backend.dto.request.NotificationRequest
@@ -492,6 +629,7 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
                 .requestedRoomName(request.getRequestedRoom() != null ? request.getRequestedRoom().getName() : null)
                 .requestedDate(request.getRequestedSlot() != null ? request.getRequestedSlot().getDate()
                         : request.getRequestedDate())
+                .originalDate(request.getOriginalSlot() != null ? request.getOriginalSlot().getDate() : null)
                 .originalRoomName(request.getOriginalSlot() != null && request.getOriginalSlot().getRoom() != null
                         ? request.getOriginalSlot().getRoom().getName()
                         : null)
