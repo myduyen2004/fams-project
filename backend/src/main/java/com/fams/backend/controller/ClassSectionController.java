@@ -1,13 +1,17 @@
 package com.fams.backend.controller;
 
+import com.fams.backend.dto.request.ClassSectionRequest;
+import com.fams.backend.dto.request.EnrollmentRequest;
 import com.fams.backend.dto.response.ClassDetailResponse;
 import com.fams.backend.dto.response.ClassSectionResponse;
 import com.fams.backend.dto.response.EnrollmentResponse;
 import com.fams.backend.dto.response.LecturerOptionResponse;
+import com.fams.backend.dto.response.StudentOptionResponse;
 import com.fams.backend.service.ClassSectionService;
 import com.fams.backend.service.impl.StagingImportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -60,6 +64,13 @@ public class ClassSectionController {
                 return ResponseEntity.ok(classSectionService.getLecturersBySemester(semesterCode));
         }
 
+        @GetMapping("/lecturers")
+        @Operation(summary = "Get all lecturers", description = "Get list of all lecturers for dropdown")
+        public ResponseEntity<List<LecturerOptionResponse>> getAllLecturers() {
+                log.info("GET /api/v1/class-sections/lecturers");
+                return ResponseEntity.ok(classSectionService.getAllLecturers());
+        }
+
         @GetMapping("/semester/{semesterCode}/courses")
         @Operation(summary = "Get courses by semester and lecturer", description = "Get list of unique courses taught by a lecturer in a semester")
         public ResponseEntity<List<com.fams.backend.dto.response.CourseOptionResponse>> getCoursesBySemesterAndLecturer(
@@ -83,6 +94,106 @@ public class ClassSectionController {
         public ResponseEntity<ClassDetailResponse> getClassDetail(@PathVariable String className) {
                 log.info("GET /api/v1/class-sections/{}/details", className);
                 return ResponseEntity.ok(classSectionService.getClassDetail(className));
+        }
+
+        @GetMapping("/{className}/available-students")
+        @Operation(summary = "Get available students for class section", description = "Get list of students not enrolled in this class section")
+        public ResponseEntity<List<StudentOptionResponse>> getAvailableStudents(@PathVariable String className) {
+                log.info("GET /api/v1/class-sections/{}/available-students", className);
+                return ResponseEntity.ok(classSectionService.getAvailableStudentsForClassSection(className));
+        }
+
+        // ==================== CLASS SECTION CRUD ENDPOINTS ====================
+
+        @PostMapping
+        @Operation(summary = "Create a class section", description = "Create a new class section. Only allowed when semester is UPCOMING.")
+        public ResponseEntity<ClassSectionResponse> createClassSection(
+                        @Valid @RequestBody ClassSectionRequest request) {
+                log.info("POST /api/v1/class-sections | className={}", request.getClassName());
+                return ResponseEntity.ok(classSectionService.createClassSection(request));
+        }
+
+        @PutMapping("/{className}")
+        @Operation(summary = "Update a class section", description = "Update an existing class section. Only allowed when semester is UPCOMING.")
+        public ResponseEntity<ClassSectionResponse> updateClassSection(
+                        @PathVariable String className,
+                        @Valid @RequestBody ClassSectionRequest request) {
+                log.info("PUT /api/v1/class-sections/{}", className);
+                return ResponseEntity.ok(classSectionService.updateClassSection(className, request));
+        }
+
+        @DeleteMapping("/{className}")
+        @Operation(summary = "Delete a class section", description = "Delete a class section. Only allowed when semester is UPCOMING.")
+        public ResponseEntity<Void> deleteClassSection(@PathVariable String className) {
+                log.info("DELETE /api/v1/class-sections/{}", className);
+                classSectionService.deleteClassSection(className);
+                return ResponseEntity.noContent().build();
+        }
+
+        @DeleteMapping("/bulk")
+        @Operation(summary = "Delete multiple class sections", description = "Delete multiple class sections. Only allowed when semester is UPCOMING.")
+        public ResponseEntity<Void> deleteClassSections(@RequestBody List<String> classNames) {
+                log.info("DELETE /api/v1/class-sections/bulk | count={}", classNames.size());
+                classSectionService.deleteClassSections(classNames);
+                return ResponseEntity.noContent().build();
+        }
+
+        // ==================== ENROLLMENT CRUD ENDPOINTS ====================
+
+        @PostMapping("/enrollments")
+        @Operation(summary = "Create an enrollment", description = "Create a new enrollment. Only allowed when semester is UPCOMING.")
+        public ResponseEntity<EnrollmentResponse> createEnrollment(
+                        @Valid @RequestBody EnrollmentRequest request) {
+                log.info("POST /api/v1/class-sections/enrollments | className={}, studentCode={}",
+                                request.getClassName(), request.getStudentCode());
+                return ResponseEntity.ok(classSectionService.createEnrollment(request));
+        }
+
+        @PutMapping("/enrollments/{enrollmentId}")
+        @Operation(summary = "Update an enrollment", description = "Update an enrollment status. Only allowed when semester is UPCOMING.")
+        public ResponseEntity<EnrollmentResponse> updateEnrollment(
+                        @PathVariable Long enrollmentId,
+                        @Valid @RequestBody EnrollmentRequest request) {
+                log.info("PUT /api/v1/class-sections/enrollments/{}", enrollmentId);
+                return ResponseEntity.ok(classSectionService.updateEnrollment(enrollmentId, request));
+        }
+
+        @DeleteMapping("/enrollments/{enrollmentId}")
+        @Operation(summary = "Delete an enrollment", description = "Delete an enrollment. Only allowed when semester is UPCOMING.")
+        public ResponseEntity<Void> deleteEnrollment(@PathVariable Long enrollmentId) {
+                log.info("DELETE /api/v1/class-sections/enrollments/{}", enrollmentId);
+                classSectionService.deleteEnrollment(enrollmentId);
+                return ResponseEntity.noContent().build();
+        }
+
+        @DeleteMapping("/enrollments/bulk")
+        @Operation(summary = "Delete multiple enrollments", description = "Delete multiple enrollments. Only allowed when semester is UPCOMING.")
+        public ResponseEntity<Void> deleteEnrollments(@RequestBody List<Long> enrollmentIds) {
+                log.info("DELETE /api/v1/class-sections/enrollments/bulk | count={}", enrollmentIds.size());
+                classSectionService.deleteEnrollments(enrollmentIds);
+                return ResponseEntity.noContent().build();
+        }
+
+        @GetMapping("/{className}/transfer-targets")
+        @Operation(summary = "Get available class sections for transfer", description = "Get list of class sections with same course that have available slots")
+        public ResponseEntity<List<ClassSectionResponse>> getAvailableClassSectionsForTransfer(
+                        @PathVariable String className) {
+                log.info("GET /api/v1/class-sections/{}/transfer-targets", className);
+                return ResponseEntity.ok(classSectionService.getAvailableClassSectionsForTransfer(className));
+        }
+
+        @PostMapping("/enrollments/transfer")
+        @Operation(summary = "Transfer enrollments to another class section", description = "Transfer selected enrollments to a different class section with the same course. Only allowed when semester is UPCOMING.")
+        public ResponseEntity<Void> transferEnrollments(
+                        @RequestBody Map<String, Object> request) {
+                @SuppressWarnings("unchecked")
+                List<Integer> enrollmentIdInts = (List<Integer>) request.get("enrollmentIds");
+                List<Long> enrollmentIds = enrollmentIdInts.stream().map(Long::valueOf).toList();
+                String targetClassName = (String) request.get("targetClassName");
+                log.info("POST /api/v1/class-sections/enrollments/transfer | count={}, target={}",
+                                enrollmentIds.size(), targetClassName);
+                classSectionService.transferEnrollments(enrollmentIds, targetClassName);
+                return ResponseEntity.ok().build();
         }
 
         // ==================== TEMPLATE DOWNLOAD ENDPOINTS ====================

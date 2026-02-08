@@ -122,6 +122,18 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle RuntimeException (business logic errors from service layer)
+     */
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ErrorResponse> handleRuntimeException(RuntimeException ex) {
+        log.error("Runtime error: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                ex.getMessage());
+        return ResponseEntity.badRequest().body(error);
+    }
+
+    /**
      * Handle Generic Exception
      */
     @ExceptionHandler(Exception.class)

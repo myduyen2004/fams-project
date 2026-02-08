@@ -122,4 +122,14 @@ public class GradeComponentController {
         log.info("PATCH /grade-components/{}/toggle-required", id);
         return ResponseEntity.ok(gradeComponentService.toggleRequired(id));
     }
+
+    /**
+     * Import grade components from Excel
+     * Expected format: courseCode, name, type, weight, description, isRequired
+     */
+    @PostMapping("/grade-components/import")
+    public ResponseEntity<Map<String, Object>> importGradeComponents(@RequestBody List<Map<String, Object>> rows) {
+        log.info("POST /grade-components/import | rows={}", rows.size());
+        return ResponseEntity.ok(gradeComponentService.importGradeComponents(rows));
+    }
 }

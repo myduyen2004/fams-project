@@ -1,6 +1,7 @@
 import '../../../core/constants/api_constants.dart';
 import '../../../core/services/api_service.dart';
 import '../models/schedule_request_model.dart';
+import '../models/create_request_models.dart';
 
 /// Service for Schedule Request API calls
 class ScheduleRequestService {
@@ -41,4 +42,72 @@ class ScheduleRequestService {
       rethrow;
     }
   }
+
+  /// Get list of classes for current lecturer
+  Future<List<String>> getClasses() async {
+    try {
+      final response = await _apiService.get(ApiConstants.lecturerClasses);
+      if (response.statusCode == 200) {
+        return List<String>.from(response.data);
+      }
+      return [];
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Get slots for a specific class
+  Future<List<ClassSlot>> getSlotsForClass(String className) async {
+    try {
+      final response = await _apiService.get(
+        '${ApiConstants.lecturerClasses}/$className/slots',
+      );
+      if (response.statusCode == 200) {
+        return (response.data as List)
+            .map((json) => ClassSlot.fromJson(json))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Get room availability for a specific date and slot
+  Future<List<RoomAvailability>> getRoomAvailability(String date, int slotNumber) async {
+    try {
+      final response = await _apiService.get(
+        ApiConstants.roomsAvailability,
+        queryParameters: {
+          'date': date,
+          'slotNumber': slotNumber,
+        },
+      );
+      if (response.statusCode == 200) {
+        return (response.data as List)
+            .map((json) => RoomAvailability.fromJson(json))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Create a new schedule request
+  Future<ScheduleRequest?> createRequest(CreateRequestPayload payload) async {
+    try {
+      final response = await _apiService.post(
+        ApiConstants.lecturerRequests,
+        data: payload.toJson(),
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return ScheduleRequest.fromJson(response.data);
+      }
+      return null;
+    } catch (e) {
+      rethrow;
+    }
+  }
 }
+
