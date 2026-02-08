@@ -104,46 +104,43 @@ export const LecturerRequestDetailPage: React.FC = () => {
                         <section className="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-800">
                             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Chi tiết thay đổi</h2>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                {/* Original Room */}
-                                <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-100 dark:border-slate-800">
-                                    <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">PHÒNG BAN ĐẦU</p>
-                                    <p className="font-bold text-slate-800 dark:text-slate-200 text-xl">
-                                        {request.originalRoomName || 'Không có'}
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-4">
+                                {/* Row 1: Thông tin ban đầu */}
+                                <div>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Ngày ban đầu</p>
+                                    <p className="font-semibold text-gray-700 dark:text-gray-200">
+                                        {request.originalDate ? new Date(request.originalDate).toLocaleDateString('vi-VN') : 'Không có'}
                                     </p>
                                 </div>
-
-                                {/* Original Slot */}
-                                <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-100 dark:border-slate-800">
-                                    <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">SLOT BAN ĐẦU</p>
-                                    <p className="font-bold text-slate-800 dark:text-slate-200 text-xl">
+                                <div>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Slot ban đầu</p>
+                                    <p className="font-semibold text-gray-700 dark:text-gray-200">
                                         {request.originalSlotNumber ? `Slot ${request.originalSlotNumber}` : 'Không có'}
                                     </p>
                                 </div>
-
-                                {/* Requested Date */}
-                                <div className="bg-orange-50 dark:bg-orange-900/10 p-4 rounded-lg border border-orange-100 dark:border-orange-900/20">
-                                    <p className="text-xs font-bold text-fpt-orange uppercase tracking-wide mb-2">NGÀY YÊU CẦU</p>
-                                    <p className="font-bold text-fpt-orange text-xl">
+                                <div>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Phòng ban đầu</p>
+                                    <p className="font-semibold text-gray-700 dark:text-gray-200">
+                                        {request.originalRoomName || 'Không có'}
+                                    </p>
+                                </div>
+                                {/* Row 2: Thông tin yêu cầu */}
+                                <div>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Ngày yêu cầu</p>
+                                    <p className="font-semibold text-gray-700 dark:text-gray-200">
                                         {request.requestedDate ? new Date(request.requestedDate).toLocaleDateString('vi-VN') : 'Không có'}
                                     </p>
                                 </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                {/* Requested Room */}
-                                <div className="bg-orange-50 dark:bg-orange-900/10 p-4 rounded-lg border border-orange-100 dark:border-orange-900/20">
-                                    <p className="text-xs font-bold text-fpt-orange uppercase tracking-wide mb-2">PHÒNG YÊU CẦU</p>
-                                    <p className="font-bold text-fpt-orange text-xl">
-                                        {request.requestedRoomName || 'Không đổi'}
+                                <div>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Slot yêu cầu</p>
+                                    <p className="font-semibold text-gray-700 dark:text-gray-200">
+                                        {request.requestedSlotNumber ? `Slot ${request.requestedSlotNumber}` : 'Không có'}
                                     </p>
                                 </div>
-
-                                {/* Requested Slot */}
-                                <div className="bg-orange-50 dark:bg-orange-900/10 p-4 rounded-lg border border-orange-100 dark:border-orange-900/20">
-                                    <p className="text-xs font-bold text-fpt-orange uppercase tracking-wide mb-2">SLOT YÊU CẦU</p>
-                                    <p className="font-bold text-fpt-orange text-xl">
-                                        {request.requestedSlotNumber ? `Slot ${request.requestedSlotNumber}` : 'Không có'}
+                                <div>
+                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Phòng yêu cầu</p>
+                                    <p className="font-semibold text-gray-700 dark:text-gray-200">
+                                        {request.requestedRoomName || 'Không đổi'}
                                     </p>
                                 </div>
                             </div>
@@ -191,16 +188,16 @@ export const LecturerRequestDetailPage: React.FC = () => {
                                                             href={url}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg p-4 hover:border-fpt-orange hover:shadow-md transition-all cursor-pointer group flex items-start gap-4"
+                                                            className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-zinc-800 dark:to-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl p-4 hover:border-fpt-orange hover:shadow-md transition-all cursor-pointer group flex items-center gap-3"
                                                         >
-                                                            <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 group-hover:bg-orange-50 dark:group-hover:bg-orange-900/20 group-hover:text-fpt-orange transition-colors">
-                                                                <FileText size={24} />
+                                                            <div className="p-2.5 bg-white dark:bg-zinc-800 rounded-lg border border-slate-200 dark:border-zinc-700 text-slate-400 dark:text-slate-500 group-hover:text-fpt-orange transition-colors">
+                                                                <FileText size={22} />
                                                             </div>
-                                                            <div className="flex flex-col gap-1 min-w-0 flex-1">
-                                                                <span className="text-slate-900 dark:text-white font-semibold text-sm truncate group-hover:text-fpt-orange transition-colors" title={fileName}>
-                                                                    {fileName}
+                                                            <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                                                                <span className="text-slate-800 dark:text-white font-medium text-sm truncate group-hover:text-fpt-orange transition-colors" title={fileName}>
+                                                                    {fileName.length > 18 ? fileName.substring(0, 15) + '...' : fileName}
                                                                 </span>
-                                                                <span className="text-slate-400 text-xs font-medium">
+                                                                <span className="text-blue-500 dark:text-blue-400 text-xs font-medium">
                                                                     {extension} File
                                                                 </span>
                                                             </div>

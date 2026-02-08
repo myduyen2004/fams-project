@@ -156,6 +156,7 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
                         "WHERE s.code = :studentCode " +
                         "AND e.status != com.fams.backend.entity.Enrollment.EnrollmentStatus.DROPPED " +
                         "AND ts.date BETWEEN :startDate AND :endDate " +
+                        "AND ts.status = com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.SCHEDULED " +
                         "ORDER BY ts.date, ts.slotNumber")
         List<TimetableSlot> findByStudentCodeAndDateBetween(
                         @Param("studentCode") String studentCode,
@@ -173,6 +174,7 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
                         "JOIN FETCH ts.slotType st " +
                         "WHERE cs.lecturer.id = :lecturerId " +
                         "AND ts.date BETWEEN :startDate AND :endDate " +
+                        "AND ts.status = com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.SCHEDULED " +
                         "ORDER BY ts.date, ts.slotNumber")
         List<TimetableSlot> findByLecturerIdAndDateBetween(
                         @Param("lecturerId") Long lecturerId,
@@ -260,4 +262,46 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
         @Query("SELECT MIN(ts.createdAt) FROM TimetableSlot ts " +
                         "WHERE ts.classSection.semester.code = :semesterCode")
         java.time.LocalDateTime findEarliestCreatedAtBySemesterCode(@Param("semesterCode") String semesterCode);
+
+        // ==================== STUDENT CONFLICT VALIDATION ====================
+
+        /**
+         * Check if any student in the class has a schedule conflict
+         * with other classes on the target date and slot
+         */
+        @Query("SELECT CASE WHEN COUNT(*) > 0 THEN true ELSE false END " +
+                        "FROM Enrollment e1 " +
+                        "JOIN Enrollment e2 ON e2.student.id = e1.student.id " +
+                        "JOIN TimetableSlot ts2 ON ts2.classSection.className = e2.classSection.className " +
+                        "WHERE e1.classSection.className = :className " +
+                        "AND e1.status = 'ENROLLED' " +
+                        "AND e2.classSection.className != :className " +
+                        "AND e2.status = 'ENROLLED' " +
+                        "AND ts2.date = :date " +
+                        "AND ts2.slotNumber = :slotNumber " +
+                        "AND ts2.status != 'CANCELLED'")
+        boolean hasStudentConflict(
+                        @Param("className") String className,
+                        @Param("date") LocalDate date,
+                        @Param("slotNumber") Integer slotNumber);
+
+        /**
+         * Count the number of students in the class who have schedule conflicts
+         * with other classes on the target date and slot
+         */
+        @Query("SELECT COUNT(DISTINCT e1.student.id) " +
+                        "FROM Enrollment e1 " +
+                        "JOIN Enrollment e2 ON e2.student.id = e1.student.id " +
+                        "JOIN TimetableSlot ts2 ON ts2.classSection.className = e2.classSection.className " +
+                        "WHERE e1.classSection.className = :className " +
+                        "AND e1.status = 'ENROLLED' " +
+                        "AND e2.classSection.className != :className " +
+                        "AND e2.status = 'ENROLLED' " +
+                        "AND ts2.date = :date " +
+                        "AND ts2.slotNumber = :slotNumber " +
+                        "AND ts2.status != 'CANCELLED'")
+        long countStudentConflicts(
+                        @Param("className") String className,
+                        @Param("date") LocalDate date,
+                        @Param("slotNumber") Integer slotNumber);
 }

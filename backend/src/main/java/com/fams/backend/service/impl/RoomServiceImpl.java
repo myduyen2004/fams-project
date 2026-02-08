@@ -4,7 +4,9 @@ import com.fams.backend.dto.request.RoomRequest;
 import com.fams.backend.dto.response.RoomAvailabilityResponse;
 import com.fams.backend.dto.response.RoomResponse;
 import com.fams.backend.entity.Room;
+import com.fams.backend.entity.ScheduleRequest;
 import com.fams.backend.repository.RoomRepository;
+import com.fams.backend.repository.ScheduleRequestRepository;
 import com.fams.backend.repository.TimetableSlotRepository;
 import com.fams.backend.service.RoomService;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
@@ -24,6 +27,7 @@ public class RoomServiceImpl implements RoomService {
 
     private final RoomRepository roomRepository;
     private final TimetableSlotRepository timetableSlotRepository;
+    private final ScheduleRequestRepository scheduleRequestRepository;
 
     @Override
     public List<RoomResponse> getAllRooms() {
@@ -99,9 +103,17 @@ public class RoomServiceImpl implements RoomService {
 
     @Override
     public List<RoomAvailabilityResponse> getRoomAvailability(LocalDate date, Integer slotNumber) {
-        // Get all busy room IDs for the given date and slot
+        // Get busy room IDs from timetable slots (actual scheduled classes)
         List<Long> busyRoomIds = timetableSlotRepository.findBusyRoomIds(date, slotNumber);
         Set<Long> busyRoomIdSet = new HashSet<>(busyRoomIds);
+
+        // Also get busy room IDs from schedule requests with PENDING or APPROVED status
+        List<ScheduleRequest.RequestStatus> activeStatuses = Arrays.asList(
+                ScheduleRequest.RequestStatus.PENDING,
+                ScheduleRequest.RequestStatus.APPROVED);
+        List<Long> requestedRoomIds = scheduleRequestRepository.findBusyRoomIdsByDateAndSlotAndStatuses(
+                date, slotNumber, activeStatuses);
+        busyRoomIdSet.addAll(requestedRoomIds);
 
         // Get all active rooms and mark availability
         return roomRepository.findAll().stream()
