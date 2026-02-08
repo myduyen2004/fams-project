@@ -104,13 +104,25 @@ export const UserNotificationDetailPage: React.FC = () => {
             <div className="flex items-end justify-between">
               {/* Left Side: Status + Meta */}
               <div className="flex flex-col gap-3">
-                <div className="flex">
+                <div className="flex gap-2">
                   <span className={`text-xs font-bold px-3 py-1 rounded uppercase tracking-wider ${notification.isRead
                     ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                     : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                     }`}>
                     {notification.isRead ? 'Đã đọc' : 'Mới'}
                   </span>
+                  {/* Show approval status badge for schedule request notifications */}
+                  {notification.type === 'SCHEDULE' && (
+                    notification.description?.includes('Đã duyệt') ? (
+                      <span className="text-xs font-bold px-3 py-1 rounded uppercase tracking-wider bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                        Đã duyệt
+                      </span>
+                    ) : notification.description?.includes('Từ chối') ? (
+                      <span className="text-xs font-bold px-3 py-1 rounded uppercase tracking-wider bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                        Từ chối
+                      </span>
+                    ) : null
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-slate-500 dark:text-slate-400">
                   <p className="text-sm font-medium">

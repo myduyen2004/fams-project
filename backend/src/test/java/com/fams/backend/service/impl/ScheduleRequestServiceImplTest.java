@@ -172,7 +172,7 @@ class ScheduleRequestServiceImplTest {
         @DisplayName("Nên cập nhật thành APPROVED và gửi thông báo khi duyệt")
         void updateRequestStatus_shouldApproveRequest_whenPending() {
             // Arrange
-            when(scheduleRequestRepository.findById(1L)).thenReturn(Optional.of(request));
+            when(scheduleRequestRepository.findByIdWithSlots(1L)).thenReturn(Optional.of(request));
             when(userRepository.findById(2L)).thenReturn(Optional.of(approver));
             when(scheduleRequestRepository.saveAndFlush(any(ScheduleRequest.class))).thenReturn(request);
 
@@ -197,7 +197,7 @@ class ScheduleRequestServiceImplTest {
         @DisplayName("Nên cập nhật thành REJECTED khi từ chối")
         void updateRequestStatus_shouldRejectRequest_whenPending() {
             // Arrange
-            when(scheduleRequestRepository.findById(1L)).thenReturn(Optional.of(request));
+            when(scheduleRequestRepository.findByIdWithSlots(1L)).thenReturn(Optional.of(request));
             when(userRepository.findById(2L)).thenReturn(Optional.of(approver));
             when(scheduleRequestRepository.saveAndFlush(any(ScheduleRequest.class))).thenReturn(request);
 
@@ -224,7 +224,7 @@ class ScheduleRequestServiceImplTest {
         @DisplayName("Nên ném lỗi khi người duyệt không tồn tại")
         void updateRequestStatus_shouldThrowException_whenApproverNotFound() {
             // Arrange
-            when(scheduleRequestRepository.findById(1L)).thenReturn(Optional.of(request));
+            when(scheduleRequestRepository.findByIdWithSlots(1L)).thenReturn(Optional.of(request));
             when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
             // Act & Assert
@@ -238,7 +238,7 @@ class ScheduleRequestServiceImplTest {
         void updateRequestStatus_shouldThrowException_whenNotPending() {
             // Arrange
             request.setStatus(ScheduleRequest.RequestStatus.APPROVED);
-            when(scheduleRequestRepository.findById(1L)).thenReturn(Optional.of(request));
+            when(scheduleRequestRepository.findByIdWithSlots(1L)).thenReturn(Optional.of(request));
 
             // Act & Assert
             BadRequestException ex = assertThrows(BadRequestException.class, () -> scheduleRequestService
