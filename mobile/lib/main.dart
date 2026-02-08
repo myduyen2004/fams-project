@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'core/constants/app_colors.dart';
@@ -14,6 +15,8 @@ import 'features/home/views/home_screen.dart';
 import 'features/home/bindings/home_binding.dart';
 import 'features/schedule_request/views/schedule_request_list_screen.dart';
 import 'features/schedule_request/views/schedule_request_detail_screen.dart';
+import 'features/schedule_request/views/create_request_screen.dart';
+import 'features/schedule_request/bindings/schedule_request_bindings.dart';
 
 void main() {
   runApp(const MyApp());
@@ -34,6 +37,17 @@ class MyApp extends StatelessWidget {
     return GetMaterialApp(
       title: 'FAMS Mobile',
       debugShowCheckedModeBanner: false,
+      // Localization for date picker
+      localizationsDelegates: [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('vi', 'VN'),
+        Locale('en', 'US'),
+      ],
+      locale: const Locale('vi', 'VN'),
       theme: ThemeData(
         primaryColor: AppColors.primaryOrange,
         scaffoldBackgroundColor: Colors.white,
@@ -80,10 +94,18 @@ class MyApp extends StatelessWidget {
         GetPage(
           name: AppRoutes.lecturerRequests,
           page: () => const ScheduleRequestListScreen(),
+          binding: ScheduleRequestBinding(),
+        ),
+        // IMPORTANT: Create route must come BEFORE :id route
+        GetPage(
+          name: AppRoutes.lecturerCreateRequest,
+          page: () => const CreateRequestScreen(),
+          binding: CreateRequestBinding(),
         ),
         GetPage(
           name: AppRoutes.lecturerRequestDetail,
           page: () => const ScheduleRequestDetailScreen(),
+          binding: ScheduleRequestBinding(),
         ),
       ],
     );

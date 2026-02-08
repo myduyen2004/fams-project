@@ -110,27 +110,32 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
                     .orElseThrow(() -> new BadRequestException("Room not found"));
 
             // Check Conflicts - chỉ kiểm tra, không tạo slot mới
-            // a. Room Conflict
-            boolean roomBusy = timetableSlotRepository.existsByRoomIdAndDateAndSlotNumberAndStatusNot(
+            // Lấy ID của slot gốc để loại trừ khi kiểm tra conflict
+            Long originalSlotId = originalSlot.getId();
+
+            // a. Room Conflict (loại trừ slot gốc)
+            boolean roomBusy = timetableSlotRepository.existsByRoomIdAndDateAndSlotNumberExcludingSlot(
                     requestedRoom.getId(), targetDate, targetSlotIndex,
-                    com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.CANCELLED);
+                    com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.CANCELLED,
+                    originalSlotId);
             if (roomBusy) {
                 throw new BadRequestException("Phòng học đã có lớp học khác vào khung giờ này.");
             }
 
-            // b. Lecturer Conflict
-            boolean lecturerBusy = timetableSlotRepository
-                    .existsByClassSectionLecturerIdAndDateAndSlotNumberAndStatusNot(
-                            originalSlot.getClassSection().getLecturer().getId(), targetDate, targetSlotIndex,
-                            com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.CANCELLED);
+            // b. Lecturer Conflict (loại trừ slot gốc)
+            boolean lecturerBusy = timetableSlotRepository.existsByLecturerIdAndDateAndSlotNumberExcludingSlot(
+                    originalSlot.getClassSection().getLecturer().getId(), targetDate, targetSlotIndex,
+                    com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.CANCELLED,
+                    originalSlotId);
             if (lecturerBusy) {
                 throw new BadRequestException("Giảng viên đã có lịch dạy vào khung giờ này.");
             }
 
-            // c. Class Conflict
-            boolean classBusy = timetableSlotRepository.existsByClassSectionClassNameAndDateAndSlotNumberAndStatusNot(
+            // c. Class Conflict (loại trừ slot gốc)
+            boolean classBusy = timetableSlotRepository.existsByClassNameAndDateAndSlotNumberExcludingSlot(
                     originalSlot.getClassSection().getClassName(), targetDate, targetSlotIndex,
-                    com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.CANCELLED);
+                    com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.CANCELLED,
+                    originalSlotId);
             if (classBusy) {
                 throw new BadRequestException("Lớp học đã có lịch học vào khung giờ này.");
             }
