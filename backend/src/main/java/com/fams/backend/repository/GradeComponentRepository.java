@@ -57,4 +57,10 @@ public interface GradeComponentRepository extends JpaRepository<GradeComponent, 
      * Find Resit component linked to a reference component (FE)
      */
     java.util.Optional<GradeComponent> findByReferenceComponentId(Long referenceComponentId);
+
+    /**
+     * Find component by course, name and type (for import logic)
+     */
+    java.util.Optional<GradeComponent> findByCourseIdAndNameAndType(Long courseId, String name,
+            GradeComponent.GradeType type);
 }
