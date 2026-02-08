@@ -42,6 +42,8 @@ services:
     environment:
       - PORT=5000
       - TZ=Asia/Ho_Chi_Minh
+    volumes:
+      - ./ai-service:/app
     networks:
       - fams-network
     healthcheck:

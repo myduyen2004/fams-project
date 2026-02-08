@@ -98,7 +98,8 @@ export const AcademicStaffSidebar: React.FC = () => {
       icon: <List size={20} />,
       submenu: [
         { label: 'Phòng học', path: '/academic-staff/rooms' },
-        { label: 'Học kỳ', path: '/academic-staff/semesters' }
+        { label: 'Học kỳ', path: '/academic-staff/semesters' },
+        { label: 'WiFi Access Point', path: '/academic-staff/wifi-aps' }
       ]
     },
     {
