@@ -728,6 +728,7 @@ public class TimetableController {
 
         return TimetableDTO.TimetableSlotDTO.builder()
                 .id(slot.getId())
+                .classSectionId(cs != null ? cs.getClassName() : null)
                 .className(cs != null ? cs.getClassName() : null)
                 .courseCode(course != null ? course.getCode() : null)
                 .courseName(course != null ? course.getName() : null)

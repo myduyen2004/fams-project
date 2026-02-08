@@ -106,6 +106,7 @@ public class TimetableDTO {
     @AllArgsConstructor
     public static class TimetableSlotDTO {
         private Long id;
+        private String classSectionId; // For mobile app navigation
         private String className;
         private String courseCode;
         private String courseName;
