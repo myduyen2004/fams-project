@@ -6,6 +6,9 @@ import '../../auth/controllers/auth_controller.dart';
 import '../../../core/constants/app_colors.dart';
 import 'edit_profile_screen.dart';
 import '../../../core/widgets/app_background.dart';
+import '../../face_recognition/views/face_registration_view.dart';
+import '../../face_recognition/views/face_registration_guide_screen.dart';
+import '../../face_recognition/views/view_face_info_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -24,25 +27,27 @@ class ProfileScreen extends StatelessWidget {
             child: SafeArea(
             child: Stack(
               children: [
-                // Fixed Layout - No Scrolling as requested ("cố định không trượt lên trượt xuống đc")
-                Center(
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
-                    decoration: BoxDecoration(
-                      color: cardColor,
-                      borderRadius: BorderRadius.circular(40.0),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min, // Wrap content
-                      children: [
+                // Scrollable content to handle different screen sizes
+                SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  child: Center(
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+                      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
+                      decoration: BoxDecoration(
+                        color: cardColor,
+                        borderRadius: BorderRadius.circular(40.0),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min, // Wrap content
+                        children: [
                         // 1. Avatar
                         Container(
                           decoration: BoxDecoration(
@@ -128,7 +133,68 @@ class ProfileScreen extends StatelessWidget {
                         ],
 
 
-                        const SizedBox(height: 30),
+                        const SizedBox(height: 20),
+
+                        // Face Registration Section
+                        if (user?.hasFaceRegistered == true) ...[
+                          // Clickable container to view registered face info
+                          InkWell(
+                            onTap: () => Get.to(() => const ViewFaceInfoScreen()),
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.green.withOpacity(0.3)),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.check_circle, color: Colors.green, size: 24),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    'Đã đăng ký khuôn mặt',
+                                    style: GoogleFonts.roboto(
+                                      color: Colors.green,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Icon(Icons.arrow_forward_ios, color: Colors.green, size: 16),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ] else ...[
+                          // Show register button if face not registered
+                          SizedBox(
+                            width: double.infinity,
+                            height: 54,
+                            child: OutlinedButton.icon(
+                              onPressed: () => Get.to(() => const FaceRegistrationGuideScreen()),
+                              icon: const Icon(Icons.face, color: AppColors.primaryOrange),
+                              label: Text(
+                                'Đăng ký khuôn mặt',
+                                style: GoogleFonts.roboto(
+                                  color: AppColors.primaryOrange,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: AppColors.primaryOrange, width: 2),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+
+                        const SizedBox(height: 12),
 
                         // Logout Button
                         SizedBox(
@@ -158,6 +224,7 @@ class ProfileScreen extends StatelessWidget {
                         ),
                       ],
                     ),
+                  ),
                   ),
                 ),
                 

@@ -7,6 +7,7 @@ import '../models/schedule_model.dart';
 import '../../lecturer/models/class_section_model.dart';
 import '../../lecturer/views/student_list_screen.dart';
 import '../../lecturer/controllers/class_list_controller.dart';
+import '../../face_attendance/views/face_attendance_view.dart';
 
 class SlotDetailScreen extends StatelessWidget {
   final TimetableSlot slot;
@@ -338,9 +339,49 @@ class SlotDetailScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       color: Colors.transparent, // Background handles it? no, SafeArea wrapper.
-      child: SizedBox(
-        width: double.infinity,
-        height: 56,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Face Attendance Button
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton(
+              onPressed: () {
+                if (slot.id != null) {
+                  Get.to(() => FaceAttendanceView(slotId: slot.id!));
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryOrange, // Use orange for consistency
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 5,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.face_retouching_natural, color: Colors.white),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Quét mặt điểm danh',
+                    style: GoogleFonts.roboto(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // Lecturer Button (Student List)
+          SizedBox(
+            width: double.infinity,
+            height: 56,
         child: ElevatedButton(
           onPressed: () {
             // Create dummy ClassSection to navigate
@@ -386,6 +427,8 @@ class SlotDetailScreen extends StatelessWidget {
             ],
           ),
         ),
+          ),
+        ],
       ),
     );
   }

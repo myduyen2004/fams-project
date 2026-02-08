@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
-import { Video, Wifi, ChevronRight, Loader2, Box, Grid3X3 } from 'lucide-react';
+import { Video, ChevronRight, Loader2, Box, Grid3X3 } from 'lucide-react';
 import { roomService } from '../../services/api/roomService';
 import { Room } from '../../types/room';
 import toast from 'react-hot-toast';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, Environment, useTexture } from '@react-three/drei';
+import { RoomAPAssignment } from '../../components/academic-staff/RoomAPAssignment';
 
 // Separate component for 3D content to allow using hooks like useTexture
 const Classroom3D: React.FC<{ rows: number[], tablesPerRow: number[] }> = ({ rows, tablesPerRow }) => {
@@ -363,75 +364,8 @@ export const RoomDetail: React.FC = () => {
                         </span>
                     </div>
 
-                    {/* Attendance Setup Section */}
-                    <div className="space-y-5">
-                        <h3 className="text-xs font-bold text-fpt-orange uppercase tracking-wider flex items-center gap-2">
-                            <Wifi size={14} /> Cấu hình Điểm danh
-                        </h3>
-
-                        <div className="space-y-4">
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Tên SSID</label>
-                                <div className="p-3 bg-gray-50 dark:bg-zinc-800 rounded-xl border border-gray-200 dark:border-zinc-700 font-mono text-sm text-gray-700 dark:text-gray-300">
-                                    EDU_SMART_5G
-                                </div>
-                            </div>
-
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">BSSID (Địa chỉ MAC)</label>
-                                <div className="p-3 bg-gray-50 dark:bg-zinc-800 rounded-xl border border-gray-200 dark:border-zinc-700 font-mono text-sm text-gray-700 dark:text-gray-300">
-                                    00:1A:2B:3C:4D:5E
-                                </div>
-                            </div>
-
-                            {/* Signal Stability Chart */}
-                            <div className="p-4 bg-gray-50 dark:bg-zinc-800 rounded-xl border border-gray-200 dark:border-zinc-700 space-y-3">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Độ ổn định tín hiệu</span>
-                                    <span className="text-emerald-500 font-bold text-sm">-54 dBm</span>
-                                </div>
-                                <div className="h-16 flex items-end gap-1">
-                                    {[35, 50, 40, 60, 45, 70, 55, 85, 65, 45].map((h, i) => (
-                                        <div
-                                            key={i}
-                                            style={{ height: `${h}%` }}
-                                            className={`flex-1 rounded-t transition-all duration-300 ${i === 7 ? 'bg-fpt-orange' : 'bg-orange-200 dark:bg-orange-900/50'}`}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Signal Threshold */}
-                            <div className="space-y-2">
-                                <div className="flex justify-between text-xs">
-                                    <span className="text-gray-500">Ngưỡng tín hiệu</span>
-                                    <span className="font-bold text-gray-900 dark:text-white">-75 dBm</span>
-                                </div>
-                                <input
-                                    type="range"
-                                    min="-100"
-                                    max="-30"
-                                    defaultValue="-75"
-                                    className="w-full h-1.5 bg-gray-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-fpt-orange"
-                                />
-                            </div>
-
-                            {/* Location-based Toggle */}
-                            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-zinc-800 rounded-xl border border-gray-200 dark:border-zinc-700">
-                                <div className="flex flex-col">
-                                    <span className="text-sm font-semibold text-gray-900 dark:text-white">Dựa trên vị trí</span>
-                                    <span className="text-[10px] text-gray-500">Yêu cầu vùng nghiêm ngặt</span>
-                                </div>
-                                <div className="w-11 h-6 bg-fpt-orange rounded-full relative cursor-pointer">
-                                    <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <button className="w-full py-3 bg-fpt-orange hover:bg-orange-600 active:scale-[0.98] text-white rounded-xl font-semibold shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 mt-4">
-                            Áp dụng thay đổi
-                        </button>
-                    </div>
+                    {/* Room AP Assignment Component */}
+                    <RoomAPAssignment roomId={parseInt(id!)} />
                 </div>
             </div>
         </AcademicStaffLayout>

@@ -115,6 +115,13 @@ attendance:
         - FPT_Student
         - FPT_Staff
 
+# ---------------- Face Recognition Configuration ----------------
+face:
+    recognition:
+        max-attempts: 1000
+        wifi-rssi-threshold: -75
+        late-threshold-minutes: 15
+
 # ---------------- Scheduling Configuration ----------------
 scheduling:
     slot-duration: 50 # minutes

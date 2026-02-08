@@ -99,6 +99,19 @@ public class User {
     @Builder.Default
     private java.util.List<StudentAttendance> studentAttendances = new java.util.ArrayList<>();
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private java.util.List<FaceEncoding> faceEncodings = new java.util.ArrayList<>();
+
+    // Face registration retry limit
+    @Column(nullable = false, columnDefinition = "int default 0")
+    @Builder.Default
+    private Integer faceRegistrationAttempts = 0;
+
+    // Block face registration until this time (null = not blocked)
+    @Column
+    private LocalDateTime faceRegistrationBlockedUntil;
+
     @Column(nullable = false, columnDefinition = "boolean default false")
     @Builder.Default
     private Boolean isPasswordChanged = false;
