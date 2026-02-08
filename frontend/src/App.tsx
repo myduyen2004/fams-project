@@ -51,6 +51,8 @@ const LecturerCreateRequestPage = lazy(() => import('./pages/lecturer/LecturerCr
 const LecturerSchedulePage = lazy(() => import('./pages/lecturer/LecturerSchedulePage').then(m => ({ default: m.LecturerSchedulePage })));
 const AttendanceSessionPage = lazy(() => import('./pages/lecturer/AttendanceSessionPage').then(m => ({ default: m.AttendanceSessionPage })));
 const LecturerGradeManagementPage = lazy(() => import('./pages/lecturer/LecturerGradeManagementPage').then(m => ({ default: m.LecturerGradeManagementPage })));
+const ExamGradeManagementPage = lazy(() => import('./pages/academic-staff/ExamGradeManagementPage').then(m => ({ default: m.ExamGradeManagementPage })));
+const ResitGradeManagementPage = lazy(() => import('./pages/academic-staff/ResitGradeManagementPage').then(m => ({ default: m.ResitGradeManagementPage })));
 
 const PageLoader = () => (
   <div className="flex h-screen w-full items-center justify-center bg-gray-50 dark:bg-zinc-950">
@@ -411,7 +413,8 @@ function App() {
           {/* Academic Staff Coming Soon Routes */}
           <Route path="/academic-staff/schedule" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><SchedulePage /></ProtectedRoute>} />
           <Route path="/academic-staff/classes" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Quản lý lớp học" /></ProtectedRoute>} />
-          <Route path="/academic-staff/academic-results" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Kết quả học tập" /></ProtectedRoute>} />
+          <Route path="/academic-staff/exam-grades" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ExamGradeManagementPage /></ProtectedRoute>} />
+          <Route path="/academic-staff/resit-grades" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ResitGradeManagementPage /></ProtectedRoute>} />
           <Route
             path="/academic-staff/requests"
             element={

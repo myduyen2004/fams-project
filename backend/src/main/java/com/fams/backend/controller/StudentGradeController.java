@@ -96,6 +96,19 @@ public class StudentGradeController {
         return ResponseEntity.ok().build();
     }
 
+    /**
+     * Submit grades to academic office
+     * This will lock the grades from further editing
+     */
+    @PostMapping("/class-sections/{className}/grades/submit")
+    public ResponseEntity<Void> submitGrades(
+            @PathVariable String className,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = getUserId(userDetails);
+        studentGradeService.submitGrades(className, userId);
+        return ResponseEntity.ok().build();
+    }
+
     private Long getUserId(UserDetails userDetails) {
         User user = userRepository.findByUsername(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
