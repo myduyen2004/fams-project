@@ -215,17 +215,20 @@ export const NotificationListPage: React.FC = () => {
   // Mark all as read
   const handleMarkAllAsRead = async () => {
     try {
-      // Immediately update UI state for instant feedback
+      if (unreadCount === 0) return;
+
+      await dashboardService.markAllNotificationsAsRead();
+
+      // OPTIMISTIC UPDATE: Update all local notifications to read
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
 
-      // Then sync with backend using the dedicated endpoint
-      await dashboardService.markAllNotificationsAsRead();
       toast.success('Đã đánh dấu tất cả là đã đọc');
+
+      // Trigger a global event to update other components (like navbar badge)
+      window.dispatchEvent(new Event('notificationRefresh'));
     } catch (error) {
       console.error('Failed to mark all as read:', error);
       toast.error('Không thể đánh dấu tất cả là đã đọc');
-      // Reload notifications on error to restore correct state
-      loadNotifications();
     }
   };
 
