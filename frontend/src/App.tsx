@@ -38,6 +38,7 @@ const GradeConfigurationPage = lazy(() => import('./pages/academic-staff/GradeCo
 const ManagerStudentsPage = lazy(() => import('./pages/academic-staff/ManagerStudentsPage').then(m => ({ default: m.ManagerStudentsPage })));
 const RoomManagement = lazy(() => import('./pages/academic-staff/RoomManagement').then(m => ({ default: m.RoomManagement })));
 const RoomDetail = lazy(() => import('./pages/academic-staff/RoomDetail').then(m => ({ default: m.RoomDetail })));
+const WiFiAPManagement = lazy(() => import('./pages/academic-staff/WiFiAPManagement').then(m => ({ default: m.WiFiAPManagement })));
 const ScheduleRequestPage = lazy(() => import('./pages/academic-staff/ScheduleRequestPage').then(m => ({ default: m.ScheduleRequestPage })));
 const RequestDetailPage = lazy(() => import('./pages/academic-staff/RequestDetailPage').then(m => ({ default: m.RequestDetailPage })));
 const StudentDashboard = lazy(() => import('./pages/student/StudentDashboard').then(m => ({ default: m.StudentDashboard })));
@@ -449,6 +450,14 @@ function App() {
           />
           <Route path="/academic-staff/announcements" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Cài đặt thông báo" /></ProtectedRoute>} />
           <Route path="/academic-staff/attendance" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Cài đặt điểm danh" /></ProtectedRoute>} />
+          <Route
+            path="/academic-staff/wifi-aps"
+            element={
+              <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
+                <WiFiAPManagement />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/academic-staff/rooms"
             element={
