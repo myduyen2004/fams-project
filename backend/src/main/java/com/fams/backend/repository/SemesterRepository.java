@@ -30,4 +30,7 @@ public interface SemesterRepository extends JpaRepository<Semester, Long> {
 
     @Query("SELECT s FROM Semester s WHERE :date >= s.startDate AND :date <= s.endDate")
     Optional<Semester> findSemesterByDate(java.time.LocalDate date);
+
+    @Query("SELECT s FROM Semester s WHERE :date >= s.startDate AND :date <= s.endDate")
+    List<Semester> findSemestersByDate(java.time.LocalDate date);
 }
