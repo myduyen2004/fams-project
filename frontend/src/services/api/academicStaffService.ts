@@ -149,7 +149,7 @@ export const academicStaffService = {
     },
 
     // Students APIs
-    getStudents: async (params: { search?: string; status?: string; major?: string; specialization?: string; page?: number; size?: number; sort?: string }) => {
+    getStudents: async (params: { search?: string; status?: string; major?: string; specialization?: string; subSpecialization?: string; page?: number; size?: number; sort?: string }) => {
         const response = await apiClient.get<PageResponse<StudentResponse>>('/academic-staff/students', { params });
         return response.data;
     },

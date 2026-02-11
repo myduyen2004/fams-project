@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Moon, Sun, User,Settings, LogOut } from 'lucide-react';
+import { Moon, Sun, User, Settings, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../../services/api/authService';
 import { userService } from '../../services/api/userService';
 import { ConfirmModal } from '../common/ConfirmModal';
 import { NotificationBell } from '../common/NotificationBell';
+import { ChatMessageIcon } from '../common/ChatMessageIcon';
 
 interface AdminHeaderProps {
   title: string;
@@ -119,6 +120,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
         </button>
 
         {/* Notification Bell */}
+        <ChatMessageIcon />
         <NotificationBell />
 
         {/* User Info with Dropdown */}
@@ -130,10 +132,10 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
             {/* Avatar */}
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-fpt-orange to-orange-600 flex items-center justify-center overflow-hidden">
               {user?.avatar ? (
-                <img 
-                  src={`${user.avatar}${user.avatar.includes('?') ? '&' : '?'}t=${new Date().getTime()}`} 
-                  alt={user.fullName} 
-                  className="w-full h-full object-cover" 
+                <img
+                  src={`${user.avatar}${user.avatar.includes('?') ? '&' : '?'}t=${new Date().getTime()}`}
+                  alt={user.fullName}
+                  className="w-full h-full object-cover"
                 />
               ) : (
                 <span className="text-white font-semibold text-sm">
@@ -197,7 +199,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
         onClose={() => setShowLogoutModal(false)}
         onConfirm={handleLogout}
         title={activeJob ? "Cảnh báo: Tiến trình đang thực hiện" : "Đăng xuất"}
-        message={activeJob 
+        message={activeJob
           ? `Hệ thống đang thực hiện import dữ liệu (${activeJob.percentage}%). Nếu bạn đăng xuất và hủy bây giờ, dữ liệu có thể bị dở dang. Bạn có chắc muốn DỪNG tiến trình và đăng xuất không?`
           : "Bạn có chắc chắn muốn đăng xuất khỏi hệ thống FAMS không?"
         }

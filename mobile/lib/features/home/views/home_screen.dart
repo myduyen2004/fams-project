@@ -8,6 +8,9 @@ import '../controllers/home_controller.dart';
 import '../../profile/views/profile_screen.dart'; // Import ProfileScreen
 import '../../schedule/views/schedule_screen.dart'; // Import ScheduleScreen
 import '../../lecturer/views/class_list_screen.dart'; // Import ClassListScreen
+import 'package:badges/badges.dart' as badges;
+import '../../notification/controllers/notification_controller.dart';
+import '../../notification/views/notification_list_screen.dart';
 
 /// Home Screen - Dashboard for Students and Lecturers
 class HomeScreen extends StatelessWidget {
@@ -175,9 +178,22 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ),
                       
-                      IconButton(
-                        icon: const Icon(Icons.notifications_active, color: Colors.white, size: 28),
-                        onPressed: () {},
+                      GetBuilder<NotificationController>(
+                        init: NotificationController(),
+                        builder: (notificationController) {
+                          return Obx(() => badges.Badge(
+                            position: badges.BadgePosition.topEnd(top: 0, end: 3),
+                            showBadge: notificationController.unreadCount.value > 0,
+                            badgeContent: Text(
+                              '${notificationController.unreadCount.value}',
+                              style: const TextStyle(color: Colors.white, fontSize: 10),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.notifications_active, color: Colors.white, size: 28),
+                              onPressed: () => Get.to(() => const NotificationListScreen()),
+                            ),
+                          ));
+                        }
                       ),
                     ],
                   ),
@@ -233,7 +249,7 @@ class HomeScreen extends StatelessWidget {
                                         title: 'Thông báo',
                                         iconBgColor: const Color(0xFFFFE0B2),
                                         iconColor: const Color(0xFFE65100),
-                                        onTap: () {},
+                                        onTap: () => Get.to(() => const NotificationListScreen()),
                                       ),
                                     ),
                                     const SizedBox(width: 16),

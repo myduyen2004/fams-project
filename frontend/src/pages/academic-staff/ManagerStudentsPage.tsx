@@ -16,9 +16,10 @@ export const ManagerStudentsPage = () => {
     const [students, setStudents] = useState<StudentResponse[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
+    const [subSpecializationFilter, setSubSpecializationFilter] = useState('all');
     const [majorFilter, setMajorFilter] = useState('all');
     const [specializationFilter, setSpecializationFilter] = useState('all');
+    const [subSpecializations, setSubSpecializations] = useState<string[]>([]);
 
     const [majors, setMajors] = useState<string[]>([]);
     const [specializations, setSpecializations] = useState<string[]>([]);
@@ -28,7 +29,7 @@ export const ManagerStudentsPage = () => {
 
     // Use custom pagination hook - auto resets to page 0 when filters change
     const { page, setPage } = usePagination({
-        resetDependencies: [statusFilter, majorFilter, specializationFilter, search]
+        resetDependencies: [subSpecializationFilter, majorFilter, specializationFilter, search]
     });
 
     const [isExporting, setIsExporting] = useState(false);
@@ -39,30 +40,68 @@ export const ManagerStudentsPage = () => {
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState<StudentResponse | null>(null);
 
-    // Fetch Majors and Specializations for filters
+    // Fetch Majors for filters on mount
     useEffect(() => {
         const fetchFilters = async () => {
             try {
-                const [mList, sList] = await Promise.all([
-                    academicStaffService.getAllMajors(),
-                    academicStaffService.getAllSpecializations()
-                ]);
+                const mList = await academicStaffService.getAllMajors();
                 setMajors(mList);
-                setSpecializations(sList);
             } catch (error) {
-                console.error('Failed to fetch majors/specializations for filters');
+                console.error('Failed to fetch majors for filters');
             }
         };
         fetchFilters();
     }, []);
 
+    // Reset other filters and fetch specializations when major filter changes
+    useEffect(() => {
+        const fetchSpecs = async () => {
+            setSpecializationFilter('all');
+            setSubSpecializationFilter('all');
+            setSubSpecializations([]);
+
+            try {
+                if (majorFilter !== 'all') {
+                    const sList = await academicStaffService.getSpecializationsByMajor(majorFilter);
+                    setSpecializations(sList);
+                } else {
+                    const sList = await academicStaffService.getAllSpecializations();
+                    setSpecializations(sList);
+                }
+            } catch (error) {
+                console.error('Failed to fetch specializations');
+                setSpecializations([]);
+            }
+        };
+        fetchSpecs();
+    }, [majorFilter]);
+
+    // Fetch sub-specializations when specialization filter changes
+    useEffect(() => {
+        const fetchSubSpecs = async () => {
+            setSubSpecializationFilter('all'); // Reset sub-specialization when specialization changes
+            if (specializationFilter !== 'all') {
+                try {
+                    const ssList = await academicStaffService.getSubSpecializationsBySpecialization(specializationFilter);
+                    setSubSpecializations(ssList);
+                } catch (error) {
+                    console.error('Failed to fetch sub-specializations');
+                    setSubSpecializations([]);
+                }
+            } else {
+                setSubSpecializations([]);
+            }
+        };
+        fetchSubSpecs();
+    }, [specializationFilter]);
+
     const fetchStudents = useCallback(async () => {
         try {
             setLoading(true);
             const data = await academicStaffService.getStudents({
-                status: statusFilter === 'all' ? undefined : statusFilter,
                 major: majorFilter === 'all' ? undefined : majorFilter,
                 specialization: specializationFilter === 'all' ? undefined : specializationFilter,
+                subSpecialization: subSpecializationFilter === 'all' ? undefined : subSpecializationFilter,
                 search,
                 page,
                 size: 50,
@@ -75,7 +114,7 @@ export const ManagerStudentsPage = () => {
         } finally {
             setLoading(false);
         }
-    }, [statusFilter, majorFilter, specializationFilter, search, page]);
+    }, [subSpecializationFilter, majorFilter, specializationFilter, search, page]);
 
     useEffect(() => {
         fetchStudents();
@@ -105,8 +144,8 @@ export const ManagerStudentsPage = () => {
             const blob = await academicStaffService.exportStudents({
                 major: majorFilter === 'all' ? undefined : majorFilter,
                 specialization: specializationFilter === 'all' ? undefined : specializationFilter,
-                subSpecialization: undefined, // Add if subSpecializationFilter state is added
-                status: statusFilter === 'all' ? undefined : statusFilter
+                subSpecialization: subSpecializationFilter === 'all' ? undefined : subSpecializationFilter,
+                status: undefined
             });
 
             const url = window.URL.createObjectURL(blob);
@@ -124,7 +163,7 @@ export const ManagerStudentsPage = () => {
         } finally {
             setIsExporting(false);
         }
-    }, [majorFilter, specializationFilter, statusFilter]);
+    }, [majorFilter, specializationFilter, subSpecializationFilter]);
 
     const handleEditSuccess = useCallback(() => {
         setIsEditModalOpen(false);
@@ -146,8 +185,9 @@ export const ManagerStudentsPage = () => {
                 <StudentFilters
                     search={search}
                     onSearchChange={setSearch}
-                    statusFilter={statusFilter}
-                    onStatusFilterChange={setStatusFilter}
+                    subSpecializationFilter={subSpecializationFilter}
+                    onSubSpecializationFilterChange={setSubSpecializationFilter}
+                    subSpecializations={subSpecializations}
 
                     majorFilter={majorFilter}
                     onMajorFilterChange={setMajorFilter}
@@ -189,7 +229,7 @@ export const ManagerStudentsPage = () => {
                                     GPA
                                 </th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">
-                                    Trạng thái
+                                    Chuyên ngành hẹp
                                 </th>
                                 <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-lg">
                                     Hành động
