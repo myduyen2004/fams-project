@@ -304,4 +304,29 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
                         @Param("className") String className,
                         @Param("date") LocalDate date,
                         @Param("slotNumber") Integer slotNumber);
+
+        /**
+         * Count students from a class who have other scheduled classes at the same
+         * date/slot
+         * This is used for Student Conflict validation when creating schedule change
+         * requests
+         */
+        @Query("SELECT COUNT(DISTINCT e.student.id) FROM Enrollment e " +
+                        "JOIN TimetableSlot ts ON ts.classSection.className = e.classSection.className " +
+                        "WHERE e.student.id IN (" +
+                        "  SELECT e2.student.id FROM Enrollment e2 " +
+                        "  WHERE e2.classSection.className = :className " +
+                        "  AND e2.status = 'ENROLLED'" +
+                        ") " +
+                        "AND e.classSection.className != :className " +
+                        "AND e.status = 'ENROLLED' " +
+                        "AND ts.date = :date " +
+                        "AND ts.slotNumber = :slotNumber " +
+                        "AND ts.status = 'SCHEDULED' " +
+                        "AND ts.id != :excludeSlotId")
+        long countStudentConflicts(
+                        @Param("className") String className,
+                        @Param("date") LocalDate date,
+                        @Param("slotNumber") Integer slotNumber,
+                        @Param("excludeSlotId") Long excludeSlotId);
 }

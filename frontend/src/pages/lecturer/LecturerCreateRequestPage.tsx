@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Upload, Info, Check, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { REQUEST_TYPE_LABELS, RequestType } from '../../types/requestType';
-import { scheduleRequestService, ClassSlotResponse, CreateScheduleRequestPayload } from '../../services/api/scheduleRequestService';
+import { scheduleRequestService, ClassSlotResponse, CreateScheduleRequestPayload, ConflictCheckResponse } from '../../services/api/scheduleRequestService';
 import { RoomSelectionCard } from '../../components/lecturer/request/RoomSelectionCard';
 import { Room } from '../../types/room';
 import { uploadFile } from '../../services/utils/fileUploadService';
@@ -16,6 +16,7 @@ export const LecturerCreateRequestPage: React.FC = () => {
     const [selectedClass, setSelectedClass] = useState('');
     const [classes, setClasses] = useState<string[]>([]);
     const [slots, setSlots] = useState<ClassSlotResponse[]>([]);
+    const [selectedOriginalDate, setSelectedOriginalDate] = useState<string>('');
     const [selectedSlotId, setSelectedSlotId] = useState<string>('');
     const [selectedSlot, setSelectedSlot] = useState<ClassSlotResponse | null>(null);
     const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
@@ -26,6 +27,8 @@ export const LecturerCreateRequestPage: React.FC = () => {
     const [reason, setReason] = useState<string>('');
     const [requestType, setRequestType] = useState<string>('');
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [conflictResult, setConflictResult] = useState<ConflictCheckResponse | null>(null);
+    const [checkingConflict, setCheckingConflict] = useState(false);
 
     // Get today's date in YYYY-MM-DD format
     const getTodayString = () => {
@@ -130,6 +133,35 @@ export const LecturerCreateRequestPage: React.FC = () => {
         }
     }, [selectedClass]);
 
+    // Check for conflicts when date/slot changes
+    useEffect(() => {
+        const checkConflict = async () => {
+            console.log('Checking conflicts:', { selectedClass, selectedSlotId, newDate, newSlot });
+
+            if (!selectedClass || !selectedSlotId || !newDate || !newSlot) {
+                setConflictResult(null);
+                return;
+            }
+            try {
+                setCheckingConflict(true);
+                console.log('Calling checkConflicts API...');
+                const result = await scheduleRequestService.checkConflicts(
+                    selectedClass,
+                    newDate,
+                    newSlot,
+                    parseInt(selectedSlotId)
+                );
+                console.log('Conflict result:', result);
+                setConflictResult(result);
+            } catch (error) {
+                console.error('Error checking conflicts:', error);
+                setConflictResult(null);
+            } finally {
+                setCheckingConflict(false);
+            }
+        };
+        checkConflict();
+    }, [selectedClass, selectedSlotId, newDate, newSlot]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -279,13 +311,13 @@ export const LecturerCreateRequestPage: React.FC = () => {
                                 <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">NGÀY BAN ĐẦU</label>
                                 <select
                                     className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all text-slate-700 dark:text-slate-200 font-bold"
-                                    value={selectedSlotId}
+                                    value={selectedOriginalDate}
                                     onChange={(e) => {
-                                        const slotId = e.target.value;
-                                        setSelectedSlotId(slotId);
-                                        const found = slots.find(s => s.id.toString() === slotId) || null;
-                                        setSelectedSlot(found);
-
+                                        const date = e.target.value;
+                                        setSelectedOriginalDate(date);
+                                        // Reset slot selection when date changes
+                                        setSelectedSlotId('');
+                                        setSelectedSlot(null);
                                     }}
                                     disabled={!selectedClass}
                                 >
@@ -299,16 +331,11 @@ export const LecturerCreateRequestPage: React.FC = () => {
                                                 .map(s => s.date)
                                         )).sort();
 
-                                        return uniqueDates.map(date => {
-                                            // Find the first slot for this date to get the slot id
-                                            const slot = slots.find(s => s.date === date);
-                                            if (!slot) return null;
-                                            return (
-                                                <option key={slot.id} value={slot.id}>
-                                                    {formatDateDDMMYYYY(date)}
-                                                </option>
-                                            );
-                                        });
+                                        return uniqueDates.map(date => (
+                                            <option key={date} value={date}>
+                                                {formatDateDDMMYYYY(date)}
+                                            </option>
+                                        ));
                                     })()}
                                 </select>
                             </div>
@@ -324,11 +351,11 @@ export const LecturerCreateRequestPage: React.FC = () => {
                                         const found = slots.find(s => s.id.toString() === slotId) || null;
                                         setSelectedSlot(found);
                                     }}
-                                    disabled={!selectedSlot}
+                                    disabled={!selectedOriginalDate}
                                 >
                                     <option value="">Chọn slot</option>
-                                    {selectedSlot && slots
-                                        .filter(s => s.date === selectedSlot.date)
+                                    {selectedOriginalDate && slots
+                                        .filter(s => s.date === selectedOriginalDate)
                                         .sort((a, b) => a.slotNumber - b.slotNumber)
                                         .map(slot => (
                                             <option key={slot.id} value={slot.id}>
@@ -378,13 +405,49 @@ export const LecturerCreateRequestPage: React.FC = () => {
                         </div>
                     </section>
 
-                    {/* Room Selection */}
-                    <RoomSelectionCard
-                        selectedRoom={selectedRoom}
-                        onRoomSelect={setSelectedRoom}
-                        selectedDate={newDate}
-                        selectedSlot={newSlot}
-                    />
+                    {/* Conflict Warnings */}
+                    {conflictResult?.hasConflict && (
+                        <div className="p-4 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-200 dark:border-red-900/30">
+                            <div className="flex items-start gap-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                                <div className="flex-1">
+                                    <p className="text-sm font-bold text-red-700 dark:text-red-400 mb-2">Phát hiện xung đột lịch học!</p>
+                                    <ul className="space-y-1">
+                                        {conflictResult.conflicts.map((conflict, index) => (
+                                            <li key={index} className="text-sm text-red-600 dark:text-red-300 flex items-center gap-2">
+                                                <span className="w-1.5 h-1.5 bg-red-500 rounded-full flex-shrink-0"></span>
+                                                {conflict.message}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    <p className="text-xs text-red-500 dark:text-red-400 mt-3 italic">
+                                        Vui lòng chọn ngày hoặc slot khác để tránh xung đột.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {checkingConflict && (
+                        <div className="p-4 bg-slate-50 dark:bg-zinc-800/50 rounded-xl border border-slate-200 dark:border-zinc-700 flex items-center gap-2">
+                            <svg className="animate-spin h-4 w-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span className="text-sm text-slate-500">Đang kiểm tra xung đột...</span>
+                        </div>
+                    )}
+
+                    {/* Room Selection - Hidden when conflicts exist */}
+                    {!conflictResult?.hasConflict && (
+                        <RoomSelectionCard
+                            selectedRoom={selectedRoom}
+                            onRoomSelect={setSelectedRoom}
+                            selectedDate={newDate}
+                            selectedSlot={newSlot}
+                        />
+                    )}
 
                     {/* Content & Docs */}
                     <section className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-8">
