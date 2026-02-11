@@ -62,4 +62,32 @@ public interface StudentGradeRepository extends JpaRepository<StudentGrade, Long
          * Delete all grades for an enrollment
          */
         void deleteByEnrollmentId(Long enrollmentId);
+
+        /**
+         * Find all grades for a course in a semester (across all class sections)
+         */
+        @Query("SELECT sg FROM StudentGrade sg " +
+                        "JOIN sg.enrollment e " +
+                        "JOIN e.classSection cs " +
+                        "WHERE cs.course.code = :courseCode " +
+                        "AND cs.semester.code = :semesterCode " +
+                        "ORDER BY e.studentCode, sg.gradeComponent.name")
+        List<StudentGrade> findByCourseAndSemester(
+                        @Param("courseCode") String courseCode,
+                        @Param("semesterCode") String semesterCode);
+
+        /**
+         * Find grades by course, semester and specific grade types
+         */
+        @Query("SELECT sg FROM StudentGrade sg " +
+                        "JOIN sg.enrollment e " +
+                        "JOIN e.classSection cs " +
+                        "WHERE cs.course.code = :courseCode " +
+                        "AND cs.semester.code = :semesterCode " +
+                        "AND sg.gradeComponent.type IN :types " +
+                        "ORDER BY e.studentCode, sg.gradeComponent.name")
+        List<StudentGrade> findByCourseAndSemesterAndTypes(
+                        @Param("courseCode") String courseCode,
+                        @Param("semesterCode") String semesterCode,
+                        @Param("types") List<com.fams.backend.entity.GradeComponent.GradeType> types);
 }

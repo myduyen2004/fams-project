@@ -31,6 +31,11 @@ public class GradeOverviewResponse {
     private Double passRate;
     private String lastUpdated;
 
+    // Grade submission status
+    private Boolean gradesSubmitted;
+    private String gradesSubmittedAt;
+    private String gradesSubmittedByName;
+
     @Data
     @Builder
     @NoArgsConstructor

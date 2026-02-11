@@ -157,11 +157,20 @@ public class TimetableController {
         Semester semester = semesterRepository.findByCode(semesterCode)
                 .orElseThrow(() -> new RuntimeException("Semester not found"));
         com.fams.backend.entity.SemesterConfig config = semester.getConfig();
-        if (config != null && !Boolean.TRUE.equals(config.getIsPublished())) {
-            // For this public/shared endpoint, we might want to return 403 or empty list?
-            // Given it's used by frontend fallback, 403 is consistent.
-            log.warn("Semester {} is not published. Access denied.", semesterCode);
-            return ResponseEntity.status(403).build();
+        boolean isPublished = config != null && Boolean.TRUE.equals(config.getIsPublished());
+
+        if (!isPublished) {
+            // Allow if User has ROLE_ADMIN or ROLE_ACADEMIC_STAFF
+            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
+                    .getContext().getAuthentication();
+            boolean isAdminOrStaff = auth != null && auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")
+                            || a.getAuthority().equals("ROLE_ACADEMIC_STAFF"));
+
+            if (!isAdminOrStaff) {
+                log.warn("Semester {} is not published. Access denied.", semesterCode);
+                return ResponseEntity.status(403).build();
+            }
         }
 
         List<TimetableSlot> slots = timetableSlotRepository.findBySemesterCode(semesterCode);
@@ -304,9 +313,11 @@ public class TimetableController {
 
     @GetMapping("/student/{studentId}")
     @Operation(summary = "Get timetable for a student")
-    public ResponseEntity<TimetableDTO.WeeklyTimetableDTO> getStudentTimetable(
+    public ResponseEntity<Object> getStudentTimetable(
             @PathVariable Long studentId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+
+        log.info("Entering getStudentTimetable for studentId: {}, date: {}", studentId, date);
 
         try {
             LocalDate targetDate = date != null ? date : LocalDate.now();
@@ -320,7 +331,17 @@ public class TimetableController {
                     weekStart, weekEnd);
 
             // Check if semester is published for this date
-            Semester semester = semesterRepository.findSemesterByDate(targetDate).orElse(null);
+            List<Semester> semesters = semesterRepository.findSemestersByDate(targetDate);
+            log.info("Found {} semesters for date {}: {}", semesters.size(), targetDate,
+                    semesters.stream()
+                            .map(s -> s.getCode() + "(published="
+                                    + (s.getConfig() != null && Boolean.TRUE.equals(s.getConfig().getIsPublished()))
+                                    + ")")
+                            .toList());
+            Semester semester = semesters.stream()
+                    .filter(s -> s.getConfig() != null && Boolean.TRUE.equals(s.getConfig().getIsPublished()))
+                    .findFirst()
+                    .orElse(semesters.isEmpty() ? null : semesters.get(0));
 
             if (semester != null) {
                 com.fams.backend.entity.SemesterConfig config = semester.getConfig();
@@ -331,12 +352,14 @@ public class TimetableController {
                 if (!isPublished) {
                     log.warn("Timetable for semester {} is not published yet. Access denied for student.",
                             semester.getCode());
-                    return ResponseEntity.status(403).build();
+                    // Return explicit error message
+                    return ResponseEntity.status(403).body(Map.of(
+                            "status", 403,
+                            "error", "Forbidden",
+                            "message", "Semester schedule is not published yet: " + semester.getCode()));
                 }
             } else {
                 log.warn("No active semester found for date {}. Skipping visibility check (CAUTION).", targetDate);
-                // Optional: Strict mode - if no semester found, should we block?
-                // For now, logging it.
             }
 
             List<TimetableSlot> slots = timetableSlotRepository.findByStudentCodeAndDateBetween(
@@ -360,7 +383,10 @@ public class TimetableController {
                         if (!isPublished) {
                             log.warn("Timetable for semester {} (from slots) is not published. Access denied.",
                                     semester.getCode());
-                            return ResponseEntity.status(403).build();
+                            return ResponseEntity.status(403).body(Map.of(
+                                    "status", 403,
+                                    "error", "Forbidden",
+                                    "message", "Semester schedule is not published yet: " + semester.getCode()));
                         }
                     }
                 }
@@ -390,8 +416,8 @@ public class TimetableController {
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("Error fetching timetable for student " + studentId, e);
-            throw e; // Let Spring handle the 500 but now it's logged
+            log.error("CRITICAL ERROR in getStudentTimetable for student " + studentId, e);
+            throw e;
         }
     }
 
@@ -550,13 +576,18 @@ public class TimetableController {
         }
 
         if (semester == null && date != null) {
-            semester = semesterRepository.findSemesterByDate(date).orElse(null);
+            List<Semester> semesters = semesterRepository.findSemestersByDate(date);
+            semester = semesters.isEmpty() ? null : semesters.get(0);
         }
 
         if (semester == null) {
             // Fallback to current date semester if still null
-            semester = semesterRepository.findSemesterByDate(LocalDate.now())
-                    .orElseThrow(() -> new RuntimeException("Semester not found for the given criteria"));
+            List<Semester> semesters = semesterRepository.findSemestersByDate(LocalDate.now());
+            semester = semesters.isEmpty() ? null : semesters.get(0);
+
+            if (semester == null) {
+                throw new RuntimeException("Semester not found for the given criteria");
+            }
         }
 
         // 1. Fetch ALL slots for this lecturer in this semester
@@ -697,6 +728,7 @@ public class TimetableController {
 
         return TimetableDTO.TimetableSlotDTO.builder()
                 .id(slot.getId())
+                .classSectionId(cs != null ? cs.getClassName() : null)
                 .className(cs != null ? cs.getClassName() : null)
                 .courseCode(course != null ? course.getCode() : null)
                 .courseName(course != null ? course.getName() : null)

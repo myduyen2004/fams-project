@@ -114,4 +114,46 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     @Transactional
     @Modifying
     long deleteAllByRoleInAndStatus(Collection<User.UserRole> roles, User.UserStatus status);
+
+    /**
+     * Find student IDs not enrolled in a specific class section
+     * Only returns students whose specialization or sub-specialization contains the
+     * course
+     */
+    @Query(value = """
+                SELECT DISTINCT u.id FROM users u
+                LEFT JOIN student_profiles sp ON sp.user_id = u.id
+                JOIN class_sections cs ON cs.class_name = :className
+                WHERE u.role = 'STUDENT'
+                AND u.id NOT IN (
+                    SELECT e.student_id FROM enrollments e WHERE e.class_name = :className
+                )
+                AND (
+                    EXISTS (
+                        SELECT 1 FROM specialization_courses sc
+                        WHERE sc.specialization_id = sp.specialization_id
+                        AND sc.course_id = cs.course_id
+                    )
+                    OR EXISTS (
+                        SELECT 1 FROM sub_specialization_courses ssc
+                        WHERE ssc.sub_specialization_id = sp.sub_specialization_id
+                        AND ssc.course_id = cs.course_id
+                    )
+                )
+            """, nativeQuery = true)
+    List<Long> findStudentIdsNotEnrolledInClassSection(@Param("className") String className);
+
+    /**
+     * Find students by IDs with profiles loaded
+     * Uses JOIN FETCH to avoid N+1 problem
+     */
+    @Query("""
+                SELECT u FROM User u
+                LEFT JOIN FETCH u.studentProfile sp
+                LEFT JOIN FETCH sp.major
+                LEFT JOIN FETCH sp.specialization
+                WHERE u.id IN :ids
+                ORDER BY u.code ASC
+            """)
+    List<User> findStudentsWithProfilesByIds(@Param("ids") List<Long> ids);
 }

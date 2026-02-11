@@ -115,11 +115,10 @@ class CreateRequestScreen extends StatelessWidget {
                       Expanded(
                         child: _buildDropdown(
                           label: 'NGÀY BAN ĐẦU',
-                          value: controller.selectedSlotId.value,
+                          value: controller.selectedOriginalDate.value,
                           items: controller.getAvailableDates().map((date) {
-                            final slot = controller.slots.firstWhere((s) => s.date == date);
                             return DropdownMenuItem(
-                              value: slot.id.toString(),
+                              value: date,
                               child: Text(_formatDate(date)),
                             );
                           }).toList(),
@@ -131,18 +130,29 @@ class CreateRequestScreen extends StatelessWidget {
                       const SizedBox(width: 12),
                       // Original Slot
                       Expanded(
-                        child: _buildDropdown(
-                          label: 'SLOT BAN ĐẦU',
-                          value: controller.selectedSlotId.value,
-                          items: controller.getSlotsForSelectedDate().map((slot) =>
-                            DropdownMenuItem(
-                              value: slot.id.toString(),
-                              child: Text('Slot ${slot.slotNumber}'),
-                            )
-                          ).toList(),
-                          onChanged: (v) => controller.onSlotSelected(v ?? ''),
-                          hint: 'Chọn slot',
-                          enabled: controller.selectedSlot.value != null,
+                        child: Builder(
+                          builder: (context) {
+                            final slots = controller.getSlotsForSelectedDate();
+                            if (slots.length == 1) {
+                              return _buildReadOnlyField(
+                                label: 'SLOT BAN ĐẦU',
+                                value: 'Slot ${slots.first.slotNumber}',
+                              );
+                            }
+                            return _buildDropdown(
+                              label: 'SLOT BAN ĐẦU',
+                              value: controller.selectedSlotId.value,
+                              items: slots.map((slot) =>
+                                DropdownMenuItem(
+                                  value: slot.id.toString(),
+                                  child: Text('Slot ${slot.slotNumber}'),
+                                )
+                              ).toList(),
+                              onChanged: (v) => controller.onSlotSelected(v ?? ''),
+                              hint: 'Chọn slot',
+                              enabled: controller.selectedOriginalDate.value != null,
+                            );
+                          }
                         ),
                       ),
                     ],
@@ -242,20 +252,128 @@ class CreateRequestScreen extends StatelessWidget {
               )),
             ),
 
+            const SizedBox(height: 16),
+
+            // Inline Conflict Warnings
+            Obx(() {
+              if (controller.checkingConflict.value) {
+                return Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.grey),
+                      ),
+                      const SizedBox(width: 10),
+                      Text('Đang kiểm tra xung đột...', 
+                        style: TextStyle(fontSize: 13, color: Colors.grey[600])
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              final result = controller.conflictResult.value;
+              if (result != null && result.hasConflict) {
+                return Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.red[100]!),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.warning_amber_rounded, color: Colors.red[700], size: 24),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Phát hiện xung đột lịch học!',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red[800],
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      ...result.conflicts.map((conflict) => Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              margin: const EdgeInsets.only(top: 6),
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: Colors.red[400],
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                conflict.message,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.red[700],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )).toList(),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Vui lòng chọn ngày hoặc slot khác để tránh xung đột.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                          color: Colors.red[400],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            }),
+
             const SizedBox(height: 20),
 
-            // Section 3: Room Selection
-            Obx(() => RoomSelectionWidget(
-              rooms: controller.rooms,
-              selectedRoom: controller.selectedRoom.value,
-              onRoomSelect: controller.onRoomSelected,
-              activeFloor: controller.activeFloor.value,
-              onFloorChange: (floor) => controller.activeFloor.value = floor,
-              isLoading: controller.isLoadingRooms.value,
-              hasFilters: controller.newDate.value != null && controller.newSlot.value != null,
-              selectedDate: controller.newDate.value,
-              selectedSlot: controller.newSlot.value,
-            )),
+            // Section 3: Room Selection (Hidden if conflict exists)
+            Obx(() {
+              // Hide room selection if there's a conflict
+              if (controller.conflictResult.value?.hasConflict == true) {
+                return const SizedBox.shrink();
+              }
+              
+              return RoomSelectionWidget(
+                rooms: controller.rooms,
+                selectedRoom: controller.selectedRoom.value,
+                onRoomSelect: controller.onRoomSelected,
+                activeFloor: controller.activeFloor.value,
+                onFloorChange: (floor) => controller.activeFloor.value = floor,
+                isLoading: controller.isLoadingRooms.value,
+                hasFilters: controller.newDate.value != null && controller.newSlot.value != null,
+                selectedDate: controller.newDate.value,
+                selectedSlot: controller.newSlot.value,
+              );
+            }),
 
             const SizedBox(height: 20),
 

@@ -141,7 +141,14 @@ public class StudentGradeService {
                 .studentGrades(studentRows)
                 .averageGrade(Math.round(averageGrade * 10.0) / 10.0)
                 .passRate(Math.round(passRate * 10.0) / 10.0)
-                .lastUpdated(LocalDateTime.now().toString()) // Placeholder
+                .lastUpdated(LocalDateTime.now().toString())
+                .gradesSubmitted(classSection.getGradesSubmitted())
+                .gradesSubmittedAt(classSection.getGradesSubmittedAt() != null
+                        ? classSection.getGradesSubmittedAt().toString()
+                        : null)
+                .gradesSubmittedByName(classSection.getGradesSubmittedBy() != null
+                        ? classSection.getGradesSubmittedBy().getFullName()
+                        : null)
                 .build();
     }
 
@@ -152,6 +159,12 @@ public class StudentGradeService {
     public void updateGrade(UpdateGradeRequest request, Long updatedById) {
         Enrollment enrollment = enrollmentRepository.findById(request.getEnrollmentId())
                 .orElseThrow(() -> new RuntimeException("Enrollment not found"));
+
+        // Check if grades are already submitted
+        ClassSection classSection = enrollment.getClassSection();
+        if (Boolean.TRUE.equals(classSection.getGradesSubmitted())) {
+            throw new RuntimeException("Không thể chỉnh sửa điểm. Điểm đã được gửi cho phòng đào tạo.");
+        }
 
         GradeComponent gradeComponent = gradeComponentRepository.findById(request.getGradeComponentId())
                 .orElseThrow(() -> new RuntimeException("Grade component not found"));
@@ -183,6 +196,30 @@ public class StudentGradeService {
         for (UpdateGradeRequest req : requests) {
             updateGrade(req, updatedById);
         }
+    }
+
+    /**
+     * Submit grades to academic office
+     * This will lock the grades from further editing by the lecturer
+     */
+    @Transactional
+    public void submitGrades(String className, Long submittedById) {
+        ClassSection classSection = classSectionRepository.findByClassName(className)
+                .orElseThrow(() -> new RuntimeException("Class section not found: " + className));
+
+        if (Boolean.TRUE.equals(classSection.getGradesSubmitted())) {
+            throw new RuntimeException("Điểm đã được gửi trước đó.");
+        }
+
+        User submittedBy = userRepository.findById(submittedById)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        classSection.setGradesSubmitted(true);
+        classSection.setGradesSubmittedAt(LocalDateTime.now());
+        classSection.setGradesSubmittedBy(submittedBy);
+
+        classSectionRepository.save(classSection);
+        log.info("Grades submitted for class {} by user {}", className, submittedById);
     }
 
     /**
@@ -665,12 +702,15 @@ public class StudentGradeService {
         result.put("totalRows", totalRows);
         result.put("validRows", validRows);
         result.put("errorRows", errorRows);
-        result.put("canImport", errorRows == 0 && validRows > 0);
+        // Allow import if there are rows to process and no errors (even if validRows is
+        // 0 - for deleting all grades)
+        result.put("canImport", errorRows == 0 && totalRows > 0);
         result.put("previewRows", previewRows);
         result.put("componentNames", componentNames);
         result.put("durationMs", durationMs);
         result.put("message", errorRows == 0
-                ? validRows + " dòng hợp lệ, sẵn sàng import"
+                ? (validRows > 0 ? validRows + " dòng hợp lệ, sẵn sàng import"
+                        : "Tất cả điểm sẽ bị xóa, sẵn sàng import")
                 : "Có " + errorRows + " dòng lỗi. Vui lòng sửa file và thử lại.");
         return result;
     }

@@ -54,9 +54,14 @@ dependencies:
 
   # Utils
   intl: ^0.20.2
+  badges: ^3.1.2
   
   # QR Code Scanning (Future Ready)
   mobile_scanner: ^5.0.0
+  
+  # Notifications & Badges
+  flutter_local_notifications: ^18.0.0
+  app_badge_plus: ^1.1.0
   
   # Face Recognition (Future Ready)
   google_mlkit_face_detection: ^0.13.1
@@ -67,6 +72,9 @@ dependencies:
 
   # Image Picker
   image_picker: ^1.0.7
+  
+  # Image manipulation
+  image: ^4.1.7
   
   # URL Launcher (for opening attachments)
   url_launcher: ^6.2.5

@@ -15,6 +15,7 @@ class User {
   final String? specialization;
   final String? department;
   final String? expertise;
+  final String? faceDataStatus; // REGISTERED, NOT_REGISTERED, etc.
 
   User({
     required this.id,
@@ -30,6 +31,7 @@ class User {
     this.specialization,
     this.department,
     this.expertise,
+    this.faceDataStatus,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -47,6 +49,7 @@ class User {
       specialization: json['specialization'],
       department: json['department'],
       expertise: json['expertise'],
+      faceDataStatus: json['faceDataStatus'],
     );
   }
 
@@ -66,9 +69,11 @@ class User {
       'specialization': specialization,
       'department': department,
       'expertise': expertise,
+      'faceDataStatus': faceDataStatus,
     };
   }
 
   bool get isLecturer => role.toUpperCase() == 'LECTURER';
   bool get isStudent => role.toUpperCase() == 'STUDENT';
+  bool get hasFaceRegistered => faceDataStatus?.toUpperCase() == 'REGISTERED';
 }

@@ -6,5 +6,8 @@
 **/.vscode
 **/.idea
 **/logs
-**/data/temp
-**/data/faces
+**/data
+**/ml_models
+**/tests/__pycache__
+**/*.db
+**/*.sqlite3

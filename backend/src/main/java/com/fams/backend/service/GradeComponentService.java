@@ -260,4 +260,158 @@ public class GradeComponentService {
             throw new NotFoundException("Course not found with id: " + courseId);
         }
     }
+
+    /**
+     * Import grade components for all courses from Excel
+     * Expected format: courseCode, componentName, type
+     * (PROGRESS_TEST/MID_TERM/FINAL_EXAM/PRACTICAL_EXAM), weight, description,
+     * isRequired
+     */
+    @Transactional
+    public Map<String, Object> importGradeComponents(List<Map<String, Object>> rows) {
+        int created = 0;
+        int updated = 0;
+        int failed = 0;
+        List<String> errors = new java.util.ArrayList<>();
+
+        for (int i = 0; i < rows.size(); i++) {
+            Map<String, Object> row = rows.get(i);
+            int rowNum = i + 2; // Excel row number (header is row 1)
+            try {
+                String courseCode = getString(row, "courseCode");
+                String name = getString(row, "name");
+                String typeStr = getString(row, "type");
+                Double weight = getDouble(row, "weight");
+
+                if (courseCode == null || name == null || typeStr == null || weight == null) {
+                    errors.add("Row " + rowNum + ": Missing required fields (courseCode, name, type, weight)");
+                    failed++;
+                    continue;
+                }
+
+                Course course = courseRepository.findByCode(courseCode)
+                        .orElse(null);
+                if (course == null) {
+                    errors.add("Row " + rowNum + ": Course not found: " + courseCode);
+                    failed++;
+                    continue;
+                }
+
+                GradeComponent.GradeType type;
+                try {
+                    type = GradeComponent.GradeType.valueOf(typeStr.toUpperCase().replace(" ", "_"));
+                } catch (IllegalArgumentException e) {
+                    errors.add("Row " + rowNum + ": Invalid type: " + typeStr);
+                    failed++;
+                    continue;
+                }
+
+                // Block RESIT import
+                if (type == GradeComponent.GradeType.RESIT) {
+                    errors.add("Row " + rowNum + ": Cannot import RESIT directly. It's auto-created with FINAL_EXAM.");
+                    failed++;
+                    continue;
+                }
+
+                // Check if component exists
+                var existing = gradeComponentRepository.findByCourseIdAndNameAndType(course.getId(), name, type);
+                if (existing.isPresent()) {
+                    // Update existing
+                    GradeComponent component = existing.get();
+                    component.setWeight(weight);
+                    String desc = getString(row, "description");
+                    if (desc != null)
+                        component.setDescription(desc);
+                    Boolean isRequired = getBoolean(row, "isRequired");
+                    if (isRequired != null)
+                        component.setIsRequired(isRequired);
+                    gradeComponentRepository.save(component);
+
+                    // If FINAL_EXAM, also update linked RESIT
+                    if (type == GradeComponent.GradeType.FINAL_EXAM) {
+                        gradeComponentRepository.findByReferenceComponentId(component.getId()).ifPresent(resit -> {
+                            resit.setWeight(weight);
+                            gradeComponentRepository.save(resit);
+                        });
+                    }
+                    updated++;
+                } else {
+                    // Check duplicate FINAL_EXAM
+                    if (type == GradeComponent.GradeType.FINAL_EXAM) {
+                        if (gradeComponentRepository.existsByCourseIdAndType(course.getId(),
+                                GradeComponent.GradeType.FINAL_EXAM)) {
+                            errors.add("Row " + rowNum + ": Course " + courseCode + " already has a FINAL_EXAM");
+                            failed++;
+                            continue;
+                        }
+                    }
+
+                    GradeComponent component = GradeComponent.builder()
+                            .name(name)
+                            .description(getString(row, "description"))
+                            .type(type)
+                            .weight(weight)
+                            .isRequired(getBoolean(row, "isRequired") != null ? getBoolean(row, "isRequired") : true)
+                            .isResit(false)
+                            .course(course)
+                            .build();
+                    GradeComponent saved = gradeComponentRepository.save(component);
+
+                    // Auto-create RESIT for FINAL_EXAM
+                    if (type == GradeComponent.GradeType.FINAL_EXAM) {
+                        GradeComponent resit = GradeComponent.builder()
+                                .name("Resit")
+                                .description("Resit for " + saved.getName())
+                                .type(GradeComponent.GradeType.RESIT)
+                                .weight(weight)
+                                .isRequired(true)
+                                .isResit(true)
+                                .referenceComponent(saved)
+                                .course(course)
+                                .build();
+                        gradeComponentRepository.save(resit);
+                    }
+                    created++;
+                }
+            } catch (Exception e) {
+                errors.add("Row " + rowNum + ": " + e.getMessage());
+                failed++;
+            }
+        }
+
+        log.info("Import grade components: created={}, updated={}, failed={}", created, updated, failed);
+        return Map.of(
+                "created", created,
+                "updated", updated,
+                "failed", failed,
+                "errors", errors);
+    }
+
+    private String getString(Map<String, Object> row, String key) {
+        Object val = row.get(key);
+        return val != null ? val.toString().trim() : null;
+    }
+
+    private Double getDouble(Map<String, Object> row, String key) {
+        Object val = row.get(key);
+        if (val == null)
+            return null;
+        if (val instanceof Number)
+            return ((Number) val).doubleValue();
+        try {
+            return Double.parseDouble(val.toString());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private Boolean getBoolean(Map<String, Object> row, String key) {
+        Object val = row.get(key);
+        if (val == null)
+            return null;
+        if (val instanceof Boolean)
+            return (Boolean) val;
+        String str = val.toString().toLowerCase();
+        return "true".equals(str) || "yes".equals(str) || "1".equals(str);
+    }
 }

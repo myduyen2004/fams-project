@@ -141,94 +141,97 @@ class SlotCard extends StatelessWidget {
   }
 
   Widget _buildStatusCard(BuildContext context, {required bool isNext}) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10), // Reduced from 16
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16), // Reduced from 20
-      decoration: BoxDecoration(
-        color: isNext ? Colors.white : Colors.white.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(20), // Reduced from 28
-        boxShadow: isNext ? [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ] : null,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            isNext ? 'Tiếp theo' : 'Slot ${slot.slotNumber ?? '?' }',
-            style: TextStyle(
-              color: isNext ? const Color(0xFFB2BEC3) : AppColors.primaryOrange, 
-              fontWeight: FontWeight.w900, 
-              fontSize: 11, // Reduced from 12
+    return GestureDetector(
+      onTap: () => Get.to(() => SlotDetailScreen(slot: slot)),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10), // Reduced from 16
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16), // Reduced from 20
+        decoration: BoxDecoration(
+          color: isNext ? Colors.white : Colors.white.withOpacity(0.6),
+          borderRadius: BorderRadius.circular(20), // Reduced from 28
+          boxShadow: isNext ? [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
-          ),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                slot.courseCode ?? 'COURSE',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF2D3436), letterSpacing: -0.3), // Reduced from 24
+          ] : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isNext ? 'Tiếp theo' : 'Slot ${slot.slotNumber ?? '?' }',
+              style: TextStyle(
+                color: isNext ? const Color(0xFFB2BEC3) : AppColors.primaryOrange, 
+                fontWeight: FontWeight.w900, 
+                fontSize: 11, // Reduced from 12
               ),
-              Row(
-                children: [
-                  _buildCalendarButton(),
-                  const SizedBox(width: 8),
-                  if (!isNext && Get.find<AuthController>().currentUser.value?.role != 'LECTURER') _buildSmallBadge(slot.attendanceStatus ?? 'Có mặt'),
-                ],
-              )
-            ],
-          ),
-          const SizedBox(height: 12), // Reduced from 16
-          if (isNext) ...[
-            _buildInfoItem(Icons.access_time_filled_rounded, "${_formatTime(slot.startTime)} - ${_formatTime(slot.endTime)}"),
-            const SizedBox(height: 8),
-            _buildInfoItem(Icons.people_alt_rounded, slot.className ?? 'N/A'),
-            const SizedBox(height: 8),
+            ),
+            const SizedBox(height: 4),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildInfoItem(Icons.meeting_room_rounded, slot.roomCode ?? 'Online'),
-                Expanded(
-                  child: Text(
-                    slot.lecturerName ?? 'N/A',
-                    style: const TextStyle(color: Color(0xFFB2BEC3), fontSize: 12, fontWeight: FontWeight.w700), // Reduced from 13
-                    textAlign: TextAlign.right,
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  ),
+                Text(
+                  slot.courseCode ?? 'COURSE',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF2D3436), letterSpacing: -0.3), // Reduced from 24
                 ),
+                Row(
+                  children: [
+                    _buildCalendarButton(),
+                    const SizedBox(width: 8),
+                    if (!isNext && Get.find<AuthController>().currentUser.value?.role != 'LECTURER') _buildSmallBadge(slot.attendanceStatus ?? 'Có mặt'),
+                  ],
+                )
               ],
             ),
-          ] else ...[
-            _buildInfoItem(Icons.meeting_room_rounded, slot.roomCode ?? 'Online'),
-            const SizedBox(height: 8),
-            _buildInfoItem(Icons.people_alt_rounded, slot.className ?? 'N/A'),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                _buildInfoItem(Icons.access_time_filled_rounded, "${_formatTime(slot.startTime)} - ${_formatTime(slot.endTime)}"),
-                const SizedBox(width: 8),
-                Container(width: 1.5, height: 14, color: const Color(0xFFE9EEF5)),
-                const SizedBox(width: 8),
-                Icon(Icons.person_rounded, size: 15, color: const Color(0xFFB2BEC3)),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    slot.lecturerName ?? 'N/A',
-                    style: const TextStyle(color: Color(0xFFB2BEC3), fontSize: 12, fontWeight: FontWeight.w800),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
+            const SizedBox(height: 12), // Reduced from 16
+            if (isNext) ...[
+              _buildInfoItem(Icons.access_time_filled_rounded, "${_formatTime(slot.startTime)} - ${_formatTime(slot.endTime)}"),
+              const SizedBox(height: 8),
+              _buildInfoItem(Icons.people_alt_rounded, slot.className ?? 'N/A'),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildInfoItem(Icons.meeting_room_rounded, slot.roomCode ?? 'Online'),
+                  Expanded(
+                    child: Text(
+                      slot.lecturerName ?? 'N/A',
+                      style: const TextStyle(color: Color(0xFFB2BEC3), fontSize: 12, fontWeight: FontWeight.w700), // Reduced from 13
+                      textAlign: TextAlign.right,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+            ] else ...[
+              _buildInfoItem(Icons.meeting_room_rounded, slot.roomCode ?? 'Online'),
+              const SizedBox(height: 8),
+              _buildInfoItem(Icons.people_alt_rounded, slot.className ?? 'N/A'),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  _buildInfoItem(Icons.access_time_filled_rounded, "${_formatTime(slot.startTime)} - ${_formatTime(slot.endTime)}"),
+                  const SizedBox(width: 8),
+                  Container(width: 1.5, height: 14, color: const Color(0xFFE9EEF5)),
+                  const SizedBox(width: 8),
+                  Icon(Icons.person_rounded, size: 15, color: const Color(0xFFB2BEC3)),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      slot.lecturerName ?? 'N/A',
+                      style: const TextStyle(color: Color(0xFFB2BEC3), fontSize: 12, fontWeight: FontWeight.w800),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

@@ -15,6 +15,7 @@ export interface ScheduleRequest {
     createdAt: string;
     approverNote?: string;
     originalRoomName?: string;
+    originalDate?: string;
     requestedRoomName?: string;
     requestedDate?: string;
     file?: string;
@@ -65,8 +66,26 @@ export const scheduleRequestService = {
     getRooms: async (): Promise<any[]> => {
         const response = await apiClient.get(`/v1/rooms`);
         return response.data;
+    },
+
+    checkConflicts: async (className: string, date: string, slotNumber: number, originalSlotId: number): Promise<ConflictCheckResponse> => {
+        const response = await apiClient.get(`/lecturer/check-conflicts`, {
+            params: { className, date, slotNumber, originalSlotId }
+        });
+        return response.data;
     }
 };
+
+export interface ConflictItem {
+    type: 'LECTURER' | 'PENDING_REQUEST' | 'STUDENT';
+    message: string;
+    count?: number;
+}
+
+export interface ConflictCheckResponse {
+    conflicts: ConflictItem[];
+    hasConflict: boolean;
+}
 
 export interface ClassSlotResponse {
     id: number;
