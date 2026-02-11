@@ -21,5 +21,7 @@ public class ClassDetailResponse {
     private Integer studentCount;
     private String academicYear; // e.g., "2019 - 2023"
     private String status;
+    private Boolean hasChatGroup;
+    private Long chatGroupId;
     private List<StudentEnrollmentDTO> enrollments;
 }

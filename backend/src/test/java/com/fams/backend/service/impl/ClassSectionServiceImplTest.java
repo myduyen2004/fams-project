@@ -2,6 +2,7 @@ package com.fams.backend.service.impl;
 
 import com.fams.backend.dto.response.*;
 import com.fams.backend.entity.*;
+import com.fams.backend.repository.ChatGroupRepository;
 import com.fams.backend.repository.ClassSectionRepository;
 import com.fams.backend.repository.CourseRepository;
 import com.fams.backend.repository.EnrollmentRepository;
@@ -40,6 +41,7 @@ public class ClassSectionServiceImplTest {
     private EnrollmentRepository enrollmentRepository;
 
     @Mock
+    private ChatGroupRepository chatGroupRepository;
     private SemesterRepository semesterRepository;
 
     @Mock
@@ -204,6 +206,8 @@ public class ClassSectionServiceImplTest {
                 .thenReturn(Optional.of(classSection));
         when(enrollmentRepository.findByClassSectionClassName(className))
                 .thenReturn(Collections.singletonList(enrollment));
+        when(chatGroupRepository.findByClassSectionClassName(className))
+                .thenReturn(Optional.empty());
 
         // When
         ClassDetailResponse result = classSectionService.getClassDetail(className);

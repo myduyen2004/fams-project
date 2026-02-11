@@ -7,7 +7,6 @@ import com.fams.backend.entity.User;
 import com.fams.backend.repository.NotificationRecipientRepository;
 import com.fams.backend.repository.NotificationRepository;
 import com.fams.backend.repository.UserRepository;
-import com.fams.backend.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -16,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -30,8 +28,6 @@ public class NotificationServiceImpl {
         private final NotificationRecipientRepository recipientRepository;
         private final UserRepository userRepository;
         private final SimpMessagingTemplate messagingTemplate;
-
-        private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
         @Transactional
         public void createNotification(User recipient, String title, String content, Notification.NotificationType type,
@@ -137,6 +133,12 @@ public class NotificationServiceImpl {
                         nr.setReadAt(LocalDateTime.now());
                         recipientRepository.save(nr);
                         log.info("Notification {} marked as read for user {} successfully", notificationId, username);
+
+                        // Broadcast real-time sync update
+                        messagingTemplate.convertAndSendToUser(
+                                        username,
+                                        "/queue/notifications",
+                                        java.util.Map.of("type", "READ_UPDATE", "notificationId", notificationId));
                 }, () -> log.warn("Notification recipient for notification {} and user {} not found", notificationId,
                                 username));
         }
@@ -155,6 +157,12 @@ public class NotificationServiceImpl {
                         });
                         recipientRepository.saveAll(unread);
                         log.info("All notifications for user {} marked as read successfully", username);
+
+                        // Broadcast real-time sync update
+                        messagingTemplate.convertAndSendToUser(
+                                        username,
+                                        "/queue/notifications",
+                                        java.util.Map.of("type", "READ_UPDATE", "all", true));
                 } else {
                         log.warn("User {} not found during markAllAsRead", username);
                 }
