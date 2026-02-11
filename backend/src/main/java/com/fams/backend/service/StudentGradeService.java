@@ -2,7 +2,9 @@ package com.fams.backend.service;
 
 import com.fams.backend.dto.request.UpdateGradeRequest;
 import com.fams.backend.dto.response.GradeOverviewResponse;
+import com.fams.backend.dto.response.StudentCourseOptionResponse;
 import com.fams.backend.dto.response.StudentGradeRowDTO;
+import com.fams.backend.dto.response.StudentMyGradeResponse;
 import com.fams.backend.entity.*;
 import com.fams.backend.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -37,9 +39,14 @@ public class StudentGradeService {
         Semester semester = classSection.getSemester();
 
         // Get all grade components - sorted by weight ascending, then by numeric suffix
-        List<GradeComponent> gradeComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId())
-                .stream()
-                .sorted(gradeComponentComparator())
+        // Get all grade components - sorted by Total Weight of Grade Type
+        List<GradeComponent> rawComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId());
+        Map<GradeComponent.GradeType, Double> typeTotalWeights = rawComponents.stream()
+                .collect(Collectors.groupingBy(GradeComponent::getType,
+                        Collectors.summingDouble(GradeComponent::getWeight)));
+
+        List<GradeComponent> gradeComponents = rawComponents.stream()
+                .sorted(gradeComponentComparator(typeTotalWeights))
                 .collect(Collectors.toList());
         List<GradeOverviewResponse.GradeComponentInfo> componentInfos = gradeComponents.stream()
                 .map(gc -> GradeOverviewResponse.GradeComponentInfo.builder()
@@ -236,14 +243,22 @@ public class StudentGradeService {
 
         // Get only editable components (exclude PE, MidTerm, Final, Resit)
         // Sort by weight ascending (lowest first), then by name for same weight
-        List<GradeComponent> editableComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId())
+        // Get only editable components (exclude PE, MidTerm, Final, Resit)
+        List<GradeComponent> rawEditableComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId())
                 .stream()
                 .filter(gc -> !gc.getIsResit())
                 .filter(gc -> gc.getType() != GradeComponent.GradeType.FINAL_EXAM)
                 .filter(gc -> gc.getType() != GradeComponent.GradeType.RESIT)
                 .filter(gc -> gc.getType() != GradeComponent.GradeType.MID_TERM)
                 .filter(gc -> gc.getType() != GradeComponent.GradeType.PRACTICAL_EXAM)
-                .sorted(gradeComponentComparator())
+                .collect(Collectors.toList());
+
+        Map<GradeComponent.GradeType, Double> typeTotalWeights = rawEditableComponents.stream()
+                .collect(Collectors.groupingBy(GradeComponent::getType,
+                        Collectors.summingDouble(GradeComponent::getWeight)));
+
+        List<GradeComponent> editableComponents = rawEditableComponents.stream()
+                .sorted(gradeComponentComparator(typeTotalWeights))
                 .collect(Collectors.toList());
 
         // Get enrollments and grades
@@ -365,14 +380,22 @@ public class StudentGradeService {
         Course course = classSection.getCourse();
         // Exclude FINAL_EXAM, RESIT, MID_TERM, PRACTICAL_EXAM from import
         // Sort by weight ascending, then by name
-        List<GradeComponent> gradeComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId())
+        // Exclude FINAL_EXAM, RESIT, MID_TERM, PRACTICAL_EXAM from import
+        List<GradeComponent> rawComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId())
                 .stream()
                 .filter(gc -> !gc.getIsResit())
                 .filter(gc -> gc.getType() != GradeComponent.GradeType.FINAL_EXAM)
                 .filter(gc -> gc.getType() != GradeComponent.GradeType.RESIT)
                 .filter(gc -> gc.getType() != GradeComponent.GradeType.MID_TERM)
                 .filter(gc -> gc.getType() != GradeComponent.GradeType.PRACTICAL_EXAM)
-                .sorted(gradeComponentComparator())
+                .collect(Collectors.toList());
+
+        Map<GradeComponent.GradeType, Double> typeTotalWeights = rawComponents.stream()
+                .collect(Collectors.groupingBy(GradeComponent::getType,
+                        Collectors.summingDouble(GradeComponent::getWeight)));
+
+        List<GradeComponent> gradeComponents = rawComponents.stream()
+                .sorted(gradeComponentComparator(typeTotalWeights))
                 .collect(Collectors.toList());
 
         // Get enrollments map by student code
@@ -529,14 +552,22 @@ public class StudentGradeService {
         Course course = classSection.getCourse();
         // Exclude FINAL_EXAM, RESIT, MID_TERM, PRACTICAL_EXAM from preview
         // Sort by weight ascending (lowest first), then by name
-        List<GradeComponent> gradeComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId())
+        // Exclude FINAL_EXAM, RESIT, MID_TERM, PRACTICAL_EXAM from preview
+        List<GradeComponent> rawComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId())
                 .stream()
                 .filter(gc -> !gc.getIsResit())
                 .filter(gc -> gc.getType() != GradeComponent.GradeType.FINAL_EXAM)
                 .filter(gc -> gc.getType() != GradeComponent.GradeType.RESIT)
                 .filter(gc -> gc.getType() != GradeComponent.GradeType.MID_TERM)
                 .filter(gc -> gc.getType() != GradeComponent.GradeType.PRACTICAL_EXAM)
-                .sorted(gradeComponentComparator())
+                .collect(Collectors.toList());
+
+        Map<GradeComponent.GradeType, Double> typeTotalWeights = rawComponents.stream()
+                .collect(Collectors.groupingBy(GradeComponent::getType,
+                        Collectors.summingDouble(GradeComponent::getWeight)));
+
+        List<GradeComponent> gradeComponents = rawComponents.stream()
+                .sorted(gradeComponentComparator(typeTotalWeights))
                 .collect(Collectors.toList());
 
         // Build list of component names for frontend column headers
@@ -776,11 +807,266 @@ public class StudentGradeService {
     }
 
     /**
-     * Comparator for grade components: sort by weight ascending, then by numeric
-     * suffix
+     * Comparator for grade components:
+     * 1. FINAL_EXAM và RESIT luôn ở cuối
+     * 2. Sort by TOTAL WEIGHT of Grade Type ascending
+     * 3. Sort by type priority
+     * 4. Sort by name (numeric-aware)
      */
-    private Comparator<GradeComponent> gradeComponentComparator() {
-        return Comparator.comparing(GradeComponent::getWeight)
-                .thenComparing(gc -> extractNumberFromName(gc.getName()));
+    private Comparator<GradeComponent> gradeComponentComparator(
+            Map<GradeComponent.GradeType, Double> typeTotalWeights) {
+        return (a, b) -> {
+            // 1. FINAL_EXAM và RESIT luôn xuống cuối
+            boolean isABottom = a.getType() == GradeComponent.GradeType.FINAL_EXAM ||
+                    a.getType() == GradeComponent.GradeType.RESIT;
+            boolean isBBottom = b.getType() == GradeComponent.GradeType.FINAL_EXAM ||
+                    b.getType() == GradeComponent.GradeType.RESIT;
+
+            if (isABottom && !isBBottom)
+                return 1;
+            if (!isABottom && isBBottom)
+                return -1;
+
+            if (isABottom && isBBottom) {
+                // FINAL_EXAM trước RESIT
+                int priorityA = a.getType() == GradeComponent.GradeType.FINAL_EXAM ? 1 : 2;
+                int priorityB = b.getType() == GradeComponent.GradeType.FINAL_EXAM ? 1 : 2;
+                return Integer.compare(priorityA, priorityB);
+            }
+
+            // 2. Nhóm thường:
+
+            // Ưu tiên A: Sort by TOTAL WEIGHT of Grade Type ascending
+            double totalWeightA = typeTotalWeights.getOrDefault(a.getType(), 0.0);
+            double totalWeightB = typeTotalWeights.getOrDefault(b.getType(), 0.0);
+            int totalWeightCompare = Double.compare(totalWeightA, totalWeightB);
+
+            if (totalWeightCompare != 0)
+                return totalWeightCompare;
+
+            // Ưu tiên B: Sort by type priority
+            int typePriorityCompare = Integer.compare(getGradeTypePriority(a.getType()),
+                    getGradeTypePriority(b.getType()));
+            if (typePriorityCompare != 0)
+                return typePriorityCompare;
+
+            // 3. Finally by name (numeric-aware)
+            int numA = extractNumberFromName(a.getName());
+            int numB = extractNumberFromName(b.getName());
+            if (numA != numB)
+                return Integer.compare(numA, numB);
+
+            return a.getName().compareTo(b.getName());
+        };
+    }
+
+    private int getGradeTypePriority(GradeComponent.GradeType type) {
+        switch (type) {
+            case PARTICIPATION:
+                return 1;
+            case QUIZ:
+                return 2;
+            case PROGRESS_TEST:
+                return 3;
+            case WORKSHOP:
+                return 4;
+            case PROJECT:
+                return 5;
+            case PRESENTATION:
+                return 6;
+            case ASSIGNMENT:
+                return 7;
+            case MID_TERM:
+                return 8;
+            case PRACTICAL_EXAM:
+                return 9;
+            case OTHER:
+                return 10;
+            default:
+                return 99;
+        }
+    }
+
+    // ==================== STUDENT SELF-VIEW GRADE METHODS ====================
+
+    /**
+     * Get all courses a student is enrolled in, optionally filtered by semester
+     */
+    @Transactional(readOnly = true)
+    public List<StudentCourseOptionResponse> getStudentCourses(Long studentId, Long semesterId) {
+        List<Enrollment> enrollments;
+        if (semesterId != null) {
+            enrollments = enrollmentRepository.findByStudentIdAndSemesterId(studentId, semesterId);
+        } else {
+            enrollments = enrollmentRepository.findByStudentId(studentId);
+        }
+
+        return enrollments.stream()
+                .map(e -> StudentCourseOptionResponse.builder()
+                        .courseId(e.getClassSection().getCourse().getId())
+                        .courseCode(e.getClassSection().getCourse().getCode())
+                        .courseName(e.getClassSection().getCourse().getName())
+                        .className(e.getClassSection().getClassName())
+                        .semesterCode(e.getClassSection().getSemester().getCode())
+                        .semesterName(e.getClassSection().getSemester().getName())
+                        .semesterId(e.getClassSection().getSemester().getId().intValue())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get detailed grades for a student in a specific class section
+     * Returns grades grouped by category (type)
+     */
+    @Transactional(readOnly = true)
+    public StudentMyGradeResponse getStudentGrades(Long studentId, String className) {
+        ClassSection classSection = classSectionRepository.findByClassName(className)
+                .orElseThrow(() -> new RuntimeException("Class section not found: " + className));
+
+        // Find the enrollment for this student
+        List<Enrollment> enrollments = enrollmentRepository.findByClassSectionClassName(className);
+        Enrollment studentEnrollment = enrollments.stream()
+                .filter(e -> e.getStudent().getId().equals(studentId))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Student is not enrolled in this class"));
+
+        Course course = classSection.getCourse();
+        Semester semester = classSection.getSemester();
+
+        // Get all grade components - sorted by Total Weight of Grade Type
+        List<GradeComponent> rawComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId());
+        Map<GradeComponent.GradeType, Double> typeTotalWeights = rawComponents.stream()
+                .collect(Collectors.groupingBy(GradeComponent::getType,
+                        Collectors.summingDouble(GradeComponent::getWeight)));
+
+        List<GradeComponent> gradeComponents = rawComponents.stream()
+                .sorted(gradeComponentComparator(typeTotalWeights))
+                .collect(Collectors.toList());
+
+        // Get student's grades
+        List<StudentGrade> studentGrades = studentGradeRepository.findByEnrollmentIdIn(
+                List.of(studentEnrollment.getId()));
+        Map<Long, StudentGrade> gradesMap = studentGrades.stream()
+                .collect(Collectors.toMap(g -> g.getGradeComponent().getId(), g -> g));
+
+        // Group components by type
+        Map<GradeComponent.GradeType, List<GradeComponent>> componentsByType = gradeComponents.stream()
+                .collect(Collectors.groupingBy(GradeComponent::getType, LinkedHashMap::new, Collectors.toList()));
+
+        // Build grade categories
+        List<StudentMyGradeResponse.GradeCategoryDTO> categories = new ArrayList<>();
+        double totalWeightedSum = 0;
+        double totalWeight = 0;
+
+        for (Map.Entry<GradeComponent.GradeType, List<GradeComponent>> entry : componentsByType.entrySet()) {
+            GradeComponent.GradeType type = entry.getKey();
+            List<GradeComponent> components = entry.getValue();
+
+            String categoryName = formatCategoryName(type);
+            List<StudentMyGradeResponse.GradeItemDTO> items = new ArrayList<>();
+            double categoryWeight = 0;
+            double categoryWeightedSum = 0;
+            int categoryGradeCount = 0;
+
+            for (GradeComponent gc : components) {
+                StudentGrade grade = gradesMap.get(gc.getId());
+                Double score = grade != null ? grade.getScore() : null;
+                String comment = grade != null ? grade.getNote() : null;
+
+                items.add(StudentMyGradeResponse.GradeItemDTO.builder()
+                        .itemName(gc.getName())
+                        .weight(gc.getWeight())
+                        .value(score)
+                        .comment(comment)
+                        .isPublished(classSection.getGradesPublished())
+                        .build());
+
+                categoryWeight += gc.getWeight();
+                if (score != null) {
+                    categoryWeightedSum += score * gc.getWeight();
+                    categoryGradeCount++;
+                    totalWeightedSum += score * gc.getWeight();
+                    totalWeight += gc.getWeight();
+                }
+            }
+
+            // Add total row for category
+            Double categoryAverage = categoryGradeCount > 0
+                    ? Math.round(categoryWeightedSum / categoryWeight * 10.0) / 10.0
+                    : null;
+
+            items.add(StudentMyGradeResponse.GradeItemDTO.builder()
+                    .itemName("Total")
+                    .weight(categoryWeight)
+                    .value(categoryAverage)
+                    .comment(null)
+                    .isPublished(classSection.getGradesPublished())
+                    .build());
+
+            categories.add(StudentMyGradeResponse.GradeCategoryDTO.builder()
+                    .categoryName(categoryName)
+                    .items(items)
+                    .totalWeight(categoryWeight)
+                    .totalValue(categoryAverage)
+                    .build());
+        }
+
+        // Calculate course average (out of 10)
+        Double courseAverage = totalWeight > 0
+                ? Math.round(totalWeightedSum / 100.0 * 10.0) / 10.0
+                : null;
+
+        // Determine status
+        String status = "PENDING";
+        if (courseAverage != null) {
+            status = courseAverage >= 5.0 ? "PASSED" : "FAILED";
+        }
+
+        return StudentMyGradeResponse.builder()
+                .className(className)
+                .courseName(course.getName())
+                .courseCode(course.getCode())
+                .semesterName(semester.getName())
+                .semesterCode(semester.getCode())
+                .gradeCategories(categories)
+                .courseAverage(courseAverage)
+                .courseStatus(status)
+                .gradesPublished(classSection.getGradesPublished())
+                .lastUpdatedAt(LocalDateTime.now().toString())
+                .build();
+    }
+
+    /**
+     * Format grade type to display name
+     */
+    private String formatCategoryName(GradeComponent.GradeType type) {
+        switch (type) {
+            case PARTICIPATION:
+                return "Participation";
+            case ASSIGNMENT:
+                return "Assignment";
+            case QUIZ:
+                return "Quiz";
+            case WORKSHOP:
+                return "Workshop";
+            case PROJECT:
+                return "Project";
+            case PRESENTATION:
+                return "Presentation";
+            case PROGRESS_TEST:
+                return "Progress Test";
+            case MID_TERM:
+                return "Midterm Test";
+            case PRACTICAL_EXAM:
+                return "Practical Exam";
+            case FINAL_EXAM:
+                return "Final Exam";
+            case RESIT:
+                return "Resit";
+            case OTHER:
+                return "Other";
+            default:
+                return type.name();
+        }
     }
 }
