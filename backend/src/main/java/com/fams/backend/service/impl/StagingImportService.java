@@ -54,9 +54,13 @@ public class StagingImportService {
         String stagingTable = "staging_cs_" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
 
         try {
-            // 1. Validate semester exists
+            // 1. Validate semester exists and is in UPCOMING status
             var semester = semesterRepository.findByCode(semesterCode)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy học kỳ: " + semesterCode));
+
+            if (semester.getStatus() != com.fams.backend.entity.Semester.SemesterStatus.UPCOMING) {
+                throw new RuntimeException("Chỉ có thể nhập lớp học phần khi học kỳ chưa bắt đầu");
+            }
 
             // 2. Create staging table
             createClassSectionStagingTable(stagingTable);
@@ -100,6 +104,13 @@ public class StagingImportService {
         long startTime = System.currentTimeMillis();
 
         try {
+            var semester = semesterRepository.findById(semesterId)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy học kỳ"));
+
+            if (semester.getStatus() != com.fams.backend.entity.Semester.SemesterStatus.UPCOMING) {
+                throw new RuntimeException("Chỉ có thể nhập lớp học phần khi học kỳ chưa bắt đầu");
+            }
+
             String insertSql = """
                     INSERT INTO class_sections (class_name, semester_id, course_id, lecturer_id, number_of_slots, max_students, current_enrollment, status, created_at, updated_at)
                     SELECT
@@ -164,6 +175,10 @@ public class StagingImportService {
             var semester = semesterRepository.findByCode(semesterCode)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy học kỳ: " + semesterCode));
 
+            if (semester.getStatus() != com.fams.backend.entity.Semester.SemesterStatus.UPCOMING) {
+                throw new RuntimeException("Chỉ có thể nhập lớp học phần khi học kỳ chưa bắt đầu");
+            }
+
             createClassSectionStagingTable(stagingTable);
 
             long rowsCopied = streamExcelToStagingClassSection(file, stagingTable);
@@ -206,6 +221,10 @@ public class StagingImportService {
             var semester = semesterRepository.findByCode(semesterCode)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy học kỳ: " + semesterCode));
 
+            if (semester.getStatus() != com.fams.backend.entity.Semester.SemesterStatus.UPCOMING) {
+                throw new RuntimeException("Chỉ có thể nhập danh sách đăng ký khi học kỳ chưa bắt đầu");
+            }
+
             createEnrollmentStagingTable(stagingTable);
 
             long rowsCopied = streamExcelToStagingEnrollment(file, stagingTable);
@@ -245,6 +264,13 @@ public class StagingImportService {
         long startTime = System.currentTimeMillis();
 
         try {
+            var semester = semesterRepository.findById(semesterId)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy học kỳ"));
+
+            if (semester.getStatus() != com.fams.backend.entity.Semester.SemesterStatus.UPCOMING) {
+                throw new RuntimeException("Chỉ có thể nhập danh sách đăng ký khi học kỳ chưa bắt đầu");
+            }
+
             // Note: enrollments table uses class_name as FK to class_sections, and
             // studentCode column
             String insertSql = """
@@ -312,6 +338,10 @@ public class StagingImportService {
         try {
             var semester = semesterRepository.findByCode(semesterCode)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy học kỳ: " + semesterCode));
+
+            if (semester.getStatus() != com.fams.backend.entity.Semester.SemesterStatus.UPCOMING) {
+                throw new RuntimeException("Chỉ có thể nhập danh sách đăng ký khi học kỳ chưa bắt đầu");
+            }
 
             createEnrollmentStagingTable(stagingTable);
 
@@ -552,9 +582,7 @@ public class StagingImportService {
                         """
                         .formatted(stagingTable, stagingTable));
 
-        // Mark rows where enrollment already exists
-        // Note: enrollments table uses class_name as FK to class_sections (not
-        // class_section_id)
+        // Mark rows where enrollment already exists (enrollments uses class_name as FK)
         jdbcTemplate
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Sinh viên đã đăng ký lớp này rồi'
@@ -567,6 +595,32 @@ public class StagingImportService {
                             AND cs.semester_id = ?
                         )
                         AND s.error_message IS NULL
+                        """
+                        .formatted(stagingTable), semesterId);
+
+        // Mark rows where course is not in student's specialization or
+        // sub-specialization
+        jdbcTemplate
+                .update("""
+                        UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Môn học không nằm trong chuyên ngành của sinh viên'
+                        WHERE s.error_message IS NULL
+                        AND EXISTS (
+                            SELECT 1 FROM users u
+                            JOIN student_profiles sp ON sp.user_id = u.id
+                            JOIN class_sections cs ON TRIM(s.class_name) = cs.class_name AND cs.semester_id = ?
+                            WHERE UPPER(TRIM(s.student_code)) = UPPER(u.code)
+                            AND u.role = 'STUDENT'
+                            AND NOT EXISTS (
+                                SELECT 1 FROM specialization_courses sc
+                                WHERE sc.specialization_id = sp.specialization_id
+                                AND sc.course_id = cs.course_id
+                            )
+                            AND NOT EXISTS (
+                                SELECT 1 FROM sub_specialization_courses ssc
+                                WHERE ssc.sub_specialization_id = sp.sub_specialization_id
+                                AND ssc.course_id = cs.course_id
+                            )
+                        )
                         """
                         .formatted(stagingTable), semesterId);
 

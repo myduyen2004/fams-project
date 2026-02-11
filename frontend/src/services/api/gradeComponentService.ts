@@ -156,5 +156,20 @@ export const gradeComponentService = {
             headers: getAuthHeader()
         });
         return response.data;
+    },
+
+    /**
+     * Import grade components from Excel data
+     */
+    importGradeComponents: async (rows: Record<string, unknown>[]): Promise<{
+        created: number;
+        updated: number;
+        failed: number;
+        errors: string[];
+    }> => {
+        const response = await axios.post(`${API_URL}/grade-components/import`, rows, {
+            headers: getAuthHeader()
+        });
+        return response.data;
     }
 };

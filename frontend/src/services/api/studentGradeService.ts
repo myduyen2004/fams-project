@@ -32,6 +32,10 @@ export interface GradeOverviewResponse {
     averageGrade: number | null;
     passRate: number | null;
     lastUpdated: string;
+    // Grade submission status
+    gradesSubmitted: boolean;
+    gradesSubmittedAt: string | null;
+    gradesSubmittedByName: string | null;
 }
 
 export interface UpdateGradeRequest {
@@ -128,5 +132,12 @@ export const studentGradeService = {
             }
         });
         return response.data;
+    },
+
+    /**
+     * Submit grades to academic office (locks grades for editing)
+     */
+    submitGrades: async (className: string): Promise<void> => {
+        await apiClient.post(`/v1/class-sections/${className}/grades/submit`);
     }
 };

@@ -109,5 +109,27 @@ class ScheduleRequestService {
       rethrow;
     }
   }
+  /// Check for conflicts (Lecturer, Pending Request, Student)
+  Future<ConflictCheckResponse?> checkConflicts(
+      String className, String date, int slotNumber, int originalSlotId) async {
+    try {
+      final response = await _apiService.get(
+        '/api/lecturer/check-conflicts',
+        queryParameters: {
+          'className': className,
+          'date': date,
+          'slotNumber': slotNumber,
+          'originalSlotId': originalSlotId,
+        },
+      );
+      if (response.statusCode == 200) {
+        return ConflictCheckResponse.fromJson(response.data);
+      }
+      return null;
+    } catch (e) {
+      // Return empty response on error (assume no conflict to avoid blocking)
+      return ConflictCheckResponse(conflicts: [], hasConflict: false);
+    }
+  }
 }
 

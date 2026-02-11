@@ -96,3 +96,44 @@ class CreateRequestPayload {
     return map;
   }
 }
+
+/// Represents a conflict item (Student, Lecturer, Pending Request)
+class ConflictItem {
+  final String type;
+  final String message;
+  final int? count;
+
+  ConflictItem({
+    required this.type,
+    required this.message,
+    this.count,
+  });
+
+  factory ConflictItem.fromJson(Map<String, dynamic> json) {
+    return ConflictItem(
+      type: json['type'] ?? '',
+      message: json['message'] ?? '',
+      count: json['count'],
+    );
+  }
+}
+
+/// Represents the response for conflict check API
+class ConflictCheckResponse {
+  final List<ConflictItem> conflicts;
+  final bool hasConflict;
+
+  ConflictCheckResponse({
+    required this.conflicts,
+    required this.hasConflict,
+  });
+
+  factory ConflictCheckResponse.fromJson(Map<String, dynamic> json) {
+    return ConflictCheckResponse(
+      conflicts: (json['conflicts'] as List? ?? [])
+          .map((item) => ConflictItem.fromJson(item))
+          .toList(),
+      hasConflict: json['hasConflict'] ?? false,
+    );
+  }
+}

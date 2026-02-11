@@ -71,7 +71,8 @@ export const AcademicStaffSidebar: React.FC = () => {
         { label: 'Tài khoản', path: '/academic-staff/accounts' },
         { label: 'Giảng viên', path: '/academic-staff/lecturers' },
         { label: 'Sinh viên', path: '/academic-staff/students' },
-        { label: 'Kết quả học tập', path: '/academic-staff/academic-results' }
+        { label: 'Điểm thi', path: '/academic-staff/exam-grades' },
+        { label: 'Thi lại', path: '/academic-staff/resit-grades' }
       ]
     },
     {
@@ -98,7 +99,8 @@ export const AcademicStaffSidebar: React.FC = () => {
       icon: <List size={20} />,
       submenu: [
         { label: 'Phòng học', path: '/academic-staff/rooms' },
-        { label: 'Học kỳ', path: '/academic-staff/semesters' }
+        { label: 'Học kỳ', path: '/academic-staff/semesters' },
+        { label: 'WiFi Access Point', path: '/academic-staff/wifi-aps' }
       ]
     },
     {

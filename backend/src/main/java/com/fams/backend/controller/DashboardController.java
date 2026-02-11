@@ -49,6 +49,14 @@ public class DashboardController {
         return ResponseEntity.ok(dashboardService.getNotifications());
     }
 
+    @GetMapping("/notifications/unread-count")
+    @Operation(summary = "Lấy số lượng thông báo chưa đọc")
+    public ResponseEntity<java.util.Map<String, Integer>> getUnreadCount() {
+        log.info("GET /api/dashboard/notifications/unread-count");
+        return ResponseEntity
+                .ok(java.util.Collections.singletonMap("count", dashboardService.getUnreadNotificationCount()));
+    }
+
     @GetMapping("/notifications/{id}")
     @Operation(summary = "Lấy chi tiết thông báo trên dashboard theo ID")
     public ResponseEntity<DashboardNotificationResponse> getNotificationById(@PathVariable Long id) {

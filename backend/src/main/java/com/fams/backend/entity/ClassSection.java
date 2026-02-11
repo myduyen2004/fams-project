@@ -20,15 +20,17 @@ import java.util.List;
         @Index(name = "idx_class_section_course", columnList = "course_id"),
         @Index(name = "idx_class_section_lecturer", columnList = "lecturer_id")
 })
-@Data
+@Getter
+@Setter
+@ToString(exclude = { "enrollments", "timetableSlots", "chatGroup" })
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class ClassSection {
 
-    // Mã lớp học phần (e.g., "SE18B02-PRN211") - PRIMARY KEY
-    // Mã lớp học phần (e.g., "SE18B02-PRN211") - PRIMARY KEY
     @Id
+    @EqualsAndHashCode.Include
     @Column(length = 50)
     private String className;
 
@@ -81,6 +83,32 @@ public class ClassSection {
     // Nhóm chat của lớp (quan hệ 1-1: mỗi lớp có 1 nhóm chat riêng)
     @OneToOne(mappedBy = "classSection", cascade = CascadeType.ALL)
     private ChatGroup chatGroup;
+
+    // Trạng thái gửi điểm cho phòng đào tạo
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean gradesSubmitted = false;
+
+    // Thời gian gửi điểm
+    private LocalDateTime gradesSubmittedAt;
+
+    // Giảng viên gửi điểm
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "grades_submitted_by")
+    private User gradesSubmittedBy;
+
+    // Trạng thái công bố điểm cho sinh viên (do phòng đào tạo thực hiện)
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean gradesPublished = false;
+
+    // Thời gian công bố điểm
+    private LocalDateTime gradesPublishedAt;
+
+    // Nhân viên phòng đào tạo công bố điểm
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "grades_published_by")
+    private User gradesPublishedBy;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
