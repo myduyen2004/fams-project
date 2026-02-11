@@ -5,8 +5,6 @@ import com.fams.backend.service.DashboardService;
 import com.fams.backend.service.MapService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -17,7 +15,7 @@ import java.util.List;
 @Slf4j
 public class DashboardBroadcastService {
 
-    private final SimpMessagingTemplate messagingTemplate;
+    private final @org.springframework.context.annotation.Lazy org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
     private final DashboardService dashboardService;
     private final MapService mapService;
 
