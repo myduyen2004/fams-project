@@ -2,6 +2,8 @@ package com.fams.backend.controller;
 
 import com.fams.backend.dto.request.UpdateGradeRequest;
 import com.fams.backend.dto.response.GradeOverviewResponse;
+import com.fams.backend.dto.response.StudentCourseOptionResponse;
+import com.fams.backend.dto.response.StudentMyGradeResponse;
 import com.fams.backend.service.StudentGradeService;
 import com.fams.backend.entity.User;
 import com.fams.backend.repository.UserRepository;
@@ -113,5 +115,29 @@ public class StudentGradeController {
         User user = userRepository.findByUsername(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
         return user.getId();
+    }
+
+    // ==================== STUDENT SELF-VIEW GRADE ENDPOINTS ====================
+
+    /**
+     * Get all courses a student is enrolled in (for dropdown)
+     */
+    @GetMapping("/students/{studentId}/courses")
+    public ResponseEntity<List<StudentCourseOptionResponse>> getStudentCourses(
+            @PathVariable Long studentId,
+            @RequestParam(required = false) Long semesterId) {
+        List<StudentCourseOptionResponse> courses = studentGradeService.getStudentCourses(studentId, semesterId);
+        return ResponseEntity.ok(courses);
+    }
+
+    /**
+     * Get detailed grades for a student in a specific class
+     */
+    @GetMapping("/students/{studentId}/grades")
+    public ResponseEntity<StudentMyGradeResponse> getStudentGrades(
+            @PathVariable Long studentId,
+            @RequestParam String className) {
+        StudentMyGradeResponse response = studentGradeService.getStudentGrades(studentId, className);
+        return ResponseEntity.ok(response);
     }
 }

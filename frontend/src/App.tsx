@@ -44,6 +44,7 @@ const RequestDetailPage = lazy(() => import('./pages/academic-staff/RequestDetai
 const StudentDashboard = lazy(() => import('./pages/student/StudentDashboard').then(m => ({ default: m.StudentDashboard })));
 const LecturerDashboard = lazy(() => import('./pages/lecturer/LecturerDashboard').then(m => ({ default: m.LecturerDashboard })));
 const StudentSchedulePage = lazy(() => import('./pages/student/StudentSchedulePage').then(m => ({ default: m.StudentSchedulePage })));
+const StudentGradesPage = lazy(() => import('./pages/student/StudentGradesPage').then(m => ({ default: m.StudentGradesPage })));
 const LeturerClassManagementPage = lazy(() => import('./pages/lecturer/LeturerClassManagementPage').then(m => ({ default: m.LeturerClassManagementPage })));
 const LeturerClassDetailPage = lazy(() => import('./pages/lecturer/LeturerClassDetailPage').then(m => ({ default: m.LeturerClassDetailPage })));
 const LecturerRequestPage = lazy(() => import('./pages/lecturer/LecturerRequestPage').then(m => ({ default: m.LecturerRequestPage })));
@@ -313,6 +314,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['STUDENT']}>
                 <StudentSchedulePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/grades"
+            element={
+              <ProtectedRoute allowedRoles={['STUDENT']}>
+                <StudentGradesPage />
               </ProtectedRoute>
             }
           />

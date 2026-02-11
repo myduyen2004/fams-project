@@ -8,7 +8,8 @@ import {
     MessageCircle,
     Send,
     Settings,
-    LogOut
+    LogOut,
+    GraduationCap
 } from 'lucide-react';
 import { authService } from '../../services/api/authService';
 import { ConfirmModal } from '../common/ConfirmModal';
@@ -38,6 +39,12 @@ export const StudentSidebar: React.FC = () => {
             label: 'Thời khóa biểu',
             icon: <Calendar size={20} />,
             path: '/student/schedule'
+        },
+        {
+            id: 'grades',
+            label: 'Bảng điểm',
+            icon: <GraduationCap size={20} />,
+            path: '/student/grades'
         },
         {
             id: 'attendance',
