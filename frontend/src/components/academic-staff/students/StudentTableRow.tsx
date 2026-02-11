@@ -10,18 +10,7 @@ interface StudentTableRowProps {
     onEdit?: (student: StudentResponse) => void;
 }
 
-const getStatusBadge = (status: string) => {
-    switch (status) {
-        case 'ACTIVE':
-            return <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">Hoạt động</span>;
-        case 'LOCKED':
-            return <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">Đã khóa</span>;
-        case 'INACTIVE':
-            return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full">Chưa kích hoạt</span>;
-        default:
-            return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">{status}</span>;
-    }
-};
+
 
 export const StudentTableRow: React.FC<StudentTableRowProps> = React.memo(({
     student,
@@ -72,7 +61,7 @@ export const StudentTableRow: React.FC<StudentTableRowProps> = React.memo(({
                 <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{student.gpa !== undefined ? student.gpa : '---'}</span>
             </td>
             <td className="px-4 py-4">
-                {getStatusBadge(student.status)}
+                <span className="text-sm text-gray-600 dark:text-gray-400">{student.subSpecialization || '---'}</span>
             </td>
             <td className="px-4 py-4 text-center">
                 <div className="flex items-center justify-center gap-1">
