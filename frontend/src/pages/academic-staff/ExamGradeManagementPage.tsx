@@ -21,12 +21,15 @@ export const ExamGradeManagementPage: React.FC = () => {
     const [loadingGrades, setLoadingGrades] = useState<boolean>(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [courseSearchTerm, setCourseSearchTerm] = useState('');
+    const [selectedClass, setSelectedClass] = useState<string>(''); // New state for selected class
 
     // Dropdown states
     const [isSemesterOpen, setIsSemesterOpen] = useState(false);
     const [isCourseOpen, setIsCourseOpen] = useState(false);
+    const [isClassOpen, setIsClassOpen] = useState(false); // New state for class dropdown
     const semesterDropdownRef = useRef<HTMLDivElement>(null);
     const courseDropdownRef = useRef<HTMLDivElement>(null);
+    const classDropdownRef = useRef<HTMLDivElement>(null); // New ref for class dropdown
 
     // Import modal state
     const [showImportModal, setShowImportModal] = useState(false);
@@ -49,6 +52,9 @@ export const ExamGradeManagementPage: React.FC = () => {
             }
             if (courseDropdownRef.current && !courseDropdownRef.current.contains(event.target as Node)) {
                 setIsCourseOpen(false);
+            }
+            if (classDropdownRef.current && !classDropdownRef.current.contains(event.target as Node)) {
+                setIsClassOpen(false);
             }
         };
 
@@ -94,6 +100,11 @@ export const ExamGradeManagementPage: React.FC = () => {
             setGradeOverview(null);
         }
     }, [selectedSemester, selectedCourse]);
+
+    // Reset selected class when grades change
+    useEffect(() => {
+        setSelectedClass('');
+    }, [gradeOverview]);
 
     const fetchGrades = async () => {
         setLoadingGrades(true);
@@ -184,13 +195,23 @@ export const ExamGradeManagementPage: React.FC = () => {
         }
     };
 
+    // Get available classes from student grades
+    const availableClasses = React.useMemo(() => {
+        if (!gradeOverview?.studentGrades) return [];
+        const classes = new Set(gradeOverview.studentGrades.map(s => s.className));
+        return Array.from(classes).sort();
+    }, [gradeOverview]);
 
-    // Filter students by search term
-    const filteredStudents = gradeOverview?.studentGrades.filter(student =>
-        student.studentCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.className.toLowerCase().includes(searchTerm.toLowerCase())
-    ) || [];
+    // Filter students by search term and selected class
+    const filteredStudents = gradeOverview?.studentGrades.filter(student => {
+        const matchesSearch = student.studentCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            student.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            student.className.toLowerCase().includes(searchTerm.toLowerCase());
+
+        const matchesClass = selectedClass ? student.className === selectedClass : true;
+
+        return matchesSearch && matchesClass;
+    }) || [];
 
     // Get score colors
     const getScoreColor = (score: number | null): string => {
@@ -208,6 +229,67 @@ export const ExamGradeManagementPage: React.FC = () => {
         if (score === null || score === undefined) return '--';
         return score.toFixed(1);
     };
+
+    // Định nghĩa thứ tự ưu tiên cho các loại (khi cùng trọng số)
+    const TYPE_PRIORITY: Record<string, number> = {
+        'PARTICIPATION': 1,
+        'QUIZ': 2,
+        'PROGRESS_TEST': 3,
+        'WORKSHOP': 4,
+        'PROJECT': 5,
+        'PRESENTATION': 6,
+        'ASSIGNMENT': 7,
+        'MID_TERM': 8,
+        'PRACTICAL_EXAM': 9,
+    };
+
+    const sortedGradeComponents = React.useMemo(() => {
+        if (!gradeOverview?.gradeComponents) return [];
+
+        // 1. Tính tổng trọng số cho từng loại (Grade Type)
+        const typeTotalWeight: Record<string, number> = {};
+        gradeOverview.gradeComponents.forEach(gc => {
+            const currentTotal = typeTotalWeight[gc.type] || 0;
+            typeTotalWeight[gc.type] = currentTotal + gc.weight;
+        });
+
+        return [...gradeOverview.gradeComponents].sort((a, b) => {
+            const BOTTOM_TYPES = ['FINAL_EXAM', 'RESIT'];
+            const isABottom = BOTTOM_TYPES.includes(a.type);
+            const isBBottom = BOTTOM_TYPES.includes(b.type);
+
+            // 1. Xử lý nhóm ĐÁY (FE/RESIT)
+            if (isABottom && !isBBottom) return 1;
+            if (!isABottom && isBBottom) return -1;
+
+            if (isABottom && isBBottom) {
+                // Final Exam luôn đứng trước Resit
+                const pMap: Record<string, number> = { 'FINAL_EXAM': 1, 'RESIT': 2 };
+                return (pMap[a.type] || 99) - (pMap[b.type] || 99);
+            }
+
+            // 2. Xử lý nhóm THƯỜNG
+
+            // Ưu tiên A: Theo TỔNG TRỌNG SỐ của Loại (Type Total Weight) tăng dần
+            const totalWeightA = typeTotalWeight[a.type] || 0;
+            const totalWeightB = typeTotalWeight[b.type] || 0;
+
+            if (Math.abs(totalWeightA - totalWeightB) > 0.001) {
+                return totalWeightA - totalWeightB;
+            }
+
+            // Ưu tiên B: Theo Loại (Type Priority) - Nếu tổng trọng số bằng nhau
+            const typePriorityA = TYPE_PRIORITY[a.type] || 99;
+            const typePriorityB = TYPE_PRIORITY[b.type] || 99;
+
+            if (typePriorityA !== typePriorityB) {
+                return typePriorityA - typePriorityB;
+            }
+
+            // Ưu tiên C: Theo Tên (Name)
+            return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+        });
+    }, [gradeOverview]);
 
     // Get component abbreviation
     const getComponentAbbr = (name: string, type: string): string => {
@@ -355,6 +437,59 @@ export const ExamGradeManagementPage: React.FC = () => {
                                                     </button>
                                                 ))}
                                         </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Class Selector (New) */}
+                        <div className="flex-1 min-w-[150px]" ref={classDropdownRef}>
+                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Lớp
+                            </label>
+                            <div className="relative">
+                                <button
+                                    onClick={() => setIsClassOpen(!isClassOpen)}
+                                    className="flex items-center justify-between w-full rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 px-3 py-2 text-left focus:outline-none focus:ring-2 focus:ring-fpt-orange transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled={!gradeOverview || availableClasses.length === 0}
+                                >
+                                    <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                        {selectedClass || 'Tất cả các lớp'}
+                                    </span>
+                                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isClassOpen ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {isClassOpen && (
+                                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-lg max-h-60 overflow-y-auto">
+                                        <button
+                                            onClick={() => {
+                                                setSelectedClass('');
+                                                setIsClassOpen(false);
+                                            }}
+                                            className={`flex w-full items-center justify-between px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition-colors ${!selectedClass
+                                                ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange'
+                                                : 'text-gray-900 dark:text-white'
+                                                }`}
+                                        >
+                                            <span className="text-sm font-medium">Tất cả các lớp</span>
+                                            {!selectedClass && <Check size={16} />}
+                                        </button>
+                                        {availableClasses.map((className) => (
+                                            <button
+                                                key={className}
+                                                onClick={() => {
+                                                    setSelectedClass(className);
+                                                    setIsClassOpen(false);
+                                                }}
+                                                className={`flex w-full items-center justify-between px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition-colors ${selectedClass === className
+                                                    ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange'
+                                                    : 'text-gray-900 dark:text-white'
+                                                    }`}
+                                            >
+                                                <span className="text-sm font-medium">{className}</span>
+                                                {selectedClass === className && <Check size={16} />}
+                                            </button>
+                                        ))}
                                     </div>
                                 )}
                             </div>
@@ -535,7 +670,7 @@ export const ExamGradeManagementPage: React.FC = () => {
                                         <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider">
                                             Lớp
                                         </th>
-                                        {gradeOverview.gradeComponents.map((component) => (
+                                        {sortedGradeComponents.map((component) => (
                                             <th
                                                 key={component.id}
                                                 className={`px-2 py-3 text-center text-xs font-semibold uppercase tracking-wider min-w-[60px] ${component.isEditable ? 'bg-orange-600' : ''
@@ -580,7 +715,7 @@ export const ExamGradeManagementPage: React.FC = () => {
                                             <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">
                                                 {student.className}
                                             </td>
-                                            {gradeOverview.gradeComponents.map((component) => {
+                                            {sortedGradeComponents.map((component) => {
                                                 const gradeKey = `${student.enrollmentId}_${component.id}`;
                                                 const score = editedGrades.hasOwnProperty(gradeKey)
                                                     ? editedGrades[gradeKey]
@@ -618,7 +753,7 @@ export const ExamGradeManagementPage: React.FC = () => {
                         </div>
                         {filteredStudents.length === 0 && (
                             <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                                {searchTerm ? 'Không tìm thấy sinh viên phù hợp' : 'Không có dữ liệu'}
+                                {searchTerm || selectedClass ? 'Không tìm thấy sinh viên phù hợp' : 'Không có dữ liệu'}
                             </div>
                         )}
                     </div>

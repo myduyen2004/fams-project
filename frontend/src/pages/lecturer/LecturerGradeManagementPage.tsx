@@ -389,7 +389,7 @@ export const LecturerGradeManagementPage: React.FC = () => {
         }
     };
 
-    // Priority for grouping: Progress Test < Quiz < Participation < Assignment < Midterm < Practical < Final < Resit < Other
+    // Định nghĩa thứ tự ưu tiên cho các loại (khi cùng trọng số)
     const TYPE_PRIORITY: Record<string, number> = {
         'PARTICIPATION': 1,
         'QUIZ': 2,
@@ -400,27 +400,56 @@ export const LecturerGradeManagementPage: React.FC = () => {
         'ASSIGNMENT': 7,
         'MID_TERM': 8,
         'PRACTICAL_EXAM': 9,
-        'FINAL_EXAM': 10,
-        'RESIT': 11,
-        'OTHER': 12
+        // Các loại khác sẽ tự động có priority thấp hơn
     };
 
-    const sortedGradeComponents = gradeOverview?.gradeComponents ? [...gradeOverview.gradeComponents].sort((a, b) => {
-        const priorityA = TYPE_PRIORITY[a.type] || 99;
-        const priorityB = TYPE_PRIORITY[b.type] || 99;
+    const sortedGradeComponents = React.useMemo(() => {
+        if (!gradeOverview?.gradeComponents) return [];
 
-        if (priorityA !== priorityB) {
-            return priorityA - priorityB;
-        }
+        // 1. Tính tổng trọng số cho từng loại (Grade Type)
+        const typeTotalWeight: Record<string, number> = {};
+        gradeOverview.gradeComponents.forEach(gc => {
+            const currentTotal = typeTotalWeight[gc.type] || 0;
+            typeTotalWeight[gc.type] = currentTotal + gc.weight;
+        });
 
-        // Within same type, sort by weight
-        if (a.weight !== b.weight) {
-            return a.weight - b.weight;
-        }
+        return [...gradeOverview.gradeComponents].sort((a, b) => {
+            const BOTTOM_TYPES = ['FINAL_EXAM', 'RESIT'];
+            const isABottom = BOTTOM_TYPES.includes(a.type);
+            const isBBottom = BOTTOM_TYPES.includes(b.type);
 
-        // Finally by name
-        return a.name.localeCompare(b.name);
-    }) : [];
+            // 1. Xử lý nhóm ĐÁY (FE/RESIT)
+            if (isABottom && !isBBottom) return 1;
+            if (!isABottom && isBBottom) return -1;
+
+            if (isABottom && isBBottom) {
+                // Final Exam luôn đứng trước Resit
+                const pMap: Record<string, number> = { 'FINAL_EXAM': 1, 'RESIT': 2 };
+                return (pMap[a.type] || 99) - (pMap[b.type] || 99);
+            }
+
+            // 2. Xử lý nhóm THƯỜNG
+
+            // Ưu tiên A: Theo TỔNG TRỌNG SỐ của Loại (Type Total Weight) tăng dần
+            const totalWeightA = typeTotalWeight[a.type] || 0;
+            const totalWeightB = typeTotalWeight[b.type] || 0;
+
+            if (Math.abs(totalWeightA - totalWeightB) > 0.001) {
+                return totalWeightA - totalWeightB;
+            }
+
+            // Ưu tiên B: Theo Loại (Type Priority) - Nếu tổng trọng số bằng nhau
+            const typePriorityA = TYPE_PRIORITY[a.type] || 99;
+            const typePriorityB = TYPE_PRIORITY[b.type] || 99;
+
+            if (typePriorityA !== typePriorityB) {
+                return typePriorityA - typePriorityB;
+            }
+
+            // Ưu tiên C: Theo Tên (Name)
+            return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+        });
+    }, [gradeOverview]);
 
     return (
         <LecturerLayout pageTitle="Quản lý điểm số">

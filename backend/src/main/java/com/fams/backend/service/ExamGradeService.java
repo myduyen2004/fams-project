@@ -65,10 +65,52 @@ public class ExamGradeService {
         List<GradeComponent.GradeType> editableTypes = "RESIT".equalsIgnoreCase(type) ? RESIT_TYPES : EXAM_TYPES;
 
         // Get ALL grade components for display (not just editable ones)
-        List<GradeComponent> allComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId())
-                .stream()
-                .sorted(Comparator.comparing((GradeComponent gc) -> gc.getType().ordinal())
-                        .thenComparing(GradeComponent::getWeight))
+        // Sắp xếp: FINAL_EXAM và RESIT luôn ở cuối, sau đó theo TỔNG trọng số của loại,
+        // type priority, name
+        List<GradeComponent> rawComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId());
+
+        // 1. Tính tổng trọng số cho từng loại (Grade Type)
+        Map<GradeComponent.GradeType, Double> typeTotalWeight = rawComponents.stream()
+                .collect(Collectors.groupingBy(GradeComponent::getType,
+                        Collectors.summingDouble(GradeComponent::getWeight)));
+
+        List<GradeComponent> allComponents = rawComponents.stream()
+                .sorted((a, b) -> {
+                    // 1. FINAL_EXAM và RESIT luôn xuống cuối
+                    boolean isABottom = isBottomType(a.getType());
+                    boolean isBBottom = isBottomType(b.getType());
+
+                    if (isABottom && !isBBottom)
+                        return 1;
+                    if (!isABottom && isBBottom)
+                        return -1;
+
+                    if (isABottom && isBBottom) {
+                        // FINAL_EXAM trước RESIT
+                        int priorityA = a.getType() == GradeComponent.GradeType.FINAL_EXAM ? 1 : 2;
+                        int priorityB = b.getType() == GradeComponent.GradeType.FINAL_EXAM ? 1 : 2;
+                        return Integer.compare(priorityA, priorityB);
+                    }
+
+                    // 2. Nhóm thường:
+
+                    // Ưu tiên A: Sort by TOTAL WEIGHT of Grade Type ascending
+                    double totalWeightA = typeTotalWeight.getOrDefault(a.getType(), 0.0);
+                    double totalWeightB = typeTotalWeight.getOrDefault(b.getType(), 0.0);
+                    int totalWeightCompare = Double.compare(totalWeightA, totalWeightB);
+
+                    if (totalWeightCompare != 0)
+                        return totalWeightCompare;
+
+                    // Ưu tiên B: Sort by type priority (if total weights are equal)
+                    int typePriorityCompare = Integer.compare(getGradeTypePriority(a.getType()),
+                            getGradeTypePriority(b.getType()));
+                    if (typePriorityCompare != 0)
+                        return typePriorityCompare;
+
+                    // 3. Finally by name
+                    return a.getName().compareTo(b.getName());
+                })
                 .collect(Collectors.toList());
 
         // Get all enrollments for this course in this semester
@@ -597,6 +639,38 @@ public class ExamGradeService {
             }
         } catch (NumberFormatException e) {
             return null;
+        }
+    }
+
+    private boolean isBottomType(GradeComponent.GradeType type) {
+        return type == GradeComponent.GradeType.FINAL_EXAM || type == GradeComponent.GradeType.RESIT;
+    }
+
+    private int getGradeTypePriority(GradeComponent.GradeType type) {
+        // Các loại thường (không phải FINAL_EXAM/RESIT)
+        switch (type) {
+            case PARTICIPATION:
+                return 1;
+            case QUIZ:
+                return 2;
+            case PROGRESS_TEST:
+                return 3;
+            case WORKSHOP:
+                return 4;
+            case PROJECT:
+                return 5;
+            case PRESENTATION:
+                return 6;
+            case ASSIGNMENT:
+                return 7;
+            case MID_TERM:
+                return 8;
+            case PRACTICAL_EXAM:
+                return 9;
+            case OTHER:
+                return 10;
+            default:
+                return 99;
         }
     }
 
