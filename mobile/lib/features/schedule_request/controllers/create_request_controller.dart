@@ -38,6 +38,13 @@ class CreateRequestController extends GetxController {
 
   // Error states
   final RxnString dateError = RxnString(null);
+  
+  // Conflict states
+  final Rx<ConflictCheckResponse?> conflictResult = Rx<ConflictCheckResponse?>(null);
+  final RxBool checkingConflict = false.obs;
+  
+  // Separated date selection state
+  final RxnString selectedOriginalDate = RxnString(null);
 
   // Floor selection for room
   final RxInt activeFloor = 2.obs;
@@ -73,8 +80,11 @@ class CreateRequestController extends GetxController {
     selectedClass.value = className;
     // Reset downstream selections
     slots.clear();
+    slots.clear();
     selectedSlotId.value = null;
     selectedSlot.value = null;
+    selectedOriginalDate.value = null;
+    conflictResult.value = null;
     
     if (className != null && className.isNotEmpty) {
       fetchSlotsForClass(className);
@@ -107,21 +117,29 @@ class CreateRequestController extends GetxController {
     return uniqueDates;
   }
 
-  /// Get slots for selected date
+  /// Get slots for selected original date
   List<ClassSlot> getSlotsForSelectedDate() {
-    if (selectedSlot.value == null) return [];
+    if (selectedOriginalDate.value == null) return [];
+    
     return slots
-        .where((s) => s.date == selectedSlot.value!.date)
+        .where((s) => s.date == selectedOriginalDate.value)
         .toList()
       ..sort((a, b) => a.slotNumber.compareTo(b.slotNumber));
   }
 
-  /// Handle date selection (by selecting first slot of that date)
-  void onDateSelected(String slotId) {
-    final slot = slots.firstWhereOrNull((s) => s.id.toString() == slotId);
-    if (slot != null) {
-      selectedSlotId.value = slotId;
-      selectedSlot.value = slot;
+  /// Handle date selection
+  void onDateSelected(String date) {
+    selectedOriginalDate.value = date;
+    // Reset slot selection but keep date
+    selectedSlotId.value = null;
+    selectedSlot.value = null;
+    // Reset conflict status
+    conflictResult.value = null;
+    
+    // Auto-select if only 1 slot
+    final availableSlots = getSlotsForSelectedDate();
+    if (availableSlots.length == 1) {
+      onSlotSelected(availableSlots.first.id.toString());
     }
   }
 
@@ -131,6 +149,11 @@ class CreateRequestController extends GetxController {
     if (slot != null) {
       selectedSlotId.value = slotId;
       selectedSlot.value = slot;
+      
+      // Re-check conflict if new date/slot already selected
+      if (newDate.value != null && newSlot.value != null) {
+        checkConflicts();
+      }
     }
   }
 
@@ -155,6 +178,7 @@ class CreateRequestController extends GetxController {
     
     // Fetch room availability if both date and slot are selected
     if (newSlot.value != null) {
+      checkConflicts();
       fetchRoomAvailability();
     }
   }
@@ -167,13 +191,60 @@ class CreateRequestController extends GetxController {
     
     // Fetch room availability if both date and slot are selected
     if (newDate.value != null && slot != null) {
+      checkConflicts();
       fetchRoomAvailability();
+    }
+  }
+
+  /// Check for conflicts
+  Future<void> checkConflicts() async {
+    if (selectedClass.value == null || 
+        selectedSlotId.value == null || 
+        newDate.value == null || 
+        newSlot.value == null) {
+      conflictResult.value = null;
+      return;
+    }
+
+    try {
+      print('Checking conflicts for: Class=${selectedClass.value}, Date=${newDate.value}, Slot=${newSlot.value}, OrigSlot=${selectedSlotId.value}');
+      
+      checkingConflict.value = true;
+      final result = await _service.checkConflicts(
+        selectedClass.value!,
+        newDate.value!,
+        newSlot.value!,
+        int.parse(selectedSlotId.value!),
+      );
+      
+      print('Conflict Result: hasConflict=${result?.hasConflict}, conflicts=${result?.conflicts.length}');
+      if (result?.conflicts.isNotEmpty == true) {
+        result!.conflicts.forEach((c) => print(' - ${c.message}'));
+      }
+      
+      conflictResult.value = result;
+      
+      // If conflict exists, clear selected room (disable selection)
+      if (result?.hasConflict == true) {
+        selectedRoom.value = null;
+      }
+    } catch (e) {
+      print('Error checking conflicts: $e');
+      conflictResult.value = null;
+    } finally {
+      checkingConflict.value = false;
     }
   }
 
   /// Fetch room availability
   Future<void> fetchRoomAvailability() async {
     if (newDate.value == null || newSlot.value == null) return;
+    
+    // Don't fetch rooms if there are conflicts
+    if (conflictResult.value?.hasConflict == true) {
+      rooms.clear();
+      return;
+    }
     
     try {
       isLoadingRooms.value = true;
@@ -263,8 +334,14 @@ class CreateRequestController extends GetxController {
       return null;
     }
     if (selectedRoom.value == null) {
-      Get.snackbar('Lỗi', 'Vui lòng chọn phòng học mới',
-          snackPosition: SnackPosition.BOTTOM);
+      // Check if blocked by conflict
+      if (conflictResult.value?.hasConflict == true) {
+        Get.snackbar('Lỗi', 'Không thể gửi yêu cầu do có xung đột lịch học',
+            snackPosition: SnackPosition.BOTTOM);
+      } else {
+        Get.snackbar('Lỗi', 'Vui lòng chọn phòng học mới',
+            snackPosition: SnackPosition.BOTTOM);
+      }
       return null;
     }
     if (reason.value.trim().isEmpty) {
@@ -340,6 +417,8 @@ class CreateRequestController extends GetxController {
     slots.clear();
     selectedSlotId.value = null;
     selectedSlot.value = null;
+    selectedOriginalDate.value = null;
+    conflictResult.value = null;
     newDate.value = null;
     newSlot.value = null;
     selectedRoom.value = null;
