@@ -7,6 +7,8 @@ import com.fams.backend.repository.ClassSectionRepository;
 import com.fams.backend.repository.CourseRepository;
 import com.fams.backend.repository.EnrollmentRepository;
 import com.fams.backend.repository.SemesterRepository;
+import com.fams.backend.repository.SpecializationCourseRepository;
+import com.fams.backend.repository.SubSpecializationCourseRepository;
 import com.fams.backend.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -42,7 +44,15 @@ public class ClassSectionServiceImplTest {
 
     @Mock
     private ChatGroupRepository chatGroupRepository;
+
+    @Mock
     private SemesterRepository semesterRepository;
+
+    @Mock
+    private SpecializationCourseRepository specializationCourseRepository;
+
+    @Mock
+    private SubSpecializationCourseRepository subSpecializationCourseRepository;
 
     @Mock
     private CourseRepository courseRepository;

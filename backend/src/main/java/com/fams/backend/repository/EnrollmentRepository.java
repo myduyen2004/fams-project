@@ -128,4 +128,33 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
         List<Enrollment> findByCourseAndSemester(
                         @Param("courseCode") String courseCode,
                         @Param("semesterCode") String semesterCode);
+
+        /**
+         * Find all enrollments for a student
+         */
+        @Query("SELECT e FROM Enrollment e " +
+                        "JOIN FETCH e.student s " +
+                        "JOIN FETCH e.classSection cs " +
+                        "JOIN FETCH cs.course c " +
+                        "JOIN FETCH cs.semester sem " +
+                        "WHERE s.id = :studentId " +
+                        "AND e.status = 'ENROLLED' " +
+                        "ORDER BY sem.startDate DESC, c.name ASC")
+        List<Enrollment> findByStudentId(@Param("studentId") Long studentId);
+
+        /**
+         * Find all enrollments for a student in a specific semester
+         */
+        @Query("SELECT e FROM Enrollment e " +
+                        "JOIN FETCH e.student s " +
+                        "JOIN FETCH e.classSection cs " +
+                        "JOIN FETCH cs.course c " +
+                        "JOIN FETCH cs.semester sem " +
+                        "WHERE s.id = :studentId " +
+                        "AND sem.id = :semesterId " +
+                        "AND e.status = 'ENROLLED' " +
+                        "ORDER BY c.name ASC")
+        List<Enrollment> findByStudentIdAndSemesterId(
+                        @Param("studentId") Long studentId,
+                        @Param("semesterId") Long semesterId);
 }
