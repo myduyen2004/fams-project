@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
-import { Video, ChevronRight, Loader2, Box, Grid3X3 } from 'lucide-react';
+import { ChevronRight, Loader2, Box, Grid3X3, DoorOpen, Building2, Layers, Users } from 'lucide-react';
 import { roomService } from '../../services/api/roomService';
 import { Room } from '../../types/room';
 import toast from 'react-hot-toast';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, Environment, useTexture } from '@react-three/drei';
-import { RoomAPAssignment } from '../../components/academic-staff/RoomAPAssignment';
+import { getRoomTypeLabel } from '../../utils/roomUtils';
 
-// Separate component for 3D content to allow using hooks like useTexture
-const Classroom3D: React.FC<{ rows: number[], tablesPerRow: number[], isComputerLab: boolean }> = ({ rows, tablesPerRow, isComputerLab }) => {
+interface Classroom3DProps {
+    rows: number[];
+    tablesPerRow: number[];
+    isComputerLab: boolean;
+}
+
+const Classroom3D: React.FC<Classroom3DProps> = ({ rows, tablesPerRow, isComputerLab }) => {
     // Load FPT Logo Texture
     const screenTexture = useTexture('/assets/images/fpt-logo.png');
 
@@ -60,7 +64,7 @@ const Classroom3D: React.FC<{ rows: number[], tablesPerRow: number[], isComputer
                             <group position={[0, 0, 0]}>
                                 {/* Desk Surface - Wide for 2 seats */}
                                 <mesh position={[0, 0.6, 0]} receiveShadow castShadow>
-                                    <boxGeometry args={[3.2, 0.05, 1.1]} /> {/* Widened from 1.5 to 3.2 */}
+                                    <boxGeometry args={[3.2, 0.05, 1.1]} />
                                     <meshStandardMaterial color={DESK_COLOR} />
                                 </mesh>
                                 <mesh position={[0, 0.59, 0]}>
@@ -75,87 +79,48 @@ const Classroom3D: React.FC<{ rows: number[], tablesPerRow: number[], isComputer
                                 <mesh position={[1.5, 0.2, 0.45]} castShadow><boxGeometry args={[0.1, 0.8, 0.1]} /><meshStandardMaterial color="#9ca3af" /></mesh>
                             </group>
 
-                            {/* SEAT 1 (Left) - Always rendered fully */}
-                            <group position={[-0.85, 0, 0]}>
-                                {/* Monitor - Only for COMPUTER_LAB */}
-                                {isComputerLab && (
-                                    <group position={[-0.35, 0.65, -0.25]}>
-                                        <mesh position={[0, 0.25, 0]} castShadow>
-                                            <boxGeometry args={[0.5, 0.35, 0.05]} />
-                                            <meshStandardMaterial color="#111827" />
+                            {/* SEAT 1 (Left) & SEAT 2 (Right) logic remains the same... */}
+                            {[-0.85, 0.85].map((sideOffset, idx) => (
+                                <group key={`seat-${idx}`} position={[sideOffset, 0, 0]}>
+                                    {/* Monitor - Only for COMPUTER_LAB */}
+                                    {isComputerLab && (
+                                        <group position={[-0.35, 0.65, -0.25]}>
+                                            <mesh position={[0, 0.25, 0]} castShadow>
+                                                <boxGeometry args={[0.5, 0.35, 0.05]} />
+                                                <meshStandardMaterial color="#111827" />
+                                            </mesh>
+                                            <mesh position={[0, 0.05, 0]}>
+                                                <boxGeometry args={[0.1, 0.1, 0.05]} />
+                                                <meshStandardMaterial color="#374151" />
+                                            </mesh>
+                                        </group>
+                                    )}
+
+                                    {/* Chair */}
+                                    <group position={[0, 0, 0.7]}>
+                                        <mesh position={[-0.25, 0.2, -0.25]}><boxGeometry args={[0.05, 0.4, 0.05]} /><meshStandardMaterial color="#9ca3af" /></mesh>
+                                        <mesh position={[0.25, 0.2, -0.25]}><boxGeometry args={[0.05, 0.4, 0.05]} /><meshStandardMaterial color="#9ca3af" /></mesh>
+                                        <mesh position={[-0.25, 0.2, 0.25]}><boxGeometry args={[0.05, 0.4, 0.05]} /><meshStandardMaterial color="#9ca3af" /></mesh>
+                                        <mesh position={[0.25, 0.2, 0.25]}><boxGeometry args={[0.05, 0.4, 0.05]} /><meshStandardMaterial color="#9ca3af" /></mesh>
+                                        <mesh position={[0, 0.42, 0]} castShadow>
+                                            <boxGeometry args={[0.6, 0.05, 0.6]} />
+                                            <meshStandardMaterial color="#1a1a1a" roughness={0.7} />
                                         </mesh>
-                                        <mesh position={[0, 0.05, 0]}>
-                                            <boxGeometry args={[0.1, 0.1, 0.05]} />
-                                            <meshStandardMaterial color="#374151" />
+                                        <mesh position={[-0.25, 0.7, 0.28]} rotation={[0, 0, 0]}>
+                                            <boxGeometry args={[0.05, 0.6, 0.05]} />
+                                            <meshStandardMaterial color="#9ca3af" />
+                                        </mesh>
+                                        <mesh position={[0.25, 0.7, 0.28]} rotation={[0, 0, 0]}>
+                                            <boxGeometry args={[0.05, 0.6, 0.05]} />
+                                            <meshStandardMaterial color="#9ca3af" />
+                                        </mesh>
+                                        <mesh position={[0, 0.85, 0.25]} castShadow>
+                                            <boxGeometry args={[0.6, 0.25, 0.05]} />
+                                            <meshStandardMaterial color="#1a1a1a" roughness={0.7} />
                                         </mesh>
                                     </group>
-                                )}
-
-                                {/* Chair - Always Black Cushioned */}
-                                <group position={[0, 0, 0.7]}>
-                                    <mesh position={[-0.25, 0.2, -0.25]}><boxGeometry args={[0.05, 0.4, 0.05]} /><meshStandardMaterial color="#9ca3af" /></mesh>
-                                    <mesh position={[0.25, 0.2, -0.25]}><boxGeometry args={[0.05, 0.4, 0.05]} /><meshStandardMaterial color="#9ca3af" /></mesh>
-                                    <mesh position={[-0.25, 0.2, 0.25]}><boxGeometry args={[0.05, 0.4, 0.05]} /><meshStandardMaterial color="#9ca3af" /></mesh>
-                                    <mesh position={[0.25, 0.2, 0.25]}><boxGeometry args={[0.05, 0.4, 0.05]} /><meshStandardMaterial color="#9ca3af" /></mesh>
-                                    <mesh position={[0, 0.42, 0]} castShadow>
-                                        <boxGeometry args={[0.6, 0.05, 0.6]} />
-                                        <meshStandardMaterial color="#1a1a1a" roughness={0.7} />
-                                    </mesh>
-                                    <mesh position={[-0.25, 0.7, 0.28]} rotation={[0, 0, 0]}>
-                                        <boxGeometry args={[0.05, 0.6, 0.05]} />
-                                        <meshStandardMaterial color="#9ca3af" />
-                                    </mesh>
-                                    <mesh position={[0.25, 0.7, 0.28]} rotation={[0, 0, 0]}>
-                                        <boxGeometry args={[0.05, 0.6, 0.05]} />
-                                        <meshStandardMaterial color="#9ca3af" />
-                                    </mesh>
-                                    <mesh position={[0, 0.85, 0.25]} castShadow>
-                                        <boxGeometry args={[0.6, 0.25, 0.05]} />
-                                        <meshStandardMaterial color="#1a1a1a" roughness={0.7} />
-                                    </mesh>
                                 </group>
-                            </group>
-
-                            {/* SEAT 2 (Right) - Always rendered fully */}
-                            <group position={[0.85, 0, 0]}>
-                                {/* Monitor - Only for COMPUTER_LAB */}
-                                {isComputerLab && (
-                                    <group position={[-0.35, 0.65, -0.25]}>
-                                        <mesh position={[0, 0.25, 0]} castShadow>
-                                            <boxGeometry args={[0.5, 0.35, 0.05]} />
-                                            <meshStandardMaterial color="#111827" />
-                                        </mesh>
-                                        <mesh position={[0, 0.05, 0]}>
-                                            <boxGeometry args={[0.1, 0.1, 0.05]} />
-                                            <meshStandardMaterial color="#374151" />
-                                        </mesh>
-                                    </group>
-                                )}
-
-                                {/* Chair - Always Black Cushioned */}
-                                <group position={[0, 0, 0.7]}>
-                                    <mesh position={[-0.25, 0.2, -0.25]}><boxGeometry args={[0.05, 0.4, 0.05]} /><meshStandardMaterial color="#9ca3af" /></mesh>
-                                    <mesh position={[0.25, 0.2, -0.25]}><boxGeometry args={[0.05, 0.4, 0.05]} /><meshStandardMaterial color="#9ca3af" /></mesh>
-                                    <mesh position={[-0.25, 0.2, 0.25]}><boxGeometry args={[0.05, 0.4, 0.05]} /><meshStandardMaterial color="#9ca3af" /></mesh>
-                                    <mesh position={[0.25, 0.2, 0.25]}><boxGeometry args={[0.05, 0.4, 0.05]} /><meshStandardMaterial color="#9ca3af" /></mesh>
-                                    <mesh position={[0, 0.42, 0]} castShadow>
-                                        <boxGeometry args={[0.6, 0.05, 0.6]} />
-                                        <meshStandardMaterial color="#1a1a1a" roughness={0.7} />
-                                    </mesh>
-                                    <mesh position={[-0.25, 0.7, 0.28]} rotation={[0, 0, 0]}>
-                                        <boxGeometry args={[0.05, 0.6, 0.05]} />
-                                        <meshStandardMaterial color="#9ca3af" />
-                                    </mesh>
-                                    <mesh position={[0.25, 0.7, 0.28]} rotation={[0, 0, 0]}>
-                                        <boxGeometry args={[0.05, 0.6, 0.05]} />
-                                        <meshStandardMaterial color="#9ca3af" />
-                                    </mesh>
-                                    <mesh position={[0, 0.85, 0.25]} castShadow>
-                                        <boxGeometry args={[0.6, 0.25, 0.05]} />
-                                        <meshStandardMaterial color="#1a1a1a" roughness={0.7} />
-                                    </mesh>
-                                </group>
-                            </group>
+                            ))}
                         </group>
                     );
                 })
@@ -226,6 +191,7 @@ const Classroom3D: React.FC<{ rows: number[], tablesPerRow: number[], isComputer
                 <mesh position={[1.9, 0.2, -0.65]} castShadow><boxGeometry args={[0.1, 0.8, 0.1]} /><meshStandardMaterial color="#9ca3af" /></mesh>
                 <mesh position={[-1.9, 0.2, 0.65]} castShadow><boxGeometry args={[0.1, 0.8, 0.1]} /><meshStandardMaterial color="#9ca3af" /></mesh>
                 <mesh position={[1.9, 0.2, 0.65]} castShadow><boxGeometry args={[0.1, 0.8, 0.1]} /><meshStandardMaterial color="#9ca3af" /></mesh>
+
                 <group position={[0, 0, 1]}>
                     <mesh position={[-0.25, 0.2, 0.25]}><boxGeometry args={[0.05, 0.4, 0.05]} /><meshStandardMaterial color="#9ca3af" /></mesh>
                     <mesh position={[0.25, 0.2, 0.25]}><boxGeometry args={[0.05, 0.4, 0.05]} /><meshStandardMaterial color="#9ca3af" /></mesh>
@@ -253,7 +219,12 @@ const Classroom3D: React.FC<{ rows: number[], tablesPerRow: number[], isComputer
     );
 };
 
-export const RoomDetail: React.FC = () => {
+interface RoomDetailTemplateProps {
+    Layout: React.ComponentType<{ children: React.ReactNode; pageTitle: string }>;
+    basePath: string;
+}
+
+export const RoomDetailTemplate: React.FC<RoomDetailTemplateProps> = ({ Layout, basePath }) => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [room, setRoom] = useState<Room | null>(null);
@@ -267,15 +238,15 @@ export const RoomDetail: React.FC = () => {
                 setLoading(true);
                 const data = await roomService.getRoom(parseInt(id));
                 setRoom(data);
-            } catch (error) {
+            } catch {
                 toast.error('Không thể tải thông tin phòng học');
-                navigate('/academic-staff/rooms');
+                navigate(`${basePath}/rooms`);
             } finally {
                 setLoading(false);
             }
         };
         fetchRoom();
-    }, [id, navigate]);
+    }, [id, navigate, basePath]);
 
     // Generate static layout data: 3 rows, 6 tables per row, 2 seats per table
     const rows = Array.from({ length: 3 }, (_, i) => i);
@@ -283,19 +254,19 @@ export const RoomDetail: React.FC = () => {
 
     if (loading) {
         return (
-            <AcademicStaffLayout pageTitle="Chi tiết phòng học">
+            <Layout pageTitle="Chi tiết phòng học">
                 <div className="flex items-center justify-center h-[calc(100vh-200px)]">
                     <Loader2 className="w-8 h-8 animate-spin text-fpt-orange" />
                 </div>
-            </AcademicStaffLayout>
+            </Layout>
         );
     }
 
     if (!room) {
         return (
-            <AcademicStaffLayout pageTitle="Chi tiết phòng học">
+            <Layout pageTitle="Chi tiết phòng học">
                 <div className="text-center py-20 text-gray-500">Không tìm thấy phòng học</div>
-            </AcademicStaffLayout>
+            </Layout>
         );
     }
 
@@ -303,7 +274,7 @@ export const RoomDetail: React.FC = () => {
     const isClassroom = room?.type === 'CLASSROOM';
 
     return (
-        <AcademicStaffLayout pageTitle={`${room.name} - Mô phỏng`}>
+        <Layout pageTitle={`${room.name} - Mô phỏng`}>
             <div className="flex gap-6 h-[calc(100vh-140px)]">
                 {/* Main Content - Simulation View */}
                 <div className="flex-1 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-6 overflow-hidden flex flex-col">
@@ -312,7 +283,7 @@ export const RoomDetail: React.FC = () => {
                         <div>
                             {/* Breadcrumb */}
                             <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-zinc-400 mb-1">
-                                <Link to="/academic-staff/rooms" className="hover:text-fpt-orange transition-colors">Phòng học</Link>
+                                <Link to={`${basePath}/rooms`} className="hover:text-fpt-orange transition-colors">Phòng học</Link>
                                 <ChevronRight size={14} />
                                 <span className="text-fpt-orange font-medium">{room.name}</span>
                             </div>
@@ -321,25 +292,20 @@ export const RoomDetail: React.FC = () => {
                             </h1>
                         </div>
 
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setIs3DMode(!is3DMode)}
-                                className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors flex items-center gap-2 shadow-sm ${is3DMode
-                                    ? 'bg-fpt-orange text-white border-fpt-orange hover:bg-orange-600'
-                                    : 'bg-white dark:bg-zinc-800 border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-zinc-700'
-                                    }`}
-                            >
-                                {is3DMode ? <Grid3X3 size={16} /> : <Box size={16} />}
-                                {is3DMode ? 'Chế độ 2D' : 'Chế độ 3D'}
-                            </button>
-                            <button className="px-4 py-2 bg-fpt-orange hover:bg-orange-600 text-white rounded-lg shadow-lg shadow-orange-500/20 text-sm font-medium transition-all flex items-center gap-2">
-                                <Video size={16} /> Phát trực tiếp
-                            </button>
-                        </div>
+                        <button
+                            onClick={() => setIs3DMode(!is3DMode)}
+                            className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors flex items-center gap-2 shadow-sm ${is3DMode
+                                ? 'bg-fpt-orange text-white border-fpt-orange hover:bg-orange-600'
+                                : 'bg-white dark:bg-zinc-800 border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-zinc-700'
+                                }`}
+                        >
+                            {is3DMode ? <Grid3X3 size={16} /> : <Box size={16} />}
+                            {is3DMode ? 'Chế độ 2D' : 'Chế độ 3D'}
+                        </button>
                     </div>
 
-                    {/* Seating Grid - 3 dãy (hàng ngang), mỗi dãy 6 bàn */}
-                    <div className="flex-1 bg-gray-50 dark:bg-zinc-800/30 rounded-2xl p-6 overflow-auto">
+                    {/* Seating Grid */}
+                    <div className="flex-1 bg-gray-50 dark:bg-zinc-800/30 rounded-2xl p-6 overflow-auto relative">
                         {!is3DMode ? (
                             /* 2D View */
                             <div className="flex flex-col gap-6 items-center pt-8">
@@ -371,57 +337,34 @@ export const RoomDetail: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* 3 rows */}
+                                {/* Rows */}
                                 {rows.map((rowIndex) => (
                                     <div key={`row-${rowIndex}`} className="flex justify-center gap-8">
-                                        {/* 6 tables per row */}
-                                        {tablesPerRow.map((tableIndex) => {
-                                            return (
-                                                <div key={`table-${rowIndex}-${tableIndex}`} className="relative group transform transition-transform hover:scale-105 duration-200">
-                                                    {/* Table with 2 seats side by side */}
-                                                    <div className="flex gap-0">
-                                                        {/* Single Long Desk Container */}
-                                                        <div className="flex relative">
-                                                            {/* Long Desk Surface */}
-                                                            <div className={`absolute inset-x-0 top-0 h-12 rounded-md shadow-lg border-2 z-0 bg-[#faf0c8] border-orange-200 dark:bg-orange-900/30 dark:border-orange-900/50`}></div>
-
-                                                            {/* Seat 1 */}
-                                                            <div className="flex flex-col items-center z-10 w-16">
-                                                                <div className="w-16 h-12 relative flex items-center justify-center">
-                                                                    {/* Monitor - Only for COMPUTER_LAB */}
-                                                                    {isComputerLab && (
-                                                                        <div className="absolute top-1 left-3 w-6 h-4 bg-gray-900 rounded-sm border border-gray-700 flex items-center justify-center">
-                                                                            <div className="w-full h-full bg-blue-900/20 rounded-[1px]"></div>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                                {/* Chair - Always Black */}
-                                                                <div className="w-8 h-6 rounded-t-lg border border-gray-500 bg-[#1a1a1a] -mt-1"></div>
+                                        {tablesPerRow.map((tableIndex) => (
+                                            <div key={`table-${rowIndex}-${tableIndex}`} className="relative group transform transition-transform hover:scale-105 duration-200">
+                                                <div className={`flex relative`}>
+                                                    <div className={`absolute inset-x-0 top-0 h-12 rounded-md shadow-lg border-2 z-0 bg-[#faf0c8] border-orange-200 dark:bg-orange-900/30 dark:border-orange-900/50`}></div>
+                                                    {[0, 1].map((seatIdx) => (
+                                                        <div key={seatIdx} className="flex flex-col items-center z-10 w-16">
+                                                            <div className="w-16 h-12 relative flex items-center justify-center">
+                                                                {/* Monitor - Only for COMPUTER_LAB */}
+                                                                {isComputerLab && (
+                                                                    <div className="absolute top-1 left-3 w-6 h-4 bg-gray-900 rounded-sm border border-gray-700 flex items-center justify-center">
+                                                                        <div className="w-full h-full bg-blue-900/20 rounded-[1px]"></div>
+                                                                    </div>
+                                                                )}
                                                             </div>
-
-                                                            {/* Seat 2 */}
-                                                            <div className="flex flex-col items-center z-10 w-16">
-                                                                <div className="w-16 h-12 relative flex items-center justify-center">
-                                                                    {/* Monitor - Only for COMPUTER_LAB */}
-                                                                    {isComputerLab && (
-                                                                        <div className="absolute top-1 left-3 w-6 h-4 bg-gray-900 rounded-sm border border-gray-700 flex items-center justify-center">
-                                                                            <div className="w-full h-full bg-blue-900/20 rounded-[1px]"></div>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                                {/* Chair - Black*/}
-                                                                <div className="w-8 h-6 rounded-t-lg border border-gray-500 bg-[#1a1a1a] -mt-1"></div>
-                                                            </div>
+                                                            <div className="w-8 h-6 rounded-t-lg border border-gray-500 bg-[#1a1a1a] -mt-1"></div>
                                                         </div>
-                                                    </div>
+                                                    ))}
                                                 </div>
-                                            );
-                                        })}
+                                            </div>
+                                        ))}
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            /* 3D View - OrbitControls với góc nhìn giới hạn */
+                            /* 3D View */
                             <div className="w-full h-full min-h-[400px]">
                                 <Canvas shadows>
                                     <React.Suspense fallback={null}>
@@ -436,28 +379,50 @@ export const RoomDetail: React.FC = () => {
                             </div>
                         )}
                     </div>
-
-                    {/* Legend - Removed specific statuses since visual is unified */}
                 </div>
 
                 {/* Sidebar - Room Info */}
                 <div className="w-80 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-6 overflow-y-auto">
-                    <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Thông tin {room.name}</h2>
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1
-                            ${isComputerLab ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300' :
-                                isClassroom ? 'bg-orange-100 dark:bg-orange-900 text-orange-600 dark:text-orange-300' :
-                                    'bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400'}
-                        `}>
-                            <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isComputerLab ? 'bg-blue-500' : isClassroom ? 'bg-orange-500' : 'bg-emerald-500'}`}></span>
-                            TRỰC TIẾP
-                        </span>
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className={`p-3 rounded-xl ${isComputerLab ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300' : isClassroom ? 'bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-300' : 'bg-emerald-100 dark:bg-emerald-800/50 text-emerald-600 dark:text-emerald-300'}`}>
+                            <DoorOpen className="w-6 h-6" />
+                        </div>
+                        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Thông tin phòng</h2>
                     </div>
 
-                    {/* Room AP Assignment Component */}
-                    <RoomAPAssignment roomId={parseInt(id!)} />
+                    <div className="space-y-4">
+                        {[
+                            { label: 'Mã phòng', val: room.code },
+                            { label: 'Tên phòng', val: room.name },
+                            { label: 'Loại phòng', val: getRoomTypeLabel(room.type), icon: DoorOpen },
+                            { label: 'Tòa nhà', val: room.building, icon: Building2 },
+                            { label: 'Tầng', val: `Tầng ${room.floor}`, icon: Layers },
+                            { label: 'Sức chứa', val: `${room.capacity} người`, icon: Users }
+                        ].map((item, idx) => (
+                            <div key={idx} className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-zinc-800/50 rounded-xl">
+                                {item.icon && (
+                                    <div className="p-2 bg-white dark:bg-zinc-900 rounded-lg">
+                                        <item.icon className="w-5 h-5 text-gray-600 dark:text-zinc-400" />
+                                    </div>
+                                )}
+                                <div>
+                                    <p className="text-xs text-gray-500 dark:text-zinc-500 mb-1">{item.label}</p>
+                                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{item.val}</p>
+                                </div>
+                            </div>
+                        ))}
+
+                        {room.description && (
+                            <div className="p-4 bg-gray-50 dark:bg-zinc-800/50 rounded-xl">
+                                <p className="text-xs text-gray-500 dark:text-zinc-500 mb-2">Mô tả</p>
+                                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                                    {room.description}
+                                </p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
-        </AcademicStaffLayout>
+        </Layout>
     );
 };

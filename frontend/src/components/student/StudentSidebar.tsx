@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Home,
@@ -9,22 +9,31 @@ import {
     Send,
     Settings,
     LogOut,
-    GraduationCap
+    GraduationCap,
+    List,
+    ChevronDown
 } from 'lucide-react';
 import { authService } from '../../services/api/authService';
 import { ConfirmModal } from '../common/ConfirmModal';
+
+interface SubMenuItem {
+    label: string;
+    path: string;
+}
 
 interface MenuItem {
     id: string;
     label: string;
     icon: React.ReactNode;
-    path: string;
+    path?: string;
+    submenu?: SubMenuItem[];
 }
 
 export const StudentSidebar: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [isExpanded, setIsExpanded] = useState(false);
+    const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
 
     const menuItems: MenuItem[] = [
@@ -59,6 +68,15 @@ export const StudentSidebar: React.FC = () => {
             path: '/student/study'
         },
         {
+            id: 'lists',
+            label: 'Danh sách',
+            icon: <List size={20} />,
+            submenu: [
+                { label: 'Phòng học', path: '/student/rooms' },
+                { label: 'Học kỳ', path: '/student/semesters' }
+            ]
+        },
+        {
             id: 'messages',
             label: 'Tin nhắn',
             icon: <MessageCircle size={20} />,
@@ -72,6 +90,16 @@ export const StudentSidebar: React.FC = () => {
         }
     ];
 
+    // Auto-expand submenu if current route matches
+    useEffect(() => {
+        const activeMenuItem = menuItems.find(item =>
+            item.submenu && isSubmenuActive(item.submenu)
+        );
+        if (activeMenuItem) {
+            setOpenSubmenu(activeMenuItem.id);
+        }
+    }, [location.pathname]);
+
     const handleLogout = async () => {
         setShowLogoutModal(false);
         try {
@@ -82,15 +110,32 @@ export const StudentSidebar: React.FC = () => {
         navigate('/login');
     };
 
-    const isActive = (path: string) => {
+    const isActive = (path?: string) => {
+        if (!path) return false;
         return location.pathname === path || (path !== '/student/dashboard' && location.pathname.startsWith(path + '/'));
+    };
+
+    const isSubmenuActive = (submenu?: SubMenuItem[]) => {
+        if (!submenu) return false;
+        return submenu.some(subItem => isActive(subItem.path));
+    };
+
+    const handleMenuClick = (item: MenuItem) => {
+        if (item.submenu) {
+            setOpenSubmenu(openSubmenu === item.id ? null : item.id);
+        } else if (item.path) {
+            navigate(item.path);
+        }
     };
 
     return (
         <div
             className={`fixed left-0 top-0 h-screen bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-800 transition-all duration-300 z-50 ${isExpanded ? 'w-64' : 'w-16'}`}
             onMouseEnter={() => setIsExpanded(true)}
-            onMouseLeave={() => setIsExpanded(false)}
+            onMouseLeave={() => {
+                setIsExpanded(false);
+                setOpenSubmenu(null);
+            }}
         >
             <div className="flex flex-col h-full">
                 {/* Logo Section */}
@@ -127,22 +172,49 @@ export const StudentSidebar: React.FC = () => {
                     {menuItems.map((item) => (
                         <div key={item.id} className="mb-1">
                             <button
-                                onClick={() => navigate(item.path)}
-                                className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group ${isActive(item.path)
+                                onClick={() => handleMenuClick(item)}
+                                className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group ${isActive(item.path) || isSubmenuActive(item.submenu)
                                     ? 'bg-fpt-orange text-white'
                                     : 'text-fpt-orange hover:bg-fpt-orange hover:text-white'
                                     }`}
                                 title={!isExpanded ? item.label : ''}
                             >
-                                <div className={`flex-shrink-0 transition-colors duration-200 ${isActive(item.path) ? 'text-white' : 'text-fpt-orange group-hover:text-white'}`}>
+                                <div className={`flex-shrink-0 transition-colors duration-200 ${isActive(item.path) || isSubmenuActive(item.submenu) ? 'text-white' : 'text-fpt-orange group-hover:text-white'}`}>
                                     {item.icon}
                                 </div>
                                 {isExpanded && (
-                                    <span className={`flex-1 text-left text-sm whitespace-nowrap transition-colors duration-200 ${isActive(item.path) ? 'text-white font-bold' : 'font-medium group-hover:text-white'}`}>
-                                        {item.label}
-                                    </span>
+                                    <>
+                                        <span className={`flex-1 text-left text-sm whitespace-nowrap transition-colors duration-200 ${isActive(item.path) || isSubmenuActive(item.submenu) ? 'text-white font-bold' : 'font-medium group-hover:text-white'}`}>
+                                            {item.label}
+                                        </span>
+                                        {item.submenu && (
+                                            <ChevronDown
+                                                size={16}
+                                                className={`transition-transform duration-200 ${openSubmenu === item.id ? 'rotate-180' : ''}`}
+                                            />
+                                        )}
+                                    </>
                                 )}
                             </button>
+
+                            {/* Submenu */}
+                            {isExpanded && item.submenu && openSubmenu === item.id && (
+                                <div className="mt-1 ml-4 space-y-1">
+                                    {item.submenu.map((subItem) => (
+                                        <button
+                                            key={subItem.path}
+                                            onClick={() => navigate(subItem.path)}
+                                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 group ${isActive(subItem.path)
+                                                ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange font-medium'
+                                                : 'text-fpt-orange hover:bg-fpt-orange hover:text-white'
+                                                }`}
+                                        >
+                                            <div className={`w-1.5 h-1.5 rounded-full transition-colors duration-200 ${isActive(subItem.path) ? 'bg-current' : 'bg-fpt-orange group-hover:bg-white'}`}></div>
+                                            <span className="whitespace-nowrap">{subItem.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     ))}
                 </nav>

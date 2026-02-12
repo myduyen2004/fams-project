@@ -1,16 +1,117 @@
 import React, { useState, useMemo } from 'react';
-import { X, Loader2 } from 'lucide-react';
-import { Room, RoomRequest, RoomStatus, RoomType } from '../../../types/room';
+import { X, Loader2, ChevronDown, Check } from 'lucide-react';
+import { Room, RoomRequest } from '../../../types/room';
 import { roomService } from '../../../services/api/roomService';
 import toast from 'react-hot-toast';
 
-// Building configuration
-const BUILDING_CONFIG = {
-    'Gamma': { floors: [1, 2, 3, 4] },
-    'Alpha': { floors: [1, 2, 3, 4, 5, 6, 7] }
+// Custom Select Component for high-end UI
+interface CustomSelectProps {
+    label: string;
+    value: string | number;
+    options: { value: string | number; label: string }[];
+    onChange: (value: any) => void;
+}
+
+const CustomSelect: React.FC<CustomSelectProps> = ({ label, value, options, onChange }) => {
+    const [isOpen, setIsOpen] = React.useState(false);
+    const selectedOption = options.find(opt => opt.value === value);
+
+    return (
+        <div className="relative">
+            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">{label}</label>
+            <div className="relative">
+                <button
+                    type="button"
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none transition-all hover:border-fpt-orange/50 shadow-sm"
+                >
+                    <span className="text-gray-900 dark:text-gray-100 font-medium">
+                        {selectedOption ? selectedOption.label : 'Chọn...'}
+                    </span>
+                    <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {isOpen && (
+                    <>
+                        <div className="fixed inset-0 z-[60]" onClick={() => setIsOpen(false)} />
+                        <div className="absolute left-0 right-0 top-full mt-2 bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-xl shadow-xl z-[70] py-1 max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+                            {options.map((opt) => (
+                                <button
+                                    key={opt.value}
+                                    type="button"
+                                    onClick={() => {
+                                        onChange(opt.value);
+                                        setIsOpen(false);
+                                    }}
+                                    className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors hover:bg-orange-50 dark:hover:bg-orange-900/10
+                                        ${value === opt.value ? 'text-fpt-orange bg-orange-50/50 dark:bg-orange-900/5 font-bold' : 'text-gray-700 dark:text-gray-300'}
+                                    `}
+                                >
+                                    <span>{opt.label}</span>
+                                    {value === opt.value && <Check size={16} className="text-fpt-orange" />}
+                                </button>
+                            ))}
+                        </div>
+                    </>
+                )}
+            </div>
+        </div>
+    );
 };
 
-const BUILDINGS = Object.keys(BUILDING_CONFIG) as Array<keyof typeof BUILDING_CONFIG>;
+// Building configuration
+interface BuildingConfig {
+    floors: number[];
+    gridRows: number;
+    gridCols: number;
+    narrowColumns: number[];
+    lockedRows: number[];
+    lockedCells: { row: number; col: number }[];
+    lockedColumns: number[];
+    unlockedCells: { row: number; col: number }[];
+    defaultRoomColSpan: number;
+    defaultRoomRowSpan: number;
+}
+
+const BUILDING_CONFIG: Record<string, BuildingConfig> = {
+    'Gamma': {
+        floors: [1, 2, 3, 4],
+        gridRows: 10,
+        gridCols: 7,
+        narrowColumns: [1, 5],
+        lockedRows: [2, 7],
+        lockedCells: [
+            { row: 0, col: 3 },
+            { row: 9, col: 3 },
+        ],
+        lockedColumns: [],
+        unlockedCells: [],
+        defaultRoomColSpan: 1,
+        defaultRoomRowSpan: 1
+    },
+    'Alpha': {
+        floors: [1, 2, 3, 4, 5, 6, 7],
+        gridRows: 10,
+        gridCols: 8,
+        narrowColumns: [2, 5],
+        lockedRows: [2, 5],
+        lockedCells: [
+            { row: 0, col: 0 },
+            { row: 1, col: 0 },
+            { row: 0, col: 7 },
+            { row: 1, col: 7 },
+        ],
+        lockedColumns: [],
+        unlockedCells: [
+            { row: 2, col: 2 },
+            { row: 2, col: 5 },
+        ],
+        defaultRoomColSpan: 1,
+        defaultRoomRowSpan: 2
+    }
+};
+
+const BUILDINGS = Object.keys(BUILDING_CONFIG);
 
 interface ModalProps {
     onClose: () => void;
@@ -21,45 +122,52 @@ interface EditModalProps extends ModalProps {
     room: Room;
 }
 
-// Validation: must NOT contain letters (only numbers/symbols allowed)
-const hasLetter = (str: string) => /[a-zA-Z]/.test(str);
 
 export const AddRoomModal: React.FC<ModalProps> = ({ onClose, onSuccess }) => {
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState<RoomRequest>({
         code: '',
         name: '',
+        description: '',
         capacity: 30,
         building: 'Gamma',
         floor: 1,
-        type: 'LECTURE',
-        status: 'ACTIVE'
+        type: 'CLASSROOM',
+        status: 'ACTIVE',
+        gridColSpan: BUILDING_CONFIG['Gamma']?.defaultRoomColSpan || 1,
+        gridRowSpan: BUILDING_CONFIG['Gamma']?.defaultRoomRowSpan || 1
     });
-    const [errors, setErrors] = useState<{ code?: string; name?: string }>({});
+    const [errors, setErrors] = useState<{ code?: string }>({});
 
     const availableFloors = useMemo(() => {
         return BUILDING_CONFIG[formData.building as keyof typeof BUILDING_CONFIG]?.floors || [];
     }, [formData.building]);
 
     const handleBuildingChange = (building: string) => {
-        const floors = BUILDING_CONFIG[building as keyof typeof BUILDING_CONFIG]?.floors || [];
+        const config = BUILDING_CONFIG[building];
+        const floors = config?.floors || [];
         setFormData({
             ...formData,
             building,
-            floor: floors[0] || 1
+            floor: floors[0] || 1,
+            gridColSpan: config?.defaultRoomColSpan || 1,
+            gridRowSpan: config?.defaultRoomRowSpan || 1
         });
     };
 
     const validate = (): boolean => {
-        const newErrors: { code?: string; name?: string } = {};
-        if (hasLetter(formData.code)) {
-            newErrors.code = 'Mã phòng không được chứa chữ cái';
-        }
-        if (hasLetter(formData.name)) {
-            newErrors.name = 'Tên phòng không được chứa chữ cái';
+        const newErrors: { code?: string } = {};
+        if (!formData.code || formData.code.trim() === '') {
+            newErrors.code = 'Mã phòng không được để trống';
         }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
+    };
+
+    // Auto-fill name from code
+    const handleCodeChange = (code: string) => {
+        setFormData({ ...formData, code, name: code });
+        setErrors({ ...errors, code: undefined });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -89,61 +197,61 @@ export const AddRoomModal: React.FC<ModalProps> = ({ onClose, onSuccess }) => {
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Mã phòng</label>
                             <input required type="text" className={`w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border ${errors.code ? 'border-red-500' : 'border-gray-200 dark:border-zinc-700'} rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none`}
-                                value={formData.code} onChange={e => { setFormData({ ...formData, code: e.target.value }); setErrors({ ...errors, code: undefined }); }} placeholder="VD: P.101" />
+                                value={formData.code} onChange={e => handleCodeChange(e.target.value)} placeholder="VD: A201, G301" />
                             {errors.code && <p className="text-xs text-red-500 mt-1">{errors.code}</p>}
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Tên phòng</label>
-                            <input required type="text" className={`w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border ${errors.name ? 'border-red-500' : 'border-gray-200 dark:border-zinc-700'} rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none`}
-                                value={formData.name} onChange={e => { setFormData({ ...formData, name: e.target.value }); setErrors({ ...errors, name: undefined }); }} placeholder="VD: P.101" />
-                            {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Tòa nhà</label>
-                            <select className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none"
-                                value={formData.building} onChange={e => handleBuildingChange(e.target.value)}>
-                                {BUILDINGS.map(b => (
-                                    <option key={b} value={b}>{b}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Tầng</label>
-                            <select className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none"
-                                value={formData.floor} onChange={e => setFormData({ ...formData, floor: parseInt(e.target.value) })}>
-                                {availableFloors.map(f => (
-                                    <option key={f} value={f}>Tầng {f}</option>
-                                ))}
-                            </select>
-                        </div>
+                        <CustomSelect
+                            label="Tòa nhà"
+                            value={formData.building}
+                            options={BUILDINGS.map(b => ({ value: b, label: b }))}
+                            onChange={handleBuildingChange}
+                        />
+
+                        <CustomSelect
+                            label="Tầng"
+                            value={formData.floor}
+                            options={availableFloors.map(f => ({ value: f, label: `Tầng ${f}` }))}
+                            onChange={value => setFormData({ ...formData, floor: value })}
+                        />
+
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Sức chứa</label>
-                            <input required type="number" min="1" className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none"
+                            <input required type="number" min="1" className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none"
                                 value={formData.capacity} onChange={e => setFormData({ ...formData, capacity: parseInt(e.target.value) })} />
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Loại phòng</label>
-                            <select className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none"
-                                value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value as RoomType })}>
-                                <option value="LECTURE">Lý thuyết</option>
-                                <option value="LAB">Thực hành</option>
-                                <option value="MEETING">Họp</option>
-                                <option value="AUDITORIUM">Hội trường</option>
-                            </select>
+
+                        <CustomSelect
+                            label="Loại phòng"
+                            value={formData.type}
+                            options={[
+                                { value: 'CLASSROOM', label: 'Lớp học' },
+                                { value: 'COMPUTER_LAB', label: 'Phòng máy' },
+                                { value: 'PSEUDO_ROOM', label: 'Phòng giả' }
+                            ]}
+                            onChange={value => setFormData({ ...formData, type: value })}
+                        />
+
+                        <div className="col-span-2">
+                            <CustomSelect
+                                label="Trạng thái"
+                                value={formData.status}
+                                options={[
+                                    { value: 'ACTIVE', label: 'Hoạt động' },
+                                    { value: 'MAINTENANCE', label: 'Bảo trì' },
+                                    { value: 'INACTIVE', label: 'Ngưng sử dụng' }
+                                ]}
+                                onChange={value => setFormData({ ...formData, status: value })}
+                            />
                         </div>
                         <div className="col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Trạng thái</label>
-                            <select className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none"
-                                value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as RoomStatus })}>
-                                <option value="ACTIVE">Hoạt động</option>
-                                <option value="MAINTENANCE">Bảo trì</option>
-                                <option value="INACTIVE">Ngưng sử dụng</option>
-                            </select>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Mô tả</label>
+                            <textarea className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none resize-none h-24"
+                                value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="VD: Phòng có máy chiếu, sức chứa lớn..." />
                         </div>
                     </div>
                     <div className="flex justify-end gap-3 mt-8">
-                        <button type="button" onClick={onClose} className="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Hủy</button>
-                        <button type="submit" disabled={loading} className="px-6 py-2 bg-fpt-orange text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center gap-2">
+                        <button type="button" onClick={onClose} className="px-6 py-2.5 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-colors">Hủy</button>
+                        <button type="submit" disabled={loading} className="px-8 py-2.5 bg-fpt-orange text-white text-sm font-bold rounded-xl hover:bg-orange-600 shadow-lg shadow-orange-500/20 transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2">
                             {loading && <Loader2 size={16} className="animate-spin" />} Xác nhận
                         </button>
                     </div>
@@ -158,34 +266,47 @@ export const EditRoomModal: React.FC<EditModalProps> = ({ room, onClose, onSucce
     const [formData, setFormData] = useState<RoomRequest>({
         code: room.code,
         name: room.name,
+        description: room.description || '',
         capacity: room.capacity,
         building: room.building,
         floor: room.floor,
         type: room.type,
-        status: room.status
+        status: room.status,
+        gridRowSpan: room.gridRowSpan,
+        gridColSpan: room.gridColSpan
     });
-    const [errors, setErrors] = useState<{ code?: string; name?: string }>({});
+    const [errors, setErrors] = useState<{ code?: string }>({});
 
     const availableFloors = useMemo(() => {
         return BUILDING_CONFIG[formData.building as keyof typeof BUILDING_CONFIG]?.floors || [];
     }, [formData.building]);
 
     const handleBuildingChange = (building: string) => {
-        const floors = BUILDING_CONFIG[building as keyof typeof BUILDING_CONFIG]?.floors || [];
+        const config = BUILDING_CONFIG[building];
+        const floors = config?.floors || [];
         const newFloor = floors.includes(formData.floor) ? formData.floor : floors[0];
-        setFormData({ ...formData, building, floor: newFloor });
+        setFormData({
+            ...formData,
+            building,
+            floor: newFloor,
+            gridRowSpan: config?.defaultRoomRowSpan || 1,
+            gridColSpan: config?.defaultRoomColSpan || 1
+        });
     };
 
     const validate = (): boolean => {
-        const newErrors: { code?: string; name?: string } = {};
-        if (hasLetter(formData.code)) {
-            newErrors.code = 'Mã phòng không được chứa chữ cái';
-        }
-        if (hasLetter(formData.name)) {
-            newErrors.name = 'Tên phòng không được chứa chữ cái';
+        const newErrors: { code?: string } = {};
+        if (!formData.code || formData.code.trim() === '') {
+            newErrors.code = 'Mã phòng không được để trống';
         }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
+    };
+
+    // Auto-fill name from code
+    const handleCodeChange = (code: string) => {
+        setFormData({ ...formData, code, name: code });
+        setErrors({ ...errors, code: undefined });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -216,61 +337,61 @@ export const EditRoomModal: React.FC<EditModalProps> = ({ room, onClose, onSucce
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Mã phòng</label>
                             <input required type="text" className={`w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border ${errors.code ? 'border-red-500' : 'border-gray-200 dark:border-zinc-700'} rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none`}
-                                value={formData.code} onChange={e => { setFormData({ ...formData, code: e.target.value }); setErrors({ ...errors, code: undefined }); }} />
+                                value={formData.code} onChange={e => handleCodeChange(e.target.value)} placeholder="VD: A201, G301" />
                             {errors.code && <p className="text-xs text-red-500 mt-1">{errors.code}</p>}
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Tên phòng</label>
-                            <input required type="text" className={`w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border ${errors.name ? 'border-red-500' : 'border-gray-200 dark:border-zinc-700'} rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none`}
-                                value={formData.name} onChange={e => { setFormData({ ...formData, name: e.target.value }); setErrors({ ...errors, name: undefined }); }} />
-                            {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Tòa nhà</label>
-                            <select className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none"
-                                value={formData.building} onChange={e => handleBuildingChange(e.target.value)}>
-                                {BUILDINGS.map(b => (
-                                    <option key={b} value={b}>{b}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Tầng</label>
-                            <select className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none"
-                                value={formData.floor} onChange={e => setFormData({ ...formData, floor: parseInt(e.target.value) })}>
-                                {availableFloors.map(f => (
-                                    <option key={f} value={f}>Tầng {f}</option>
-                                ))}
-                            </select>
-                        </div>
+                        <CustomSelect
+                            label="Tòa nhà"
+                            value={formData.building}
+                            options={BUILDINGS.map(b => ({ value: b, label: b }))}
+                            onChange={handleBuildingChange}
+                        />
+
+                        <CustomSelect
+                            label="Tầng"
+                            value={formData.floor}
+                            options={availableFloors.map(f => ({ value: f, label: `Tầng ${f}` }))}
+                            onChange={value => setFormData({ ...formData, floor: value })}
+                        />
+
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Sức chứa</label>
-                            <input required type="number" min="1" className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none"
+                            <input required type="number" min="1" className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none"
                                 value={formData.capacity} onChange={e => setFormData({ ...formData, capacity: parseInt(e.target.value) })} />
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Loại phòng</label>
-                            <select className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none"
-                                value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value as RoomType })}>
-                                <option value="LECTURE">Lý thuyết</option>
-                                <option value="LAB">Thực hành</option>
-                                <option value="MEETING">Họp</option>
-                                <option value="AUDITORIUM">Hội trường</option>
-                            </select>
+
+                        <CustomSelect
+                            label="Loại phòng"
+                            value={formData.type}
+                            options={[
+                                { value: 'CLASSROOM', label: 'Lớp học' },
+                                { value: 'COMPUTER_LAB', label: 'Phòng máy' },
+                                { value: 'PSEUDO_ROOM', label: 'Phòng giả' }
+                            ]}
+                            onChange={value => setFormData({ ...formData, type: value })}
+                        />
+
+                        <div className="col-span-2">
+                            <CustomSelect
+                                label="Trạng thái"
+                                value={formData.status}
+                                options={[
+                                    { value: 'ACTIVE', label: 'Hoạt động' },
+                                    { value: 'MAINTENANCE', label: 'Bảo trì' },
+                                    { value: 'INACTIVE', label: 'Ngưng sử dụng' }
+                                ]}
+                                onChange={value => setFormData({ ...formData, status: value })}
+                            />
                         </div>
                         <div className="col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Trạng thái</label>
-                            <select className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none"
-                                value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as RoomStatus })}>
-                                <option value="ACTIVE">Hoạt động</option>
-                                <option value="MAINTENANCE">Bảo trì</option>
-                                <option value="INACTIVE">Ngưng sử dụng</option>
-                            </select>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Mô tả</label>
+                            <textarea className="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none resize-none h-24"
+                                value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} />
                         </div>
                     </div>
                     <div className="flex justify-end gap-3 mt-8">
-                        <button type="button" onClick={onClose} className="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Hủy</button>
-                        <button type="submit" disabled={loading} className="px-6 py-2 bg-fpt-orange text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center gap-2">
+                        <button type="button" onClick={onClose} className="px-6 py-2.5 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-colors">Hủy</button>
+                        <button type="submit" disabled={loading} className="px-8 py-2.5 bg-fpt-orange text-white text-sm font-bold rounded-xl hover:bg-orange-600 shadow-lg shadow-orange-500/20 transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2">
                             {loading && <Loader2 size={16} className="animate-spin" />} Lưu thay đổi
                         </button>
                     </div>
