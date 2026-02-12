@@ -45,6 +45,10 @@ public class Room {
     @Column(length = 50)
     private String building;
 
+    // Mô tả phòng (e.g., "Có máy chiếu", "Gần thang máy")
+    @Column(length = 500)
+    private String description;
+
     // Tầng
     private Integer floor;
 
@@ -67,7 +71,7 @@ public class Room {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
-    private RoomType type = RoomType.LECTURE;
+    private RoomType type = RoomType.CLASSROOM;
 
     // Trạng thái
     @Enumerated(EnumType.STRING)
@@ -89,10 +93,9 @@ public class Room {
     private LocalDateTime updatedAt;
 
     public enum RoomType {
-        LECTURE, // Phòng học lý thuyết
-        LAB, // Phòng thực hành
-        MEETING, // Phòng họp
-        AUDITORIUM // Hội trường
+        PSEUDO_ROOM, // Phòng giả
+        CLASSROOM, // Phòng học lý thuyết
+        COMPUTER_LAB, // Phòng thực hành máy tính
     }
 
     public enum RoomStatus {
