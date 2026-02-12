@@ -10,6 +10,7 @@ public class RoomRequest {
     private String name;
     private Integer capacity;
     private String building;
+    private String description;
     private Integer floor;
     private RoomType type;
     private RoomStatus status;
