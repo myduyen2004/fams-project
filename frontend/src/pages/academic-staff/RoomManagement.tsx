@@ -6,42 +6,169 @@ import { roomService } from '../../services/api/roomService';
 import { Room } from '../../types/room';
 import { AddRoomModal, EditRoomModal } from '../../components/academic-staff/rooms/RoomModals';
 import toast from 'react-hot-toast';
+import { ROOM_TYPE_OPTIONS, getRoomTypeDisplayLabel } from '../../utils/roomUtils';
 
 // Building configuration
-const BUILDING_CONFIG = {
-    'Gamma': { floors: [1, 2, 3, 4] },
-    'Alpha': { floors: [1, 2, 3, 4, 5, 6, 7] }
+interface FloorConfig {
+    lockedCells: { row: number; col: number }[];
+}
+
+interface BuildingConfig {
+    floors: Record<number, FloorConfig>;
+    gridRows: number;
+    gridCols: number;
+    narrowColumns: number[];
+    lockedRows: number[];
+    lockedCells: { row: number; col: number }[];
+    lockedColumns: number[];
+    unlockedCells: { row: number; col: number }[];
+    defaultRoomColSpan: number;
+    defaultRoomRowSpan: number;
+}
+
+const BUILDING_CONFIG: Record<string, BuildingConfig> = {
+    'Gamma': {
+        floors: {
+            1: {
+                lockedCells: [
+                    { row: 9, col: 3 },
+                    { row: 8, col: 3 },
+                    { row: 9, col: 5 },
+                    { row: 8, col: 5 },
+                ]
+            },
+            2: { lockedCells: [] },
+            3: { lockedCells: [] },
+            4: { lockedCells: [] },
+        },
+        gridRows: 10,
+        gridCols: 7,
+        narrowColumns: [1, 5],
+        lockedRows: [2, 7],
+        lockedCells: [
+            { row: 0, col: 3 },
+            { row: 9, col: 3 },
+        ],
+        lockedColumns: [],
+        unlockedCells: [],
+        defaultRoomColSpan: 1,
+        defaultRoomRowSpan: 1
+    },
+    'Alpha': {
+        floors: {
+            1: { lockedCells: [] },
+            2: { lockedCells: [] },
+            3: { lockedCells: [] },
+            4: { lockedCells: [] },
+            5: { lockedCells: [] },
+            6: { lockedCells: [] },
+            7: { lockedCells: [] },
+        },
+        gridRows: 9,
+        gridCols: 8,
+        narrowColumns: [2, 5],
+        lockedRows: [4],
+        lockedCells: [
+            { row: 1, col: 3 },
+            { row: 1, col: 4 },
+            { row: 8, col: 3 },
+            { row: 8, col: 4 },
+            { row: 7, col: 3 },
+            { row: 7, col: 4 },
+        ],
+        lockedColumns: [0, 7],
+        unlockedCells: [],
+        defaultRoomColSpan: 1,
+        defaultRoomRowSpan: 2
+    }
 };
 
-const BUILDINGS = Object.keys(BUILDING_CONFIG) as Array<keyof typeof BUILDING_CONFIG>;
-const GRID_ROWS = 10;
-const GRID_COLS = 7;
+const BUILDINGS = Object.keys(BUILDING_CONFIG);
 
 // Fixed floor plan elements (lobby, stairs, WC, etc.)
 type FloorElement = {
     id: string;
     name: string;
-    type: 'STAIRS' | 'CORRIDOR' | 'ELEVATOR' | 'RESTROOM' | 'LOBBY';
+    type: 'STAIRS' | 'CORRIDOR' | 'ELEVATOR' | 'RESTROOM' | 'LOBBY' | 'LIBRARY' | 'SELF-STUDY' | 'DISPLAY';
     gridRow: number;
     gridCol: number;
     gridRowSpan: number;
     gridColSpan: number;
     color?: string;
+    image?: string;
 };
 
 // Default floor elements matching the image layout
-const getFloorElements = (_building: string, _floor: number): FloorElement[] => {
-    return [
-        // Lobby in center (spans 3 cols, 2 rows)
-        { id: 'lobby', name: 'Sảnh', type: 'LOBBY', gridRow: 3, gridCol: 2, gridRowSpan: 4, gridColSpan: 3 },
-        // Stairs on left (spans 2 rows)
-        { id: 'stairs', name: 'Cầu thang', type: 'STAIRS', gridRow: 4, gridCol: 0, gridRowSpan: 2, gridColSpan: 1 },
-        { id: 'stairs', name: 'Cầu thang', type: 'STAIRS', gridRow: 4, gridCol: 6, gridRowSpan: 2, gridColSpan: 1 },
-        // WC nữ (top right, green)
-        { id: 'wc-nu', name: 'WC nữ', type: 'RESTROOM', gridRow: 3, gridCol: 6, gridRowSpan: 1, gridColSpan: 1, color: 'bg-green-200 dark:bg-green-800/50' },
-        // WC nam (bottom right, blue)
-        { id: 'wc-nam', name: 'WC nam', type: 'RESTROOM', gridRow: 6, gridCol: 6, gridRowSpan: 1, gridColSpan: 1, color: 'bg-blue-200 dark:bg-blue-800/50' },
-    ];
+const getFloorElements = (building: string, floor: number): FloorElement[] => {
+    // Gamma Floor 1 - Special layout with large reception area
+    if (building === 'Gamma' && floor === 1) {
+        return [
+            // Large lobby/reception area (spans more space on floor 1)
+            { id: 'lobby', name: 'Sảnh tiếp tân', type: 'LOBBY', gridRow: 3, gridCol: 2, gridRowSpan: 4, gridColSpan: 3 },
+            // Main stairs
+            { id: 'stairs-left', name: 'Cầu thang', type: 'STAIRS', gridRow: 4, gridCol: 0, gridRowSpan: 2, gridColSpan: 1 },
+            { id: 'stairs-right', name: 'Cầu thang', type: 'STAIRS', gridRow: 4, gridCol: 6, gridRowSpan: 2, gridColSpan: 1 },
+            // WC on floor 1 (larger, near lobby)
+            { id: 'wc-nu', name: 'WC nữ', type: 'RESTROOM', gridRow: 3, gridCol: 6, gridRowSpan: 1, gridColSpan: 1, color: 'bg-green-200 dark:bg-green-800/50' },
+            { id: 'wc-nam', name: 'WC nam', type: 'RESTROOM', gridRow: 6, gridCol: 6, gridRowSpan: 1, gridColSpan: 1, color: 'bg-blue-200 dark:bg-blue-800/50' },
+            // Library
+            { id: 'library', name: 'Thư viện', type: 'LIBRARY', gridRow: 0, gridCol: 2, gridRowSpan: 2, gridColSpan: 3, color: 'bg-gray-200 dark:bg-gray-800/50' },
+            // Phòng tự học
+            { id: 'self-study', name: 'Phòng tự học', type: 'SELF-STUDY', gridRow: 0, gridCol: 0, gridRowSpan: 4, gridColSpan: 1, color: 'bg-gray-200 dark:bg-gray-800/50' },
+            // Phòng trưng bày
+            { id: 'display', name: 'Phòng trưng bày', type: 'DISPLAY', gridRow: 8, gridCol: 5, gridRowSpan: 2, gridColSpan: 2, color: 'bg-gray-200 dark:bg-gray-800/50' },
+            // Trống đồng Đông Sơn (New decorative element)
+            { id: 'trong-dong', name: 'Trống đồng Đông Sơn', type: 'LOBBY', gridRow: 7, gridCol: 3, gridRowSpan: 3, gridColSpan: 1, image: '/trong-dong-dong-son.png', color: 'bg-transparent' },
+        ];
+    }
+
+    // Gamma - Other floors (standard layout)
+    if (building === 'Gamma') {
+        return [
+            // Standard lobby
+            { id: 'lobby', name: 'Sảnh', type: 'LOBBY', gridRow: 3, gridCol: 2, gridRowSpan: 4, gridColSpan: 3 },
+            // Stairs
+            { id: 'stairs-left', name: 'Cầu thang', type: 'STAIRS', gridRow: 4, gridCol: 0, gridRowSpan: 2, gridColSpan: 1 },
+            { id: 'stairs-right', name: 'Cầu thang', type: 'STAIRS', gridRow: 4, gridCol: 6, gridRowSpan: 2, gridColSpan: 1 },
+            // WC
+            { id: 'wc-nu', name: 'WC nữ', type: 'RESTROOM', gridRow: 3, gridCol: 6, gridRowSpan: 1, gridColSpan: 1, color: 'bg-green-200 dark:bg-green-800/50' },
+            { id: 'wc-nam', name: 'WC nam', type: 'RESTROOM', gridRow: 6, gridCol: 6, gridRowSpan: 1, gridColSpan: 1, color: 'bg-blue-200 dark:bg-blue-800/50' },
+        ];
+    }
+
+    // Alpha - Different layout with elevator
+    if (building === 'Alpha' && floor === 2) {
+        return [
+            //Lobby
+            { id: 'lobby', name: 'Sảnh', type: 'LOBBY', gridRow: 5, gridCol: 3, gridRowSpan: 4, gridColSpan: 2 },
+            // Stairs on both sides
+            { id: 'stairs-left', name: 'Cầu thang A', type: 'STAIRS', gridRow: 2, gridCol: 0, gridRowSpan: 2, gridColSpan: 1 },
+            { id: 'stairs-right', name: 'Cầu thang B', type: 'STAIRS', gridRow: 2, gridCol: 7, gridRowSpan: 2, gridColSpan: 1 },
+            // Elevator (unique to Alpha)
+            { id: 'elevator-left', name: 'Thang máy', type: 'ELEVATOR', gridRow: 2, gridCol: 3, gridRowSpan: 2, gridColSpan: 1, color: 'bg-indigo-200 dark:bg-indigo-800/50' },
+            { id: 'elevator-right', name: 'Thang máy', type: 'ELEVATOR', gridRow: 2, gridCol: 4, gridRowSpan: 2, gridColSpan: 1, color: 'bg-indigo-200 dark:bg-indigo-800/50' },
+            // WC positioned differently
+            { id: 'wc-nu', name: 'WC nữ', type: 'RESTROOM', gridRow: 0, gridCol: 3, gridRowSpan: 1, gridColSpan: 1, color: 'bg-green-200 dark:bg-green-800/50' },
+            { id: 'wc-nam', name: 'WC nam', type: 'RESTROOM', gridRow: 0, gridCol: 4, gridRowSpan: 1, gridColSpan: 1, color: 'bg-blue-200 dark:bg-blue-800/50' },
+        ];
+    }
+
+    if (building === 'Alpha') {
+        return [
+            // Stairs on both sides
+            { id: 'stairs-left', name: 'Cầu thang A', type: 'STAIRS', gridRow: 2, gridCol: 0, gridRowSpan: 2, gridColSpan: 1 },
+            { id: 'stairs-right', name: 'Cầu thang B', type: 'STAIRS', gridRow: 2, gridCol: 7, gridRowSpan: 2, gridColSpan: 1 },
+            // Elevator (unique to Alpha)
+            { id: 'elevator-left', name: 'Thang máy', type: 'ELEVATOR', gridRow: 2, gridCol: 3, gridRowSpan: 2, gridColSpan: 1, color: 'bg-indigo-200 dark:bg-indigo-800/50' },
+            { id: 'elevator-right', name: 'Thang máy', type: 'ELEVATOR', gridRow: 2, gridCol: 4, gridRowSpan: 2, gridColSpan: 1, color: 'bg-indigo-200 dark:bg-indigo-800/50' },
+            // WC positioned differently
+            { id: 'wc-nu', name: 'WC nữ', type: 'RESTROOM', gridRow: 0, gridCol: 3, gridRowSpan: 1, gridColSpan: 1, color: 'bg-green-200 dark:bg-green-800/50' },
+            { id: 'wc-nam', name: 'WC nam', type: 'RESTROOM', gridRow: 0, gridCol: 4, gridRowSpan: 1, gridColSpan: 1, color: 'bg-blue-200 dark:bg-blue-800/50' },
+        ];
+    }
+
+    // Default/fallback
+    return [];
 };
 
 export const RoomManagement: React.FC = () => {
@@ -57,8 +184,9 @@ export const RoomManagement: React.FC = () => {
     // Dropdown states
     const [isBuildingFilterOpen, setIsBuildingFilterOpen] = useState(false);
     const [isFloorFilterOpen, setIsFloorFilterOpen] = useState(false);
+    const [isRoomTypeFilterOpen, setIsRoomTypeFilterOpen] = useState(false);
+    const [selectedRoomType, setSelectedRoomType] = useState<string>('ALL');
 
-    // Modal states
     // Modal states
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingRoom, setEditingRoom] = useState<Room | null>(null);
@@ -66,38 +194,46 @@ export const RoomManagement: React.FC = () => {
     // Navigation
     const navigate = useNavigate();
 
+    // Current building configuration
+    const currentBuildingConfig = useMemo(() => {
+        if (selectedBuilding === 'ALL') return null;
+        return BUILDING_CONFIG[selectedBuilding as keyof typeof BUILDING_CONFIG];
+    }, [selectedBuilding]);
+
+    const gridRows = currentBuildingConfig?.gridRows || 10;
+    const gridCols = currentBuildingConfig?.gridCols || 7;
+
     // Column Configuration (read-only)
     const columnConfigs = useMemo(() => {
-        const initial = Array(GRID_COLS).fill(null).map(() => ({ isLocked: false, isNarrow: false }));
-        // Default: Shrink and lock columns 1 and 5 only
-        if (initial[1]) {
-            initial[1].isNarrow = true;
-            initial[1].isLocked = true;
-        }
-        if (initial[5]) {
-            initial[5].isNarrow = true;
-            initial[5].isLocked = true;
-        }
-        return initial;
-    }, []);
-
-    // Locked rows (entire row is locked)
-    const LOCKED_ROWS = [2, 7];
-
-    // Locked specific cells (row, col pairs)
-    const LOCKED_CELLS: Array<{ row: number; col: number }> = [
-        { row: 0, col: 3 },
-        { row: 9, col: 3 },
-    ];
+        if (!currentBuildingConfig) return [];
+        const narrowCols = currentBuildingConfig.narrowColumns || [];
+        return Array(gridCols).fill(null).map((_, idx) => ({
+            isLocked: narrowCols.includes(idx),
+            isNarrow: narrowCols.includes(idx)
+        }));
+    }, [currentBuildingConfig, gridCols]);
 
     // Helper function to check if a cell is locked
     const isCellLocked = (row: number, col: number): boolean => {
-        // Check if column is locked
+        if (!currentBuildingConfig) return false;
+
+        // 1. Check if specific cell is UNLOCKED (overrides other locks)
+        if (currentBuildingConfig.unlockedCells?.some(c => c.row === row && c.col === col)) return false;
+
+        // 2. Check if column is locked (from columnConfigs OR lockedColumns)
         if (columnConfigs[col]?.isLocked) return true;
-        // Check if row is locked
-        if (LOCKED_ROWS.includes(row)) return true;
-        // Check if specific cell is locked
-        if (LOCKED_CELLS.some(cell => cell.row === row && cell.col === col)) return true;
+        if (currentBuildingConfig.lockedColumns?.includes(col)) return true;
+
+        // 3. Check if row is locked
+        if (currentBuildingConfig.lockedRows.includes(row)) return true;
+
+        // 4. Check if cell is locked in building-wide config
+        if (currentBuildingConfig.lockedCells.some(cell => cell.row === row && cell.col === col)) return true;
+
+        // 5. Check if cell is locked in floor-specific config
+        const floorConfig = currentBuildingConfig.floors[selectedFloor];
+        if (floorConfig?.lockedCells.some(cell => cell.row === row && cell.col === col)) return true;
+
         return false;
     };
 
@@ -120,22 +256,33 @@ export const RoomManagement: React.FC = () => {
     // Available floors based on selected building
     const availableFloors = useMemo(() => {
         if (selectedBuilding === 'ALL') return [];
-        return BUILDING_CONFIG[selectedBuilding as keyof typeof BUILDING_CONFIG]?.floors || [];
+        const building = BUILDING_CONFIG[selectedBuilding as keyof typeof BUILDING_CONFIG];
+        if (!building) return [];
+        return Object.keys(building.floors).map(Number).sort((a, b) => a - b);
     }, [selectedBuilding]);
 
     // Reset floor when building changes
     useEffect(() => {
-        if (selectedBuilding !== 'ALL' && !availableFloors.includes(selectedFloor)) {
-            setSelectedFloor(availableFloors[0] || 1);
+        if (selectedBuilding !== 'ALL' && availableFloors.length > 0 && !availableFloors.includes(selectedFloor)) {
+            setSelectedFloor(availableFloors[0]);
         }
     }, [selectedBuilding, availableFloors, selectedFloor]);
 
     const filteredRooms = useMemo(() => {
-        if (selectedBuilding === 'ALL') {
-            return [...rooms].sort((a, b) => a.building.localeCompare(b.building) || a.floor - b.floor || a.name.localeCompare(b.name));
+        let result = rooms;
+
+        if (selectedBuilding !== 'ALL') {
+            result = result.filter(r => r.building === selectedBuilding && r.floor === selectedFloor);
+        } else {
+            result = [...result].sort((a, b) => a.building.localeCompare(b.building) || a.floor - b.floor || a.name.localeCompare(b.name));
         }
-        return rooms.filter(r => r.building === selectedBuilding && r.floor === selectedFloor);
-    }, [rooms, selectedBuilding, selectedFloor]);
+
+        if (selectedRoomType !== 'ALL') {
+            result = result.filter(r => r.type === selectedRoomType);
+        }
+
+        return result;
+    }, [rooms, selectedBuilding, selectedFloor, selectedRoomType]);
 
     // Rooms positioned on grid (only relevant for map view of specific building/floor)
     const positionedRooms = useMemo(() => {
@@ -198,23 +345,56 @@ export const RoomManagement: React.FC = () => {
 
     const handleDrop = async (e: React.DragEvent, row: number, col: number) => {
         e.preventDefault();
-        if (!draggedRoom) return;
+        if (!draggedRoom || !currentBuildingConfig) return;
 
-        // Check if cell is locked
-        if (isCellLocked(row, col)) {
-            toast.error('Ô này đã bị khóa');
+        // Determine span - prefer building default if current is 1 or missing
+        const colSpan = (draggedRoom.gridColSpan && draggedRoom.gridColSpan > 1)
+            ? draggedRoom.gridColSpan
+            : (currentBuildingConfig.defaultRoomColSpan || 1);
+        const rowSpan = (draggedRoom.gridRowSpan && draggedRoom.gridRowSpan > 1)
+            ? draggedRoom.gridRowSpan
+            : (currentBuildingConfig.defaultRoomRowSpan || 1);
+
+        // Check bounds
+        if (col + colSpan > gridCols || row + rowSpan > gridRows) {
+            toast.error('Không đủ không gian để đặt phòng');
             return;
         }
 
-        // Check if cell is occupied
-        const occupiedRoom = positionedRooms.find(r =>
-            r.id !== draggedRoom.id &&
-            r.gridRow === row &&
-            r.gridCol === col
-        );
-        if (occupiedRoom) {
-            toast.error('Ô này đã có phòng khác');
-            return;
+        // Check if ANY cell in the span is locked
+        for (let r = row; r < row + rowSpan; r++) {
+            for (let c = col; c < col + colSpan; c++) {
+                if (isCellLocked(r, c)) {
+                    toast.error('Khu vực này có ô bị khóa');
+                    return;
+                }
+            }
+        }
+
+        // Check if ANY cell in the span is occupied by another room or element
+        for (let r = row; r < row + rowSpan; r++) {
+            for (let c = col; c < col + colSpan; c++) {
+                // Room collision
+                const collidedRoom = positionedRooms.find(other => {
+                    if (other.id === draggedRoom.id) return false;
+                    const oRS = other.gridRowSpan || 1;
+                    const oCS = other.gridColSpan || 1;
+                    return other.gridRow != null && other.gridCol != null &&
+                        r >= other.gridRow && r < other.gridRow + oRS &&
+                        c >= other.gridCol && c < other.gridCol + oCS;
+                });
+
+                if (collidedRoom) {
+                    toast.error(`Khu vực này đã bị chiếm bởi ${collidedRoom.name}`);
+                    return;
+                }
+
+                // Element collision
+                if (isOccupiedByElement(r, c)) {
+                    toast.error('Khu vực này đã có vật thể cố định');
+                    return;
+                }
+            }
         }
 
         try {
@@ -222,7 +402,9 @@ export const RoomManagement: React.FC = () => {
             await roomService.updateRoom(draggedRoom.id, {
                 ...draggedRoom,
                 gridRow: row,
-                gridCol: col
+                gridCol: col,
+                gridRowSpan: rowSpan, // Ensure spans are saved
+                gridColSpan: colSpan
             });
             toast.success(`Đã di chuyển ${draggedRoom.name}`);
             fetchRooms();
@@ -278,8 +460,8 @@ export const RoomManagement: React.FC = () => {
     // Generate grid cells (excluding cells that are part of a span)
     const gridCells = useMemo(() => {
         const cells: Array<{ row: number; col: number; room: Room | undefined; element: FloorElement | undefined; isSpanned: boolean }> = [];
-        for (let row = 0; row < GRID_ROWS; row++) {
-            for (let col = 0; col < GRID_COLS; col++) {
+        for (let row = 0; row < gridRows; row++) {
+            for (let col = 0; col < gridCols; col++) {
                 // Check if this is the start of a floor element
                 const element = floorElements.find(el => el.gridRow === row && el.gridCol === col);
                 // Check if this is the start of a room
@@ -291,7 +473,7 @@ export const RoomManagement: React.FC = () => {
             }
         }
         return cells;
-    }, [positionedRooms, floorElements]);
+    }, [positionedRooms, floorElements, gridRows, gridCols]);
 
     return (
         <AcademicStaffLayout pageTitle="Quản lý phòng học">
@@ -339,14 +521,55 @@ export const RoomManagement: React.FC = () => {
                                 </div>
                             </div>
 
+                            {/* Room Type Filter */}
+                            <div className="flex items-center gap-2 relative">
+                                <span className="text-xs font-medium text-gray-500 dark:text-zinc-500">Loại phòng:</span>
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setIsRoomTypeFilterOpen(!isRoomTypeFilterOpen)}
+                                        className="flex items-center gap-2 rounded-lg border border-gray-300 py-2 pl-3 pr-2 text-sm bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 min-w-[140px]"
+                                    >
+                                        <span className="flex-1 text-left">
+                                            {getRoomTypeDisplayLabel(selectedRoomType)}
+                                        </span>
+                                        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isRoomTypeFilterOpen ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    {isRoomTypeFilterOpen && (
+                                        <>
+                                            <div className="fixed inset-0 z-10" onClick={() => setIsRoomTypeFilterOpen(false)}></div>
+                                            <div className="absolute left-0 top-full mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg py-1 z-20 dark:border-zinc-700 dark:bg-zinc-800 transition-all duration-200">
+                                                <button
+                                                    onClick={() => { setSelectedRoomType('ALL'); setIsRoomTypeFilterOpen(false); }}
+                                                    className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center justify-between ${selectedRoomType === 'ALL' ? 'text-fpt-orange bg-orange-50 dark:bg-orange-900/10' : 'text-gray-700 dark:text-gray-200'}`}
+                                                >
+                                                    <span>Tất cả loại phòng</span>
+                                                    {selectedRoomType === 'ALL' && <Check className="h-4 w-4" />}
+                                                </button>
+                                                {ROOM_TYPE_OPTIONS.map(type => (
+                                                    <button
+                                                        key={type.value}
+                                                        onClick={() => { setSelectedRoomType(type.value); setIsRoomTypeFilterOpen(false); }}
+                                                        className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center justify-between ${selectedRoomType === type.value ? 'text-fpt-orange bg-orange-50 dark:bg-orange-900/10' : 'text-gray-700 dark:text-gray-200'}`}
+                                                    >
+                                                        <span>{type.label}</span>
+                                                        {selectedRoomType === type.value && <Check className="h-4 w-4" />}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+
                             {/* Floor Filters - Only show if not ALL */}
                             {selectedBuilding !== 'ALL' && (
                                 <div className="flex items-center gap-2 relative">
                                     <span className="text-xs font-medium text-gray-500 dark:text-zinc-500">Tầng:</span>
-                                    <div className="relative">
+                                    <div className="relative w-48">
                                         <button
                                             onClick={() => setIsFloorFilterOpen(!isFloorFilterOpen)}
-                                            className="flex items-center gap-2 rounded-lg border border-gray-300 py-2 pl-3 pr-2 text-sm bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 min-w-[100px]"
+                                            className="flex items-center gap-2 rounded-lg border border-gray-300 py-2 pl-3 pr-2 text-sm bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 w-full"
                                         >
                                             <span className="flex-1 text-left">Tầng {selectedFloor}</span>
                                             <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isFloorFilterOpen ? 'rotate-180' : ''}`} />
@@ -412,7 +635,10 @@ export const RoomManagement: React.FC = () => {
                                         <div
                                             key={room.id}
                                             className={`p-4 rounded-xl border transition-all hover:shadow-md
-                                                ${!isPositioned ? 'bg-orange-50 border-orange-200 text-gray-900' : 'bg-gray-50 dark:bg-zinc-800 border-gray-200 dark:border-zinc-700'}
+                                                ${room.type === 'COMPUTER_LAB' ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-100 dark:border-blue-800' :
+                                                    room.type === 'CLASSROOM' ? 'bg-orange-50 dark:bg-orange-950/20 border-orange-100 dark:border-orange-900/40' :
+                                                        'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-100 dark:border-emerald-800'}
+                                                ${!isPositioned ? 'ring-2 ring-fpt-orange ring-offset-2' : ''}
                                             `}
                                         >
                                             <div className="flex items-center justify-between mb-2">
@@ -437,6 +663,12 @@ export const RoomManagement: React.FC = () => {
                                                     <span>Sức chứa:</span>
                                                     <span className="font-medium text-gray-900 dark:text-gray-200">{room.capacity} người</span>
                                                 </div>
+                                                {room.description && (
+                                                    <div className="flex flex-col gap-1 mt-1 border-t border-gray-100 dark:border-zinc-700/30 pt-1">
+                                                        <span className="text-[10px] text-gray-400">Mô tả:</span>
+                                                        <span className="font-medium text-gray-900 dark:text-gray-200 line-clamp-2 italic">{room.description}</span>
+                                                    </div>
+                                                )}
                                                 <div className="flex justify-between">
                                                     <span>Trạng thái:</span>
                                                     <span className={`font-medium ${!isPositioned ? 'text-red-500' : 'text-green-500'}`}>
@@ -457,7 +689,7 @@ export const RoomManagement: React.FC = () => {
                                 className="grid gap-1"
                                 style={{
                                     gridTemplateColumns: columnConfigs.map(c => c.isNarrow ? '60px' : 'minmax(80px, 1fr)').join(' '),
-                                    gridTemplateRows: `repeat(${GRID_ROWS}, 60px)`
+                                    gridTemplateRows: `repeat(${gridRows}, 60px)`
                                 }}
                             >
                                 {gridCells.map(({ row, col, room, element, isSpanned }) => {
@@ -468,7 +700,7 @@ export const RoomManagement: React.FC = () => {
                                     if (element) {
                                         const elementColor = element.color || (
                                             element.type === 'STAIRS' ? 'bg-gray-300 dark:bg-zinc-500 bg-stripes' :
-                                                element.type === 'LOBBY' ? 'bg-fpt-orange' :
+                                                element.type === 'LOBBY' ? 'bg-fpt-orange rounded-lg' :
                                                     element.type === 'ELEVATOR' ? 'bg-indigo-200 dark:bg-indigo-800/50' :
                                                         element.type === 'CORRIDOR' ? 'bg-transparent' :
                                                             'bg-teal-200 dark:bg-teal-800/50'
@@ -476,14 +708,14 @@ export const RoomManagement: React.FC = () => {
                                         return (
                                             <div
                                                 key={`element-${element.id}`}
-                                                className={`rounded-lg flex flex-col items-center justify-center overflow-hidden ${elementColor} ${element.type === 'LOBBY' ? 'p-0' : ''}`}
+                                                className={`flex flex-col items-center justify-center overflow-hidden ${elementColor} ${element.type === 'LOBBY' ? 'p-0' : 'rounded-lg'}`}
                                                 style={{
                                                     gridRow: `${row + 1} / span ${element.gridRowSpan}`,
                                                     gridColumn: `${col + 1} / span ${element.gridColSpan}`
                                                 }}
                                             >
                                                 {element.type === 'LOBBY' ? (
-                                                    <img src="/assets/images/fpt-university-logo.png" alt="FPT Logo" className="w-full h-full object-cover" />
+                                                    <img src={element.image || "/assets/images/fpt-university-logo.png"} alt={element.name} className="w-full h-full object-cover" />
                                                 ) : (
                                                     <span className="text-xs font-medium text-gray-700 dark:text-white">
                                                         {element.name}
@@ -504,13 +736,12 @@ export const RoomManagement: React.FC = () => {
                                                 onDragStart={isEditMode ? (e) => handleDragStart(e, room) : undefined}
                                                 onClick={() => setSelectedRoom(room)}
                                                 onDoubleClick={() => handleRoomDoubleClick(room)}
-                                                className={`rounded-lg flex flex-col items-center justify-center cursor-pointer transition-all
+                                                className={`rounded-lg flex flex-col items-center justify-center cursor-pointer transition-all border
                                                     ${isEditMode ? 'cursor-move' : ''}
-                                                    ${selectedRoom?.id === room.id ? 'ring-2 ring-fpt-orange' : ''}
-                                                    ${room.type === 'LAB' ? 'bg-blue-200 dark:bg-blue-800/50' :
-                                                        room.status === 'MAINTENANCE' ? 'bg-yellow-200 dark:bg-yellow-800/50' :
-                                                            room.status === 'INACTIVE' ? 'bg-red-200 dark:bg-red-800/50' :
-                                                                'bg-gray-300 dark:bg-zinc-600'}`}
+                                                    ${selectedRoom?.id === room.id ? 'ring-2 ring-fpt-orange z-10' : ''}
+                                                    ${room.type === 'COMPUTER_LAB' ? 'bg-blue-100/90 dark:bg-blue-900/40 border-blue-200 dark:border-blue-700 text-blue-900 dark:text-blue-100 shadow-[0_2px_4px_rgba(59,130,246,0.1)]' :
+                                                        room.type === 'CLASSROOM' ? 'bg-orange-100/90 dark:bg-orange-900/40 border-orange-200 dark:border-orange-700 text-orange-900 dark:text-orange-100 shadow-[0_2px_4px_rgba(249,115,22,0.1)]' :
+                                                            'bg-emerald-100/90 dark:bg-emerald-900/40 border-emerald-200 dark:border-emerald-700 text-emerald-900 dark:text-emerald-100 shadow-[0_2px_4px_rgba(16,185,129,0.1)]'}`}
                                                 style={{
                                                     gridRow: `${row + 1} / span ${rowSpan}`,
                                                     gridColumn: `${col + 1} / span ${colSpan}`
@@ -573,19 +804,23 @@ export const RoomManagement: React.FC = () => {
                                         key={room.id}
                                         draggable={isEditMode && selectedBuilding !== 'ALL'}
                                         onDragStart={isEditMode && selectedBuilding !== 'ALL' ? (e) => handleDragStart(e, room) : undefined}
-                                        className={`p-3 rounded-xl border transition-all cursor-pointer
+                                        className={`p-3 rounded-xl border transition-all cursor-pointer group hover:shadow-md
                                             ${selectedRoom?.id === room.id ? 'ring-2 ring-fpt-orange' : ''}
-                                            ${!isPositioned ? 'bg-orange-50 border-orange-200 text-gray-900' : 'bg-gray-50 border-gray-200 text-gray-500'}
-                                            ${isEditMode && selectedBuilding !== 'ALL' ? 'cursor-move hover:shadow-md' : ''}
+                                            ${room.type === 'COMPUTER_LAB' ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30' :
+                                                room.type === 'CLASSROOM' ? 'bg-orange-50/50 dark:bg-orange-950/10 border-orange-100 dark:border-orange-900/30' :
+                                                    'bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30'}
+                                            ${!isPositioned ? 'border-dashed border-fpt-orange/40' : ''}
+                                            ${isEditMode && selectedBuilding !== 'ALL' ? 'cursor-move' : ''}
                                         `}
                                         onClick={() => setSelectedRoom(room)}
                                         onDoubleClick={() => handleRoomDoubleClick(room)}
                                     >
                                         <div className="flex items-center justify-between">
                                             <div className="flex flex-col">
-                                                <span className={`text-sm font-semibold ${!isPositioned ? 'text-gray-900 dark:text-gray-900' : 'text-gray-500 dark:text-zinc-500'}`}>
-                                                    {room.name} ({getRoomTypeLabel(room.type)})
+                                                <span className={`text-sm font-bold ${room.type === 'COMPUTER_LAB' ? 'text-blue-700 dark:text-blue-400' : room.type === 'CLASSROOM' ? 'text-orange-700 dark:text-orange-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                                                    {room.name}
                                                 </span>
+                                                <span className="text-[10px] opacity-70 italic">{getRoomTypeLabel(room.type)}</span>
                                             </div>
                                             <div className="flex gap-1">
                                                 {/* Show edit/delete buttons */}
@@ -593,13 +828,20 @@ export const RoomManagement: React.FC = () => {
                                                 <button onClick={(e) => { e.stopPropagation(); handleDelete(room.id); }} className="p-1 text-gray-400 hover:text-red-500"><Trash2 size={14} /></button>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-4 mt-1 text-xs text-gray-500 dark:text-zinc-400">
-                                            <span className="flex items-center gap-1">
-                                                <Maximize2 size={12} /> {room.capacity} m²
-                                            </span>
-                                            <span className="flex items-center gap-1">
-                                                <Users size={12} /> {room.capacity} người
-                                            </span>
+                                        <div className="flex flex-col gap-1 mt-2 text-[10px] text-gray-500 dark:text-zinc-400">
+                                            <div className="flex items-center gap-4">
+                                                <span className="flex items-center gap-1">
+                                                    <Maximize2 size={12} /> {room.capacity} m²
+                                                </span>
+                                                <span className="flex items-center gap-1">
+                                                    <Users size={12} /> {room.capacity} người
+                                                </span>
+                                            </div>
+                                            {room.description && (
+                                                <span className="italic line-clamp-1 border-t border-gray-100 dark:border-zinc-700/30 pt-1">
+                                                    {room.description}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                 );
