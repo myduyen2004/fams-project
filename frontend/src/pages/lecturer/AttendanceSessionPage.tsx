@@ -2,35 +2,26 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 
-import QRCode from "react-qr-code";
 import attendanceService, { SessionDetailResponse } from '../../services/api/attendanceService';
 import { toast } from 'react-hot-toast';
-import { Loader2, ArrowLeft } from 'lucide-react';
+import { Loader2, ArrowLeft, Users } from 'lucide-react';
 
 export const AttendanceSessionPage: React.FC = () => {
     const { sessionId } = useParams<{ sessionId: string }>();
     const navigate = useNavigate();
     const [session, setSession] = useState<SessionDetailResponse | null>(null);
     const [loading, setLoading] = useState(true);
-    const [currentTime, setCurrentTime] = useState(new Date());
-
-    // Polling interval ref
-    const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         fetchSession();
         
-        // Start polling every 3 seconds
-        intervalRef.current = setInterval(() => {
+        // Start polling every 5 seconds (slightly slower since QR is gone)
+        const interval = setInterval(() => {
             fetchSession(true);
-        }, 3000);
-
-        // Timer for clock
-        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+        }, 5000);
 
         return () => {
-            if (intervalRef.current) clearInterval(intervalRef.current);
-            clearInterval(timer);
+            clearInterval(interval);
         };
     }, [sessionId]);
 
@@ -52,24 +43,6 @@ export const AttendanceSessionPage: React.FC = () => {
         return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     };
 
-    const getTimerData = () => {
-        if (!session || !session.qrExpiresAt) return { text: "00:00", percent: 0, seconds: 0, minutes: 0 };
-        const expires = new Date(session.qrExpiresAt).getTime();
-        const now = currentTime.getTime();
-        const diff = Math.max(0, Math.floor((expires - now) / 1000)); // seconds remaining
-
-        // Assuming 5 minutes (300s) is the max duration for the progress bar
-        const totalDuration = 300; 
-        const percent = (diff / totalDuration) * 100;
-
-        const minutes = Math.floor(diff / 60);
-        const seconds = diff % 60;
-        const text = `${minutes < 10 ? '0' : ''}${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-        
-        return { text, percent, minutes, seconds };
-    };
-
-    const timerData = getTimerData();
 
     if (loading) {
         return (
@@ -90,39 +63,63 @@ export const AttendanceSessionPage: React.FC = () => {
 
     return (
         <LecturerLayout pageTitle="Điểm danh sinh viên">
-            <div className="max-w-6xl mx-auto p-4">
+            <div className="max-w-4xl mx-auto p-4">
                 <button 
                     onClick={() => navigate('/lecturer/schedule')} 
-                    className="flex items-center text-sm text-gray-500 hover:text-gray-900 transition-colors mb-4"
+                    className="flex items-center text-sm text-gray-500 hover:text-gray-900 transition-colors mb-6"
                 >
                     <ArrowLeft size={16} className="mr-1" /> Quay lại lịch dạy
                 </button>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                    {/* Left: Student List - simplified */}
-                    <div className="lg:col-span-7 space-y-4">
-                        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                             <div className="flex items-center justify-between mb-4">
+                <div className="space-y-6">
+                    {/* Header Card */}
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-orange-50 rounded-xl">
+                                    <Users className="text-fpt-orange h-6 w-6" />
+                                </div>
                                 <div>
-                                    <h2 className="text-lg font-bold text-gray-800">{session.courseName}</h2>
-                                    <p className="text-sm text-gray-500">{session.className} - {session.roomCode}</p>
+                                    <h2 className="text-xl font-bold text-gray-900 leading-tight">{session.courseName}</h2>
+                                    <p className="text-gray-500 font-medium">{session.className} • Phòng {session.roomCode}</p>
                                 </div>
-                                <div className="text-right">
-                                     <span className="text-xs text-gray-500 block uppercase">Sĩ số</span>
-                                     <span className="text-xl font-bold text-gray-800">
-                                        <span className="text-green-600">{session.presentCount}</span>/{session.totalStudents}
-                                     </span>
+                            </div>
+                            <div className="flex items-center gap-6 px-4 py-2 bg-gray-50 rounded-xl border border-gray-100">
+                                <div className="text-center">
+                                    <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider block">Sĩ số</span>
+                                    <span className="text-xl font-bold text-gray-900">
+                                        <span className="text-green-600">{session.presentCount}</span>
+                                        <span className="text-gray-300 mx-1">/</span>
+                                        {session.totalStudents}
+                                    </span>
                                 </div>
-                             </div>
+                                <div className="h-8 w-[1px] bg-gray-200"></div>
+                                <div className="text-center">
+                                    <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider block">Trạng thái</span>
+                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${session.status === 'OPEN' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                        {session.status === 'OPEN' ? 'ĐANG MỞ' : 'ĐÃ ĐÓNG'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                             <div className="h-[1px] bg-gray-100 mb-4"></div>
+                    {/* Student List */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div className="p-6 border-b border-gray-50 flex items-center justify-between">
+                            <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                                Danh sách sinh viên đã điểm danh
+                                <span className="bg-orange-100 text-fpt-orange text-[10px] px-2 py-0.5 rounded-full uppercase">Thời gian thực</span>
+                            </h3>
+                        </div>
 
-                            <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2">
-                                {session.students && session.students.length > 0 ? (
-                                    session.students.map((student) => (
-                                        <div key={student.studentId} className="flex items-center justify-between p-2 rounded hover:bg-gray-50 border-b border-gray-50 last:border-0 transition-colors">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-xs font-bold overflow-hidden">
+                        <div className="max-h-[500px] overflow-y-auto">
+                            {session.students && session.students.length > 0 ? (
+                                <div className="divide-y divide-gray-50">
+                                    {session.students.map((student) => (
+                                        <div key={student.studentId} className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-sm font-bold overflow-hidden border border-gray-200">
                                                     {student.avatarUrl ? (
                                                         <img src={student.avatarUrl} alt={student.fullName} className="w-full h-full object-cover" />
                                                     ) : (
@@ -130,77 +127,37 @@ export const AttendanceSessionPage: React.FC = () => {
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <p className="font-medium text-gray-800 text-sm">{student.fullName}</p>
-                                                    <p className="text-xs text-gray-500">{student.studentCode}</p>
+                                                    <p className="font-bold text-gray-900 text-sm">{student.fullName}</p>
+                                                    <p className="text-xs text-gray-500 font-medium uppercase tracking-tight">{student.studentCode}</p>
                                                 </div>
                                             </div>
-                                            <div className="text-xs text-gray-400">
-                                                {formatTime(new Date(student.checkInTime))}
+                                            <div className="flex items-center gap-2">
+                                                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                                                <span className="text-xs font-mono text-gray-400">
+                                                    {formatTime(new Date(student.checkInTime))}
+                                                </span>
                                             </div>
                                         </div>
-                                    ))
-                                ) : (
-                                    <div className="text-center py-8 text-gray-400 text-sm">
-                                        Chưa có sinh viên nào điểm danh
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-16 px-4">
+                                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-dashed border-gray-200">
+                                        <Users className="text-gray-300 w-8 h-8" />
                                     </div>
-                                )}
-                            </div>
+                                    <p className="text-gray-400 text-sm font-medium">Chưa có sinh viên nào điểm danh khuôn mặt</p>
+                                    <p className="text-xs text-gray-300 mt-1">Sinh viên cần mở app mobile để quét khuôn mặt tại lớp</p>
+                                </div>
+                            )}
                         </div>
-                    </div>
 
-                    {/* Right: QR Code Card - Styled like reference */}
-                    <div className="lg:col-span-5">
-                        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden relative">
-                            <div className="p-8 text-center">
-                                <h2 className="text-2xl font-bold text-[#F97316] mb-2">Mã QR điểm danh</h2>
-                                <p className="text-sm text-gray-500 mb-8">Sinh viên vui lòng quét mã bên dưới<br/>để tiếp tục điểm danh</p>
-                                
-                                {/* Frame corners for visual effect similar to image (simplified with border) */}
-                                <div className="relative inline-block p-4 rounded-xl border-2 border-dashed border-gray-200 mb-8">
-                                    <div className="bg-white p-2">
-                                        <QRCode
-                                            size={200}
-                                            style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                                            value={session.qrCodeData}
-                                            viewBox={`0 0 256 256`}
-                                        />
-                                    </div>
-                                    
-                                    {/* Corner accents - Optional, using CSS borders for simplicity */}
-                                    <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-[#F97316] -mt-1 -ml-1 rounded-tl-lg"></div>
-                                    <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-[#F97316] -mt-1 -mr-1 rounded-tr-lg"></div>
-                                    <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-[#F97316] -mb-1 -ml-1 rounded-bl-lg"></div>
-                                    <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-[#F97316] -mb-1 -mr-1 rounded-br-lg"></div>
-                                </div>
-
-                                <div className="mb-2">
-                                    <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Mã sẽ hết hạn trong</p>
-                                    <div className="text-4xl font-bold font-mono tracking-wider">
-                                        <span className="text-gray-800">
-                                            {timerData.minutes < 10 ? '0' : ''}{timerData.minutes}
-                                        </span>
-                                        <span className="text-gray-300 mx-1">:</span>
-                                        <span className="text-[#F97316]">
-                                            {timerData.seconds < 10 ? '0' : ''}{timerData.seconds}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Progress Bar */}
-                                <div className="w-full h-1.5 bg-gray-100 rounded-full mt-4 mb-8 overflow-hidden">
-                                    <div 
-                                        className="h-full bg-[#F97316] transition-all duration-1000 ease-linear rounded-full"
-                                        style={{ width: `${timerData.percent}%` }}
-                                    ></div>
-                                </div>
-
-                                <button 
-                                    onClick={() => navigate('/lecturer/schedule')}
-                                    className="w-full py-3 bg-[#F97316] hover:bg-orange-600 text-white font-bold rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
-                                >
-                                    Kết thúc điểm danh <ArrowLeft className="rotate-180" size={16}/>
-                                </button>
-                            </div>
+                        <div className="p-6 bg-gray-50 border-t border-gray-100">
+                            <button 
+                                onClick={() => navigate('/lecturer/schedule')}
+                                className="w-full py-4 bg-fpt-orange hover:bg-orange-600 text-white font-bold rounded-xl shadow-lg shadow-orange-200 transition-all flex items-center justify-center gap-2 text-base"
+                            >
+                                <ArrowLeft size={20} /> Kết thúc phiên và quay lại lịch dạy
+                            </button>
                         </div>
                     </div>
                 </div>
