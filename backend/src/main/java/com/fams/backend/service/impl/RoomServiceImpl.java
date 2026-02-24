@@ -58,6 +58,7 @@ public class RoomServiceImpl implements RoomService {
                 .floor(request.getFloor())
                 .type(request.getType())
                 .status(request.getStatus())
+                .description(request.getDescription())
                 .gridRow(request.getGridRow())
                 .gridCol(request.getGridCol())
                 .gridRowSpan(request.getGridRowSpan() != null ? request.getGridRowSpan() : 1)
@@ -84,6 +85,7 @@ public class RoomServiceImpl implements RoomService {
         room.setFloor(request.getFloor());
         room.setType(request.getType());
         room.setStatus(request.getStatus());
+        room.setDescription(request.getDescription());
         room.setGridRow(request.getGridRow());
         room.setGridCol(request.getGridCol());
         room.setGridRowSpan(request.getGridRowSpan() != null ? request.getGridRowSpan() : 1);
@@ -130,6 +132,7 @@ public class RoomServiceImpl implements RoomService {
                 .capacity(room.getCapacity())
                 .building(room.getBuilding())
                 .floor(room.getFloor())
+                .description(room.getDescription())
                 .type(room.getType())
                 .status(room.getStatus())
                 .gridRow(room.getGridRow())
@@ -149,6 +152,7 @@ public class RoomServiceImpl implements RoomService {
                 .capacity(room.getCapacity())
                 .building(room.getBuilding())
                 .floor(room.getFloor())
+                .description(room.getDescription())
                 .type(room.getType())
                 .status(room.getStatus())
                 .gridRow(room.getGridRow())

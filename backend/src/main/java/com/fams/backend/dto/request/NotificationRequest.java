@@ -41,6 +41,8 @@ public class NotificationRequest {
 
     private LocalDateTime scheduledAt;
 
+    private String targetUrl;
+
     @Builder.Default
     private NotificationStatus status = NotificationStatus.DRAFT;
 

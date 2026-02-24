@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AdminLayout } from '../components/admin/AdminLayout';
 import { AcademicStaffLayout } from '../layouts/AcademicStaffLayout';
@@ -6,7 +6,6 @@ import { LecturerLayout } from '../layouts/LecturerLayout';
 import { StudentLayout } from '../layouts/StudentLayout';
 import { Pagination } from '../components/common/Pagination';
 import { dashboardService } from '../services/api/dashboardService';
-import { academicStaffService } from '../services/api/academicStaffService';
 import { authService } from '../services/api/authService';
 import { AppNotification } from '../types/dashboard';
 import { Loader2, Search, Bell, AlertCircle, CheckCircle2, User, ArrowLeft } from 'lucide-react';
@@ -156,46 +155,36 @@ export const NotificationListPage: React.FC = () => {
 
   const LayoutComponent = getLayout(user?.role);
 
-  // Load notifications
-  useEffect(() => {
-    const loadNotifications = async () => {
-      try {
-        setLoading(true);
-        // If user is ACADEMIC_STAFF, we also want to consider the global notifications from the dashboard
-        const dashboardData = await academicStaffService.getDashboardData().catch(() => null);
-        const recipientNotifications = await dashboardService.getNotifications();
+  // Load notifications - defined outside useEffect so it can be reused
+  const loadNotifications = useCallback(async () => {
+    try {
+      setLoading(true);
+      // Use dashboardService.getNotifications() for all roles
+      // This endpoint returns notifications from NotificationRecipient table
+      // which properly tracks isRead status per user
+      const recipientNotifications = await dashboardService.getNotifications();
 
-        let allNotifs = [...recipientNotifications];
+      // Sort by timestamp desc (requires proper parsing)
+      const sortedNotifs = [...recipientNotifications].sort((a, b) => {
+        const dateA = parseDateTime(a.timestamp);
+        const dateB = parseDateTime(b.timestamp);
+        if (!dateA || !dateB) return 0;
+        return dateB.getTime() - dateA.getTime();
+      });
 
-        // Add dashboard notifications if they are not already in the list
-        if (dashboardData?.notifications) {
-          const existingIds = new Set(allNotifs.map(n => n.id));
-          dashboardData.notifications.forEach((dn: any) => {
-            if (!existingIds.has(dn.id)) {
-              allNotifs.push(dn);
-            }
-          });
-        }
-
-        // Sort by timestamp desc (requires proper parsing)
-        allNotifs.sort((a, b) => {
-          const dateA = parseDateTime(a.timestamp);
-          const dateB = parseDateTime(b.timestamp);
-          if (!dateA || !dateB) return 0;
-          return dateB.getTime() - dateA.getTime();
-        });
-
-        setNotifications(allNotifs);
-      } catch (error) {
-        console.error('Failed to load notifications:', error);
-        toast.error('Không thể tải thông báo');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadNotifications();
+      setNotifications(sortedNotifs);
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+      toast.error('Không thể tải thông báo');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // Initial load
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
 
   // Filter notifications
   const filteredNotifications = notifications.filter((notif) => {
@@ -226,12 +215,17 @@ export const NotificationListPage: React.FC = () => {
   // Mark all as read
   const handleMarkAllAsRead = async () => {
     try {
-      const unreadNotifications = notifications.filter((n) => !n.isRead);
-      await Promise.all(
-        unreadNotifications.map((n) => dashboardService.markNotificationAsRead(n.id))
-      );
+      if (unreadCount === 0) return;
+
+      await dashboardService.markAllNotificationsAsRead();
+
+      // OPTIMISTIC UPDATE: Update all local notifications to read
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+
       toast.success('Đã đánh dấu tất cả là đã đọc');
+
+      // Trigger a global event to update other components (like navbar badge)
+      window.dispatchEvent(new Event('notificationRefresh'));
     } catch (error) {
       console.error('Failed to mark all as read:', error);
       toast.error('Không thể đánh dấu tất cả là đã đọc');
