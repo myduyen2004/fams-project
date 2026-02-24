@@ -75,6 +75,11 @@ public class Assignment {
     @Column(name = "reference_name", length = 255)
     private String referenceName;
 
+    // Đã gửi thông báo nhắc nhở trước hạn nộp chưa
+    @Column(name = "reminder_sent", nullable = false)
+    @Builder.Default
+    private Boolean reminderSent = false;
+
     // Danh sách bài nộp
     @OneToMany(mappedBy = "assignment", cascade = CascadeType.ALL)
     @Builder.Default

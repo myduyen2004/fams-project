@@ -49,7 +49,6 @@ export const LecturerAssignmentPage: React.FC = () => {
     const [batchDueDate, setBatchDueDate] = useState('');
     const [batchEditing, setBatchEditing] = useState(false);
     const [batchWarning, setBatchWarning] = useState('');
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [editAssignmentId, setEditAssignmentId] = useState<number | null>(null);
     const [editTitle, setEditTitle] = useState('');
     const [editDescription, setEditDescription] = useState('');
@@ -192,8 +191,15 @@ export const LecturerAssignmentPage: React.FC = () => {
     };
 
     const handleCreate = async () => {
-        if (!newTitle.trim() || !selectedClass) {
+        if (!newTitle.trim()) {
             toast.error('Vui lòng nhập tiêu đề bài tập');
+            return;
+        }
+        const targetClass = createForSlotId
+            ? (slots.find(s => s.id === createForSlotId)?.className || selectedClass)
+            : selectedClass;
+        if (!targetClass) {
+            toast.error('Vui lòng chọn lớp học');
             return;
         }
         if (newDueDate) {
@@ -207,9 +213,7 @@ export const LecturerAssignmentPage: React.FC = () => {
         try {
             setCreating(true);
             await assignmentService.createAssignment({
-                className: createForSlotId
-                    ? (slots.find(s => s.id === createForSlotId)?.className || selectedClass)
-                    : selectedClass,
+                className: targetClass,
                 timetableSlotId: createForSlotId || undefined,
                 title: newTitle.trim(),
                 description: newDescription.trim() || undefined,
@@ -451,10 +455,7 @@ export const LecturerAssignmentPage: React.FC = () => {
             setBatchWarning('Không thể chỉnh sửa hoặc xóa bài tập đã đóng. Vui lòng chỉ chọn bài tập đang mở.');
             return;
         }
-        setShowDeleteConfirm(true);
-    };
-
-    const executeBatchDelete = async () => {
+        if (!window.confirm(`Bạn có chắc muốn xóa ${selectedIds.size} bài tập? Hành động này không thể hoàn tác.`)) return;
         try {
             setBatchEditing(true);
             const promises = Array.from(selectedIds).map(id =>
@@ -463,7 +464,6 @@ export const LecturerAssignmentPage: React.FC = () => {
             await Promise.all(promises);
             toast.success(`Đã xóa ${selectedIds.size} bài tập`);
             setSelectedIds(new Set());
-            setShowDeleteConfirm(false);
             fetchAllData();
         } catch (err: any) {
             toast.error(err?.response?.data?.message || 'Không thể xóa bài tập');
@@ -906,38 +906,6 @@ export const LecturerAssignmentPage: React.FC = () => {
                     </div>
                 )
             }
-            {/* Custom Delete Confirmation Dialog */}
-            {showDeleteConfirm && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-sm border border-gray-200 dark:border-zinc-800 p-6 text-center">
-                        <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Trash2 className="w-6 h-6 text-red-600 dark:text-red-500" />
-                        </div>
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-                            Xác nhận xóa tài liệu
-                        </h3>
-                        <p className="text-sm text-gray-500 dark:text-zinc-400 mb-6">
-                            Bạn có chắc muốn xóa {selectedIds.size} bài tập đã chọn? Hành động này không thể hoàn tác.
-                        </p>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setShowDeleteConfirm(false)}
-                                disabled={batchEditing}
-                                className="flex-1 px-4 py-2 border border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-zinc-300 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
-                            >
-                                Hủy
-                            </button>
-                            <button
-                                onClick={executeBatchDelete}
-                                disabled={batchEditing}
-                                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center"
-                            >
-                                {batchEditing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Xóa bài tập'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </LecturerLayout >
     );
 };

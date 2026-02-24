@@ -10,9 +10,11 @@ import com.fams.backend.service.AssignmentSubmissionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -30,8 +32,8 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
     private final EnrollmentRepository enrollmentRepository;
     private final UserRepository userRepository;
     private final ClassSectionRepository classSectionRepository;
-
     private final TimetableSlotRepository timetableSlotRepository;
+    private final NotificationServiceImpl notificationService;
 
     @Override
     public AssignmentResponse createAssignment(CreateAssignmentRequest request, Long lecturerId) {
@@ -80,6 +82,9 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
         log.info("Assignment created: id={}, class={}, lecturer={}, slot={}", assignment.getId(),
                 request.getClassName(),
                 lecturerId, slot != null ? slot.getId() : "null");
+
+        // Gửi thông báo cho sinh viên trong lớp
+        sendNewAssignmentNotifications(assignment, classSection, lecturer);
 
         return toAssignmentResponse(assignment);
     }
@@ -317,6 +322,74 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
                 .status(AssignmentSubmission.SubmissionStatus.NOT_SUBMITTED)
                 .assignmentDueDate(assignment.getDueDate())
                 .build();
+    }
+
+    // === Notification helper ===
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void sendNewAssignmentNotifications(Assignment a, ClassSection cs, User lecturer) {
+        try {
+            String dueNote = a.getDueDate() != null
+                    ? " trước " + a.getDueDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                    : "";
+            String courseCode = cs.getCourse().getCode();
+            String title = "Bài tập môn " + courseCode;
+            String content = "Giảng viên đã giao cho em một bài tập mới trong môn "
+                    + courseCode + "."
+                    + " Em vui lòng vào hệ thống để xem chi tiết yêu cầu"
+                    + " và hoàn thành bài tập" + dueNote + " nhé.</br>\n\n"
+                    + "Chúc em học tốt!";
+
+            // Chi lay sinh vien dang ky dung lop nay
+            List<Enrollment> enrollments = enrollmentRepository.findByClassSectionClassName(cs.getClassName());
+
+            for (Enrollment e : enrollments) {
+                notificationService.createNotification(
+                        e.getStudent(),
+                        title,
+                        content,
+                        Notification.NotificationType.ACADEMIC,
+                        "/student/assignments",
+                        lecturer);
+            }
+            log.info("Sent assignment notification to {} students in class {}",
+                    enrollments.size(), cs.getClassName());
+        } catch (Exception ex) {
+            log.warn("Failed to send assignment notifications for class {}: {}",
+                    cs.getClassName(), ex.getMessage());
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void sendDueDateReminderNotifications(Assignment a) {
+        try {
+            ClassSection cs = a.getClassSection();
+            User lecturer = a.getCreatedBy();
+            String courseCode = cs.getCourse().getCode();
+            String due = a.getDueDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+
+            String title = "Nhắc nhở: Bài tập môn " + courseCode + " sắp đến hạn";
+            String content = "Bài tập môn " + courseCode
+                    + " của em sẽ đến hạn nộp vào " + due
+                    + ". Em vui lòng hoàn thành và nộp bài trước thời hạn nhé.</br>\n\nChúc em học tốt!";
+
+            List<Enrollment> enrollments = enrollmentRepository.findByClassSectionClassName(cs.getClassName());
+
+            for (Enrollment e : enrollments) {
+                notificationService.createNotification(
+                        e.getStudent(),
+                        title,
+                        content,
+                        Notification.NotificationType.ACADEMIC,
+                        "/student/assignments",
+                        lecturer);
+            }
+            log.info("Sent due-date reminder to {} students for assignment {} (class {})",
+                    enrollments.size(), a.getId(), cs.getClassName());
+        } catch (Exception ex) {
+            log.warn("Failed to send due-date reminder for assignment {}: {}",
+                    a.getId(), ex.getMessage());
+        }
     }
 
     // === Auto-close helper ===
