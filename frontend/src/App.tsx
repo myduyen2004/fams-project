@@ -52,8 +52,6 @@ const LecturerCreateRequestPage = lazy(() => import('./pages/lecturer/LecturerCr
 const LecturerSchedulePage = lazy(() => import('./pages/lecturer/LecturerSchedulePage').then(m => ({ default: m.LecturerSchedulePage })));
 const AttendanceSessionPage = lazy(() => import('./pages/lecturer/AttendanceSessionPage').then(m => ({ default: m.AttendanceSessionPage })));
 const RealTimeAttendancePage = lazy(() => import('./pages/lecturer/RealTimeAttendancePage').then(m => ({ default: m.RealTimeAttendancePage })));
-const LecturerMessagesPage = lazy(() => import('./pages/lecturer/LecturerMessagesPage').then(m => ({ default: m.LecturerMessagesPage })));
-const StudentMessagesPage = lazy(() => import('./pages/student/StudentMessagesPage').then(m => ({ default: m.StudentMessagesPage })));
 const LecturerGradeManagementPage = lazy(() => import('./pages/lecturer/LecturerGradeManagementPage').then(m => ({ default: m.LecturerGradeManagementPage })));
 const ExamGradeManagementPage = lazy(() => import('./pages/academic-staff/ExamGradeManagementPage').then(m => ({ default: m.ExamGradeManagementPage })));
 const ResitGradeManagementPage = lazy(() => import('./pages/academic-staff/ResitGradeManagementPage').then(m => ({ default: m.ResitGradeManagementPage })));

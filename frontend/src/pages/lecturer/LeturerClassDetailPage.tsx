@@ -15,7 +15,6 @@ export const LeturerClassDetailPage: React.FC = () => {
     const navigate = useNavigate();
     const [detail, setDetail] = useState<ClassDetailResponse | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
-    const [creatingGroup, setCreatingGroup] = useState<boolean>(false);
     const [pagination, setPagination] = useState({
         page: 0,
         size: 10,
@@ -101,22 +100,6 @@ export const LeturerClassDetailPage: React.FC = () => {
         }
     };
 
-    const handleCreateChatGroup = async () => {
-        if (!className || creatingGroup) return;
-        setCreatingGroup(true);
-        try {
-            const group = await chatGroupService.createGroupForClass(className);
-            // Update local state
-            setDetail(prev => prev ? { ...prev, hasChatGroup: true, chatGroupId: group.id } : null);
-            // Navigate to messages page
-            navigate('/lecturer/messages');
-        } catch (error: any) {
-            console.error("Failed to create chat group", error);
-            alert(error?.response?.data?.message || 'Có lỗi xảy ra khi tạo nhóm chat');
-        } finally {
-            setCreatingGroup(false);
-        }
-    };
 
     const maskValue = (value: string | undefined, visibleChars: number = 2) => {
         if (!value) return '';

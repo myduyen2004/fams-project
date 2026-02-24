@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Edit2, Save, X, Camera, Eye, EyeOff, Lock, Key, Loader2 } from 'lucide-react';
+import { Edit2, Save, X, Camera, Eye, EyeOff, Lock, Key } from 'lucide-react';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { authService } from '../../services/api/authService';
 import { userService } from '../../services/api/userService';
@@ -213,8 +213,8 @@ export const ProfilePage: React.FC = () => {
                 <div className="w-32 h-32 rounded-full border-4 border-white dark:border-zinc-900 bg-gradient-to-br from-fpt-orange to-orange-600 overflow-hidden">
                   {displayProfile.avatar ? (
                     <img
-                      src={displayProfile.avatar.startsWith('data:') 
-                        ? displayProfile.avatar 
+                      src={displayProfile.avatar.startsWith('data:')
+                        ? displayProfile.avatar
                         : `${displayProfile.avatar}${displayProfile.avatar.includes('?') ? '&' : '?'}t=${new Date().getTime()}`}
                       alt={displayProfile.fullName}
                       className="w-full h-full object-cover"

@@ -46,7 +46,6 @@ export const LecturerAssignmentPage: React.FC = () => {
     // Multi-select & batch edit
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [showBatchEditDialog, setShowBatchEditDialog] = useState(false);
-    const [batchDueDate, setBatchDueDate] = useState('');
     const [batchEditing, setBatchEditing] = useState(false);
     const [batchWarning, setBatchWarning] = useState('');
     const [editAssignmentId, setEditAssignmentId] = useState<number | null>(null);
