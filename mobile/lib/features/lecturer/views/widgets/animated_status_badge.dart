@@ -90,7 +90,7 @@ class _AnimatedStatusBadgeState extends State<AnimatedStatusBadge> with SingleTi
                   const SizedBox(width: 8),
                   Text(
                     label,
-                    style: GoogleFonts.roboto(
+                    style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: baseColor,

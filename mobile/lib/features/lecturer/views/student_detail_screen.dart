@@ -41,7 +41,7 @@ class StudentDetailScreen extends StatelessWidget {
                   ),
                   Text(
                     'Hồ Sơ Sinh Viên',
-                    style: GoogleFonts.roboto(
+                    style: GoogleFonts.inter(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
@@ -154,7 +154,7 @@ class StudentDetailScreen extends StatelessWidget {
         const SizedBox(height: 16),
         Text(
           student.studentName,
-          style: GoogleFonts.roboto(
+          style: GoogleFonts.inter(
             fontSize: 22,
             fontWeight: FontWeight.bold,
             color: Colors.black87,
@@ -164,7 +164,7 @@ class StudentDetailScreen extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           'MSSV: ${student.studentCode}',
-          style: GoogleFonts.roboto(
+          style: GoogleFonts.inter(
             fontSize: 15,
             fontWeight: FontWeight.w600,
             color: const Color(0xFFEF7623),
@@ -191,7 +191,7 @@ class StudentDetailScreen extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: GoogleFonts.roboto(
+        style: GoogleFonts.inter(
           fontSize: 12,
           fontWeight: FontWeight.bold,
           color: textColor,
@@ -205,7 +205,7 @@ class StudentDetailScreen extends StatelessWidget {
       alignment: Alignment.centerLeft,
       child: Text(
         title,
-        style: GoogleFonts.roboto(
+        style: GoogleFonts.inter(
           fontSize: 17,
           fontWeight: FontWeight.bold,
           color: Colors.black87,
@@ -319,7 +319,7 @@ class StudentDetailScreen extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: GoogleFonts.roboto(
+                style: GoogleFonts.inter(
                   fontSize: 12,
                   color: Colors.grey[500],
                 ),
@@ -327,7 +327,7 @@ class StudentDetailScreen extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 displayValue,
-                style: GoogleFonts.roboto(
+                style: GoogleFonts.inter(
                   fontSize: 14, 
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,

@@ -39,737 +39,758 @@ import java.util.stream.Collectors;
 @Tag(name = "Timetable", description = "Timetable generation and management APIs")
 public class TimetableController {
 
-    private final TimetableGenerationService generationService;
-    private final TimetableSlotRepository timetableSlotRepository;
-    private final StudentAttendanceRepository studentAttendanceRepository;
-    private final ExcelExportService excelExportService;
-    private final UserRepository userRepository;
-    private final SemesterRepository semesterRepository;
-    private final com.fams.backend.repository.ClassSectionRepository classSectionRepository;
-    private final com.fams.backend.repository.SemesterConfigRepository semesterConfigRepository;
-    private final com.fams.backend.service.timetable.TimetableSlotService timetableSlotService;
+        private final TimetableGenerationService generationService;
+        private final TimetableSlotRepository timetableSlotRepository;
+        private final StudentAttendanceRepository studentAttendanceRepository;
+        private final ExcelExportService excelExportService;
+        private final UserRepository userRepository;
+        private final SemesterRepository semesterRepository;
+        private final com.fams.backend.repository.ClassSectionRepository classSectionRepository;
+        private final com.fams.backend.repository.SemesterConfigRepository semesterConfigRepository;
+        private final com.fams.backend.service.timetable.TimetableSlotService timetableSlotService;
 
-    // ==================== GENERATION APIs ====================
+        // ==================== GENERATION APIs ====================
 
-    @PostMapping("/generate")
-    @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
-    @Operation(summary = "Generate timetable", description = "Start GA-based timetable generation for a semester")
-    public ResponseEntity<TimetableDTO.GenerateResponse> generateTimetable(
-            @RequestBody TimetableDTO.GenerateRequest request) {
+        @PostMapping("/generate")
+        @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
+        @Operation(summary = "Generate timetable", description = "Start GA-based timetable generation for a semester")
+        public ResponseEntity<TimetableDTO.GenerateResponse> generateTimetable(
+                        @RequestBody TimetableDTO.GenerateRequest request) {
 
-        log.info("Starting timetable generation for semester: {}", request.getSemesterCode());
+                log.info("Starting timetable generation for semester: {}", request.getSemesterCode());
 
-        // Convert config DTO to GAConfig
-        GAConfig config = convertToGAConfig(request.getConfig());
+                // Convert config DTO to GAConfig
+                GAConfig config = convertToGAConfig(request.getConfig());
 
-        // Start async generation
-        String jobId = UUID.randomUUID().toString();
-        CompletableFuture<TimetableGenerationService.GenerationResult> future = generationService
-                .generateTimetable(jobId, request.getSemesterCode(), config, null);
+                // Start async generation
+                String jobId = UUID.randomUUID().toString();
+                CompletableFuture<TimetableGenerationService.GenerationResult> future = generationService
+                                .generateTimetable(jobId, request.getSemesterCode(), config, null);
 
-        // Wait for result (or use async approach with job tracking)
-        try {
-            TimetableGenerationService.GenerationResult result = future.get();
+                // Wait for result (or use async approach with job tracking)
+                try {
+                        TimetableGenerationService.GenerationResult result = future.get();
 
-            return ResponseEntity.ok(TimetableDTO.GenerateResponse.builder()
-                    .success(result.isSuccess())
-                    .jobId(result.getJobId())
-                    .message(result.getMessage())
-                    .fitness(result.getFitness())
-                    .totalGenerations(result.getTotalGenerations())
-                    .durationMs(result.getDurationMs())
-                    .totalSlots(result.getTotalSlots())
-                    .totalClasses(result.getTotalClasses())
-                    .build());
-        } catch (Exception e) {
-            log.error("Error generating timetable", e);
-            return ResponseEntity.internalServerError()
-                    .body(TimetableDTO.GenerateResponse.builder()
-                            .success(false)
-                            .message("Error: " + e.getMessage())
-                            .build());
-        }
-    }
-
-    @PostMapping("/generate/async")
-    @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
-    @Operation(summary = "Start async generation", description = "Start timetable generation and return job ID immediately")
-    public ResponseEntity<Map<String, String>> startAsyncGeneration(
-            @RequestBody TimetableDTO.GenerateRequest request) {
-
-        String jobId = UUID.randomUUID().toString();
-        GAConfig config = convertToGAConfig(request.getConfig());
-
-        // Start async - don't wait, pass jobId for tracking
-        generationService.generateTimetable(jobId, request.getSemesterCode(), config, null);
-
-        return ResponseEntity.accepted()
-                .body(Map.of(
-                        "jobId", jobId,
-                        "message", "Timetable generation started",
-                        "status", "RUNNING"));
-    }
-
-    @GetMapping("/generate/status/{jobId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
-    @Operation(summary = "Get generation job status")
-    public ResponseEntity<TimetableDTO.JobStatusResponse> getJobStatus(@PathVariable String jobId) {
-        TimetableGenerationService.GenerationJob job = generationService.getJobStatus(jobId);
-
-        if (job == null) {
-            return ResponseEntity.notFound().build();
+                        return ResponseEntity.ok(TimetableDTO.GenerateResponse.builder()
+                                        .success(result.isSuccess())
+                                        .jobId(result.getJobId())
+                                        .message(result.getMessage())
+                                        .fitness(result.getFitness())
+                                        .totalGenerations(result.getTotalGenerations())
+                                        .durationMs(result.getDurationMs())
+                                        .totalSlots(result.getTotalSlots())
+                                        .totalClasses(result.getTotalClasses())
+                                        .build());
+                } catch (Exception e) {
+                        log.error("Error generating timetable", e);
+                        return ResponseEntity.internalServerError()
+                                        .body(TimetableDTO.GenerateResponse.builder()
+                                                        .success(false)
+                                                        .message("Error: " + e.getMessage())
+                                                        .build());
+                }
         }
 
-        return ResponseEntity.ok(TimetableDTO.JobStatusResponse.builder()
-                .jobId(job.getJobId())
-                .semesterCode(job.getSemesterCode())
-                .status(job.getStatus().name())
-                .phase(job.getPhase())
-                .currentGeneration(job.getCurrentGeneration())
-                .bestFitness(job.getBestFitness())
-                .percentComplete(job.getPercentComplete())
-                .startTime(job.getStartTime())
-                .endTime(job.getEndTime())
-                .errorMessage(job.getErrorMessage())
-                .build());
-    }
+        @PostMapping("/generate/async")
+        @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
+        @Operation(summary = "Start async generation", description = "Start timetable generation and return job ID immediately")
+        public ResponseEntity<Map<String, String>> startAsyncGeneration(
+                        @RequestBody TimetableDTO.GenerateRequest request) {
 
-    @PostMapping("/generate/cancel/{jobId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
-    @Operation(summary = "Cancel running job")
-    public ResponseEntity<Map<String, Object>> cancelJob(@PathVariable String jobId) {
-        boolean cancelled = generationService.cancelJob(jobId);
+                String jobId = UUID.randomUUID().toString();
+                GAConfig config = convertToGAConfig(request.getConfig());
 
-        return ResponseEntity.ok(Map.of(
-                "jobId", jobId,
-                "cancelled", cancelled,
-                "message", cancelled ? "Job cancelled" : "Job not found or already completed"));
-    }
+                // Start async - don't wait, pass jobId for tracking
+                generationService.generateTimetable(jobId, request.getSemesterCode(), config, null);
 
-    // ==================== QUERY APIs ====================
-
-    @GetMapping("/semester/{semesterCode}")
-    @Operation(summary = "Get timetable by semester")
-    public ResponseEntity<List<TimetableDTO.TimetableSlotDTO>> getTimetableBySemester(
-            @PathVariable String semesterCode) {
-
-        // Check visibility
-        Semester semester = semesterRepository.findByCode(semesterCode)
-                .orElseThrow(() -> new RuntimeException("Semester not found"));
-        com.fams.backend.entity.SemesterConfig config = semester.getConfig();
-        boolean isPublished = config != null && Boolean.TRUE.equals(config.getIsPublished());
-
-        if (!isPublished) {
-            // Allow if User has ROLE_ADMIN or ROLE_ACADEMIC_STAFF
-            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
-                    .getContext().getAuthentication();
-            boolean isAdminOrStaff = auth != null && auth.getAuthorities().stream()
-                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")
-                            || a.getAuthority().equals("ROLE_ACADEMIC_STAFF"));
-
-            if (!isAdminOrStaff) {
-                log.warn("Semester {} is not published. Access denied.", semesterCode);
-                return ResponseEntity.status(403).build();
-            }
+                return ResponseEntity.accepted()
+                                .body(Map.of(
+                                                "jobId", jobId,
+                                                "message", "Timetable generation started",
+                                                "status", "RUNNING"));
         }
 
-        List<TimetableSlot> slots = timetableSlotRepository.findBySemesterCode(semesterCode);
-        List<TimetableDTO.TimetableSlotDTO> dtos = slots.stream()
-                .map(this::convertToDTO)
-                .toList();
+        @GetMapping("/generate/status/{jobId}")
+        @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
+        @Operation(summary = "Get generation job status")
+        public ResponseEntity<TimetableDTO.JobStatusResponse> getJobStatus(@PathVariable String jobId) {
+                TimetableGenerationService.GenerationJob job = generationService.getJobStatus(jobId);
 
-        return ResponseEntity.ok(dtos);
-    }
+                if (job == null) {
+                        return ResponseEntity.notFound().build();
+                }
 
-    @GetMapping("/semester/{semesterCode}/date/{date}")
-    @Operation(summary = "Get timetable by semester and specific date", description = "Faster API that only loads slots for a specific date")
-    public ResponseEntity<List<TimetableDTO.TimetableSlotDTO>> getTimetableBySemesterAndDate(
-            @PathVariable String semesterCode,
-            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-
-        List<TimetableSlot> slots = timetableSlotRepository.findBySemesterCodeAndDate(semesterCode, date);
-        List<TimetableDTO.TimetableSlotDTO> dtos = slots.stream()
-                .map(this::convertToDTO)
-                .toList();
-
-        return ResponseEntity.ok(dtos);
-    }
-
-    @GetMapping("/semester/{semesterCode}/range")
-    @Operation(summary = "Get timetable by semester and date range", description = "Optimized API for weekly view/export")
-    public ResponseEntity<List<TimetableDTO.TimetableSlotDTO>> getTimetableBySemesterAndDateRange(
-            @PathVariable String semesterCode,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-
-        List<TimetableSlot> slots = timetableSlotRepository.findBySemesterCodeAndDateBetween(semesterCode, startDate,
-                endDate);
-        List<TimetableDTO.TimetableSlotDTO> dtos = slots.stream()
-                .map(this::convertToDTO)
-                .toList();
-
-        return ResponseEntity.ok(dtos);
-    }
-
-    @GetMapping("/semester/{semesterCode}/exists")
-    @Operation(summary = "Check if timetable exists for semester", description = "Returns whether the semester has any timetable slots")
-    public ResponseEntity<Map<String, Object>> checkTimetableExists(@PathVariable String semesterCode) {
-        long count = timetableSlotRepository.countBySemesterCode(semesterCode);
-        return ResponseEntity.ok(Map.of(
-                "exists", count > 0,
-                "count", count));
-    }
-
-    @GetMapping("/semester/{semesterCode}/unscheduled-count")
-    @Operation(summary = "Count unscheduled class sections", description = "Returns the number of class sections that have not been scheduled yet")
-    public ResponseEntity<Map<String, Object>> countUnscheduledClassSections(@PathVariable String semesterCode) {
-        // Optimized query directly from DB instead of loading all objects
-
-        long totalSchedulable = classSectionRepository.countSchedulableClassSections(semesterCode);
-        long unscheduledCount = classSectionRepository.countUnscheduledClassSections(semesterCode);
-        long scheduledCount = totalSchedulable - unscheduledCount;
-        java.util.List<String> unscheduledClassNames = classSectionRepository.findUnscheduledClassNames(semesterCode);
-
-        return ResponseEntity.ok(Map.of(
-                "unscheduledCount", unscheduledCount,
-                "totalSchedulable", totalSchedulable,
-                "scheduledCount", scheduledCount,
-                "unscheduledClassNames", unscheduledClassNames));
-    }
-
-    @GetMapping("/semester/{semesterCode}/config-changed")
-    @Operation(summary = "Check if semester config changed after timetable generation", description = "Returns whether the semester configuration was modified after the timetable was generated")
-    public ResponseEntity<Map<String, Object>> checkConfigChangedAfterGeneration(@PathVariable String semesterCode) {
-        // Get semester config
-        var configOpt = semesterConfigRepository.findBySemesterCode(semesterCode);
-        if (configOpt.isEmpty()) {
-            return ResponseEntity.ok(Map.of(
-                    "configChanged", false,
-                    "hasTimetable", false,
-                    "message", "No semester config found"));
+                return ResponseEntity.ok(TimetableDTO.JobStatusResponse.builder()
+                                .jobId(job.getJobId())
+                                .semesterCode(job.getSemesterCode())
+                                .status(job.getStatus().name())
+                                .phase(job.getPhase())
+                                .currentGeneration(job.getCurrentGeneration())
+                                .bestFitness(job.getBestFitness())
+                                .percentComplete(job.getPercentComplete())
+                                .startTime(job.getStartTime())
+                                .endTime(job.getEndTime())
+                                .errorMessage(job.getErrorMessage())
+                                .build());
         }
 
-        // Get earliest timetable slot creation time
-        java.time.LocalDateTime timetableCreatedAt = timetableSlotRepository
-                .findEarliestCreatedAtBySemesterCode(semesterCode);
-        if (timetableCreatedAt == null) {
-            return ResponseEntity.ok(Map.of(
-                    "configChanged", false,
-                    "hasTimetable", false,
-                    "message", "No timetable exists for this semester"));
+        @PostMapping("/generate/cancel/{jobId}")
+        @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
+        @Operation(summary = "Cancel running job")
+        public ResponseEntity<Map<String, Object>> cancelJob(@PathVariable String jobId) {
+                boolean cancelled = generationService.cancelJob(jobId);
+
+                return ResponseEntity.ok(Map.of(
+                                "jobId", jobId,
+                                "cancelled", cancelled,
+                                "message", cancelled ? "Job cancelled" : "Job not found or already completed"));
         }
 
-        // Compare timestamps
-        var config = configOpt.get();
-        java.time.LocalDateTime configUpdatedAt = config.getUpdatedAt();
+        // ==================== QUERY APIs ====================
 
-        // If config was updated after the timetable was created, it means config
-        // changed
-        boolean configChanged = configUpdatedAt != null && configUpdatedAt.isAfter(timetableCreatedAt);
+        @GetMapping("/semester/{semesterCode}")
+        @Operation(summary = "Get timetable by semester")
+        public ResponseEntity<List<TimetableDTO.TimetableSlotDTO>> getTimetableBySemester(
+                        @PathVariable String semesterCode) {
 
-        return ResponseEntity.ok(Map.of(
-                "configChanged", configChanged,
-                "hasTimetable", true,
-                "timetableCreatedAt", timetableCreatedAt.toString(),
-                "configUpdatedAt", configUpdatedAt != null ? configUpdatedAt.toString() : "null",
-                "message", configChanged
-                        ? "Cấu hình học kỳ đã thay đổi. Vui lòng tạo thời khóa biểu mới."
-                        : "Semester config is up to date"));
-    }
-
-    @GetMapping("/class/{className}")
-    @Operation(summary = "Get timetable for a class")
-    public ResponseEntity<List<TimetableDTO.TimetableSlotDTO>> getTimetableByClass(
-            @PathVariable String className) {
-
-        List<TimetableSlot> slots = timetableSlotRepository.findByClassName(className);
-        List<TimetableDTO.TimetableSlotDTO> dtos = slots.stream()
-                .map(this::convertToDTO)
-                .toList();
-
-        return ResponseEntity.ok(dtos);
-    }
-
-    @RequestMapping(value = "/slot/{id}", method = { RequestMethod.PATCH, RequestMethod.PUT })
-    @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
-    @Operation(summary = "Update a timetable slot", description = "Reschedule a session to a different date, slot, or room")
-    public ResponseEntity<TimetableDTO.TimetableSlotDTO> updateSlot(
-            @PathVariable Long id,
-            @RequestBody @jakarta.validation.Valid TimetableDTO.UpdateSlotRequest request) {
-        log.info("Updating timetable slot {}: date={}, slot={}, room={}", id, request.getDate(),
-                request.getSlotNumber(), request.getRoomId());
-        return ResponseEntity.ok(timetableSlotService.updateSlot(id, request));
-    }
-
-    @GetMapping("/availability")
-    @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
-    @Operation(summary = "Get available slots and rooms for a date")
-    public ResponseEntity<TimetableDTO.AvailabilityResponse> getAvailability(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam String semesterCode) {
-        log.info("[Controller] Get availability: date={}, semesterCode={}", date, semesterCode);
-        return ResponseEntity.ok(timetableSlotService.getAvailability(date, semesterCode));
-    }
-
-    @GetMapping("/student/{studentId}")
-    @Operation(summary = "Get timetable for a student")
-    public ResponseEntity<Object> getStudentTimetable(
-            @PathVariable Long studentId,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-
-        log.info("Entering getStudentTimetable for studentId: {}, date: {}", studentId, date);
-
-        try {
-            LocalDate targetDate = date != null ? date : LocalDate.now();
-            LocalDate weekStart = targetDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-            LocalDate weekEnd = weekStart.plusDays(6);
-
-            User student = userRepository.findById(studentId)
-                    .orElseThrow(() -> new RuntimeException("Student not found"));
-
-            log.info("Fetching timetable for student {} (code: {}) from {} to {}", studentId, student.getCode(),
-                    weekStart, weekEnd);
-
-            // Check if semester is published for this date
-            List<Semester> semesters = semesterRepository.findSemestersByDate(targetDate);
-            log.info("Found {} semesters for date {}: {}", semesters.size(), targetDate,
-                    semesters.stream()
-                            .map(s -> s.getCode() + "(published="
-                                    + (s.getConfig() != null && Boolean.TRUE.equals(s.getConfig().getIsPublished()))
-                                    + ")")
-                            .toList());
-            Semester semester = semesters.stream()
-                    .filter(s -> s.getConfig() != null && Boolean.TRUE.equals(s.getConfig().getIsPublished()))
-                    .findFirst()
-                    .orElse(semesters.isEmpty() ? null : semesters.get(0));
-
-            if (semester != null) {
+                // Check visibility
+                Semester semester = semesterRepository.findByCode(semesterCode)
+                                .orElseThrow(() -> new RuntimeException("Semester not found"));
                 com.fams.backend.entity.SemesterConfig config = semester.getConfig();
                 boolean isPublished = config != null && Boolean.TRUE.equals(config.getIsPublished());
-                log.info("Checking visibility for date {}: Semester={}, Published={}", targetDate, semester.getCode(),
-                        isPublished);
 
                 if (!isPublished) {
-                    log.warn("Timetable for semester {} is not published yet. Access denied for student.",
-                            semester.getCode());
-                    // Return explicit error message
-                    return ResponseEntity.status(403).body(Map.of(
-                            "status", 403,
-                            "error", "Forbidden",
-                            "message", "Semester schedule is not published yet: " + semester.getCode()));
-                }
-            } else {
-                log.warn("No active semester found for date {}. Skipping visibility check (CAUTION).", targetDate);
-            }
+                        // Allow if User has ROLE_ADMIN or ROLE_ACADEMIC_STAFF
+                        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
+                                        .getContext().getAuthentication();
+                        boolean isAdminOrStaff = auth != null && auth.getAuthorities().stream()
+                                        .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")
+                                                        || a.getAuthority().equals("ROLE_ACADEMIC_STAFF"));
 
-            List<TimetableSlot> slots = timetableSlotRepository.findByStudentCodeAndDateBetween(
-                    student.getCode(), weekStart, weekEnd);
-
-            // Fallback: If semester wasn't found by date, check the semester of the found
-            // slots
-            if (semester == null && !slots.isEmpty()) {
-                TimetableSlot firstSlot = slots.get(0);
-                if (firstSlot.getClassSection() != null && firstSlot.getClassSection().getSemester() != null) {
-                    // Fix LazyInitializationException: Get ID from proxy and fetch fresh entity
-                    Long semesterId = firstSlot.getClassSection().getSemester().getId();
-                    semester = semesterRepository.findById(semesterId).orElse(null);
-
-                    if (semester != null) {
-                        log.info("Fallback visibility check: Found semester {} from slots.", semester.getCode());
-
-                        com.fams.backend.entity.SemesterConfig config = semester.getConfig();
-                        boolean isPublished = config != null && Boolean.TRUE.equals(config.getIsPublished());
-
-                        if (!isPublished) {
-                            log.warn("Timetable for semester {} (from slots) is not published. Access denied.",
-                                    semester.getCode());
-                            return ResponseEntity.status(403).body(Map.of(
-                                    "status", 403,
-                                    "error", "Forbidden",
-                                    "message", "Semester schedule is not published yet: " + semester.getCode()));
+                        if (!isAdminOrStaff) {
+                                log.warn("Semester {} is not published. Access denied.", semesterCode);
+                                return ResponseEntity.status(403).build();
                         }
-                    }
                 }
-            }
 
-            log.info("Found {} slots for student {}", slots.size(), studentId);
+                List<TimetableSlot> slots = timetableSlotRepository.findBySemesterCode(semesterCode);
+                List<TimetableDTO.TimetableSlotDTO> dtos = slots.stream()
+                                .map(this::convertToDTO)
+                                .toList();
 
-            TimetableDTO.WeeklyTimetableDTO response = buildWeeklyTimetable(weekStart, weekEnd, slots);
-
-            // Enrich with attendance data
-            if (!slots.isEmpty()) {
-                List<Long> slotIds = slots.stream().map(TimetableSlot::getId).toList();
-                List<StudentAttendance> attendances = studentAttendanceRepository.findByStudentIdAndSlotIds(studentId,
-                        slotIds);
-                Map<Long, String> attendanceMap = attendances.stream()
-                        .collect(Collectors.toMap(
-                                a -> a.getSession().getTimetableSlot().getId(),
-                                a -> a.getStatus().name(),
-                                (existing, replacement) -> existing));
-
-                response.getDays().forEach(day -> day.getSlots().forEach(slot -> {
-                    if (attendanceMap.containsKey(slot.getId())) {
-                        slot.setAttendanceStatus(attendanceMap.get(slot.getId()));
-                    }
-                }));
-            }
-
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("CRITICAL ERROR in getStudentTimetable for student " + studentId, e);
-            throw e;
-        }
-    }
-
-    @GetMapping("/student/{studentId}/semester")
-    @Operation(summary = "Get all timetable slots for a student in a semester (for calendar export)")
-    public ResponseEntity<List<TimetableDTO.TimetableSlotDTO>> getSemesterSlotsForStudent(
-            @PathVariable Long studentId,
-            @RequestParam String semesterCode) {
-
-        User student = userRepository.findById(studentId)
-                .orElseThrow(() -> new RuntimeException("Student not found"));
-
-        Semester semester = semesterRepository.findByCode(semesterCode)
-                .orElseThrow(() -> new RuntimeException("Semester not found"));
-
-        // Check if semester is published
-        com.fams.backend.entity.SemesterConfig config = semester.getConfig();
-        if (config != null && !Boolean.TRUE.equals(config.getIsPublished())) {
-            return ResponseEntity.status(403).build();
+                return ResponseEntity.ok(dtos);
         }
 
-        // Fetch ALL slots for this student in this semester
-        List<TimetableSlot> slots = timetableSlotRepository.findByStudentCodeAndDateBetween(
-                student.getCode(), semester.getStartDate(), semester.getEndDate());
+        @GetMapping("/semester/{semesterCode}/date/{date}")
+        @Operation(summary = "Get timetable by semester and specific date", description = "Faster API that only loads slots for a specific date")
+        public ResponseEntity<List<TimetableDTO.TimetableSlotDTO>> getTimetableBySemesterAndDate(
+                        @PathVariable String semesterCode,
+                        @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
-        // Map to DTOs and sort
-        List<TimetableDTO.TimetableSlotDTO> slotDTOs = slots.stream()
-                .map(this::convertToDTO)
-                .sorted(Comparator.comparing(TimetableDTO.TimetableSlotDTO::getDate)
-                        .thenComparing(TimetableDTO.TimetableSlotDTO::getSlotNumber))
-                .collect(Collectors.toList());
+                List<TimetableSlot> slots = timetableSlotRepository.findBySemesterCodeAndDate(semesterCode, date);
+                List<TimetableDTO.TimetableSlotDTO> dtos = slots.stream()
+                                .map(this::convertToDTO)
+                                .toList();
 
-        log.info("Returning {} slots for student {} in semester {}", slotDTOs.size(), studentId, semesterCode);
-        return ResponseEntity.ok(slotDTOs);
-    }
-
-    @GetMapping("/lecturer/{lecturerId}/semester")
-    @Operation(summary = "Get all timetable slots for a lecturer in a semester (for calendar export)")
-    public ResponseEntity<List<TimetableDTO.TimetableSlotDTO>> getSemesterSlotsForLecturer(
-            @PathVariable Long lecturerId,
-            @RequestParam String semesterCode) {
-
-        User lecturer = userRepository.findById(lecturerId)
-                .orElseThrow(() -> new RuntimeException("Lecturer not found"));
-
-        Semester semester = semesterRepository.findByCode(semesterCode)
-                .orElseThrow(() -> new RuntimeException("Semester not found"));
-
-        // Lecturers can always see their schedule
-        List<TimetableSlot> slots = timetableSlotRepository.findByLecturerIdAndDateBetween(
-                lecturerId, semester.getStartDate(), semester.getEndDate());
-
-        List<TimetableDTO.TimetableSlotDTO> slotDTOs = slots.stream()
-                .map(this::convertToDTO)
-                .sorted(Comparator.comparing(TimetableDTO.TimetableSlotDTO::getDate)
-                        .thenComparing(TimetableDTO.TimetableSlotDTO::getSlotNumber))
-                .collect(Collectors.toList());
-
-        log.info("Returning {} slots for lecturer {} in semester {}", slotDTOs.size(), lecturerId, semesterCode);
-        return ResponseEntity.ok(slotDTOs);
-    }
-
-    @GetMapping("/export/student/{studentId}")
-    @Operation(summary = "Export student timetable to Excel")
-    public void exportStudentTimetable(
-            @PathVariable Long studentId,
-            @RequestParam(required = true) String semesterCode,
-            HttpServletResponse response) throws Exception {
-
-        User student = userRepository.findById(studentId)
-                .orElseThrow(() -> new RuntimeException("Student not found"));
-
-        // Find semester by code or assume active? Better to pass semesterCode from
-        // frontend
-        Semester semester = semesterRepository.findByCode(semesterCode)
-                .orElseThrow(() -> new RuntimeException("Semester not found"));
-
-        // Check if semester is published
-        com.fams.backend.entity.SemesterConfig config = semester.getConfig();
-        if (config != null && !Boolean.TRUE.equals(config.getIsPublished())) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Schedule is not published");
-            return;
+                return ResponseEntity.ok(dtos);
         }
 
-        // 1. Fetch ALL slots for this student in this semester context
-        // Using Repository method that filters by DATE RANGE of the semester
-        List<TimetableSlot> slots = timetableSlotRepository.findByStudentCodeAndDateBetween(
-                student.getCode(), semester.getStartDate(), semester.getEndDate());
+        @GetMapping("/semester/{semesterCode}/range")
+        @Operation(summary = "Get timetable by semester and date range", description = "Optimized API for weekly view/export")
+        public ResponseEntity<List<TimetableDTO.TimetableSlotDTO>> getTimetableBySemesterAndDateRange(
+                        @PathVariable String semesterCode,
+                        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+                        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
-        // 2. Map to DTOs
-        List<TimetableDTO.TimetableSlotDTO> slotDTOs = slots.stream()
-                .map(this::convertToDTO)
-                .sorted(Comparator.comparing(TimetableDTO.TimetableSlotDTO::getDate)
-                        .thenComparing(TimetableDTO.TimetableSlotDTO::getSlotNumber))
-                .collect(Collectors.toList());
+                List<TimetableSlot> slots = timetableSlotRepository.findBySemesterCodeAndDateBetween(semesterCode,
+                                startDate,
+                                endDate);
+                List<TimetableDTO.TimetableSlotDTO> dtos = slots.stream()
+                                .map(this::convertToDTO)
+                                .toList();
 
-        // 3. Enrich with Attendance
-        if (!slotDTOs.isEmpty()) {
-            List<Long> slotIds = slots.stream().map(TimetableSlot::getId).toList();
-            List<StudentAttendance> attendances = studentAttendanceRepository.findByStudentIdAndSlotIds(studentId,
-                    slotIds);
-            Map<Long, String> attendanceMap = attendances.stream()
-                    .collect(Collectors.toMap(
-                            a -> a.getSession().getTimetableSlot().getId(),
-                            a -> a.getStatus().name(),
-                            (existing, replacement) -> existing));
+                return ResponseEntity.ok(dtos);
+        }
 
-            slotDTOs.forEach(dto -> {
-                if (attendanceMap.containsKey(dto.getId())) {
-                    dto.setAttendanceStatus(attendanceMap.get(dto.getId()));
+        @GetMapping("/semester/{semesterCode}/exists")
+        @Operation(summary = "Check if timetable exists for semester", description = "Returns whether the semester has any timetable slots")
+        public ResponseEntity<Map<String, Object>> checkTimetableExists(@PathVariable String semesterCode) {
+                long count = timetableSlotRepository.countBySemesterCode(semesterCode);
+                return ResponseEntity.ok(Map.of(
+                                "exists", count > 0,
+                                "count", count));
+        }
+
+        @GetMapping("/semester/{semesterCode}/unscheduled-count")
+        @Operation(summary = "Count unscheduled class sections", description = "Returns the number of class sections that have not been scheduled yet")
+        public ResponseEntity<Map<String, Object>> countUnscheduledClassSections(@PathVariable String semesterCode) {
+                // Optimized query directly from DB instead of loading all objects
+
+                long totalSchedulable = classSectionRepository.countSchedulableClassSections(semesterCode);
+                long unscheduledCount = classSectionRepository.countUnscheduledClassSections(semesterCode);
+                long scheduledCount = totalSchedulable - unscheduledCount;
+                java.util.List<String> unscheduledClassNames = classSectionRepository
+                                .findUnscheduledClassNames(semesterCode);
+
+                return ResponseEntity.ok(Map.of(
+                                "unscheduledCount", unscheduledCount,
+                                "totalSchedulable", totalSchedulable,
+                                "scheduledCount", scheduledCount,
+                                "unscheduledClassNames", unscheduledClassNames));
+        }
+
+        @GetMapping("/semester/{semesterCode}/config-changed")
+        @Operation(summary = "Check if semester config changed after timetable generation", description = "Returns whether the semester configuration was modified after the timetable was generated")
+        public ResponseEntity<Map<String, Object>> checkConfigChangedAfterGeneration(
+                        @PathVariable String semesterCode) {
+                // Get semester config
+                var configOpt = semesterConfigRepository.findBySemesterCode(semesterCode);
+                if (configOpt.isEmpty()) {
+                        return ResponseEntity.ok(Map.of(
+                                        "configChanged", false,
+                                        "hasTimetable", false,
+                                        "message", "No semester config found"));
                 }
-            });
+
+                // Get earliest timetable slot creation time
+                java.time.LocalDateTime timetableCreatedAt = timetableSlotRepository
+                                .findEarliestCreatedAtBySemesterCode(semesterCode);
+                if (timetableCreatedAt == null) {
+                        return ResponseEntity.ok(Map.of(
+                                        "configChanged", false,
+                                        "hasTimetable", false,
+                                        "message", "No timetable exists for this semester"));
+                }
+
+                // Compare timestamps
+                var config = configOpt.get();
+                java.time.LocalDateTime configUpdatedAt = config.getUpdatedAt();
+
+                // If config was updated after the timetable was created, it means config
+                // changed
+                boolean configChanged = configUpdatedAt != null && configUpdatedAt.isAfter(timetableCreatedAt);
+
+                return ResponseEntity.ok(Map.of(
+                                "configChanged", configChanged,
+                                "hasTimetable", true,
+                                "timetableCreatedAt", timetableCreatedAt.toString(),
+                                "configUpdatedAt", configUpdatedAt != null ? configUpdatedAt.toString() : "null",
+                                "message", configChanged
+                                                ? "Cấu hình học kỳ đã thay đổi. Vui lòng tạo thời khóa biểu mới."
+                                                : "Semester config is up to date"));
         }
 
-        // 4. Set Response Headers
-        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        String headerKey = "Content-Disposition";
-        String headerValue = "attachment; filename=schedule_" + student.getUsername() + "_" + student.getId() + "_"
-                + semester.getName().replaceAll(" ", "_") + ".xlsx";
-        response.setHeader(headerKey, headerValue);
+        @GetMapping("/class/{className}")
+        @Operation(summary = "Get timetable for a class")
+        public ResponseEntity<List<TimetableDTO.TimetableSlotDTO>> getTimetableByClass(
+                        @PathVariable String className) {
 
-        // 5. Generate Excel
-        excelExportService.exportStudentScheduleToExcel(response, slotDTOs, student.getFullName(), semester.getName());
-    }
+                List<TimetableSlot> slots = timetableSlotRepository.findByClassName(className);
+                List<TimetableDTO.TimetableSlotDTO> dtos = slots.stream()
+                                .map(this::convertToDTO)
+                                .toList();
 
-    @GetMapping("/lecturer/{lecturerId}")
-    @Operation(summary = "Get timetable for a lecturer")
-    public ResponseEntity<TimetableDTO.WeeklyTimetableDTO> getLecturerTimetable(
-            @PathVariable Long lecturerId,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-
-        LocalDate targetDate = date != null ? date : LocalDate.now();
-        LocalDate weekStart = targetDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-        LocalDate weekEnd = weekStart.plusDays(6);
-
-        List<TimetableSlot> slots = timetableSlotRepository.findByLecturerIdAndDateBetween(
-                lecturerId, weekStart, weekEnd);
-
-        return ResponseEntity.ok(buildWeeklyTimetable(weekStart, weekEnd, slots));
-    }
-
-    @GetMapping("/export/lecturer/{lecturerId}")
-    @Operation(summary = "Export lecturer timetable to Excel")
-    public void exportLecturerTimetable(
-            @PathVariable Long lecturerId,
-            @RequestParam(required = false) String semesterCode,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            HttpServletResponse response) throws Exception {
-
-        User lecturer = userRepository.findById(lecturerId)
-                .orElseThrow(() -> new RuntimeException("Lecturer not found"));
-
-        Semester semester = null;
-        if (semesterCode != null && !semesterCode.isEmpty()) {
-            semester = semesterRepository.findByCode(semesterCode).orElse(null);
+                return ResponseEntity.ok(dtos);
         }
 
-        if (semester == null && date != null) {
-            List<Semester> semesters = semesterRepository.findSemestersByDate(date);
-            semester = semesters.isEmpty() ? null : semesters.get(0);
+        @RequestMapping(value = "/slot/{id}", method = { RequestMethod.PATCH, RequestMethod.PUT })
+        @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
+        @Operation(summary = "Update a timetable slot", description = "Reschedule a session to a different date, slot, or room")
+        public ResponseEntity<TimetableDTO.TimetableSlotDTO> updateSlot(
+                        @PathVariable Long id,
+                        @RequestBody @jakarta.validation.Valid TimetableDTO.UpdateSlotRequest request) {
+                log.info("Updating timetable slot {}: date={}, slot={}, room={}", id, request.getDate(),
+                                request.getSlotNumber(), request.getRoomId());
+                return ResponseEntity.ok(timetableSlotService.updateSlot(id, request));
         }
 
-        if (semester == null) {
-            // Fallback to current date semester if still null
-            List<Semester> semesters = semesterRepository.findSemestersByDate(LocalDate.now());
-            semester = semesters.isEmpty() ? null : semesters.get(0);
-
-            if (semester == null) {
-                throw new RuntimeException("Semester not found for the given criteria");
-            }
+        @GetMapping("/availability")
+        @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
+        @Operation(summary = "Get available slots and rooms for a date")
+        public ResponseEntity<TimetableDTO.AvailabilityResponse> getAvailability(
+                        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+                        @RequestParam String semesterCode) {
+                log.info("[Controller] Get availability: date={}, semesterCode={}", date, semesterCode);
+                return ResponseEntity.ok(timetableSlotService.getAvailability(date, semesterCode));
         }
 
-        // 1. Fetch ALL slots for this lecturer in this semester
-        List<TimetableSlot> slots = timetableSlotRepository.findByLecturerIdAndDateBetween(
-                lecturer.getId(), semester.getStartDate(), semester.getEndDate());
+        @GetMapping("/student/{studentId}")
+        @Operation(summary = "Get timetable for a student")
+        public ResponseEntity<Object> getStudentTimetable(
+                        @PathVariable Long studentId,
+                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
-        // 2. Map to DTOs
-        List<TimetableDTO.TimetableSlotDTO> slotDTOs = slots.stream()
-                .map(this::convertToDTO)
-                .sorted(Comparator.comparing(TimetableDTO.TimetableSlotDTO::getDate)
-                        .thenComparing(TimetableDTO.TimetableSlotDTO::getSlotNumber))
-                .collect(Collectors.toList());
+                log.info("Entering getStudentTimetable for studentId: {}, date: {}", studentId, date);
 
-        // 3. Set Response Headers
-        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        String headerKey = "Content-Disposition";
-        String headerValue = "attachment; filename=schedule_lecturer_" + lecturer.getUsername() + "_"
-                + semester.getCode() + ".xlsx";
-        response.setHeader(headerKey, headerValue);
+                try {
+                        LocalDate targetDate = date != null ? date : LocalDate.now();
+                        LocalDate weekStart = targetDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+                        LocalDate weekEnd = weekStart.plusDays(6);
 
-        // 4. Generate Excel
-        excelExportService.exportLecturerScheduleToExcel(response, slotDTOs, lecturer.getFullName(),
-                semester.getName());
-    }
+                        User student = userRepository.findById(studentId)
+                                        .orElseThrow(() -> new RuntimeException("Student not found"));
 
-    @GetMapping("/room/{roomId}")
-    @Operation(summary = "Get timetable for a room")
-    public ResponseEntity<TimetableDTO.WeeklyTimetableDTO> getRoomTimetable(
-            @PathVariable Long roomId,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+                        log.info("Fetching timetable for student {} (code: {}) from {} to {}", studentId,
+                                        student.getCode(),
+                                        weekStart, weekEnd);
 
-        LocalDate targetDate = date != null ? date : LocalDate.now();
-        LocalDate weekStart = targetDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-        LocalDate weekEnd = weekStart.plusDays(6);
+                        // Check if semester is published for this date
+                        List<Semester> semesters = semesterRepository.findSemestersByDate(targetDate);
+                        log.info("Found {} semesters for date {}: {}", semesters.size(), targetDate,
+                                        semesters.stream()
+                                                        .map(s -> s.getCode() + "(published="
+                                                                        + (s.getConfig() != null && Boolean.TRUE.equals(
+                                                                                        s.getConfig().getIsPublished()))
+                                                                        + ")")
+                                                        .toList());
+                        Semester semester = semesters.stream()
+                                        .filter(s -> s.getConfig() != null
+                                                        && Boolean.TRUE.equals(s.getConfig().getIsPublished()))
+                                        .findFirst()
+                                        .orElse(semesters.isEmpty() ? null : semesters.get(0));
 
-        List<TimetableSlot> slots = timetableSlotRepository.findByRoomIdAndDateBetween(
-                roomId, weekStart, weekEnd);
+                        if (semester != null) {
+                                com.fams.backend.entity.SemesterConfig config = semester.getConfig();
+                                boolean isPublished = config != null && Boolean.TRUE.equals(config.getIsPublished());
+                                log.info("Checking visibility for date {}: Semester={}, Published={}", targetDate,
+                                                semester.getCode(),
+                                                isPublished);
 
-        return ResponseEntity.ok(buildWeeklyTimetable(weekStart, weekEnd, slots));
-    }
+                                if (!isPublished) {
+                                        log.warn("Timetable for semester {} is not published yet. Access denied for student.",
+                                                        semester.getCode());
+                                        // Return explicit error message
+                                        return ResponseEntity.status(403).body(Map.of(
+                                                        "status", 403,
+                                                        "error", "Forbidden",
+                                                        "message", "Semester schedule is not published yet: "
+                                                                        + semester.getCode()));
+                                }
+                        } else {
+                                log.warn("No active semester found for date {}. Skipping visibility check (CAUTION).",
+                                                targetDate);
+                        }
 
-    @GetMapping("/stats/{semesterCode}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
-    @Operation(summary = "Get timetable statistics")
-    public ResponseEntity<TimetableDTO.TimetableStatsDTO> getTimetableStats(
-            @PathVariable String semesterCode) {
+                        List<TimetableSlot> slots = timetableSlotRepository.findByStudentCodeAndDateBetween(
+                                        student.getCode(), weekStart, weekEnd);
 
-        long totalSlots = timetableSlotRepository.countBySemesterCode(semesterCode);
-        List<TimetableSlot> slots = timetableSlotRepository.findBySemesterCode(semesterCode);
+                        // Fallback: If semester wasn't found by date, check the semester of the found
+                        // slots
+                        if (semester == null && !slots.isEmpty()) {
+                                TimetableSlot firstSlot = slots.get(0);
+                                if (firstSlot.getClassSection() != null
+                                                && firstSlot.getClassSection().getSemester() != null) {
+                                        // Fix LazyInitializationException: Get ID from proxy and fetch fresh entity
+                                        Long semesterId = firstSlot.getClassSection().getSemester().getId();
+                                        semester = semesterRepository.findById(semesterId).orElse(null);
 
-        // Count Saturday slots
-        long saturdaySlots = slots.stream()
-                .filter(s -> s.getDayOfWeek() == 7) // Saturday
-                .count();
+                                        if (semester != null) {
+                                                log.info("Fallback visibility check: Found semester {} from slots.",
+                                                                semester.getCode());
 
-        // Calculate unique classes
-        long totalClasses = slots.stream()
-                .map(s -> s.getClassSection().getClassName())
-                .distinct()
-                .count();
+                                                com.fams.backend.entity.SemesterConfig config = semester.getConfig();
+                                                boolean isPublished = config != null
+                                                                && Boolean.TRUE.equals(config.getIsPublished());
 
-        return ResponseEntity.ok(TimetableDTO.TimetableStatsDTO.builder()
-                .semesterCode(semesterCode)
-                .totalSlots((int) totalSlots)
-                .totalClasses((int) totalClasses)
-                .saturdaySlots((int) saturdaySlots)
-                .build());
-    }
+                                                if (!isPublished) {
+                                                        log.warn("Timetable for semester {} (from slots) is not published. Access denied.",
+                                                                        semester.getCode());
+                                                        return ResponseEntity.status(403).body(Map.of(
+                                                                        "status", 403,
+                                                                        "error", "Forbidden",
+                                                                        "message",
+                                                                        "Semester schedule is not published yet: "
+                                                                                        + semester.getCode()));
+                                                }
+                                        }
+                                }
+                        }
 
-    // ==================== HELPER METHODS ====================
+                        log.info("Found {} slots for student {}", slots.size(), studentId);
 
-    private GAConfig convertToGAConfig(TimetableDTO.GAConfigDTO dto) {
-        if (dto == null) {
-            return GAConfig.defaultConfig();
+                        TimetableDTO.WeeklyTimetableDTO response = buildWeeklyTimetable(weekStart, weekEnd, slots);
+
+                        // Enrich with attendance data
+                        if (!slots.isEmpty()) {
+                                List<Long> slotIds = slots.stream().map(TimetableSlot::getId).toList();
+                                List<StudentAttendance> attendances = studentAttendanceRepository
+                                                .findByStudentIdAndSlotIds(studentId,
+                                                                slotIds);
+                                Map<Long, StudentAttendance> attendanceMap = attendances.stream()
+                                                .collect(Collectors.toMap(
+                                                                a -> a.getSession().getTimetableSlot().getId(),
+                                                                a -> a,
+                                                                (existing, replacement) -> existing));
+
+                                response.getDays().forEach(day -> day.getSlots().forEach(slot -> {
+                                        if (attendanceMap.containsKey(slot.getId())) {
+                                                StudentAttendance att = attendanceMap.get(slot.getId());
+                                                slot.setAttendanceStatus(att.getStatus().name());
+                                                slot.setCheckInTime(att.getCheckInTime());
+                                        }
+                                }));
+                        }
+
+                        return ResponseEntity.ok(response);
+                } catch (Exception e) {
+                        log.error("CRITICAL ERROR in getStudentTimetable for student " + studentId, e);
+                        throw e;
+                }
         }
 
-        GAConfig.GAConfigBuilder builder = GAConfig.builder();
+        @GetMapping("/student/{studentId}/semester")
+        @Operation(summary = "Get all timetable slots for a student in a semester (for calendar export)")
+        public ResponseEntity<List<TimetableDTO.TimetableSlotDTO>> getSemesterSlotsForStudent(
+                        @PathVariable Long studentId,
+                        @RequestParam String semesterCode) {
 
-        if (dto.getPopulationSize() != null)
-            builder.populationSize(dto.getPopulationSize());
-        if (dto.getEliteCount() != null)
-            builder.eliteCount(dto.getEliteCount());
-        if (dto.getMaxGenerations() != null)
-            builder.maxGenerations(dto.getMaxGenerations());
-        if (dto.getStagnationLimit() != null)
-            builder.stagnationLimit(dto.getStagnationLimit());
-        if (dto.getTargetFitness() != null)
-            builder.targetFitness(dto.getTargetFitness());
-        if (dto.getCrossoverRate() != null)
-            builder.crossoverRate(dto.getCrossoverRate());
-        if (dto.getMutationRate() != null)
-            builder.mutationRate(dto.getMutationRate());
-        if (dto.getMinMutationRate() != null)
-            builder.minMutationRate(dto.getMinMutationRate());
-        if (dto.getMaxMutationRate() != null)
-            builder.maxMutationRate(dto.getMaxMutationRate());
-        if (dto.getTournamentSize() != null)
-            builder.tournamentSize(dto.getTournamentSize());
-        if (dto.getSaturdayPenaltyWeight() != null)
-            builder.saturdayPenaltyWeight(dto.getSaturdayPenaltyWeight());
-        if (dto.getGapPenaltyWeight() != null)
-            builder.gapPenaltyWeight(dto.getGapPenaltyWeight());
-        if (dto.getOverloadPenaltyWeight() != null)
-            builder.overloadPenaltyWeight(dto.getOverloadPenaltyWeight());
-        if (dto.getStudentWeeklyOverloadThreshold() != null)
-            builder.studentWeeklyOverloadThreshold(dto.getStudentWeeklyOverloadThreshold());
-        if (dto.getLecturerWeeklyOverloadThreshold() != null)
-            builder.lecturerWeeklyOverloadThreshold(dto.getLecturerWeeklyOverloadThreshold());
-        if (dto.getEnableLocalSearch() != null)
-            builder.enableLocalSearch(dto.getEnableLocalSearch());
-        if (dto.getVerbose() != null)
-            builder.verbose(dto.getVerbose());
+                User student = userRepository.findById(studentId)
+                                .orElseThrow(() -> new RuntimeException("Student not found"));
 
-        if (dto.getCrossoverType() != null) {
-            try {
-                builder.crossoverType(GAConfig.CrossoverType.valueOf(dto.getCrossoverType()));
-            } catch (IllegalArgumentException ignored) {
-            }
+                Semester semester = semesterRepository.findByCode(semesterCode)
+                                .orElseThrow(() -> new RuntimeException("Semester not found"));
+
+                // Check if semester is published
+                com.fams.backend.entity.SemesterConfig config = semester.getConfig();
+                if (config != null && !Boolean.TRUE.equals(config.getIsPublished())) {
+                        return ResponseEntity.status(403).build();
+                }
+
+                // Fetch ALL slots for this student in this semester
+                List<TimetableSlot> slots = timetableSlotRepository.findByStudentCodeAndDateBetween(
+                                student.getCode(), semester.getStartDate(), semester.getEndDate());
+
+                // Map to DTOs and sort
+                List<TimetableDTO.TimetableSlotDTO> slotDTOs = slots.stream()
+                                .map(this::convertToDTO)
+                                .sorted(Comparator.comparing(TimetableDTO.TimetableSlotDTO::getDate)
+                                                .thenComparing(TimetableDTO.TimetableSlotDTO::getSlotNumber))
+                                .collect(Collectors.toList());
+
+                log.info("Returning {} slots for student {} in semester {}", slotDTOs.size(), studentId, semesterCode);
+                return ResponseEntity.ok(slotDTOs);
         }
 
-        if (dto.getSelectionType() != null) {
-            try {
-                builder.selectionType(GAConfig.SelectionType.valueOf(dto.getSelectionType()));
-            } catch (IllegalArgumentException ignored) {
-            }
+        @GetMapping("/lecturer/{lecturerId}/semester")
+        @Operation(summary = "Get all timetable slots for a lecturer in a semester (for calendar export)")
+        public ResponseEntity<List<TimetableDTO.TimetableSlotDTO>> getSemesterSlotsForLecturer(
+                        @PathVariable Long lecturerId,
+                        @RequestParam String semesterCode) {
+
+                User lecturer = userRepository.findById(lecturerId)
+                                .orElseThrow(() -> new RuntimeException("Lecturer not found"));
+
+                Semester semester = semesterRepository.findByCode(semesterCode)
+                                .orElseThrow(() -> new RuntimeException("Semester not found"));
+
+                // Lecturers can always see their schedule
+                List<TimetableSlot> slots = timetableSlotRepository.findByLecturerIdAndDateBetween(
+                                lecturerId, semester.getStartDate(), semester.getEndDate());
+
+                List<TimetableDTO.TimetableSlotDTO> slotDTOs = slots.stream()
+                                .map(this::convertToDTO)
+                                .sorted(Comparator.comparing(TimetableDTO.TimetableSlotDTO::getDate)
+                                                .thenComparing(TimetableDTO.TimetableSlotDTO::getSlotNumber))
+                                .collect(Collectors.toList());
+
+                log.info("Returning {} slots for lecturer {} in semester {}", slotDTOs.size(), lecturerId,
+                                semesterCode);
+                return ResponseEntity.ok(slotDTOs);
         }
 
-        return builder.build();
-    }
+        @GetMapping("/export/student/{studentId}")
+        @Operation(summary = "Export student timetable to Excel")
+        public void exportStudentTimetable(
+                        @PathVariable Long studentId,
+                        @RequestParam(required = true) String semesterCode,
+                        HttpServletResponse response) throws Exception {
 
-    private TimetableDTO.TimetableSlotDTO convertToDTO(TimetableSlot slot) {
-        // Defensive null checks to avoid NPE / lazy-loading issues
-        var cs = slot.getClassSection();
-        var course = cs != null ? cs.getCourse() : null;
-        var lecturer = cs != null ? cs.getLecturer() : null;
-        var room = slot.getRoom();
-        var slotType = slot.getSlotType();
+                User student = userRepository.findById(studentId)
+                                .orElseThrow(() -> new RuntimeException("Student not found"));
 
-        return TimetableDTO.TimetableSlotDTO.builder()
-                .id(slot.getId())
-                .classSectionId(cs != null ? cs.getClassName() : null)
-                .className(cs != null ? cs.getClassName() : null)
-                .courseCode(course != null ? course.getCode() : null)
-                .courseName(course != null ? course.getName() : null)
-                .lecturerName(lecturer != null ? lecturer.getFullName() : null)
-                .roomCode(room != null ? room.getCode() : null)
-                .roomName(room != null ? room.getName() : null)
-                .date(slot.getDate())
-                .dayOfWeek(slot.getDayOfWeek())
-                .slotNumber(slot.getSlotNumber())
-                .startTime(slotType != null ? slotType.getStartTime() : null)
-                .endTime(slotType != null ? slotType.getEndTime() : null)
-                .status(slot.getStatus() != null ? slot.getStatus().name() : null)
-                .build();
-    }
+                // Find semester by code or assume active? Better to pass semesterCode from
+                // frontend
+                Semester semester = semesterRepository.findByCode(semesterCode)
+                                .orElseThrow(() -> new RuntimeException("Semester not found"));
 
-    private TimetableDTO.WeeklyTimetableDTO buildWeeklyTimetable(
-            LocalDate weekStart,
-            LocalDate weekEnd,
-            List<TimetableSlot> slots) {
+                // Check if semester is published
+                com.fams.backend.entity.SemesterConfig config = semester.getConfig();
+                if (config != null && !Boolean.TRUE.equals(config.getIsPublished())) {
+                        response.sendError(HttpServletResponse.SC_FORBIDDEN, "Schedule is not published");
+                        return;
+                }
 
-        // Group by date
-        Map<LocalDate, List<TimetableSlot>> byDate = slots.stream()
-                .collect(Collectors.groupingBy(TimetableSlot::getDate));
+                // 1. Fetch ALL slots for this student in this semester context
+                // Using Repository method that filters by DATE RANGE of the semester
+                List<TimetableSlot> slots = timetableSlotRepository.findByStudentCodeAndDateBetween(
+                                student.getCode(), semester.getStartDate(), semester.getEndDate());
 
-        List<TimetableDTO.DailyTimetableDTO> days = new ArrayList<>();
+                // 2. Map to DTOs
+                List<TimetableDTO.TimetableSlotDTO> slotDTOs = slots.stream()
+                                .map(this::convertToDTO)
+                                .sorted(Comparator.comparing(TimetableDTO.TimetableSlotDTO::getDate)
+                                                .thenComparing(TimetableDTO.TimetableSlotDTO::getSlotNumber))
+                                .collect(Collectors.toList());
 
-        for (LocalDate date = weekStart; !date.isAfter(weekEnd); date = date.plusDays(1)) {
-            List<TimetableSlot> daySlots = byDate.getOrDefault(date, Collections.emptyList());
+                // 3. Enrich with Attendance
+                if (!slotDTOs.isEmpty()) {
+                        List<Long> slotIds = slots.stream().map(TimetableSlot::getId).toList();
+                        List<StudentAttendance> attendances = studentAttendanceRepository.findByStudentIdAndSlotIds(
+                                        studentId,
+                                        slotIds);
+                        Map<Long, String> attendanceMap = attendances.stream()
+                                        .collect(Collectors.toMap(
+                                                        a -> a.getSession().getTimetableSlot().getId(),
+                                                        a -> a.getStatus().name(),
+                                                        (existing, replacement) -> existing));
 
-            days.add(TimetableDTO.DailyTimetableDTO.builder()
-                    .date(date)
-                    .dayOfWeek(date.getDayOfWeek().getValue())
-                    .dayName(date.getDayOfWeek().name())
-                    .slots(daySlots.stream().map(this::convertToDTO).toList())
-                    .build());
+                        slotDTOs.forEach(dto -> {
+                                if (attendanceMap.containsKey(dto.getId())) {
+                                        dto.setAttendanceStatus(attendanceMap.get(dto.getId()));
+                                }
+                        });
+                }
+
+                // 4. Set Response Headers
+                response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+                String headerKey = "Content-Disposition";
+                String headerValue = "attachment; filename=schedule_" + student.getUsername() + "_" + student.getId()
+                                + "_"
+                                + semester.getName().replaceAll(" ", "_") + ".xlsx";
+                response.setHeader(headerKey, headerValue);
+
+                // 5. Generate Excel
+                excelExportService.exportStudentScheduleToExcel(response, slotDTOs, student.getFullName(),
+                                semester.getName());
         }
 
-        return TimetableDTO.WeeklyTimetableDTO.builder()
-                .weekStartDate(weekStart)
-                .weekEndDate(weekEnd)
-                .days(days)
-                .build();
-    }
+        @GetMapping("/lecturer/{lecturerId}")
+        @Operation(summary = "Get timetable for a lecturer")
+        public ResponseEntity<TimetableDTO.WeeklyTimetableDTO> getLecturerTimetable(
+                        @PathVariable Long lecturerId,
+                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+
+                LocalDate targetDate = date != null ? date : LocalDate.now();
+                LocalDate weekStart = targetDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+                LocalDate weekEnd = weekStart.plusDays(6);
+
+                List<TimetableSlot> slots = timetableSlotRepository.findByLecturerIdAndDateBetween(
+                                lecturerId, weekStart, weekEnd);
+
+                return ResponseEntity.ok(buildWeeklyTimetable(weekStart, weekEnd, slots));
+        }
+
+        @GetMapping("/export/lecturer/{lecturerId}")
+        @Operation(summary = "Export lecturer timetable to Excel")
+        public void exportLecturerTimetable(
+                        @PathVariable Long lecturerId,
+                        @RequestParam(required = false) String semesterCode,
+                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+                        HttpServletResponse response) throws Exception {
+
+                User lecturer = userRepository.findById(lecturerId)
+                                .orElseThrow(() -> new RuntimeException("Lecturer not found"));
+
+                Semester semester = null;
+                if (semesterCode != null && !semesterCode.isEmpty()) {
+                        semester = semesterRepository.findByCode(semesterCode).orElse(null);
+                }
+
+                if (semester == null && date != null) {
+                        List<Semester> semesters = semesterRepository.findSemestersByDate(date);
+                        semester = semesters.isEmpty() ? null : semesters.get(0);
+                }
+
+                if (semester == null) {
+                        // Fallback to current date semester if still null
+                        List<Semester> semesters = semesterRepository.findSemestersByDate(LocalDate.now());
+                        semester = semesters.isEmpty() ? null : semesters.get(0);
+
+                        if (semester == null) {
+                                throw new RuntimeException("Semester not found for the given criteria");
+                        }
+                }
+
+                // 1. Fetch ALL slots for this lecturer in this semester
+                List<TimetableSlot> slots = timetableSlotRepository.findByLecturerIdAndDateBetween(
+                                lecturer.getId(), semester.getStartDate(), semester.getEndDate());
+
+                // 2. Map to DTOs
+                List<TimetableDTO.TimetableSlotDTO> slotDTOs = slots.stream()
+                                .map(this::convertToDTO)
+                                .sorted(Comparator.comparing(TimetableDTO.TimetableSlotDTO::getDate)
+                                                .thenComparing(TimetableDTO.TimetableSlotDTO::getSlotNumber))
+                                .collect(Collectors.toList());
+
+                // 3. Set Response Headers
+                response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+                String headerKey = "Content-Disposition";
+                String headerValue = "attachment; filename=schedule_lecturer_" + lecturer.getUsername() + "_"
+                                + semester.getCode() + ".xlsx";
+                response.setHeader(headerKey, headerValue);
+
+                // 4. Generate Excel
+                excelExportService.exportLecturerScheduleToExcel(response, slotDTOs, lecturer.getFullName(),
+                                semester.getName());
+        }
+
+        @GetMapping("/room/{roomId}")
+        @Operation(summary = "Get timetable for a room")
+        public ResponseEntity<TimetableDTO.WeeklyTimetableDTO> getRoomTimetable(
+                        @PathVariable Long roomId,
+                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+
+                LocalDate targetDate = date != null ? date : LocalDate.now();
+                LocalDate weekStart = targetDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+                LocalDate weekEnd = weekStart.plusDays(6);
+
+                List<TimetableSlot> slots = timetableSlotRepository.findByRoomIdAndDateBetween(
+                                roomId, weekStart, weekEnd);
+
+                return ResponseEntity.ok(buildWeeklyTimetable(weekStart, weekEnd, slots));
+        }
+
+        @GetMapping("/stats/{semesterCode}")
+        @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
+        @Operation(summary = "Get timetable statistics")
+        public ResponseEntity<TimetableDTO.TimetableStatsDTO> getTimetableStats(
+                        @PathVariable String semesterCode) {
+
+                long totalSlots = timetableSlotRepository.countBySemesterCode(semesterCode);
+                List<TimetableSlot> slots = timetableSlotRepository.findBySemesterCode(semesterCode);
+
+                // Count Saturday slots
+                long saturdaySlots = slots.stream()
+                                .filter(s -> s.getDayOfWeek() == 7) // Saturday
+                                .count();
+
+                // Calculate unique classes
+                long totalClasses = slots.stream()
+                                .map(s -> s.getClassSection().getClassName())
+                                .distinct()
+                                .count();
+
+                return ResponseEntity.ok(TimetableDTO.TimetableStatsDTO.builder()
+                                .semesterCode(semesterCode)
+                                .totalSlots((int) totalSlots)
+                                .totalClasses((int) totalClasses)
+                                .saturdaySlots((int) saturdaySlots)
+                                .build());
+        }
+
+        // ==================== HELPER METHODS ====================
+
+        private GAConfig convertToGAConfig(TimetableDTO.GAConfigDTO dto) {
+                if (dto == null) {
+                        return GAConfig.defaultConfig();
+                }
+
+                GAConfig.GAConfigBuilder builder = GAConfig.builder();
+
+                if (dto.getPopulationSize() != null)
+                        builder.populationSize(dto.getPopulationSize());
+                if (dto.getEliteCount() != null)
+                        builder.eliteCount(dto.getEliteCount());
+                if (dto.getMaxGenerations() != null)
+                        builder.maxGenerations(dto.getMaxGenerations());
+                if (dto.getStagnationLimit() != null)
+                        builder.stagnationLimit(dto.getStagnationLimit());
+                if (dto.getTargetFitness() != null)
+                        builder.targetFitness(dto.getTargetFitness());
+                if (dto.getCrossoverRate() != null)
+                        builder.crossoverRate(dto.getCrossoverRate());
+                if (dto.getMutationRate() != null)
+                        builder.mutationRate(dto.getMutationRate());
+                if (dto.getMinMutationRate() != null)
+                        builder.minMutationRate(dto.getMinMutationRate());
+                if (dto.getMaxMutationRate() != null)
+                        builder.maxMutationRate(dto.getMaxMutationRate());
+                if (dto.getTournamentSize() != null)
+                        builder.tournamentSize(dto.getTournamentSize());
+                if (dto.getSaturdayPenaltyWeight() != null)
+                        builder.saturdayPenaltyWeight(dto.getSaturdayPenaltyWeight());
+                if (dto.getGapPenaltyWeight() != null)
+                        builder.gapPenaltyWeight(dto.getGapPenaltyWeight());
+                if (dto.getOverloadPenaltyWeight() != null)
+                        builder.overloadPenaltyWeight(dto.getOverloadPenaltyWeight());
+                if (dto.getStudentWeeklyOverloadThreshold() != null)
+                        builder.studentWeeklyOverloadThreshold(dto.getStudentWeeklyOverloadThreshold());
+                if (dto.getLecturerWeeklyOverloadThreshold() != null)
+                        builder.lecturerWeeklyOverloadThreshold(dto.getLecturerWeeklyOverloadThreshold());
+                if (dto.getEnableLocalSearch() != null)
+                        builder.enableLocalSearch(dto.getEnableLocalSearch());
+                if (dto.getVerbose() != null)
+                        builder.verbose(dto.getVerbose());
+
+                if (dto.getCrossoverType() != null) {
+                        try {
+                                builder.crossoverType(GAConfig.CrossoverType.valueOf(dto.getCrossoverType()));
+                        } catch (IllegalArgumentException ignored) {
+                        }
+                }
+
+                if (dto.getSelectionType() != null) {
+                        try {
+                                builder.selectionType(GAConfig.SelectionType.valueOf(dto.getSelectionType()));
+                        } catch (IllegalArgumentException ignored) {
+                        }
+                }
+
+                return builder.build();
+        }
+
+        private TimetableDTO.TimetableSlotDTO convertToDTO(TimetableSlot slot) {
+                // Defensive null checks to avoid NPE / lazy-loading issues
+                var cs = slot.getClassSection();
+                var course = cs != null ? cs.getCourse() : null;
+                var lecturer = cs != null ? cs.getLecturer() : null;
+                var room = slot.getRoom();
+                var slotType = slot.getSlotType();
+
+                return TimetableDTO.TimetableSlotDTO.builder()
+                                .id(slot.getId())
+                                .classSectionId(cs != null ? cs.getClassName() : null)
+                                .className(cs != null ? cs.getClassName() : null)
+                                .courseCode(course != null ? course.getCode() : null)
+                                .courseName(course != null ? course.getName() : null)
+                                .lecturerName(lecturer != null ? lecturer.getFullName() : null)
+                                .roomCode(room != null ? room.getCode() : null)
+                                .roomName(room != null ? room.getName() : null)
+                                .date(slot.getDate())
+                                .dayOfWeek(slot.getDayOfWeek())
+                                .slotNumber(slot.getSlotNumber())
+                                .startTime(slotType != null ? slotType.getStartTime() : null)
+                                .endTime(slotType != null ? slotType.getEndTime() : null)
+                                .status(slot.getStatus() != null ? slot.getStatus().name() : null)
+                                .build();
+        }
+
+        private TimetableDTO.WeeklyTimetableDTO buildWeeklyTimetable(
+                        LocalDate weekStart,
+                        LocalDate weekEnd,
+                        List<TimetableSlot> slots) {
+
+                // Group by date
+                Map<LocalDate, List<TimetableSlot>> byDate = slots.stream()
+                                .collect(Collectors.groupingBy(TimetableSlot::getDate));
+
+                List<TimetableDTO.DailyTimetableDTO> days = new ArrayList<>();
+
+                for (LocalDate date = weekStart; !date.isAfter(weekEnd); date = date.plusDays(1)) {
+                        List<TimetableSlot> daySlots = byDate.getOrDefault(date, Collections.emptyList());
+
+                        days.add(TimetableDTO.DailyTimetableDTO.builder()
+                                        .date(date)
+                                        .dayOfWeek(date.getDayOfWeek().getValue())
+                                        .dayName(date.getDayOfWeek().name())
+                                        .slots(daySlots.stream().map(this::convertToDTO).toList())
+                                        .build());
+                }
+
+                return TimetableDTO.WeeklyTimetableDTO.builder()
+                                .weekStartDate(weekStart)
+                                .weekEndDate(weekEnd)
+                                .days(days)
+                                .build();
+        }
 }
