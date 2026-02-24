@@ -114,10 +114,13 @@ public class AcademicStaffDashboardController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String major,
             @RequestParam(required = false) String specialization,
+            @RequestParam(required = false) String subSpecialization,
             Pageable pageable) {
-        log.info("GET /academic-staff/students | search={}, status={}, major={}, spec={}", search, status, major,
-                specialization);
-        return ResponseEntity.ok(studentService.getAllStudents(search, status, major, specialization, pageable));
+        log.info("GET /academic-staff/students | search={}, status={}, major={}, spec={}, subSpec={}", search, status,
+                major,
+                specialization, subSpecialization);
+        return ResponseEntity
+                .ok(studentService.getAllStudents(search, status, major, specialization, subSpecialization, pageable));
     }
 
     @GetMapping("/students/{id}")

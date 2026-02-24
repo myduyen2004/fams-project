@@ -10,7 +10,8 @@ import {
     Settings,
     LogOut,
     ChevronDown,
-    KeyRound
+    KeyRound,
+    List
 } from 'lucide-react';
 import { authService } from '../../services/api/authService';
 import { ConfirmModal } from '../common/ConfirmModal';
@@ -66,6 +67,15 @@ export const LecturerSidebar: React.FC = () => {
             submenu: [
                 { label: 'Điểm', path: '/lecturer/grades' },
                 { label: 'Lớp học', path: '/lecturer/classes' }
+            ]
+        },
+        {
+            id: 'lists',
+            label: 'Danh sách',
+            icon: <List size={20} />,
+            submenu: [
+                { label: 'Phòng học', path: '/lecturer/rooms' },
+                { label: 'Học kỳ', path: '/lecturer/semesters' }
             ]
         },
         {

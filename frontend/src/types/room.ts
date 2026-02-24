@@ -1,10 +1,11 @@
-export type RoomType = 'LECTURE' | 'LAB' | 'MEETING' | 'AUDITORIUM';
+export type RoomType = 'CLASSROOM' | 'COMPUTER_LAB' | 'PSEUDO_ROOM';
 export type RoomStatus = 'ACTIVE' | 'MAINTENANCE' | 'INACTIVE';
 
 export interface Room {
     id: number;
     code: string;
     name: string;
+    description?: string;
     capacity: number;
     building: string;
     floor: number;
@@ -21,6 +22,7 @@ export interface Room {
 export interface RoomRequest {
     code: string;
     name: string;
+    description?: string;
     capacity: number;
     building: string;
     floor: number;

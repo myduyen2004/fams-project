@@ -225,6 +225,24 @@ public class DashboardServiceImpl implements DashboardService {
                                 .collect(Collectors.toList());
         }
 
+        @Override
+        public int getUnreadNotificationCount() {
+                var authentication = SecurityContextHolder.getContext().getAuthentication();
+                if (authentication == null || !authentication.isAuthenticated()
+                                || "anonymousUser".equals(authentication.getPrincipal())) {
+                        return 0;
+                }
+
+                String username = authentication.getName();
+                User user = userRepository.findByUsername(username).orElse(null);
+
+                if (user == null) {
+                        return 0;
+                }
+
+                return (int) notificationRecipientRepository.countByRecipientAndIsReadFalse(user);
+        }
+
         private String getRoleDisplayName(User.UserRole role) {
                 switch (role) {
                         case STUDENT:
