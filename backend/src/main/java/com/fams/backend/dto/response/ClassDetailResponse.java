@@ -16,6 +16,7 @@ public class ClassDetailResponse {
     private String courseCode;
     private String courseName;
     private String semesterName;
+    private String semesterCode;
     private String majorName;
     private String courseYear; // e.g., "k19"
     private Integer studentCount;

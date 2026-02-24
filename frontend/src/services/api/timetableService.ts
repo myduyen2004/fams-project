@@ -21,6 +21,12 @@ export interface TimetableSlotDTO {
   endTime?: string;
   status?: string;
   attendanceStatus?: string;
+  // Assignment info (populated for lecturer timetable)
+  assignmentId?: number | null;
+  assignmentTitle?: string | null;
+  assignmentStatus?: string | null;
+  // Student submission status (SUBMITTED / NOT_SUBMITTED)
+  submissionStatus?: string | null;
 }
 
 export interface DailyTimetableDTO {
@@ -180,6 +186,54 @@ export const timetableService = {
       params: { date, semesterCode }
     });
     return resp.data;
+  },
+
+  // Lecturer: get ALL slots for a specific semester
+  getLecturerSemesterSlots: async (lecturerId: number, semesterCode: string): Promise<TimetableSlotDTO[]> => {
+    const resp = await axios.get<TimetableSlotDTO[]>(`${API_URL}/v1/timetable/lecturer/${lecturerId}/semester`, {
+      headers: getAuthHeader(),
+      params: { semesterCode }
+    });
+    return resp.data || [];
+  },
+
+  getLecturerTeachingDates: async (lecturerId: number, semesterCode: string): Promise<string[]> => {
+    const resp = await axios.get<string[]>(`${API_URL}/v1/timetable/lecturer/${lecturerId}/semester-dates`, {
+      headers: getAuthHeader(),
+      params: { semesterCode }
+    });
+    return resp.data || [];
+  },
+
+  searchAssignments: async (
+    lecturerId: number,
+    semesterCode: string,
+    params: { date?: string; className?: string; status?: string; page?: number; size?: number }
+  ) => {
+    const resp = await axios.get<{
+      content: TimetableSlotDTO[];
+      totalPages: number;
+      totalElements: number;
+      number: number;
+    }>(`${API_URL}/v1/timetable/lecturer/${lecturerId}/assignments-search`, {
+      headers: getAuthHeader(),
+      params: {
+        semesterCode,
+        date: params.date,
+        className: params.className,
+        status: params.status,
+        page: params.page,
+        size: params.size
+      }
+    });
+    return resp.data;
+  },
+
+  getTimetableByClass: async (className: string) => {
+    const resp = await axios.get<TimetableSlotDTO[]>(`${API_URL}/v1/timetable/class/${className}`, {
+      headers: getAuthHeader()
+    });
+    return resp.data || [];
   }
 };
 

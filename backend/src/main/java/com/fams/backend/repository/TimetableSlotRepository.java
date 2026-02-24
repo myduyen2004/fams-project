@@ -1,6 +1,8 @@
 package com.fams.backend.repository;
 
 import com.fams.backend.entity.TimetableSlot;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -76,9 +78,12 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
          * Find all slots for a class section
          */
         @Query("SELECT ts FROM TimetableSlot ts " +
+                        "JOIN FETCH ts.classSection cs " +
+                        "LEFT JOIN FETCH cs.course " +
+                        "LEFT JOIN FETCH cs.lecturer " +
                         "JOIN FETCH ts.room r " +
                         "JOIN FETCH ts.slotType st " +
-                        "WHERE ts.classSection.className = :className " +
+                        "WHERE cs.className = :className " +
                         "ORDER BY ts.date, ts.slotNumber")
         List<TimetableSlot> findByClassName(@Param("className") String className);
 
@@ -180,6 +185,34 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
                         @Param("lecturerId") Long lecturerId,
                         @Param("startDate") LocalDate startDate,
                         @Param("endDate") LocalDate endDate);
+
+        @Query("SELECT DISTINCT ts.date FROM TimetableSlot ts " +
+                        "WHERE ts.classSection.lecturer.id = :lecturerId " +
+                        "AND ts.date BETWEEN :startDate AND :endDate " +
+                        "AND ts.status = com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.SCHEDULED " +
+                        "ORDER BY ts.date ASC")
+        List<LocalDate> findDistinctDatesByLecturerIdAndDateBetween(
+                        @Param("lecturerId") Long lecturerId,
+                        @Param("startDate") LocalDate startDate,
+                        @Param("endDate") LocalDate endDate);
+
+        @Query("SELECT ts FROM TimetableSlot ts " +
+                        "JOIN FETCH ts.classSection cs " +
+                        "JOIN FETCH cs.course c " +
+                        "LEFT JOIN FETCH cs.lecturer lec " +
+                        "JOIN FETCH ts.room r " +
+                        "JOIN FETCH ts.slotType st " +
+                        "WHERE cs.lecturer.id = :lecturerId " +
+                        "AND cs.semester.code = :semesterCode " +
+                        "AND (cast(:date as date) IS NULL OR ts.date = :date) " +
+                        "AND (:className IS NULL OR cs.className = :className) " +
+                        "AND ts.status = com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.SCHEDULED")
+        Page<TimetableSlot> findAssignments(
+                        @Param("lecturerId") Long lecturerId,
+                        @Param("semesterCode") String semesterCode,
+                        @Param("date") LocalDate date,
+                        @Param("className") String className,
+                        Pageable pageable);
 
         /**
          * Find slots for a class and lecturer (ordered by date and slot number)
@@ -305,28 +338,6 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
                         @Param("date") LocalDate date,
                         @Param("slotNumber") Integer slotNumber);
 
-        /**
-         * Count students from a class who have other scheduled classes at the same
-         * date/slot
-         * This is used for Student Conflict validation when creating schedule change
-         * requests
-         */
-        @Query("SELECT COUNT(DISTINCT e.student.id) FROM Enrollment e " +
-                        "JOIN TimetableSlot ts ON ts.classSection.className = e.classSection.className " +
-                        "WHERE e.student.id IN (" +
-                        "  SELECT e2.student.id FROM Enrollment e2 " +
-                        "  WHERE e2.classSection.className = :className " +
-                        "  AND e2.status = 'ENROLLED'" +
-                        ") " +
-                        "AND e.classSection.className != :className " +
-                        "AND e.status = 'ENROLLED' " +
-                        "AND ts.date = :date " +
-                        "AND ts.slotNumber = :slotNumber " +
-                        "AND ts.status = 'SCHEDULED' " +
-                        "AND ts.id != :excludeSlotId")
-        long countStudentConflicts(
-                        @Param("className") String className,
-                        @Param("date") LocalDate date,
-                        @Param("slotNumber") Integer slotNumber,
-                        @Param("excludeSlotId") Long excludeSlotId);
+        // ==================== ASSIGNMENT SUBMISSION ====================
+
 }

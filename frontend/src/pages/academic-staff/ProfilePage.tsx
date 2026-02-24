@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Edit2, Save, X, Camera, Eye, EyeOff, Lock, Key } from 'lucide-react';
+import { Edit2, Save, X, Camera, Eye, EyeOff, Lock, Key, Loader2 } from 'lucide-react';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
+import { authService } from '../../services/api/authService';
+import { userService } from '../../services/api/userService';
 import toast from 'react-hot-toast';
 
 interface UserProfile {
@@ -25,6 +27,7 @@ export const ProfilePage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedProfile, setEditedProfile] = useState<UserProfile | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
   const [passwordData, setPasswordData] = useState<PasswordChangeData>({
     currentPassword: '',
     newPassword: '',
@@ -61,13 +64,35 @@ export const ProfilePage: React.FC = () => {
     setIsEditing(false);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (editedProfile) {
-      // TODO: Call API to save profile
-      setProfile(editedProfile);
-      localStorage.setItem('user', JSON.stringify(editedProfile));
-      setIsEditing(false);
-      toast.success('Cập nhật hồ sơ thành công!');
+      try {
+        setIsUploadingAvatar(true);
+        const updateData: any = {
+          fullName: editedProfile.fullName,
+          code: editedProfile.code,
+          email: editedProfile.email,
+          dob: editedProfile.dob,
+          phone: editedProfile.phone,
+          role: editedProfile.role
+        };
+
+        const updatedUser = await userService.updateUser(editedProfile.id, updateData, selectedAvatarFile || undefined);
+
+        setProfile(updatedUser as any);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        setIsEditing(false);
+        setSelectedAvatarFile(null);
+
+        // Dispatch event for Header to update avatar in real-time
+        window.dispatchEvent(new CustomEvent('user-profile-updated', { detail: updatedUser }));
+
+        toast.success('Cập nhật hồ sơ thành công!');
+      } catch (error: any) {
+        toast.error(error.response?.data?.message || 'Không thể cập nhật hồ sơ');
+      } finally {
+        setIsUploadingAvatar(false);
+      }
     }
   };
 
@@ -107,14 +132,12 @@ export const ProfilePage: React.FC = () => {
         if (editedProfile) {
           setEditedProfile({ ...editedProfile, avatar: newAvatar });
         }
-        if (profile) {
-          setProfile({ ...profile, avatar: newAvatar });
-          localStorage.setItem('user', JSON.stringify({ ...profile, avatar: newAvatar }));
-        }
+        setIsEditing(true);
       };
       reader.readAsDataURL(file);
+      setSelectedAvatarFile(file);
 
-      toast.success('Cập nhật ảnh đại diện thành công!');
+      toast.success('Đã chọn ảnh. Nhấn Lưu để cập nhật!');
     } catch (error) {
       console.error('Avatar upload failed:', error);
       toast.error('Không thể tải ảnh lên. Vui lòng thử lại!');
@@ -148,8 +171,7 @@ export const ProfilePage: React.FC = () => {
     }
 
     try {
-      // TODO: Call backend API to change password
-      // await changePassword(passwordData);
+      await authService.changePassword(passwordData.newPassword);
 
       toast.success('Đổi mật khẩu thành công!');
       setPasswordData({
@@ -191,7 +213,9 @@ export const ProfilePage: React.FC = () => {
                 <div className="w-32 h-32 rounded-full border-4 border-white dark:border-zinc-900 bg-gradient-to-br from-fpt-orange to-orange-600 overflow-hidden">
                   {displayProfile.avatar ? (
                     <img
-                      src={displayProfile.avatar}
+                      src={displayProfile.avatar.startsWith('data:') 
+                        ? displayProfile.avatar 
+                        : `${displayProfile.avatar}${displayProfile.avatar.includes('?') ? '&' : '?'}t=${new Date().getTime()}`}
                       alt={displayProfile.fullName}
                       className="w-full h-full object-cover"
                     />
