@@ -71,7 +71,7 @@ class ProfileScreen extends StatelessWidget {
                         // 2. Name
                         Text(
                           user?.fullName ?? 'Người dùng',
-                          style: GoogleFonts.roboto(
+                          style: GoogleFonts.inter(
                             fontSize: 26,
                             fontWeight: FontWeight.w500, // Medium/Regular looks cleaner
                             color: Colors.black87,
@@ -93,7 +93,7 @@ class ProfileScreen extends StatelessWidget {
                           ),
                           child: Text(
                             'ID: ${user?.username ?? "N/A"}',
-                            style: GoogleFonts.roboto(
+                            style: GoogleFonts.inter(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
                               color: Colors.black87,
@@ -156,7 +156,7 @@ class ProfileScreen extends StatelessWidget {
                                   const SizedBox(width: 10),
                                   Text(
                                     'Đã đăng ký khuôn mặt',
-                                    style: GoogleFonts.roboto(
+                                    style: GoogleFonts.inter(
                                       color: Colors.green,
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
@@ -178,7 +178,7 @@ class ProfileScreen extends StatelessWidget {
                               icon: const Icon(Icons.face, color: AppColors.primaryOrange),
                               label: Text(
                                 'Đăng ký khuôn mặt',
-                                style: GoogleFonts.roboto(
+                                style: GoogleFonts.inter(
                                   color: AppColors.primaryOrange,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -205,7 +205,7 @@ class ProfileScreen extends StatelessWidget {
                             icon: const Icon(Icons.logout_rounded, color: Colors.white),
                             label: Text(
                               'Đăng xuất',
-                              style: GoogleFonts.roboto(
+                              style: GoogleFonts.inter(
                                 color: Colors.white,
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -263,7 +263,7 @@ class ProfileScreen extends StatelessWidget {
         Flexible(
           child: Text(
             text,
-            style: GoogleFonts.roboto(
+            style: GoogleFonts.inter(
               fontSize: 15,
               color: Colors.black87,
               fontWeight: FontWeight.w400,

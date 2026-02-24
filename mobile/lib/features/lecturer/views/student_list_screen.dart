@@ -62,7 +62,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                       children: [
                         Text(
                           controller.errorMessage.value,
-                          style: GoogleFonts.roboto(color: Colors.red),
+                          style: GoogleFonts.inter(color: Colors.red),
                         ),
                         const SizedBox(height: 16),
                         ElevatedButton(
@@ -83,7 +83,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                         const SizedBox(height: 16),
                         Text(
                           _isSearching ? 'Không tìm thấy sinh viên nào' : 'Chưa có sinh viên',
-                          style: GoogleFonts.roboto(
+                          style: GoogleFonts.inter(
                             color: Colors.grey[600],
                             fontSize: 16,
                           ),
@@ -155,7 +155,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                     onChanged: (val) => controller.searchStudents(val),
                     decoration: InputDecoration(
                       hintText: 'Tìm tên hoặc mã SV...',
-                      hintStyle: GoogleFonts.roboto(color: Colors.grey[400], fontSize: 14),
+                      hintStyle: GoogleFonts.inter(color: Colors.grey[400], fontSize: 14),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       suffixIcon: IconButton(
@@ -173,7 +173,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                   children: [
                     Text(
                       _extractClassCode(widget.classSection.className),
-                      style: GoogleFonts.roboto(
+                      style: GoogleFonts.inter(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
@@ -182,7 +182,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                     const SizedBox(height: 2),
                     Text(
                       '${widget.classSection.courseCode} - ${widget.classSection.courseName}',
-                      style: GoogleFonts.roboto(
+                      style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                         color: Colors.grey[600],
@@ -236,7 +236,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
         children: [
           Text(
             'TẤT CẢ SINH VIÊN',
-            style: GoogleFonts.roboto(
+            style: GoogleFonts.inter(
               fontSize: 13,
               fontWeight: FontWeight.w600,
               color: Colors.grey[600],
@@ -244,7 +244,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
           ),
           Text(
             '${controller.filteredStudents.length} Sinh viên',
-            style: GoogleFonts.roboto(
+            style: GoogleFonts.inter(
               fontSize: 13,
               fontWeight: FontWeight.w600,
               color: const Color(0xFFEF7623),
@@ -285,7 +285,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
               child: Center(
                 child: Text(
                   '$index',
-                  style: GoogleFonts.roboto(
+                  style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                     color: Colors.grey[700],
@@ -330,7 +330,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                 children: [
                   Text(
                     student.studentName,
-                    style: GoogleFonts.roboto(
+                    style: GoogleFonts.inter(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
@@ -341,7 +341,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                   const SizedBox(height: 4),
                   Text(
                     student.studentCode,
-                    style: GoogleFonts.roboto(
+                    style: GoogleFonts.inter(
                       fontSize: 13,
                       color: Colors.grey[500],
                     ),

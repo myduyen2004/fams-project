@@ -13,13 +13,19 @@ public interface FaceAttendanceService {
 
     FaceDTO.FaceStatusResponse getFaceStatus(Long userId);
 
+    FaceDTO.FaceStatusResponse getFaceAttendanceStatus(Long userId, Long slotId);
+
+    FaceDTO.FacePreCheckResponse preCheckFace(Long userId, FaceDTO.FacePreCheckRequest request);
+
     FaceDTO.PendingVerificationsResponse getPendingVerifications(Long lecturerId);
 
     void manualVerify(Long lecturerId, FaceDTO.ManualVerifyRequest request);
 
-    boolean isValidWiFiLocation(Long roomId, String bssid, Integer rssi);
+    boolean isValidWiFiLocation(Long roomId, String ssid, String bssid, Integer rssi);
 
     FaceDTO.FaceImagesResponse getFaceImage(Long userId);
 
     FaceDTO.FaceQualityResponse checkQuality(FaceDTO.FaceQualityRequest request);
+
+    com.fams.backend.client.FaceRecognitionClient.FaceDetectResponse detectFace(String image);
 }

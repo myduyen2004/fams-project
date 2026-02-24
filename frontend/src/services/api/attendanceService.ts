@@ -19,6 +19,7 @@ export interface StudentAttendanceResponse {
     avatarUrl?: string;
     status: string;
     checkInTime: string;
+    capturedFaceUrl?: string;
 }
 
 export interface SessionDetailResponse {
@@ -30,8 +31,6 @@ export interface SessionDetailResponse {
     roomCode: string;
     lecturerName: string;
     status: string;
-    qrCodeData: string;
-    qrExpiresAt: string;
     openedAt: string;
     closedAt?: string;
     totalStudents: number;

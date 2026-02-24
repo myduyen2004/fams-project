@@ -3,6 +3,7 @@ package com.fams.backend.security.jwt;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.SignatureException;
 import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -13,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Component
+@Slf4j
 public class JwtUtil {
 
     @Value("${jwt.secret}")
@@ -68,15 +70,17 @@ public class JwtUtil {
                     .parseClaimsJws(token);
             return true;
         } catch (SignatureException ex) {
-            System.err.println("Invalid JWT signature");
+            log.error("Invalid JWT signature: {}", ex.getMessage());
         } catch (MalformedJwtException ex) {
-            System.err.println("Invalid JWT token");
+            log.error("Invalid JWT token: {}", ex.getMessage());
         } catch (ExpiredJwtException ex) {
-            System.err.println("Expired JWT token");
+            log.error("Expired JWT token: {}", ex.getMessage());
         } catch (UnsupportedJwtException ex) {
-            System.err.println("Unsupported JWT token");
+            log.error("Unsupported JWT token: {}", ex.getMessage());
         } catch (IllegalArgumentException ex) {
-            System.err.println("JWT claims string is empty");
+            log.error("JWT claims string is empty: {}", ex.getMessage());
+        } catch (Exception ex) {
+            log.error("JWT validation error: {}", ex.getMessage());
         }
         return false;
     }

@@ -112,7 +112,6 @@ public class StudentAttendance {
 
     public enum AttendanceStatus {
         PRESENT, // Có mặt
-        LATE, // Đi trễ
         ABSENT, // Vắng mặt
         EXCUSED // Vắng có phép
     }

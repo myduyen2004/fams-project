@@ -157,7 +157,7 @@ class HomeScreen extends StatelessWidget {
                                     user?.fullName ?? 'Học viên',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.roboto(
+                                    style: GoogleFonts.inter(
                                       fontSize: 14,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.black87,
@@ -165,7 +165,7 @@ class HomeScreen extends StatelessWidget {
                                   ),
                                   Text(
                                     user?.username ?? 'DE181818',
-                                    style: GoogleFonts.roboto(
+                                    style: GoogleFonts.inter(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w500,
                                       color: Colors.black54,
@@ -397,7 +397,7 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               title,
-              style: GoogleFonts.roboto(
+              style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF555555),
