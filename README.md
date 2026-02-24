@@ -1,95 +1,86 @@
 # FAMS - FPT Academic Management System 🚀
 
-**FAMS (FPT Academic Management System)** là hệ thống quản lý học vụ và điểm danh sinh viên bằng công nghệ nhận dạng khuôn mặt tiên tiến, kết hợp giữa sự bảo mật của AI và tính linh hoạt của Web/Mobile. 
+**FAMS (FPT Academic Management System)** là hệ thống quản lý học vụ toàn diện được thiết kế chuyên biệt cho môi trường giáo dục hiện đại. Không chỉ dừng lại ở việc điểm danh, FAMS là một hệ sinh thái quản trị tích hợp, kết nối giữa sinh viên, giảng viên và cán bộ quản lý học vụ (Academic Staff) thông qua các giải pháp công nghệ tiên tiến nhất.
 
-Dự án được thiết kế để giải quyết vấn đề gian lận điểm danh, tự động hóa quy trình quản lý của giảng viên và cung cấp cái nhìn tổng quan thời gian thực cho Academic Staff thông qua Dashboard giám sát chuyên sâu.
-
----
-
-## 🌟 Tính Năng Nổi Bật
-
-### 🛡️ Bảo Mật & Chống Giả Mạo Nâng Cao (Security & Anti-Spoofing)
-- **Passive Liveness Detection**: Phát hiện khuôn mặt thật/giả thông qua phân tích chiều sâu (3D Geometry Veto) và cảm biến LCD.
-- **Active Challenges**: Yêu cầu người dùng thực hiện các hành động ngẫu nhiên (chớp mắt, mỉm cười, quay đầu) để xác nhận danh tính thực.
-- **Multi-Factor Validation**: Kiểm tra vị trí (Location), mạng WiFi (BSSID/RSSI) và thời gian thực để ngăn chặn điểm danh hộ từ xa.
-- **Fail-Fast Security**: Hệ thống tiền kiểm tra (Pre-check) để từ chối ngay lập tức các nỗ lực tấn công bằng hình ảnh/video.
-
-### 📊 Dashboard Giám Sát Thời Gian Thực (Real-time Monitoring)
-- **Live Attendance Map**: Bản đồ trực quan hóa vị trí điểm danh của sinh viên trên phạm vi toàn quốc.
-- **WebSocket Broadcasting**: Cập nhật trạng thái trực tuyến (Online users), lịch sử truy cập và các cảnh báo bảo mật ngay lập tức mà không cần tải lại trang.
-- **Security Alerts**: Tự động thông báo khi phát hiện các nỗ lực đăng nhập hoặc điểm danh bất thường.
-
-### 📱 Trải Nghiệm Mobile & Web Mượt Mà
-- **Mobile app (Flutter)**: Giao diện trực quan, xử lý AI trực tiếp trên thiết bị để tăng tốc độ phản hồi.
-- **Web admin (React)**: Công cụ quản lý mạnh mẽ cho giảng viên và nhân viên học vụ với hệ thống phân quyền chặt chẽ.
+Hệ thống được xây dựng trên nền tảng kiến trúc Microservices-ready, tối ưu hóa cho hiệu năng cao, bảo mật chặt chẽ và khả năng mở rộng linh hoạt.
 
 ---
 
-## 🛠️ Công Nghệ Sử Dụng
+## 🌟 Các Phân Hệ Quản Trị Trung Tâm
 
-### 🖥️ Backend (Trung tâm xử lý)
-- **Language**: Java 21
-- **Framework**: Spring Boot 3 + Spring Security (Stateless JWT)
-- **Database**: PostgreSQL (Data persistence) & Redis (Caching/Session)
-- **Communication**: WebSocket (STOMP) cho dữ liệu thời gian thực.
-- **Tooling**: Maven, Docker.
+### 🏛️ Quản Lý Đào Tạo & Chương Trình Học (Curriculum Management)
+- **Cấu trúc đa tầng**: Quản lý linh hoạt danh mục ngành học (Major), chuyên ngành (Specialization) và chuyên ngành hẹp (Sub-Specialization).
+- **Quản lý học phần**: Hệ thống quản lý môn học (Course) với khả năng cấu trúc hóa các thành phần điểm (Grade Components) linh hoạt cho từng môn học.
+- **Hệ thống Học kỳ**: Quản lý các kỳ học (Semester) với trạng thái động (Upcoming, Ongoing, Finished).
 
-### 💻 Frontend (Dashboard & Admin)
-- **Framework**: React + TypeScript + Vite
-- **Styling**: Tailwind CSS & Lucide Icons
-- **Visualization**: Recharts & Leaflet Map
-- **State Management**: Zustand & React Router Dom 7.
+### 📅 Quản Lý Lớp Học & Thời Khóa Biểu (Scheduling & Enrollment)
+- **Lớp học phần (Class Sections)**: Quản lý danh sách lớp, sĩ số và gán giảng viên phụ trách.
+- **Xếp lịch thông minh (Timetable)**: Hệ thống quản lý thời khóa biểu chi tiết đến từng slot, phòng học (Room) và giảng viên.
+- **Quản lý đăng ký (Enrollment)**: Hỗ trợ bulk-import sinh viên vào lớp học với kỹ thuật **Staging Table**, đảm bảo RAM usage cực thấp (< 50MB) ngay cả với dữ liệu hàng triệu bản ghi.
+- **Yêu cầu đổi lịch (Schedule Requests)**: Giảng viên có thể gửi yêu cầu đổi lịch/dạy bù trực tuyến và được Academic Staff phê duyệt tức thời.
 
-### 📱 Mobile (Ứng dụng cho User)
-- **Framework**: Flutter (Dart)
-- **State Management**: GetX (Navigation & UI State)
-- **AI/ML**: Google ML Kit Face Detection
-- **Networking**: Dio for optimized API calls.
+### � Quản Lý Điểm & Đánh Giá (Grade Management)
+- **Nhập điểm bảo mật**: Quy trình nhập điểm được bảo vệ bằng mã OTP (Lecturer Grade OTP), đảm bảo tính toàn vẹn của dữ liệu điểm số.
+- **Thống kê & Báo cáo**: Tự động tính toán điểm trung bình, quản lý các kỳ thi (Exam Grades) và hiển thị tiến độ học tập cho sinh viên.
+- **Quy trình phê duyệt**: Hệ thống phân quyền cho phép giảng viên nhập điểm và Academic Staff kiểm soát, phê duyệt cuối cùng.
 
-### 🤖 AI Service (Bộ não nhận diện)
-- **Language**: Python 3.10
-- **Libraries**: OpenCV, MediaPipe, dlib, Face Recognition.
-- **API**: FastAPI/Flask phục vụ xử lý ảnh từ Backend.
+### �️ Hệ Thống Điểm Danh Bảo Mật AI (Security-First Attendance)
+- **Nhận diện khuôn mặt**: Sử dụng công nghệ AI tiên tiến để xác thực danh tính sinh viên.
+- **Chống giả mạo (Anti-Spoofing)**: Tích hợp Passive Liveness Detection (phân tích 3D Geometry) và Active Challenges để ngăn chặn các nỗ lực gian lận bằng ảnh/video.
+- **Ràng buộc hạ tầng**: Kiểm tra vị trí (Location), danh sách WiFi Access Points và tín hiệu RSSI để đảm bảo sinh viên đang có mặt trực tiếp tại phòng học.
 
 ---
 
-## ⚙️ Hướng Dẫn Cài Đặt (Setup Guide)
+## 🛠️ Kiến Trúc Hệ Thống & Tech Stack
 
-### Yêu Cầu Hệ Thống
-- Đã cài đặt **Docker** và **Docker Compose**.
-- Đã cài đặt **Node.js** (cho Frontend) và **Flutter SDK** (cho Mobile) nếu muốn chạy thủ công.
+FAMS được xây dựng với kiến trúc phân tầng rõ rệt, phối hợp mượt mà giữa 4 thành phần chính:
 
-### Khởi Chạy Nhanh với Docker
-Chạy lệnh duy nhất tại thư mục gốc để khởi động toàn bộ hệ sinh thái (Backend, Frontend, AI, DB, Redis):
+### 🖥️ 1. Backend Central (Spring Boot)
+- **Core Technology**: Java 21, Spring Boot 3.4
+- **Security**: Spring Security + Stateless JWT, mã hóa dữ liệu nhạy cảm.
+- **Real-time**: WebSocket (STOMP) phục vụ Dashboard giám sát và hệ thống thông báo báo động.
+- **Performance**: Redis Caching, tối ưu hóa truy vấn PostgreSQL, tích hợp Cloudinary để quản lý tài nguyên ảnh.
 
-```bash
-docker-compose up -d --build
-```
+### 💻 2. Admin Dashboard (React)
+- **Tech Stack**: React 18, TypeScript, Vite, Tailwind CSS.
+- **Features**: Dashboard phân tích dữ liệu chuyên sâu cho Academic Staff, quản lý bản đồ trực tuyến (Leaflet), hệ thống thông báo thời gian thực.
 
-### Các Địa Chỉ Truy Cập Mặc Định:
-- **Frontend Dashboard**: [http://localhost:3000](http://localhost:3000)
-- **Backend API Docs**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
-- **AI Service API**: [http://localhost:5000](http://localhost:5000)
+### 📱 3. Mobile App (Flutter)
+- **Framework**: Flutter (Dart).
+- **Security**: Tích hợp Google ML Kit cho việc xử lý khuôn mặt ngay trên thiết bị (Edge Computing) để đảm bảo quyền riêng tư và tốc độ.
+
+### 🤖 4. AI Security Service (Python)
+- **Core**: Python 3.10, FastAPI.
+- **AI Engine**: OpenCV, MediaPipe, dlib để thực thi các thuật toán kiểm tra tính xác thực (Liveness Test) phức tạp.
 
 ---
 
-## 📂 Cấu Trúc Dự Án
+## 🚀 Hướng Dẫn Vận Hành (Quick Start)
+
+Hệ thống được Docker hóa hoàn toàn để đảm bảo sự đồng nhất giữa môi trường dev và production.
+
+1. **Chuẩn bị**: Cài đặt Docker và Docker Compose.
+2. **Khởi chạy**: Tại thư mục gốc, chạy lệnh:
+   ```bash
+   docker-compose up -d --build
+   ```
+3. **Địa chỉ truy cập**:
+   - Web Dashboard: `http://localhost:3000`
+   - API Swagger: `http://localhost:8080/swagger-ui.html`
+   - AI Service: `http://localhost:5000`
+
+---
+
+## 📂 Tổ Chức Thư Mục
 
 ```bash
 fams-project/
-├── backend/          # Mã nguồn Spring Boot (Java)
-├── frontend/         # Mã nguồn React Dashboard (TSX)
-├── mobile/           # Mã nguồn ứng dụng Flutter (Dart)
-├── ai-service/       # Mã nguồn xử lý nhận diện (Python)
-├── scripts/          # Các script hỗ trợ deploy/setup
-└── docker-compose.yml # Cấu hình vận hành hệ thống container
+├── backend/          # Micro-monolith xử lý logic học vụ & bảo mật
+├── frontend/         # React SPA cho quản trị viên và giảng viên
+├── mobile/           # Ứng dụng di động cho sinh viên & giảng viên
+├── ai-service/       # Python Service chuyên trách bảo mật khuôn mặt
+└── docker-compose.yml # Orchestration cho toàn bộ hệ thống
 ```
 
 ---
-
-## 🤝 Đội Ngũ Phát Triển (Team)
-
-Dự án được phát triển và duy trì bởi **myduyen2004** và cộng sự, hướng tới mục tiêu xây dựng một môi trường giáo dục minh bạch và hiện đại.
-
----
-*© 2026 FAMS Project. All rights reserved.*
+*© 2026 FAMS Project - Kiến tạo môi trường quản lý học vụ hiện đại và minh bạch.*
