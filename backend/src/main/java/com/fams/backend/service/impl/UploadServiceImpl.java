@@ -68,9 +68,8 @@ public class UploadServiceImpl implements UploadService {
             log.info("Upload successful: {}", url);
             return url;
         } catch (Exception e) {
-            log.error("Cloudinary upload failed: {}. Falling back to default avatar.", e.getMessage());
-            // Fallback for demonstration since we don't have real keys
-            return "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg";
+            log.error("Cloudinary upload failed for file: {}. Error: {}", file.getOriginalFilename(), e.getMessage());
+            throw new RuntimeException("Upload file thất bại: " + e.getMessage());
         }
     }
 

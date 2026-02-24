@@ -12,7 +12,9 @@ import {
     BookOpen,
     ChevronLeft,
     ChevronRight,
-    Lock
+    Lock,
+    FileText,
+    CheckCircle
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
@@ -502,6 +504,16 @@ export const StudentSchedulePage: React.FC = () => {
                                                                     <div className="text-gray-500 dark:text-gray-400 truncate">
                                                                         Phòng: {slotData.roomCode || slotData.roomName}
                                                                     </div>
+                                                                    <div className="text-gray-500 dark:text-gray-400 truncate">
+                                                                        Bài tập: {!slotData.assignmentId
+                                                                            ? 'Chưa có'
+                                                                            : slotData.submissionStatus === 'SUBMITTED'
+                                                                                ? 'Đã nộp'
+                                                                                : slotData.assignmentStatus === 'CLOSED'
+                                                                                    ? 'Đã đóng'
+                                                                                    : 'Chưa nộp'
+                                                                        }
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         ) : (
@@ -608,6 +620,30 @@ export const StudentSchedulePage: React.FC = () => {
                                         <p className="font-medium text-gray-900 dark:text-white">
                                             {selectedSlot.lecturerName || 'Chưa phân công'}
                                         </p>
+                                    </div>
+                                </div>
+
+                                {/* Assignment Info Section */}
+                                <div className="flex items-start gap-4 pt-2 border-t border-gray-100 dark:border-zinc-800 mt-2">
+                                    <div className="w-8 flex justify-center pt-1">
+                                        <FileText className="text-gray-400" size={20} />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">Bài tập</p>
+                                        <p className="font-medium text-gray-900 dark:text-white mt-1">
+                                            {selectedSlot.assignmentId
+                                                ? selectedSlot.assignmentTitle
+                                                : 'Chưa có bài tập'}
+                                        </p>
+                                        {selectedSlot.assignmentId && (
+                                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                                Trạng thái: {selectedSlot.submissionStatus === 'SUBMITTED'
+                                                    ? 'Đã nộp'
+                                                    : selectedSlot.assignmentStatus === 'CLOSED'
+                                                        ? 'Đã đóng'
+                                                        : 'Chưa nộp'}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 

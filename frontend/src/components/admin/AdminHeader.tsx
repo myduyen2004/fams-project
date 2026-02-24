@@ -18,6 +18,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [activeJob, setActiveJob] = useState<any>(null);
+  const [avatarError, setAvatarError] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -38,6 +39,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
 
     // Listen for profile updates
     const handleProfileUpdate = (event: any) => {
+      setAvatarError(false);
       if (event.detail) {
         setUser(event.detail);
       } else {
@@ -131,11 +133,15 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
           >
             {/* Avatar */}
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-fpt-orange to-orange-600 flex items-center justify-center overflow-hidden">
-              {user?.avatar ? (
+              {user?.avatar && !avatarError ? (
                 <img
-                  src={`${user.avatar}${user.avatar.includes('?') ? '&' : '?'}t=${new Date().getTime()}`}
+                  src={user.avatar.startsWith('data:')
+                    ? user.avatar
+                    : `${user.avatar}${user.avatar.includes('?') ? '&' : '?'}t=${new Date().getTime()}`
+                  }
                   alt={user.fullName}
                   className="w-full h-full object-cover"
+                  onError={() => setAvatarError(true)}
                 />
               ) : (
                 <span className="text-white font-semibold text-sm">

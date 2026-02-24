@@ -24,140 +24,177 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TimetableSlotServiceImpl implements TimetableSlotService {
 
-    private final TimetableSlotRepository timetableSlotRepository;
-    private final RoomRepository roomRepository;
-    private final SlotTypeRepository slotTypeRepository;
+        private final TimetableSlotRepository timetableSlotRepository;
+        private final RoomRepository roomRepository;
+        private final SlotTypeRepository slotTypeRepository;
 
-    @Override
-    @Transactional
-    public TimetableDTO.TimetableSlotDTO updateSlot(Long id, TimetableDTO.UpdateSlotRequest request) {
-        log.info("Processing manual update for slot ID: {}", id);
+        private final com.fams.backend.repository.SemesterRepository semesterRepository;
 
-        TimetableSlot slot = timetableSlotRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Timetable slot not found with id: " + id));
+        @Override
+        @Transactional
+        public TimetableDTO.TimetableSlotDTO updateSlot(Long id, TimetableDTO.UpdateSlotRequest request) {
+                log.info("Processing manual update for slot ID: {}", id);
 
-        // 1. Validate Room
-        Room newRoom = roomRepository.findById(request.getRoomId())
-                .orElseThrow(() -> new BadRequestException("Room not found with id: " + request.getRoomId()));
+                TimetableSlot slot = timetableSlotRepository.findById(id)
+                                .orElseThrow(() -> new NotFoundException("Timetable slot not found with id: " + id));
 
-        // 2. Validate SlotType/SlotNumber
-        Long semesterId = slot.getClassSection().getSemester().getId();
-        SlotType newSlotType = slotTypeRepository.findBySemesterIdAndSlotIndex(semesterId, request.getSlotNumber())
-                .orElseThrow(() -> new BadRequestException(
-                        "Invalid slot number " + request.getSlotNumber() + " for this semester"));
+                // 1. Validate Room
+                Room newRoom = roomRepository.findById(request.getRoomId())
+                                .orElseThrow(() -> new BadRequestException(
+                                                "Room not found with id: " + request.getRoomId()));
 
-        // 3. Check Conflicts
-        checkConflicts(slot, request.getDate(), request.getSlotNumber(), request.getRoomId());
+                // 2. Validate SlotType/SlotNumber
+                Long semesterId = slot.getClassSection().getSemester().getId();
+                SlotType newSlotType = slotTypeRepository
+                                .findBySemesterIdAndSlotIndex(semesterId, request.getSlotNumber())
+                                .orElseThrow(() -> new BadRequestException(
+                                                "Invalid slot number " + request.getSlotNumber()
+                                                                + " for this semester"));
 
-        // 4. Update data
-        slot.setDate(request.getDate());
-        slot.setDayOfWeek(request.getDate().getDayOfWeek().getValue());
-        slot.setSlotNumber(request.getSlotNumber());
-        slot.setSlotType(newSlotType);
-        slot.setRoom(newRoom);
-        slot.setStatus(TimetableSlot.TimetableSlotStatus.SCHEDULED);
+                // 3. Check Conflicts
+                checkConflicts(slot, request.getDate(), request.getSlotNumber(), request.getRoomId());
 
-        TimetableSlot savedSlot = timetableSlotRepository.save(slot);
-        return convertToDTO(savedSlot);
-    }
+                // 4. Update data
+                slot.setDate(request.getDate());
+                slot.setDayOfWeek(request.getDate().getDayOfWeek().getValue());
+                slot.setSlotNumber(request.getSlotNumber());
+                slot.setSlotType(newSlotType);
+                slot.setRoom(newRoom);
+                slot.setStatus(TimetableSlot.TimetableSlotStatus.SCHEDULED);
 
-    private void checkConflicts(TimetableSlot currentSlot, LocalDate newDate, Integer newSlotNumber, Long newRoomId) {
-        Long slotId = currentSlot.getId();
-        String className = currentSlot.getClassSection().getClassName();
-        Long lecturerId = currentSlot.getClassSection().getLecturer() != null
-                ? currentSlot.getClassSection().getLecturer().getId()
-                : null;
-
-        // Check Room Conflict
-        List<TimetableSlot> roomConflicts = timetableSlotRepository.findByRoomIdAndDateAndSlotNumberAndStatusNot(
-                newRoomId, newDate, newSlotNumber, TimetableSlot.TimetableSlotStatus.CANCELLED);
-        if (roomConflicts.stream().anyMatch(s -> !s.getId().equals(slotId))) {
-            throw new BadRequestException("Room is already occupied on " + newDate + " at slot " + newSlotNumber);
+                TimetableSlot savedSlot = timetableSlotRepository.save(slot);
+                return convertToDTO(savedSlot);
         }
 
-        // Check Lecturer Conflict
-        if (lecturerId != null) {
-            List<TimetableSlot> lecturerConflicts = timetableSlotRepository
-                    .findByClassSectionLecturerIdAndDateAndSlotNumberAndStatusNot(
-                            lecturerId, newDate, newSlotNumber, TimetableSlot.TimetableSlotStatus.CANCELLED);
-            if (lecturerConflicts.stream().anyMatch(s -> !s.getId().equals(slotId))) {
-                throw new BadRequestException(
-                        "Lecturer is already teaching on " + newDate + " at slot " + newSlotNumber);
-            }
+        private void checkConflicts(TimetableSlot currentSlot, LocalDate newDate, Integer newSlotNumber,
+                        Long newRoomId) {
+                Long slotId = currentSlot.getId();
+                String className = currentSlot.getClassSection().getClassName();
+                Long lecturerId = currentSlot.getClassSection().getLecturer() != null
+                                ? currentSlot.getClassSection().getLecturer().getId()
+                                : null;
+
+                // Check Room Conflict
+                List<TimetableSlot> roomConflicts = timetableSlotRepository
+                                .findByRoomIdAndDateAndSlotNumberAndStatusNot(
+                                                newRoomId, newDate, newSlotNumber,
+                                                TimetableSlot.TimetableSlotStatus.CANCELLED);
+                if (roomConflicts.stream().anyMatch(s -> !s.getId().equals(slotId))) {
+                        throw new BadRequestException(
+                                        "Room is already occupied on " + newDate + " at slot " + newSlotNumber);
+                }
+
+                // Check Lecturer Conflict
+                if (lecturerId != null) {
+                        List<TimetableSlot> lecturerConflicts = timetableSlotRepository
+                                        .findByClassSectionLecturerIdAndDateAndSlotNumberAndStatusNot(
+                                                        lecturerId, newDate, newSlotNumber,
+                                                        TimetableSlot.TimetableSlotStatus.CANCELLED);
+                        if (lecturerConflicts.stream().anyMatch(s -> !s.getId().equals(slotId))) {
+                                throw new BadRequestException(
+                                                "Lecturer is already teaching on " + newDate + " at slot "
+                                                                + newSlotNumber);
+                        }
+                }
+
+                // Check Class Conflict
+                List<TimetableSlot> classConflicts = timetableSlotRepository
+                                .existsByClassSectionClassNameAndDateAndSlotNumberAndStatusNot(
+                                                className, newDate, newSlotNumber,
+                                                TimetableSlot.TimetableSlotStatus.CANCELLED)
+                                                                ? timetableSlotRepository
+                                                                                .findByClassSectionClassNameAndDateAndSlotNumberAndStatusNot(
+                                                                                                className, newDate,
+                                                                                                newSlotNumber,
+                                                                                                TimetableSlot.TimetableSlotStatus.CANCELLED)
+                                                                : Collections.emptyList();
+
+                if (classConflicts.stream().anyMatch(s -> !s.getId().equals(slotId))) {
+                        throw new BadRequestException(
+                                        "Class " + className + " already has a session on " + newDate + " at slot "
+                                                        + newSlotNumber);
+                }
         }
 
-        // Check Class Conflict
-        List<TimetableSlot> classConflicts = timetableSlotRepository
-                .existsByClassSectionClassNameAndDateAndSlotNumberAndStatusNot(
-                        className, newDate, newSlotNumber, TimetableSlot.TimetableSlotStatus.CANCELLED)
-                                ? timetableSlotRepository.findByClassSectionClassNameAndDateAndSlotNumberAndStatusNot(
-                                        className, newDate, newSlotNumber, TimetableSlot.TimetableSlotStatus.CANCELLED)
-                                : Collections.emptyList();
+        @Override
+        @Transactional(readOnly = true)
+        public TimetableDTO.AvailabilityResponse getAvailability(LocalDate date, String semesterCode) {
+                log.info("Fetching room availability for date: {} in semester: {}", date, semesterCode);
 
-        if (classConflicts.stream().anyMatch(s -> !s.getId().equals(slotId))) {
-            throw new BadRequestException(
-                    "Class " + className + " already has a session on " + newDate + " at slot " + newSlotNumber);
-        }
-    }
+                // 1. Get all rooms
+                List<Room> allRooms = roomRepository.findAll();
+                List<TimetableDTO.RoomDTO> roomDTOs = allRooms.stream()
+                                .map(r -> TimetableDTO.RoomDTO.builder()
+                                                .id(r.getId())
+                                                .code(r.getCode())
+                                                .name(r.getName())
+                                                .capacity(r.getCapacity())
+                                                .build())
+                                .collect(Collectors.toList());
 
-    @Override
-    @Transactional(readOnly = true)
-    public TimetableDTO.AvailabilityResponse getAvailability(LocalDate date, String semesterCode) {
-        log.info("Fetching room availability for date: {} in semester: {}", date, semesterCode);
+                // 2. Get all slot types for this semester
+                List<SlotType> slotTypes = slotTypeRepository.findBySemesterCodeOrderBySlotIndexAsc(semesterCode);
 
-        // 1. Get all rooms
-        List<Room> allRooms = roomRepository.findAll();
-        List<TimetableDTO.RoomDTO> roomDTOs = allRooms.stream()
-                .map(r -> TimetableDTO.RoomDTO.builder()
-                        .id(r.getId())
-                        .code(r.getCode())
-                        .name(r.getName())
-                        .capacity(r.getCapacity())
-                        .build())
-                .collect(Collectors.toList());
+                List<Integer> slotIndices = slotTypes.stream()
+                                .map(SlotType::getSlotIndex)
+                                .collect(Collectors.toList());
 
-        // 2. Get all slot types for this semester
-        List<SlotType> slotTypes = slotTypeRepository.findBySemesterCodeOrderBySlotIndexAsc(semesterCode);
+                // 3. Build occupiedRoomIdsBySlot map
+                Map<Integer, List<Long>> occupiedRoomIdsBySlot = new HashMap<>();
+                for (Integer slotIndex : slotIndices) {
+                        List<Long> busyRoomIds = timetableSlotRepository.findBusyRoomIds(date, slotIndex);
+                        occupiedRoomIdsBySlot.put(slotIndex, busyRoomIds);
+                }
 
-        List<Integer> slotIndices = slotTypes.stream()
-                .map(SlotType::getSlotIndex)
-                .collect(Collectors.toList());
-
-        // 3. Build occupiedRoomIdsBySlot map
-        Map<Integer, List<Long>> occupiedRoomIdsBySlot = new HashMap<>();
-        for (Integer slotIndex : slotIndices) {
-            List<Long> busyRoomIds = timetableSlotRepository.findBusyRoomIds(date, slotIndex);
-            occupiedRoomIdsBySlot.put(slotIndex, busyRoomIds);
+                return TimetableDTO.AvailabilityResponse.builder()
+                                .availableSlots(slotIndices)
+                                .allRooms(roomDTOs)
+                                .occupiedRoomIdsBySlot(occupiedRoomIdsBySlot)
+                                .build();
         }
 
-        return TimetableDTO.AvailabilityResponse.builder()
-                .availableSlots(slotIndices)
-                .allRooms(roomDTOs)
-                .occupiedRoomIdsBySlot(occupiedRoomIdsBySlot)
-                .build();
-    }
+        @Override
+        @Transactional(readOnly = true)
+        public List<LocalDate> getLecturerTeachingDates(Long lecturerId, String semesterCode) {
+                var semester = semesterRepository.findByCode(semesterCode)
+                                .orElseThrow(() -> new NotFoundException("Semester not found: " + semesterCode));
 
-    private TimetableDTO.TimetableSlotDTO convertToDTO(TimetableSlot slot) {
-        var cs = slot.getClassSection();
-        var course = cs != null ? cs.getCourse() : null;
-        var lecturer = cs != null ? cs.getLecturer() : null;
-        var room = slot.getRoom();
-        var slotType = slot.getSlotType();
+                return timetableSlotRepository.findDistinctDatesByLecturerIdAndDateBetween(
+                                lecturerId, semester.getStartDate(), semester.getEndDate());
+        }
 
-        return TimetableDTO.TimetableSlotDTO.builder()
-                .id(slot.getId())
-                .className(cs != null ? cs.getClassName() : null)
-                .courseCode(course != null ? course.getCode() : null)
-                .courseName(course != null ? course.getName() : null)
-                .lecturerName(lecturer != null ? lecturer.getFullName() : null)
-                .roomCode(room != null ? room.getCode() : null)
-                .roomName(room != null ? room.getName() : null)
-                .date(slot.getDate())
-                .dayOfWeek(slot.getDayOfWeek())
-                .slotNumber(slot.getSlotNumber())
-                .startTime(slotType != null ? slotType.getStartTime() : null)
-                .endTime(slotType != null ? slotType.getEndTime() : null)
-                .status(slot.getStatus() != null ? slot.getStatus().name() : null)
-                .build();
-    }
+        @Override
+        @Transactional(readOnly = true)
+        public org.springframework.data.domain.Page<TimetableDTO.TimetableSlotDTO> searchAssignments(
+                        Long lecturerId, String semesterCode, LocalDate date, String className, String status,
+                        org.springframework.data.domain.Pageable pageable) {
+
+                var page = timetableSlotRepository.findAssignments(lecturerId, semesterCode, date, className,
+                                pageable);
+                return page.map(this::convertToDTO);
+        }
+
+        private TimetableDTO.TimetableSlotDTO convertToDTO(TimetableSlot slot) {
+                var cs = slot.getClassSection();
+                var course = cs != null ? cs.getCourse() : null;
+                var lecturer = cs != null ? cs.getLecturer() : null;
+                var room = slot.getRoom();
+                var slotType = slot.getSlotType();
+
+                return TimetableDTO.TimetableSlotDTO.builder()
+                                .id(slot.getId())
+                                .className(cs != null ? cs.getClassName() : null)
+                                .courseCode(course != null ? course.getCode() : null)
+                                .courseName(course != null ? course.getName() : null)
+                                .lecturerName(lecturer != null ? lecturer.getFullName() : null)
+                                .roomCode(room != null ? room.getCode() : null)
+                                .roomName(room != null ? room.getName() : null)
+                                .date(slot.getDate())
+                                .dayOfWeek(slot.getDayOfWeek())
+                                .slotNumber(slot.getSlotNumber())
+                                .startTime(slotType != null ? slotType.getStartTime() : null)
+                                .endTime(slotType != null ? slotType.getEndTime() : null)
+                                .status(slot.getStatus() != null ? slot.getStatus().name() : null)
+                                .build();
+        }
 }
