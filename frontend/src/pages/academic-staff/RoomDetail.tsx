@@ -10,7 +10,7 @@ import { OrbitControls, PerspectiveCamera, Environment, useTexture } from '@reac
 import { RoomAPAssignment } from '../../components/academic-staff/RoomAPAssignment';
 
 // Separate component for 3D content to allow using hooks like useTexture
-const Classroom3D: React.FC<{ rows: number[], tablesPerRow: number[] }> = ({ rows, tablesPerRow }) => {
+const Classroom3D: React.FC<{ rows: number[], tablesPerRow: number[], isComputerLab: boolean }> = ({ rows, tablesPerRow, isComputerLab }) => {
     // Load FPT Logo Texture
     const screenTexture = useTexture('/assets/images/fpt-logo.png');
 
@@ -77,17 +77,19 @@ const Classroom3D: React.FC<{ rows: number[], tablesPerRow: number[] }> = ({ row
 
                             {/* SEAT 1 (Left) - Always rendered fully */}
                             <group position={[-0.85, 0, 0]}>
-                                {/* Monitor */}
-                                <group position={[-0.35, 0.65, -0.25]}>
-                                    <mesh position={[0, 0.25, 0]} castShadow>
-                                        <boxGeometry args={[0.5, 0.35, 0.05]} />
-                                        <meshStandardMaterial color="#111827" />
-                                    </mesh>
-                                    <mesh position={[0, 0.05, 0]}>
-                                        <boxGeometry args={[0.1, 0.1, 0.05]} />
-                                        <meshStandardMaterial color="#374151" />
-                                    </mesh>
-                                </group>
+                                {/* Monitor - Only for COMPUTER_LAB */}
+                                {isComputerLab && (
+                                    <group position={[-0.35, 0.65, -0.25]}>
+                                        <mesh position={[0, 0.25, 0]} castShadow>
+                                            <boxGeometry args={[0.5, 0.35, 0.05]} />
+                                            <meshStandardMaterial color="#111827" />
+                                        </mesh>
+                                        <mesh position={[0, 0.05, 0]}>
+                                            <boxGeometry args={[0.1, 0.1, 0.05]} />
+                                            <meshStandardMaterial color="#374151" />
+                                        </mesh>
+                                    </group>
+                                )}
 
                                 {/* Chair - Always Black Cushioned */}
                                 <group position={[0, 0, 0.7]}>
@@ -116,17 +118,19 @@ const Classroom3D: React.FC<{ rows: number[], tablesPerRow: number[] }> = ({ row
 
                             {/* SEAT 2 (Right) - Always rendered fully */}
                             <group position={[0.85, 0, 0]}>
-                                {/* Monitor */}
-                                <group position={[-0.35, 0.65, -0.25]}>
-                                    <mesh position={[0, 0.25, 0]} castShadow>
-                                        <boxGeometry args={[0.5, 0.35, 0.05]} />
-                                        <meshStandardMaterial color="#111827" />
-                                    </mesh>
-                                    <mesh position={[0, 0.05, 0]}>
-                                        <boxGeometry args={[0.1, 0.1, 0.05]} />
-                                        <meshStandardMaterial color="#374151" />
-                                    </mesh>
-                                </group>
+                                {/* Monitor - Only for COMPUTER_LAB */}
+                                {isComputerLab && (
+                                    <group position={[-0.35, 0.65, -0.25]}>
+                                        <mesh position={[0, 0.25, 0]} castShadow>
+                                            <boxGeometry args={[0.5, 0.35, 0.05]} />
+                                            <meshStandardMaterial color="#111827" />
+                                        </mesh>
+                                        <mesh position={[0, 0.05, 0]}>
+                                            <boxGeometry args={[0.1, 0.1, 0.05]} />
+                                            <meshStandardMaterial color="#374151" />
+                                        </mesh>
+                                    </group>
+                                )}
 
                                 {/* Chair - Always Black Cushioned */}
                                 <group position={[0, 0, 0.7]}>
@@ -158,7 +162,25 @@ const Classroom3D: React.FC<{ rows: number[], tablesPerRow: number[] }> = ({ row
             ))}
 
             {/* TV / Large Screen */}
-            <group position={[0, 2.5, -9]}>
+            <group position={[-7, 2.5, -9]}>
+                {/* Viền bảng */}
+                <mesh castShadow>
+                    <boxGeometry args={[5, 2.8, 0.2]} />
+                    <meshStandardMaterial
+                        color="#989898ff"
+                        metalness={0.8}
+                        roughness={0.2}
+                    />
+                </mesh>
+
+                {/* Mặt bảng/Màn hình */}
+                <mesh position={[0, 0, 0.11]}>
+                    <planeGeometry args={[4.8, 2.6]} />
+                    <meshStandardMaterial color="#ffffffff" />
+                </mesh>
+            </group>
+
+            <group position={[0, 2.5, -9]} scale={1.4}>
                 <mesh castShadow>
                     <boxGeometry args={[5, 2.8, 0.2]} />
                     <meshStandardMaterial color="#1f2937" />
@@ -167,25 +189,66 @@ const Classroom3D: React.FC<{ rows: number[], tablesPerRow: number[] }> = ({ row
                     <planeGeometry args={[4.8, 2.6]} />
                     <meshStandardMaterial map={screenTexture} toneMapped={false} />
                 </mesh>
-                <mesh position={[0, -2, -0.1]}>
-                    <cylinderGeometry args={[0.2, 0.4, 2]} />
-                    <meshStandardMaterial color="#374151" />
+            </group>
+
+            <group position={[7, 2.5, -9]}>
+                {/* Viền bảng */}
+                <mesh castShadow>
+                    <boxGeometry args={[5, 2.8, 0.2]} />
+                    <meshStandardMaterial
+                        color="#989898ff"
+                        metalness={0.8}
+                        roughness={0.2}
+                    />
                 </mesh>
-                <mesh position={[0, -3.1, -0.1]}>
-                    <boxGeometry args={[2, 0.2, 1]} />
-                    <meshStandardMaterial color="#374151" />
+
+                {/* Mặt bảng/Màn hình */}
+                <mesh position={[0, 0, 0.11]}>
+                    <planeGeometry args={[4.8, 2.6]} />
+                    <meshStandardMaterial color="#ffffffff" />
                 </mesh>
             </group>
 
             {/* Teacher's desk */}
-            <mesh position={[0, 0.5, -7]} castShadow>
-                <boxGeometry args={[4, 0.2, 1.5]} />
-                <meshStandardMaterial color="#f3e5ab" />
-            </mesh>
-            <mesh position={[0, 0.25, -7]} castShadow>
-                <boxGeometry args={[0.2, 0.5, 1.2]} />
-                <meshStandardMaterial color="#6b7280" />
-            </mesh>
+            <group position={[7, 0, -6]} rotation={[0, Math.PI, 0]}>
+                {/* Desk Surface */}
+                <mesh position={[0, 0.6, 0]} receiveShadow castShadow>
+                    <boxGeometry args={[4, 0.05, 1.5]} />
+                    <meshStandardMaterial color="#c8b97c" />
+                </mesh>
+                <mesh position={[0, 0.59, 0]}>
+                    <boxGeometry args={[4.05, 0.04, 1.55]} />
+                    <meshStandardMaterial color="#d1d5db" />
+                </mesh>
+
+                {/* Desk Legs (4 legs) */}
+                <mesh position={[-1.9, 0.2, -0.65]} castShadow><boxGeometry args={[0.1, 0.8, 0.1]} /><meshStandardMaterial color="#9ca3af" /></mesh>
+                <mesh position={[1.9, 0.2, -0.65]} castShadow><boxGeometry args={[0.1, 0.8, 0.1]} /><meshStandardMaterial color="#9ca3af" /></mesh>
+                <mesh position={[-1.9, 0.2, 0.65]} castShadow><boxGeometry args={[0.1, 0.8, 0.1]} /><meshStandardMaterial color="#9ca3af" /></mesh>
+                <mesh position={[1.9, 0.2, 0.65]} castShadow><boxGeometry args={[0.1, 0.8, 0.1]} /><meshStandardMaterial color="#9ca3af" /></mesh>
+                <group position={[0, 0, 1]}>
+                    <mesh position={[-0.25, 0.2, 0.25]}><boxGeometry args={[0.05, 0.4, 0.05]} /><meshStandardMaterial color="#9ca3af" /></mesh>
+                    <mesh position={[0.25, 0.2, 0.25]}><boxGeometry args={[0.05, 0.4, 0.05]} /><meshStandardMaterial color="#9ca3af" /></mesh>
+                    <mesh position={[-0.25, 0.2, -0.25]}><boxGeometry args={[0.05, 0.4, 0.05]} /><meshStandardMaterial color="#9ca3af" /></mesh>
+                    <mesh position={[0.25, 0.2, -0.25]}><boxGeometry args={[0.05, 0.4, 0.05]} /><meshStandardMaterial color="#9ca3af" /></mesh>
+                    <mesh position={[0, 0.42, 0]} castShadow>
+                        <boxGeometry args={[0.6, 0.05, 0.6]} />
+                        <meshStandardMaterial color="#1a1a1a" roughness={0.7} />
+                    </mesh>
+                    <mesh position={[-0.25, 0.7, 0.28]} rotation={[0, 0, 0]}>
+                        <boxGeometry args={[0.05, 0.6, 0.05]} />
+                        <meshStandardMaterial color="#9ca3af" />
+                    </mesh>
+                    <mesh position={[0.25, 0.7, 0.28]} rotation={[0, 0, 0]}>
+                        <boxGeometry args={[0.05, 0.6, 0.05]} />
+                        <meshStandardMaterial color="#9ca3af" />
+                    </mesh>
+                    <mesh position={[0, 0.85, 0.25]} castShadow>
+                        <boxGeometry args={[0.6, 0.25, 0.05]} />
+                        <meshStandardMaterial color="#1a1a1a" roughness={0.7} />
+                    </mesh>
+                </group>
+            </group>
         </>
     );
 };
@@ -236,6 +299,9 @@ export const RoomDetail: React.FC = () => {
         );
     }
 
+    const isComputerLab = room?.type === 'COMPUTER_LAB';
+    const isClassroom = room?.type === 'CLASSROOM';
+
     return (
         <AcademicStaffLayout pageTitle={`${room.name} - Mô phỏng`}>
             <div className="flex gap-6 h-[calc(100vh-140px)]">
@@ -276,18 +342,33 @@ export const RoomDetail: React.FC = () => {
                     <div className="flex-1 bg-gray-50 dark:bg-zinc-800/30 rounded-2xl p-6 overflow-auto">
                         {!is3DMode ? (
                             /* 2D View */
-                            <div className="flex flex-col gap-16 items-center pt-8">
+                            <div className="flex flex-col gap-6 items-center pt-8">
                                 {/* TV Screen - Front of Class */}
-                                <div className="flex flex-col items-center mb-4">
+                                <div className="flex flex-row items-center mb-4 gap-4">
+                                    <div className="w-64 h-32 bg-[#1f2937] rounded-lg border-4 border-gray-300 relative flex items-center justify-center shadow-xl">
+                                        {/* Board Content */}
+                                        <div className="w-full h-full bg-white flex items-center justify-center overflow-hidden"></div>
+                                    </div>
                                     <div className="w-64 h-32 bg-[#1f2937] rounded-lg border-4 border-gray-700 relative flex items-center justify-center shadow-xl">
                                         {/* Screen Content */}
                                         <div className="w-full h-full bg-black flex items-center justify-center overflow-hidden">
                                             <img src="/assets/images/fpt-logo.png" className="w-32 h-auto object-contain" alt="Screen" />
                                         </div>
                                     </div>
-                                    {/* Stand */}
-                                    <div className="w-8 h-8 bg-gray-700"></div>
-                                    <div className="w-32 h-2 bg-gray-700 rounded-full"></div>
+                                    <div className="w-64 h-32 bg-[#1f2937] rounded-lg border-4 border-gray-300 relative flex items-center justify-center shadow-xl">
+                                        {/* Board Content */}
+                                        <div className="w-full h-full bg-white flex items-center justify-center overflow-hidden"></div>
+                                    </div>
+                                </div>
+
+                                {/* Teacher Desk */}
+                                <div className="w-full flex justify-end pr-20 mb-8">
+                                    <div className="flex flex-col items-center">
+                                        {/* Chair - Behind the desk (closer to board) */}
+                                        <div className="w-8 h-6 rounded-t-lg border border-gray-500 bg-[#1a1a1a] -mt-1"></div>
+                                        {/* Desk Surface */}
+                                        <div className="w-48 h-12 rounded-md shadow-lg border-2 z-10 bg-[#faf0c8] border-orange-200 dark:bg-orange-900/30 dark:border-orange-900/50"></div>
+                                    </div>
                                 </div>
 
                                 {/* 3 rows */}
@@ -301,16 +382,18 @@ export const RoomDetail: React.FC = () => {
                                                     <div className="flex gap-0">
                                                         {/* Single Long Desk Container */}
                                                         <div className="flex relative">
-                                                            {/* Long Desk Surface - Lighter Beige to match 3D lighting */}
-                                                            <div className="absolute inset-x-0 top-0 h-12 bg-[#faf0c8] rounded-md shadow-lg border-2 border-gray-300 dark:border-zinc-700 z-0"></div>
+                                                            {/* Long Desk Surface */}
+                                                            <div className={`absolute inset-x-0 top-0 h-12 rounded-md shadow-lg border-2 z-0 bg-[#faf0c8] border-orange-200 dark:bg-orange-900/30 dark:border-orange-900/50`}></div>
 
                                                             {/* Seat 1 */}
                                                             <div className="flex flex-col items-center z-10 w-16">
                                                                 <div className="w-16 h-12 relative flex items-center justify-center">
-                                                                    {/* Monitor always visible */}
-                                                                    <div className="absolute top-1 left-3 w-6 h-4 bg-gray-900 rounded-sm border border-gray-700 flex items-center justify-center">
-                                                                        <div className="w-full h-full bg-blue-900/20 rounded-[1px]"></div>
-                                                                    </div>
+                                                                    {/* Monitor - Only for COMPUTER_LAB */}
+                                                                    {isComputerLab && (
+                                                                        <div className="absolute top-1 left-3 w-6 h-4 bg-gray-900 rounded-sm border border-gray-700 flex items-center justify-center">
+                                                                            <div className="w-full h-full bg-blue-900/20 rounded-[1px]"></div>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                                 {/* Chair - Always Black */}
                                                                 <div className="w-8 h-6 rounded-t-lg border border-gray-500 bg-[#1a1a1a] -mt-1"></div>
@@ -319,10 +402,12 @@ export const RoomDetail: React.FC = () => {
                                                             {/* Seat 2 */}
                                                             <div className="flex flex-col items-center z-10 w-16">
                                                                 <div className="w-16 h-12 relative flex items-center justify-center">
-                                                                    {/* Monitor always visible */}
-                                                                    <div className="absolute top-1 left-3 w-6 h-4 bg-gray-900 rounded-sm border border-gray-700 flex items-center justify-center">
-                                                                        <div className="w-full h-full bg-blue-900/20 rounded-[1px]"></div>
-                                                                    </div>
+                                                                    {/* Monitor - Only for COMPUTER_LAB */}
+                                                                    {isComputerLab && (
+                                                                        <div className="absolute top-1 left-3 w-6 h-4 bg-gray-900 rounded-sm border border-gray-700 flex items-center justify-center">
+                                                                            <div className="w-full h-full bg-blue-900/20 rounded-[1px]"></div>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                                 {/* Chair - Black*/}
                                                                 <div className="w-8 h-6 rounded-t-lg border border-gray-500 bg-[#1a1a1a] -mt-1"></div>
@@ -340,13 +425,13 @@ export const RoomDetail: React.FC = () => {
                             <div className="w-full h-full min-h-[400px]">
                                 <Canvas shadows>
                                     <React.Suspense fallback={null}>
-                                        <Classroom3D rows={rows} tablesPerRow={tablesPerRow} />
+                                        <Classroom3D rows={rows} tablesPerRow={tablesPerRow} isComputerLab={isComputerLab} />
                                     </React.Suspense>
                                 </Canvas>
 
                                 {/* 3D Mode Instructions */}
                                 <div className="absolute bottom-4 left-4 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm rounded-lg px-3 py-2 text-xs text-gray-600 dark:text-gray-300">
-                                    🖱️ Kéo chuột trái để xoay • Cuộn chuột để zoom • Kéo chuột phải để di chuyển
+                                    Kéo chuột trái để xoay • Cuộn chuột để zoom • Kéo chuột phải để di chuyển
                                 </div>
                             </div>
                         )}
@@ -359,8 +444,13 @@ export const RoomDetail: React.FC = () => {
                 <div className="w-80 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-6 overflow-y-auto">
                     <div className="flex items-center justify-between mb-6">
                         <h2 className="text-lg font-bold text-gray-900 dark:text-white">Thông tin {room.name}</h2>
-                        <span className="px-2.5 py-1 rounded-full bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-xs font-bold flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> TRỰC TIẾP
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1
+                            ${isComputerLab ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300' :
+                                isClassroom ? 'bg-orange-100 dark:bg-orange-900 text-orange-600 dark:text-orange-300' :
+                                    'bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400'}
+                        `}>
+                            <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isComputerLab ? 'bg-blue-500' : isClassroom ? 'bg-orange-500' : 'bg-emerald-500'}`}></span>
+                            TRỰC TIẾP
                         </span>
                     </div>
 

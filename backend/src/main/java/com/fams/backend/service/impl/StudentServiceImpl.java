@@ -40,7 +40,7 @@ public class StudentServiceImpl implements StudentService {
     @Override
     @Transactional(readOnly = true)
     public Page<StudentResponse> getAllStudents(String search, String status, String majorStr, String specializationStr,
-            Pageable pageable) {
+            String subSpecializationStr, Pageable pageable) {
         Specification<User> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -78,7 +78,8 @@ public class StudentServiceImpl implements StudentService {
             // because StudentProfile is linked.
             // We can do it via subquery or fetch all IDs first. Subquery is better.
             if (query != null && ((majorStr != null && !majorStr.isEmpty())
-                    || (specializationStr != null && !specializationStr.isEmpty()))) {
+                    || (specializationStr != null && !specializationStr.isEmpty())
+                    || (subSpecializationStr != null && !subSpecializationStr.isEmpty()))) {
                 var subquery = query.subquery(Long.class);
                 var profileRoot = subquery.from(StudentProfile.class);
                 subquery.select(profileRoot.get("userId"));
@@ -86,9 +87,6 @@ public class StudentServiceImpl implements StudentService {
                 List<Predicate> profilePredicates = new ArrayList<>();
 
                 if (majorStr != null && !majorStr.isEmpty()) {
-                    // Start by assuming majorStr is Name or Code.
-                    // But major is an entity in StudentProfile.
-                    // Joining major
                     var majorJoin = profileRoot.join("major");
                     profilePredicates.add(cb.equal(majorJoin.get("name"), majorStr));
                 }
@@ -96,6 +94,11 @@ public class StudentServiceImpl implements StudentService {
                 if (specializationStr != null && !specializationStr.isEmpty()) {
                     var specJoin = profileRoot.join("specialization");
                     profilePredicates.add(cb.equal(specJoin.get("name"), specializationStr));
+                }
+
+                if (subSpecializationStr != null && !subSpecializationStr.isEmpty()) {
+                    var subSpecJoin = profileRoot.join("subSpecialization");
+                    profilePredicates.add(cb.equal(subSpecJoin.get("name"), subSpecializationStr));
                 }
 
                 subquery.where(profilePredicates.toArray(new Predicate[0]));
@@ -318,7 +321,7 @@ public class StudentServiceImpl implements StudentService {
             Row headerRow = sheet.createRow(0);
             String[] headers = {
                     "STT", "Mã SV", "Họ và tên", "Email", "Số điện thoại",
-                    "Ngành (Major)", "Chuyên ngành (Specialization)", "Combo (Sub-Spec)", "Khóa", "GPA"
+                    "Ngành (Major)", "Chuyên ngành (Specialization)", "Chuyên ngành hẹp", "Khóa", "GPA"
             };
 
             for (int i = 0; i < headers.length; i++) {

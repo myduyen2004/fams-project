@@ -4,8 +4,9 @@ import { Search, Upload, Download, Loader2 } from 'lucide-react';
 interface StudentFiltersProps {
     search: string;
     onSearchChange: (value: string) => void;
-    statusFilter: string;
-    onStatusFilterChange: (value: string) => void;
+    subSpecializationFilter?: string;
+    onSubSpecializationFilterChange?: (value: string) => void;
+    subSpecializations?: string[];
 
     majorFilter?: string;
     onMajorFilterChange?: (value: string) => void;
@@ -25,8 +26,9 @@ interface StudentFiltersProps {
 export const StudentFilters: React.FC<StudentFiltersProps> = React.memo(({
     search,
     onSearchChange,
-    statusFilter,
-    onStatusFilterChange,
+    subSpecializationFilter = 'all',
+    onSubSpecializationFilterChange,
+    subSpecializations = [],
     majorFilter = 'all',
     onMajorFilterChange,
     majors = [],
@@ -93,21 +95,25 @@ export const StudentFilters: React.FC<StudentFiltersProps> = React.memo(({
                     </div>
                 )}
 
-                {/* Trạng thái */}
-                <div className="lg:w-44">
-                    <label className="block text-xs font-medium text-gray-600 dark:text-zinc-400 mb-1">
-                        Trạng thái
-                    </label>
-                    <select
-                        value={statusFilter}
-                        onChange={(e) => onStatusFilterChange(e.target.value)}
-                        className="border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 rounded-lg px-3 py-2.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white"
-                    >
-                        <option value="all">Tất cả trạng thái</option>
-                        <option value="ACTIVE">🟢 Đang hoạt động</option>
-                        <option value="LOCKED">🔴 Đã khóa</option>
-                    </select>
-                </div>
+                {/* Chuyên ngành hẹp */}
+                {onSubSpecializationFilterChange && (
+                    <div className="lg:w-44">
+                        <label className="block text-xs font-medium text-gray-600 dark:text-zinc-400 mb-1">
+                            Chuyên ngành hẹp
+                        </label>
+                        <select
+                            value={subSpecializationFilter}
+                            onChange={(e) => onSubSpecializationFilterChange(e.target.value)}
+                            disabled={subSpecializations.length === 0}
+                            className="border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 rounded-lg px-3 py-2.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white disabled:opacity-50"
+                        >
+                            <option value="all">Tất cả CN hẹp</option>
+                            {subSpecializations.map((ss) => (
+                                <option key={ss} value={ss}>{ss}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2 lg:ml-auto">

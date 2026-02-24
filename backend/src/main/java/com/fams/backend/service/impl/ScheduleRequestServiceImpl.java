@@ -187,7 +187,12 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
         scheduleRequest.setStatus(ScheduleRequest.RequestStatus.PENDING);
         scheduleRequest.setCreatedAt(LocalDateTime.now());
 
-        return mapToResponse(scheduleRequestRepository.save(scheduleRequest));
+        ScheduleRequest savedRequest = scheduleRequestRepository.save(scheduleRequest);
+
+        // 6. Send notification to Academic Staff
+        sendNotificationToAcademicStaff(savedRequest);
+
+        return mapToResponse(savedRequest);
     }
 
     @Override
@@ -360,8 +365,8 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
             Integer slotNumber = request.getRequestedSlotNumber();
 
             String content = String.format(
-                    "Dear em,<br><br>Buổi học ngày %s đã được đổi sang ngày %s, Slot %d, Phòng %s. " +
-                            "Em lưu ý kiểm tra và cập nhật thêm thông tin ở trang thời khóa biểu.<br><br>" +
+                    "Dear em,<br>Buổi học ngày %s đã được đổi sang ngày %s, Slot %d, Phòng %s. " +
+                            "Em lưu ý kiểm tra và cập nhật thêm thông tin ở trang thời khóa biểu.<br>" +
                             "Thân mến,<br>Phòng đào tạo",
                     originalDateFormatted, requestedDateFormatted, slotNumber != null ? slotNumber : 0, roomName);
 
@@ -381,6 +386,47 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
             log.info("Sent schedule change notification to {} students in class {}", studentIds.size(), className);
         } catch (Exception e) {
             log.error("Error sending notification to students: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Send notification to all Academic Staff when a new request is created
+     */
+    private void sendNotificationToAcademicStaff(ScheduleRequest request) {
+        try {
+            List<User> academicStaffs = userRepository.findByRole(User.UserRole.ACADEMIC_STAFF)
+                    .orElse(new ArrayList<>());
+
+            if (academicStaffs.isEmpty()) {
+                log.info("No Academic Staff found to notify");
+                return;
+            }
+
+            String requesterName = request.getRequester().getFullName();
+            String className = request.getClassSection() != null ? request.getClassSection().getClassName() : "N/A";
+            String typeLabel = getTypeLabel(request.getType());
+
+            String title = "Yêu cầu thay đổi lịch mới từ " + requesterName;
+            String content = String.format("Giảng viên %s đã gửi yêu cầu %s cho lớp %s. Vui lòng kiểm tra và xử lý.",
+                    requesterName, typeLabel, className);
+
+            int count = 0;
+            for (User staff : academicStaffs) {
+                com.fams.backend.dto.request.NotificationRequest notifRequest = com.fams.backend.dto.request.NotificationRequest
+                        .builder()
+                        .title(title)
+                        .content(content)
+                        .type(com.fams.backend.entity.Notification.NotificationType.SYSTEM)
+                        .targetType(com.fams.backend.entity.Notification.TargetType.USER)
+                        .status(com.fams.backend.entity.Notification.NotificationStatus.SENT)
+                        .recipientId(staff.getId())
+                        .build();
+                notificationService.createNotification(notifRequest);
+                count++;
+            }
+            log.info("Sent notification to {} Academic Staff members", count);
+        } catch (Exception e) {
+            log.error("Error sending notification to Academic Staff: {}", e.getMessage(), e);
         }
     }
 

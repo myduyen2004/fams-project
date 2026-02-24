@@ -2,10 +2,13 @@ package com.fams.backend.service.impl;
 
 import com.fams.backend.dto.response.*;
 import com.fams.backend.entity.*;
+import com.fams.backend.repository.ChatGroupRepository;
 import com.fams.backend.repository.ClassSectionRepository;
 import com.fams.backend.repository.CourseRepository;
 import com.fams.backend.repository.EnrollmentRepository;
 import com.fams.backend.repository.SemesterRepository;
+import com.fams.backend.repository.SpecializationCourseRepository;
+import com.fams.backend.repository.SubSpecializationCourseRepository;
 import com.fams.backend.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -40,7 +43,16 @@ public class ClassSectionServiceImplTest {
     private EnrollmentRepository enrollmentRepository;
 
     @Mock
+    private ChatGroupRepository chatGroupRepository;
+
+    @Mock
     private SemesterRepository semesterRepository;
+
+    @Mock
+    private SpecializationCourseRepository specializationCourseRepository;
+
+    @Mock
+    private SubSpecializationCourseRepository subSpecializationCourseRepository;
 
     @Mock
     private CourseRepository courseRepository;
@@ -204,6 +216,8 @@ public class ClassSectionServiceImplTest {
                 .thenReturn(Optional.of(classSection));
         when(enrollmentRepository.findByClassSectionClassName(className))
                 .thenReturn(Collections.singletonList(enrollment));
+        when(chatGroupRepository.findByClassSectionClassName(className))
+                .thenReturn(Optional.empty());
 
         // When
         ClassDetailResponse result = classSectionService.getClassDetail(className);

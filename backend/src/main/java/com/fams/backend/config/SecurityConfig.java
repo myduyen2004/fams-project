@@ -57,6 +57,7 @@ public class SecurityConfig {
                                                                 "/api/map/**", // map endpoints
                                                                 "/api/v1/semesters/**", // semester endpoints
                                                                 "/api/v1/class-sections/**", // class section endpoints
+                                                                "/api/v1/files/**", // file download endpoints
                                                                 "/api-docs/**",
                                                                 "/swagger-ui/**",
                                                                 "/swagger-ui.html",

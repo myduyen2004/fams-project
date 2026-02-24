@@ -52,6 +52,8 @@ export interface ClassDetailResponse {
     studentCount: number;
     academicYear: string;
     status: string;
+    hasChatGroup: boolean;
+    chatGroupId: number | null;
     enrollments: StudentEnrollmentDTO[];
 }
 

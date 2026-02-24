@@ -5,7 +5,6 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -72,14 +71,14 @@ public class ChatMessage {
     private LocalDateTime sentAt;
 
     // Danh sách đã đọc
-    @OneToMany(mappedBy = "message", cascade = CascadeType.ALL)
-    @Builder.Default
-    private List<ChatMessageRead> readReceipts = new ArrayList<>();
+    @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    private List<ChatMessageRead> readReceipts;
 
     public enum MessageType {
         TEXT, // Văn bản
         IMAGE, // Hình ảnh
         FILE, // File
+        LINK, // Chia sẻ link
         SYSTEM // Tin nhắn hệ thống
     }
 }

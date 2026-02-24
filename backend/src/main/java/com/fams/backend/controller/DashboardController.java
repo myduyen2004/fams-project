@@ -4,7 +4,6 @@ import com.fams.backend.dto.response.*;
 import com.fams.backend.service.DashboardService;
 import com.fams.backend.service.impl.NotificationServiceImpl;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -48,6 +47,14 @@ public class DashboardController {
     public ResponseEntity<List<DashboardNotificationResponse>> getNotifications() {
         log.info("GET /api/dashboard/notifications");
         return ResponseEntity.ok(dashboardService.getNotifications());
+    }
+
+    @GetMapping("/notifications/unread-count")
+    @Operation(summary = "Lấy số lượng thông báo chưa đọc")
+    public ResponseEntity<java.util.Map<String, Integer>> getUnreadCount() {
+        log.info("GET /api/dashboard/notifications/unread-count");
+        return ResponseEntity
+                .ok(java.util.Collections.singletonMap("count", dashboardService.getUnreadNotificationCount()));
     }
 
     @GetMapping("/notifications/{id}")
