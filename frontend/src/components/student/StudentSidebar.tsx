@@ -11,7 +11,6 @@ import {
     Settings,
     LogOut,
     GraduationCap,
-    List,
     ChevronDown
 } from 'lucide-react';
 import { authService } from '../../services/api/authService';
