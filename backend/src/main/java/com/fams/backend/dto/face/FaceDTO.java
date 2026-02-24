@@ -34,6 +34,7 @@ public class FaceDTO {
     public static class FaceCheckInRequest {
         private Long slotId;
         private String faceImageBase64;
+        private String wifiSsid;
         private String wifiBssid;
         private Integer wifiRssi;
         private Integer attemptNumber;
@@ -101,6 +102,12 @@ public class FaceDTO {
         private Boolean hasFaceData;
         private Integer faceCount;
         private LocalDateTime registeredAt;
+
+        // Current attendance state (optional, only when slotId is provided)
+        private Integer attemptCount;
+        private Integer remainingAttempts;
+        private Integer maxAttempts;
+        private String attendanceStatus;
     }
 
     @Data
@@ -146,6 +153,7 @@ public class FaceDTO {
     @AllArgsConstructor
     public static class FaceQualityRequest {
         private String image;
+        private String mode;
     }
 
     @Data
@@ -158,5 +166,29 @@ public class FaceDTO {
         private List<String> warnings;
         private List<String> errors;
         private String message;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class FacePreCheckRequest {
+        private Long slotId;
+        private String image;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class FacePreCheckResponse {
+        private Boolean success;
+        private Boolean passed; // Is the face "clean" (not a spoof)
+        private String message;
+        private Boolean isQualityWarning; // NEW: Instructional warning (distance/light) vs real spoof
+        private Integer attemptNumber;
+        private Integer remainingAttempts;
+        private Integer maxAttempts;
+        private String status; // e.g. "FAILED", "REQUIRES_MANUAL"
     }
 }

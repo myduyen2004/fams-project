@@ -118,7 +118,7 @@ attendance:
 # ---------------- Face Recognition Configuration ----------------
 face:
     recognition:
-        max-attempts: 1000
+        max-attempts: 5
         wifi-rssi-threshold: -75
         late-threshold-minutes: 15
 
@@ -175,6 +175,12 @@ springdoc:
 
 # ---------------- Cloudinary Configuration ----------------
 cloudinary:
-    cloud-name: dqirhvblt
-    api-key: 525798314275663
-    api-secret: eUj9fDz8rz3DkUhGCpXQNF2xKv8
+    cloud-name: ${CLOUDINARY_CLOUD_NAME}
+    api-key: ${CLOUDINARY_API_KEY}
+    api-secret: ${CLOUDINARY_API_SECRET}
+
+# ---------------- App Custom Configuration ----------------
+app:
+  cors:
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000,http://localhost:8080,http://127.0.0.1:5173}
+  base-url: ${APP_BASE_URL:http://localhost:8080}

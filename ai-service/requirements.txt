@@ -73,7 +73,7 @@ mediapipe==0.10.9
 
 # ONNX Runtime - Chạy AI models
 # GIẢI THÍCH: Chạy models đã train sẵn, không cần TensorFlow/PyTorch
-onnxruntime==1.16.3
+onnxruntime
 
 # ========================================
 # SECTION 3: FULL AI SETUP (Optional)

@@ -8,6 +8,4 @@ public interface AttendanceService {
     AttendanceDTO.SessionDetailResponse getSessionDetail(Long sessionId);
 
     AttendanceDTO.SessionDetailResponse getSessionBySlot(Long slotId);
-
-    AttendanceDTO.CheckInResponse checkIn(Long studentId, AttendanceDTO.CheckInRequest request);
 }
