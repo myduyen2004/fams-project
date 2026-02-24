@@ -52,18 +52,7 @@ const formatDate = (date: unknown) => {
     }
 };
 
-const getStatusBadge = (status: string) => {
-    switch (status) {
-        case 'ACTIVE':
-            return <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">Hoạt động</span>;
-        case 'LOCKED':
-            return <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">Đã khóa</span>;
-        case 'INACTIVE':
-            return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full">Chưa kích hoạt</span>;
-        default:
-            return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">{status}</span>;
-    }
-};
+
 
 const getErrorMessage = (error: unknown, defaultMessage: string): string => {
     if (error && typeof error === 'object' && 'response' in error) {
@@ -98,7 +87,9 @@ export const ViewStudentModal: React.FC<{
                             <h4 className="text-xl font-bold text-gray-900 dark:text-white">{student.fullName}</h4>
                             <p className="text-gray-500 dark:text-zinc-400 font-mono">{student.code}</p>
                             <div className="mt-2">
-                                {getStatusBadge(student.status)}
+                                <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                                    {student.subSpecialization || 'Chưa chọn chuyên ngành hẹp'}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -144,7 +135,7 @@ export const ViewStudentModal: React.FC<{
                                 </div>
                                 {student.subSpecialization && (
                                     <div className="col-span-2">
-                                        <p className="text-gray-400">Chuyên ngành phụ/Combo</p>
+                                        <p className="text-gray-400">Chuyên ngành hẹp</p>
                                         <p className="font-medium text-gray-700 dark:text-gray-300">{student.subSpecialization}</p>
                                     </div>
                                 )}
@@ -376,7 +367,7 @@ export const EditStudentModal: React.FC<{ student: StudentResponse; onClose: () 
                         </div>
 
                         <div className="col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Chuyên ngành phụ / Combo</label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Chuyên ngành hẹp</label>
                             <select
                                 className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none text-gray-900 dark:text-white disabled:opacity-50"
                                 value={formData.subSpecialization}
@@ -548,7 +539,7 @@ export const ImportStudentModal: React.FC<{ onClose: () => void; onSuccess: () =
                                             <th className="px-4 py-3">Ngành / Chuyên ngành</th>
                                             <th className="px-4 py-3">Khóa</th>
                                             <th className="px-4 py-3">GPA</th>
-                                            <th className="px-4 py-3">Combo</th>
+                                            <th className="px-4 py-3">Chuyên ngành hẹp</th>
                                             <th className="px-4 py-3">Ghi chú lỗi</th>
                                             <th className="px-4 py-3 text-center">Trạng thái</th>
                                         </tr>

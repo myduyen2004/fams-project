@@ -24,6 +24,8 @@ export const NotificationBell: React.FC = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [activeTab, setActiveTab] = useState<'notifications' | 'jobs'>('notifications');
   const navigate = useNavigate();
+  const user = authService.getUser();
+  const role = user?.role?.toLowerCase() || 'student';
 
   // Get first line of HTML content
   const getFirstLineHtml = (html: string): string => {
@@ -83,7 +85,9 @@ export const NotificationBell: React.FC = () => {
       // ONLY add truly new notifications that don't exist in current state
       // NEVER overwrite existing notifications to preserve their isRead status
       const existingIds = new Set(prev.map(n => n.id));
-      const newNotifications = data.filter(n => !existingIds.has(n.id));
+      // Filter out CHAT type notifications since they are now handled by ChatMessageIcon
+      const nonChatNotifications = data.filter(n => n.type !== 'CHAT');
+      const newNotifications = nonChatNotifications.filter(n => !existingIds.has(n.id));
 
       if (newNotifications.length > 0) {
         console.log('[NotificationBell] Adding', newNotifications.length, 'new notifications');
@@ -160,7 +164,9 @@ export const NotificationBell: React.FC = () => {
       console.log('[NotificationBell] Loading notifications from API...');
       const data = await dashboardService.getNotifications();
       console.log('[NotificationBell] API returned', data.length, 'notifications:', data);
-      setNotifications(data);
+      // Filter out CHAT type notifications
+      const nonChatNotifications = data.filter(n => n.type !== 'CHAT');
+      setNotifications(nonChatNotifications);
     } catch (error) {
       console.error('[NotificationBell] Error loading notifications:', error);
     }
@@ -182,8 +188,8 @@ export const NotificationBell: React.FC = () => {
       let updated;
       const jobWithTimestamp = {
         ...update,
-        createdAt: update.createdAt ? new Date(update.createdAt).getTime() : 
-                  (index !== -1 ? prev[index].createdAt : Date.now())
+        createdAt: update.createdAt ? new Date(update.createdAt).getTime() :
+          (index !== -1 ? prev[index].createdAt : Date.now())
       };
 
       if (index === -1) {
@@ -195,7 +201,7 @@ export const NotificationBell: React.FC = () => {
 
       // If finished, refresh notifications as a persistent one might have been created
       if (update.status === 'COMPLETED' || update.status === 'FAILED' || update.status === 'CANCELLED') {
-         loadNotifications();
+        loadNotifications();
       }
 
       // Save to localStorage
@@ -227,8 +233,14 @@ export const NotificationBell: React.FC = () => {
       }
     }
 
-    // Always navigate to notification detail page
-    navigate(`/notifications/${notification.id}`);
+    // Navigate based on notification type
+    if (notification.type === 'CHAT') {
+      const path = `/${role}/messages`;
+      navigate(path);
+    } else {
+      // Always navigate to notification detail page for other types
+      navigate(`/notifications/${notification.id}`);
+    }
     setShowDropdown(false);
   };
 
@@ -262,7 +274,7 @@ export const NotificationBell: React.FC = () => {
     console.log('[NotificationBell] Recalculating unreadCount:', count);
     return count;
   }, [notifications]);
-  
+
   const sortedJobs = useMemo(() => {
     return [...jobs].sort((a, b) => b.createdAt - a.createdAt);
   }, [jobs]);
@@ -451,13 +463,12 @@ export const NotificationBell: React.FC = () => {
                 sortedJobs.map(job => (
                   <div key={job.jobId} className="p-4 flex gap-4 hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors group">
                     <div className="flex-shrink-0">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                        job.status === 'COMPLETED' ? 'bg-orange-100 dark:bg-orange-900/20 text-fpt-orange' :
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${job.status === 'COMPLETED' ? 'bg-orange-100 dark:bg-orange-900/20 text-fpt-orange' :
                         job.status === 'FAILED' || job.status === 'CANCELLED' ? 'bg-red-100 text-red-600' :
-                        'bg-orange-100 text-fpt-orange'
-                      }`}>
-                        {job.status === 'COMPLETED' ? <CheckCircle2 size={24} /> : 
-                         job.status === 'FAILED' || job.status === 'CANCELLED' ? <AlertCircle size={24} /> : <Loader2 size={24} className="animate-spin" />}
+                          'bg-orange-100 text-fpt-orange'
+                        }`}>
+                        {job.status === 'COMPLETED' ? <CheckCircle2 size={24} /> :
+                          job.status === 'FAILED' || job.status === 'CANCELLED' ? <AlertCircle size={24} /> : <Loader2 size={24} className="animate-spin" />}
                       </div>
                     </div>
 
@@ -483,13 +494,12 @@ export const NotificationBell: React.FC = () => {
 
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
-                          <span className={`text-[10px] font-bold ${
-                            job.status === 'COMPLETED' ? 'text-fpt-orange' :
+                          <span className={`text-[10px] font-bold ${job.status === 'COMPLETED' ? 'text-fpt-orange' :
                             job.status === 'FAILED' || job.status === 'CANCELLED' ? 'text-red-600' : 'text-fpt-orange'
-                          }`}>
-                            {job.status === 'COMPLETED' ? '✓ Hoàn tất' : 
-                             job.status === 'FAILED' ? '✗ Thất bại' : 
-                             job.status === 'CANCELLED' ? '✗ Đã dừng' : `${job.percentage}%`}
+                            }`}>
+                            {job.status === 'COMPLETED' ? '✓ Hoàn tất' :
+                              job.status === 'FAILED' ? '✗ Thất bại' :
+                                job.status === 'CANCELLED' ? '✗ Đã dừng' : `${job.percentage}%`}
                           </span>
                           {job.status === 'COMPLETED' && (job.failedCount ?? 0) > 0 && (
                             <span className="text-[9px] font-medium text-red-600 dark:text-red-400">
@@ -498,11 +508,10 @@ export const NotificationBell: React.FC = () => {
                           )}
                         </div>
                         <div className="w-full bg-gray-100 dark:bg-zinc-800 rounded-full h-1 overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full transition-all duration-500 ${
-                              job.status === 'COMPLETED' ? 'bg-fpt-orange' :
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${job.status === 'COMPLETED' ? 'bg-fpt-orange' :
                               job.status === 'FAILED' || job.status === 'CANCELLED' ? 'bg-red-500' : 'bg-fpt-orange'
-                            }`} 
+                              }`}
                             style={{ width: `${job.percentage}%` }}
                           ></div>
                         </div>

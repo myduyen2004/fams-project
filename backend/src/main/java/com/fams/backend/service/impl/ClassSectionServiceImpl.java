@@ -7,6 +7,7 @@ import com.fams.backend.dto.response.ClassSectionResponse;
 import com.fams.backend.dto.response.EnrollmentResponse;
 import com.fams.backend.dto.response.LecturerOptionResponse;
 import com.fams.backend.dto.response.StudentEnrollmentDTO;
+import com.fams.backend.entity.ChatGroup;
 import com.fams.backend.dto.response.StudentOptionResponse;
 import com.fams.backend.entity.ClassSection;
 import com.fams.backend.entity.Course;
@@ -14,6 +15,7 @@ import com.fams.backend.entity.Enrollment;
 import com.fams.backend.entity.Semester;
 import com.fams.backend.entity.StudentProfile;
 import com.fams.backend.entity.User;
+import com.fams.backend.repository.ChatGroupRepository;
 import com.fams.backend.repository.ClassSectionRepository;
 import com.fams.backend.repository.CourseRepository;
 import com.fams.backend.repository.EnrollmentRepository;
@@ -48,6 +50,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
 
     private final ClassSectionRepository classSectionRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final ChatGroupRepository chatGroupRepository;
     private final SemesterRepository semesterRepository;
     private final CourseRepository courseRepository;
     private final UserRepository userRepository;
@@ -743,6 +746,11 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                     .getSpecialization().getName();
         }
 
+        // Check if chat group exists for this class
+        Optional<ChatGroup> chatGroupOpt = chatGroupRepository.findByClassSectionClassName(className);
+        Boolean hasChatGroup = chatGroupOpt.isPresent();
+        Long chatGroupId = chatGroupOpt.map(ChatGroup::getId).orElse(null);
+
         return ClassDetailResponse.builder()
                 .className(classSection.getClassName())
                 .courseCode(classSection.getCourse().getCode())
@@ -753,6 +761,8 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                 .studentCount(classSection.getCurrentEnrollment())
                 .academicYear("2019 - 2023")
                 .status(classSection.getStatus().name())
+                .hasChatGroup(hasChatGroup)
+                .chatGroupId(chatGroupId)
                 .enrollments(studentEnrollments)
                 .build();
     }

@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { lecturerClassService, ClassDetailResponse } from '../../services/api/LecturerClass';
-import { Users, BookOpen, GraduationCap, Calendar, Clock, ArrowLeft } from 'lucide-react';
+import { chatGroupService } from '../../services/api/chatGroupService';
+import { Users, BookOpen, GraduationCap, Calendar, Clock, ArrowLeft, MessageCircle, Loader2 } from 'lucide-react';
 
 export const LeturerClassDetailPage: React.FC = () => {
     const { className } = useParams<{ className: string }>();
     const navigate = useNavigate();
     const [detail, setDetail] = useState<ClassDetailResponse | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
+    const [creatingGroup, setCreatingGroup] = useState<boolean>(false);
     const [pagination, setPagination] = useState({
         page: 0,
         size: 10,
@@ -30,6 +32,23 @@ export const LeturerClassDetailPage: React.FC = () => {
             console.error("Failed to fetch class detail", error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleCreateChatGroup = async () => {
+        if (!className || creatingGroup) return;
+        setCreatingGroup(true);
+        try {
+            const group = await chatGroupService.createGroupForClass(className);
+            // Update local state
+            setDetail(prev => prev ? { ...prev, hasChatGroup: true, chatGroupId: group.id } : null);
+            // Navigate to messages page
+            navigate('/lecturer/messages');
+        } catch (error: any) {
+            console.error("Failed to create chat group", error);
+            alert(error?.response?.data?.message || 'Có lỗi xảy ra khi tạo nhóm chat');
+        } finally {
+            setCreatingGroup(false);
         }
     };
 
@@ -82,6 +101,29 @@ export const LeturerClassDetailPage: React.FC = () => {
                         </div>
 
                         <div className="flex flex-wrap gap-3">
+                            {/* Create Chat Group Button */}
+                            {detail && !detail.hasChatGroup ? (
+                                <button
+                                    onClick={handleCreateChatGroup}
+                                    disabled={creatingGroup}
+                                    className="flex items-center gap-2 px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-2xl font-bold transition-all shadow-sm disabled:opacity-50"
+                                >
+                                    {creatingGroup ? (
+                                        <Loader2 size={18} className="animate-spin" />
+                                    ) : (
+                                        <MessageCircle size={18} />
+                                    )}
+                                    {creatingGroup ? 'Đang tạo...' : 'Tạo nhóm chat'}
+                                </button>
+                            ) : detail?.hasChatGroup ? (
+                                <button
+                                    onClick={() => navigate('/lecturer/messages')}
+                                    className="flex items-center gap-2 px-6 py-3 bg-green-100 text-green-700 hover:bg-green-200 rounded-2xl font-bold transition-all shadow-sm"
+                                >
+                                    <MessageCircle size={18} />
+                                    Đi tới nhóm chat
+                                </button>
+                            ) : null}
                             <button className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-zinc-900 text-gray-700 dark:text-gray-200 rounded-2xl font-bold border-2 border-gray-100  transition-all shadow-sm">
 
                                 Quản lý điểm số

@@ -5,6 +5,7 @@ import { authService } from '../../services/api/authService';
 import { userService } from '../../services/api/userService';
 import { ConfirmModal } from './ConfirmModal';
 import { NotificationBell } from './NotificationBell';
+import { ChatMessageIcon } from './ChatMessageIcon';
 
 interface CommonHeaderProps {
   title: string;
@@ -12,7 +13,7 @@ interface CommonHeaderProps {
   showThemeToggle?: boolean;
 }
 
-export const CommonHeader: React.FC<CommonHeaderProps> = ({ 
+export const CommonHeader: React.FC<CommonHeaderProps> = ({
   title,
   showNotifications = true,
   showThemeToggle = true
@@ -114,7 +115,10 @@ export const CommonHeader: React.FC<CommonHeaderProps> = ({
         )}
 
         {/* Notification Bell */}
-        {showNotifications && <NotificationBell />}
+        <div className="flex items-center gap-2">
+          {showNotifications && <ChatMessageIcon />}
+          {showNotifications && <NotificationBell />}
+        </div>
 
         {/* User Info with Dropdown */}
         <div className="relative" ref={dropdownRef}>
@@ -188,7 +192,7 @@ export const CommonHeader: React.FC<CommonHeaderProps> = ({
         onClose={() => setShowLogoutModal(false)}
         onConfirm={handleLogout}
         title={activeJob ? "Cảnh báo: Tiến trình đang thực hiện" : "Đăng xuất"}
-        message={activeJob 
+        message={activeJob
           ? `Hệ thống đang thực hiện import dữ liệu (${activeJob.percentage}%). Nếu bạn đăng xuất và hủy bây giờ, dữ liệu có thể bị dở dang. Bạn có chắc muốn DỪNG tiến trình và đăng xuất không?`
           : "Bạn có chắc chắn muốn đăng xuất khỏi hệ thống FAMS không?"
         }
