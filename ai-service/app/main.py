@@ -1,16 +1,39 @@
+import os
+import sys
+
+# [STABILITY]: Force MediaPipe to CPU-only mode for Docker/Server environments.
+# This must be set before libraries are imported.
+os.environ['MEDIAPIPE_DISABLE_GPU'] = '1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+os.environ['PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION'] = 'python'
+
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-import os
 from dotenv import load_dotenv
 import logging
 
 load_dotenv()
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+log_dir = "app/logs"
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+log_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# Stream Handler (Standard Output)
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(log_formatter)
+
+# File Handler (Persistent log)
+file_handler = logging.FileHandler(os.path.join(log_dir, "app.log"))
+file_handler.setFormatter(log_formatter)
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+logger.addHandler(stream_handler)
+logger.addHandler(file_handler)
+
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
@@ -28,6 +51,11 @@ app.register_blueprint(v1_bp)
 
 # Also register face_bp at root level for backward compatibility
 app.register_blueprint(face_bp)
+
+@app.before_request
+def log_request_info():
+    print(f"REQUEST: {request.method} {request.path} from {request.remote_addr}")
+    sys.stdout.flush()
 
 
 @app.route('/health', methods=['GET'])

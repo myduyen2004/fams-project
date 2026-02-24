@@ -65,6 +65,9 @@ dependencies:
   # WiFi Detection (Future Ready)
   network_info_plus: ^7.0.0
 
+  # Permission Handling
+  permission_handler: ^11.3.1
+
   # Image Picker
   image_picker: ^1.0.7
   

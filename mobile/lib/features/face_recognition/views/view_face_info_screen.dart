@@ -79,7 +79,7 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
       appBar: AppBar(
         title: Text(
           'Thông tin khuôn mặt',
-          style: GoogleFonts.roboto(
+          style: GoogleFonts.inter(
             fontWeight: FontWeight.w600,
             color: Colors.white,
           ),
@@ -116,7 +116,7 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
             const SizedBox(height: 16),
             Text(
               _error!,
-              style: GoogleFonts.roboto(color: Colors.red, fontSize: 16),
+              style: GoogleFonts.inter(color: Colors.red, fontSize: 16),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -148,7 +148,7 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
           // Status Text
           Text(
             hasFaceData ? 'Đã đăng ký khuôn mặt' : 'Chưa đăng ký',
-            style: GoogleFonts.roboto(
+            style: GoogleFonts.inter(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: hasFaceData ? Colors.green : Colors.red,
@@ -216,7 +216,7 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
                 Expanded(
                   child: Text(
                     'Khuôn mặt của bạn được sử dụng để điểm danh tự động. Dữ liệu được bảo mật và chỉ dùng trong hệ thống FAMS.',
-                    style: GoogleFonts.roboto(
+                    style: GoogleFonts.inter(
                       color: Colors.blue[800],
                       fontSize: 13,
                     ),
@@ -243,7 +243,7 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
               ),
               child: Text(
                 'Quay lại',
-                style: GoogleFonts.roboto(
+                style: GoogleFonts.inter(
                   color: Colors.white,
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -326,7 +326,7 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
             children: [
               Text(
                 label,
-                style: GoogleFonts.roboto(
+                style: GoogleFonts.inter(
                   color: Colors.grey[600],
                   fontSize: 13,
                 ),
@@ -334,7 +334,7 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
               const SizedBox(height: 4),
               Text(
                 value,
-                style: GoogleFonts.roboto(
+                style: GoogleFonts.inter(
                   color: valueColor,
                   fontSize: 15,
                   fontWeight: FontWeight.w500,

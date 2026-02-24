@@ -49,7 +49,7 @@ public class FaceAttendanceController {
         FaceDTO.FaceCheckInResponse response = faceAttendanceService.checkInWithFace(studentId, request);
 
         String status = response.getStatus();
-        if ("SUCCESS".equals(status) || "LATE".equals(status) || "ALREADY_CHECKED_IN".equals(status)) {
+        if ("SUCCESS".equals(status) || "ALREADY_CHECKED_IN".equals(status) || "FAILED".equals(status)) {
             return ResponseEntity.ok(response);
         } else if ("REQUIRES_MANUAL".equals(status)) {
             return ResponseEntity.status(202).body(response);
@@ -59,11 +59,33 @@ public class FaceAttendanceController {
     }
 
     @GetMapping("/status")
-    @Operation(summary = "Face status")
+    @Operation(summary = "Face status (registration only)")
     public ResponseEntity<FaceDTO.FaceStatusResponse> getFaceStatus(@AuthenticationPrincipal UserDetails userDetails) {
 
         Long userId = extractUserId(userDetails);
         FaceDTO.FaceStatusResponse response = faceAttendanceService.getFaceStatus(userId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/status/{slotId}")
+    @Operation(summary = "Face attendance status for specific slot")
+    public ResponseEntity<FaceDTO.FaceStatusResponse> getFaceAttendanceStatus(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long slotId) {
+
+        Long userId = extractUserId(userDetails);
+        FaceDTO.FaceStatusResponse response = faceAttendanceService.getFaceAttendanceStatus(userId, slotId);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/pre-check")
+    @Operation(summary = "Pre-check face (Detection + Spoofing) with attempt tracking")
+    public ResponseEntity<FaceDTO.FacePreCheckResponse> preCheckFace(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody FaceDTO.FacePreCheckRequest request) {
+
+        Long userId = extractUserId(userDetails);
+        FaceDTO.FacePreCheckResponse response = faceAttendanceService.preCheckFace(userId, request);
         return ResponseEntity.ok(response);
     }
 

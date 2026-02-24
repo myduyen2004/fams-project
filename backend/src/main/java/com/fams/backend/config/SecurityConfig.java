@@ -63,11 +63,24 @@ public class SecurityConfig {
                                                                 "/v3/api-docs/**",
                                                                 "/actuator/health",
                                                                 "/ws/**", // WebSocket endpoint
+                                                                "/api/files/**",
                                                                 "/api/courses/**")
                                                 .permitAll()
 
                                                 // All other endpoints require authentication
                                                 .anyRequest().authenticated())
+
+                                // Custom Exception handling
+                                .exceptionHandling(exception -> exception
+                                                .authenticationEntryPoint((request, response, authException) -> {
+                                                        response.setStatus(
+                                                                        jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+                                                        response.setContentType("application/json");
+                                                        response.getWriter().write(
+                                                                        "{\"status\": 401, \"error\": \"Unauthorized\", \"message\": \""
+                                                                                        + authException.getMessage()
+                                                                                        + "\"}");
+                                                }))
 
                                 // Add JWT filter
                                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

@@ -44,7 +44,7 @@ class ClassListScreen extends StatelessWidget {
                       children: [
                         Text(
                           controller.errorMessage.value,
-                          style: GoogleFonts.roboto(color: Colors.red),
+                          style: GoogleFonts.inter(color: Colors.red),
                         ),
                         const SizedBox(height: 16),
                         ElevatedButton(
@@ -60,7 +60,7 @@ class ClassListScreen extends StatelessWidget {
                   return Center(
                     child: Text(
                       'Không có lớp học',
-                      style: GoogleFonts.roboto(
+                      style: GoogleFonts.inter(
                         color: Colors.grey[600],
                         fontSize: 16,
                       ),
@@ -183,7 +183,7 @@ class ClassListScreen extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Danh sách lớp',
-                  style: GoogleFonts.roboto(
+                  style: GoogleFonts.inter(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
@@ -230,7 +230,7 @@ class ClassListScreen extends StatelessWidget {
                 const SizedBox(width: 10),
                 Text(
                   'Học kỳ: ${selectedSemester?.name ?? 'Chọn kỳ'}',
-                  style: GoogleFonts.roboto(
+                  style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFFEF7623),
@@ -256,7 +256,7 @@ class ClassListScreen extends StatelessWidget {
               const SizedBox(width: 10),
               Text(
                 'Học kỳ: Spring 2026',
-                style: GoogleFonts.roboto(
+                style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFFEF7623),
@@ -293,7 +293,7 @@ class ClassListScreen extends StatelessWidget {
               const SizedBox(height: 20),
               Text(
                 'Chọn học kỳ',
-                style: GoogleFonts.roboto(
+                style: GoogleFonts.inter(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -304,7 +304,7 @@ class ClassListScreen extends StatelessWidget {
                 return ListTile(
                   title: Text(
                     semester.name,
-                    style: GoogleFonts.roboto(
+                    style: GoogleFonts.inter(
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                       color: isSelected ? const Color(0xFFEF7623) : Colors.black87,
                     ),
@@ -360,7 +360,7 @@ class ClassListScreen extends StatelessWidget {
               child: Center(
                 child: Text(
                   '$index',
-                  style: GoogleFonts.roboto(
+                  style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                     color: Colors.grey[600],
@@ -379,7 +379,7 @@ class ClassListScreen extends StatelessWidget {
                 children: [
                   Text(
                     _extractClassCode(classSection.className), // SE18B02
-                    style: GoogleFonts.roboto(
+                    style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
@@ -388,7 +388,7 @@ class ClassListScreen extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     '${classSection.courseCode} - ${classSection.courseName}', // DBI202 - Cơ sở dữ liệu
-                    style: GoogleFonts.roboto(
+                    style: GoogleFonts.inter(
                       fontSize: 13,
                       color: Colors.grey[600],
                     ),
@@ -462,7 +462,7 @@ class ClassListScreen extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             label,
-            style: GoogleFonts.roboto(
+            style: GoogleFonts.inter(
               fontSize: 11,
               fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
               color: isActive ? AppColors.primaryOrange : Colors.grey,

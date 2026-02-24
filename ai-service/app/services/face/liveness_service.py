@@ -12,6 +12,13 @@ from PIL import Image
 from io import BytesIO
 import base64
 
+import os
+
+# [STABILITY]: Force CPU for MediaPipe to avoid EGL errors in Docker
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+os.environ['MEDIAPIPE_DISABLE_GPU'] = '1'
+os.environ['PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION'] = 'python'
+
 # For face landmark detection
 import mediapipe as mp
 
@@ -52,13 +59,17 @@ class LivenessDetectionService:
     def __init__(self):
         """Initialize the liveness detection service."""
         self.mp_face_mesh = mp.solutions.face_mesh
-        self.face_mesh = self.mp_face_mesh.FaceMesh(
-            static_image_mode=True,
-            max_num_faces=1,
-            refine_landmarks=True,
-            min_detection_confidence=0.5
-        )
-        logger.info("LivenessDetectionService initialized")
+        try:
+            self.face_mesh = self.mp_face_mesh.FaceMesh(
+                static_image_mode=True,
+                max_num_faces=1,
+                refine_landmarks=True,
+                min_detection_confidence=0.5
+            )
+            logger.info("LivenessDetectionService initialized (CPU mode)")
+        except Exception as e:
+            logger.error(f"Failed to initialize FaceMesh (Liveness): {e}")
+            self.face_mesh = None
     
     def decode_base64_image(self, base64_string: str) -> Optional[np.ndarray]:
         """Decode a base64-encoded image to numpy array (BGR for OpenCV)."""
@@ -118,10 +129,15 @@ class LivenessDetectionService:
         try:
             # Convert to RGB for MediaPipe
             rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            
+            # [FAIL-SAFE]: Handle technical EGL glitches
+            if not self.face_mesh:
+                return BlinkDetectionResult(False, message="System Busy (Bỏ qua nháy mắt)")
+                
             results = self.face_mesh.process(rgb_image)
             
-            if not results.multi_face_landmarks:
-                return BlinkDetectionResult(False, message="No face detected")
+            if not results or not results.multi_face_landmarks:
+                return BlinkDetectionResult(False, message="No face detected (Technical Skip)")
             
             landmarks = results.multi_face_landmarks[0].landmark
             h, w = image.shape[:2]
@@ -167,9 +183,14 @@ class LivenessDetectionService:
         
         try:
             rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            
+            # [FAIL-SAFE]: Handle technical EGL glitches
+            if not self.face_mesh:
+                 return HeadPoseResult()
+                 
             results = self.face_mesh.process(rgb_image)
             
-            if not results.multi_face_landmarks:
+            if not results or not results.multi_face_landmarks:
                 return HeadPoseResult()
             
             landmarks = results.multi_face_landmarks[0].landmark
@@ -278,26 +299,38 @@ class LivenessDetectionService:
             edges = cv2.Canny(gray, 100, 200)
             edge_density = np.sum(edges > 0) / edges.size
             
-            # Simple scoring (in production, use ML model)
-            blur_score = min(laplacian_var / 500.0, 1.0)
+            # Re-scaled scoring:
+            # If laplacian_var > 50, we want a score >= 0.8
+            # If laplacian_var < 50, score drops rapidly
+            normalized_var = min(laplacian_var / 100.0, 1.0) # 100 as new reference max
+            if laplacian_var > 50:
+                # Map 50-100+ to 0.8-1.0 range
+                blur_score = 0.8 + 0.2 * ((laplacian_var - 50) / 200.0)
+                blur_score = min(blur_score, 1.0)
+            else:
+                # Map 0-50 to 0.0-0.7 range
+                blur_score = 0.7 * (laplacian_var / 50.0)
+                
             edge_score = min(edge_density * 10, 1.0)
             
             combined_score = (blur_score + edge_score) / 2
             
             # Threshold (tunable)
-            passed = bool(combined_score > 0.3 and laplacian_var > 100)
+            # Lowered threshold to 50 to accommodate mobile front cameras in various lighting
+            passed = bool(combined_score > 0.4 and laplacian_var > 50)
             
             return {
                 "passed": passed,
                 "score": float(combined_score),
                 "blur_score": float(blur_score),
                 "edge_score": float(edge_score),
-                "reason": "Passed" if passed else "Image quality too low (possible photo attack)"
+                "laplacian_var": float(laplacian_var),
+                "reason": "Đạt yêu cầu" if passed else "Chất lượng ảnh quá thấp (có thể là ảnh chụp)"
             }
             
         except Exception as e:
             logger.error(f"Passive liveness check failed: {e}")
-            return {"passed": False, "reason": f"Error: {str(e)}", "score": 0.0}
+            return {"passed": False, "reason": f"Lỗi: {str(e)}", "score": 0.0}
     
     def verify_liveness_proof(self, proof: LivenessProof) -> bool:
         """

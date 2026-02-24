@@ -29,22 +29,46 @@ public class FaceRecognitionClient {
 
     public FaceVerifyResponse verifyFace(FaceVerifyRequest request) {
         log.debug("Calling AI service verify face");
-        return restClient.post()
-                .uri("/api/face/verify")
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(request)
-                .retrieve()
-                .body(FaceVerifyResponse.class);
+        try {
+            return restClient.post()
+                    .uri("/api/face/verify")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .body(FaceVerifyResponse.class);
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            log.error("AI verify error: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
+            return parseErrorResponse(e.getResponseBodyAsString(), FaceVerifyResponse.class);
+        } catch (Exception e) {
+            log.error("Unexpected error in AI verify: {}", e.getMessage());
+            return FaceVerifyResponse.builder()
+                    .success(false)
+                    .isMatch(false)
+                    .message("Verify failed: " + e.getMessage())
+                    .build();
+        }
     }
 
     public FaceDetectResponse detectFace(FaceDetectRequest request) {
         log.debug("Calling AI service detect face");
-        return restClient.post()
-                .uri("/api/face/detect")
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(request)
-                .retrieve()
-                .body(FaceDetectResponse.class);
+        try {
+            return restClient.post()
+                    .uri("/api/face/detect")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .body(FaceDetectResponse.class);
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            log.error("AI detect error: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
+            return parseErrorResponse(e.getResponseBodyAsString(), FaceDetectResponse.class);
+        } catch (Exception e) {
+            log.error("Unexpected error in AI detect: {}", e.getMessage());
+            return FaceDetectResponse.builder()
+                    .success(false)
+                    .faceFound(false)
+                    .message("Detect failed: " + e.getMessage())
+                    .build();
+        }
     }
 
     public FaceRegisterResponse registerFace(FaceRegisterRequest request) {
@@ -100,12 +124,24 @@ public class FaceRecognitionClient {
 
     public LivenessResponse passiveLiveness(LivenessRequest request) {
         log.debug("Calling AI service passive liveness");
-        return restClient.post()
-                .uri("/api/face/liveness/passive")
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(request)
-                .retrieve()
-                .body(LivenessResponse.class);
+        try {
+            return restClient.post()
+                    .uri("/api/face/liveness/passive")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .body(LivenessResponse.class);
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            log.error("AI liveness error: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
+            return parseErrorResponse(e.getResponseBodyAsString(), LivenessResponse.class);
+        } catch (Exception e) {
+            log.error("Unexpected error in AI liveness: {}", e.getMessage());
+            return LivenessResponse.builder()
+                    .success(false)
+                    .passed(false)
+                    .message("Liveness check failed: " + e.getMessage())
+                    .build();
+        }
     }
 
     public FaceQualityResponse checkQuality(FaceQualityRequest request) {
@@ -117,13 +153,51 @@ public class FaceRecognitionClient {
                     .body(request)
                     .retrieve()
                     .body(FaceQualityResponse.class);
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            log.error("AI quality error: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
+            return parseErrorResponse(e.getResponseBodyAsString(), FaceQualityResponse.class);
         } catch (Exception e) {
-            log.error("Error calling AI service quality check: {}", e.getMessage());
+            log.error("Unexpected error in AI quality check: {}", e.getMessage());
             return FaceQualityResponse.builder()
                     .success(false)
                     .passed(false)
-                    .message("AI Service error: " + e.getMessage())
+                    .message("Quality check failed: " + e.getMessage())
                     .build();
+        }
+    }
+
+    /**
+     * Centralized parser for error responses from AI Service
+     */
+    private <T> T parseErrorResponse(String body, Class<T> responseType) {
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            T errorResponse = mapper.readValue(body, responseType);
+
+            // Handle nested JSON messages if present
+            try {
+                java.lang.reflect.Method getMessage = responseType.getMethod("getMessage");
+                java.lang.reflect.Method setMessage = responseType.getMethod("setMessage", String.class);
+                String msg = (String) getMessage.invoke(errorResponse);
+
+                if (msg != null && msg.trim().startsWith("{")) {
+                    com.fasterxml.jackson.databind.JsonNode rootNode = mapper.readTree(msg);
+                    if (rootNode.has("message")) {
+                        setMessage.invoke(errorResponse, rootNode.get("message").asText());
+                    }
+                }
+            } catch (Exception reflectionEx) {
+                // Ignore reflection errors
+            }
+
+            return errorResponse;
+        } catch (Exception e) {
+            log.error("Failed to parse AI error response: {}", body);
+            try {
+                return responseType.getDeclaredConstructor().newInstance();
+            } catch (Exception instantiateEx) {
+                return null;
+            }
         }
     }
 
@@ -145,6 +219,9 @@ public class FaceRecognitionClient {
         @com.fasterxml.jackson.annotation.JsonProperty("reference_encoding")
         private List<Double> referenceEncoding; // Backward compatibility
         private Double tolerance;
+        private String mode;
+        @com.fasterxml.jackson.annotation.JsonProperty("liveness_proof")
+        private LivenessProof livenessProof;
     }
 
     @Data
@@ -165,6 +242,7 @@ public class FaceRecognitionClient {
     @AllArgsConstructor
     public static class FaceDetectRequest {
         private String image;
+        private String mode;
     }
 
     @Data
@@ -179,6 +257,14 @@ public class FaceRecognitionClient {
         private Integer faceCount;
         private List<Double> encoding;
         private String message;
+        @com.fasterxml.jackson.annotation.JsonProperty("is_replay")
+        private Boolean isReplay;
+        @com.fasterxml.jackson.annotation.JsonProperty("is_liveness")
+        private Boolean isLiveness;
+        @com.fasterxml.jackson.annotation.JsonProperty("screen_artifacts_score")
+        private Double screenArtifactsScore;
+        @com.fasterxml.jackson.annotation.JsonProperty("replay_score")
+        private Double replayScore;
     }
 
     @Data
@@ -191,6 +277,7 @@ public class FaceRecognitionClient {
         private String image;
         @com.fasterxml.jackson.annotation.JsonProperty("liveness_proof")
         private LivenessProof livenessProof;
+        private String mode;
     }
 
     @Data
@@ -213,6 +300,7 @@ public class FaceRecognitionClient {
     @AllArgsConstructor
     public static class LivenessRequest {
         private String image;
+        private String mode;
     }
 
     @Data
@@ -248,6 +336,7 @@ public class FaceRecognitionClient {
     @AllArgsConstructor
     public static class FaceQualityRequest {
         private String image;
+        private String mode;
     }
 
     @Data
