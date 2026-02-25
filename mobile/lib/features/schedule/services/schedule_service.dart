@@ -94,4 +94,16 @@ class ScheduleService {
       rethrow;
     }
   }
+
+  Future<AttendanceConfig> getAttendanceConfig() async {
+    try {
+      final response = await _apiService.get(ApiConstants.attendanceConfig);
+      if (response.statusCode == 200) {
+        return AttendanceConfig.fromJson(response.data);
+      }
+      return AttendanceConfig.defaultConfig();
+    } catch (e) {
+      return AttendanceConfig.defaultConfig();
+    }
+  }
 }

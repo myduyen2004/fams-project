@@ -18,6 +18,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../../../core/utils/image_converter_utils.dart';
 import '../../auth/controllers/auth_controller.dart';
+import '../../schedule/controllers/schedule_controller.dart';
 import '../../../core/constants/api_constants.dart';
 
 enum LivenessChallenge { 
@@ -636,16 +637,25 @@ class FaceAttendanceController extends GetxController {
       final base64Image = base64Encode(jpgBytes);
 
       // 2. Get Wifi Info
-      final info = NetworkInfo();
-      String? wifiBssid = await info.getWifiBSSID(); 
-      String? wifiSsid = await info.getWifiName();
+      final scheduleController = Get.find<ScheduleController>();
+      final config = scheduleController.attendanceConfig.value;
       
-      // Clean SSID quotes (iOS artifact)
-      if (wifiSsid != null && wifiSsid.startsWith('"') && wifiSsid.endsWith('"')) {
-        wifiSsid = wifiSsid.substring(1, wifiSsid.length - 1);
+      String? wifiBssid;
+      String? wifiSsid;
+      
+      if (config.wifiLocationEnabled) {
+          final info = NetworkInfo();
+          wifiBssid = await info.getWifiBSSID(); 
+          wifiSsid = await info.getWifiName();
+          
+          // Clean SSID quotes (iOS artifact)
+          if (wifiSsid != null && wifiSsid.startsWith('"') && wifiSsid.endsWith('"')) {
+            wifiSsid = wifiSsid.substring(1, wifiSsid.length - 1);
+          }
+          debugPrint('Captured WiFi SSID: $wifiSsid, BSSID: $wifiBssid');
+      } else {
+          debugPrint('WiFi location check is disabled in config, skipping scan.');
       }
-      
-      debugPrint('Captured WiFi SSID: $wifiSsid, BSSID: $wifiBssid');
       
       // 3. Call API
       final authController = Get.find<AuthController>();
