@@ -10,6 +10,8 @@ class ClassSection {
   final String? enrollmentInfo; // e.g., "28 / 30"
   final int? slots;
   final String status; // UPCOMING, ONGOING, FINISHED
+  final bool hasChatGroup;
+  final int? chatGroupId;
 
   ClassSection({
     required this.className,
@@ -21,6 +23,8 @@ class ClassSection {
     this.enrollmentInfo,
     this.slots,
     required this.status,
+    this.hasChatGroup = false,
+    this.chatGroupId,
   });
 
   factory ClassSection.fromJson(Map<String, dynamic> json) {
@@ -32,8 +36,14 @@ class ClassSection {
       semesterName: json['semesterName'] ?? '',
       lecturerName: json['lecturerName'],
       enrollmentInfo: json['enrollmentInfo'],
-      slots: json['slots'],
+      slots: json['slots'] != null
+          ? int.tryParse(json['slots'].toString())
+          : null,
       status: json['status'] ?? 'ONGOING',
+      hasChatGroup: json['hasChatGroup'] ?? false,
+      chatGroupId: json['chatGroupId'] != null
+          ? int.tryParse(json['chatGroupId'].toString())
+          : null,
     );
   }
 
@@ -88,7 +98,7 @@ class Enrollment {
 
   factory Enrollment.fromJson(Map<String, dynamic> json) {
     return Enrollment(
-      id: json['id'] ?? 0,
+      id: int.tryParse(json['id']?.toString() ?? '0') ?? 0,
       className: json['className'] ?? '',
       studentCode: json['studentCode'] ?? '',
       studentName: json['studentName'] ?? '',
