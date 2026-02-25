@@ -9,6 +9,4 @@ import java.util.Optional;
 @Repository
 public interface AttendanceSessionRepository extends JpaRepository<AttendanceSession, Long> {
     Optional<AttendanceSession> findByTimetableSlotId(Long timetableSlotId);
-
-    Optional<AttendanceSession> findByQrCodeData(String qrCodeData);
 }

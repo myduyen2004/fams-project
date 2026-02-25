@@ -120,6 +120,7 @@ public class TimetableDTO {
         private LocalTime endTime;
         private String status;
         private String attendanceStatus;
+        private java.time.LocalDateTime checkInTime;
     }
 
     @Data

@@ -136,7 +136,7 @@ class _FaceRegistrationGuideScreenState extends State<FaceRegistrationGuideScree
                   ),
                   child: Text(
                     _currentPage == _steps.length - 1 ? 'Hoàn tất đăng ký' : 'Tiếp tục',
-                    style: GoogleFonts.roboto(
+                    style: GoogleFonts.inter(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
                     ),
@@ -151,7 +151,7 @@ class _FaceRegistrationGuideScreenState extends State<FaceRegistrationGuideScree
                 onPressed: _skipGuide,
                 child: Text(
                   'Bỏ qua hướng dẫn',
-                  style: GoogleFonts.roboto(
+                  style: GoogleFonts.inter(
                     fontSize: 14,
                     color: Colors.grey.shade500,
                   ),
@@ -177,7 +177,7 @@ class _FaceRegistrationGuideScreenState extends State<FaceRegistrationGuideScree
           // Step Label
           Text(
             'BƯỚC ${step.stepNumber}: ${step.stepLabel}',
-            style: GoogleFonts.roboto(
+            style: GoogleFonts.inter(
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: AppColors.primaryOrange,
@@ -207,7 +207,7 @@ class _FaceRegistrationGuideScreenState extends State<FaceRegistrationGuideScree
           // Title
           Text(
             step.title,
-            style: GoogleFonts.roboto(
+            style: GoogleFonts.inter(
               fontSize: 28,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
@@ -220,7 +220,7 @@ class _FaceRegistrationGuideScreenState extends State<FaceRegistrationGuideScree
           // Description
           Text(
             step.description,
-            style: GoogleFonts.roboto(
+            style: GoogleFonts.inter(
               fontSize: 16,
               color: Colors.grey.shade600,
               height: 1.5,
@@ -255,7 +255,7 @@ class _FaceRegistrationGuideScreenState extends State<FaceRegistrationGuideScree
               const SizedBox(height: 8),
               Text(
                 'Chưa có ảnh',
-                style: GoogleFonts.roboto(
+                style: GoogleFonts.inter(
                   fontSize: 12,
                   color: Colors.grey.shade500,
                 ),

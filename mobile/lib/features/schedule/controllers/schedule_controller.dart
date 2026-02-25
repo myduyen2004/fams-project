@@ -19,6 +19,7 @@ class ScheduleController extends GetxController {
   final Rx<WeeklyTimetable?> weeklyTimetable = Rx<WeeklyTimetable?>(null);
   final Rx<DateTime> selectedDate = DateTime.now().obs;
   final RxList<TimetableSlot> selectedDaySlots = <TimetableSlot>[].obs;
+  final Rx<AttendanceConfig> attendanceConfig = AttendanceConfig.defaultConfig().obs;
 
   // Identification logic
   final Rx<TimetableSlot?> activeSlot = Rx<TimetableSlot?>(null);
@@ -40,6 +41,7 @@ class ScheduleController extends GetxController {
 
   Future<void> _initializeData() async {
     await fetchSemesters();
+    await fetchAttendanceConfig();
     await fetchSchedule();
     _startTimer();
   }
@@ -117,6 +119,10 @@ class ScheduleController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  Future<void> fetchAttendanceConfig() async {
+    attendanceConfig.value = await _scheduleService.getAttendanceConfig();
   }
 
   void selectDate(DateTime date) {
