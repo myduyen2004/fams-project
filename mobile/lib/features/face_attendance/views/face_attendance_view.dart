@@ -151,7 +151,7 @@ class FaceAttendanceView extends StatelessWidget {
             child: Text(
               'Điểm danh khuôn mặt',
               textAlign: TextAlign.center,
-              style: GoogleFonts.roboto(
+              style: GoogleFonts.inter(
                 color: Colors.white,
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -180,6 +180,16 @@ class FaceAttendanceView extends StatelessWidget {
           statusIcon = Icons.remove_red_eye;
         } else if (controller.currentChallenge.value == LivenessChallenge.smile) {
           statusIcon = Icons.sentiment_satisfied_alt;
+        } else if (controller.currentChallenge.value == LivenessChallenge.headTurnLeft) {
+          statusIcon = Icons.arrow_back_rounded;
+        } else if (controller.currentChallenge.value == LivenessChallenge.headTurnRight) {
+          statusIcon = Icons.arrow_forward_rounded;
+        } else if (controller.currentChallenge.value == LivenessChallenge.lookUp) {
+          statusIcon = Icons.arrow_upward_rounded;
+        } else if (controller.currentChallenge.value == LivenessChallenge.openMouth) {
+          statusIcon = Icons.mic_none_rounded;
+        } else if (controller.currentChallenge.value == LivenessChallenge.nodHead) {
+          statusIcon = Icons.swap_vert_rounded;
         }
         break;
       case AttendanceState.verifying:
@@ -207,7 +217,7 @@ class FaceAttendanceView extends StatelessWidget {
           Text(
             statusText,
             textAlign: TextAlign.center,
-            style: GoogleFonts.roboto(
+            style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
@@ -225,67 +235,125 @@ class FaceAttendanceView extends StatelessWidget {
     VoidCallback? secondaryAction,
     String? secondaryLabel,
   }) {
+    final controller = Get.find<FaceAttendanceController>();
+    
     return Container(
-      color: Colors.black87,
-      padding: const EdgeInsets.all(32),
+      color: Colors.black.withOpacity(0.85),
+      padding: const EdgeInsets.symmetric(horizontal: 40),
       child: Center(
         child: Container(
-          padding: const EdgeInsets.all(24),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(40),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                isSuccess ? Icons.check_circle : Icons.error,
-                color: isSuccess ? Colors.green : Colors.red,
-                size: 80,
-              ),
-              const SizedBox(height: 24),
-              Text(
-                isSuccess ? 'Thành công' : 'Thất bại',
-                style: GoogleFonts.roboto(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: isSuccess ? Colors.green : Colors.red,
+              // 1. Icon Circle
+              Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  color: isSuccess ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE),
+                  shape: BoxShape.circle,
                 ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.roboto(
-                  fontSize: 16,
-                  color: Colors.grey[800],
+                child: Center(
+                  child: Icon(
+                    isSuccess ? Icons.check_circle_outline_rounded : Icons.report_problem_outlined,
+                    color: isSuccess ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
+                    size: 56,
+                  ),
                 ),
               ),
               const SizedBox(height: 32),
-              SizedBox(
+              
+              // 2. Title
+              Text(
+                isSuccess ? 'Thành công' : 'Thất bại',
+                style: GoogleFonts.inter(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: isSuccess ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
+                ),
+              ),
+              const SizedBox(height: 12),
+              
+              // 3. Message
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF475569),
+                  height: 1.5,
+                ),
+              ),
+              
+              // 4. Remaining Attempts (Failure only)
+              if (!isSuccess) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Số lần thử còn lại: ${controller.remainingAttempts.value}',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: const Color(0xFF94A3B8),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+              
+              const SizedBox(height: 40),
+              
+              // 5. Action Button
+              Container(
                 width: double.infinity,
-                height: 48,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: isSuccess ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (isSuccess ? const Color(0xFF4CAF50) : const Color(0xFFF44336)).withOpacity(0.3),
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
                 child: ElevatedButton(
                   onPressed: onClose,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isSuccess ? Colors.green : AppColors.primaryOrange,
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(24),
                     ),
                   ),
                   child: Text(
                     isSuccess ? 'Hoàn tất' : 'Thử lại',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
+
+              // 6. Secondary Action (Exit)
               if (!isSuccess && secondaryAction != null) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 TextButton(
                   onPressed: secondaryAction,
                   child: Text(
                     secondaryLabel ?? 'Thoát',
-                    style: TextStyle(color: Colors.grey[600]),
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: const Color(0xFF94A3B8),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],

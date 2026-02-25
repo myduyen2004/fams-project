@@ -491,6 +491,12 @@ export const LecturerSchedulePage: React.FC = () => {
                                 >
                                     <Clock size={16} /> Điểm danh
                                 </button>
+                                <button
+                                    onClick={() => navigate(`/lecturer/attendance/realtime/${selectedSlot.id}`)}
+                                    className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-bold shadow-md hover:bg-blue-600 transition-colors flex items-center gap-2"
+                                >
+                                    Xem danh sách
+                                </button>
                             </div>
                         </div>
                     </div>

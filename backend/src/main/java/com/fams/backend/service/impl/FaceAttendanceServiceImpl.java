@@ -2,17 +2,22 @@ package com.fams.backend.service.impl;
 
 import com.fams.backend.client.FaceRecognitionClient;
 import com.fams.backend.dto.face.FaceDTO;
+import com.fams.backend.dto.attendance.AttendanceDTO;
 import com.fams.backend.entity.*;
 import com.fams.backend.repository.*;
+import com.fams.backend.service.AttendanceConfigService;
 import com.fams.backend.service.FaceAttendanceService;
 import com.fams.backend.exception.NotFoundException;
 import com.fams.backend.exception.BadRequestException;
 import com.fams.backend.exception.UnauthorizedException;
+import com.fams.backend.service.UploadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Base64;
 
 import java.io.*;
 import java.time.LocalDateTime;
@@ -32,14 +37,9 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
         private final TimetableSlotRepository slotRepository;
         private final UserRepository userRepository;
         private final RoomWiFiAccessPointRepository roomWifiRepository;
-
-        @Value("${face.recognition.max-attempts:5}")
-        private int maxAttempts;
-
-        @Value("${face.recognition.wifi-rssi-threshold:-75}")
-        private int wifiRssiThreshold;
-
-        private static final int LATE_THRESHOLD_MINUTES = 15;
+        private final UploadService uploadService;
+        private final SimpMessagingTemplate messagingTemplate;
+        private final AttendanceConfigService configService;
 
         @Override
         @Transactional
@@ -81,15 +81,34 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
                                                                 .userId(userId)
                                                                 .image(imageBase64)
                                                                 .livenessProof(livenessProof)
+                                                                .mode("registration")
                                                                 .build());
 
                                 if (aiResponse.getSuccess()) {
                                         byte[] encodingBytes = serializeEncoding(aiResponse.getEncoding());
 
+                                        // Upload original registration image to Cloudinary and store URL
+                                        String imageUrl = null;
+                                        try {
+                                                String base64Data = imageBase64;
+                                                if (base64Data.contains(",")) {
+                                                        base64Data = base64Data.split(",")[1];
+                                                }
+                                                byte[] imageBytes = Base64.getDecoder().decode(base64Data);
+                                                String fileName = "registration_" + userId + "_"
+                                                                + System.currentTimeMillis() + "_"
+                                                                + successCount + ".jpg";
+                                                imageUrl = uploadService.uploadBytes(imageBytes, fileName,
+                                                                "fams_registration");
+                                        } catch (Exception e) {
+                                                log.error("Failed to upload registration photo: {}", e.getMessage());
+                                                imageUrl = "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg";
+                                        }
+
                                         FaceEncoding faceEncoding = FaceEncoding.builder()
                                                         .user(user)
                                                         .encodingData(encodingBytes)
-                                                        .faceImage(imageBase64)
+                                                        .faceImage(imageUrl) // Store Cloudinary URL instead of Base64
                                                         .registeredAt(LocalDateTime.now())
                                                         .livenessVerified(aiResponse.getLivenessVerified())
                                                         .build();
@@ -120,9 +139,10 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
                                         .build();
                 } else {
                         // Increment failed attempts
+                        AttendanceConfig config = configService.getConfig();
                         int attempts = user.getFaceRegistrationAttempts() + 1;
                         user.setFaceRegistrationAttempts(attempts);
-                        if (attempts >= maxAttempts) {
+                        if (attempts >= config.getMaxAttempts()) {
                                 user.setFaceRegistrationBlockedUntil(LocalDateTime.now().plusMinutes(30));
                         }
                         userRepository.save(user);
@@ -144,44 +164,72 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
                 TimetableSlot slot = slotRepository.findById(request.getSlotId())
                                 .orElseThrow(() -> new NotFoundException("Slot not found"));
 
-                // TESTING MODE: Auto-create session if missing (User request)
-                // TESTING MODE: Auto-create session if missing (User request)
-                AttendanceSession session;
-                try {
-                        session = sessionRepository.findByTimetableSlotId(slot.getId())
-                                        .orElseGet(() -> {
-                                                log.warn("TESTING MODE: Auto-creating session for slot {}",
-                                                                slot.getId());
-                                                User lecturer = slot.getClassSection().getLecturer();
-                                                // Fallback if lecturer is null (should not happen in valid data)
-                                                if (lecturer == null) {
-                                                        // Try to find any lecturer or just throw
-                                                        throw new BadRequestException(
-                                                                        "Cannot auto-create session: No lecturer assigned to class");
-                                                }
+                AttendanceConfig config = configService.getConfig();
 
-                                                AttendanceSession newSession = AttendanceSession.builder()
-                                                                .timetableSlot(slot)
-                                                                .lecturer(lecturer)
-                                                                .openedAt(LocalDateTime.now())
-                                                                .status(AttendanceSession.SessionStatus.OPEN)
-                                                                .build();
-                                                return sessionRepository.save(newSession);
-                                        });
-                } catch (Exception e) {
-                        log.error("Failed to auto-create session: {}", e.getMessage(), e);
-                        throw new BadRequestException("Failed to auto-create session: " + e.getMessage());
+                // 1. Check if Face Recognition is enabled
+                if (!Boolean.TRUE.equals(config.getFaceRecognitionEnabled())) {
+                        return FaceDTO.FaceCheckInResponse.builder()
+                                        .status("FAILED")
+                                        .message("Quản trị viên chưa cho phép điểm danh bằng khuôn mặt cho hệ thống này.")
+                                        .build();
                 }
 
-                // TESTING MODE: Ignore session status check
-                /*
-                 * if (session.getStatus() != AttendanceSession.SessionStatus.OPEN) {
-                 * return FaceDTO.FaceCheckInResponse.builder()
-                 * .status("FAILED")
-                 * .message("Attendance session is not open")
-                 * .build();
-                 * }
-                 */
+                // 2. Strict timeframe validation
+                java.time.LocalDate today = java.time.LocalDate.now();
+                java.time.LocalTime timeNow = java.time.LocalTime.now();
+
+                if (!slot.getDate().equals(today)) {
+                        return FaceDTO.FaceCheckInResponse.builder()
+                                        .status("FAILED")
+                                        .message("Lỗi: Không đúng ngày học (" + slot.getDate() + ")")
+                                        .build();
+                }
+
+                // Strict timeframe: No early check-in allowed.
+                // Window starts at slot start time and ends at slot start time +
+                // absentThresholdMinutes.
+                java.time.LocalTime startTime = slot.getSlotType().getStartTime();
+                java.time.LocalTime endTime = slot.getSlotType().getStartTime()
+                                .plusMinutes(config.getAbsentThresholdMinutes());
+
+                if (timeNow.isBefore(startTime) || timeNow.isAfter(endTime)) {
+                        return FaceDTO.FaceCheckInResponse.builder()
+                                        .status("FAILED")
+                                        .message("Lỗi: Hiện không trong khung giờ cho phép điểm danh (Mở từ: " +
+                                                        startTime + " - Kết thúc lúc: " + endTime + ")")
+                                        .build();
+                }
+
+                // Check for existing session (TEMPORARILY AUTO-CREATE OR BYPASS FOR TESTING)
+                AttendanceSession session = sessionRepository.findByTimetableSlotId(slot.getId())
+                                .orElseGet(() -> {
+                                        log.warn("TESTING MODE: Auto-creating session for slot {}", slot.getId());
+                                        User lecturer = slot.getClassSection().getLecturer();
+                                        AttendanceSession newSession = AttendanceSession.builder()
+                                                        .timetableSlot(slot)
+                                                        .lecturer(lecturer)
+                                                        .openedAt(LocalDateTime.now())
+                                                        .status(AttendanceSession.SessionStatus.OPEN)
+                                                        .build();
+                                        return sessionRepository.save(newSession);
+                                });
+
+                // WiFi Location Validation
+                if (Boolean.TRUE.equals(config.getWifiLocationEnabled())) {
+                        if (!isValidWiFiLocation(slot.getRoom().getId(), request.getWifiSsid(), request.getWifiBssid(),
+                                        request.getWifiRssi())) {
+                                String detectedInfo = (request.getWifiBssid() != null
+                                                && !request.getWifiBssid().isEmpty())
+                                                                ? " (Phát hiện BSSID: " + request.getWifiBssid() + ")"
+                                                                : " (Không phát hiện được mã WiFi - Hãy bật GPS/Vị trí)";
+
+                                return FaceDTO.FaceCheckInResponse.builder()
+                                                .status("FAILED")
+                                                .message("Lỗi: Bạn không ở trong phòng học " + slot.getRoom().getCode()
+                                                                + detectedInfo)
+                                                .build();
+                        }
+                }
 
                 User student = userRepository.findById(studentId)
                                 .orElseThrow(() -> new NotFoundException("Student not found"));
@@ -193,54 +241,13 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
                 if (attendance != null && attendance.getStatus() == StudentAttendance.AttendanceStatus.PRESENT) {
                         return FaceDTO.FaceCheckInResponse.builder()
                                         .status("ALREADY_CHECKED_IN")
-                                        .message("You have already checked in")
+                                        .message("Bạn đã điểm danh cho slot này rồi")
                                         .courseName(slot.getClassSection().getCourse().getName())
                                         .build();
                 }
 
-                // TESTING MODE: Ignore WiFi check
-                /*
-                 * if (!isValidWiFiLocation(slot.getRoom().getId(), request.getWifiBssid(),
-                 * request.getWifiRssi())) {
-                 * return FaceDTO.FaceCheckInResponse.builder()
-                 * .status("FAILED")
-                 * .message("You are not in the classroom")
-                 * .attemptNumber(request.getAttemptNumber())
-                 * .remainingAttempts(maxAttempts - request.getAttemptNumber())
-                 * .build();
-                 * }
-                 */
-
                 FaceEncoding faceEncoding = faceEncodingRepository.findByUserId(studentId)
                                 .orElseThrow(() -> new BadRequestException("Face not registered"));
-
-                // ANTI-SPOOFING CHECK (Passive Liveness)
-                try {
-                        FaceRecognitionClient.LivenessResponse livenessResponse = faceClient.passiveLiveness(
-                                        FaceRecognitionClient.LivenessRequest.builder()
-                                                        .image(request.getFaceImageBase64())
-                                                        .build());
-
-                        if (livenessResponse != null && !livenessResponse.getPassed()) {
-                                log.warn("Spoofing detected for student {}: {}", studentId,
-                                                livenessResponse.getMessage());
-                                return FaceDTO.FaceCheckInResponse.builder()
-                                                .status("FAILED")
-                                                .message("Liveness check failed: " + livenessResponse.getMessage())
-                                                .attemptNumber(request.getAttemptNumber())
-                                                .remainingAttempts(maxAttempts - request.getAttemptNumber())
-                                                .build();
-                        }
-                } catch (Exception e) {
-                        log.error("Liveness check error: {}", e.getMessage());
-                        // Fail closed for security
-                        return FaceDTO.FaceCheckInResponse.builder()
-                                        .status("FAILED")
-                                        .message("Anti-spoofing service error")
-                                        .attemptNumber(request.getAttemptNumber())
-                                        .remainingAttempts(maxAttempts - request.getAttemptNumber())
-                                        .build();
-                }
 
                 List<Double> referenceEncoding = deserializeEncoding(faceEncoding.getEncodingData());
 
@@ -250,15 +257,38 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
                                         FaceRecognitionClient.FaceVerifyRequest.builder()
                                                         .capturedImage(request.getFaceImageBase64())
                                                         .referenceEncoding(referenceEncoding)
-                                                        .tolerance(0.6)
+                                                        .tolerance(1.0 - 0.65) // Applied 0.65 match threshold
+                                                        .mode("attendance")
+                                                        .livenessProof(true // Hardcoded true
+                                                                        && request.getLivenessProof() != null
+                                                                                        ? FaceRecognitionClient.LivenessProof
+                                                                                                        .builder()
+                                                                                                        .passedPassive(request
+                                                                                                                        .getLivenessProof()
+                                                                                                                        .getPassedPassiveCheck())
+                                                                                                        .passedBlink(request
+                                                                                                                        .getLivenessProof()
+                                                                                                                        .getPassedBlinkCheck())
+                                                                                                        .passedHeadMovement(
+                                                                                                                        request
+                                                                                                                                        .getLivenessProof()
+                                                                                                                                        .getPassedHeadMovement())
+                                                                                                        .passedSmile(request
+                                                                                                                        .getLivenessProof()
+                                                                                                                        .getPassedSmile())
+                                                                                                        .timestamp(request
+                                                                                                                        .getLivenessProof()
+                                                                                                                        .getTimestamp())
+                                                                                                        .build()
+                                                                                        : null)
                                                         .build());
                 } catch (Exception e) {
                         log.error("Face verification failed at AI service: {}", e.getMessage(), e);
                         return FaceDTO.FaceCheckInResponse.builder()
                                         .status("FAILED")
-                                        .message("AI Service Error: " + e.getMessage())
+                                        .message("Lỗi dịch vụ AI: " + e.getMessage())
                                         .attemptNumber(request.getAttemptNumber())
-                                        .remainingAttempts(maxAttempts - request.getAttemptNumber())
+                                        .remainingAttempts(config.getMaxAttempts() - request.getAttemptNumber())
                                         .build();
                 }
 
@@ -268,36 +298,77 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
                                         .student(student)
                                         .method(StudentAttendance.CheckInMethod.FACE_RECOGNITION)
                                         .attemptCount(0)
+                                        .status(StudentAttendance.AttendanceStatus.ABSENT)
                                         .build();
                 }
 
-                attendance.setAttemptCount(request.getAttemptNumber());
+                // Increment attempt count on server side
+                int currentAttempt = attendance.getAttemptCount() + 1;
+                attendance.setAttemptCount(currentAttempt);
                 attendance.setWifiBssid(request.getWifiBssid());
                 attendance.setWifiRssi(request.getWifiRssi());
 
+                log.info("Face verification response for student {}: isMatch={}, confidence={}, message={}, attempt={}",
+                                studentId, verifyResponse.getIsMatch(), verifyResponse.getConfidence(),
+                                verifyResponse.getMessage(), currentAttempt);
+
                 if (verifyResponse.getIsMatch()) {
-                        boolean isLate = isLateCheckIn(session.getOpenedAt());
-                        attendance.setStatus(
-                                        isLate ? StudentAttendance.AttendanceStatus.LATE
-                                                        : StudentAttendance.AttendanceStatus.PRESENT);
+                        attendance.setStatus(StudentAttendance.AttendanceStatus.PRESENT);
                         attendance.setCheckInTime(LocalDateTime.now());
                         attendance.setFaceConfidence(verifyResponse.getConfidence());
                         attendance.setRequiresManualVerify(false);
 
-                        attendanceRepository.save(attendance);
+                        // Upload captured face image to Cloudinary
+                        try {
+                                String base64Image = request.getFaceImageBase64();
+                                if (base64Image != null && base64Image.contains(",")) {
+                                        base64Image = base64Image.split(",")[1];
+                                }
+                                byte[] imageBytes = Base64.getDecoder().decode(base64Image);
+                                String fileName = "attendance_" + studentId + "_" + System.currentTimeMillis() + ".jpg";
+                                String faceUrl = uploadService.uploadBytes(imageBytes, fileName, "fams_attendance");
+                                attendance.setCapturedFaceUrl(faceUrl);
+                        } catch (Exception e) {
+                                log.error("Failed to upload attendance photo for student {}: {}", studentId,
+                                                e.getMessage());
+                        }
+
+                        StudentAttendance savedAttendance = attendanceRepository.save(attendance);
+
+                        // Notify Lecturer via WebSocket
+                        try {
+                                AttendanceDTO.StudentAttendanceResponse wsMessage = AttendanceDTO.StudentAttendanceResponse
+                                                .builder()
+                                                .studentId(studentId)
+                                                .studentCode(student.getCode())
+                                                .fullName(student.getFullName())
+                                                .avatarUrl(student.getAvatar())
+                                                .status(savedAttendance.getStatus().toString())
+                                                .checkInTime(savedAttendance.getCheckInTime())
+                                                .capturedFaceUrl(savedAttendance.getCapturedFaceUrl())
+                                                .build();
+
+                                messagingTemplate.convertAndSend("/topic/attendance/slot/" + request.getSlotId(),
+                                                wsMessage);
+                        } catch (Exception e) {
+                                log.error("Failed to send WebSocket update: {}", e.getMessage());
+                        }
 
                         return FaceDTO.FaceCheckInResponse.builder()
-                                        .status(isLate ? "LATE" : "SUCCESS")
-                                        .message(isLate ? "Checked in late" : "Check-in successful")
+                                        .status("SUCCESS")
+                                        .message("Điểm danh thành công")
                                         .courseName(slot.getClassSection().getCourse().getName())
                                         .sessionTime(session.getOpenedAt().toString())
                                         .confidence(verifyResponse.getConfidence())
-                                        .attemptNumber(request.getAttemptNumber())
+                                        .attemptNumber(currentAttempt)
                                         .remainingAttempts(0)
                                         .build();
                 } else {
+                        log.warn("Face verification FAILED for student {}: confidence={}, message={}",
+                                        studentId, verifyResponse.getConfidence(), verifyResponse.getMessage());
+
                         attendance.setFailureReason(verifyResponse.getMessage());
-                        int remainingAttempts = maxAttempts - request.getAttemptNumber();
+                        int remainingAttempts = config.getMaxAttempts() - currentAttempt;
 
                         if (remainingAttempts <= 0) {
                                 attendance.setRequiresManualVerify(true);
@@ -308,9 +379,11 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
 
                                 return FaceDTO.FaceCheckInResponse.builder()
                                                 .status("REQUIRES_MANUAL")
-                                                .message("Maximum attempts reached")
+                                                .message("Bạn đã thực hiện sai quá nhiều lần ("
+                                                                + config.getMaxAttempts()
+                                                                + " lần). Vui lòng liên hệ giảng viên.")
                                                 .courseName(slot.getClassSection().getCourse().getName())
-                                                .attemptNumber(request.getAttemptNumber())
+                                                .attemptNumber(currentAttempt)
                                                 .remainingAttempts(0)
                                                 .build();
                         }
@@ -319,12 +392,34 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
 
                         return FaceDTO.FaceCheckInResponse.builder()
                                         .status("FAILED")
-                                        .message("Face verification failed")
-                                        .attemptNumber(request.getAttemptNumber())
+                                        .message(translateAiMessage(verifyResponse.getMessage()))
+                                        .attemptNumber(currentAttempt)
                                         .remainingAttempts(remainingAttempts)
                                         .confidence(verifyResponse.getConfidence())
                                         .build();
                 }
+        }
+
+        private String translateAiMessage(String message) {
+                if (message == null)
+                        return "Không thể xác thực danh tính.";
+
+                String msg = message.toLowerCase();
+                if (msg.contains("too far")) {
+                        return "Bạn đang ở quá xa camera. Vui lòng tiến lại gần hơn.";
+                } else if (msg.contains("too close")) {
+                        return "Bạn đang ở quá gần camera. Vui lòng lùi ra sau một chút.";
+                } else if (msg.contains("low light") || msg.contains("too dark")) {
+                        return "Ánh sáng quá tối. Vui lòng di chuyển đến khu vực có ánh sáng tốt hơn.";
+                } else if (msg.contains("blur")) {
+                        return "Hình ảnh bị nhòe. Vui lòng giữ chắc thiết bị và thử lại.";
+                } else if (msg.contains("spoof") || msg.contains("replay") || msg.contains("fake")) {
+                        return "Hình ảnh không hợp lệ. Vui lòng chụp ảnh trực tiếp, không sử dụng ảnh in hoặc chụp lại qua màn hình thiết bị khác.";
+                } else if (msg.contains("no face")) {
+                        return "Không tìm thấy khuôn mặt trong ảnh.";
+                }
+
+                return "Không thể xác thực danh tính.";
         }
 
         @Override
@@ -339,6 +434,140 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
                                 .hasFaceData(hasData)
                                 .faceCount(encodings.size())
                                 .registeredAt(latestReg)
+                                .build();
+        }
+
+        @Override
+        @Transactional(readOnly = true)
+        public FaceDTO.FaceStatusResponse getFaceAttendanceStatus(Long userId, Long slotId) {
+                FaceDTO.FaceStatusResponse status = getFaceStatus(userId);
+
+                AttendanceConfig config = configService.getConfig();
+                status.setMaxAttempts(config.getMaxAttempts());
+                status.setFaceRecognitionEnabled(config.getFaceRecognitionEnabled());
+                status.setWifiLocationEnabled(config.getWifiLocationEnabled());
+
+                // Find session for slot
+                AttendanceSession session = sessionRepository.findByTimetableSlotId(slotId).orElse(null);
+
+                if (session != null) {
+                        StudentAttendance attendance = attendanceRepository
+                                        .findBySessionIdAndStudentId(session.getId(), userId)
+                                        .orElse(null);
+
+                        if (attendance != null) {
+                                int attemptCount = attendance.getAttemptCount();
+                                status.setAttemptCount(attemptCount);
+                                status.setRemainingAttempts(Math.max(0, config.getMaxAttempts() - attemptCount));
+                                status.setAttendanceStatus(attendance.getStatus().toString());
+                        } else {
+                                status.setAttemptCount(0);
+                                status.setRemainingAttempts(config.getMaxAttempts());
+                                status.setAttendanceStatus("ABSENT");
+                        }
+                } else {
+                        status.setAttemptCount(0);
+                        status.setRemainingAttempts(config.getMaxAttempts());
+                        status.setAttendanceStatus("ABSENT");
+                }
+
+                return status;
+        }
+
+        @Override
+        @Transactional
+        public FaceDTO.FacePreCheckResponse preCheckFace(Long studentId, FaceDTO.FacePreCheckRequest request) {
+                log.info("Face pre-check request for student {} at slot {}", studentId, request.getSlotId());
+
+                AttendanceConfig config = configService.getConfig();
+                TimetableSlot slot = slotRepository.findById(request.getSlotId())
+                                .orElseThrow(() -> new NotFoundException("Slot not found"));
+
+                // Call AI Detection directly
+                FaceRecognitionClient.FaceDetectResponse detectResponse = detectFace(request.getImage());
+
+                // If isReplay is true, it's a security failure that should count as an attempt
+                boolean isSecurityFailure = Boolean.TRUE.equals(detectResponse.getIsReplay());
+
+                // Fetch or create attendance record to track attempt
+                AttendanceSession session = sessionRepository.findByTimetableSlotId(slot.getId())
+                                .orElseGet(() -> {
+                                        User lecturer = slot.getClassSection().getLecturer();
+                                        AttendanceSession newSession = AttendanceSession.builder()
+                                                        .timetableSlot(slot)
+                                                        .lecturer(lecturer)
+                                                        .openedAt(LocalDateTime.now())
+                                                        .status(AttendanceSession.SessionStatus.OPEN)
+                                                        .build();
+                                        return sessionRepository.save(newSession);
+                                });
+
+                User student = userRepository.findById(studentId)
+                                .orElseThrow(() -> new NotFoundException("Student not found"));
+
+                StudentAttendance attendance = attendanceRepository
+                                .findBySessionIdAndStudentId(session.getId(), studentId)
+                                .orElse(null);
+
+                if (attendance == null) {
+                        attendance = StudentAttendance.builder()
+                                        .session(session)
+                                        .student(student)
+                                        .method(StudentAttendance.CheckInMethod.FACE_RECOGNITION)
+                                        .attemptCount(0)
+                                        .status(StudentAttendance.AttendanceStatus.ABSENT)
+                                        .build();
+                }
+
+                if (isSecurityFailure) {
+                        String msg = detectResponse.getMessage();
+                        // Quality warnings (instructional) should NOT count as failed attempts
+                        boolean isQualityWarning = msg != null && (msg.contains("mặt lại gần") ||
+                                        msg.contains("ánh sáng") ||
+                                        msg.contains("chưa rõ") ||
+                                        msg.contains("xa quá") ||
+                                        msg.contains("nhìn thẳng"));
+
+                        int currentAttempt = attendance.getAttemptCount();
+                        if (!isQualityWarning) {
+                                currentAttempt++;
+                                attendance.setAttemptCount(currentAttempt);
+                                attendance.setFailureReason(msg);
+
+                                int remainingAttempts = config.getMaxAttempts() - currentAttempt;
+                                if (remainingAttempts <= 0) {
+                                        attendance.setRequiresManualVerify(true);
+                                }
+                                attendanceRepository.save(attendance);
+                        }
+
+                        int remainingAttempts = config.getMaxAttempts() - currentAttempt;
+
+                        return FaceDTO.FacePreCheckResponse.builder()
+                                        .success(true)
+                                        .passed(false)
+                                        .message(msg)
+                                        .isQualityWarning(isQualityWarning)
+                                        .attemptNumber(currentAttempt)
+                                        .remainingAttempts(Math.max(0, remainingAttempts))
+                                        .maxAttempts(config.getMaxAttempts())
+                                        .status(isQualityWarning ? "OK"
+                                                        : (remainingAttempts <= 0 ? "REQUIRES_MANUAL" : "FAILED"))
+                                        .build();
+                }
+
+                // If passed detection, just return current state without incrementing
+                int currentAttempt = attendance.getAttemptCount();
+                int remainingAttempts = config.getMaxAttempts() - currentAttempt;
+
+                return FaceDTO.FacePreCheckResponse.builder()
+                                .success(true)
+                                .passed(true)
+                                .message("Detection passed")
+                                .attemptNumber(currentAttempt)
+                                .remainingAttempts(remainingAttempts)
+                                .maxAttempts(config.getMaxAttempts())
+                                .status("OK")
                                 .build();
         }
 
@@ -393,6 +622,13 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
                                 .findBySessionIdAndStudentId(request.getSessionId(), request.getStudentId())
                                 .orElseThrow(() -> new NotFoundException("Attendance not found"));
 
+                // Apply Manual Enabled configuration
+                AttendanceConfig config = configService.getConfig();
+                if (!Boolean.TRUE.equals(config.getManualEnabled())) {
+                        throw new BadRequestException(
+                                        "Chức năng điểm danh thủ công hiện đang bị tắt bởi quản trị viên.");
+                }
+
                 if (!attendance.getRequiresManualVerify()) {
                         throw new BadRequestException("Does not require manual verification");
                 }
@@ -414,8 +650,7 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
                 attendance.setRequiresManualVerify(false);
                 attendance.setNote(request.getNote());
 
-                if (status == StudentAttendance.AttendanceStatus.PRESENT ||
-                                status == StudentAttendance.AttendanceStatus.LATE) {
+                if (status == StudentAttendance.AttendanceStatus.PRESENT) {
                         attendance.setCheckInTime(LocalDateTime.now());
                 }
 
@@ -423,25 +658,57 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
         }
 
         @Override
-        public boolean isValidWiFiLocation(Long roomId, String bssid, Integer rssi) {
+        public boolean isValidWiFiLocation(Long roomId, String ssid, String bssid, Integer rssi) {
                 if (bssid == null || bssid.isEmpty()) {
                         return false;
                 }
 
-                boolean bssidValid = roomWifiRepository.existsByRoomIdAndWifiAccessPointBssid(roomId, bssid);
-                if (!bssidValid) {
+                AttendanceConfig config = configService.getConfig();
+
+                // 1. Campus WiFi Enforcement - Disabled/Not present in simplified config
+                // We assume any mapped BSSID is valid for the room
+
+                // Room-specific validation
+                java.util.List<com.fams.backend.entity.RoomWiFiAccessPoint> mappedAps = roomWifiRepository
+                                .findByRoomId(roomId);
+
+                if (mappedAps.isEmpty()) {
+                        log.warn("Room {} has no mapped WiFi Access Points. Validation skipped.", roomId);
+                        return true; // Or false, depending on security policy. Here we allow it if not configured.
+                }
+
+                java.util.Optional<com.fams.backend.entity.RoomWiFiAccessPoint> rwapOpt = mappedAps.stream()
+                                .filter(ap -> ap.getWifiAccessPoint().getBssid().equalsIgnoreCase(bssid))
+                                .findFirst();
+
+                if (rwapOpt.isEmpty()) {
+                        log.warn("WiFi BSSID NOT MAPPED to Room {}: detected BSSID {}", roomId, bssid);
                         return false;
                 }
 
-                if (rssi != null && rssi < wifiRssiThreshold) {
+                com.fams.backend.entity.RoomWiFiAccessPoint rwap = rwapOpt.get();
+                com.fams.backend.entity.WiFiAccessPoint ap = rwap.getWifiAccessPoint();
+
+                // 2. SSID Filter
+                if (ssid != null && !ssid.isEmpty() && ap.getSsid() != null && !ap.getSsid().isEmpty()) {
+                        if (!ap.getSsid().equalsIgnoreCase(ssid)) {
+                                log.warn("WiFi SSID mismatch for Room {}: expected {}, got {}", roomId, ap.getSsid(),
+                                                ssid);
+                                return false;
+                        }
+                }
+
+                // 3. RSSI Signal Strength check
+                Integer threshold = (rwap.getSignalStrength() != null) ? rwap.getSignalStrength()
+                                : -75; // Hardcoded default
+
+                if (rssi != null && rssi < threshold) {
+                        log.warn("WiFi RSSI too weak for Room {} (AP {}): threshold {}, got {}", roomId, bssid,
+                                        threshold, rssi);
                         return false;
                 }
 
                 return true;
-        }
-
-        private boolean isLateCheckIn(LocalDateTime sessionOpenedAt) {
-                return LocalDateTime.now().isAfter(sessionOpenedAt.plusMinutes(LATE_THRESHOLD_MINUTES));
         }
 
         private void notifyLecturerForManualVerification(AttendanceSession session, User student) {
@@ -492,6 +759,7 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
                 FaceRecognitionClient.FaceQualityRequest clientRequest = FaceRecognitionClient.FaceQualityRequest
                                 .builder()
                                 .image(request.getImage())
+                                .mode(request.getMode() != null ? request.getMode() : "attendance")
                                 .build();
 
                 FaceRecognitionClient.FaceQualityResponse clientResponse = faceClient.checkQuality(clientRequest);
@@ -503,5 +771,12 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
                                 .errors(clientResponse.getErrors())
                                 .message(clientResponse.getMessage())
                                 .build();
+        }
+
+        @Override
+        public FaceRecognitionClient.FaceDetectResponse detectFace(String image) {
+                return faceClient.detectFace(FaceRecognitionClient.FaceDetectRequest.builder()
+                                .image(image)
+                                .build());
         }
 }

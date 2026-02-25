@@ -11,31 +11,37 @@ import java.util.List;
 @Repository
 public interface RoomWiFiAccessPointRepository extends JpaRepository<RoomWiFiAccessPoint, Long> {
 
-    /**
-     * Find all WiFi access points for a room
-     */
-    List<RoomWiFiAccessPoint> findByRoomId(Long roomId);
+        /**
+         * Find all WiFi access points for a room
+         */
+        List<RoomWiFiAccessPoint> findByRoomId(Long roomId);
 
-    /**
-     * Find the primary access point for a room
-     */
-    RoomWiFiAccessPoint findByRoomIdAndIsPrimaryTrue(Long roomId);
+        /**
+         * Find the primary access point for a room
+         */
+        RoomWiFiAccessPoint findByRoomIdAndIsPrimaryTrue(Long roomId);
 
-    /**
-     * Check if a BSSID is associated with a room
-     */
-    @Query("SELECT CASE WHEN COUNT(rwap) > 0 THEN true ELSE false END " +
-            "FROM RoomWiFiAccessPoint rwap " +
-            "WHERE rwap.room.id = :roomId " +
-            "AND rwap.wifiAccessPoint.bssid = :bssid")
-    boolean existsByRoomIdAndWifiAccessPointBssid(
-            @Param("roomId") Long roomId,
-            @Param("bssid") String bssid);
+        /**
+         * Check if a BSSID is associated with a room
+         */
+        @Query("SELECT CASE WHEN COUNT(rwap) > 0 THEN true ELSE false END " +
+                        "FROM RoomWiFiAccessPoint rwap " +
+                        "WHERE rwap.room.id = :roomId " +
+                        "AND rwap.wifiAccessPoint.bssid = :bssid")
+        boolean existsByRoomIdAndWifiAccessPointBssid(
+                        @Param("roomId") Long roomId,
+                        @Param("bssid") String bssid);
 
-    /**
-     * Get all BSSIDs for a room
-     */
-    @Query("SELECT rwap.wifiAccessPoint.bssid FROM RoomWiFiAccessPoint rwap " +
-            "WHERE rwap.room.id = :roomId")
-    List<String> findBssidsByRoomId(@Param("roomId") Long roomId);
+        /**
+         * Get all BSSIDs for a room
+         */
+        @Query("SELECT rwap.wifiAccessPoint.bssid FROM RoomWiFiAccessPoint rwap " +
+                        "WHERE rwap.room.id = :roomId")
+        List<String> findBssidsByRoomId(@Param("roomId") Long roomId);
+
+        /**
+         * Find a specific mapping to get its RSSI threshold
+         */
+        java.util.Optional<com.fams.backend.entity.RoomWiFiAccessPoint> findByRoomIdAndWifiAccessPointBssid(Long roomId,
+                        String bssid);
 }

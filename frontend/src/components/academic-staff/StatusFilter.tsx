@@ -13,12 +13,12 @@ interface StatusFilterProps {
  */
 export const StatusFilter: React.FC<StatusFilterProps> = ({ value, onChange, isOpen, onToggle }) => {
     const getLabel = (status: 'ACTIVE' | 'INACTIVE') => {
-        return status === 'ACTIVE' ? 'Đang mở' : 'Ngừng đào tạo';
+        return status === 'ACTIVE' ? 'Đang mở' : 'Ngừng hoạt động';
     };
 
     return (
         <div className="flex items-center gap-2 relative">
-            <span className="text-gray-500">Trạng thái:</span>
+            <span className="text-gray-500 text-sm">Trạng thái:</span>
             <div className="relative">
                 <button
                     onClick={onToggle}
@@ -52,7 +52,7 @@ export const StatusFilter: React.FC<StatusFilterProps> = ({ value, onChange, isO
                                 }}
                                 className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center justify-between ${value === 'INACTIVE' ? 'text-fpt-orange bg-orange-50 dark:bg-orange-900/10' : 'text-gray-700 dark:text-gray-200'}`}
                             >
-                                <span>Ngừng đào tạo</span>
+                                <span>Ngừng hoạt động</span>
                                 {value === 'INACTIVE' && <Check className="h-4 w-4" />}
                             </button>
                         </div>
