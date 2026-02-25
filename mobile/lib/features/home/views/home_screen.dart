@@ -11,6 +11,7 @@ import '../../lecturer/views/class_list_screen.dart'; // Import ClassListScreen
 import 'package:badges/badges.dart' as badges;
 import '../../notification/controllers/notification_controller.dart';
 import '../../notification/views/notification_list_screen.dart';
+import '../../chat/views/chat_list_screen.dart';
 
 /// Home Screen - Dashboard for Students and Lecturers
 class HomeScreen extends StatelessWidget {
@@ -23,7 +24,6 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFF7F0), // Cream background
-      
       // Use GetBuilder to rebuild body when tab changes
       body: GetBuilder<HomeController>(
         builder: (controller) {
@@ -33,7 +33,7 @@ class HomeScreen extends StatelessWidget {
             case 1:
               return const ScheduleScreen(); // Replace with ScheduleScreen
             case 3:
-               return const Center(child: Text("Tin nhắn (Coming Soon)"));
+              return const ChatListScreen();
             case 4:
               return const ProfileScreen(); // Use the ProfileView
             default:
@@ -46,7 +46,7 @@ class HomeScreen extends StatelessWidget {
       floatingActionButton: Container(
         height: 70,
         width: 70,
-         margin: const EdgeInsets.only(top: 40), // Push FAB down slightly
+        margin: const EdgeInsets.only(top: 40), // Push FAB down slightly
         child: FloatingActionButton(
           backgroundColor: Colors.white,
           elevation: 4,
@@ -58,7 +58,11 @@ class HomeScreen extends StatelessWidget {
               color: Color(0xFFFFF0E0),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.qr_code_scanner_rounded, color: AppColors.primaryOrange, size: 32),
+            child: const Icon(
+              Icons.qr_code_scanner_rounded,
+              color: AppColors.primaryOrange,
+              size: 32,
+            ),
           ),
         ),
       ),
@@ -76,205 +80,205 @@ class HomeScreen extends StatelessWidget {
           builder: (controller) {
             final authController = Get.find<AuthController>();
             return Obx(() {
-              final isLecturer = authController.currentUser.value?.isLecturer == true;
+              final isLecturer =
+                  authController.currentUser.value?.isLecturer == true;
               return Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildNavItem(icon: Icons.home_rounded, label: 'Trang chủ', isActive: controller.currentIndex == 0, onTap: () => controller.changeTab(0)),
-                  _buildNavItem(icon: Icons.calendar_month_rounded, label: isLecturer ? 'Lịch dạy' : 'Lịch học', isActive: controller.currentIndex == 1, onTap: () => controller.changeTab(1)),
+                  _buildNavItem(
+                    icon: Icons.home_rounded,
+                    label: 'Trang chủ',
+                    isActive: controller.currentIndex == 0,
+                    onTap: () => controller.changeTab(0),
+                  ),
+                  _buildNavItem(
+                    icon: Icons.calendar_month_rounded,
+                    label: isLecturer ? 'Lịch dạy' : 'Lịch học',
+                    isActive: controller.currentIndex == 1,
+                    onTap: () => controller.changeTab(1),
+                  ),
                   const SizedBox(width: 48), // Space for FAB
-                  _buildNavItem(icon: Icons.chat_bubble_rounded, label: 'Tin nhắn', isActive: controller.currentIndex == 3, onTap: () => controller.changeTab(3)),
-                  _buildNavItem(icon: Icons.account_circle_rounded, label: 'Tài khoản', isActive: controller.currentIndex == 4, onTap: () => controller.changeTab(4)),
+                  _buildNavItem(
+                    icon: Icons.chat_bubble_rounded,
+                    label: 'Tin nhắn',
+                    isActive: controller.currentIndex == 3,
+                    onTap: () => controller.changeTab(3),
+                  ),
+                  _buildNavItem(
+                    icon: Icons.account_circle_rounded,
+                    label: 'Tài khoản',
+                    isActive: controller.currentIndex == 4,
+                    onTap: () => controller.changeTab(4),
+                  ),
                 ],
               );
             });
-          }
+          },
         ),
       ),
     );
   }
 
   // Extracted Home Content (Dashboard)
-  Widget _buildHomeContent(BuildContext context, AuthController authController, HomeController homeController) {
+  Widget _buildHomeContent(
+    BuildContext context,
+    AuthController authController,
+    HomeController homeController,
+  ) {
     return Stack(
-        children: [
-          // 1. Orange Curved Header Background
-          Container(
-            height: 200, // Reduced height
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFFF9F43), // Lighter Orange
-                  Color(0xFFFF6B00), // Darker Orange
-                ],
-              ),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(30),
-                bottomRight: Radius.circular(30),
-              ),
+      children: [
+        // 1. Orange Curved Header Background
+        Container(
+          height: 200, // Reduced height
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFFFF9F43), // Lighter Orange
+                Color(0xFFFF6B00), // Darker Orange
+              ],
+            ),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(30),
+              bottomRight: Radius.circular(30),
             ),
           ),
+        ),
 
-          // 2. Main Content
-          SafeArea(
-            child: Column(
-              children: [
-                // 2.1 Top Buttons & User Info (Aligned Horizontally)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 28),
-                        onPressed: () => _showMenu(context, homeController),
+        // 2. Main Content
+        SafeArea(
+          child: Column(
+            children: [
+              // 2.1 Top Buttons & User Info (Aligned Horizontally)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      icon: const Icon(
+                        Icons.menu_rounded,
+                        color: Colors.white,
+                        size: 28,
                       ),
-                      
-                      // User Info Capsule (Centered and aligned with icons)
-                      Expanded(
-                        child: Center(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(30),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
+                      onPressed: () => _showMenu(context, homeController),
+                    ),
+
+                    // User Info Capsule (Centered and aligned with icons)
+                    Expanded(
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Obx(() {
+                            final user = authController.currentUser.value;
+                            return Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  user?.fullName ?? 'Học viên',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.roboto(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                Text(
+                                  user?.username ?? 'DE181818',
+                                  style: GoogleFonts.roboto(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.black54,
+                                  ),
                                 ),
                               ],
-                            ),
-                            child: Obx(() {
-                              final user = authController.currentUser.value;
-                              return Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    user?.fullName ?? 'Học viên',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.roboto(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                  Text(
-                                    user?.username ?? 'DE181818',
-                                    style: GoogleFonts.roboto(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.black54,
-                                    ),
-                                  ),
-                                ],
-                              );
-                            }),
-                          ),
+                            );
+                          }),
                         ),
                       ),
-                      
-                      GetBuilder<NotificationController>(
-                        init: NotificationController(),
-                        builder: (notificationController) {
-                          return Obx(() => badges.Badge(
-                            position: badges.BadgePosition.topEnd(top: 0, end: 3),
-                            showBadge: notificationController.unreadCount.value > 0,
+                    ),
+
+                    GetBuilder<NotificationController>(
+                      init: NotificationController(),
+                      builder: (notificationController) {
+                        return Obx(
+                          () => badges.Badge(
+                            position: badges.BadgePosition.topEnd(
+                              top: 0,
+                              end: 3,
+                            ),
+                            showBadge:
+                                notificationController.unreadCount.value > 0,
                             badgeContent: Text(
                               '${notificationController.unreadCount.value}',
-                              style: const TextStyle(color: Colors.white, fontSize: 10),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                              ),
                             ),
                             child: IconButton(
-                              icon: const Icon(Icons.notifications_active, color: Colors.white, size: 28),
-                              onPressed: () => Get.to(() => const NotificationListScreen()),
-                            ),
-                          ));
-                        }
-                      ),
-                    ],
-                  ),
-                ),
-
-                // 2.2 Content Scrollable Area
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Column(
-                        children: [
-                          // Section 1: Thông báo và đơn từ (White Card Container)
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(30),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 15,
-                                  offset: const Offset(0, 5),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              children: [
-                                const Text(
-                                  'Thông báo và đơn từ',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF2D3436),
-                                  ),
-                                ),
-                                Container(
-                                  height: 4,
-                                  width: 30,
-                                  margin: const EdgeInsets.only(top: 8, bottom: 20),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primaryOrange,
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                ),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: _buildSquareCard(
-                                        icon: Icons.notifications_active_rounded,
-                                        title: 'Thông báo',
-                                        iconBgColor: const Color(0xFFFFE0B2),
-                                        iconColor: const Color(0xFFE65100),
-                                        onTap: () => Get.to(() => const NotificationListScreen()),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: _buildSquareCard(
-                                        icon: Icons.person_search_rounded,
-                                        title: 'Đơn yêu cầu',
-                                        iconBgColor: const Color(0xFFFFE0B2), 
-                                        iconColor: const Color(0xFFE65100),
-                                        onTap: () => Get.toNamed('/lecturer/requests'),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                              icon: const Icon(
+                                Icons.notifications_active,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                              onPressed: () =>
+                                  Get.to(() => const NotificationListScreen()),
                             ),
                           ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
 
-                          const SizedBox(height: 24),
-
-                          // Section 2: Thông tin học vụ
-                          Column(
+              // 2.2 Content Scrollable Area
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      children: [
+                        // Section 1: Thông báo và đơn từ (White Card Container)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 20,
+                            horizontal: 16,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 15,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: Column(
                             children: [
                               const Text(
-                                'Thông tin học vụ',
+                                'Thông báo và đơn từ',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
@@ -284,76 +288,139 @@ class HomeScreen extends StatelessWidget {
                               Container(
                                 height: 4,
                                 width: 30,
-                                margin: const EdgeInsets.symmetric(vertical: 8),
+                                margin: const EdgeInsets.only(
+                                  top: 8,
+                                  bottom: 20,
+                                ),
                                 decoration: BoxDecoration(
                                   color: AppColors.primaryOrange,
                                   borderRadius: BorderRadius.circular(2),
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                              
-                              // Vertical Cards (Big, Centered)
-                              // Show "Lớp học" card for lecturers only
-                              Obx(() {
-                                final isLecturer = authController.currentUser.value?.isLecturer == true;
-                                if (!isLecturer) return const SizedBox.shrink();
-                                return Column(
-                                  children: [
-                                    _buildBigCard(
-                                      icon: Icons.class_rounded,
-                                      title: 'Danh sách lớp dạy',
-                                      onTap: () => Get.to(() => ClassListScreen()),
-                                    ),
-                                    const SizedBox(height: 16),
-                                  ],
-                                );
-                              }),
-                              
-                              _buildBigCard(
-                                icon: Icons.calendar_month_rounded,
-                                title: 'Xem điểm danh',
-                                onTap: () {},
-                              ),
-
-                              const SizedBox(height: 16),
-
-                              _buildBigCard(
-                                icon: Icons.assignment_rounded,
-                                title: 'Báo cáo điểm',
-                                onTap: () {},
-                              ),
-
-                              // "Gửi đơn yêu cầu" card - only for lecturers
-                              Obx(() {
-                                final user = authController.currentUser.value;
-                                if (user?.role == 'LECTURER') {
-                                  return Column(
-                                    children: [
-                                      const SizedBox(height: 16),
-                                      _buildBigCard(
-                                        icon: Icons.send_rounded,
-                                        title: 'Gửi đơn yêu cầu',
-                                        onTap: () => Get.toNamed(AppRoutes.lecturerCreateRequest),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildSquareCard(
+                                      icon: Icons.notifications_active_rounded,
+                                      title: 'Thông báo',
+                                      iconBgColor: const Color(0xFFFFE0B2),
+                                      iconColor: const Color(0xFFE65100),
+                                      onTap: () => Get.to(
+                                        () => const NotificationListScreen(),
                                       ),
-                                    ],
-                                  );
-                                }
-                                return const SizedBox.shrink();
-                              }),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: _buildSquareCard(
+                                      icon: Icons.person_search_rounded,
+                                      title: 'Đơn yêu cầu',
+                                      iconBgColor: const Color(0xFFFFE0B2),
+                                      iconColor: const Color(0xFFE65100),
+                                      onTap: () =>
+                                          Get.toNamed('/lecturer/requests'),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
+                        ),
 
-                          const SizedBox(height: 100), // Space for FAB
-                        ],
-                      ),
+                        const SizedBox(height: 24),
+
+                        // Section 2: Thông tin học vụ
+                        Column(
+                          children: [
+                            const Text(
+                              'Thông tin học vụ',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2D3436),
+                              ),
+                            ),
+                            Container(
+                              height: 4,
+                              width: 30,
+                              margin: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryOrange,
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+
+                            // Vertical Cards (Big, Centered)
+                            // Show "Lớp học" card for lecturers only
+                            Obx(() {
+                              final isLecturer =
+                                  authController
+                                      .currentUser
+                                      .value
+                                      ?.isLecturer ==
+                                  true;
+                              if (!isLecturer) return const SizedBox.shrink();
+                              return Column(
+                                children: [
+                                  _buildBigCard(
+                                    icon: Icons.class_rounded,
+                                    title: 'Danh sách lớp dạy',
+                                    onTap: () =>
+                                        Get.to(() => ClassListScreen()),
+                                  ),
+                                  const SizedBox(height: 16),
+                                ],
+                              );
+                            }),
+
+                            _buildBigCard(
+                              icon: Icons.calendar_month_rounded,
+                              title: 'Xem điểm danh',
+                              onTap: () {},
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            _buildBigCard(
+                              icon: Icons.assignment_rounded,
+                              title: 'Báo cáo điểm',
+                              onTap: () {},
+                            ),
+
+                            // "Gửi đơn yêu cầu" card - only for lecturers
+                            Obx(() {
+                              final user = authController.currentUser.value;
+                              if (user?.role == 'LECTURER') {
+                                return Column(
+                                  children: [
+                                    const SizedBox(height: 16),
+                                    _buildBigCard(
+                                      icon: Icons.send_rounded,
+                                      title: 'Gửi đơn yêu cầu',
+                                      onTap: () => Get.toNamed(
+                                        AppRoutes.lecturerCreateRequest,
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }
+                              return const SizedBox.shrink();
+                            }),
+                          ],
+                        ),
+
+                        const SizedBox(height: 100), // Space for FAB
+                      ],
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      );
+        ),
+      ],
+    );
   }
 
   // --- Helper Widgets ---
@@ -376,7 +443,7 @@ class HomeScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: Colors.grey.withOpacity(0.1)),
           boxShadow: [
-             BoxShadow(
+            BoxShadow(
               color: Colors.black.withOpacity(0.04),
               blurRadius: 8,
               offset: const Offset(0, 4),
@@ -386,7 +453,7 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-             Container(
+            Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: iconBgColor,
@@ -425,7 +492,10 @@ class HomeScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: AppColors.primaryOrange.withOpacity(0.3), width: 1.5), // Orange border
+          border: Border.all(
+            color: AppColors.primaryOrange.withOpacity(0.3),
+            width: 1.5,
+          ), // Orange border
           boxShadow: [
             BoxShadow(
               color: AppColors.primaryOrange.withOpacity(0.08),
@@ -443,10 +513,14 @@ class HomeScreen extends StatelessWidget {
                 color: Color(0xFFFFF0E0),
                 borderRadius: BorderRadius.all(Radius.circular(16)),
               ),
-              child: Icon(icon, color: AppColors.primaryOrange, size: 36), // Bigger icon
+              child: Icon(
+                icon,
+                color: AppColors.primaryOrange,
+                size: 36,
+              ), // Bigger icon
             ),
-             const SizedBox(height: 16),
-             Text(
+            const SizedBox(height: 16),
+            Text(
               title,
               style: const TextStyle(
                 fontSize: 16,
@@ -517,19 +591,28 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
               ListTile(
-                leading: const Icon(Icons.person, color: AppColors.primaryOrange),
+                leading: const Icon(
+                  Icons.person,
+                  color: AppColors.primaryOrange,
+                ),
                 title: const Text('Thông tin cá nhân'),
                 onTap: () => Get.back(),
               ),
               ListTile(
-                leading: const Icon(Icons.settings, color: AppColors.primaryOrange),
+                leading: const Icon(
+                  Icons.settings,
+                  color: AppColors.primaryOrange,
+                ),
                 title: const Text('Cài đặt'),
                 onTap: () => Get.back(),
               ),
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.logout, color: Colors.red),
-                title: const Text('Đăng xuất', style: TextStyle(color: Colors.red)),
+                title: const Text(
+                  'Đăng xuất',
+                  style: TextStyle(color: Colors.red),
+                ),
                 onTap: () {
                   Get.back();
                   homeController.logout();
