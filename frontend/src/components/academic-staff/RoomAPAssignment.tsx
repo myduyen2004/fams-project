@@ -17,7 +17,7 @@ interface RoomWiFiAP {
     accessPoint: WiFiAccessPoint;
     signalStrength: number;
     isPrimary: boolean;
-    positionNotes: string;
+    positionNote: string;
 }
 
 interface Props {
@@ -34,8 +34,9 @@ export const RoomAPAssignment: React.FC<Props> = ({ roomId }) => {
     const [selectedApId, setSelectedApId] = useState<number | ''>('');
     const [signalStrength, setSignalStrength] = useState(-65);
     const [isPrimary, setIsPrimary] = useState(false);
-    const [positionNotes, setPositionNotes] = useState('');
+    const [positionNote, setPositionNote] = useState('');
     const [saving, setSaving] = useState(false);
+    const [editingAssignment, setEditingAssignment] = useState<RoomWiFiAP | null>(null);
 
     useEffect(() => {
         fetchData();
@@ -51,40 +52,44 @@ export const RoomAPAssignment: React.FC<Props> = ({ roomId }) => {
             // Fetch all available APs
             const allApsRes = await apiClient.get('/wifi-access-points');
             setAvailableAPs(allApsRes.data || []);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to fetch AP data:', error);
-            // Use mock data for demo
+            toast.error('Không thể tải danh sách Access Point đã gán');
+            // Use mock data for demo only if needed, or keep empty
             setAssignedAPs([]);
-            setAvailableAPs([
-                { id: 1, name: 'AP-BE-T2-01', ssid: 'FPTU-WiFi', bssid: 'AC:23:3F:88:91:A1', location: 'Beta - Tầng 2' },
-                { id: 2, name: 'AP-BE-T2-02', ssid: 'FPTU-WiFi', bssid: 'AC:23:3F:88:91:A2', location: 'Beta - Tầng 2' },
-                { id: 3, name: 'AP-BE-T3-01', ssid: 'FPTU-WiFi', bssid: 'AC:23:3F:88:91:A3', location: 'Beta - Tầng 3' },
-            ]);
         } finally {
             setLoading(false);
         }
     };
 
     const handleAssignAP = async () => {
-        if (!selectedApId) {
+        if (!selectedApId && !editingAssignment) {
             toast.error('Vui lòng chọn Access Point');
             return;
         }
 
         setSaving(true);
         try {
-            await apiClient.post(`/wifi-access-points/room/${roomId}/assign`, {
-                accessPointId: selectedApId,
+            const payload = {
+                accessPointId: editingAssignment ? editingAssignment.accessPoint.id : selectedApId,
                 signalStrength,
                 isPrimary,
-                positionNotes
-            });
-            toast.success('Gán AP thành công');
+                positionNote
+            };
+
+            if (editingAssignment) {
+                await apiClient.put(`/wifi-access-points/room/${roomId}/assign/${editingAssignment.id}`, payload);
+                toast.success('Cập nhật thông tin AP thành công');
+            } else {
+                await apiClient.post(`/wifi-access-points/room/${roomId}/assign`, payload);
+                toast.success('Gán AP thành công');
+            }
+            
             setShowAddForm(false);
             resetForm();
             fetchData();
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Không thể gán AP');
+            toast.error(error.response?.data?.message || 'Không thể thực hiện yêu cầu');
         } finally {
             setSaving(false);
         }
@@ -114,7 +119,23 @@ export const RoomAPAssignment: React.FC<Props> = ({ roomId }) => {
         setSelectedApId('');
         setSignalStrength(-65);
         setIsPrimary(false);
-        setPositionNotes('');
+        setPositionNote('');
+        setEditingAssignment(null);
+    };
+
+    const handleEditClick = (item: RoomWiFiAP) => {
+        setEditingAssignment(item);
+        setSelectedApId(item.accessPoint.id);
+        setSignalStrength(item.signalStrength);
+        setIsPrimary(item.isPrimary);
+        setPositionNote(item.positionNote || '');
+        setShowAddForm(true);
+        
+        // Scroll to form nicely
+        const formElement = document.getElementById('ap-assignment-form');
+        if (formElement) {
+            formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     };
 
     const getSignalQuality = (rssi: number) => {
@@ -148,58 +169,60 @@ export const RoomAPAssignment: React.FC<Props> = ({ roomId }) => {
                             </div>
                         </div>
                         {assignedAPs.length > 0 && (
-                            <div className="flex flex-col items-end">
-                                <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-[10px] font-bold rounded-full border border-green-200 dark:border-green-800/30">
+                            <div className="flex flex-col items-end shrink-0">
+                                <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-[10px] font-bold rounded-full border border-green-200 dark:border-green-800/30 whitespace-nowrap">
                                     {assignedAPs.length} Kết nối
                                 </span>
                             </div>
                         )}
                     </div>
 
-                    <button
-                        onClick={() => setShowAddForm(!showAddForm)}
-                        className={`group flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-bold transition-all duration-300 transform active:scale-95
-                            ${showAddForm
-                                ? 'bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-400 border border-gray-200 dark:border-zinc-700 hover:bg-gray-200 dark:hover:bg-zinc-700'
-                                : 'bg-fpt-orange text-white shadow-lg shadow-orange-500/20 hover:bg-orange-600 hover:shadow-orange-500/40'
-                            }`}
-                    >
-                        {showAddForm ? (
-                            <>Đóng form</>
-                        ) : (
-                            <>
-                                <Plus size={18} className="transition-transform group-hover:rotate-90" />
-                                Thêm Access Point
-                            </>
-                        )}
-                    </button>
+                    {!showAddForm && (
+                        <button
+                            onClick={() => setShowAddForm(true)}
+                            className="group flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-bold transition-all duration-300 transform active:scale-95 bg-fpt-orange text-white shadow-lg shadow-orange-500/20 hover:bg-orange-600 hover:shadow-orange-500/40"
+                        >
+                            <Plus size={18} className="transition-transform group-hover:rotate-90" />
+                            Thêm Access Point
+                        </button>
+                    )}
                 </div>
             </div>
 
-            {/* Add Form */}
+
+            {/* Add/Edit Form */}
             {
                 showAddForm && (
-                    <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-200 dark:border-orange-900/30 space-y-3">
-                        <div className="text-sm font-semibold text-gray-900 dark:text-white">Gán AP mới</div>
-
-                        {/* AP Selection */}
-                        <div>
-                            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">
-                                Chọn Access Point
-                            </label>
-                            <select
-                                value={selectedApId}
-                                onChange={(e) => setSelectedApId(e.target.value ? Number(e.target.value) : '')}
-                                className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-1 focus:ring-fpt-orange focus:border-fpt-orange"
-                            >
-                                <option value="">-- Chọn AP --</option>
-                                {unassignedAPs.map(ap => (
-                                    <option key={ap.id} value={ap.id}>
-                                        {ap.name} ({ap.bssid})
-                                    </option>
-                                ))}
-                            </select>
+                    <div id="ap-assignment-form" className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-200 dark:border-orange-900/30 space-y-3 animate-in fade-in slide-in-from-top-4 duration-300">
+                        <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                            {editingAssignment ? `Chỉnh sửa AP: ${editingAssignment.accessPoint.name}` : 'Gán AP mới'}
                         </div>
+
+                        {/* AP Selection (Read-only when editing) */}
+                        {!editingAssignment ? (
+                            <div>
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">
+                                    Chọn Access Point
+                                </label>
+                                <select
+                                    value={selectedApId}
+                                    onChange={(e) => setSelectedApId(e.target.value ? Number(e.target.value) : '')}
+                                    className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-1 focus:ring-fpt-orange focus:border-fpt-orange"
+                                >
+                                    <option value="">-- Chọn AP --</option>
+                                    {unassignedAPs.map(ap => (
+                                        <option key={ap.id} value={ap.id}>
+                                            {ap.name} ({ap.bssid})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        ) : (
+                            <div className="bg-white/50 dark:bg-zinc-800/50 p-2 rounded-lg border border-gray-100 dark:border-zinc-700">
+                                <span className="text-[10px] font-bold text-gray-400 block uppercase tracking-wide mb-0.5">AP đang chỉnh sửa</span>
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{editingAssignment.accessPoint.name}</span>
+                            </div>
+                        )}
 
                         {/* Signal Strength */}
                         <div>
@@ -231,8 +254,8 @@ export const RoomAPAssignment: React.FC<Props> = ({ roomId }) => {
                             </label>
                             <input
                                 type="text"
-                                value={positionNotes}
-                                onChange={(e) => setPositionNotes(e.target.value)}
+                                value={positionNote}
+                                onChange={(e) => setPositionNote(e.target.value)}
                                 placeholder="VD: Góc trái phòng, gần cửa sổ..."
                                 className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-1 focus:ring-fpt-orange focus:border-fpt-orange"
                             />
@@ -263,18 +286,20 @@ export const RoomAPAssignment: React.FC<Props> = ({ roomId }) => {
                             </button>
                             <button
                                 onClick={handleAssignAP}
-                                disabled={saving || !selectedApId}
+                                disabled={saving || (!selectedApId && !editingAssignment)}
                                 className="flex-1 px-3 py-2 text-sm font-medium text-white bg-fpt-orange rounded-lg hover:bg-orange-600 disabled:opacity-50"
                             >
-                                {saving ? 'Đang lưu...' : 'Gán AP'}
+                                {saving ? 'Đang lưu...' : editingAssignment ? 'Cập nhật' : 'Gán AP'}
                             </button>
                         </div>
                     </div>
                 )
             }
-
             {/* Assigned APs List */}
-            <div className="space-y-2">
+            <div className="space-y-2 pt-4 border-t border-gray-100 dark:border-zinc-800">
+                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 px-1">
+                    Danh sách AP đã gán ({assignedAPs.length})
+                </div>
                 {loading ? (
                     <div className="text-center py-4 text-gray-400 text-sm">Đang tải...</div>
                 ) : assignedAPs.length === 0 ? (
@@ -288,7 +313,7 @@ export const RoomAPAssignment: React.FC<Props> = ({ roomId }) => {
                         return (
                             <div
                                 key={item.id}
-                                className={`group/card p-4 rounded-2xl border transition-all duration-300 shadow-sm hover:shadow-md
+                                className={`group/card p-3 rounded-2xl border transition-all duration-300 shadow-sm hover:shadow-md
                                     ${item.isPrimary
                                         ? 'bg-gradient-to-br from-orange-50 to-white dark:from-orange-900/20 dark:to-zinc-900 border-orange-200 dark:border-orange-900/30'
                                         : 'bg-white dark:bg-zinc-900 border-gray-100 dark:border-zinc-800'
@@ -302,7 +327,7 @@ export const RoomAPAssignment: React.FC<Props> = ({ roomId }) => {
                                             </span>
                                             {item.isPrimary && (
                                                 <span className="px-2 py-0.5 text-[8px] font-black bg-orange-500 text-white rounded-full uppercase tracking-widest shadow-sm shadow-orange-500/30">
-                                                    Primary
+                                                    CHÍNH
                                                 </span>
                                             )}
                                         </div>
@@ -310,10 +335,10 @@ export const RoomAPAssignment: React.FC<Props> = ({ roomId }) => {
                                             <Signal size={10} className="shrink-0" />
                                             {item.accessPoint?.bssid}
                                         </div>
-                                        {item.positionNotes && (
-                                            <div className="flex items-center gap-1.5 text-[10px] text-gray-500 mt-2 bg-gray-50 dark:bg-zinc-800/50 p-1.5 rounded-lg border border-gray-100 dark:border-zinc-800/50">
+                                        {item.positionNote && (
+                                            <div className="flex items-center gap-1.5 text-[10px] text-gray-500 mt-1 bg-gray-50 dark:bg-zinc-800/50 p-1.5 rounded-lg border border-gray-100 dark:border-zinc-800/50">
                                                 <MapPin size={10} className="text-fpt-orange shrink-0" />
-                                                <span className="italic line-clamp-1">{item.positionNotes}</span>
+                                                <span className="italic line-clamp-1">{item.positionNote}</span>
                                             </div>
                                         )}
                                     </div>
@@ -327,7 +352,14 @@ export const RoomAPAssignment: React.FC<Props> = ({ roomId }) => {
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-3 mt-4 pt-3 border-t border-gray-100 dark:border-zinc-800 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300">
+                                <div className="flex items-center gap-3 mt-2 pt-2 border-t border-gray-100 dark:border-zinc-800 transition-opacity duration-300">
+                                    <button
+                                        onClick={() => handleEditClick(item)}
+                                        className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 hover:text-fpt-orange transition-colors"
+                                    >
+                                        <Star size={12} className="rotate-12" />
+                                        Chỉnh sửa
+                                    </button>
                                     {!item.isPrimary && (
                                         <button
                                             onClick={() => handleSetPrimary(item.id)}
@@ -342,7 +374,7 @@ export const RoomAPAssignment: React.FC<Props> = ({ roomId }) => {
                                         className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 hover:text-red-500 transition-colors ml-auto"
                                     >
                                         <Trash2 size={12} />
-                                        Remove
+                                        Gỡ
                                     </button>
                                 </div>
                             </div>
@@ -350,6 +382,6 @@ export const RoomAPAssignment: React.FC<Props> = ({ roomId }) => {
                     })
                 )}
             </div>
-        </div >
+        </div>
     );
 };

@@ -150,3 +150,39 @@ class Semester {
     );
   }
 }
+
+class AttendanceConfig {
+  final bool faceRecognitionEnabled;
+  final bool wifiLocationEnabled;
+  final bool manualEnabled;
+  final int absentThresholdMinutes;
+  final int maxAttempts;
+
+  AttendanceConfig({
+    required this.faceRecognitionEnabled,
+    required this.wifiLocationEnabled,
+    required this.manualEnabled,
+    required this.absentThresholdMinutes,
+    required this.maxAttempts,
+  });
+
+  factory AttendanceConfig.fromJson(Map<String, dynamic> json) {
+    return AttendanceConfig(
+      faceRecognitionEnabled: json['faceRecognitionEnabled'] ?? true,
+      wifiLocationEnabled: json['wifiLocationEnabled'] ?? true,
+      manualEnabled: json['manualEnabled'] ?? true,
+      absentThresholdMinutes: json['absentThresholdMinutes'] ?? 15,
+      maxAttempts: json['maxAttempts'] ?? 5,
+    );
+  }
+
+  factory AttendanceConfig.defaultConfig() {
+    return AttendanceConfig(
+      faceRecognitionEnabled: true,
+      wifiLocationEnabled: true,
+      manualEnabled: true,
+      absentThresholdMinutes: 15,
+      maxAttempts: 5,
+    );
+  }
+}

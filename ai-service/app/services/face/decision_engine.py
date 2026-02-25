@@ -68,7 +68,8 @@ class DecisionEngine:
         quality_passed = True
         if is_reg:
             # Ultra-lenient for registration to ensure a face is captured
-            if laplacian < 15.0: quality_passed = False 
+            # Relaxed from 15.0 to 10.0 for better usability on all devices
+            if laplacian < 10.0: quality_passed = False 
             if face_coverage < 0.20: quality_passed = False 
         else:
             if laplacian < 60.0: quality_passed = False 
@@ -150,8 +151,10 @@ class DecisionEngine:
         
         if not passive_liveness_passed and not fas_skipped and passive_liveness_score < 0.85:
             # AI is CERTAIN it's fake (score below its own threshold)
-            veto_triggered = True
-            veto_reason = f"Silent-FAS (Phát hiện đặc điểm giả mạo) - Score: {passive_liveness_score:.2%}"
+            # Registration is more lenient on absolute FAS vetoes
+            if not is_reg or passive_liveness_score < 0.70:
+                veto_triggered = True
+                veto_reason = f"Silent-FAS (Phát hiện đặc điểm giả mạo) - Score: {passive_liveness_score:.2%}"
         elif actual_replay_score > rej_replay and physical_votes_real != "OVERRIDDEN":
             # Overwhelming physical evidence of a screen
             veto_triggered = True
