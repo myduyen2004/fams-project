@@ -756,6 +756,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                 .courseCode(classSection.getCourse().getCode())
                 .courseName(classSection.getCourse().getName())
                 .semesterName(classSection.getSemester().getName())
+                .semesterCode(classSection.getSemester().getCode())
                 .majorName(specializationName)
                 .courseYear("k19")
                 .studentCount(classSection.getCurrentEnrollment())

@@ -30,7 +30,7 @@ export interface AppNotification {
     description: string;
     isRead: boolean;
     timestamp: string;
-    type?: 'SYSTEM' | 'ALERT' | 'IMPORT' | 'CHAT'| 'SCHEDULE';
+    type?: 'SYSTEM' | 'ALERT' | 'IMPORT' | 'CHAT' | 'SCHEDULE' | 'ACADEMIC';
     targetUrl?: string;
     senderName?: string;
     senderFullName?: string;

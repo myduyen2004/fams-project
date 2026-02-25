@@ -147,7 +147,7 @@ public class LecturerController {
 
                 // 3. Check Student Conflict
                 long studentConflictCount = timetableSlotRepository.countStudentConflicts(
-                                className, targetDate, slotNumber, originalSlotId);
+                                className, targetDate, slotNumber);
                 if (studentConflictCount > 0) {
                         java.util.Map<String, Object> conflict = new java.util.HashMap<>();
                         conflict.put("type", "STUDENT");

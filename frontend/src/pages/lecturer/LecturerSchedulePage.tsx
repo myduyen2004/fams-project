@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { Card } from '../../components/common/Card';
 import {
@@ -10,11 +10,15 @@ import {
     X,
     ChevronLeft,
     ChevronRight,
-    BookOpen
+    BookOpen,
+    Plus,
+    FileText
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import timetableService, { WeeklyTimetableDTO, TimetableSlotDTO } from '../../services/api/timetableService';
 import attendanceService from '../../services/api/attendanceService';
+import { assignmentService } from '../../services/api/assignmentService';
+import { uploadFile } from '../../services/utils/fileUploadService';
 import { useNavigate } from 'react-router-dom';
 
 const SLOTS = [
@@ -31,6 +35,57 @@ export const LecturerSchedulePage: React.FC = () => {
     const [selectedSlot, setSelectedSlot] = useState<TimetableSlotDTO | null>(null);
     const [exporting, setExporting] = useState(false);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+    // Create Assignment Dialog state
+    const [showCreateDialog, setShowCreateDialog] = useState(false);
+    const [creating, setCreating] = useState(false);
+    const [createForSlotId, setCreateForSlotId] = useState<number | null>(null);
+    const [createForClassName, setCreateForClassName] = useState<string>('');
+    const [newTitle, setNewTitle] = useState('');
+    const [newDescription, setNewDescription] = useState('');
+    const [newDueDate, setNewDueDate] = useState('');
+    const [newRefUrl, setNewRefUrl] = useState('');
+    const [newRefName, setNewRefName] = useState('');
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [uploadingFile, setUploadingFile] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const resetCreateForm = () => {
+        setNewTitle('');
+        setNewDescription('');
+        setNewDueDate('');
+        setNewRefUrl('');
+        setNewRefName('');
+        setSelectedFile(null);
+        setCreateForSlotId(null);
+        setCreateForClassName('');
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (file.size > 10 * 1024 * 1024) {
+            toast.error('File quá lớn. Tối đa 10MB.');
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+        try {
+            setUploadingFile(true);
+            setSelectedFile(file);
+            const result = await uploadFile(file);
+            setNewRefUrl(result.secure_url || result.url);
+            setNewRefName(file.name);
+            toast.success('Upload tài liệu thành công');
+        } catch (err: any) {
+            toast.error(err.message || 'Upload thất bại');
+            setSelectedFile(null);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        } finally {
+            setUploadingFile(false);
+        }
+    };
+
     const YEARS = [2024, 2025, 2026];
 
     const getStartOfWeek = (date: Date) => {
@@ -205,7 +260,55 @@ export const LecturerSchedulePage: React.FC = () => {
     };
 
     const navigate = useNavigate();
-    
+
+    const handleOpenCreateDialog = () => {
+        if (!selectedSlot) return;
+        setCreateForSlotId(selectedSlot.id);
+        setCreateForClassName(selectedSlot.className || '');
+        setShowCreateDialog(true);
+    };
+
+    const handleCreate = async () => {
+        if (!newTitle.trim()) {
+            toast.error('Vui lòng nhập tiêu đề bài tập');
+            return;
+        }
+        const targetClassName = createForClassName || selectedSlot?.className || '';
+        if (!targetClassName) {
+            toast.error('Không xác định được lớp học');
+            return;
+        }
+        if (newDueDate) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (new Date(newDueDate) < today) {
+                toast.error('Hạn nộp bài phải từ hôm nay trở đi');
+                return;
+            }
+        }
+        try {
+            setCreating(true);
+            await assignmentService.createAssignment({
+                className: targetClassName,
+                timetableSlotId: createForSlotId || undefined,
+                title: newTitle.trim(),
+                description: newDescription.trim() || undefined,
+                dueDate: newDueDate || undefined,
+                referenceUrl: newRefUrl.trim() || undefined,
+                referenceName: newRefName.trim() || undefined
+            });
+            toast.success('Đã tạo bài tập thành công');
+            setShowCreateDialog(false);
+            setSelectedSlot(null);
+            resetCreateForm();
+            fetchTimetable(); // Refresh to show new assignment indicator
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || 'Không thể tạo bài tập');
+        } finally {
+            setCreating(false);
+        }
+    };
+
     const handleStartAttendance = async () => {
         if (!selectedSlot) return;
         try {
@@ -385,6 +488,12 @@ export const LecturerSchedulePage: React.FC = () => {
                                                                     <div className="text-gray-500 dark:text-gray-400 truncate">
                                                                         Phòng: {slotData.roomCode || slotData.roomName}
                                                                     </div>
+                                                                    {slotData.assignmentId && (
+                                                                        <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400 mt-1">
+                                                                            <FileText size={10} />
+                                                                            <span className="truncate">{slotData.assignmentTitle}</span>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         ) : (
@@ -478,6 +587,35 @@ export const LecturerSchedulePage: React.FC = () => {
                                 </div>
                             </div>
 
+
+                            {/* Assignment info section */}
+                            {selectedSlot.assignmentId ? (
+                                <div className="flex items-start gap-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
+                                    <div className="w-8 flex justify-center pt-1">
+                                        <FileText className="text-blue-500" size={20} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">Bài tập đã giao</p>
+                                        <p className="font-bold text-gray-900 dark:text-white text-sm mt-0.5">
+                                            {selectedSlot.assignmentTitle}
+                                        </p>
+                                        <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${selectedSlot.assignmentStatus === 'OPEN'
+                                            ? 'bg-green-100 text-green-700 border border-green-200'
+                                            : 'bg-gray-100 text-gray-600 border border-gray-200'
+                                            }`}>
+                                            {selectedSlot.assignmentStatus === 'OPEN' ? 'Đang mở' : 'Đã đóng'}
+                                        </span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-4 p-3 bg-gray-50 dark:bg-zinc-800/50 rounded-lg border border-dashed border-gray-200 dark:border-zinc-700">
+                                    <div className="w-8 flex justify-center">
+                                        <FileText className="text-gray-300" size={20} />
+                                    </div>
+                                    <p className="text-sm text-gray-400 dark:text-gray-500 italic">Chưa có bài tập cho buổi này</p>
+                                </div>
+                            )}
+
                             <div className="flex items-center gap-4 pt-2 border-t border-gray-100 dark:border-zinc-800 mt-2">
                                 <div className="flex items-center gap-2 flex-1 justify-between">
                                     <p className="text-sm text-gray-500 dark:text-gray-400">Trạng thái:</p>
@@ -485,6 +623,14 @@ export const LecturerSchedulePage: React.FC = () => {
                                         {getStatusLabel(selectedSlot)}
                                     </span>
                                 </div>
+                                {!selectedSlot.assignmentId && (
+                                    <button
+                                        onClick={handleOpenCreateDialog}
+                                        className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-bold shadow-md hover:bg-blue-600 transition-colors flex items-center gap-2"
+                                    >
+                                        <Plus size={16} /> Tạo bài tập
+                                    </button>
+                                )}
                                 <button
                                     onClick={handleStartAttendance}
                                     className="px-4 py-2 bg-fpt-orange text-white rounded-lg text-sm font-bold shadow-md hover:bg-orange-600 transition-colors flex items-center gap-2"
@@ -502,6 +648,72 @@ export const LecturerSchedulePage: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            {/* Create Assignment Dialog */}
+            {showCreateDialog && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-lg shadow-xl border border-gray-100 dark:border-zinc-800 animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800">
+                            <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <Plus className="w-5 h-5 text-fpt-orange" /> Tạo bài tập mới
+                            </h2>
+                            <button onClick={() => { setShowCreateDialog(false); resetCreateForm(); }}
+                                className="text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
+                                    Tiêu đề <span className="text-red-500">*</span>
+                                </label>
+                                <input type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="VD: Bài tập tuần 3"
+                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange outline-none" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Mô tả</label>
+                                <textarea value={newDescription} onChange={e => setNewDescription(e.target.value)} placeholder="Mô tả chi tiết bài tập..." rows={3}
+                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange outline-none resize-none" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
+                                    <Clock className="w-3.5 h-3.5 inline mr-1" /> Hạn nộp bài
+                                </label>
+                                <input type="datetime-local" value={newDueDate} onChange={e => setNewDueDate(e.target.value)}
+                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange outline-none" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
+                                    <BookOpen className="w-3.5 h-3.5 inline mr-1" /> Tài liệu tham khảo
+                                </label>
+                                <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.jpg,.png"
+                                    className="hidden" />
+                                <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingFile}
+                                    className="w-full px-3 py-2.5 rounded-lg border border-dashed border-gray-300 dark:border-zinc-600 bg-gray-50 dark:bg-zinc-800 text-sm text-gray-500 hover:border-fpt-orange hover:text-fpt-orange transition-colors flex items-center justify-center gap-2">
+                                    {uploadingFile ? <><Loader2 size={14} className="animate-spin" /> Đang upload...</> : selectedFile ? <><FileText size={14} /> {selectedFile.name}</> : 'Chọn file (tối đa 10MB)'}
+                                </button>
+                                {newRefUrl && (
+                                    <div className="mt-2 flex items-center gap-2 text-xs text-green-600">
+                                        <FileText size={12} />
+                                        <a href={newRefUrl} target="_blank" rel="noopener noreferrer" className="underline truncate max-w-[300px]">{newRefName || 'Xem file'}</a>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 dark:border-zinc-800">
+                            <button onClick={() => { setShowCreateDialog(false); resetCreateForm(); }}
+                                className="px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-zinc-400 hover:text-gray-800 transition-colors">
+                                Hủy
+                            </button>
+                            <button onClick={handleCreate} disabled={creating || !newTitle.trim() || uploadingFile}
+                                className="inline-flex items-center gap-2 px-5 py-2.5 bg-fpt-orange hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
+                                {creating ? <><Loader2 size={16} className="animate-spin" /> Đang tạo...</> : <><Plus className="w-4 h-4" /> Tạo bài tập</>}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </LecturerLayout>
     );
 };
