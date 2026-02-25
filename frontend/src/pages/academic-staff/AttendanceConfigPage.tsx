@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Settings, 
-  Save, 
   UserCheck, 
-  Wifi, 
   ShieldCheck, 
-  AlertCircle
+  AlertCircle,
+  ChevronRight,
+  ArrowLeft,
+  Check,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import apiClient from '../../services/api/authService';
@@ -14,40 +18,27 @@ import apiClient from '../../services/api/authService';
 interface AttendanceConfig {
   id?: number;
   manualEnabled: boolean;
-  lateThresholdMinutes: number;
   absentThresholdMinutes: number;
-  openBeforeMinutes: number;
-  closeAfterMinutes: number;
   minAttendancePercentage: number;
   faceRecognitionEnabled: boolean;
-  livenessEnabled: boolean;
   maxAttempts: number;
-  faceMatchThreshold: number;
   wifiLocationEnabled: boolean;
-  forceCampusWifi: boolean;
-  minMatchedAps: number;
-  wifiRssiThreshold: number;
 }
 
 const DEFAULT_CONFIG: AttendanceConfig = {
   manualEnabled: true,
-  lateThresholdMinutes: 15,
   absentThresholdMinutes: 30,
-  openBeforeMinutes: 15,
-  closeAfterMinutes: 15,
   minAttendancePercentage: 80,
   faceRecognitionEnabled: true,
-  livenessEnabled: true,
   maxAttempts: 5,
-  faceMatchThreshold: 0.85,
-  wifiLocationEnabled: false,
-  forceCampusWifi: false,
-  minMatchedAps: 1,
-  wifiRssiThreshold: -75
+  wifiLocationEnabled: false
 };
 
 export const AttendanceConfigPage: React.FC = () => {
+  const navigate = useNavigate();
   const [config, setConfig] = useState<AttendanceConfig>(DEFAULT_CONFIG);
+  const [originalConfig, setOriginalConfig] = useState<AttendanceConfig | null>(null);
+  const [isReadOnly, setIsReadOnly] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -57,6 +48,7 @@ export const AttendanceConfigPage: React.FC = () => {
         const response = await apiClient.get('/attendance-configs');
         if (response.data) {
           setConfig(response.data);
+          setOriginalConfig(response.data);
         }
       } catch (error) {
         console.error('Failed to fetch config:', error);
@@ -68,11 +60,21 @@ export const AttendanceConfigPage: React.FC = () => {
     fetchConfig();
   }, []);
 
+  const handleCancelChanges = () => {
+    if (originalConfig) {
+      setConfig(originalConfig);
+      setIsReadOnly(true);
+      toast.success('Đã hủy các thay đổi');
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
       await apiClient.put('/attendance-configs', config);
       toast.success('Cập nhật cấu hình thành công');
+      setOriginalConfig(config);
+      setIsReadOnly(true);
     } catch (error) {
       console.error('Failed to save config:', error);
       toast.error('Có lỗi xảy ra khi lưu cấu hình');
@@ -84,20 +86,18 @@ export const AttendanceConfigPage: React.FC = () => {
   const ConfigGroup: React.FC<{ 
     title: string; 
     icon: React.ReactNode; 
-    description: string;
     children: React.ReactNode;
-  }> = ({ title, icon, description, children }) => (
-    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md">
-      <div className="p-6 border-b border-gray-50 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/30">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg text-fpt-orange">
+  }> = ({ title, icon, children }) => (
+    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-sm overflow-hidden flex flex-col h-full">
+      <div className="px-5 py-3 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between bg-gray-50/30 dark:bg-zinc-800/30">
+        <div className="flex items-center gap-3">
+          <div className="text-gray-400">
             {icon}
           </div>
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white uppercase tracking-tight">{title}</h2>
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white">{title}</h2>
         </div>
-        <p className="text-sm text-gray-500 dark:text-zinc-400 ml-11">{description}</p>
       </div>
-      <div className="p-8 space-y-6">
+      <div className="p-6 space-y-6">
         {children}
       </div>
     </div>
@@ -109,24 +109,30 @@ export const AttendanceConfigPage: React.FC = () => {
     value: boolean;
     onChange: (val: boolean) => void;
   }> = ({ label, description, value, onChange }) => (
-    <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-zinc-800/20 border border-gray-100 dark:border-zinc-800/50 transition-colors hover:bg-gray-100/50 dark:hover:bg-zinc-800/40">
+    <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-zinc-800/20 border border-gray-100 dark:border-zinc-800/50 min-h-[85px]">
       <div className="flex-1 pr-4">
         <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-0.5">{label}</h4>
-        <p className="text-xs text-gray-500 dark:text-zinc-400">{description}</p>
+        <p className="text-xs text-gray-500 dark:text-zinc-400 leading-relaxed">{description}</p>
       </div>
-      <button
-        type="button"
-        onClick={() => onChange(!value)}
-        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-          value ? 'bg-fpt-orange' : 'bg-gray-200 dark:bg-zinc-700'
-        }`}
-      >
-        <span
-          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-            value ? 'translate-x-5' : 'translate-x-0'
-          }`}
-        />
-      </button>
+      <div className="flex flex-col items-center justify-center gap-1.5 w-44 shrink-0 border-l border-gray-100 dark:border-zinc-800/50 pl-4">
+        <button
+          type="button"
+          disabled={isReadOnly}
+          onClick={() => onChange(!value)}
+          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-500 ease-in-out focus:outline-none active:scale-95 ${
+            value ? 'bg-fpt-orange shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)]' : 'bg-gray-300 dark:bg-zinc-700'
+          } ${isReadOnly ? 'opacity-60 cursor-not-allowed scale-100' : 'hover:brightness-110'}`}
+        >
+          <span
+            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition-transform duration-500 cubic-bezier(0.34, 1.56, 0.64, 1) ${
+              value ? 'translate-x-5' : 'translate-x-0'
+            }`}
+          />
+        </button>
+        <span className={`text-[10px] font-black tracking-tighter uppercase ${value ? 'text-fpt-orange' : 'text-gray-400'}`}>
+          {value ? 'ĐANG BẬT' : 'ĐANG TẮT'}
+        </span>
+      </div>
     </div>
   );
 
@@ -140,28 +146,81 @@ export const AttendanceConfigPage: React.FC = () => {
     step?: number;
     unit?: string;
     onChange: (val: any) => void;
-  }> = ({ label, description, type = "number", value, min, max, step, unit, onChange }) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center p-4 rounded-xl border border-transparent hover:border-gray-100 dark:hover:border-zinc-800 transition-all">
-      <div>
-        <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-0.5">{label}</h4>
-        <p className="text-xs text-gray-500 dark:text-zinc-400">{description}</p>
+  }> = ({ label, description, type = "number", value, min, max, step = 1, unit, onChange }) => {
+    const handleIncrement = () => {
+      const newVal = (parseFloat(value) || 0) + step;
+      if (max !== undefined && newVal > max) return;
+      onChange(newVal);
+    };
+    const handleDecrement = () => {
+      const newVal = (parseFloat(value) || 0) - step;
+      if (min !== undefined && newVal < min) return;
+      onChange(newVal);
+    };
+
+    return (
+      <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50/50 dark:bg-zinc-800/20 border border-gray-100 dark:border-zinc-800/50 min-h-[85px]">
+        <div className="flex-1 pr-4">
+          <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-0.5">{label}</h4>
+          <p className="text-xs text-gray-500 dark:text-zinc-400 leading-relaxed">{description}</p>
+        </div>
+        <div className="w-44 shrink-0 border-l border-gray-100 dark:border-zinc-800/50 pl-4">
+          {isReadOnly ? (
+            <div className="bg-white dark:bg-zinc-800/50 rounded-lg px-2 py-2 text-xs font-bold text-gray-900 dark:text-white border border-gray-100 dark:border-zinc-700 text-center shadow-sm">
+              {value}
+              {unit && <span className="text-[10px] text-gray-400 ml-1.5 uppercase tracking-tighter">{unit}</span>}
+            </div>
+          ) : (
+            <div className="flex items-center bg-white dark:bg-zinc-800 border-2 border-gray-200 dark:border-zinc-700 rounded-lg overflow-hidden transition-all hover:border-orange-400 focus-within:border-orange-500 shadow-sm">
+              {/* Controls on the far left */}
+              <div className="flex flex-col border-r border-gray-100 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800">
+                <button 
+                  type="button"
+                  onClick={handleIncrement}
+                  className="px-2 py-1 flex items-center justify-center hover:bg-orange-100 dark:hover:bg-orange-900/30 text-gray-400 hover:text-orange-600 border-b border-gray-100 dark:border-zinc-700 transition-colors"
+                >
+                  <ChevronUp size={12} />
+                </button>
+                <button 
+                  type="button"
+                  onClick={handleDecrement}
+                  className="px-2 py-1 flex items-center justify-center hover:bg-orange-100 dark:hover:bg-orange-900/30 text-gray-400 hover:text-orange-600 transition-colors"
+                >
+                  <ChevronDown size={12} />
+                </button>
+              </div>
+
+              {/* Input field in the middle */}
+              <input
+                type={type === 'number' ? 'text' : type}
+                value={value}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (type === 'number') {
+                    if (val === '' || /^-?\d*\.?\d*$/.test(val)) {
+                      onChange(val);
+                    }
+                  } else {
+                    onChange(val);
+                  }
+                }}
+                className="w-full bg-transparent py-2 px-2 text-xs font-black text-gray-900 dark:text-white outline-none border-none focus:ring-0 text-center"
+              />
+
+              {/* Unit on the right */}
+              {unit && (
+                <div className="bg-gray-50 dark:bg-zinc-800/50 border-l border-gray-100 dark:border-zinc-700 px-2 py-2.5 shrink-0 flex items-center min-w-[40px] justify-center text-center">
+                  <span className="text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-tighter italic">
+                    {unit}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-      <div className="relative flex items-center">
-        <input
-          type={type}
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          onChange={(e) => onChange(type === 'number' ? parseFloat(e.target.value) : e.target.value)}
-          className="w-full bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg px-4 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-fpt-orange transition-all"
-        />
-        {unit && (
-          <span className="absolute right-3 text-xs font-medium text-gray-400 dark:text-zinc-500">{unit}</span>
-        )}
-      </div>
-    </div>
-  );
+    );
+  };
 
   if (loading) {
     return (
@@ -176,43 +235,65 @@ export const AttendanceConfigPage: React.FC = () => {
 
   return (
     <AcademicStaffLayout pageTitle="Cấu hình điểm danh">
-      <div className="max-w-5xl mx-auto space-y-8 pb-20">
-        {/* Page Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-fpt-orange mb-1">
-              <div className="p-1.5 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
-                <Settings size={20} className="animate-spin-slow" />
-              </div>
-              <span className="text-xs font-bold uppercase tracking-widest">System Settings</span>
-            </div>
-            <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">CÀI ĐẶT ĐIỂM DANH</h1>
-            <p className="text-sm text-gray-500 dark:text-zinc-400">Thiết lập các tham số vận hành cho hệ thống ghi nhận sự diện.</p>
+      <div className="max-w-7xl mx-auto space-y-3 pb-20 pt-2">
+        {/* Top Header & Breadcrumb */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3 text-sm text-gray-500">
+            <button onClick={() => navigate('/academic-staff/dashboard')} className="hover:text-orange-600 transition-colors flex items-center gap-1">
+              <ArrowLeft className="w-4 h-4" /> Bảng điều khiển
+            </button>
+            <ChevronRight className="w-4 h-4 text-gray-300" />
+            <span className="text-gray-900 dark:text-white font-bold uppercase tracking-tight">Cài đặt điểm danh</span>
+            
+            {isReadOnly ? (
+              <span className="ml-2 px-2.5 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-bold border border-blue-100 dark:border-blue-800/30 flex items-center gap-1.5 uppercase tracking-wide">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                Chế độ xem
+              </span>
+            ) : (
+              <span className="ml-2 px-2.5 py-0.5 bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full text-[10px] font-bold border border-orange-100 dark:border-orange-800/30 flex items-center gap-1.5 uppercase tracking-wide">
+                <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                Đang chỉnh sửa
+              </span>
+            )}
           </div>
           
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center justify-center gap-2 group relative overflow-hidden bg-fpt-orange hover:bg-orange-600 disabled:bg-gray-400 text-white px-8 py-3 rounded-xl font-bold text-sm shadow-lg shadow-orange-500/25 transition-all active:scale-95"
-          >
-            <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-            {saving ? (
-              <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+          <div className="flex gap-2">
+            {isReadOnly ? (
+              <button 
+                onClick={() => setIsReadOnly(false)}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs font-bold text-white shadow-lg shadow-blue-600/20 transition-all active:scale-95 flex items-center gap-2"
+              >
+                <Settings className="w-3.5 h-3.5" /> CHỈNH SỬA
+              </button>
             ) : (
-              <Save size={18} />
+              <>
+                <button 
+                  onClick={handleCancelChanges}
+                  className="px-4 py-2 border border-gray-200 dark:border-zinc-700 rounded-lg text-xs font-bold text-gray-600 dark:text-zinc-400 bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 transition-all"
+                >
+                  HỦY THAY ĐỔI
+                </button>
+                <button 
+                  onClick={handleSave} 
+                  disabled={saving}
+                  className="px-6 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg text-xs font-bold text-white shadow-lg shadow-orange-600/20 transition-all active:scale-95 flex items-center gap-2"
+                >
+                  {saving ? <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                  LƯU CẤU HÌNH
+                </button>
+              </>
             )}
-            <span>{saving ? 'ĐANG LƯU...' : 'LƯU THAY ĐỔI'}</span>
-          </button>
+          </div>
         </div>
 
-        {/* Settings Content */}
-        <div className="grid grid-cols-1 gap-8">
+        {/* Content Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           
           {/* Cấu hình chung */}
           <ConfigGroup
             title="Cấu hình điểm danh chung"
             icon={<UserCheck size={20} />}
-            description="Thiết lập các quy tắc cơ bản và tham số thời gian cho buổi học."
           >
             <div className="space-y-6">
               <ToggleItem
@@ -222,39 +303,13 @@ export const AttendanceConfigPage: React.FC = () => {
                 onChange={(val) => setConfig({ ...config, manualEnabled: val })}
               />
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-                <InputItem
-                  label="Thời gian tính đi muộn"
-                  description="Sau bao lâu kể từ khi bắt đầu slot sẽ tính là Present - Late."
-                  value={config.lateThresholdMinutes}
-                  unit="phút"
-                  onChange={(val) => setConfig({ ...config, lateThresholdMinutes: val })}
-                />
-                <InputItem
-                  label="Thời gian tính vắng mặt"
-                  description="Sau bao lâu sẽ không thể Check-in và tính là Absent."
-                  value={config.absentThresholdMinutes}
-                  unit="phút"
-                  onChange={(val) => setConfig({ ...config, absentThresholdMinutes: val })}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <InputItem
-                  label="Mở điểm danh trước"
-                  description="Sinh viên có thể Check-in trước khi slot bắt đầu."
-                  value={config.openBeforeMinutes}
-                  unit="phút"
-                  onChange={(val) => setConfig({ ...config, openBeforeMinutes: val })}
-                />
-                <InputItem
-                  label="Đóng điểm danh sau"
-                  description="Thời gian gia hạn để ghi nhận sau khi slot kết thúc."
-                  value={config.closeAfterMinutes}
-                  unit="phút"
-                  onChange={(val) => setConfig({ ...config, closeAfterMinutes: val })}
-                />
-              </div>
+              <InputItem
+                label="Thời gian điểm danh tối đa"
+                description="Tổng thời gian kể từ khi bắt đầu slot để sinh viên có thể tự thực hiện điểm danh."
+                value={config.absentThresholdMinutes}
+                unit="PHÚT"
+                onChange={(val) => setConfig({ ...config, absentThresholdMinutes: val })}
+              />
 
               <InputItem
                 label="Tỉ lệ hiện diện tối thiểu"
@@ -268,11 +323,10 @@ export const AttendanceConfigPage: React.FC = () => {
             </div>
           </ConfigGroup>
 
-          {/* Cấu hình Gương mặt */}
+          {/* Cấu hình Gương mặt & Vị trí */}
           <ConfigGroup
-            title="Cấu hình điểm danh gương mặt"
+            title="Xác thực sinh trắc học & Vị trí"
             icon={<ShieldCheck size={20} />}
-            description="Điều chỉnh độ chính xác và bảo mật cho công nghệ sinh trắc học."
           >
             <div className="space-y-6">
               <ToggleItem
@@ -283,74 +337,20 @@ export const AttendanceConfigPage: React.FC = () => {
               />
               
               <ToggleItem
-                label="Bắt buộc kiểm tra Liveness"
-                description="Yêu cầu sinh viên thực hiện các hành động thực tế (chớp mắt, mỉm cười) để chống spoofing."
-                value={config.livenessEnabled}
-                onChange={(val) => setConfig({ ...config, livenessEnabled: val })}
-              />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-                <InputItem
-                  label="Số lần thử tối đa"
-                  description="Giới hạn số lần Check-in thất bại trước khi yêu cầu xác thực thủ công."
-                  value={config.maxAttempts}
-                  unit="lần"
-                  min={1}
-                  onChange={(val) => setConfig({ ...config, maxAttempts: val })}
-                />
-                <InputItem
-                  label="Ngưỡng khớp (Matching)"
-                  description="Độ tương đồng tối thiểu để xác nhận danh tính thành công."
-                  value={config.faceMatchThreshold}
-                  step={0.01}
-                  min={0.5}
-                  max={1.0}
-                  onChange={(val) => setConfig({ ...config, faceMatchThreshold: val })}
-                />
-              </div>
-            </div>
-          </ConfigGroup>
-
-          {/* Cấu hình vị trí WiFi */}
-          <ConfigGroup
-            title="CÀI ĐẶT XÁC THỰC VỊ TRÍ / WIFI"
-            icon={<Wifi size={20} />}
-            description="Đảm bảo sinh viên đang có mặt tại đúng phòng học quy định."
-          >
-            <div className="space-y-6">
-              <ToggleItem
                 label="Bật xác thực vị trí (WiFi)"
-                description="Yêu cầu quét tín hiệu WiFi để xác minh sinh viên đang ở trong phòng học."
+                description="Quét tín hiệu WiFi để xác minh sinh viên đang ở trong phòng học."
                 value={config.wifiLocationEnabled}
                 onChange={(val) => setConfig({ ...config, wifiLocationEnabled: val })}
               />
 
-              <ToggleItem
-                label="Bắt buộc kết nối WiFi trường"
-                description="Chỉ cho phép Check-in nếu sinh viên đang kết nối với mạng WiFi của trường."
-                value={config.forceCampusWifi}
-                onChange={(val) => setConfig({ ...config, forceCampusWifi: val })}
+              <InputItem
+                label="Số lần thử tối đa"
+                description="Giới hạn số lần Check-in thất bại trước khi yêu cầu xác thực thủ công."
+                value={config.maxAttempts}
+                unit="LẦN"
+                min={1}
+                onChange={(val) => setConfig({ ...config, maxAttempts: val })}
               />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-                <InputItem
-                  label="Số AP tối thiểu cần match"
-                  description="Số lượng Access Point hợp lệ tối thiểu phát hiện được trong phòng."
-                  value={config.minMatchedAps}
-                  unit="AP"
-                  min={1}
-                  onChange={(val) => setConfig({ ...config, minMatchedAps: val })}
-                />
-                <InputItem
-                  label="Ngưỡng tín hiệu (RSSI)"
-                  description="Cường độ tín hiệu tối thiểu để chấp nhận thiết bị đang ở gần AP (Càng gần 0 càng mạnh)."
-                  value={config.wifiRssiThreshold}
-                  unit="dBm"
-                  max={-30}
-                  min={-100}
-                  onChange={(val) => setConfig({ ...config, wifiRssiThreshold: val })}
-                />
-              </div>
             </div>
           </ConfigGroup>
 
@@ -364,7 +364,7 @@ export const AttendanceConfigPage: React.FC = () => {
           <div>
             <h4 className="text-sm font-bold text-amber-900 dark:text-amber-400 mb-1 leading-tight">Lưu ý quan trọng</h4>
             <p className="text-xs text-amber-800/80 dark:text-amber-500/80 leading-relaxed italic">
-              Việc thay đổi các cấu hình bảo mật (Ngưỡng khớp gương mặt, Liveness, WiFi) sẽ có hiệu lực ngay lập tức đối với tất cả các buổi điểm danh đang diễn ra. Hãy kiểm tra kỹ các tham số trước khi lưu.
+              Việc thay đổi các cấu hình bảo mật và thời gian sẽ có hiệu lực ngay lập tức đối với tất cả các buổi điểm danh đang diễn ra. Hãy kiểm tra kỹ các tham số trước khi lưu.
             </p>
           </div>
         </div>
