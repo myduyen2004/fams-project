@@ -33,7 +33,7 @@ class ScheduleController extends GetxController {
   void onInit() {
     super.onInit();
     _initializeData();
-    
+
     ever(selectedDate, (_) => _updateSelectedDaySlots());
     ever(weeklyTimetable, (_) => _updateSelectedDaySlots());
     ever(selectedSemester, (_) => _onSemesterChanged());
@@ -60,7 +60,7 @@ class ScheduleController extends GetxController {
   Future<void> fetchSemesters() async {
     final list = await _scheduleService.getSemesters();
     semesters.value = list;
-    
+
     // Auto select current semester based on today's date
     final now = DateTime.now();
     for (var s in list) {
@@ -71,10 +71,14 @@ class ScheduleController extends GetxController {
         }
       }
     }
-    
+
     // Fallback to first if none match
     if (selectedSemester.value == null && list.isNotEmpty) {
       selectedSemester.value = list.first;
+    }
+
+    if (selectedSemester.value == null) {
+      // Warning: selectedSemester is still null
     }
   }
 
@@ -83,7 +87,8 @@ class ScheduleController extends GetxController {
     if (sem != null && sem.startDate != null) {
       // If today is not in this semester, jump to semester start
       final now = DateTime.now();
-      if (now.isBefore(sem.startDate!) || (sem.endDate != null && now.isAfter(sem.endDate!))) {
+      if (now.isBefore(sem.startDate!) ||
+          (sem.endDate != null && now.isAfter(sem.endDate!))) {
         selectDate(sem.startDate!);
       }
     }
@@ -148,7 +153,7 @@ class ScheduleController extends GetxController {
         if (a.startTime == null || b.startTime == null) return 0;
         return a.startTime!.compareTo(b.startTime!);
       });
-      
+
       selectedDaySlots.value = sortedSlots;
       _updateActiveStatus();
     } else {
@@ -170,18 +175,21 @@ class ScheduleController extends GetxController {
       return;
     }
 
-    final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
-    
+    final timeStr =
+        "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+
     activeSlot.value = null;
     nextSlot.value = null;
 
     for (int i = 0; i < selectedDaySlots.length; i++) {
       final slot = selectedDaySlots[i];
       if (slot.startTime != null && slot.endTime != null) {
-        if (timeStr.compareTo(slot.startTime!) >= 0 && timeStr.compareTo(slot.endTime!) <= 0) {
+        if (timeStr.compareTo(slot.startTime!) >= 0 &&
+            timeStr.compareTo(slot.endTime!) <= 0) {
           activeSlot.value = slot;
           _calculateProgress(slot, now);
-        } else if (timeStr.compareTo(slot.startTime!) < 0 && nextSlot.value == null) {
+        } else if (timeStr.compareTo(slot.startTime!) < 0 &&
+            nextSlot.value == null) {
           nextSlot.value = slot;
         }
       }
@@ -192,13 +200,25 @@ class ScheduleController extends GetxController {
     try {
       final startParts = slot.startTime!.split(':');
       final endParts = slot.endTime!.split(':');
-      
-      final start = DateTime(now.year, now.month, now.day, int.parse(startParts[0]), int.parse(startParts[1]));
-      final end = DateTime(now.year, now.month, now.day, int.parse(endParts[0]), int.parse(endParts[1]));
-      
+
+      final start = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        int.parse(startParts[0]),
+        int.parse(startParts[1]),
+      );
+      final end = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        int.parse(endParts[0]),
+        int.parse(endParts[1]),
+      );
+
       final total = end.difference(start).inMinutes;
       final current = now.difference(start).inMinutes;
-      
+
       if (total > 0) {
         activeProgress.value = (current / total).clamp(0.0, 1.0);
         final remaining = total - current;
@@ -217,6 +237,7 @@ class ScheduleController extends GetxController {
     DateTime getMonday(DateTime d) {
       return d.subtract(Duration(days: d.weekday - 1));
     }
+
     final m1 = getMonday(d1);
     final m2 = getMonday(d2);
     return m1.year == m2.year && m1.month == m2.month && m1.day == m2.day;
@@ -228,22 +249,36 @@ class ScheduleController extends GetxController {
   Future<void> saveAllSemesterToCalendar() async {
     final user = _authController.currentUser.value;
     final semester = selectedSemester.value;
-    
+
     if (user == null || semester == null) {
-      Get.snackbar('Lỗi', 'Không thể lấy thông tin người dùng hoặc học kỳ', snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar(
+        'Lỗi',
+        'Không thể lấy thông tin người dùng hoặc học kỳ',
+        snackPosition: SnackPosition.BOTTOM,
+      );
       return;
     }
 
     try {
       isSavingToCalendar.value = true;
-      
+
       // Fetch all slots for the semester
       final List<TimetableSlot> slots = isLecturer
-          ? await _scheduleService.getLecturerSemesterSlots(user.id, semester.code)
-          : await _scheduleService.getStudentSemesterSlots(user.id, semester.code);
+          ? await _scheduleService.getLecturerSemesterSlots(
+              user.id,
+              semester.code,
+            )
+          : await _scheduleService.getStudentSemesterSlots(
+              user.id,
+              semester.code,
+            );
 
       if (slots.isEmpty) {
-        Get.snackbar('Thông báo', 'Không có lịch học trong học kỳ này', snackPosition: SnackPosition.BOTTOM);
+        Get.snackbar(
+          'Thông báo',
+          'Không có lịch học trong học kỳ này',
+          snackPosition: SnackPosition.BOTTOM,
+        );
         return;
       }
 
@@ -257,28 +292,44 @@ class ScheduleController extends GetxController {
       icsContent.writeln('X-WR-CALNAME:${semester.name}');
 
       for (final slot in slots) {
-        if (slot.startTime == null || slot.endTime == null || slot.date == null) continue;
+        if (slot.startTime == null || slot.endTime == null || slot.date == null)
+          continue;
 
         final date = DateTime.parse(slot.date.toString());
         final startParts = slot.startTime!.split(':');
         final endParts = slot.endTime!.split(':');
 
-        final start = DateTime(date.year, date.month, date.day, 
-            int.parse(startParts[0]), int.parse(startParts[1]));
-        final end = DateTime(date.year, date.month, date.day, 
-            int.parse(endParts[0]), int.parse(endParts[1]));
+        final start = DateTime(
+          date.year,
+          date.month,
+          date.day,
+          int.parse(startParts[0]),
+          int.parse(startParts[1]),
+        );
+        final end = DateTime(
+          date.year,
+          date.month,
+          date.day,
+          int.parse(endParts[0]),
+          int.parse(endParts[1]),
+        );
 
-        final uid = '${slot.id ?? DateTime.now().millisecondsSinceEpoch}@fams.edu.vn';
+        final uid =
+            '${slot.id ?? DateTime.now().millisecondsSinceEpoch}@fams.edu.vn';
         final dtStart = _formatIcsDate(start);
         final dtEnd = _formatIcsDate(end);
-        
+
         icsContent.writeln('BEGIN:VEVENT');
         icsContent.writeln('UID:$uid');
         icsContent.writeln('DTSTAMP:${_formatIcsDate(DateTime.now())}');
         icsContent.writeln('DTSTART:$dtStart');
         icsContent.writeln('DTEND:$dtEnd');
-        icsContent.writeln('SUMMARY:${slot.courseCode} - ${slot.courseName ?? ''}');
-        icsContent.writeln('DESCRIPTION:Lớp: ${slot.className}\\nGiảng viên: ${slot.lecturerName}\\nPhòng: ${slot.roomCode}');
+        icsContent.writeln(
+          'SUMMARY:${slot.courseCode} - ${slot.courseName ?? ''}',
+        );
+        icsContent.writeln(
+          'DESCRIPTION:Lớp: ${slot.className}\\nGiảng viên: ${slot.lecturerName}\\nPhòng: ${slot.roomCode}',
+        );
         icsContent.writeln('LOCATION:${slot.roomCode ?? 'Online'}');
         icsContent.writeln('END:VEVENT');
       }
@@ -292,29 +343,41 @@ class ScheduleController extends GetxController {
 
       // Open the file with calendar app (Google Calendar should be an option)
       final result = await OpenFilex.open(file.path, type: 'text/calendar');
-      
+
       if (result.type == ResultType.done) {
         Get.snackbar(
-          'Thành công', 
+          'Thành công',
           'Đã mở file lịch với ${slots.length} sự kiện. Chọn "Add all" trong Google Calendar!',
           snackPosition: SnackPosition.BOTTOM,
           duration: const Duration(seconds: 4),
         );
       } else {
         Get.snackbar(
-          'Thông báo', 
+          'Thông báo',
           'Không tìm thấy ứng dụng lịch. Vui lòng cài Google Calendar.',
           snackPosition: SnackPosition.BOTTOM,
         );
       }
     } on DioException catch (e) {
       if (e.response?.statusCode == 403) {
-        Get.snackbar('Lỗi', 'Lịch học kỳ này chưa được công bố', snackPosition: SnackPosition.BOTTOM);
+        Get.snackbar(
+          'Lỗi',
+          'Lịch học kỳ này chưa được công bố',
+          snackPosition: SnackPosition.BOTTOM,
+        );
       } else {
-        Get.snackbar('Lỗi', 'Không thể tải lịch học: ${e.message}', snackPosition: SnackPosition.BOTTOM);
+        Get.snackbar(
+          'Lỗi',
+          'Không thể tải lịch học: ${e.message}',
+          snackPosition: SnackPosition.BOTTOM,
+        );
       }
     } catch (e) {
-      Get.snackbar('Lỗi', 'Đã xảy ra lỗi: $e', snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar(
+        'Lỗi',
+        'Đã xảy ra lỗi: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
     } finally {
       isSavingToCalendar.value = false;
     }

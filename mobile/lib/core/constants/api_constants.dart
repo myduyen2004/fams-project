@@ -4,9 +4,11 @@ class ApiConstants {
 
   // Base URLs
   static const String baseUrlLocal = 'http://10.0.2.2:8080'; // Android Emulator
-  static const String baseUrlUsb = 'http://127.0.0.1:8080'; // Real device via USB (adb reverse)
-  static const String baseUrlLocalDevice = 'http://10.0.14.210:8080'; // Real device via WiFi
-  
+  static const String baseUrlUsb =
+      'http://127.0.0.1:8080'; // Real device via USB (adb reverse)
+  static const String baseUrlLocalDevice =
+      'http://10.0.14.210:8080'; // Real device via WiFi
+
   // Current Environment
   static const String baseUrl = baseUrlUsb; // Use USB (adb reverse)
 
@@ -42,4 +44,11 @@ class ApiConstants {
   static const String keyRefreshToken = 'refresh_token';
   static const String keyUser = 'user_data';
   static const String keyIsLoggedIn = 'is_logged_in';
+
+  // WebSocket URL
+  static String get wsUrl => '${baseUrl.replaceFirst('http', 'ws')}/ws';
+
+  // Chat Endpoints
+  static const String chatGroups = '/api/v1/chat-groups';
+  static const String chatMessages = '/api/v1/chat-messages';
 }
