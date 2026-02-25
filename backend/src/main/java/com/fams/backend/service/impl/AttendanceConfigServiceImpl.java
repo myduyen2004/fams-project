@@ -36,21 +36,13 @@ public class AttendanceConfigServiceImpl implements AttendanceConfigService {
 
         // Manual copy of fields to avoid overwriting configKey, id, or timestamps
         existing.setManualEnabled(config.getManualEnabled());
-        existing.setLateThresholdMinutes(config.getLateThresholdMinutes());
         existing.setAbsentThresholdMinutes(config.getAbsentThresholdMinutes());
-        existing.setOpenBeforeMinutes(config.getOpenBeforeMinutes());
-        existing.setCloseAfterMinutes(config.getCloseAfterMinutes());
         existing.setMinAttendancePercentage(config.getMinAttendancePercentage());
 
         existing.setFaceRecognitionEnabled(config.getFaceRecognitionEnabled());
-        existing.setLivenessEnabled(config.getLivenessEnabled());
         existing.setMaxAttempts(config.getMaxAttempts());
-        existing.setFaceMatchThreshold(config.getFaceMatchThreshold());
 
         existing.setWifiLocationEnabled(config.getWifiLocationEnabled());
-        existing.setForceCampusWifi(config.getForceCampusWifi());
-        existing.setMinMatchedAps(config.getMinMatchedAps());
-        existing.setWifiRssiThreshold(config.getWifiRssiThreshold());
 
         return configRepository.save(existing);
     }

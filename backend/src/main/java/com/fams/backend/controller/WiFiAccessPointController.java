@@ -2,6 +2,7 @@ package com.fams.backend.controller;
 
 import com.fams.backend.entity.RoomWiFiAccessPoint;
 import com.fams.backend.entity.WiFiAccessPoint;
+import com.fams.backend.repository.RoomRepository;
 import com.fams.backend.repository.RoomWiFiAccessPointRepository;
 import com.fams.backend.repository.WiFiAccessPointRepository;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,6 +14,7 @@ import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,6 +32,7 @@ public class WiFiAccessPointController {
 
     private final WiFiAccessPointRepository wifiApRepository;
     private final RoomWiFiAccessPointRepository roomWifiRepository;
+    private final RoomRepository roomRepository;
 
     // ========================================
     // DTOs
@@ -46,6 +49,7 @@ public class WiFiAccessPointController {
         private String name;
         private String location;
         private String status;
+        private Integer roomCount;
     }
 
     @Data
@@ -66,8 +70,7 @@ public class WiFiAccessPointController {
     public static class RoomWiFiApDTO {
         private Long id;
         private Long apId;
-        private String ssid;
-        private String bssid;
+        private WiFiApDTO accessPoint;
         private Integer signalStrength;
         private Boolean isPrimary;
         private String positionNote;
@@ -78,10 +81,18 @@ public class WiFiAccessPointController {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class AssignApToRoomRequest {
-        private Long wifiApId;
+        private Long accessPointId;
         private Integer signalStrength;
         private Boolean isPrimary;
         private String positionNote;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class BulkStatusUpdateRequest {
+        private List<Long> ids;
+        private String status;
     }
 
     // ========================================
@@ -92,6 +103,7 @@ public class WiFiAccessPointController {
      * Get all WiFi access points
      */
     @GetMapping
+    @Transactional(readOnly = true)
     @Operation(summary = "List all APs", description = "Get all WiFi access points")
     public ResponseEntity<List<WiFiApDTO>> getAllAccessPoints() {
         List<WiFiApDTO> aps = wifiApRepository.findAll().stream()
@@ -157,6 +169,25 @@ public class WiFiAccessPointController {
     }
 
     /**
+     * Update status for multiple access points
+     */
+    @PatchMapping("/bulk-status")
+    @Operation(summary = "Bulk update AP status", description = "Update the status for multiple Access Points")
+    public ResponseEntity<Void> bulkUpdateStatus(@RequestBody BulkStatusUpdateRequest request) {
+        List<WiFiAccessPoint> aps = wifiApRepository.findAllById(request.getIds());
+        aps.forEach(ap -> {
+            try {
+                ap.setStatus(WiFiAccessPoint.WiFiStatus.valueOf(request.getStatus().toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid status provided in bulk update: {}", request.getStatus());
+            }
+        });
+        wifiApRepository.saveAll(aps);
+        log.info("Bulk updated {} APs to status {}", aps.size(), request.getStatus());
+        return ResponseEntity.ok().build();
+    }
+
+    /**
      * Delete an access point
      */
     @DeleteMapping("/{id}")
@@ -173,7 +204,8 @@ public class WiFiAccessPointController {
     /**
      * Get access points for a room
      */
-    @GetMapping("/room/{roomId}")
+    @GetMapping("/room/{roomId}/assign")
+    @Transactional(readOnly = true)
     @Operation(summary = "Get room APs", description = "Get all access points assigned to a room")
     public ResponseEntity<List<RoomWiFiApDTO>> getRoomAccessPoints(@PathVariable Long roomId) {
         List<RoomWiFiApDTO> roomAps = roomWifiRepository.findByRoomId(roomId).stream()
@@ -186,13 +218,132 @@ public class WiFiAccessPointController {
      * Assign an access point to a room
      */
     @PostMapping("/room/{roomId}/assign")
+    @Transactional
     @Operation(summary = "Assign AP to room", description = "Assign a WiFi access point to a room")
     public ResponseEntity<RoomWiFiApDTO> assignToRoom(
             @PathVariable Long roomId,
             @RequestBody AssignApToRoomRequest request) {
 
-        // This would need RoomRepository injected for full implementation
-        // For now, returning a placeholder
+        WiFiAccessPoint ap = wifiApRepository.findById(request.getAccessPointId())
+                .orElseThrow(() -> new RuntimeException("Access Point not found"));
+
+        com.fams.backend.entity.Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new RuntimeException("Room not found"));
+
+        // If this is set as primary, unset other primaries for this room
+        if (Boolean.TRUE.equals(request.getIsPrimary())) {
+            List<RoomWiFiAccessPoint> existing = roomWifiRepository.findByRoomId(roomId);
+            existing.forEach(e -> {
+                if (Boolean.TRUE.equals(e.getIsPrimary())) {
+                    e.setIsPrimary(false);
+                    roomWifiRepository.save(e);
+                }
+            });
+        }
+
+        RoomWiFiAccessPoint assignment = RoomWiFiAccessPoint.builder()
+                .room(room)
+                .wifiAccessPoint(ap)
+                .signalStrength(request.getSignalStrength())
+                .isPrimary(request.getIsPrimary() != null ? request.getIsPrimary() : false)
+                .positionNote(request.getPositionNote())
+                .build();
+
+        assignment = roomWifiRepository.save(assignment);
+        log.info("Assigned AP {} to room {}", ap.getName(), room.getName());
+
+        return ResponseEntity.ok(toRoomApDto(assignment));
+    }
+
+    /**
+     * Update an access point assignment in a room
+     */
+    @PutMapping("/room/{roomId}/assign/{assignmentId}")
+    @Transactional
+    @Operation(summary = "Update AP assignment", description = "Update details of an AP assignment (signal strength, position note)")
+    public ResponseEntity<RoomWiFiApDTO> updateAssignment(
+            @PathVariable Long roomId,
+            @PathVariable Long assignmentId,
+            @RequestBody AssignApToRoomRequest request) {
+
+        RoomWiFiAccessPoint assignment = roomWifiRepository.findById(assignmentId)
+                .orElseThrow(() -> new RuntimeException("Assignment not found"));
+
+        if (!assignment.getRoom().getId().equals(roomId)) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        assignment.setSignalStrength(request.getSignalStrength());
+        assignment.setPositionNote(request.getPositionNote());
+
+        // If primary status is being changed
+        if (request.getIsPrimary() != null && request.getIsPrimary() != assignment.getIsPrimary()) {
+            if (Boolean.TRUE.equals(request.getIsPrimary())) {
+                // Unset others
+                List<RoomWiFiAccessPoint> existing = roomWifiRepository.findByRoomId(roomId);
+                existing.forEach(e -> {
+                    if (!e.getId().equals(assignmentId) && Boolean.TRUE.equals(e.getIsPrimary())) {
+                        e.setIsPrimary(false);
+                        roomWifiRepository.save(e);
+                    }
+                });
+            }
+            assignment.setIsPrimary(request.getIsPrimary());
+        }
+
+        assignment = roomWifiRepository.save(assignment);
+        log.info("Updated AP assignment {} in room {}", assignmentId, roomId);
+
+        return ResponseEntity.ok(toRoomApDto(assignment));
+    }
+
+    /**
+     * Remove an access point assignment from a room
+     */
+    @DeleteMapping("/room/{roomId}/assign/{assignmentId}")
+    @Transactional
+    @Operation(summary = "Unassign AP", description = "Remove an AP assignment from a room")
+    public ResponseEntity<Void> unassignFromRoom(
+            @PathVariable Long roomId,
+            @PathVariable Long assignmentId) {
+
+        if (!roomWifiRepository.existsById(assignmentId)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        roomWifiRepository.deleteById(assignmentId);
+        log.info("Unassigned AP mapping {} from room {}", assignmentId, roomId);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Set a specific AP assignment as primary for a room
+     */
+    @PutMapping("/room/{roomId}/assign/{assignmentId}/primary")
+    @Transactional
+    @Operation(summary = "Set primary AP", description = "Set a specific AP as primary for a room")
+    public ResponseEntity<Void> setPrimaryAp(
+            @PathVariable Long roomId,
+            @PathVariable Long assignmentId) {
+
+        List<RoomWiFiAccessPoint> existing = roomWifiRepository.findByRoomId(roomId);
+        boolean found = false;
+
+        for (RoomWiFiAccessPoint rwap : existing) {
+            if (rwap.getId().equals(assignmentId)) {
+                rwap.setIsPrimary(true);
+                found = true;
+            } else {
+                rwap.setIsPrimary(false);
+            }
+            roomWifiRepository.save(rwap);
+        }
+
+        if (!found) {
+            return ResponseEntity.notFound().build();
+        }
+
+        log.info("Set assignment {} as primary for room {}", assignmentId, roomId);
         return ResponseEntity.ok().build();
     }
 
@@ -208,6 +359,7 @@ public class WiFiAccessPointController {
                 .name(ap.getName())
                 .location(ap.getLocation())
                 .status(ap.getStatus().name())
+                .roomCount(ap.getRoomWiFiAccessPoints() != null ? ap.getRoomWiFiAccessPoints().size() : 0)
                 .build();
     }
 
@@ -215,8 +367,7 @@ public class WiFiAccessPointController {
         return RoomWiFiApDTO.builder()
                 .id(rap.getId())
                 .apId(rap.getWifiAccessPoint().getId())
-                .ssid(rap.getWifiAccessPoint().getSsid())
-                .bssid(rap.getWifiAccessPoint().getBssid())
+                .accessPoint(toDto(rap.getWifiAccessPoint()))
                 .signalStrength(rap.getSignalStrength())
                 .isPrimary(rap.getIsPrimary())
                 .positionNote(rap.getPositionNote())
