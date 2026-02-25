@@ -79,15 +79,37 @@ export const NotificationBell: React.FC = () => {
   });
 
   // Listen for persistent system/import notifications
-  useWebSocket(`/user/queue/notifications`, (data: AppNotification[]) => {
+  useWebSocket(`/user/queue/notifications`, (data: any) => {
     console.log('[NotificationBell] Received WebSocket notifications:', data);
+
+    // Backend sends {type: 'READ_UPDATE', notificationId: ...} when marking as read
+    // This is NOT an array — handle it separately to avoid crashing
+    if (data && !Array.isArray(data)) {
+      if (data.type === 'READ_UPDATE') {
+        if (data.all) {
+          // Mark all as read
+          setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+        } else if (data.notificationId != null) {
+          // Mark single notification as read — try matching by notification.id or recipient.id
+          setNotifications(prev => prev.map(n =>
+            n.id === data.notificationId ? { ...n, isRead: true } : n
+          ));
+          // Also reload to ensure badge count is correct
+          loadNotifications();
+        }
+      }
+      return;
+    }
+
+    if (!Array.isArray(data)) return; // extra guard
+
     setNotifications(prev => {
       // ONLY add truly new notifications that don't exist in current state
       // NEVER overwrite existing notifications to preserve their isRead status
       const existingIds = new Set(prev.map(n => n.id));
       // Filter out CHAT type notifications since they are now handled by ChatMessageIcon
-      const nonChatNotifications = data.filter(n => n.type !== 'CHAT');
-      const newNotifications = nonChatNotifications.filter(n => !existingIds.has(n.id));
+      const nonChatNotifications = data.filter((n: AppNotification) => n.type !== 'CHAT');
+      const newNotifications = nonChatNotifications.filter((n: AppNotification) => !existingIds.has(n.id));
 
       if (newNotifications.length > 0) {
         console.log('[NotificationBell] Adding', newNotifications.length, 'new notifications');
@@ -211,34 +233,34 @@ export const NotificationBell: React.FC = () => {
   };
 
   const handleNotificationClick = async (notification: AppNotification) => {
-    // Try to mark as read, but don't block navigation if it fails
-    if (!notification.isRead) {
-      console.log('[NotificationBell] Marking notification as read:', notification.id);
+    const goesToDetailPage = !notification.targetUrl && notification.type !== 'CHAT';
 
-      // Immediately update UI state for instant feedback
+    // Only mark as read immediately when NOT going to detail page
+    // (detail page will auto-mark as read itself, so the button shows up)
+    if (!notification.isRead && !goesToDetailPage) {
       setNotifications(prev => prev.map(n =>
         n.id === notification.id ? { ...n, isRead: true } : n
       ));
-
-      // Try to sync with backend, but don't fail if it doesn't work
       try {
         await dashboardService.markNotificationAsRead(notification.id);
-        console.log('[NotificationBell] Successfully marked notification as read:', notification.id);
-      } catch (error) {
-        console.warn('[NotificationBell] Failed to mark as read on backend, but continuing:', error);
-        // Revert UI state if backend failed
+      } catch {
         setNotifications(prev => prev.map(n =>
           n.id === notification.id ? { ...n, isRead: false } : n
         ));
       }
+    } else if (!notification.isRead && goesToDetailPage) {
+      // Optimistically update bell badge count while letting detail page do the API call
+      setNotifications(prev => prev.map(n =>
+        n.id === notification.id ? { ...n, isRead: true } : n
+      ));
     }
 
-    // Navigate based on notification type
+    // Navigate
     if (notification.type === 'CHAT') {
-      const path = `/${role}/messages`;
-      navigate(path);
+      navigate(`/${role}/messages`);
+    } else if (notification.targetUrl) {
+      navigate(notification.targetUrl);
     } else {
-      // Always navigate to notification detail page for other types
       navigate(`/notifications/${notification.id}`);
     }
     setShowDropdown(false);

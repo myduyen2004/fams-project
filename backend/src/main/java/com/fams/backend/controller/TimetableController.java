@@ -5,6 +5,10 @@ import com.fams.backend.entity.TimetableSlot;
 import com.fams.backend.entity.StudentAttendance;
 import com.fams.backend.repository.StudentAttendanceRepository;
 import com.fams.backend.repository.TimetableSlotRepository;
+import com.fams.backend.repository.AssignmentRepository;
+import com.fams.backend.repository.AssignmentSubmissionRepository;
+import com.fams.backend.entity.Assignment;
+import com.fams.backend.entity.AssignmentSubmission;
 import com.fams.backend.service.timetable.TimetableGenerationService;
 import com.fams.backend.service.timetable.ga.model.GAConfig;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,7 +19,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import jakarta.servlet.http.HttpServletResponse; // Import Response for streaming file
+import jakarta.servlet.http.HttpServletResponse;
 
 import com.fams.backend.service.ExcelExportService;
 import com.fams.backend.repository.UserRepository;
@@ -28,6 +32,10 @@ import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 
 /**
  * TimetableController - REST API cho tạo và quản lý thời khóa biểu
@@ -42,6 +50,8 @@ public class TimetableController {
         private final TimetableGenerationService generationService;
         private final TimetableSlotRepository timetableSlotRepository;
         private final StudentAttendanceRepository studentAttendanceRepository;
+        private final AssignmentRepository assignmentRepository;
+        private final AssignmentSubmissionRepository assignmentSubmissionRepository;
         private final ExcelExportService excelExportService;
         private final UserRepository userRepository;
         private final SemesterRepository semesterRepository;
@@ -67,10 +77,9 @@ public class TimetableController {
                 CompletableFuture<TimetableGenerationService.GenerationResult> future = generationService
                                 .generateTimetable(jobId, request.getSemesterCode(), config, null);
 
-                // Wait for result (or use async approach with job tracking)
+                // Wait for result
                 try {
                         TimetableGenerationService.GenerationResult result = future.get();
-
                         return ResponseEntity.ok(TimetableDTO.GenerateResponse.builder()
                                         .success(result.isSuccess())
                                         .jobId(result.getJobId())
@@ -225,7 +234,6 @@ public class TimetableController {
         @Operation(summary = "Count unscheduled class sections", description = "Returns the number of class sections that have not been scheduled yet")
         public ResponseEntity<Map<String, Object>> countUnscheduledClassSections(@PathVariable String semesterCode) {
                 // Optimized query directly from DB instead of loading all objects
-
                 long totalSchedulable = classSectionRepository.countSchedulableClassSections(semesterCode);
                 long unscheduledCount = classSectionRepository.countUnscheduledClassSections(semesterCode);
                 long scheduledCount = totalSchedulable - unscheduledCount;
@@ -359,7 +367,6 @@ public class TimetableController {
                                 if (!isPublished) {
                                         log.warn("Timetable for semester {} is not published yet. Access denied for student.",
                                                         semester.getCode());
-                                        // Return explicit error message
                                         return ResponseEntity.status(403).body(Map.of(
                                                         "status", 403,
                                                         "error", "Forbidden",
@@ -414,19 +421,50 @@ public class TimetableController {
                         if (!slots.isEmpty()) {
                                 List<Long> slotIds = slots.stream().map(TimetableSlot::getId).toList();
                                 List<StudentAttendance> attendances = studentAttendanceRepository
-                                                .findByStudentIdAndSlotIds(studentId,
-                                                                slotIds);
-                                Map<Long, StudentAttendance> attendanceMap = attendances.stream()
+                                                .findByStudentIdAndSlotIds(studentId, slotIds);
+                                Map<Long, String> attendanceMap = attendances.stream()
                                                 .collect(Collectors.toMap(
                                                                 a -> a.getSession().getTimetableSlot().getId(),
-                                                                a -> a,
+                                                                a -> a.getStatus().name(),
                                                                 (existing, replacement) -> existing));
 
                                 response.getDays().forEach(day -> day.getSlots().forEach(slot -> {
                                         if (attendanceMap.containsKey(slot.getId())) {
-                                                StudentAttendance att = attendanceMap.get(slot.getId());
-                                                slot.setAttendanceStatus(att.getStatus().name());
-                                                slot.setCheckInTime(att.getCheckInTime());
+                                                slot.setAttendanceStatus(attendanceMap.get(slot.getId()));
+                                        }
+                                }));
+                        }
+
+                        // Enrich with assignment + submission data for each slot
+                        if (!slots.isEmpty()) {
+                                List<Long> slotIds = slots.stream().map(TimetableSlot::getId).toList();
+                                List<Assignment> assignments = assignmentRepository.findByTimetableSlotIdIn(slotIds);
+                                Map<Long, Assignment> assignmentBySlotId = assignments.stream()
+                                                .collect(Collectors.toMap(
+                                                                a -> a.getTimetableSlot().getId(),
+                                                                a -> a,
+                                                                (existing, replacement) -> existing));
+
+                                // Get student's submissions for these assignments
+                                Map<Long, String> submissionStatusMap = new HashMap<>();
+                                if (!assignments.isEmpty()) {
+                                        List<AssignmentSubmission> submissions = assignmentSubmissionRepository
+                                                        .findByStudent_Id(studentId);
+                                        for (AssignmentSubmission sub : submissions) {
+                                                submissionStatusMap.put(sub.getAssignment().getId(),
+                                                                sub.getStatus().name());
+                                        }
+                                }
+
+                                response.getDays().forEach(day -> day.getSlots().forEach(slotDto -> {
+                                        Assignment assignment = assignmentBySlotId.get(slotDto.getId());
+                                        if (assignment != null) {
+                                                slotDto.setAssignmentId(assignment.getId());
+                                                slotDto.setAssignmentTitle(assignment.getTitle());
+                                                slotDto.setAssignmentStatus(assignment.getStatus().name());
+                                                String subStatus = submissionStatusMap.get(assignment.getId());
+                                                slotDto.setSubmissionStatus(
+                                                                subStatus != null ? subStatus : "NOT_SUBMITTED");
                                         }
                                 }));
                         }
@@ -498,6 +536,31 @@ public class TimetableController {
                 return ResponseEntity.ok(slotDTOs);
         }
 
+        @GetMapping("/lecturer/{lecturerId}/semester-dates")
+        @Operation(summary = "Get distinct teaching dates for a lecturer in a semester")
+        public ResponseEntity<List<LocalDate>> getLecturerTeachingDates(
+                        @PathVariable Long lecturerId,
+                        @RequestParam String semesterCode) {
+                return ResponseEntity.ok(timetableSlotService.getLecturerTeachingDates(lecturerId, semesterCode));
+        }
+
+        @GetMapping("/lecturer/{lecturerId}/assignments-search")
+        @Operation(summary = "Search assignments with filters and pagination")
+        public ResponseEntity<Page<TimetableDTO.TimetableSlotDTO>> searchAssignments(
+                        @PathVariable Long lecturerId,
+                        @RequestParam String semesterCode,
+                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+                        @RequestParam(required = false) String className,
+                        @RequestParam(required = false) String status,
+                        @PageableDefault(size = 20, sort = "date", direction = Sort.Direction.ASC) Pageable pageable) {
+
+                // If "all" status is passed, treat as null (no filter)
+                String filterStatus = (status != null && status.equalsIgnoreCase("all")) ? null : status;
+
+                return ResponseEntity.ok(timetableSlotService.searchAssignments(
+                                lecturerId, semesterCode, date, className, filterStatus, pageable));
+        }
+
         @GetMapping("/export/student/{studentId}")
         @Operation(summary = "Export student timetable to Excel")
         public void exportStudentTimetable(
@@ -508,8 +571,7 @@ public class TimetableController {
                 User student = userRepository.findById(studentId)
                                 .orElseThrow(() -> new RuntimeException("Student not found"));
 
-                // Find semester by code or assume active? Better to pass semesterCode from
-                // frontend
+                // Find semester by code
                 Semester semester = semesterRepository.findByCode(semesterCode)
                                 .orElseThrow(() -> new RuntimeException("Semester not found"));
 
@@ -520,8 +582,7 @@ public class TimetableController {
                         return;
                 }
 
-                // 1. Fetch ALL slots for this student in this semester context
-                // Using Repository method that filters by DATE RANGE of the semester
+                // 1. Fetch ALL slots for this student in this semester
                 List<TimetableSlot> slots = timetableSlotRepository.findByStudentCodeAndDateBetween(
                                 student.getCode(), semester.getStartDate(), semester.getEndDate());
 
@@ -577,7 +638,30 @@ public class TimetableController {
                 List<TimetableSlot> slots = timetableSlotRepository.findByLecturerIdAndDateBetween(
                                 lecturerId, weekStart, weekEnd);
 
-                return ResponseEntity.ok(buildWeeklyTimetable(weekStart, weekEnd, slots));
+                TimetableDTO.WeeklyTimetableDTO weeklyDto = buildWeeklyTimetable(weekStart, weekEnd, slots);
+
+                // Enrich with assignment data (optimized: single batch query)
+                if (!slots.isEmpty()) {
+                        List<Long> slotIds = slots.stream().map(TimetableSlot::getId).toList();
+                        List<Assignment> assignments = assignmentRepository.findByTimetableSlotIdIn(slotIds);
+                        Map<Long, Assignment> assignmentBySlotId = assignments.stream()
+                                        .collect(Collectors.toMap(
+                                                        a -> a.getTimetableSlot().getId(),
+                                                        a -> a,
+                                                        (existing, replacement) -> existing // keep first if duplicates
+                                        ));
+
+                        weeklyDto.getDays().forEach(day -> day.getSlots().forEach(slotDto -> {
+                                Assignment assignment = assignmentBySlotId.get(slotDto.getId());
+                                if (assignment != null) {
+                                        slotDto.setAssignmentId(assignment.getId());
+                                        slotDto.setAssignmentTitle(assignment.getTitle());
+                                        slotDto.setAssignmentStatus(assignment.getStatus().name());
+                                }
+                        }));
+                }
+
+                return ResponseEntity.ok(weeklyDto);
         }
 
         @GetMapping("/export/lecturer/{lecturerId}")
