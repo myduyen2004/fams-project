@@ -31,66 +31,72 @@ class StudentDetailScreen extends StatelessWidget {
             children: [
               // Custom Header
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildCircleButton(
-                    icon: Icons.chevron_left,
-                    onTap: () => Get.back(),
-                  ),
-                  Text(
-                    'Hồ Sơ Sinh Viên',
-                    style: GoogleFonts.roboto(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  _buildCircleButton(
-                    icon: Icons.edit,
-                    onTap: () {}, // View only for now
-                  ),
-                ],
-              ),
-            ),
-
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const SizedBox(height: 10),
-                    // Avatar & Name Section
-                    _buildProfileSection(),
-                    
-                    const SizedBox(height: 30),
-                    
-                    // Personal Info
-                    _buildSectionTitle('Thông tin cá nhân'),
-                    const SizedBox(height: 12),
-                    _buildPersonalInfoCard(),
-
-                    const SizedBox(height: 24),
-
-                    // Academic Info
-                    _buildSectionTitle('Thông tin đào tạo'),
-                    const SizedBox(height: 12),
-                    _buildAcademicInfoCard(),
-                    
-                    const SizedBox(height: 40),
+                    _buildCircleButton(
+                      icon: Icons.chevron_left,
+                      onTap: () => Get.back(),
+                    ),
+                    Text(
+                      'Hồ Sơ Sinh Viên',
+                      style: GoogleFonts.roboto(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    _buildCircleButton(
+                      icon: Icons.edit,
+                      onTap: () {}, // View only for now
+                    ),
                   ],
                 ),
               ),
-            ),
-          ],
+
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 10),
+                      // Avatar & Name Section
+                      _buildProfileSection(),
+
+                      const SizedBox(height: 30),
+
+                      // Personal Info
+                      _buildSectionTitle('Thông tin cá nhân'),
+                      const SizedBox(height: 12),
+                      _buildPersonalInfoCard(),
+
+                      const SizedBox(height: 24),
+
+                      // Academic Info
+                      _buildSectionTitle('Thông tin đào tạo'),
+                      const SizedBox(height: 12),
+                      _buildAcademicInfoCard(),
+
+                      const SizedBox(height: 40),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
 
-  Widget _buildCircleButton({required IconData icon, required VoidCallback onTap}) {
+  Widget _buildCircleButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -131,9 +137,7 @@ class StudentDetailScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              child: ClipOval(
-                child: _buildAvatarImage(student.avatar),
-              ),
+              child: ClipOval(child: _buildAvatarImage(student.avatar)),
             ),
             Positioned(
               right: 2,
@@ -174,7 +178,11 @@ class StudentDetailScreen extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildBadge('ĐANG HỌC', const Color(0xFFE8F5E9), const Color(0xFF4CAF50)),
+            _buildBadge(
+              'ĐANG HỌC',
+              const Color(0xFFE8F5E9),
+              const Color(0xFF4CAF50),
+            ),
             // Removed Year Badge as requested
           ],
         ),
@@ -280,11 +288,11 @@ class StudentDetailScreen extends StatelessWidget {
             title: 'Chuyên ngành',
             value: student.specialization,
           ),
-           _buildDivider(),
+          _buildDivider(),
           _buildInfoRow(
             icon: Icons.class_outlined,
             title: 'Chuyên ngành hẹp',
-            value: student.subSpecialization, 
+            value: student.subSpecialization,
           ),
         ],
       ),
@@ -298,7 +306,9 @@ class StudentDetailScreen extends StatelessWidget {
     bool isEmail = false,
   }) {
     // If value is null or empty, display "Chưa cập nhật"
-    final displayValue = (value == null || value.isEmpty) ? "Chưa cập nhật" : value;
+    final displayValue = (value == null || value.isEmpty)
+        ? "Chưa cập nhật"
+        : value;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -328,7 +338,7 @@ class StudentDetailScreen extends StatelessWidget {
               Text(
                 displayValue,
                 style: GoogleFonts.roboto(
-                  fontSize: 14, 
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
                 ),
@@ -356,7 +366,7 @@ class StudentDetailScreen extends StatelessWidget {
         child: const Icon(Icons.person, color: Color(0xFFEF7623), size: 50),
       );
     }
-    
+
     String fullUrl = avatarUrl;
     if (!avatarUrl.startsWith('http')) {
       fullUrl = '${ApiConstants.baseUrl}$avatarUrl';
