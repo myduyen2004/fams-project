@@ -108,6 +108,8 @@ public class FaceDTO {
         private Integer remainingAttempts;
         private Integer maxAttempts;
         private String attendanceStatus;
+        private Boolean faceRecognitionEnabled;
+        private Boolean wifiLocationEnabled;
     }
 
     @Data

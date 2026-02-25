@@ -224,8 +224,10 @@ class FaceQualityService:
 
             # C. Eyes/Eyebrows (Hair)
             # Left Eye/Brow region
-            le_occluded = self._check_occlusion(image, landmarks, [33, 133, 159, 145], width, height, threshold=0.25)
-            re_occluded = self._check_occlusion(image, landmarks, [362, 263, 386, 374], width, height, threshold=0.25)
+            # Registration is more lenient with hair near eyes
+            eye_thresh = 0.15 if is_reg else 0.25
+            le_occluded = self._check_occlusion(image, landmarks, [33, 133, 159, 145], width, height, threshold=eye_thresh)
+            re_occluded = self._check_occlusion(image, landmarks, [362, 263, 386, 374], width, height, threshold=eye_thresh)
             if le_occluded and re_occluded:  # Both eyes must be covered
                 errors.append("eyes_covered")
                 
@@ -333,8 +335,9 @@ class FaceQualityService:
             
             # Standard Skin Color Thresholds in YCrCb
             # Y > 80, 135 < Cr < 180, 85 < Cb < 135
-            min_YCrCb = np.array([0, 133, 77], np.uint8)
-            max_YCrCb = np.array([255, 173, 127], np.uint8)
+            # Expanded for more diverse skin tones and lighting conditions
+            min_YCrCb = np.array([0, 130, 70], np.uint8)
+            max_YCrCb = np.array([255, 180, 135], np.uint8)
             
             skin_mask = cv2.inRange(image_ycrcb, min_YCrCb, max_YCrCb)
             
