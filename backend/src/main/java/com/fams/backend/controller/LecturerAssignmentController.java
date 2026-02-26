@@ -6,6 +6,7 @@ import com.fams.backend.dto.response.AssignmentResponse;
 import com.fams.backend.dto.response.AssignmentSubmissionResponse;
 import com.fams.backend.entity.User;
 import com.fams.backend.repository.UserRepository;
+import com.fams.backend.scheduler.AssignmentReminderScheduler;
 import com.fams.backend.service.AssignmentSubmissionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class LecturerAssignmentController {
 
     private final AssignmentSubmissionService assignmentSubmissionService;
     private final UserRepository userRepository;
+    private final AssignmentReminderScheduler assignmentReminderScheduler;
 
     /**
      * Tạo bài tập mới cho lớp
@@ -148,5 +150,15 @@ public class LecturerAssignmentController {
         User user = userRepository.findByUsername(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
         return user.getId();
+    }
+
+    /**
+     * [TEST ONLY] Trigger thủ công AssignmentReminderScheduler để test Phase 2.
+     * Xóa endpoint này sau khi test xong.
+     */
+    @PostMapping("/test/trigger-reminders")
+    public ResponseEntity<Map<String, String>> testTriggerReminders() {
+        assignmentReminderScheduler.sendDueDateReminders();
+        return ResponseEntity.ok(Map.of("message", "Reminder scheduler triggered manually"));
     }
 }

@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:app_badge_plus/app_badge_plus.dart';
 import 'package:get/get.dart';
+import '../models/notification_model.dart';
+import '../views/notification_detail_screen.dart';
 import 'notification_service.dart';
 
 class NotificationPollingService {
@@ -45,13 +48,32 @@ class NotificationPollingService {
     );
 
     await _notificationsPlugin.initialize(
-      initializationSettings, 
-      onDidReceiveNotificationResponse: (response) {
-        // Handle notification tap
-        if (response.payload != null) {
-          Get.toNamed('/notifications'); // Adjust route if needed
+      initializationSettings,
+      onDidReceiveNotificationResponse: (response) async {
+        if (response.payload == null) return;
+
+        // payload format: "TYPE_123" e.g. "ACADEMIC_42"
+        final parts = response.payload!.split('_');
+        final id = int.tryParse(parts.last);
+
+        if (id != null) {
+          try {
+            final NotificationModel? notification =
+                await _notificationService.getNotificationById(id);
+            if (notification != null) {
+              // Open list first so back-button works correctly
+              Get.toNamed('/notifications');
+              Get.to(() => NotificationDetailScreen(notification: notification));
+              return;
+            }
+          } catch (e) {
+            debugPrint('Error fetching notification for deep link: $e');
+          }
         }
-      }
+
+        // Fallback: open notification list
+        Get.toNamed('/notifications');
+      },
     );
   }
 
@@ -95,7 +117,7 @@ class NotificationPollingService {
       _lastUnreadCount = count;
       
     } catch (e) {
-      print('Polling error: $e');
+      debugPrint('Polling error: $e');
     }
   }
   
@@ -124,11 +146,11 @@ class NotificationPollingService {
           latest.title, // Title
           latest.cleanDescription, // Body (cleaned HTML)
           platformChannelSpecifics,
-          payload: 'notification_${latest.id}',
+          payload: '${latest.type ?? "notification"}_${latest.id}',
         );
       }
     } catch (e) {
-      print('Error showing notification: $e');
+      debugPrint('Error showing notification: $e');
     }
   }
   
