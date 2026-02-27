@@ -170,7 +170,7 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
                 if (!Boolean.TRUE.equals(config.getFaceRecognitionEnabled())) {
                         return FaceDTO.FaceCheckInResponse.builder()
                                         .status("FAILED")
-                                        .message("Chức năng điểm danh gương mặt hiện đang bị tắt.")
+                                        .message("Quản trị viên chưa cho phép điểm danh bằng khuôn mặt cho hệ thống này.")
                                         .build();
                 }
 
@@ -185,16 +185,18 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
                                         .build();
                 }
 
-                java.time.LocalTime startTime = slot.getSlotType().getStartTime()
-                                .minusMinutes(config.getOpenBeforeMinutes());
-                java.time.LocalTime endTime = slot.getSlotType().getEndTime()
-                                .plusMinutes(config.getCloseAfterMinutes());
+                // Strict timeframe: No early check-in allowed.
+                // Window starts at slot start time and ends at slot start time +
+                // absentThresholdMinutes.
+                java.time.LocalTime startTime = slot.getSlotType().getStartTime();
+                java.time.LocalTime endTime = slot.getSlotType().getStartTime()
+                                .plusMinutes(config.getAbsentThresholdMinutes());
 
                 if (timeNow.isBefore(startTime) || timeNow.isAfter(endTime)) {
                         return FaceDTO.FaceCheckInResponse.builder()
                                         .status("FAILED")
-                                        .message("Lỗi: Hiện không trong khung giờ cho phép điểm danh (" +
-                                                        startTime + " - " + endTime + ")")
+                                        .message("Lỗi: Hiện không trong khung giờ cho phép điểm danh (Mở từ: " +
+                                                        startTime + " - Kết thúc lúc: " + endTime + ")")
                                         .build();
                 }
 
@@ -255,11 +257,9 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
                                         FaceRecognitionClient.FaceVerifyRequest.builder()
                                                         .capturedImage(request.getFaceImageBase64())
                                                         .referenceEncoding(referenceEncoding)
-                                                        .tolerance(1.0 - config.getFaceMatchThreshold()) // Map
-                                                                                                         // threshold to
-                                                                                                         // tolerance
+                                                        .tolerance(1.0 - 0.65) // Applied 0.65 match threshold
                                                         .mode("attendance")
-                                                        .livenessProof(Boolean.TRUE.equals(config.getLivenessEnabled())
+                                                        .livenessProof(true // Hardcoded true
                                                                         && request.getLivenessProof() != null
                                                                                         ? FaceRecognitionClient.LivenessProof
                                                                                                         .builder()
@@ -444,6 +444,8 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
 
                 AttendanceConfig config = configService.getConfig();
                 status.setMaxAttempts(config.getMaxAttempts());
+                status.setFaceRecognitionEnabled(config.getFaceRecognitionEnabled());
+                status.setWifiLocationEnabled(config.getWifiLocationEnabled());
 
                 // Find session for slot
                 AttendanceSession session = sessionRepository.findByTimetableSlotId(slotId).orElse(null);
@@ -620,6 +622,13 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
                                 .findBySessionIdAndStudentId(request.getSessionId(), request.getStudentId())
                                 .orElseThrow(() -> new NotFoundException("Attendance not found"));
 
+                // Apply Manual Enabled configuration
+                AttendanceConfig config = configService.getConfig();
+                if (!Boolean.TRUE.equals(config.getManualEnabled())) {
+                        throw new BadRequestException(
+                                        "Chức năng điểm danh thủ công hiện đang bị tắt bởi quản trị viên.");
+                }
+
                 if (!attendance.getRequiresManualVerify()) {
                         throw new BadRequestException("Does not require manual verification");
                 }
@@ -656,20 +665,17 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
 
                 AttendanceConfig config = configService.getConfig();
 
-                // 1. Campus WiFi Enforcement
-                if (Boolean.TRUE.equals(config.getForceCampusWifi())) {
-                        // For simplicity, we assume any mapped BSSID is a campus AP
-                        // In a real scenario, we might check SSID patterns or a whitelist of campus
-                        // SSIDs
-                }
+                // 1. Campus WiFi Enforcement - Disabled/Not present in simplified config
+                // We assume any mapped BSSID is valid for the room
 
                 // Room-specific validation
                 java.util.List<com.fams.backend.entity.RoomWiFiAccessPoint> mappedAps = roomWifiRepository
                                 .findByRoomId(roomId);
 
                 if (mappedAps.isEmpty()) {
-                        log.warn("Room {} has no mapped WiFi Access Points. Validation skipped.", roomId);
-                        return true; // Or false, depending on security policy. Here we allow it if not configured.
+                        log.error("SECURITY RISK: Room {} has no mapped WiFi Access Points but WiFi validation is ENABLED. Rejecting attendance.",
+                                        roomId);
+                        return false; // Fail closed for better security
                 }
 
                 java.util.Optional<com.fams.backend.entity.RoomWiFiAccessPoint> rwapOpt = mappedAps.stream()
@@ -695,7 +701,7 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
 
                 // 3. RSSI Signal Strength check
                 Integer threshold = (rwap.getSignalStrength() != null) ? rwap.getSignalStrength()
-                                : config.getWifiRssiThreshold();
+                                : -75; // Hardcoded default
 
                 if (rssi != null && rssi < threshold) {
                         log.warn("WiFi RSSI too weak for Room {} (AP {}): threshold {}, got {}", roomId, bssid,
