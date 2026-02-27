@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { Card } from '../../components/common/Card';
-import {Clock,
+import {
+    Clock,
     MapPin,
     Download,
     Calendar as CalendarIcon,
