@@ -8,7 +8,7 @@ import 'student_detail_screen.dart';
 
 class StudentListScreen extends StatefulWidget {
   final ClassSection classSection;
-  
+
   const StudentListScreen({super.key, required this.classSection});
 
   @override
@@ -42,10 +42,10 @@ class _StudentListScreenState extends State<StudentListScreen> {
           children: [
             // Header
             _buildHeader(),
-            
+
             // Student Count
             _buildStudentCountHeader(),
-            
+
             // Student List
             Expanded(
               child: Obx(() {
@@ -66,7 +66,9 @@ class _StudentListScreenState extends State<StudentListScreen> {
                         ),
                         const SizedBox(height: 16),
                         ElevatedButton(
-                          onPressed: () => controller.fetchStudents(widget.classSection.className),
+                          onPressed: () => controller.fetchStudents(
+                            widget.classSection.className,
+                          ),
                           child: const Text('Thử lại'),
                         ),
                       ],
@@ -79,7 +81,11 @@ class _StudentListScreenState extends State<StudentListScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.search_off, size: 48, color: Colors.grey[400]),
+                        Icon(
+                          Icons.search_off,
+                          size: 48,
+                          color: Colors.grey[400],
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           _isSearching ? 'Không tìm thấy sinh viên nào' : 'Chưa có sinh viên',
@@ -94,13 +100,17 @@ class _StudentListScreenState extends State<StudentListScreen> {
                 }
 
                 return RefreshIndicator(
-                  onRefresh: () => controller.fetchStudents(widget.classSection.className),
+                  onRefresh: () =>
+                      controller.fetchStudents(widget.classSection.className),
                   color: const Color(0xFFEF7623),
                   child: ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: controller.filteredStudents.length,
                     itemBuilder: (context, index) {
-                      return _buildStudentCard(controller.filteredStudents[index], index + 1);
+                      return _buildStudentCard(
+                        controller.filteredStudents[index],
+                        index + 1,
+                      );
                     },
                   ),
                 );
@@ -182,7 +192,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                     const SizedBox(height: 2),
                     Text(
                       '${widget.classSection.courseCode} - ${widget.classSection.courseName}',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.roboto(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                         color: Colors.grey[600],
@@ -191,7 +201,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
-                ),
+                  ),
           ),
           const SizedBox(width: 16),
           GestureDetector(
@@ -223,6 +233,68 @@ class _StudentListScreenState extends State<StudentListScreen> {
               ),
             ),
           ),
+          const SizedBox(width: 8),
+          // Chat Group Button
+          Obx(() {
+            final classSection = controller.selectedClass.value;
+            if (classSection == null) return const SizedBox.shrink();
+
+            final chatGroup = controller.getChatGroupForClass(classSection);
+            final hasGroup = chatGroup != null;
+            return GestureDetector(
+              onTap: () {
+                if (hasGroup) {
+                  controller.goToChat(chatGroup.id);
+                } else {
+                  controller.createGroupChat(classSection);
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: hasGroup
+                      ? const Color(0xFF4CAF50)
+                      : const Color(0xFFEF7623).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: hasGroup
+                      ? null
+                      : Border.all(color: const Color(0xFFEF7623), width: 1),
+                  boxShadow: hasGroup
+                      ? [
+                          BoxShadow(
+                            color: Colors.green.withOpacity(0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      hasGroup ? Icons.chat_rounded : Icons.chat_outlined,
+                      color: hasGroup ? Colors.white : const Color(0xFFEF7623),
+                      size: 18,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      hasGroup ? 'Vào nhóm' : 'Tạo nhóm',
+                      style: GoogleFonts.roboto(
+                        color: hasGroup
+                            ? Colors.white
+                            : const Color(0xFFEF7623),
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -251,8 +323,9 @@ class _StudentListScreenState extends State<StudentListScreen> {
             ),
           ),
         ],
+        ),
       ),
-    ));
+    );
   }
 
   Widget _buildStudentCard(Enrollment student, int index) {
@@ -294,7 +367,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
               ),
             ),
             const SizedBox(width: 12),
-            
+
             // Avatar with Online Badge
             Stack(
               children: [
@@ -309,20 +382,14 @@ class _StudentListScreenState extends State<StudentListScreen> {
                       width: 2,
                     ),
                   ),
-                  child: ClipOval(
-                    child: _buildAvatarImage(student.avatar),
-                  ),
+                  child: ClipOval(child: _buildAvatarImage(student.avatar)),
                 ),
                 // Blinking Online Badge
-                const Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: _OnlineBadge(),
-                ),
+                const Positioned(right: 0, bottom: 0, child: _OnlineBadge()),
               ],
             ),
             const SizedBox(width: 14),
-            
+
             // Student Info
             Expanded(
               child: Column(
@@ -349,11 +416,8 @@ class _StudentListScreenState extends State<StudentListScreen> {
                 ],
               ),
             ),
-            
-            const Icon(
-              Icons.chevron_right,
-              color: Color(0xFFEF7623),
-            ),
+
+            const Icon(Icons.chevron_right, color: Color(0xFFEF7623)),
           ],
         ),
       ),
@@ -364,7 +428,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
     if (avatarUrl == null || avatarUrl.isEmpty) {
       return _buildAvatarPlaceholder();
     }
-    
+
     String fullUrl = avatarUrl;
     if (!avatarUrl.startsWith('http')) {
       fullUrl = '${ApiConstants.baseUrl}$avatarUrl';
@@ -380,14 +444,10 @@ class _StudentListScreenState extends State<StudentListScreen> {
   Widget _buildAvatarPlaceholder() {
     return Container(
       color: const Color(0xFFFFE0B2),
-      child: const Icon(
-        Icons.person,
-        color: Color(0xFFEF7623),
-        size: 28,
-      ),
+      child: const Icon(Icons.person, color: Color(0xFFEF7623), size: 28),
     );
   }
-  
+
   String _extractClassCode(String className) {
     if (className.contains('-')) {
       return className.split('-').first;
@@ -403,7 +463,8 @@ class _OnlineBadge extends StatefulWidget {
   State<_OnlineBadge> createState() => _OnlineBadgeState();
 }
 
-class _OnlineBadgeState extends State<_OnlineBadge> with SingleTickerProviderStateMixin {
+class _OnlineBadgeState extends State<_OnlineBadge>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
@@ -414,7 +475,7 @@ class _OnlineBadgeState extends State<_OnlineBadge> with SingleTickerProviderSta
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
-    
+
     _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
   }
 
@@ -445,7 +506,9 @@ class _OnlineBadgeState extends State<_OnlineBadge> with SingleTickerProviderSta
               ),
               // Breathing outer blur ("blur blur mờ mờ nháy")
               BoxShadow(
-                color: Colors.green.withOpacity(0.4 * (1 - _animation.value * 0.5)),
+                color: Colors.green.withOpacity(
+                  0.4 * (1 - _animation.value * 0.5),
+                ),
                 blurRadius: 4 + (_animation.value * 6), // 4 -> 10
                 spreadRadius: 1 + (_animation.value * 3), // 1 -> 4
               ),

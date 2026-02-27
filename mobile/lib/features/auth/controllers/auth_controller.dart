@@ -23,7 +23,17 @@ class AuthController extends GetxController {
   void onInit() {
     super.onInit();
     apiService.init();
+    apiService.onUnauthorized = _handleUnauthorized;
     _initializeApp();
+  }
+
+  void _handleUnauthorized() {
+    debugPrint('AuthController: Handling unauthorized error (401)...');
+    // We don't want to nuke everything immediately if it's just a polling error,
+    // but if we are authenticated and get a 401, something is wrong with the token.
+    if (isAuthenticated.value) {
+      logout();
+    }
   }
 
   Future<void> _initializeApp() async {
