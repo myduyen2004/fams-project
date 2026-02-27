@@ -62,7 +62,6 @@ export const LecturerAssignmentPage: React.FC = () => {
     // Create dialog
     const [showCreateDialog, setShowCreateDialog] = useState(false);
     const [creating, setCreating] = useState(false);
-    const [createForSlotId, setCreateForSlotId] = useState<number | null>(null);
     const [newTitle, setNewTitle] = useState('');
     const [newDescription, setNewDescription] = useState('');
     const [newDueDate, setNewDueDate] = useState('');
@@ -211,7 +210,6 @@ export const LecturerAssignmentPage: React.FC = () => {
         if (!createClassName) {
             setCreateClassSlots([]);
             setSelectedSessionNumber(null);
-            setCreateForSlotId(null);
             return;
         }
         const fetchClassSlots = async () => {
@@ -300,7 +298,6 @@ export const LecturerAssignmentPage: React.FC = () => {
         setNewRefUrl('');
         setNewRefName('');
         setSelectedFile(null);
-        setCreateForSlotId(null);
         setCreateClassName('');
         setCreateClassSlots([]);
         setSelectedSessionNumber(null);
@@ -929,7 +926,6 @@ export const LecturerAssignmentPage: React.FC = () => {
                                                 <button key={cls.className} onClick={() => {
                                                     setCreateClassName(cls.className);
                                                     setSelectedSessionNumber(null);
-                                                    setCreateForSlotId(null);
                                                     setIsCreateClassOpen(false);
                                                 }}
                                                     className={`flex w-full items-center justify-between px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition-colors ${createClassName === cls.className ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange' : 'text-gray-900 dark:text-white'}`}>
@@ -967,7 +963,6 @@ export const LecturerAssignmentPage: React.FC = () => {
                                                         onClick={() => {
                                                             if (!hasAssignment) {
                                                                 setSelectedSessionNumber(sessionNum);
-                                                                setCreateForSlotId(s.id);
                                                                 setIsCreateSlotOpen(false);
                                                             }
                                                         }}
