@@ -673,8 +673,9 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
                                 .findByRoomId(roomId);
 
                 if (mappedAps.isEmpty()) {
-                        log.warn("Room {} has no mapped WiFi Access Points. Validation skipped.", roomId);
-                        return true; // Or false, depending on security policy. Here we allow it if not configured.
+                        log.error("SECURITY RISK: Room {} has no mapped WiFi Access Points but WiFi validation is ENABLED. Rejecting attendance.",
+                                        roomId);
+                        return false; // Fail closed for better security
                 }
 
                 java.util.Optional<com.fams.backend.entity.RoomWiFiAccessPoint> rwapOpt = mappedAps.stream()
