@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { REQUEST_TYPE_LABELS } from '../../types/requestType';
 import { scheduleRequestService, ScheduleRequest } from '../../services/api/scheduleRequestService';
+import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
 import { Loader2, ArrowLeft, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -185,7 +186,7 @@ export const LecturerRequestDetailPage: React.FC = () => {
                                                     return (
                                                         <a
                                                             key={index}
-                                                            href={url}
+                                                            href={getViewableFileUrl(url)}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-zinc-800 dark:to-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl p-4 hover:border-fpt-orange hover:shadow-md transition-all cursor-pointer group flex items-center gap-3"

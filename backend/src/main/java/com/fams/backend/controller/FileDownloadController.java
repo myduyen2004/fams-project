@@ -45,6 +45,8 @@ public class FileDownloadController {
                     contentType = "image/png";
                 } else if (lowerFilename.endsWith(".gif")) {
                     contentType = "image/gif";
+                } else if (lowerFilename.endsWith(".pdf")) {
+                    contentType = "application/pdf";
                 }
 
                 return ResponseEntity.ok()

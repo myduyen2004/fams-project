@@ -5,6 +5,7 @@ import { lecturerClassService, ClassDetailResponse } from '../../services/api/Le
 import { assignmentService, AssignmentDTO, AssignmentSubmissionDTO } from '../../services/api/assignmentService';
 import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
 import { uploadFile } from '../../services/utils/fileUploadService';
+import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
 
 import { Pagination } from '../../components/common/Pagination';
 import { Users, BookOpen, GraduationCap, Calendar, Clock, ArrowLeft, FileText, ChevronDown, ChevronUp, ExternalLink, Lock, Loader2, Plus, X } from 'lucide-react';
@@ -452,7 +453,7 @@ export const LeturerClassDetailPage: React.FC = () => {
                                                                                 {sub.fileUrls && sub.fileUrls.length > 0 && (
                                                                                     <div className="flex flex-col gap-1">
                                                                                         {sub.fileUrls.map((url, idx) => (
-                                                                                            <a key={idx} href={url} target="_blank" rel="noopener noreferrer"
+                                                                                            <a key={idx} href={getViewableFileUrl(url)} target="_blank" rel="noopener noreferrer"
                                                                                                 className="inline-flex items-center gap-1 px-3 py-1.5 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 text-fpt-orange rounded-lg text-xs transition-colors">
                                                                                                 <ExternalLink className="w-3 h-3" />
                                                                                                 {sub.fileNames?.[idx] || `File ${idx + 1}`}
