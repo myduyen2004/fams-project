@@ -200,8 +200,63 @@ public class StudentGradeService {
      */
     @Transactional
     public void updateGradesBatch(List<UpdateGradeRequest> requests, Long updatedById) {
+        if (requests == null || requests.isEmpty())
+            return;
+
+        User updatedBy = userRepository.findById(updatedById)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Pre-fetch all needed entities to avoid N+1 problem
+        Set<Long> enrollmentIds = requests.stream().map(UpdateGradeRequest::getEnrollmentId)
+                .collect(Collectors.toSet());
+        Set<Long> gradeComponentIds = requests.stream().map(UpdateGradeRequest::getGradeComponentId)
+                .collect(Collectors.toSet());
+
+        Map<Long, Enrollment> enrollmentMap = enrollmentRepository.findAllById(enrollmentIds).stream()
+                .collect(Collectors.toMap(Enrollment::getId, e -> e));
+        Map<Long, GradeComponent> gradeComponentMap = gradeComponentRepository.findAllById(gradeComponentIds).stream()
+                .collect(Collectors.toMap(GradeComponent::getId, gc -> gc));
+
+        // Find existing grades to update
+        List<StudentGrade> existingGradesList = studentGradeRepository.findByEnrollmentIdIn(enrollmentIds);
+        Map<String, StudentGrade> existingGradesMap = existingGradesList.stream()
+                .collect(
+                        Collectors.toMap(g -> g.getEnrollment().getId() + "_" + g.getGradeComponent().getId(), g -> g));
+
+        List<StudentGrade> toSave = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+
         for (UpdateGradeRequest req : requests) {
-            updateGrade(req, updatedById);
+            Enrollment enrollment = enrollmentMap.get(req.getEnrollmentId());
+            if (enrollment == null)
+                continue;
+
+            // Check if grades are already submitted
+            if (Boolean.TRUE.equals(enrollment.getClassSection().getGradesSubmitted())) {
+                throw new RuntimeException("Không thể chỉnh sửa điểm. Điểm đã được gửi cho phòng đào tạo.");
+            }
+
+            GradeComponent gradeComponent = gradeComponentMap.get(req.getGradeComponentId());
+            if (gradeComponent == null)
+                continue;
+
+            String key = enrollment.getId() + "_" + gradeComponent.getId();
+            StudentGrade grade = existingGradesMap.getOrDefault(key, StudentGrade.builder()
+                    .enrollment(enrollment)
+                    .gradeComponent(gradeComponent)
+                    .attempt(1)
+                    .build());
+
+            grade.setScore(req.getScore());
+            grade.setNote(req.getNote());
+            grade.setGradedAt(now);
+            grade.setGradedBy(updatedBy);
+
+            toSave.add(grade);
+        }
+
+        if (!toSave.isEmpty()) {
+            studentGradeRepository.saveAll(toSave);
         }
     }
 
@@ -973,12 +1028,25 @@ public class StudentGradeService {
                 Double score = grade != null ? grade.getScore() : null;
                 String comment = grade != null ? grade.getNote() : null;
 
+                // Determine visibility based on type and status
+                boolean isPublished;
+                if (gc.getIsResit() || gc.getType() == GradeComponent.GradeType.RESIT) {
+                    isPublished = classSection.getResitGradesPublished();
+                } else if (gc.getType() == GradeComponent.GradeType.FINAL_EXAM ||
+                        gc.getType() == GradeComponent.GradeType.MID_TERM ||
+                        gc.getType() == GradeComponent.GradeType.PRACTICAL_EXAM) {
+                    isPublished = classSection.getGradesPublished();
+                } else {
+                    // Regular components are visible if submitted
+                    isPublished = Boolean.TRUE.equals(classSection.getGradesSubmitted());
+                }
+
                 items.add(StudentMyGradeResponse.GradeItemDTO.builder()
                         .itemName(gc.getName())
                         .weight(gc.getWeight())
                         .value(score)
                         .comment(comment)
-                        .isPublished(classSection.getGradesPublished())
+                        .isPublished(isPublished)
                         .build());
 
                 categoryWeight += gc.getWeight();

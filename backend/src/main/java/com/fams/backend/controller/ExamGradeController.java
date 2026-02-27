@@ -98,9 +98,10 @@ public class ExamGradeController {
     public ResponseEntity<Map<String, Object>> publishGrades(
             @RequestParam String courseCode,
             @RequestParam String semesterCode,
+            @RequestParam(defaultValue = "EXAM") String type,
             @AuthenticationPrincipal UserDetails userDetails) {
         Long userId = getUserId(userDetails);
-        Map<String, Object> result = examGradeService.publishGrades(courseCode, semesterCode, userId);
+        Map<String, Object> result = examGradeService.publishGrades(courseCode, semesterCode, type, userId);
         return ResponseEntity.ok(result);
     }
 }

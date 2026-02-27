@@ -151,19 +151,17 @@ public class ExamGradeService {
 
             // Calculate weighted sum for final grade using ALL components
             Double finalGrade = null;
-            if ("EXAM".equalsIgnoreCase(type)) {
-                double totalWeight = 0;
-                double weightedSum = 0;
-                for (GradeComponent gc : allComponents) {
-                    Double score = studentGrades.get(gc.getId());
-                    if (score != null) {
-                        weightedSum += score * gc.getWeight();
-                        totalWeight += gc.getWeight();
-                    }
+            double totalWeight = 0;
+            double weightedSum = 0;
+            for (GradeComponent gc : allComponents) {
+                Double score = studentGrades.get(gc.getId());
+                if (score != null) {
+                    weightedSum += score * gc.getWeight();
+                    totalWeight += gc.getWeight();
                 }
-                if (totalWeight > 0) {
-                    finalGrade = weightedSum / totalWeight;
-                }
+            }
+            if (totalWeight > 0) {
+                finalGrade = weightedSum / totalWeight;
             }
 
             String status = "PENDING";
@@ -185,17 +183,37 @@ public class ExamGradeService {
         // Sort by student code
         studentRows.sort(Comparator.comparing(ExamStudentGradeRow::getStudentCode));
 
-        // Calculate statistics
-        double averageGrade = studentRows.stream()
+        // Filter student rows for RESIT type
+        List<ExamStudentGradeRow> finalStudentRows = studentRows;
+        if ("RESIT".equalsIgnoreCase(type)) {
+            finalStudentRows = studentRows.stream().filter(row -> {
+                // Điều kiện lọc danh sách thi lại giống frontend:
+                // 1. Điểm TB < 5 (FAILED)
+                // 2. Thiếu điểm thi cuối kỳ (finalGrade null hoặc logic check FE)
+                // 3. Status PENDING
+                boolean isFailed = "FAILED".equals(row.getStatus());
+                boolean isPending = "PENDING".equals(row.getStatus());
+
+                // Kiểm tra xem có thiếu điểm Final Exam không
+                boolean missingFE = allComponents.stream()
+                        .filter(gc -> gc.getType() == GradeComponent.GradeType.FINAL_EXAM)
+                        .anyMatch(gc -> row.getGrades().get(gc.getId()) == null);
+
+                return isFailed || isPending || missingFE;
+            }).collect(Collectors.toList());
+        }
+
+        // Calculate statistics based on the final (potentially filtered) list
+        double averageGrade = finalStudentRows.stream()
                 .map(ExamStudentGradeRow::getFinalGrade)
                 .filter(Objects::nonNull)
                 .mapToDouble(Double::doubleValue)
                 .average().orElse(0.0);
 
-        long passedCount = studentRows.stream()
+        long passedCount = finalStudentRows.stream()
                 .filter(row -> "PASSED".equals(row.getStatus()))
                 .count();
-        double passRate = studentRows.isEmpty() ? 0 : (double) passedCount / studentRows.size() * 100;
+        double passRate = finalStudentRows.isEmpty() ? 0 : (double) passedCount / finalStudentRows.size() * 100;
 
         // Check publish status (if ANY class in this course-semester is published,
         // consider it published)
@@ -203,19 +221,35 @@ public class ExamGradeService {
                 .map(Enrollment::getClassSection)
                 .collect(Collectors.toSet());
 
-        boolean isPublished = classSections.stream().anyMatch(ClassSection::getGradesPublished);
+        boolean isPublished;
         String publishedAt = null;
         String publishedBy = null;
 
-        Optional<ClassSection> publishedClass = classSections.stream()
-                .filter(cs -> cs.getGradesPublished() && cs.getGradesPublishedAt() != null)
-                .findFirst();
+        if ("RESIT".equalsIgnoreCase(type)) {
+            isPublished = classSections.stream().anyMatch(ClassSection::getResitGradesPublished);
+            Optional<ClassSection> publishedClass = classSections.stream()
+                    .filter(cs -> cs.getResitGradesPublished() && cs.getResitGradesPublishedAt() != null)
+                    .findFirst();
 
-        if (publishedClass.isPresent()) {
-            ClassSection cs = publishedClass.get();
-            publishedAt = cs.getGradesPublishedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-            if (cs.getGradesPublishedBy() != null) {
-                publishedBy = cs.getGradesPublishedBy().getFullName();
+            if (publishedClass.isPresent()) {
+                ClassSection cs = publishedClass.get();
+                publishedAt = cs.getResitGradesPublishedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                if (cs.getResitGradesPublishedBy() != null) {
+                    publishedBy = cs.getResitGradesPublishedBy().getFullName();
+                }
+            }
+        } else {
+            isPublished = classSections.stream().anyMatch(ClassSection::getGradesPublished);
+            Optional<ClassSection> publishedClass = classSections.stream()
+                    .filter(cs -> cs.getGradesPublished() && cs.getGradesPublishedAt() != null)
+                    .findFirst();
+
+            if (publishedClass.isPresent()) {
+                ClassSection cs = publishedClass.get();
+                publishedAt = cs.getGradesPublishedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                if (cs.getGradesPublishedBy() != null) {
+                    publishedBy = cs.getGradesPublishedBy().getFullName();
+                }
             }
         }
 
@@ -224,12 +258,12 @@ public class ExamGradeService {
                 .courseName(course.getName())
                 .semesterCode(semesterCode)
                 .semesterName(semester.getName())
-                .totalStudents(studentRows.size())
+                .totalStudents(finalStudentRows.size())
                 .averageGrade(Math.round(averageGrade * 10.0) / 10.0)
                 .passRate(Math.round(passRate * 10.0) / 10.0)
                 .lastUpdated(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
                 .gradeComponents(componentInfos)
-                .studentGrades(studentRows)
+                .studentGrades(finalStudentRows)
                 .gradesPublished(isPublished)
                 .gradesPublishedAt(publishedAt)
                 .gradesPublishedBy(publishedBy)
@@ -541,6 +575,17 @@ public class ExamGradeService {
                     continue;
                 }
 
+                // Check if grades already published
+                if ("RESIT".equalsIgnoreCase(type)) {
+                    if (Boolean.TRUE.equals(enrollment.getClassSection().getResitGradesPublished())) {
+                        continue; // Skip if published
+                    }
+                } else {
+                    if (Boolean.TRUE.equals(enrollment.getClassSection().getGradesPublished())) {
+                        continue; // Skip if published
+                    }
+                }
+
                 // Parse and save grades using map
                 for (Map.Entry<Integer, GradeComponent> entry : colToComponent.entrySet()) {
                     int colIdx = entry.getKey();
@@ -548,12 +593,6 @@ public class ExamGradeService {
 
                     Cell cell = row.getCell(colIdx);
                     Double score = getCellDoubleValue(cell);
-
-                    // If score is null (empty cell), we skip updating (or we could perform delete
-                    // like in student service,
-                    // but for now keeping it simple: only import values present)
-                    // If user wants to delete, they might need to clear it in lecturer page or we
-                    // can add that logic later if requested
 
                     if (score != null && score >= 0 && score <= 10) {
                         Optional<StudentGrade> existingGrade = studentGradeRepository
@@ -679,7 +718,7 @@ public class ExamGradeService {
      * This makes grades visible to students
      */
     @Transactional
-    public Map<String, Object> publishGrades(String courseCode, String semesterCode, Long publishedById) {
+    public Map<String, Object> publishGrades(String courseCode, String semesterCode, String type, Long publishedById) {
         Course course = courseRepository.findByCode(courseCode)
                 .orElseThrow(() -> new RuntimeException("Course not found: " + courseCode));
 
@@ -695,18 +734,30 @@ public class ExamGradeService {
                 .collect(Collectors.toSet());
 
         int publishedCount = 0;
+        boolean isResit = "RESIT".equalsIgnoreCase(type);
+
         for (ClassSection classSection : classSections) {
-            if (!classSection.getGradesPublished()) {
-                classSection.setGradesPublished(true);
-                classSection.setGradesPublishedAt(LocalDateTime.now());
-                classSection.setGradesPublishedBy(publisher);
-                classSectionRepository.save(classSection);
-                publishedCount++;
+            if (isResit) {
+                if (!classSection.getResitGradesPublished()) {
+                    classSection.setResitGradesPublished(true);
+                    classSection.setResitGradesPublishedAt(LocalDateTime.now());
+                    classSection.setResitGradesPublishedBy(publisher);
+                    classSectionRepository.save(classSection);
+                    publishedCount++;
+                }
+            } else {
+                if (!classSection.getGradesPublished()) {
+                    classSection.setGradesPublished(true);
+                    classSection.setGradesPublishedAt(LocalDateTime.now());
+                    classSection.setGradesPublishedBy(publisher);
+                    classSectionRepository.save(classSection);
+                    publishedCount++;
+                }
             }
         }
 
-        log.info("Published grades for course {} semester {} by user {}: {} classes updated",
-                courseCode, semesterCode, publishedById, publishedCount);
+        log.info("Published {} grades for course {} semester {} by user {}: {} classes updated",
+                type, courseCode, semesterCode, publishedById, publishedCount);
 
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
