@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import '../models/notification_model.dart';
 import '../services/notification_service.dart';
 import '../services/notification_polling_service.dart';
+import '../../auth/controllers/auth_controller.dart';
 
 class NotificationController extends GetxController {
   final NotificationService _notificationService = NotificationService();
@@ -41,6 +42,9 @@ class NotificationController extends GetxController {
   }
 
   Future<void> fetchNotifications() async {
+    final authController = Get.find<AuthController>();
+    if (!authController.isAuthenticated.value) return;
+
     try {
       isLoading.value = true;
       final result = await _notificationService.getNotifications();
@@ -53,6 +57,9 @@ class NotificationController extends GetxController {
   }
 
   Future<void> fetchUnreadCount() async {
+    final authController = Get.find<AuthController>();
+    if (!authController.isAuthenticated.value) return;
+
     try {
       final count = await _notificationService.getUnreadCount();
       unreadCount.value = count;

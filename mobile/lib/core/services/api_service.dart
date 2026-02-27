@@ -13,6 +13,9 @@ class ApiService {
   late Dio _dio;
   final _storage = const FlutterSecureStorage();
 
+  /// Callback to handle unauthorized errors (401)
+  VoidCallback? onUnauthorized;
+
   /// Initialize Dio with configuration
   void init() {
     _dio = Dio(
@@ -39,10 +42,26 @@ class ApiService {
           return handler.next(options);
         },
         onError: (error, handler) async {
-          // Handle 401 Unauthorized or 403 Forbidden (expired tokens result in 403 in this backend)
-          if (error.response?.statusCode == 401 ||
-              error.response?.statusCode == 403) {
-            await _storage.deleteAll();
+          // Handle 401 Unauthorized or 403 Forbidden
+          if (error.response?.statusCode == 401) {
+            debugPrint('[ApiService] Unauthorized error (401) for: ${error.requestOptions.path}');
+            
+            // Optimization: if we didn't even send an Authorization header, 
+            // it might be a race condition or an intended public request that failed.
+            // Don't kill the whole session for this.
+            bool hasToken = error.requestOptions.headers.containsKey('Authorization');
+            if (!hasToken) {
+              debugPrint('[ApiService] 401 error but no Authorization header was sent. Ignoring for session management.');
+              return handler.next(error);
+            }
+            
+            // Only trigger logout logic if it's NOT a public endpoint
+            bool isPublic = error.requestOptions.path.contains('/api/auth/') || 
+                           error.requestOptions.path.contains('/api/v1/semesters/active');
+            
+            if (!isPublic && onUnauthorized != null) {
+              onUnauthorized!();
+            }
           }
           return handler.next(error);
         },

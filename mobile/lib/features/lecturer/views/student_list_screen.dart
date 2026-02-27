@@ -192,23 +192,15 @@ class _StudentListScreenState extends State<StudentListScreen> {
                     const SizedBox(height: 2),
                     Text(
                       '${widget.classSection.courseCode} - ${widget.classSection.courseName}',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.roboto(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                         color: Colors.grey[600],
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${widget.classSection.courseCode} - ${widget.classSection.courseName}',
-                        style: GoogleFonts.roboto(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.grey[600],
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                   ),
           ),
           const SizedBox(width: 16),
@@ -329,7 +321,8 @@ class _StudentListScreenState extends State<StudentListScreen> {
               fontWeight: FontWeight.w600,
               color: const Color(0xFFEF7623),
             ),
-          ],
+          ),
+        ],
         ),
       ),
     );

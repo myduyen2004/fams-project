@@ -25,6 +25,7 @@ public class SemesterServiceImpl implements SemesterService {
     private final SlotTypeRepository slotTypeRepository;
     private final HolidayRepository holidayRepository;
     private final SemesterWeekdayRepository semesterWeekdayRepository;
+    private final TimetableSlotRepository timetableSlotRepository;
 
     @Override
     public List<SemesterResponse> getAllSemesters() {
@@ -258,6 +259,19 @@ public class SemesterServiceImpl implements SemesterService {
     public void saveSemesterConfig(String code, SemesterConfigRequest configRequest) {
         Semester semester = semesterRepository.findByCode(code)
                 .orElseThrow(() -> new RuntimeException("Semester not found with code: " + code));
+
+        // Restriction: Only allow editing UPCOMING semesters
+        if (semester.getStatus() != Semester.SemesterStatus.UPCOMING) {
+            throw new RuntimeException("Chỉ có thể chỉnh sửa cấu hình cho các học kỳ sắp diễn ra");
+        }
+
+        // Deleting existing TimetableSlots when configuration is updated for an
+        // UPCOMING semester
+        long existingSlots = timetableSlotRepository.countBySemesterCode(code);
+        if (existingSlots > 0) {
+            log.info("Deleting {} existing timetable slots for semester {} due to config update", existingSlots, code);
+            timetableSlotRepository.deleteBySemesterCode(code);
+        }
 
         // 1. Update or Create SemesterConfig
         SemesterConfig config = semester.getConfig();

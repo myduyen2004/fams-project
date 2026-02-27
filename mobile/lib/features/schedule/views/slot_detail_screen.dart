@@ -185,12 +185,14 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
             ],
           ),
           
-          // User Registration Guidance
+          // User Registration Guidance (Students only)
           Obx(() {
             final authController = Get.find<AuthController>();
-            final hasFace = authController.currentUser.value?.hasFaceRegistered ?? false;
+            final user = authController.currentUser.value;
+            final isLecturer = user?.isLecturer ?? false;
+            final hasFace = user?.hasFaceRegistered ?? false;
             
-            if (!hasFace) {
+            if (!isLecturer && !hasFace) {
               return Padding(
                 padding: const EdgeInsets.only(top: 20),
                 child: Text(
@@ -357,8 +359,13 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
         children: [
           Obx(() {
             final authController = Get.find<AuthController>();
-            final hasFace = authController.currentUser.value?.hasFaceRegistered ?? false;
+            final user = authController.currentUser.value;
+            final isLecturer = user?.isLecturer ?? false;
             
+            // If it's a lecturer, don't show the face attendance button at all
+            if (isLecturer) return const SizedBox.shrink();
+
+            final hasFace = user?.hasFaceRegistered ?? false;
             final scheduleController = Get.find<ScheduleController>();
             final config = scheduleController.attendanceConfig.value;
             final faceEnabled = config.faceRecognitionEnabled;
