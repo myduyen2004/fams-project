@@ -185,12 +185,14 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
             ],
           ),
           
-          // User Registration Guidance
+          // User Registration Guidance (Students only)
           Obx(() {
             final authController = Get.find<AuthController>();
-            final hasFace = authController.currentUser.value?.hasFaceRegistered ?? false;
+            final user = authController.currentUser.value;
+            final isLecturer = user?.isLecturer ?? false;
+            final hasFace = user?.hasFaceRegistered ?? false;
             
-            if (!hasFace) {
+            if (!isLecturer && !hasFace) {
               return Padding(
                 padding: const EdgeInsets.only(top: 20),
                 child: Text(
@@ -357,13 +359,24 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
         children: [
           Obx(() {
             final authController = Get.find<AuthController>();
-            final hasFace = authController.currentUser.value?.hasFaceRegistered ?? false;
+            final user = authController.currentUser.value;
+            final isLecturer = user?.isLecturer ?? false;
+            
+            // If it's a lecturer, don't show the face attendance button at all
+            if (isLecturer) return const SizedBox.shrink();
+
+            final hasFace = user?.hasFaceRegistered ?? false;
+            final scheduleController = Get.find<ScheduleController>();
+            final config = scheduleController.attendanceConfig.value;
+            final faceEnabled = config.faceRecognitionEnabled;
             
             Color buttonColor;
             bool isDuringTime = _isDuringSlotTime();
             
             if (hasCheckedIn) {
               buttonColor = const Color(0xFF27AE60);
+            } else if (!faceEnabled) {
+              buttonColor = const Color(0xFF64748B); // Slate/Grey for admin disabled
             } else if (!isDuringTime) {
               buttonColor = const Color(0xFF94A3B8); // Grey for out of time
             } else {
@@ -415,7 +428,25 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
                     ],
                   ),
                   child: ElevatedButton(
-                    onPressed: (hasCheckedIn || !isDuringTime) ? null : () async {
+                  onPressed: hasCheckedIn ? null : () async {
+                      if (!faceEnabled) {
+                        Get.snackbar(
+                          'Thông báo',
+                          'Quản trị viên chưa cho phép điểm danh bằng khuôn mặt cho hệ thống này.',
+                          snackPosition: SnackPosition.BOTTOM,
+                          backgroundColor: Colors.red.withOpacity(0.9),
+                          colorText: Colors.white,
+                          icon: const Icon(Icons.lock_outline_rounded, color: Colors.white),
+                        );
+                        return;
+                      }
+
+                      if (!isDuringTime) {
+                        // Keep current behavior for out of time if needed, 
+                        // but user specifically mentioned admin-disabled message.
+                        return;
+                      }
+
                       if (hasFace) {
                         if (widget.slot.id != null) {
                           final result = await Get.to(() => FaceAttendanceView(slotId: widget.slot.id!));
