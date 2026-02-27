@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:app_badge_plus/app_badge_plus.dart';
 import 'package:get/get.dart';
+import '../../auth/controllers/auth_controller.dart';
 import 'notification_service.dart';
 
 class NotificationPollingService {
@@ -75,6 +77,18 @@ class NotificationPollingService {
 
   Future<void> _fetchUnreadCount() async {
     if (!_isPolling) return;
+    
+    // Auth Guard: Only fetch if user is authenticated
+    try {
+      final authController = Get.find<AuthController>();
+      if (!authController.isAuthenticated.value) {
+        debugPrint('[NotificationPollingService] Skipping fetch: User not authenticated');
+        return;
+      }
+    } catch (e) {
+      debugPrint('[NotificationPollingService] AuthController not found, skipping fetch');
+      return;
+    }
     
     try {
       final count = await _notificationService.getUnreadCount();

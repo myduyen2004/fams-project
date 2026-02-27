@@ -41,24 +41,17 @@ class StudentDetailScreen extends StatelessWidget {
                   ),
                   Text(
                     'Hồ Sơ Sinh Viên',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.roboto(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
                     ),
-                    Text(
-                      'Hồ Sơ Sinh Viên',
-                      style: GoogleFonts.roboto(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    _buildCircleButton(
-                      icon: Icons.edit,
-                      onTap: () {}, // View only for now
-                    ),
-                  ],
+                  ),
+                  _buildCircleButton(
+                    icon: Icons.edit,
+                    onTap: () {}, // View only for now
+                  ),
+                ],
                 ),
               ),
 

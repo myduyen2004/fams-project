@@ -131,6 +131,7 @@ class Semester {
   final DateTime? startDate;
   final DateTime? endDate;
   final bool isPublished;
+  final String? status;
 
   Semester({
     required this.code,
@@ -138,16 +139,27 @@ class Semester {
     this.startDate,
     this.endDate,
     required this.isPublished,
+    this.status,
   });
 
   factory Semester.fromJson(Map<String, dynamic> json) {
-    return Semester(
-      code: json['code'] ?? '',
-      name: json['name'] ?? '',
-      startDate: json['startDate'] != null ? DateTime.parse(json['startDate']) : null,
-      endDate: json['endDate'] != null ? DateTime.parse(json['endDate']) : null,
-      isPublished: json['isPublished'] ?? false,
-    );
+    try {
+      return Semester(
+        code: json['code'] ?? '',
+        name: json['name'] ?? '',
+        startDate: json['startDate'] != null ? DateTime.tryParse(json['startDate']) : null,
+        endDate: json['endDate'] != null ? DateTime.tryParse(json['endDate']) : null,
+        isPublished: json['isPublished'] ?? false,
+        status: json['status'],
+      );
+    } catch (e) {
+      print('Error parsing Semester JSON: $e');
+      return Semester(
+        code: json['code'] ?? 'ERR',
+        name: json['name'] ?? 'Error Parsing',
+        isPublished: false,
+      );
+    }
   }
 }
 

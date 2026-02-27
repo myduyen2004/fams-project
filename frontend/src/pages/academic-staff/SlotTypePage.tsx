@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Calendar, Plus, ArrowLeft, Trash2, Clock, Check, AlertCircle, ChevronRight } from 'lucide-react';
+import { Settings, Calendar, Plus, ArrowLeft, Trash2, Clock, Check, AlertCircle, ChevronRight, AlertTriangle } from 'lucide-react';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import axios from 'axios';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 
 interface SlotTime {
   startTime: string;
@@ -26,6 +27,7 @@ interface SemesterConfig {
   slots: SlotTime[];
   holidays: Holiday[];
   isPublished: boolean;
+  status: 'upcoming' | 'active' | 'ended';
 }
 
 const DAYS_OF_WEEK = [
@@ -67,8 +69,11 @@ export const SlotTypePage: React.FC = () => {
       { startTime: '13:30', endTime: '15:00' },
     ],
     holidays: [],
-    isPublished: false
+    isPublished: false,
+    status: 'upcoming'
   });
+
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
   const [isReadOnly, setIsReadOnly] = useState(true);
   const [originalConfig, setOriginalConfig] = useState<SemesterConfig | null>(null);
@@ -84,7 +89,8 @@ export const SlotTypePage: React.FC = () => {
       { startTime: '11:00', endTime: '12:30' },
       { startTime: '13:30', endTime: '15:00' },
     ],
-    holidays: []
+    holidays: [],
+    status: 'upcoming'
   };
 
   const addMinutes = (time: string, minutes: number): string => {
@@ -147,7 +153,8 @@ export const SlotTypePage: React.FC = () => {
             slotsPerSubjectPerWeek: data.slotsPerSubjectPerWeek || config.slotsPerSubjectPerWeek,
             slotType: data.slotDuration ? data.slotDuration.toString() : config.slotType,
             slots: data.slots || config.slots,
-            holidays: data.holidays || config.holidays
+            holidays: data.holidays || config.holidays,
+            status: data.status || 'upcoming'
           };
           
           setConfig(loadedConfig);
@@ -321,6 +328,13 @@ export const SlotTypePage: React.FC = () => {
       return;
     }
 
+    // Open confirmation modal
+    setIsConfirmModalOpen(true);
+  };
+
+  const handleConfirmSave = async () => {
+    setIsConfirmModalOpen(false);
+    const validSlots = config.slots.filter(s => s.startTime && s.endTime);
     const validHolidays = config.holidays.filter(h => h.holidayDate);
 
     try {
@@ -336,12 +350,29 @@ export const SlotTypePage: React.FC = () => {
 
       await axios.post(`/api/v1/semesters/${semesterCode}/config`, payload);
       toast.success('Lưu cấu hình thành công!');
-      setOriginalConfig(config);
+      
+      // Refresh data to get newest state
+      const response = await axios.get(`/api/v1/semesters/get-by-code/${semesterCode}`);
+      const data = response.data;
+      const updatedConfig: SemesterConfig = {
+        ...config,
+        isPublished: data.isPublished || false,
+        selectedDays: data.selectedDays || config.selectedDays,
+        maxSlotsPerDay: data.maxSlotsPerDay || config.maxSlotsPerDay,
+        slotsPerSubjectPerWeek: data.slotsPerSubjectPerWeek || config.slotsPerSubjectPerWeek,
+        slotType: data.slotDuration ? data.slotDuration.toString() : config.slotType,
+        slots: data.slots || config.slots,
+        holidays: data.holidays || config.holidays,
+        status: data.status || 'upcoming'
+      };
+      
+      setConfig(updatedConfig);
+      setOriginalConfig(updatedConfig);
       setIsReadOnly(true);
     } catch (error: any) {
       console.error('Error saving configuration:', error);
       const errorMsg = error.response?.data?.message || error.response?.data || error.message || 'Lỗi không xác định';
-      toast.error(`Không thể lưu cấu hình: ${typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg)}`);
+      toast.error(`Không thể lưu cấu hình: ${error.response?.status === 403 ? 'Bạn không có quyền hoặc kỳ học đang diễn ra' : (typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg))}`);
     }
   };
 
@@ -382,12 +413,19 @@ export const SlotTypePage: React.FC = () => {
               QUẢN LÝ LỚP HỌC PHẦN
             </button>
             {isReadOnly ? (
-              <button 
-                onClick={() => setIsReadOnly(false)}
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs font-bold text-white shadow-lg shadow-blue-600/20 transition-all active:scale-95 flex items-center gap-2"
-              >
-                <Settings className="w-3.5 h-3.5" /> CHỈNH SỬA
-              </button>
+              config.status === 'upcoming' ? (
+                <button 
+                  onClick={() => setIsReadOnly(false)}
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs font-bold text-white shadow-lg shadow-blue-600/20 transition-all active:scale-95 flex items-center gap-2"
+                >
+                  <Settings className="w-3.5 h-3.5" /> CHỈNH SỬA
+                </button>
+              ) : (
+                <div className="flex items-center gap-2 bg-amber-50 text-amber-700 px-4 py-2 rounded-lg border border-amber-200">
+                  <AlertTriangle className="w-4 h-4" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Không thể chỉnh sửa do kỳ học đã hoặc đang diễn ra</span>
+                </div>
+              )
             ) : (
               <>
                 <button 
@@ -463,29 +501,6 @@ export const SlotTypePage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Trạng thái công bố */}
-                <div className="space-y-1.5 pt-1">
-                  <label className="text-sm font-semibold text-gray-700 block text-center lg:text-left">Công bố học kỳ</label>
-                  <div className="flex items-center justify-center lg:justify-start gap-4 h-[44px]">
-                    <button
-                      onClick={() => handleInputChange('isPublished', !config.isPublished)}
-                      disabled={isReadOnly}
-                      className={`relative inline-flex h-6 w-12 items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500/50 ${
-                        config.isPublished ? 'bg-emerald-500' : 'bg-gray-200'
-                      } ${isReadOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
-                    >
-                      <span
-                        className={`${config.isPublished ? 'translate-x-7' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 shadow-sm`}
-                      />
-                    </button>
-                    <div className="flex flex-col">
-                      <span className={`text-[11px] font-bold tracking-wider leading-none transition-colors duration-300 ${config.isPublished ? 'text-emerald-600' : 'text-gray-400'}`}>
-                        {config.isPublished ? 'ĐÃ CÔNG BỐ' : 'CHƯA CÔNG BỐ'}
-                      </span>
-                      <p className="text-[9px] text-gray-400 font-medium italic mt-0.5">Sinh viên & Giảng viên có thể xem lịch</p>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -759,12 +774,14 @@ export const SlotTypePage: React.FC = () => {
           </div>
           <div className="flex items-center gap-4">
             {isReadOnly ? (
-              <button 
-                onClick={() => setIsReadOnly(false)} 
-                className="px-10 py-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xl shadow-blue-600/20 transition-all active:scale-95 uppercase flex items-center gap-2"
-              >
-                <Settings className="w-4 h-4" /> Bắt đầu chỉnh sửa
-              </button>
+              config.status === 'upcoming' && (
+                <button 
+                  onClick={() => setIsReadOnly(false)} 
+                  className="px-10 py-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xl shadow-blue-600/20 transition-all active:scale-95 uppercase flex items-center gap-2"
+                >
+                  <Settings className="w-4 h-4" /> Bắt đầu chỉnh sửa
+                </button>
+              )
             ) : (
               <>
                 <button 
@@ -783,6 +800,18 @@ export const SlotTypePage: React.FC = () => {
             )}
           </div>
         </div>
+        
+        {/* Save Confirmation Modal */}
+        <ConfirmModal
+          isOpen={isConfirmModalOpen}
+          onClose={() => setIsConfirmModalOpen(false)}
+          onConfirm={handleConfirmSave}
+          title="Xác nhận lưu cấu hình"
+          message="Việc thay đổi cấu hình kỳ học sẽ xóa toàn bộ Thời khóa biểu (TKB) cũ của kỳ học này (nếu có). Bạn sẽ phải thực hiện tạo lại TKB mới sau khi lưu. Bạn có chắc chắn muốn tiếp tục?"
+          type="warning"
+          confirmLabel="Lưu và Xóa TKB cũ"
+          cancelLabel="Hủy"
+        />
 
       </div>
     </AcademicStaffLayout>

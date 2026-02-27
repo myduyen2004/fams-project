@@ -316,6 +316,17 @@ class ClassListScreen extends StatelessWidget {
     BuildContext context,
     ScheduleController scheduleController,
   ) {
+    if (scheduleController.semesters.isEmpty) {
+      Get.snackbar(
+        'Thông báo',
+        'Không tìm thấy danh sách học kỳ. Vui lòng thử lại sau hoặc kiểm tra kết nối mạng.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange.withOpacity(0.9),
+        colorText: Colors.white,
+      );
+      return;
+    }
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
