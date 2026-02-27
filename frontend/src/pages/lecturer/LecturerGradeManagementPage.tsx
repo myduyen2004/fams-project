@@ -345,7 +345,7 @@ export const LecturerGradeManagementPage: React.FC = () => {
         if (!gradeOverview) return;
         setSaving(true);
         try {
-            const updates: Promise<void>[] = [];
+            const updates: any[] = [];
             for (const [key, valueStr] of Object.entries(editedGrades)) {
                 const [enrollmentId, componentId] = key.split('_').map(Number);
                 // Find original score
@@ -356,15 +356,20 @@ export const LecturerGradeManagementPage: React.FC = () => {
                 const finalScore = newScore !== null && !isNaN(newScore) ? Math.round(newScore * 10) / 10 : null;
                 // Only save if changed
                 if (finalScore !== originalScore) {
-                    updates.push(studentGradeService.updateGrade({
+                    updates.push({
                         enrollmentId,
                         gradeComponentId: componentId,
                         score: finalScore
-                    }));
+                    });
                 }
             }
-            await Promise.all(updates);
-            toast.success(`Đã lưu ${updates.length} thay đổi`);
+
+            if (updates.length > 0) {
+                await studentGradeService.updateGradesBatch(updates);
+                toast.success(`Đã lưu ${updates.length} thay đổi`);
+            } else {
+                toast.success('Không có thay đổi nào cần lưu');
+            }
             setIsEditMode(false);
             setEditedGrades({});
             fetchGrades(); // Refresh data

@@ -110,6 +110,19 @@ public class ClassSection {
     @JoinColumn(name = "grades_published_by")
     private User gradesPublishedBy;
 
+    // Trạng thái công bố điểm THI LẠI cho sinh viên
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean resitGradesPublished = false;
+
+    // Thời gian công bố điểm thi lại
+    private LocalDateTime resitGradesPublishedAt;
+
+    // Nhân viên phòng đào tạo công bố điểm thi lại
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "resit_grades_published_by")
+    private User resitGradesPublishedBy;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
