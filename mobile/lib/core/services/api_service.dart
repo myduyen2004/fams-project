@@ -13,49 +13,78 @@ class ApiService {
   late Dio _dio;
   final _storage = const FlutterSecureStorage();
 
+  /// Callback to handle unauthorized errors (401)
+  VoidCallback? onUnauthorized;
+
   /// Initialize Dio with configuration
   void init() {
-    _dio = Dio(BaseOptions(
-      baseUrl: ApiConstants.baseUrl,
-      connectTimeout: ApiConstants.connectTimeout,
-      receiveTimeout: ApiConstants.receiveTimeout,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-    ));
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: ApiConstants.baseUrl,
+        connectTimeout: ApiConstants.connectTimeout,
+        receiveTimeout: ApiConstants.receiveTimeout,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      ),
+    );
 
     // Add interceptors
-    _dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) async {
-        // Add token to header
-        final token = await _storage.read(key: ApiConstants.keyToken);
-        if (token != null) {
-          options.headers['Authorization'] = 'Bearer $token';
-        }
-        return handler.next(options);
-      },
-      onError: (error, handler) async {
-        // Handle 401 Unauthorized
-        if (error.response?.statusCode == 401) {
-          await _storage.deleteAll();
-        }
-        return handler.next(error);
-      },
-    ));
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          // Add token to header
+          final token = await _storage.read(key: ApiConstants.keyToken);
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          return handler.next(options);
+        },
+        onError: (error, handler) async {
+          // Handle 401 Unauthorized or 403 Forbidden
+          if (error.response?.statusCode == 401) {
+            debugPrint('[ApiService] Unauthorized error (401) for: ${error.requestOptions.path}');
+            
+            // Optimization: if we didn't even send an Authorization header, 
+            // it might be a race condition or an intended public request that failed.
+            // Don't kill the whole session for this.
+            bool hasToken = error.requestOptions.headers.containsKey('Authorization');
+            if (!hasToken) {
+              debugPrint('[ApiService] 401 error but no Authorization header was sent. Ignoring for session management.');
+              return handler.next(error);
+            }
+            
+            // Only trigger logout logic if it's NOT a public endpoint
+            bool isPublic = error.requestOptions.path.contains('/api/auth/') || 
+                           error.requestOptions.path.contains('/api/v1/semesters/active');
+            
+            if (!isPublic && onUnauthorized != null) {
+              onUnauthorized!();
+            }
+          }
+          return handler.next(error);
+        },
+      ),
+    );
 
     // Add LogInterceptor in Debug Mode
     if (kDebugMode) {
-      _dio.interceptors.add(LogInterceptor(
-        requestBody: true,
-        responseBody: true,
-        logPrint: (obj) => debugPrint(obj.toString()),
-      ));
+      _dio.interceptors.add(
+        LogInterceptor(
+          requestBody: true,
+          responseBody: true,
+          logPrint: (obj) => debugPrint(obj.toString()),
+        ),
+      );
     }
   }
 
   /// GET Request
-  Future<Response> get(String path, {Map<String, dynamic>? queryParameters}) async {
+  Future<Response> get(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
     try {
       return await _dio.get(path, queryParameters: queryParameters);
     } catch (e) {
