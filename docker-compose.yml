@@ -53,9 +53,10 @@ services:
       retries: 3
 
   backend:
-    image: maven:3.9.6-eclipse-temurin-21
+    image: maven:3.9-eclipse-temurin-21-alpine
     container_name: fams-backend
     working_dir: /app
+    entrypoint: []
     volumes:
       - ./backend:/app
       - maven-repo:/root/.m2

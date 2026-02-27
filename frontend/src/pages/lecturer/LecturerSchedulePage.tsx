@@ -309,22 +309,6 @@ export const LecturerSchedulePage: React.FC = () => {
         }
     };
 
-    const handleStartAttendance = async () => {
-        if (!selectedSlot) return;
-        try {
-            // Check cache or just go to start flow?
-            // Start logic usually checks if session exists or creates new one
-            // We use the startSession API which handles both
-            const response = await attendanceService.startSession({
-                slotId: selectedSlot.id
-            });
-            navigate(`/lecturer/attendance/session/${response.sessionId}`);
-        } catch (error) {
-            console.error(error);
-            toast.error("Không thể tạo phiên điểm danh");
-        }
-    };
-
 
     return (
         <LecturerLayout pageTitle="Lịch giảng dạy">
@@ -631,12 +615,6 @@ export const LecturerSchedulePage: React.FC = () => {
                                         <Plus size={16} /> Tạo bài tập
                                     </button>
                                 )}
-                                <button
-                                    onClick={handleStartAttendance}
-                                    className="px-4 py-2 bg-fpt-orange text-white rounded-lg text-sm font-bold shadow-md hover:bg-orange-600 transition-colors flex items-center gap-2"
-                                >
-                                    <Clock size={16} /> Điểm danh
-                                </button>
                                 <button
                                     onClick={() => navigate(`/lecturer/attendance/realtime/${selectedSlot.id}`)}
                                     className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-bold shadow-md hover:bg-blue-600 transition-colors flex items-center gap-2"

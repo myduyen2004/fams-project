@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
@@ -37,13 +38,37 @@ class ScheduleController extends GetxController {
     ever(selectedDate, (_) => _updateSelectedDaySlots());
     ever(weeklyTimetable, (_) => _updateSelectedDaySlots());
     ever(selectedSemester, (_) => _onSemesterChanged());
+    
+    // Listen to auth status change to re-fetch data
+    ever(_authController.currentUser, (user) {
+      if (user != null) {
+        debugPrint('[ScheduleController] User authenticated, re-initializing data');
+        _initializeData();
+      } else {
+        debugPrint('[ScheduleController] User logged out, clearing data');
+        semesters.clear();
+        selectedSemester.value = null;
+        weeklyTimetable.value = null;
+        selectedDaySlots.clear();
+      }
+    });
+
+    _startTimer();
   }
 
   Future<void> _initializeData() async {
+    // Only fetch if user is logged in
+    if (_authController.currentUser.value == null) {
+      debugPrint('[ScheduleController] Skipping initialization: No user logged in');
+      return;
+    }
+    
+    // Always start with "today" freshly set
+    selectedDate.value = DateTime.now();
+    
     await fetchSemesters();
     await fetchAttendanceConfig();
     await fetchSchedule();
-    _startTimer();
   }
 
   void _startTimer() {
@@ -58,27 +83,56 @@ class ScheduleController extends GetxController {
   }
 
   Future<void> fetchSemesters() async {
-    final list = await _scheduleService.getSemesters();
-    semesters.value = list;
+    try {
+      debugPrint('[ScheduleController] fetchSemesters start');
+      final list = await _scheduleService.getSemesters();
+      debugPrint('[ScheduleController] Received ${list.length} semesters');
+      semesters.value = list;
 
-    // Auto select current semester based on today's date
-    final now = DateTime.now();
-    for (var s in list) {
-      if (s.startDate != null && s.endDate != null) {
-        if (now.isAfter(s.startDate!) && now.isBefore(s.endDate!)) {
-          selectedSemester.value = s;
-          break;
+      // Auto select current semester:
+      // 1. Prioritize semester with status "active" (ONGOING in backend)
+      // 2. Fallback to date range match
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      
+      Semester? found;
+      
+      // Step 1: Search for explicitly "active" semester
+      found = list.firstWhereOrNull((s) => s.status == 'active');
+      
+      // Step 2: Fallback to date range if no "active" status matches
+      if (found == null) {
+        for (var s in list) {
+          if (s.startDate != null && s.endDate != null) {
+            // Use inclusive comparison for dates
+            final start = DateTime(s.startDate!.year, s.startDate!.month, s.startDate!.day);
+            final end = DateTime(s.endDate!.year, s.endDate!.month, s.endDate!.day);
+            
+            if ((today.isAtSameMomentAs(start) || today.isAfter(start)) && 
+                (today.isAtSameMomentAs(end) || today.isBefore(end))) {
+              found = s;
+              break;
+            }
+          }
         }
       }
-    }
 
-    // Fallback to first if none match
-    if (selectedSemester.value == null && list.isNotEmpty) {
-      selectedSemester.value = list.first;
-    }
+      if (found != null) {
+        selectedSemester.value = found;
+        debugPrint('[ScheduleController] Auto-selected semester: ${found.name} (Source: ${found.status == 'active' ? 'Status' : 'Date Range'})');
+      }
 
-    if (selectedSemester.value == null) {
-      // Warning: selectedSemester is still null
+      // Fallback to first if none match
+      if (selectedSemester.value == null && list.isNotEmpty) {
+        selectedSemester.value = list.first;
+        debugPrint('[ScheduleController] Fallback to first semester: ${list.first.name}');
+      }
+
+      if (selectedSemester.value == null) {
+        debugPrint('[ScheduleController] WARNING: semestes list is empty or none selected');
+      }
+    } catch (e) {
+      debugPrint('[ScheduleController] Error in fetchSemesters: $e');
     }
   }
 
@@ -99,6 +153,11 @@ class ScheduleController extends GetxController {
     if (user == null) return;
 
     try {
+      // If semesters list is empty, try to fetch them first
+      if (semesters.isEmpty) {
+        await fetchSemesters();
+      }
+
       isLoading.value = true;
       errorStatusCode.value = -1;
 

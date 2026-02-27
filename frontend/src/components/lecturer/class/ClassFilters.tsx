@@ -32,7 +32,7 @@ export const ClassFilters: React.FC<ClassFiltersProps> = ({
                     >
                         <option value="">Chọn học kỳ</option>
                         {semesters.map((semester) => (
-                            <option key={semester.id} value={semester.code}>
+                            <option key={semester.code} value={semester.code}>
                                 {semester.name}
                             </option>
                         ))}
@@ -50,7 +50,7 @@ export const ClassFilters: React.FC<ClassFiltersProps> = ({
                     >
                         <option value="">Tất cả môn học</option>
                         {courseOptions.map((course) => (
-                            <option key={course.id} value={course.code}>
+                            <option key={course.code} value={course.code}>
                                 {course.code}
                             </option>
                         ))}

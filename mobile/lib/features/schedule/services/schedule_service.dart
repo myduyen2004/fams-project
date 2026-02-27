@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/api_constants.dart';
@@ -51,13 +52,18 @@ class ScheduleService {
 
   Future<List<Semester>> getSemesters() async {
     try {
+      debugPrint('[ScheduleService] Fetching active semesters from: /api/v1/semesters/active');
       final response = await _apiService.get('/api/v1/semesters/active');
+      
       if (response.statusCode == 200) {
+        debugPrint('[ScheduleService] Fetch semesters success: ${response.data}');
         return (response.data as List).map((i) => Semester.fromJson(i)).toList();
       }
+      debugPrint('[ScheduleService] Fetch semesters failed with status: ${response.statusCode}');
       return [];
     } catch (e) {
-      return [];
+      debugPrint('[ScheduleService] Fetch semesters CRITICAL error: $e');
+      rethrow;
     }
   }
 
