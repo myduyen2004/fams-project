@@ -49,13 +49,16 @@ class ClassListController extends GetxController {
       errorMessage.value = '';
 
       // Get active semester from schedule controller
-      String? semesterCode;
-      try {
-        final scheduleController = Get.find<ScheduleController>();
-        semesterCode = scheduleController.selectedSemester.value?.code;
-      } catch (_) {}
+      final scheduleController = Get.find<ScheduleController>();
+      
+      // If semesters list is empty, try to fetch them first
+      if (scheduleController.semesters.isEmpty) {
+        await scheduleController.fetchSemesters();
+      }
 
-      // If no semester selected yet, don't fetch (listener will catch it later)
+      String? semesterCode = scheduleController.selectedSemester.value?.code;
+
+      // If still no semester selected, don't fetch classes yet
       if (semesterCode == null) {
         isLoading.value = false;
         return;

@@ -4,8 +4,55 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../controllers/schedule_controller.dart';
 
-class ScheduleCalendar extends StatelessWidget {
+class ScheduleCalendar extends StatefulWidget {
   const ScheduleCalendar({super.key});
+
+  @override
+  State<ScheduleCalendar> createState() => _ScheduleCalendarState();
+}
+
+class _ScheduleCalendarState extends State<ScheduleCalendar> {
+  late ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    
+    // Initial scroll after build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToSelectedDate(animate: false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToSelectedDate({bool animate = true}) {
+    if (!_scrollController.hasClients) return;
+    
+    final controller = Get.find<ScheduleController>();
+    final date = controller.selectedDate.value;
+    final index = date.weekday - 1; // 0 for Monday, 6 for Sunday
+    
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth = (screenWidth - 110) / 5 + 5; // cardWidth + horizontal margins
+    
+    final offset = (index * cardWidth).clamp(0.0, _scrollController.position.maxScrollExtent);
+    
+    if (animate) {
+      _scrollController.animateTo(
+        offset,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      _scrollController.jumpTo(offset);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,12 +69,19 @@ class ScheduleCalendar extends StatelessWidget {
           ),
           Expanded(
             child: SizedBox(
-              height: 94, // Reduced from 110
+              height: 94,
               child: Obx(() {
-                // Accessing this ensures GetX registers the dependency
-                final _ = controller.selectedDate.value;
-                final __ = controller.weeklyTimetable.value; // Subscribe to schedule updates
+                // Subscribe to date changes
+                final date = controller.selectedDate.value;
+                final _ = controller.weeklyTimetable.value;
+
+                // Trigger scroll when date changes
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _scrollToSelectedDate();
+                });
+
                 return ListView.builder(
+                  controller: _scrollController,
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
                   itemCount: 7,
@@ -53,18 +107,15 @@ class ScheduleCalendar extends StatelessWidget {
     final date = monday.add(Duration(days: index));
     final isSelected = _isSameDay(date, controller.selectedDate.value);
     
-    // Check if this day has any slots
     final hasSchedule = controller.weeklyTimetable.value?.days.any((d) => 
       _isSameDay(d.date, date) && d.slots.isNotEmpty
     ) ?? false;
 
-    final double screenWidth = Get.width;
-    
     return GestureDetector(
       onTap: () => controller.selectDate(date),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        width: (Get.width - 110) / 5, 
+        width: (MediaQuery.of(context).size.width - 110) / 5, 
         margin: const EdgeInsets.symmetric(horizontal: 2.5, vertical: 5),
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(

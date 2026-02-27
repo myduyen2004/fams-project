@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 @Repository
@@ -237,7 +238,7 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
         /**
          * Delete all slots for a semester
          */
-        @Modifying(clearAutomatically = true)
+        @Modifying
         @Transactional
         @Query("DELETE FROM TimetableSlot ts WHERE ts.classSection.className IN " +
                         "(SELECT cs.className FROM ClassSection cs WHERE cs.semester.code = :semesterCode)")
@@ -339,5 +340,15 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
                         @Param("slotNumber") Integer slotNumber);
 
         // ==================== ASSIGNMENT SUBMISSION ====================
+        @Query("SELECT ts FROM TimetableSlot ts " +
+                        "JOIN FETCH ts.classSection cs " +
+                        "JOIN FETCH cs.lecturer " +
+                        "JOIN FETCH ts.slotType st " +
+                        "WHERE ts.date = :date " +
+                        "AND ts.status = com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.SCHEDULED " +
+                        "AND st.startTime <= :time " +
+                        "AND st.endTime > :time " +
+                        "AND NOT EXISTS (SELECT asess FROM AttendanceSession asess WHERE asess.timetableSlot.id = ts.id)")
+        List<TimetableSlot> findSlotsNeedingSession(@Param("date") LocalDate date, @Param("time") LocalTime time);
 
 }
