@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import timetableService, { WeeklyTimetableDTO, TimetableSlotDTO } from '../../services/api/timetableService';
-import attendanceService from '../../services/api/attendanceService';
 import { assignmentService } from '../../services/api/assignmentService';
 import { uploadFile } from '../../services/utils/fileUploadService';
 import { useNavigate } from 'react-router-dom';

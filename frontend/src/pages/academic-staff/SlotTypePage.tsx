@@ -89,7 +89,8 @@ export const SlotTypePage: React.FC = () => {
       { startTime: '11:00', endTime: '12:30' },
       { startTime: '13:30', endTime: '15:00' },
     ],
-    holidays: []
+    holidays: [],
+    status: 'upcoming'
   };
 
   const addMinutes = (time: string, minutes: number): string => {
