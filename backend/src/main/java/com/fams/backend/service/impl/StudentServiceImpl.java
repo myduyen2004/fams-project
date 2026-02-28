@@ -825,4 +825,11 @@ public class StudentServiceImpl implements StudentService {
                         .collect(Collectors.toList()))
                 .orElse(new ArrayList<>());
     }
+
+    @Override
+    public Page<StudentResponse> getAllStudents(String search, String status, String majorStr, String specializationStr,
+            String subSpecializationStr, Pageable pageable) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getAllStudents'");
+    }
 }

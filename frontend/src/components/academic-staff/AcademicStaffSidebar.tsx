@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Home,
   Calendar,
   FolderOpen,
   FileText,
   Bell,
   CheckSquare,
-  List,
   AlertTriangle,
   Settings,
   Clock,
   LogOut,
-  ChevronDown
+  ChevronDown,
+  List as ListIcon,
+  Bot,
+  LayoutDashboard
 } from 'lucide-react';
+
 import { authService } from '../../services/api/authService';
 import { ConfirmModal } from '../common/ConfirmModal';
 
@@ -51,8 +53,14 @@ export const AcademicStaffSidebar: React.FC = () => {
     {
       id: 'dashboard',
       label: 'Dashboard',
-      icon: <Home size={20} />,
+      icon: <LayoutDashboard size={20} />,
       path: '/academic-staff/dashboard'
+    },
+    {
+      id: 'chatbot',
+      label: 'FAMS AI Assistant',
+      icon: <Bot size={20} className="text-fpt-orange" />,
+      path: '/chatbot'
     },
     {
       id: 'schedule',
@@ -96,7 +104,7 @@ export const AcademicStaffSidebar: React.FC = () => {
     {
       id: 'lists',
       label: 'Danh sách',
-      icon: <List size={20} />,
+      icon: <ListIcon size={20} />,
       submenu: [
         { label: 'Phòng học', path: '/academic-staff/rooms' },
         { label: 'Học kỳ', path: '/academic-staff/semesters' },

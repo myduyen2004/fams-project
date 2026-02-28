@@ -178,4 +178,65 @@ public class EmailServiceImpl implements EmailService {
             log.error("Unexpected error sending OTP email to {}: {}", to, e.getMessage());
         }
     }
+
+    @Async
+    @Override
+    public void sendEmail(String to, String subject, String content) {
+        if (to == null || to.isEmpty()) {
+            log.warn("Cannot send email: Recipient email is empty");
+            return;
+        }
+
+        try {
+            log.info("Sending generic email to: {}", to);
+            MimeMessage message = javaMailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail, "FAMS AI Assistant");
+            helper.setTo(to);
+            helper.setSubject(subject);
+
+            String htmlContent = String.format(
+                    """
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                                <meta charset="UTF-8">
+                                <style>
+                                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+                                    .container { max-width: 600px; margin: 20px auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+                                    .header { background-color: #F26F21; color: #fff; padding: 20px; text-align: center; }
+                                    .header h1 { margin: 0; font-size: 24px; }
+                                    .content { padding: 30px; }
+                                    .footer { background-color: #eee; padding: 15px; text-align: center; font-size: 12px; color: #666; }
+                                </style>
+                            </head>
+                            <body>
+                                <div class="container">
+                                    <div class="header">
+                                        <h1>FAMS Notification</h1>
+                                    </div>
+                                    <div class="content">
+                                        %s
+                                    </div>
+                                    <div class="footer">
+                                        <p>Đây là email được gửi tự động từ FAMS AI Assistant.</p>
+                                    </div>
+                                </div>
+                            </body>
+                            </html>
+                            """,
+                    content.replace("\n", "<br>"));
+
+            helper.setText(htmlContent, true);
+
+            javaMailSender.send(message);
+            log.info("Generic email sent successfully to {}", to);
+
+        } catch (MessagingException | UnsupportedEncodingException e) {
+            log.error("Failed to send generic email to {}: {}", to, e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error sending generic email to {}: {}", to, e.getMessage());
+        }
+    }
 }
