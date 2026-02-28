@@ -8,7 +8,8 @@ import {
   Clock,
   LogOut,
   ChevronDown,
-  Cog
+  Cog,
+  Bot
 } from 'lucide-react';
 import { authService } from '../../services/api/authService';
 import { ConfirmModal } from '../common/ConfirmModal';
@@ -40,6 +41,12 @@ export const AdminSidebar: React.FC = () => {
       label: 'Dashboard',
       icon: <Home size={20} />,
       path: '/admin/dashboard'
+    },
+    {
+      id: 'chatbot',
+      label: 'FAMS AI Assistant',
+      icon: <Bot size={20} className="text-fpt-orange" />,
+      path: '/chatbot'
     },
     {
       id: 'manage',
@@ -173,8 +180,8 @@ export const AdminSidebar: React.FC = () => {
               <button
                 onClick={() => handleMenuClick(item)}
                 className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group ${isActive(item.path) || isSubmenuActive(item.submenu)
-                    ? 'bg-fpt-orange text-white'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-fpt-orange hover:text-white'
+                  ? 'bg-fpt-orange text-white'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-fpt-orange hover:text-white'
                   }`}
                 title={!isExpanded ? item.label : ''}
               >
@@ -205,8 +212,8 @@ export const AdminSidebar: React.FC = () => {
                       key={subItem.id}
                       onClick={() => handleSubmenuClick(subItem.path)}
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 group ${isActive(subItem.path)
-                          ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange font-medium'
-                          : 'text-gray-600 dark:text-gray-400 hover:bg-fpt-orange hover:text-white'
+                        ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange font-medium'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-fpt-orange hover:text-white'
                         }`}
                     >
                       <div className={`w-1.5 h-1.5 rounded-full transition-colors duration-200 ${isActive(subItem.path) ? 'bg-current' : 'bg-fpt-orange group-hover:bg-white'}`}></div>

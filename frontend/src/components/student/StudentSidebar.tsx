@@ -11,7 +11,8 @@ import {
     Settings,
     LogOut,
     GraduationCap,
-    ChevronDown
+    ChevronDown,
+    Bot
 } from 'lucide-react';
 import { authService } from '../../services/api/authService';
 import { ConfirmModal } from '../common/ConfirmModal';
@@ -42,6 +43,12 @@ export const StudentSidebar: React.FC = () => {
             label: 'Dashboard',
             icon: <Home size={20} />,
             path: '/student/dashboard'
+        },
+        {
+            id: 'chatbot',
+            label: 'FAMS AI Assistant',
+            icon: <Bot size={20} className="text-fpt-orange" />,
+            path: '/chatbot'
         },
         {
             id: 'schedule',
