@@ -333,7 +333,8 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
       setIsAsyncJob(true);
     }
     
-    if (data.statusMessage === 'DATA_PHASE_COMPLETE') {
+    if (data.statusMessage === 'DATA_PHASE_COMPLETE' && lastToastId.current !== 'DATA_PHASE_COMPLETE') {
+      lastToastId.current = 'DATA_PHASE_COMPLETE';
       toast.success('Dữ liệu đã sẵn sàng! Đang chuẩn bị ảnh nền...');
       setIsAsyncJob(false);
       onSuccess();
@@ -344,13 +345,16 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
     if (data.status === 'COMPLETED') {
       toast.success('Import hoàn tất thành công!');
       setIsAsyncJob(false);
+      setLoading(false);
+      setProgress({ percentage: 100, message: 'Hoàn thành', status: 'COMPLETED' });
       setTimeout(() => {
         onSuccess();
         onClose();
       }, 1000);
-    } else if (data.status === 'CANCELLED') {
+    } else if (data.status === 'CANCELLED' || data.status === 'FAILED') {
       setIsAsyncJob(false);
-      toast.error('Tiến trình đã bị dừng.');
+      setLoading(false);
+      toast.error(data.status === 'CANCELLED' ? 'Tiến trình đã bị dừng.' : 'Import thất bại.');
     }
   });
 
@@ -361,6 +365,14 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
         const activeJob = await userService.getActiveImportJob();
         // Only show progress if job is actually running (PENDING or PROCESSING from DB)
         if (activeJob && ['PENDING', 'PROCESSING'].includes(activeJob.status)) {
+          // Stale job detection: if percentage is 100% or job is old (> 10 min), treat as completed
+          const isStale = activeJob.percentage >= 100;
+          if (isStale) {
+            // Job completed but wasn't finalized properly — don't show progress
+            console.log('Stale import job detected, ignoring:', activeJob.jobId);
+            return;
+          }
+          
           setIsAsyncJob(true);
           setLoading(true);
           setProgress({
@@ -445,9 +457,8 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
 
   const validCount = previewData?.validRows || 0;
   const errorCount = previewData?.errorRows || 0;
-  // Only show progress when actually importing (async job detected or import in progress)
-  // Note: STARTING/PROCESSING/SAVING are WebSocket statuses, PENDING/PROCESSING are DB statuses
-  const showProgress = isAsyncJob || ['PENDING', 'STARTING', 'PROCESSING', 'SAVING'].includes(progress.status);
+  // Only show progress when actually importing AND job is actively running
+  const showProgress = isAsyncJob && !['COMPLETED', 'FAILED', 'CANCELLED'].includes(progress.status);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">

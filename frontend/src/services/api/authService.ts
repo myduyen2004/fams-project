@@ -106,12 +106,6 @@ export const authService = {
    */
   logout: async (): Promise<void> => {
     try {
-      // Best effort to cancel active import job before logging out
-      try {
-        await userService.cancelImportJob();
-      } catch (err) {
-        console.warn('Failed to cancel import job during logout:', err);
-      }
       await apiClient.post('/auth/logout');
     } finally {
       // Clear local storage

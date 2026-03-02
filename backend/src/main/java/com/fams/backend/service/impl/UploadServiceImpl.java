@@ -28,16 +28,20 @@ public class UploadServiceImpl implements UploadService {
     @Value("${file.upload-dir:./uploads}")
     private String uploadDir;
 
-    @SuppressWarnings("unchecked")
     @Override
     public String uploadFile(MultipartFile file) {
+        return uploadFile(file, "fams_general");
+    }
+
+    @Override
+    public String uploadFile(MultipartFile file, String folder) {
         if (file == null || file.isEmpty()) {
             return null;
         }
 
         try {
             String filename = file.getOriginalFilename();
-            log.info("Uploading file to Cloudinary: {}", filename);
+            log.info("Uploading file to Cloudinary folder {}: {}", folder, filename);
 
             // Determine resource type based on file extension
             String resourceType = "auto";
@@ -56,11 +60,11 @@ public class UploadServiceImpl implements UploadService {
             }
 
             log.info("Using resource_type: {} for file: {}", resourceType, filename);
-            Map<Object, Object> uploadResult = (Map<Object, Object>) cloudinary.uploader().upload(file.getBytes(),
+            Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(),
                     ObjectUtils.asMap(
                             "resource_type", resourceType,
                             "type", "upload", // Make files publicly accessible
-                            "folder", "fams_notifications",
+                            "folder", folder,
                             "use_filename", true,
                             "unique_filename", true,
                             "filename", file.getOriginalFilename()));
@@ -81,7 +85,7 @@ public class UploadServiceImpl implements UploadService {
 
         try {
             log.info("Uploading bytes to Cloudinary folder {}: {}", folder, fileName);
-            Map<Object, Object> uploadResult = (Map<Object, Object>) cloudinary.uploader().upload(bytes,
+            Map<?, ?> uploadResult = cloudinary.uploader().upload(bytes,
                     ObjectUtils.asMap(
                             "resource_type", "auto",
                             "folder", folder,
