@@ -60,6 +60,7 @@ services:
     volumes:
       - ./backend:/app
       - maven-repo:/root/.m2
+      - backend-target:/app/target
     ports:
       - "8080:8080"
     env_file: .env
@@ -73,7 +74,7 @@ services:
       - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
       - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
-    command: mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Xms512m -Xmx1024m"
+    command: mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Xms512m -Xmx1024m -XX:+TieredCompilation -XX:TieredStopAtLevel=1" -Dspring-boot.run.arguments="-T 1C"
     depends_on:
       postgres:
         condition: service_healthy
@@ -104,6 +105,7 @@ services:
 volumes:
   postgres_data:
   maven-repo:
+  backend-target:
 
 
 networks:

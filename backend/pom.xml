@@ -233,6 +233,10 @@
 							<version>${mapstruct.version}</version>
 						</path>
 					</annotationProcessorPaths>
+					<compilerArgs>
+						<arg>-parameters</arg>
+					</compilerArgs>
+					<useIncrementalCompilation>true</useIncrementalCompilation>
 				</configuration>
 			</plugin>
 		</plugins>
