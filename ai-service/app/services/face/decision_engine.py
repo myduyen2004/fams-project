@@ -134,12 +134,14 @@ class DecisionEngine:
         
         votes_real = sum([ai_votes_real, geo_votes_real, physical_votes_real])
         
-        # [ANTI-PARANOID]: Strong AI + Solid 3D can override a weak Physical sensor
-        # This prevents camera noise/matte skin from triggering a 1/3 fail when 2 systems say REAL.
-        if ai_votes_real and effective_geo > 0.6 and not physical_votes_real:
-            logger.info("DecisionEngine: AI + SOLID-3D override. Ignoring weak Physical sensor.")
-            votes_real = 2
-            physical_votes_real = "OVERRIDDEN"
+        # [ANTI-PARANOID]: AI-Physical override for Registration
+        # If AI says real with very high confidence and 3D is solid, 
+        # we treat the Physical signal as noise unless it's strictly definitive (>0.92).
+        if is_reg and ai_votes_real and effective_geo > 0.40:
+            if passive_liveness_score > 0.94 and actual_replay_score < 0.92:
+                logger.info(f"DecisionEngine [REG]: AI ({passive_liveness_score:.2f}) + 3D ({effective_geo:.2f}) OVERRIDE. Ignoring Physical ({actual_replay_score:.2f})")
+                physical_votes_real = True
+                votes_real = sum([ai_votes_real, geo_votes_real, physical_votes_real])
 
         logger.info(f"GOLDEN TRIANGLE: AI={ai_votes_real}({passive_liveness_score:.2f}), "
                      f"3D={geo_votes_real}({effective_geo:.2f}, thresh={geo_threshold}), "
@@ -213,11 +215,16 @@ class DecisionEngine:
             else:
                  decision = "PASS"
                  message = f"Xác thực thành công ({total_score:.0%})"
-        elif votes_real >= 2 and total_score >= self.REVIEW_THRESHOLD:
-            # 2/3 agree but score is borderline
-            decision = "PASS"
-            message = f"Xác thực thành công - Điểm biên ({total_score:.0%})"
-            logger.info(f"GOLDEN TRIANGLE: 2/3 agree, borderline score {total_score:.2f}. Granting PASS.")
+        elif votes_real >= 2:
+            score_thresh = 0.55 if is_reg else self.REVIEW_THRESHOLD
+            if total_score >= score_thresh:
+                # 2/3 agree but score is borderline
+                decision = "PASS"
+                message = f"Xác thực thành công - Điểm biên ({total_score:.0%})"
+                logger.info(f"GOLDEN TRIANGLE: 2/3 agree, borderline score {total_score:.2f}. Granting PASS (Mode: {mode}).")
+            else:
+                decision = "MANUAL_REVIEW"
+                message = f"Cần xác thực thủ công - Hệ thống chưa đồng thuận ({total_score:.0%})"
         elif votes_real <= 1 and total_score >= self.PASS_THRESHOLD:
             # Score is high but subsystems disagree - demote to REVIEW
             decision = "MANUAL_REVIEW"

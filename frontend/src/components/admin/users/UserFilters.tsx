@@ -71,7 +71,7 @@ export const UserFilters: React.FC<UserFiltersProps> = React.memo(({
           className="flex items-center gap-2 px-4 py-2 border border-fpt-orange text-fpt-orange rounded-lg text-sm font-medium hover:bg-orange-50 transition-colors"
         >
           <Upload size={18} />
-          Import
+          Nhập file zip
         </button>
         <button 
           onClick={onAddClick}

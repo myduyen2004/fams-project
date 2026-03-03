@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
+import { timetableService } from '../../services/api/timetableService';
 
 interface SlotTime {
   startTime: string;
@@ -318,8 +319,14 @@ export const SlotTypePage: React.FC = () => {
 
   const handleSubmit = async () => {
     const err = validateSchedule();
-    if (err) { toast.error(err); return; }
-    if (!config.semesterName || config.selectedDays.length === 0) { toast.error('Thiếu thông tin bắt buộc'); return; }
+    if (err) {
+      toast.error(err);
+      return;
+    }
+    if (!config.semesterName || config.selectedDays.length === 0) {
+      toast.error('Thiếu thông tin bắt buộc');
+      return;
+    }
 
     // Validate slots and holidays
     const validSlots = config.slots.filter(s => s.startTime && s.endTime);
@@ -328,8 +335,22 @@ export const SlotTypePage: React.FC = () => {
       return;
     }
 
-    // Open confirmation modal
-    setIsConfirmModalOpen(true);
+    // Check if timetable exists to show warning
+    try {
+      if (semesterCode) {
+        const checkResult = await timetableService.checkTimetableExists(semesterCode);
+        if (checkResult && checkResult.exists) {
+          setIsConfirmModalOpen(true);
+          return;
+        }
+      }
+      // If no TKB exists or semesterCode is missing, save directly
+      handleConfirmSave();
+    } catch (error) {
+      console.error('Error checking TKB existence:', error);
+      // Fallback to confirmation modal on error to be safe
+      setIsConfirmModalOpen(true);
+    }
   };
 
   const handleConfirmSave = async () => {
