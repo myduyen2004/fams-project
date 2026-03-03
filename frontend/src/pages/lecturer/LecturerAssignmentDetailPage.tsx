@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { assignmentService, AssignmentDTO, AssignmentSubmissionDTO } from '../../services/api/assignmentService';
+import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
 import { Pagination } from '../../components/common/Pagination';
 import {
     ArrowLeft, Clock, ExternalLink, Search, Loader2, BookOpen, Lock, X
@@ -203,7 +204,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                             </div>
                             {assignment.referenceUrl && (
                                 <div className="mt-4 pt-4 border-t border-gray-100 dark:border-zinc-800">
-                                    <a href={assignment.referenceUrl} target="_blank" rel="noopener noreferrer"
+                                    <a href={getViewableFileUrl(assignment.referenceUrl)} target="_blank" rel="noopener noreferrer"
                                         className="inline-flex items-center gap-1.5 text-sm text-fpt-orange hover:text-orange-600 transition-colors">
                                         <BookOpen className="w-4 h-4" />
                                         {assignment.referenceName || 'Tài liệu tham khảo'}
@@ -305,7 +306,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                                                 {sub.fileUrls && sub.fileUrls.length > 0 ? (
                                                     <div className="flex flex-col gap-1">
                                                         {sub.fileUrls.map((url, idx) => (
-                                                            <a key={idx} href={url} target="_blank" rel="noopener noreferrer"
+                                                            <a key={idx} href={getViewableFileUrl(url)} target="_blank" rel="noopener noreferrer"
                                                                 className="inline-flex items-center gap-1 text-fpt-orange hover:text-orange-600 text-xs transition-colors">
                                                                 <ExternalLink className="w-3.5 h-3.5" />
                                                                 {sub.fileNames?.[idx] || `File ${idx + 1}`}
