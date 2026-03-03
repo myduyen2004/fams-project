@@ -6,6 +6,7 @@ import { assignmentService, AssignmentDTO, AssignmentSubmissionDTO } from '../..
 import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
 import { authService } from '../../services/api/authService';
 import { uploadFile } from '../../services/utils/fileUploadService';
+import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
 import { Pagination } from '../../components/common/Pagination';
 import {
     ChevronDown, Check, Users, Clock, ChevronUp, ExternalLink, Search,
@@ -61,7 +62,6 @@ export const LecturerAssignmentPage: React.FC = () => {
     // Create dialog
     const [showCreateDialog, setShowCreateDialog] = useState(false);
     const [creating, setCreating] = useState(false);
-    const [createForSlotId, setCreateForSlotId] = useState<number | null>(null);
     const [newTitle, setNewTitle] = useState('');
     const [newDescription, setNewDescription] = useState('');
     const [newDueDate, setNewDueDate] = useState('');
@@ -70,6 +70,16 @@ export const LecturerAssignmentPage: React.FC = () => {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [uploadingFile, setUploadingFile] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Centralized create modal state
+    const [createClassName, setCreateClassName] = useState('');
+    const [createClassSlots, setCreateClassSlots] = useState<TimetableSlotDTO[]>([]);
+    const [loadingClassSlots, setLoadingClassSlots] = useState(false);
+    const [selectedSessionNumber, setSelectedSessionNumber] = useState<number | null>(null);
+    const [isCreateClassOpen, setIsCreateClassOpen] = useState(false);
+    const [isCreateSlotOpen, setIsCreateSlotOpen] = useState(false);
+    const createClassDropdownRef = useRef<HTMLDivElement>(null);
+    const createSlotDropdownRef = useRef<HTMLDivElement>(null);
 
     // Close dropdowns when clicking outside
     useEffect(() => {
@@ -82,6 +92,12 @@ export const LecturerAssignmentPage: React.FC = () => {
             }
             if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target as Node)) {
                 setIsStatusOpen(false);
+            }
+            if (createClassDropdownRef.current && !createClassDropdownRef.current.contains(event.target as Node)) {
+                setIsCreateClassOpen(false);
+            }
+            if (createSlotDropdownRef.current && !createSlotDropdownRef.current.contains(event.target as Node)) {
+                setIsCreateSlotOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -189,31 +205,65 @@ export const LecturerAssignmentPage: React.FC = () => {
         }
     };
 
+    // Fetch slots for selected class in create modal
+    useEffect(() => {
+        if (!createClassName) {
+            setCreateClassSlots([]);
+            setSelectedSessionNumber(null);
+            return;
+        }
+        const fetchClassSlots = async () => {
+            setLoadingClassSlots(true);
+            try {
+                const allSlots = await timetableService.getTimetableByClass(createClassName);
+                // Sort by date then slotNumber to compute session_number (ROW_NUMBER)
+                const sorted = [...allSlots].sort((a, b) => {
+                    const dateCompare = (a.date || '').localeCompare(b.date || '');
+                    if (dateCompare !== 0) return dateCompare;
+                    return (a.slotNumber || 0) - (b.slotNumber || 0);
+                });
+                setCreateClassSlots(sorted);
+            } catch {
+                setCreateClassSlots([]);
+                toast.error('Không thể tải danh sách buổi học');
+            } finally {
+                setLoadingClassSlots(false);
+            }
+        };
+        fetchClassSlots();
+    }, [createClassName]);
+
+    // Get selected session info
+    const selectedSessionSlot = selectedSessionNumber !== null ? createClassSlots[selectedSessionNumber - 1] : null;
+
     const handleCreate = async () => {
         if (!newTitle.trim()) {
             toast.error('Vui lòng nhập tiêu đề bài tập');
             return;
         }
-        const targetClass = createForSlotId
-            ? (slots.find(s => s.id === createForSlotId)?.className || selectedClass)
-            : selectedClass;
-        if (!targetClass) {
+        if (!createClassName) {
             toast.error('Vui lòng chọn lớp học');
             return;
         }
-        if (newDueDate) {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            if (new Date(newDueDate) < today) {
-                toast.error('Hạn nộp bài phải từ hôm nay trở đi');
-                return;
-            }
+        if (selectedSessionNumber === null || !selectedSessionSlot) {
+            toast.error('Vui lòng chọn buổi học');
+            return;
+        }
+        if (!newDueDate) {
+            toast.error('Vui lòng nhập hạn nộp bài');
+            return;
+        }
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (new Date(newDueDate) < today) {
+            toast.error('Hạn nộp bài phải từ hôm nay trở đi');
+            return;
         }
         try {
             setCreating(true);
             await assignmentService.createAssignment({
-                className: targetClass,
-                timetableSlotId: createForSlotId || undefined,
+                className: createClassName,
+                timetableSlotId: selectedSessionSlot.id,
                 title: newTitle.trim(),
                 description: newDescription.trim() || undefined,
                 dueDate: newDueDate || undefined,
@@ -248,7 +298,9 @@ export const LecturerAssignmentPage: React.FC = () => {
         setNewRefUrl('');
         setNewRefName('');
         setSelectedFile(null);
-        setCreateForSlotId(null);
+        setCreateClassName('');
+        setCreateClassSlots([]);
+        setSelectedSessionNumber(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
@@ -561,14 +613,19 @@ export const LecturerAssignmentPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Search bar */}
-                <div className="flex gap-3">
+                {/* Search bar + Create button */}
+                <div className="flex gap-3 items-center">
                     <div className="relative flex-1">
                         <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input type="text" placeholder="Tìm kiếm theo tên bài tập, phòng, lớp..."
                             value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
                             className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange focus:border-transparent outline-none" />
                     </div>
+                    <button
+                        onClick={() => { resetCreateForm(); setShowCreateDialog(true); }}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-fpt-orange hover:bg-orange-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm whitespace-nowrap">
+                        <Plus className="w-4 h-4" /> Tạo bài tập mới
+                    </button>
                 </div>
 
                 {/* Slot-Based Assignment Table */}
@@ -661,7 +718,7 @@ export const LecturerAssignmentPage: React.FC = () => {
                                                                     </div>
                                                                 )}
                                                                 {assignment.referenceUrl && (
-                                                                    <a href={assignment.referenceUrl} target="_blank" rel="noopener noreferrer"
+                                                                    <a href={getViewableFileUrl(assignment.referenceUrl)} target="_blank" rel="noopener noreferrer"
                                                                         className="inline-flex items-center gap-1 text-xs text-fpt-orange hover:text-orange-600 mt-0.5">
                                                                         <BookOpen className="w-3 h-3" /> {assignment.referenceName || 'Tài liệu'}
                                                                     </a>
@@ -708,10 +765,7 @@ export const LecturerAssignmentPage: React.FC = () => {
                                                                     )}
                                                                 </>
                                                             ) : (
-                                                                <button onClick={() => { setCreateForSlotId(slot.id); setShowCreateDialog(true); }}
-                                                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-fpt-orange hover:bg-orange-600 text-white rounded-lg text-xs font-medium transition-colors">
-                                                                    <Plus className="w-3.5 h-3.5" /> Tạo
-                                                                </button>
+                                                                <span className="text-gray-300 dark:text-zinc-600 text-xs italic">—</span>
                                                             )}
                                                         </div>
                                                     </td>
@@ -742,7 +796,7 @@ export const LecturerAssignmentPage: React.FC = () => {
                                                                                 {sub.note && <div className="text-xs text-gray-400 mt-0.5">Ghi chú: {sub.note}</div>}
                                                                             </div>
                                                                             {sub.fileUrls?.[0] && (
-                                                                                <a href={sub.fileUrls[0]} target="_blank" rel="noopener noreferrer"
+                                                                                <a href={getViewableFileUrl(sub.fileUrls[0])} target="_blank" rel="noopener noreferrer"
                                                                                     className="inline-flex items-center gap-1 px-3 py-1.5 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 text-fpt-orange rounded-lg text-xs transition-colors">
                                                                                     <ExternalLink className="w-3 h-3" /> Xem file
                                                                                 </a>
@@ -839,72 +893,169 @@ export const LecturerAssignmentPage: React.FC = () => {
                 </div>
             )}
 
-            {/* Create Assignment Dialog */}
-            {
-                showCreateDialog && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-zinc-800">
-                            <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800">
-                                <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                    <Plus className="w-5 h-5 text-fpt-orange" /> Tạo bài tập mới
-                                </h2>
-                                <button onClick={() => { setShowCreateDialog(false); resetCreateForm(); }}
-                                    className="text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300">
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-                            <div className="p-6 space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
-                                        Tiêu đề <span className="text-red-500">*</span>
-                                    </label>
-                                    <input type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="VD: Bài tập tuần 3"
-                                        className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange outline-none" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Mô tả</label>
-                                    <textarea value={newDescription} onChange={e => setNewDescription(e.target.value)} placeholder="Mô tả chi tiết bài tập..." rows={3}
-                                        className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange outline-none resize-none" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
-                                        <Clock className="w-3.5 h-3.5 inline mr-1" /> Hạn nộp bài
-                                    </label>
-                                    <input type="datetime-local" value={newDueDate} onChange={e => setNewDueDate(e.target.value)}
-                                        className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange outline-none" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
-                                        <BookOpen className="w-3.5 h-3.5 inline mr-1" /> Tài liệu tham khảo
-                                    </label>
-                                    <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.jpg,.png"
-                                        className="hidden" />
-                                    <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingFile}
-                                        className="w-full px-3 py-2.5 rounded-lg border border-dashed border-gray-300 dark:border-zinc-600 bg-gray-50 dark:bg-zinc-800 text-sm text-gray-500 hover:border-fpt-orange hover:text-fpt-orange transition-colors flex items-center justify-center gap-2">
-                                        {uploadingFile ? <><Loader2 size={14} className="animate-spin" /> Đang upload...</> : selectedFile ? <><FileText size={14} /> {selectedFile.name}</> : 'Chọn file (tối đa 10MB)'}
+            {/* Create Assignment Dialog - Centralized */}
+            {showCreateDialog && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-lg border border-gray-200 dark:border-zinc-800 max-h-[90vh] overflow-y-auto">
+                        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800 sticky top-0 bg-white dark:bg-zinc-900 z-10 rounded-t-2xl">
+                            <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <Plus className="w-5 h-5 text-fpt-orange" /> Tạo bài tập mới
+                            </h2>
+                            <button onClick={() => { setShowCreateDialog(false); resetCreateForm(); }}
+                                className="text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            {/* Class Dropdown */}
+                            <div ref={createClassDropdownRef}>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
+                                    <Users className="w-3.5 h-3.5 inline mr-1" /> Lớp học <span className="text-red-500">*</span>
+                                </label>
+                                <div className="relative">
+                                    <button onClick={() => setIsCreateClassOpen(!isCreateClassOpen)}
+                                        className="flex items-center justify-between w-full rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 px-3 py-2.5 text-left focus:outline-none focus:ring-2 focus:ring-fpt-orange transition-all">
+                                        <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                            {createClassName ? `${createClassName} - ${classes.find(c => c.className === createClassName)?.courseName || ''}` : 'Chọn lớp học'}
+                                        </span>
+                                        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isCreateClassOpen ? 'rotate-180' : ''}`} />
                                     </button>
-                                    {newRefUrl && (
-                                        <div className="mt-2 flex items-center gap-2 text-xs text-green-600">
-                                            <FileText size={12} />
-                                            <a href={newRefUrl} target="_blank" rel="noopener noreferrer" className="underline truncate max-w-[300px]">{newRefName || 'Xem file'}</a>
+                                    {isCreateClassOpen && (
+                                        <div className="absolute z-20 mt-1 w-full rounded-lg border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-lg max-h-48 overflow-y-auto">
+                                            {classes.map(cls => (
+                                                <button key={cls.className} onClick={() => {
+                                                    setCreateClassName(cls.className);
+                                                    setSelectedSessionNumber(null);
+                                                    setIsCreateClassOpen(false);
+                                                }}
+                                                    className={`flex w-full items-center justify-between px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition-colors ${createClassName === cls.className ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange' : 'text-gray-900 dark:text-white'}`}>
+                                                    <span className="text-sm font-medium">{cls.className} - {cls.courseName}</span>
+                                                    {createClassName === cls.className && <Check size={16} />}
+                                                </button>
+                                            ))}
                                         </div>
                                     )}
                                 </div>
                             </div>
-                            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 dark:border-zinc-800">
-                                <button onClick={() => { setShowCreateDialog(false); resetCreateForm(); }}
-                                    className="px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-zinc-400 hover:text-gray-800 transition-colors">
-                                    Hủy
+
+                            {/* Slot (Session) Dropdown */}
+                            <div ref={createSlotDropdownRef}>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
+                                    <Clock className="w-3.5 h-3.5 inline mr-1" /> Slot thứ <span className="text-red-500">*</span>
+                                </label>
+                                <div className="relative">
+                                    <button
+                                        onClick={() => createClassName && !loadingClassSlots && setIsCreateSlotOpen(!isCreateSlotOpen)}
+                                        disabled={!createClassName || loadingClassSlots}
+                                        className={`flex items-center justify-between w-full rounded-lg border border-gray-200 dark:border-zinc-700 px-3 py-2.5 text-left focus:outline-none focus:ring-2 focus:ring-fpt-orange transition-all ${!createClassName || loadingClassSlots ? 'bg-gray-100 dark:bg-zinc-800 text-gray-400 cursor-not-allowed' : 'bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white'}`}>
+                                        <span className="text-sm font-medium truncate">
+                                            {loadingClassSlots ? 'Đang tải...' : selectedSessionNumber !== null ? `Buổi ${selectedSessionNumber}` : 'Chọn buổi học'}
+                                        </span>
+                                        {loadingClassSlots ? <Loader2 className="h-4 w-4 animate-spin text-gray-400" /> : <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isCreateSlotOpen ? 'rotate-180' : ''}`} />}
+                                    </button>
+                                    {isCreateSlotOpen && createClassSlots.length > 0 && (
+                                        <div className="absolute z-20 mt-1 w-full rounded-lg border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-lg max-h-48 overflow-y-auto">
+                                            {createClassSlots.map((s, idx) => {
+                                                const sessionNum = idx + 1;
+                                                const hasAssignment = assignments.some(a => a.timetableSlotId === s.id);
+                                                return (
+                                                    <button key={s.id}
+                                                        onClick={() => {
+                                                            if (!hasAssignment) {
+                                                                setSelectedSessionNumber(sessionNum);
+                                                                setIsCreateSlotOpen(false);
+                                                            }
+                                                        }}
+                                                        disabled={hasAssignment}
+                                                        className={`flex w-full items-center justify-between px-3 py-2 text-left transition-colors ${hasAssignment ? 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-zinc-800' : 'hover:bg-gray-50 dark:hover:bg-zinc-700/50'} ${selectedSessionNumber === sessionNum ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange' : 'text-gray-900 dark:text-white'}`}>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm font-medium">Buổi {sessionNum} — {formatSlotDate(s.date)} — Slot {s.slotNumber}</span>
+                                                            <span className="text-xs text-gray-400">Phòng: {s.roomCode || '—'}{hasAssignment ? ' (Đã có bài tập)' : ''}</span>
+                                                        </div>
+                                                        {selectedSessionNumber === sessionNum && <Check size={16} />}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Auto-populated slot info */}
+                            {selectedSessionSlot && (
+                                <div className="grid grid-cols-3 gap-3 p-3 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg">
+                                    <div className="text-center">
+                                        <div className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-zinc-400 font-semibold">Ngày</div>
+                                        <div className="text-sm font-bold text-gray-900 dark:text-white mt-0.5">{formatSlotDate(selectedSessionSlot.date)}</div>
+                                    </div>
+                                    <div className="text-center">
+                                        <div className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-zinc-400 font-semibold">Slot</div>
+                                        <div className="text-sm font-bold text-gray-900 dark:text-white mt-0.5">{selectedSessionSlot.slotNumber}</div>
+                                    </div>
+                                    <div className="text-center">
+                                        <div className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-zinc-400 font-semibold">Phòng</div>
+                                        <div className="text-sm font-bold text-gray-900 dark:text-white mt-0.5">{selectedSessionSlot.roomCode || '—'}</div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Title */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
+                                    Tiêu đề <span className="text-red-500">*</span>
+                                </label>
+                                <input type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="VD: Bài tập tuần 3"
+                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange outline-none" />
+                            </div>
+
+                            {/* Description */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Mô tả</label>
+                                <textarea value={newDescription} onChange={e => setNewDescription(e.target.value)} placeholder="Mô tả chi tiết bài tập..." rows={3}
+                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange outline-none resize-none" />
+                            </div>
+
+                            {/* Deadline */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
+                                    <Clock className="w-3.5 h-3.5 inline mr-1" /> Hạn nộp bài <span className="text-red-500">*</span>
+                                </label>
+                                <input type="datetime-local" value={newDueDate} onChange={e => setNewDueDate(e.target.value)}
+                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange outline-none" />
+                            </div>
+
+                            {/* Reference File */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
+                                    <BookOpen className="w-3.5 h-3.5 inline mr-1" /> Tài liệu tham khảo
+                                </label>
+                                <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.jpg,.png"
+                                    className="hidden" />
+                                <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingFile}
+                                    className="w-full px-3 py-2.5 rounded-lg border border-dashed border-gray-300 dark:border-zinc-600 bg-gray-50 dark:bg-zinc-800 text-sm text-gray-500 hover:border-fpt-orange hover:text-fpt-orange transition-colors flex items-center justify-center gap-2">
+                                    {uploadingFile ? <><Loader2 size={14} className="animate-spin" /> Đang upload...</> : selectedFile ? <><FileText size={14} /> {selectedFile.name}</> : 'Chọn file (tối đa 10MB)'}
                                 </button>
-                                <button onClick={handleCreate} disabled={creating || !newTitle.trim() || uploadingFile}
-                                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-fpt-orange hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
-                                    {creating ? <><Loader2 size={16} className="animate-spin" /> Đang tạo...</> : <><Plus className="w-4 h-4" /> Tạo bài tập</>}
-                                </button>
+                                {newRefUrl && (
+                                    <div className="mt-2 flex items-center gap-2 text-xs text-green-600">
+                                        <FileText size={12} />
+                                        <a href={newRefUrl} target="_blank" rel="noopener noreferrer" className="underline truncate max-w-[300px]">{newRefName || 'Xem file'}</a>
+                                    </div>
+                                )}
                             </div>
                         </div>
+                        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 dark:border-zinc-800 sticky bottom-0 bg-white dark:bg-zinc-900 rounded-b-2xl">
+                            <button onClick={() => { setShowCreateDialog(false); resetCreateForm(); }}
+                                className="px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-zinc-400 hover:text-gray-800 transition-colors">
+                                Hủy
+                            </button>
+                            <button onClick={handleCreate} disabled={creating || !newTitle.trim() || !createClassName || selectedSessionNumber === null || !newDueDate || uploadingFile}
+                                className="inline-flex items-center gap-2 px-5 py-2.5 bg-fpt-orange hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
+                                {creating ? <><Loader2 size={16} className="animate-spin" /> Đang tạo...</> : <><Plus className="w-4 h-4" /> Tạo bài tập</>}
+                            </button>
+                        </div>
                     </div>
-                )
-            }
+                </div>
+            )}
         </LecturerLayout >
     );
 };
