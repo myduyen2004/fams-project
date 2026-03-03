@@ -22,6 +22,8 @@ export const ActivatedUsersPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [faceFilter, setFaceFilter] = useState('all');
   const [totalElements, setTotalElements] = useState(0);
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
   const [isLocking, setIsLocking] = useState(false);
@@ -31,7 +33,7 @@ export const ActivatedUsersPage: React.FC = () => {
   const navigate = useNavigate();
 
   // Use custom pagination hook - auto resets to page 0 when filters change
-  const { page, setPage } = usePagination({ resetDependencies: [debouncedSearch, roleFilter] });
+  const { page, setPage } = usePagination({ resetDependencies: [debouncedSearch, roleFilter, statusFilter, faceFilter] });
 
   // Search debounce effect
   useEffect(() => {
@@ -68,7 +70,24 @@ export const ActivatedUsersPage: React.FC = () => {
   // Reset page when filters change
   useEffect(() => {
     setPage(0);
-  }, [debouncedSearch, roleFilter]);
+  }, [debouncedSearch, roleFilter, statusFilter, faceFilter]);
+
+  // Client-side filtering logic
+  const filteredUsers = users.filter(user => {
+    // Face registration filter
+    if (faceFilter !== 'all') {
+      if (faceFilter === 'REGISTERED' && user.faceDataStatus !== 'REGISTERED') return false;
+      if (faceFilter === 'NOT_REGISTERED' && user.faceDataStatus === 'REGISTERED') return false;
+    }
+
+    // Activity status filter (isPasswordChanged)
+    if (statusFilter !== 'all') {
+      if (statusFilter === 'ACTIVE' && !user.isPasswordChanged) return false;
+      if (statusFilter === 'ACTIVATED' && user.isPasswordChanged) return false;
+    }
+
+    return true;
+  });
 
   const formatDateTime = (date: any) => {
     if (!date) return '---';
@@ -78,6 +97,9 @@ export const ActivatedUsersPage: React.FC = () => {
       if (Array.isArray(date)) {
         const [year, month, day, hour = 0, minute = 0, second = 0] = date;
         d = new Date(year, month - 1, day, hour, minute, second);
+      } else if (typeof date === 'string') {
+        // Safari fix: Replace space with 'T' to make it a valid ISO string
+        d = new Date(date.replace(' ', 'T'));
       } else {
         d = new Date(date);
       }
@@ -134,7 +156,7 @@ export const ActivatedUsersPage: React.FC = () => {
     <AdminLayout pageTitle="Tài khoản đã kích hoạt">
       <div className="p-6 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="relative">
               <select
                 className="appearance-none pl-3 pr-10 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-fpt-orange/20"
@@ -146,6 +168,36 @@ export const ActivatedUsersPage: React.FC = () => {
                 <option value="ACADEMIC_STAFF">Phòng đào tạo</option>
                 <option value="LECTURER">Giảng viên</option>
                 <option value="STUDENT">Sinh viên</option>
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+              </div>
+            </div>
+
+            <div className="relative">
+              <select
+                className="appearance-none pl-3 pr-10 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-fpt-orange/20"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="all">Tất cả trạng thái</option>
+                <option value="ACTIVATED">Đã kích hoạt</option>
+                <option value="ACTIVE">Đang hoạt động</option>
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+              </div>
+            </div>
+
+            <div className="relative">
+              <select
+                className="appearance-none pl-3 pr-10 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-fpt-orange/20"
+                value={faceFilter}
+                onChange={(e) => setFaceFilter(e.target.value)}
+              >
+                <option value="all">Tất cả khuôn mặt</option>
+                <option value="REGISTERED">Đã đăng ký</option>
+                <option value="NOT_REGISTERED">Chưa đăng ký</option>
               </select>
               <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -204,6 +256,7 @@ export const ActivatedUsersPage: React.FC = () => {
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Họ và tên</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Mã số</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Role</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Khuôn mặt</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Trạng thái</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Ngày tạo</th>
                 <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-lg">Hành động</th>
@@ -217,11 +270,11 @@ export const ActivatedUsersPage: React.FC = () => {
                     Đang tải dữ liệu...
                   </td>
                 </tr>
-              ) : users.length === 0 ? (
+              ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-10 text-center text-gray-400">Không có tài khoản nào đã kích hoạt</td>
+                  <td colSpan={7} className="py-10 text-center text-gray-400">Không tìm thấy tài khoản phù hợp</td>
                 </tr>
-              ) : users.map((user) => (
+              ) : filteredUsers.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors text-sm">
                   <td className="px-4 py-4">
                     <input
@@ -254,6 +307,11 @@ export const ActivatedUsersPage: React.FC = () => {
                   </td>
                   <td className="px-4 py-4 text-gray-600 dark:text-gray-400">{user.code}</td>
                   <td className="px-4 py-4 text-gray-600 dark:text-gray-400">{user.roleName}</td>
+                  <td className="px-4 py-4">
+                    <span className={`text-xs font-medium ${user.faceDataStatus === 'REGISTERED' ? 'text-green-600' : 'text-red-500'}`}>
+                      {user.faceDataStatus === 'REGISTERED' ? '● Đã đăng ký' : '● Chưa đăng ký'}
+                    </span>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {user.status === 'ACTIVE' ? (
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.isPasswordChanged
@@ -469,6 +527,9 @@ const ViewUserModal: React.FC<{ user: UserResponse; onClose: () => void }> = ({ 
       if (Array.isArray(date)) {
         const [year, month, day, hour = 0, minute = 0, second = 0] = date;
         d = new Date(year, month - 1, day, hour, minute, second);
+      } else if (typeof date === 'string') {
+        // Safari fix: Replace space with 'T' to make it a valid ISO string
+        d = new Date(date.replace(' ', 'T'));
       } else {
         d = new Date(date);
       }

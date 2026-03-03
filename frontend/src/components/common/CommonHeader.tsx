@@ -84,7 +84,12 @@ export const CommonHeader: React.FC<CommonHeaderProps> = ({
   const handleLogout = async () => {
     try {
       if (activeJob) {
-        await userService.cleanupStuckJobs();
+        // User confirmed stopping the import — cancel it
+        try {
+          await userService.cancelImportJob();
+        } catch (err) {
+          console.warn('Failed to cancel import job:', err);
+        }
       }
       await authService.logout();
     } catch (error) {

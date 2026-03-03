@@ -55,10 +55,8 @@ export const UserTableRow: React.FC<UserTableRowProps> = React.memo(({
       </td>
       <td className="px-4 py-4 text-gray-600 dark:text-gray-400">{user.code}</td>
       <td className="px-4 py-4 text-gray-600 dark:text-gray-400">{user.roleName}</td>
-      <td className="px-4 py-4">
-        <span className={`text-xs font-medium ${user.faceDataStatus === 'REGISTERED' ? 'text-green-600' : 'text-red-500'}`}>
-          {user.faceDataStatus === 'REGISTERED' ? '● Đã đăng ký' : '● Chưa đăng ký'}
-        </span>
+      <td className="px-4 py-4 text-gray-600 dark:text-gray-400">
+        {user.dob ? (typeof user.dob === 'string' ? user.dob : `${user.dob[2]}/${user.dob[1]}/${user.dob[0]}`) : '---'}
       </td>
       <td className="px-4 py-4 text-gray-500 dark:text-gray-500">{formatDateTime(user.createdAt)}</td>
       <td className="px-4 py-4 text-center">

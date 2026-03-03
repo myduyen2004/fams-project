@@ -173,8 +173,9 @@ class ReplayDetectionService:
             peak_count = np.sum(peaks)
             
             # More peaks = more regular pattern = more likely screen
-            # [RE-TUNING]: Increased divisor to 25,000 to avoid FP on high-res skin texture
-            grid_score = min(peak_count / 25000.0, 1.0)
+            # [RE-TUNING]: Increased divisor to 50,000 to avoid FP on high-res skin texture
+            # Was 25,000.0
+            grid_score = min(peak_count / 50000.0, 1.0)
             is_grid = grid_score > 0.60 # Raised bar for Veto
             
             logger.debug(f"Pixel grid detection: score={grid_score:.4f}, detected={is_grid}")
@@ -475,8 +476,8 @@ class ReplayDetectionService:
             else:
                 uniformity_boost = 0.2 # Likely Real Skin / Noise
             
-            # [RE-TUNING]: Increased divisor (100 -> 300) to make it harder to trigger by accident
-            score = min(min(avg_var / 300.0, 1.0) * uniformity_boost, 1.0)
+            # [RE-TUNING]: Increased divisor (300 -> 400) to make it harder to trigger by accident
+            score = min(min(avg_var / 400.0, 1.0) * uniformity_boost, 1.0)
             is_lcd = score > 0.85 # Raised bar for solo sensor confidence
             
             logger.info(f"LCD_TUNING: avg_var={avg_var:.2f}, cv={cv_var:.4f}, score={score:.4f} boost={uniformity_boost}")
@@ -545,12 +546,13 @@ class ReplayDetectionService:
         except:
             return False, 0.0
 
-    def detect(self, image_base64: str) -> Dict[str, Any]:
+    def detect(self, image_base64: str, mode: str = "attendance") -> Dict[str, Any]:
         """
         Perform comprehensive replay detection.
         
         Args:
             image_base64: Base64-encoded image
+            mode: "registration" or "attendance" (Influences thresholds)
             
         Returns:
             Dict with detection results and scores
@@ -614,36 +616,61 @@ class ReplayDetectionService:
         # If any major physical sensor sees a screen, the score should stay high.
         overall_score = max(weighted_sum, moire_score * 0.8, grid_score * 0.8, lcd_score * 0.8)
         
+        # [CONTEXT-AWARE TUNING]
+        is_reg = mode == "registration"
+        
         # [LEVEL 6 BALANCE]: Only flag DEFINITIVE screen artifacts
         # Single-sensor thresholds raised to avoid camera noise false positives
-        is_definitive = (
-            chromatic_score > 0.60 or   # Keep at 0.60
-            moire_score > 0.95 or       # Raised from 0.92
-            grid_score > 0.90 or        # Raised from 0.85
-            lcd_score > 0.92 or         # Raised from 0.90
-            bezel_score > 0.90          # Raised from 0.85
-        )
+        # Registration mode is even more patient to avoid blocking valid users
+        if is_reg:
+            is_definitive = (
+                chromatic_score > 0.70 or   # Raised from 0.60
+                moire_score > 0.98 or       # Raised from 0.95
+                grid_score > 0.95 or        # Raised from 0.90
+                lcd_score > 0.95 or         # Raised from 0.92
+                bezel_score > 0.95          # Raised from 0.90
+            )
+        else:
+            is_definitive = (
+                chromatic_score > 0.60 or
+                moire_score > 0.95 or 
+                grid_score > 0.90 or 
+                lcd_score > 0.92 or 
+                bezel_score > 0.90
+            )
         
         # [MULTI-SIGNAL VETO]: Raised from 0.15 to 0.30
         # Camera sensor noise typically produces G<0.1, M<0.2, L<0.3
         # Only flag when multiple sensors show STRONG evidence
         if not is_definitive:
             signs = 0
-            if grid_score > 0.45: signs += 1 # Relaxed from 0.30
-            if moire_score > 0.45: signs += 1 # Relaxed from 0.30
-            if lcd_score > 0.65: signs += 1  # Relaxed from 0.50
-            if bezel_score > 0.55: signs += 1 # Relaxed from 0.30
-            if signs >= 2:
+            # Higher signal requirements for registration
+            thresh_grid = 0.55 if is_reg else 0.45
+            thresh_moire = 0.55 if is_reg else 0.45
+            thresh_lcd = 0.75 if is_reg else 0.65
+            thresh_bezel = 0.65 if is_reg else 0.55
+            
+            if grid_score > thresh_grid: signs += 1 
+            if moire_score > thresh_moire: signs += 1 
+            if lcd_score > thresh_lcd: signs += 1  
+            if bezel_score > thresh_bezel: signs += 1 
+            
+            # Registration needs 3 signals if none are definitive, or very high score
+            required_signs = 3 if is_reg else 2
+            if signs >= required_signs:
                 is_definitive = True
-                logger.warning(f"MULTI-SIGNAL-VETO: grid={grid_score:.2f}, moire={moire_score:.2f}, lcd={lcd_score:.2f}")
+                logger.warning(f"MULTI-SIGNAL-VETO: mode={mode}, signs={signs}, required={required_signs}")
         
-        is_replay = overall_score > self.SCREEN_SCORE_THRESHOLD or is_definitive
+        # [RELAXED THRESHOLD FOR REGISTRATION]
+        final_thresh = 0.99 if is_reg else self.SCREEN_SCORE_THRESHOLD
+        is_replay = overall_score > final_thresh or is_definitive
         
-        # [ROUND 2]: Soft-Video Heuristic (Relaxed)
-        if laplacian_var < 80 and (bezel_score > 0.50 or grid_score > 0.70):
+        # [ROUND 2]: Soft-Video Heuristic (Relaxed for registration)
+        lap_thresh = 60 if is_reg else 80
+        if laplacian_var < lap_thresh and (bezel_score > 0.60 or grid_score > 0.80):
             is_replay = True
             is_definitive = True
-            logger.info(f"SOFT-VIDEO-VETO: lap={laplacian_var:.1f}, bezel={bezel_score:.2f}, grid={grid_score:.2f}")
+            logger.info(f"SOFT-VIDEO-VETO: mode={mode}, lap={laplacian_var:.1f}, bezel={bezel_score:.2f}, grid={grid_score:.2f}")
         
         # [FORCE SCORE]: If definitive, ensure the score is high enough for Veto
         if is_definitive:
