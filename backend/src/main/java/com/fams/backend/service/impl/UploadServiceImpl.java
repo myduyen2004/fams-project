@@ -47,8 +47,7 @@ public class UploadServiceImpl implements UploadService {
             String resourceType = "auto";
             if (filename != null) {
                 String lowerFilename = filename.toLowerCase();
-                if (lowerFilename.endsWith(".pdf") ||
-                        lowerFilename.endsWith(".doc") ||
+                if (lowerFilename.endsWith(".doc") ||
                         lowerFilename.endsWith(".docx") ||
                         lowerFilename.endsWith(".xls") ||
                         lowerFilename.endsWith(".xlsx") ||
@@ -68,13 +67,27 @@ public class UploadServiceImpl implements UploadService {
                             "use_filename", true,
                             "unique_filename", true,
                             "filename", file.getOriginalFilename()));
+
             String url = (String) uploadResult.get("secure_url");
+
+            // Strip any Cloudinary signing from URL (s--xxx--) to avoid 404 errors
+            // Files are uploaded with type=upload & access_mode=public, so signing is
+            // unnecessary
+            if (url != null && url.contains("/s--")) {
+                url = url.replaceAll("/s--[^/]+--/", "/");
+            }
+
             log.info("Upload successful: {}", url);
             return url;
         } catch (Exception e) {
             log.error("Cloudinary upload failed for file: {}. Error: {}", file.getOriginalFilename(), e.getMessage());
             throw new RuntimeException("Upload file thất bại: " + e.getMessage());
         }
+    }
+
+    private String getFileExtension(String filename) {
+        int lastDot = filename.lastIndexOf('.');
+        return lastDot >= 0 ? filename.substring(lastDot + 1) : "";
     }
 
     @Override

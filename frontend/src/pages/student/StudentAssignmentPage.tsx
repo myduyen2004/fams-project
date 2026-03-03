@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { FileText, Upload, CheckCircle, AlertCircle, XCircle, ExternalLink, Search, Trash2, RotateCcw } from 'lucide-react';
 import { assignmentService, AssignmentSubmissionDTO, SubmitAssignmentRequest } from '../../services/api/assignmentService';
 import { uploadFile } from '../../services/utils/fileUploadService';
+import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
 import { StudentLayout } from '../../layouts/StudentLayout';
 import { Pagination } from '../../components/common/Pagination';
 import toast from 'react-hot-toast';
@@ -323,7 +324,7 @@ export const StudentAssignmentPage: React.FC = () => {
                                                             {assignment.fileUrls.map((url, idx) => (
                                                                 <a
                                                                     key={idx}
-                                                                    href={url}
+                                                                    href={getViewableFileUrl(url)}
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
                                                                     className="inline-flex items-center gap-1 text-fpt-orange hover:text-orange-600 text-xs transition-colors"
