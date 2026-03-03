@@ -1,6 +1,5 @@
 import axios, { AxiosError } from 'axios';
 import { API_URL } from './config';
-import { userService } from './userService';
 
 // ========================================
 // Types
