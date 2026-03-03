@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { academicStaffService, ScheduleRequestResponse } from '../../services/api/academicStaffService';
+import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
 import dayjs from 'dayjs';
 import toast from 'react-hot-toast';
 
@@ -209,7 +210,7 @@ export const RequestDetailPage = () => {
                                                     return (
                                                         <a
                                                             key={index}
-                                                            href={url}
+                                                            href={getViewableFileUrl(url)}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-zinc-800 dark:to-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl p-4 hover:border-fpt-orange hover:shadow-md transition-all cursor-pointer group flex items-center gap-3"
