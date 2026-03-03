@@ -241,6 +241,9 @@ export const UsersPage = () => {
       if (Array.isArray(date)) {
         const [year, month, day, hour = 0, minute = 0, second = 0] = date;
         d = new Date(year, month - 1, day, hour, minute, second);
+      } else if (typeof date === 'string') {
+        // Safari fix: Replace space with 'T' to make it a valid ISO string
+        d = new Date(date.replace(' ', 'T'));
       } else {
         d = new Date(date);
       }
