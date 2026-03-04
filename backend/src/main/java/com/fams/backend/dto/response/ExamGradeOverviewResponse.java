@@ -31,10 +31,14 @@ public class ExamGradeOverviewResponse {
     // Student grades
     private List<ExamStudentGradeRow> studentGrades;
 
-    // Publish status (grades visible to students)
+    // Publish status (grades visible to students - context aware)
     private Boolean gradesPublished;
     private String gradesPublishedAt;
     private String gradesPublishedBy;
+
+    // Explicit statuses for both exam types
+    private Boolean examGradesPublished;
+    private Boolean resitGradesPublished;
 
     @Data
     @Builder

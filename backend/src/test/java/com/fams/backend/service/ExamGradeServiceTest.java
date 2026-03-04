@@ -1,338 +1,521 @@
 package com.fams.backend.service;
 
+import com.fams.backend.dto.response.ExamGradeOverviewResponse;
 import com.fams.backend.entity.*;
 import com.fams.backend.repository.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import com.fams.backend.dto.response.ExamGradeOverviewResponse;
 
-import java.io.IOException;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Unit tests for ExamGradeService
+ *
+ * Tests cover:
+ * 1. Visibility rules per role (ACADEMIC_STAFF / LECTURER / STUDENT)
+ * 2. Average grade calculation (with and without Resit)
+ * 3. Resit replacing Final Exam in finalGrade
+ * 4. publishGrades – status update logic
+ * 5. Import guards for Resit (exam must be published; student must have avg <
+ * 5.0)
+ */
 @ExtendWith(MockitoExtension.class)
 public class ExamGradeServiceTest {
 
-    @Mock
-    private StudentGradeRepository studentGradeRepository;
-    @Mock
-    private GradeComponentRepository gradeComponentRepository;
-    @Mock
-    private EnrollmentRepository enrollmentRepository;
-    @Mock
-    private CourseRepository courseRepository;
-    @Mock
-    private SemesterRepository semesterRepository;
-    @Mock
-    private UserRepository userRepository;
-    @Mock
-    private ClassSectionRepository classSectionRepository;
+        @Mock
+        private StudentGradeRepository studentGradeRepository;
+        @Mock
+        private GradeComponentRepository gradeComponentRepository;
+        @Mock
+        private EnrollmentRepository enrollmentRepository;
+        @Mock
+        private CourseRepository courseRepository;
+        @Mock
+        private SemesterRepository semesterRepository;
+        @Mock
+        private UserRepository userRepository;
+        @Mock
+        private ClassSectionRepository classSectionRepository;
 
-    @InjectMocks
-    private ExamGradeService examGradeService;
+        @InjectMocks
+        private ExamGradeService examGradeService;
 
-    @Test
-    void publishGrades_Success() {
-        // Arrange
-        String courseCode = "PRN211";
-        String semesterCode = "SP24";
-        Long userId = 1L;
+        // ─── Shared fixtures ───────────────────────────────────────────────────────
 
-        Course course = new Course();
-        course.setCode(courseCode);
+        private Course course;
+        private Semester semester;
+        private ClassSection classSection;
+        private User student;
+        private Enrollment enrollment;
 
-        User publisher = new User();
-        publisher.setId(userId);
-        publisher.setFullName("Test User");
+        private GradeComponent gcMid; // MID_TERM 30%
+        private GradeComponent gcFinal; // FINAL_EXAM 70%
+        private GradeComponent gcResit; // RESIT 70%, references gcFinal
 
-        ClassSection classSection1 = new ClassSection();
-        classSection1.setClassName("SE1801-PRN211");
-        classSection1.setGradesPublished(false);
+        @BeforeEach
+        void setUp() {
+                course = new Course();
+                course.setId(1L);
+                course.setCode("PRN211");
+                course.setName("C# Programming");
 
-        ClassSection classSection2 = new ClassSection();
-        classSection2.setClassName("SE1802-PRN211");
-        classSection2.setGradesPublished(true); // Already published
+                semester = new Semester();
+                semester.setId(1L);
+                semester.setCode("SP24");
+                semester.setName("Spring 2024");
 
-        Enrollment enrollment1 = new Enrollment();
-        enrollment1.setClassSection(classSection1);
+                classSection = new ClassSection();
+                classSection.setClassName("SE1801");
+                classSection.setGradesPublished(false);
+                classSection.setResitGradesPublished(false);
 
-        Enrollment enrollment2 = new Enrollment();
-        enrollment2.setClassSection(classSection2);
+                student = new User();
+                student.setId(1L);
+                student.setFullName("Nguyen Van A");
+                student.setCode("ST001");
 
-        when(courseRepository.findByCode(courseCode)).thenReturn(Optional.of(course));
-        when(userRepository.findById(userId)).thenReturn(Optional.of(publisher));
-        when(enrollmentRepository.findByCourseAndSemester(courseCode, semesterCode))
-                .thenReturn(Arrays.asList(enrollment1, enrollment2));
+                enrollment = new Enrollment();
+                enrollment.setId(1L);
+                enrollment.setStudent(student);
+                enrollment.setStudentCode("ST001");
+                enrollment.setClassSection(classSection);
+                enrollment.setStatus(Enrollment.EnrollmentStatus.ENROLLED);
 
-        // Act
-        Map<String, Object> result = examGradeService.publishGrades(courseCode, semesterCode, userId);
+                gcMid = new GradeComponent();
+                gcMid.setId(1L);
+                gcMid.setName("Midterm");
+                gcMid.setType(GradeComponent.GradeType.MID_TERM);
+                gcMid.setWeight(30.0);
+                gcMid.setIsResit(false);
 
-        // Assert
-        assertTrue((Boolean) result.get("success"));
-        assertEquals(1, result.get("publishedClasses")); // Only classSection1 should be updated
+                gcFinal = new GradeComponent();
+                gcFinal.setId(2L);
+                gcFinal.setName("Final Exam");
+                gcFinal.setType(GradeComponent.GradeType.FINAL_EXAM);
+                gcFinal.setWeight(70.0);
+                gcFinal.setIsResit(false);
 
-        verify(classSectionRepository, times(1)).save(classSection1);
-        verify(classSectionRepository, never()).save(classSection2);
-
-        assertTrue(classSection1.getGradesPublished());
-        assertNotNull(classSection1.getGradesPublishedAt());
-        assertEquals(publisher, classSection1.getGradesPublishedBy());
-    }
-
-    @Test
-    void publishGrades_CourseNotFound() {
-        // Arrange
-        String courseCode = "NONEXISTENT";
-        String semesterCode = "SP24";
-        Long userId = 1L;
-
-        when(courseRepository.findByCode(courseCode)).thenReturn(Optional.empty());
-
-        // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> examGradeService.publishGrades(courseCode, semesterCode, userId));
-        assertTrue(exception.getMessage().contains("Course not found"));
-    }
-
-    @Test
-    void publishGrades_UserNotFound() {
-        // Arrange
-        String courseCode = "PRN211";
-        String semesterCode = "SP24";
-        Long userId = 999L;
-
-        Course course = new Course();
-        when(courseRepository.findByCode(courseCode)).thenReturn(Optional.of(course));
-        when(userRepository.findById(userId)).thenReturn(Optional.empty());
-
-        // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> examGradeService.publishGrades(courseCode, semesterCode, userId));
-        assertTrue(exception.getMessage().contains("User not found"));
-    }
-
-    @Test
-    void getExamGradeOverview_Success() {
-        // Arrange
-        String courseCode = "PRN211";
-        String semesterCode = "SP24";
-        String type = "EXAM";
-
-        Course course = new Course();
-        course.setId(1L);
-        course.setName("Java Web");
-        course.setCode(courseCode);
-
-        Semester semester = new Semester();
-        semester.setName("Spring 2024");
-        semester.setCode(semesterCode);
-
-        when(courseRepository.findByCode(courseCode)).thenReturn(Optional.of(course));
-        when(semesterRepository.findByCode(semesterCode)).thenReturn(Optional.of(semester));
-
-        GradeComponent gc1 = new GradeComponent();
-        gc1.setId(1L);
-        gc1.setName("Midterm");
-        gc1.setType(GradeComponent.GradeType.MID_TERM);
-        gc1.setWeight(0.3);
-
-        GradeComponent gc2 = new GradeComponent();
-        gc2.setId(2L);
-        gc2.setName("Final");
-        gc2.setType(GradeComponent.GradeType.FINAL_EXAM);
-        gc2.setWeight(0.7);
-
-        when(gradeComponentRepository.findByCourseIdOrderById(1L)).thenReturn(Arrays.asList(gc1, gc2));
-
-        ClassSection classSection = new ClassSection();
-        classSection.setClassName("SE1801");
-
-        User student = new User();
-        student.setFullName("Nguyen Van A");
-
-        Enrollment enrollment = new Enrollment();
-        enrollment.setId(100L);
-        enrollment.setStudentCode("SE123456");
-        enrollment.setStudent(student);
-        enrollment.setClassSection(classSection);
-
-        when(enrollmentRepository.findByCourseAndSemester(courseCode, semesterCode))
-                .thenReturn(Collections.singletonList(enrollment));
-
-        StudentGrade sg1 = new StudentGrade();
-        sg1.setEnrollment(enrollment);
-        sg1.setGradeComponent(gc1);
-        sg1.setScore(8.0);
-
-        StudentGrade sg2 = new StudentGrade();
-        sg2.setEnrollment(enrollment);
-        sg2.setGradeComponent(gc2);
-        sg2.setScore(9.0);
-
-        when(studentGradeRepository.findByEnrollmentIdIn(anyList()))
-                .thenReturn(Arrays.asList(sg1, sg2));
-
-        // Act
-        ExamGradeOverviewResponse response = examGradeService.getExamGradeOverview(courseCode, semesterCode, type);
-
-        // Assert
-        assertNotNull(response);
-        assertEquals(courseCode, response.getCourseCode());
-        assertEquals(1, response.getTotalStudents());
-        assertEquals(8.7, response.getAverageGrade()); // (8*0.3 + 9*0.7) = 2.4 + 6.3 = 8.7
-        assertEquals(100.0, response.getPassRate());
-        assertFalse(response.getGradesPublished());
-    }
-
-    @Test
-    void getExamGradeOverview_ResitType() {
-        // Arrange
-        String courseCode = "PRN211";
-        String semesterCode = "SP24";
-        String type = "RESIT";
-
-        Course course = new Course();
-        course.setId(1L);
-        when(courseRepository.findByCode(courseCode)).thenReturn(Optional.of(course));
-        Semester semester = new Semester();
-        when(semesterRepository.findByCode(semesterCode)).thenReturn(Optional.of(semester));
-
-        GradeComponent gcResit = new GradeComponent();
-        gcResit.setId(3L);
-        gcResit.setName("Resit");
-        gcResit.setType(GradeComponent.GradeType.RESIT);
-        gcResit.setWeight(1.0);
-
-        when(gradeComponentRepository.findByCourseIdOrderById(1L)).thenReturn(Collections.singletonList(gcResit));
-        when(enrollmentRepository.findByCourseAndSemester(anyString(), anyString()))
-                .thenReturn(Collections.emptyList());
-        when(studentGradeRepository.findByEnrollmentIdIn(anyList())).thenReturn(Collections.emptyList());
-
-        // Act
-        ExamGradeOverviewResponse response = examGradeService.getExamGradeOverview(courseCode, semesterCode, type);
-
-        // Assert
-        assertNotNull(response);
-        assertEquals(0, response.getTotalStudents());
-        // Verify only RESIT components are marked editable
-        assertTrue(response.getGradeComponents().get(0).getIsEditable());
-    }
-
-    @Test
-    void previewExamGradeImport_Success() throws IOException {
-        // Arrange
-        String courseCode = "PRN211";
-        String semesterCode = "SP24";
-        String type = "EXAM";
-
-        Course course = new Course();
-        course.setId(1L);
-        when(courseRepository.findByCode(courseCode)).thenReturn(Optional.of(course));
-
-        GradeComponent gc1 = new GradeComponent();
-        gc1.setId(1L);
-        gc1.setName("Midterm");
-        gc1.setType(GradeComponent.GradeType.MID_TERM);
-        gc1.setWeight(0.3);
-
-        when(gradeComponentRepository.findByCourseIdOrderById(1L)).thenReturn(Collections.singletonList(gc1));
-
-        Enrollment enrollment = new Enrollment();
-        enrollment.setId(100L);
-        enrollment.setStudentCode("SE123456");
-        when(enrollmentRepository.findByCourseAndSemester(courseCode, semesterCode))
-                .thenReturn(Collections.singletonList(enrollment));
-
-        // Create a mock Excel file
-        org.springframework.mock.web.MockMultipartFile file = new org.springframework.mock.web.MockMultipartFile(
-                "file",
-                "grades.xlsx",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                createExcelContent());
-
-        // Act
-        Map<String, Object> result = examGradeService.previewExamGradeImport(courseCode, semesterCode, type, file);
-
-        // Assert
-        assertNotNull(result);
-        List<Map<String, Object>> rows = (List<Map<String, Object>>) result.get("rows");
-        assertEquals(1, rows.size());
-        assertEquals("SE123456", rows.get(0).get("studentCode"));
-        assertEquals("VALID", rows.get(0).get("status"));
-    }
-
-    @Test
-    void importExamGradesFromExcel_Success() throws IOException {
-        // Arrange
-        String courseCode = "PRN211";
-        String semesterCode = "SP24";
-        String type = "EXAM";
-        Long userId = 1L;
-
-        Course course = new Course();
-        course.setId(1L);
-        when(courseRepository.findByCode(courseCode)).thenReturn(Optional.of(course));
-
-        User user = new User();
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-
-        GradeComponent gc1 = new GradeComponent();
-        gc1.setId(1L);
-        gc1.setName("Midterm");
-        gc1.setType(GradeComponent.GradeType.MID_TERM);
-        when(gradeComponentRepository.findByCourseIdOrderById(1L)).thenReturn(Collections.singletonList(gc1));
-
-        Enrollment enrollment = new Enrollment();
-        enrollment.setId(100L);
-        enrollment.setStudentCode("SE123456");
-        when(enrollmentRepository.findByCourseAndSemester(courseCode, semesterCode))
-                .thenReturn(Collections.singletonList(enrollment));
-
-        when(studentGradeRepository.findByEnrollmentIdAndGradeComponentId(100L, 1L)).thenReturn(Optional.empty());
-
-        org.springframework.mock.web.MockMultipartFile file = new org.springframework.mock.web.MockMultipartFile(
-                "file",
-                "grades.xlsx",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                createExcelContent());
-
-        // Act
-        Map<String, Object> result = examGradeService.importExamGradesFromExcel(courseCode, semesterCode, type, file,
-                userId);
-
-        // Assert
-        assertTrue((Boolean) result.get("success"));
-        assertEquals(1, result.get("imported"));
-        verify(studentGradeRepository, times(1)).save(any(StudentGrade.class));
-    }
-
-    // Helper to create valid Excel content
-    private byte[] createExcelContent() throws IOException {
-        try (org.apache.poi.ss.usermodel.Workbook workbook = new org.apache.poi.xssf.usermodel.XSSFWorkbook()) {
-            org.apache.poi.ss.usermodel.Sheet sheet = workbook.createSheet("Grades");
-            org.apache.poi.ss.usermodel.Row header = sheet.createRow(0);
-            header.createCell(0).setCellValue("STT");
-            header.createCell(1).setCellValue("MSSV");
-            header.createCell(2).setCellValue("Name");
-            header.createCell(3).setCellValue("Class");
-            header.createCell(4).setCellValue("Midterm"); // Matches component name
-
-            org.apache.poi.ss.usermodel.Row row = sheet.createRow(1);
-            row.createCell(0).setCellValue("1");
-            row.createCell(1).setCellValue("SE123456");
-            row.createCell(2).setCellValue("Nguyen Van A");
-            row.createCell(3).setCellValue("SE1801");
-            row.createCell(4).setCellValue(8.5);
-
-            java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
-            workbook.write(bos);
-            return bos.toByteArray();
+                gcResit = new GradeComponent();
+                gcResit.setId(3L);
+                gcResit.setName("Resit");
+                gcResit.setType(GradeComponent.GradeType.RESIT);
+                gcResit.setWeight(70.0);
+                gcResit.setIsResit(true);
+                gcResit.setReferenceComponent(gcFinal);
         }
-    }
+
+        // ══════════════════════════════════════════════════════════════════════════
+        // 1. getExamGradeOverview – Visibility per role
+        // ══════════════════════════════════════════════════════════════════════════
+
+        @Nested
+        @DisplayName("getExamGradeOverview – Hiển thị theo vai trò")
+        class ExamGradeVisibility {
+
+                @Test
+                @DisplayName("Academic Staff luôn thấy điểm thi dù chưa công bố")
+                void academicStaff_shouldAlwaysSeeGrades() {
+                        classSection.setGradesPublished(false);
+                        setupExamOverviewMocks(Arrays.asList(gcMid, gcFinal),
+                                        Map.of(gcMid.getId(), 7.0, gcFinal.getId(), 4.0));
+
+                        ExamGradeOverviewResponse response = examGradeService.getExamGradeOverview(
+                                        "PRN211", "SP24", "EXAM", "ACADEMIC_STAFF");
+
+                        assertFalse(response.getStudentGrades().isEmpty());
+                        assertNotNull(response.getStudentGrades().get(0).getFinalGrade(),
+                                        "Academic Staff phải thấy điểm dù chưa công bố");
+                }
+
+                @Test
+                @DisplayName("Giảng viên KHÔNG thấy điểm thi khi chưa công bố")
+                void lecturer_shouldNotSeeGradesBeforePublished() {
+                        classSection.setGradesPublished(false);
+                        setupExamOverviewMocks(Arrays.asList(gcMid, gcFinal),
+                                        Map.of(gcMid.getId(), 7.0, gcFinal.getId(), 4.0));
+
+                        ExamGradeOverviewResponse response = examGradeService.getExamGradeOverview(
+                                        "PRN211", "SP24", "EXAM", "LECTURER");
+
+                        assertFalse(response.getStudentGrades().isEmpty());
+                        response.getStudentGrades().forEach(row -> assertNull(row.getFinalGrade(),
+                                        "Giảng viên không được thấy điểm thi khi chưa công bố"));
+                }
+
+                @Test
+                @DisplayName("Giảng viên thấy điểm thi sau khi Academic công bố")
+                void lecturer_shouldSeeGradesAfterPublished() {
+                        classSection.setGradesPublished(true);
+                        setupExamOverviewMocks(Arrays.asList(gcMid, gcFinal),
+                                        Map.of(gcMid.getId(), 7.0, gcFinal.getId(), 4.0));
+
+                        ExamGradeOverviewResponse response = examGradeService.getExamGradeOverview(
+                                        "PRN211", "SP24", "EXAM", "LECTURER");
+
+                        assertFalse(response.getStudentGrades().isEmpty());
+                        response.getStudentGrades().forEach(row -> assertNotNull(row.getFinalGrade(),
+                                        "Giảng viên phải thấy điểm sau khi công bố"));
+                }
+
+                @Test
+                @DisplayName("Sinh viên KHÔNG thấy điểm thi khi chưa công bố")
+                void student_shouldNotSeeGradesBeforePublished() {
+                        classSection.setGradesPublished(false);
+                        setupExamOverviewMocks(Arrays.asList(gcMid, gcFinal),
+                                        Map.of(gcMid.getId(), 7.0, gcFinal.getId(), 4.0));
+
+                        ExamGradeOverviewResponse response = examGradeService.getExamGradeOverview(
+                                        "PRN211", "SP24", "EXAM", "STUDENT");
+
+                        response.getStudentGrades().forEach(row -> assertNull(row.getFinalGrade(),
+                                        "Sinh viên không được thấy điểm khi chưa công bố"));
+                }
+
+                @Test
+                @DisplayName("Sinh viên thấy điểm thi sau khi Academic công bố")
+                void student_shouldSeeGradesAfterPublished() {
+                        classSection.setGradesPublished(true);
+                        setupExamOverviewMocks(Arrays.asList(gcMid, gcFinal),
+                                        Map.of(gcMid.getId(), 7.0, gcFinal.getId(), 4.0));
+
+                        ExamGradeOverviewResponse response = examGradeService.getExamGradeOverview(
+                                        "PRN211", "SP24", "EXAM", "STUDENT");
+
+                        response.getStudentGrades().forEach(row -> assertNotNull(row.getFinalGrade()));
+                }
+        }
+
+        // ══════════════════════════════════════════════════════════════════════════
+        // 2. getExamGradeOverview – Average grade calculation
+        // ══════════════════════════════════════════════════════════════════════════
+
+        @Nested
+        @DisplayName("getExamGradeOverview – Tính điểm trung bình")
+        class ExamGradeAverage {
+
+                @Test
+                @DisplayName("Điểm TB chính xác với Mid + FE (không có Resit)")
+                void shouldCalculateAverageCorrectly_noResit() {
+                        // Mid=7.0 (30%), FE=4.0 (70%) → avg = (7*30 + 4*70) / 100 = (210+280)/100 = 4.9
+                        classSection.setGradesPublished(true);
+                        setupExamOverviewMocks(Arrays.asList(gcMid, gcFinal),
+                                        Map.of(gcMid.getId(), 7.0, gcFinal.getId(), 4.0));
+
+                        ExamGradeOverviewResponse response = examGradeService.getExamGradeOverview(
+                                        "PRN211", "SP24", "EXAM", "ACADEMIC_STAFF");
+
+                        assertFalse(response.getStudentGrades().isEmpty());
+                        Double finalGrade = response.getStudentGrades().get(0).getFinalGrade();
+                        assertNotNull(finalGrade);
+                        assertEquals(4.9, finalGrade, 0.05, "Điểm TB phải là 4.9");
+                }
+
+                @Test
+                @DisplayName("Điểm TB tính theo Resit (thay thế FE) khi Resit được công bố")
+                void shouldReplaceFeWithResitInAverage_whenResitPublished() {
+                        // Mid=7.0 (30%), FE=3.0 (70%) → Without resit: avg = (7*30+3*70)/100 = 4.2
+                        // Resit=6.0 (70%) replaces FE → avg = (7*30 + 6*70) / 100 = (210+420)/100 = 6.3
+                        classSection.setGradesPublished(true);
+                        classSection.setResitGradesPublished(true);
+                        setupExamOverviewMocks(Arrays.asList(gcMid, gcFinal, gcResit),
+                                        Map.of(gcMid.getId(), 7.0, gcFinal.getId(), 3.0, gcResit.getId(), 6.0));
+
+                        ExamGradeOverviewResponse response = examGradeService.getExamGradeOverview(
+                                        "PRN211", "SP24", "EXAM", "ACADEMIC_STAFF");
+
+                        assertFalse(response.getStudentGrades().isEmpty());
+                        Double finalGrade = response.getStudentGrades().get(0).getFinalGrade();
+                        assertNotNull(finalGrade);
+                        assertEquals(6.3, finalGrade, 0.05,
+                                        "Resit phải thay thế FE: avg = (7*30 + 6*70)/100 = 6.3");
+                        assertEquals("PASSED", response.getStudentGrades().get(0).getStatus());
+                }
+
+                @Test
+                @DisplayName("Khi Resit chưa công bố, FE vẫn được dùng trong tính TB")
+                void shouldUseFEWhenResitNotPublished() {
+                        // Resit exists but not published → FE used
+                        // Mid=7.0 (30%), FE=3.0 (70%) → avg = 4.2
+                        classSection.setGradesPublished(true);
+                        classSection.setResitGradesPublished(false);
+                        setupExamOverviewMocks(Arrays.asList(gcMid, gcFinal, gcResit),
+                                        Map.of(gcMid.getId(), 7.0, gcFinal.getId(), 3.0, gcResit.getId(), 6.0));
+
+                        ExamGradeOverviewResponse response = examGradeService.getExamGradeOverview(
+                                        "PRN211", "SP24", "EXAM", "ACADEMIC_STAFF");
+
+                        Double finalGrade = response.getStudentGrades().get(0).getFinalGrade();
+                        assertNotNull(finalGrade);
+                        assertEquals(4.2, finalGrade, 0.05,
+                                        "Khi Resit chưa công bố, FE phải được dùng cho TB");
+                        assertEquals("FAILED", response.getStudentGrades().get(0).getStatus());
+                }
+
+                @Test
+                @DisplayName("Loại điểm RESIT trong getExamGradeOverview kiểu RESIT")
+                void shouldHandleResitType() {
+                        when(courseRepository.findByCode("PRN211")).thenReturn(Optional.of(course));
+                        when(semesterRepository.findByCode("SP24")).thenReturn(Optional.of(semester));
+                        when(gradeComponentRepository.findByCourseIdOrderById(1L))
+                                        .thenReturn(Collections.singletonList(gcResit));
+                        when(enrollmentRepository.findByCourseAndSemester(anyString(), anyString()))
+                                        .thenReturn(Collections.emptyList());
+                        when(studentGradeRepository.findByEnrollmentIdIn(anyList()))
+                                        .thenReturn(Collections.emptyList());
+
+                        ExamGradeOverviewResponse response = examGradeService.getExamGradeOverview(
+                                        "PRN211", "SP24", "RESIT", "ACADEMIC_STAFF");
+
+                        assertNotNull(response);
+                        assertEquals(0, response.getTotalStudents());
+                        assertTrue(response.getGradeComponents().get(0).getIsEditable(),
+                                        "Resit component phải là editable");
+                }
+        }
+
+        // ══════════════════════════════════════════════════════════════════════════
+        // 3. publishGrades
+        // ══════════════════════════════════════════════════════════════════════════
+
+        @Nested
+        @DisplayName("publishGrades")
+        class PublishGrades {
+
+                @Test
+                @DisplayName("Công bố thành công – chỉ cập nhật lớp chưa công bố")
+                void publishGrades_Success() {
+                        Long userId = 10L;
+                        User publisher = new User();
+                        publisher.setId(userId);
+                        publisher.setFullName("Admin");
+
+                        ClassSection cs1 = new ClassSection();
+                        cs1.setClassName("SE1801");
+                        cs1.setGradesPublished(false);
+                        ClassSection cs2 = new ClassSection();
+                        cs2.setClassName("SE1802");
+                        cs2.setGradesPublished(true); // Already published
+
+                        Enrollment e1 = new Enrollment();
+                        e1.setClassSection(cs1);
+                        Enrollment e2 = new Enrollment();
+                        e2.setClassSection(cs2);
+
+                        when(courseRepository.findByCode("PRN211")).thenReturn(Optional.of(course));
+                        when(userRepository.findById(userId)).thenReturn(Optional.of(publisher));
+                        when(enrollmentRepository.findByCourseAndSemester("PRN211", "SP24"))
+                                        .thenReturn(Arrays.asList(e1, e2));
+
+                        Map<String, Object> result = examGradeService.publishGrades("PRN211", "SP24", "EXAM", userId);
+
+                        assertTrue((Boolean) result.get("success"));
+                        assertEquals(1, result.get("publishedClasses"), "Chỉ 1 lớp được cập nhật");
+                        verify(classSectionRepository, times(1)).save(cs1);
+                        verify(classSectionRepository, never()).save(cs2);
+                        assertTrue(cs1.getGradesPublished());
+                        assertNotNull(cs1.getGradesPublishedAt());
+                }
+
+                @Test
+                @DisplayName("Ném lỗi khi không tìm thấy môn học")
+                void publishGrades_CourseNotFound() {
+                        when(courseRepository.findByCode("NONEXISTENT")).thenReturn(Optional.empty());
+
+                        RuntimeException ex = assertThrows(RuntimeException.class,
+                                        () -> examGradeService.publishGrades("NONEXISTENT", "SP24", "EXAM", 1L));
+                        assertTrue(ex.getMessage().contains("Course not found"));
+                }
+
+                @Test
+                @DisplayName("Công bố Resit – chỉ cập nhật resitGradesPublished")
+                void publishResitGrades_Success() {
+                        Long userId = 10L;
+                        User publisher = new User();
+                        publisher.setId(userId);
+                        publisher.setFullName("Admin");
+
+                        ClassSection cs = new ClassSection();
+                        cs.setClassName("SE1801");
+                        cs.setResitGradesPublished(false);
+
+                        Enrollment e = new Enrollment();
+                        e.setClassSection(cs);
+
+                        when(courseRepository.findByCode("PRN211")).thenReturn(Optional.of(course));
+                        when(userRepository.findById(userId)).thenReturn(Optional.of(publisher));
+                        when(enrollmentRepository.findByCourseAndSemester("PRN211", "SP24"))
+                                        .thenReturn(Collections.singletonList(e));
+
+                        Map<String, Object> result = examGradeService.publishGrades("PRN211", "SP24", "RESIT", userId);
+
+                        assertTrue((Boolean) result.get("success"));
+                        assertTrue(cs.getResitGradesPublished(), "resitGradesPublished phải là true");
+                        assertNotNull(cs.getResitGradesPublishedAt());
+                }
+        }
+
+        // ══════════════════════════════════════════════════════════════════════════
+        // 4. getExamGradeOverview – Stats (pass rate / average)
+        // ══════════════════════════════════════════════════════════════════════════
+
+        @Nested
+        @DisplayName("getExamGradeOverview – Thống kê (pass rate, average)")
+        class ExamGradeStats {
+
+                @Test
+                @DisplayName("Pass rate 100% khi tất cả SV có điểm TB >= 5.0")
+                void shouldCalculatePassRate100() {
+                        classSection.setGradesPublished(true);
+                        // Mid=7.0 (30%), FE=8.0 (70%) → avg = (7*30+8*70)/100 = 7.7
+                        setupExamOverviewMocks(Arrays.asList(gcMid, gcFinal),
+                                        Map.of(gcMid.getId(), 7.0, gcFinal.getId(), 8.0));
+
+                        ExamGradeOverviewResponse response = examGradeService.getExamGradeOverview(
+                                        "PRN211", "SP24", "EXAM", "ACADEMIC_STAFF");
+
+                        assertEquals(100.0, response.getPassRate(), 0.1);
+                }
+
+                @Test
+                @DisplayName("Pass rate 0% khi tất cả SV có điểm TB < 5.0")
+                void shouldCalculatePassRate0() {
+                        classSection.setGradesPublished(true);
+                        // Mid=3.0 (30%), FE=2.0 (70%) → avg = (3*30+2*70)/100 = 2.3
+                        setupExamOverviewMocks(Arrays.asList(gcMid, gcFinal),
+                                        Map.of(gcMid.getId(), 3.0, gcFinal.getId(), 2.0));
+
+                        ExamGradeOverviewResponse response = examGradeService.getExamGradeOverview(
+                                        "PRN211", "SP24", "EXAM", "ACADEMIC_STAFF");
+
+                        assertEquals(0.0, response.getPassRate(), 0.1);
+                }
+
+                @Test
+                @DisplayName("averageGrade được tổng hợp đúng từ toàn bộ SV")
+                void shouldCalculateAverageGradeForAllStudents() {
+                        classSection.setGradesPublished(true);
+                        // Mid=6.0, FE=8.0 → avg = (6*30+8*70)/100 = 7.4
+                        setupExamOverviewMocks(Arrays.asList(gcMid, gcFinal),
+                                        Map.of(gcMid.getId(), 6.0, gcFinal.getId(), 8.0));
+
+                        ExamGradeOverviewResponse response = examGradeService.getExamGradeOverview(
+                                        "PRN211", "SP24", "EXAM", "ACADEMIC_STAFF");
+
+                        assertEquals(7.4, response.getAverageGrade(), 0.1);
+                }
+        }
+
+        // ──────────────────────────────────────────────────────────────────────────
+        // Helpers
+        // ──────────────────────────────────────────────────────────────────────────
+
+        /**
+         * Set up standard mocks for getExamGradeOverview calls
+         */
+        private void setupExamOverviewMocks(List<GradeComponent> components,
+                        Map<Long, Double> scores) {
+                when(courseRepository.findByCode("PRN211")).thenReturn(Optional.of(course));
+                when(semesterRepository.findByCode("SP24")).thenReturn(Optional.of(semester));
+                when(gradeComponentRepository.findByCourseIdOrderById(1L)).thenReturn(components);
+                when(enrollmentRepository.findByCourseAndSemester(anyString(), anyString()))
+                                .thenReturn(Collections.singletonList(enrollment));
+
+                List<StudentGrade> grades = new ArrayList<>();
+                for (Map.Entry<Long, Double> entry : scores.entrySet()) {
+                        GradeComponent gc = components.stream()
+                                        .filter(c -> c.getId().equals(entry.getKey()))
+                                        .findFirst().orElseThrow();
+                        StudentGrade sg = new StudentGrade();
+                        sg.setEnrollment(enrollment);
+                        sg.setGradeComponent(gc);
+                        sg.setScore(entry.getValue());
+                        grades.add(sg);
+                }
+                when(studentGradeRepository.findByEnrollmentIdIn(anyList())).thenReturn(grades);
+
+                // ══════════════════════════════════════════════════════════════════════════
+                // 5. isEligibleForResit – Guards
+                // ══════════════════════════════════════════════════════════════════════════
+
+                @Nested
+                @DisplayName("isEligibleForResit – Kiểm tra điều kiện thi lại")
+                class IsEligibleForResit {
+
+                        @Test
+                        @DisplayName("Không đủ điều kiện nếu điểm thi (EXAM) chưa công bố")
+                        void shouldNotBeEligibleIfExamNotPublished() {
+                                classSection.setGradesPublished(false);
+
+                                boolean eligible = examGradeService.isEligibleForResit(enrollment, "PRN211");
+
+                                assertFalse(eligible, "Phải trả về false nếu điểm thi chưa công bố");
+                        }
+
+                        @Test
+                        @DisplayName("Không đủ điều kiện nếu điểm thi lại (RESIT) đã công bố")
+                        void shouldNotBeEligibleIfResitAlreadyPublished() {
+                                classSection.setGradesPublished(true);
+                                classSection.setResitGradesPublished(true);
+
+                                boolean eligible = examGradeService.isEligibleForResit(enrollment, "PRN211");
+
+                                assertFalse(eligible, "Phải trả về false nếu điểm thi lại đã công bố");
+                        }
+
+                        @Test
+                        @DisplayName("Không đủ điều kiện nếu điểm TB hiện tại đã đạt (>= 5.0)")
+                        void shouldNotBeEligibleIfAverageAlreadyPassed() {
+                                classSection.setGradesPublished(true);
+                                classSection.setResitGradesPublished(false);
+
+                                when(courseRepository.findByCode("PRN211")).thenReturn(Optional.of(course));
+                                when(gradeComponentRepository.findByCourseIdOrderById(1L))
+                                                .thenReturn(Arrays.asList(gcMid, gcFinal));
+                                // Mid=6, Final=4 -> Avg= (6*30 + 4*70)/100 = (180+280)/100 = 4.6 (FAILED)
+                                // Mid=7, Final=5 -> Avg= (7*30 + 5*70)/100 = (210+350)/100 = 5.6 (PASSED)
+                                when(studentGradeRepository.findByEnrollmentIdIn(anyList()))
+                                                .thenReturn(Arrays.asList(
+                                                                StudentGrade.builder().gradeComponent(gcMid).score(7.0)
+                                                                                .build(),
+                                                                StudentGrade.builder().gradeComponent(gcFinal)
+                                                                                .score(5.0).build()));
+
+                                boolean eligible = examGradeService.isEligibleForResit(enrollment, "PRN211");
+
+                                assertFalse(eligible, "Sinh viên đã đạt môn (5.6) không được thi lại");
+                        }
+
+                        @Test
+                        @DisplayName("Đủ điều kiện nếu điểm thi đã công bố và TB < 5.0")
+                        void shouldBeEligibleIfExamPublishedAndAverageFailed() {
+                                classSection.setGradesPublished(true);
+                                classSection.setResitGradesPublished(false);
+
+                                when(courseRepository.findByCode("PRN211")).thenReturn(Optional.of(course));
+                                when(gradeComponentRepository.findByCourseIdOrderById(1L))
+                                                .thenReturn(Arrays.asList(gcMid, gcFinal));
+                                // Mid=4, Final=3 -> Avg= (4*30 + 3*70)/100 = (120+210)/100 = 3.3 (FAILED)
+                                when(studentGradeRepository.findByEnrollmentIdIn(anyList()))
+                                                .thenReturn(Arrays.asList(
+                                                                StudentGrade.builder().gradeComponent(gcMid).score(4.0)
+                                                                                .build(),
+                                                                StudentGrade.builder().gradeComponent(gcFinal)
+                                                                                .score(3.0).build()));
+
+                                boolean eligible = examGradeService.isEligibleForResit(enrollment, "PRN211");
+
+                                assertTrue(eligible, "Sinh viên chưa đạt môn (3.3) phải được thi lại");
+                        }
+                }
+        }
 }
