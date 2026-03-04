@@ -69,7 +69,7 @@ public class StudentAcademicRequestTest {
         semester = new Semester();
         semester.setId(1L);
         semester.setCode("SU24");
-        semester.setStartDate(LocalDate.now().plusWeeks(2));
+        semester.setStartDate(LocalDate.now().plusWeeks(10)); // Distant future to avoid deadline issues in tests
 
         createDTO = CreateAcademicRequestDTO.builder()
                 .requestType(AcademicRequestType.CHANGE_MAJOR)
@@ -182,6 +182,7 @@ public class StudentAcademicRequestTest {
             AcademicRequest request = AcademicRequest.builder()
                     .id(100L)
                     .student(student)
+                    .requestType(AcademicRequestType.OTHERS)
                     .status(RequestStatus.PENDING)
                     .build();
             when(academicRequestRepository.findById(100L)).thenReturn(Optional.of(request));

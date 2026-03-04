@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { FileText, Plus, Clock, CheckCircle, XCircle, AlertCircle, Upload, X, Loader2, Info, Trash2, AlertTriangle, FileText as FileIcon } from 'lucide-react';
+import { FileText, Plus, Clock, CheckCircle, XCircle, AlertCircle, Upload, X, Loader2, Info, Trash2, AlertTriangle } from 'lucide-react';
 import { StudentLayout } from '../../layouts/StudentLayout';
 import { Pagination } from '../../components/common/Pagination';
 import { academicRequestService, AcademicRequest, AcademicRequestType, CreateAcademicRequestPayload } from '../../services/api/academicRequestService';
