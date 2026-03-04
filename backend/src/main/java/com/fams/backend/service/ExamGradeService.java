@@ -5,6 +5,7 @@ import com.fams.backend.dto.response.ExamGradeOverviewResponse.ExamGradeComponen
 import com.fams.backend.dto.response.ExamGradeOverviewResponse.ExamStudentGradeRow;
 import com.fams.backend.entity.*;
 import com.fams.backend.repository.*;
+import com.fams.backend.util.GradeCalculator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -54,7 +55,8 @@ public class ExamGradeService {
      * @param type         "EXAM" for ME/FE/PE, "RESIT" for resit grades
      */
     @Transactional(readOnly = true)
-    public ExamGradeOverviewResponse getExamGradeOverview(String courseCode, String semesterCode, String type) {
+    public ExamGradeOverviewResponse getExamGradeOverview(String courseCode, String semesterCode, String type,
+            String callerRole) {
         Course course = courseRepository.findByCode(courseCode)
                 .orElseThrow(() -> new RuntimeException("Course not found: " + courseCode));
 
@@ -145,28 +147,104 @@ public class ExamGradeService {
                         .build())
                 .collect(Collectors.toList());
 
+        // Determine if grades are published
+        Set<ClassSection> classSections = enrollments.stream()
+                .map(Enrollment::getClassSection)
+                .collect(Collectors.toSet());
+
+        boolean isPublished;
+        if ("RESIT".equalsIgnoreCase(type)) {
+            isPublished = classSections.stream().anyMatch(ClassSection::getResitGradesPublished);
+        } else {
+            isPublished = classSections.stream().anyMatch(ClassSection::getGradesPublished);
+        }
+
+        // LECTURER and STUDENT can only see exam grades after Academic Staff publishes
+        // them
+        boolean hideGradesForNonAcademic = !"ACADEMIC_STAFF".equals(callerRole) && !isPublished;
+
         // Build student rows
         List<ExamStudentGradeRow> studentRows = enrollments.stream().map(enrollment -> {
             Map<Long, Double> studentGrades = gradesMap.getOrDefault(enrollment.getId(), new HashMap<>());
 
-            // Calculate weighted sum for final grade using ALL components
-            Double finalGrade = null;
-            double totalWeight = 0;
-            double weightedSum = 0;
-            for (GradeComponent gc : allComponents) {
-                Double score = studentGrades.get(gc.getId());
-                if (score != null) {
-                    weightedSum += score * gc.getWeight();
-                    totalWeight += gc.getWeight();
-                }
-            }
-            if (totalWeight > 0) {
-                finalGrade = weightedSum / totalWeight;
+            // If Lecturer/Student and grades not published yet → hide all scores
+            if (hideGradesForNonAcademic) {
+                return ExamStudentGradeRow.builder()
+                        .enrollmentId(enrollment.getId())
+                        .studentCode(enrollment.getStudentCode())
+                        .studentName(enrollment.getStudent().getFullName())
+                        .className(enrollment.getClassSection().getClassName())
+                        .grades(new HashMap<>())
+                        .finalGrade(null)
+                        .status("PENDING")
+                        .build();
             }
 
+            // Identify components that are replaced by a published Resit
+            // (only applies if Resit grades have been published for this
+            // enrollment's class section)
+            Set<Long> replacedByResitIds = new HashSet<>();
+            boolean resitPublished = Boolean.TRUE.equals(enrollment.getClassSection().getResitGradesPublished());
+            if (resitPublished) {
+                for (GradeComponent gc : allComponents) {
+                    if ((Boolean.TRUE.equals(gc.getIsResit()) || gc.getType() == GradeComponent.GradeType.RESIT)
+                            && gc.getReferenceComponent() != null
+                            && studentGrades.containsKey(gc.getId())) {
+                        replacedByResitIds.add(gc.getReferenceComponent().getId());
+                    }
+                }
+            }
+
+            // Calculate weighted sum for final grade using ALL components.
+            // If a Resit exists and is published, it replaces the reference component.
+            Map<Long, Double> scoresForCalc = new HashMap<>();
+            Map<Long, Double> weightsForCalc = new HashMap<>();
+
+            boolean hasFailedExam = false;
+
+            for (GradeComponent gc : allComponents) {
+                // Skip components that are replaced by a Resit
+                if (replacedByResitIds.contains(gc.getId())) {
+                    continue;
+                }
+                Double score = studentGrades.get(gc.getId());
+                if (score != null) {
+                    scoresForCalc.put(gc.getId(), score);
+                    if ((gc.getType() == GradeComponent.GradeType.FINAL_EXAM
+                            || gc.getType() == GradeComponent.GradeType.RESIT) && score < 4.0) {
+                        hasFailedExam = true;
+                    }
+                }
+
+                // Only add to weightsForCalc if it's NOT a RESIT, OR if the student HAS a score
+                // for this RESIT
+                boolean isResitComponent = Boolean.TRUE.equals(gc.getIsResit())
+                        || gc.getType() == GradeComponent.GradeType.RESIT;
+                if (!isResitComponent || score != null) {
+                    weightsForCalc.put(gc.getId(), gc.getWeight());
+                }
+            }
+
+            Double finalGrade = GradeCalculator.calculateAverage(scoresForCalc, weightsForCalc);
+
             String status = "PENDING";
-            if (finalGrade != null) {
-                status = finalGrade >= 5.0 ? "PASSED" : "FAILED";
+            boolean isCoursePublished = Boolean.TRUE.equals(enrollment.getClassSection().getGradesPublished());
+
+            if (isCoursePublished) {
+                boolean hasMissingOrZero = false;
+                for (Map.Entry<Long, Double> entry : weightsForCalc.entrySet()) {
+                    Double score = scoresForCalc.get(entry.getKey());
+                    if (score == null || score <= 0.0) {
+                        hasMissingOrZero = true;
+                        break;
+                    }
+                }
+
+                if (hasMissingOrZero || hasFailedExam || (finalGrade != null && finalGrade < 5.0)) {
+                    status = "FAILED";
+                } else if (finalGrade != null && finalGrade >= 5.0) {
+                    status = "PASSED";
+                }
             }
 
             return ExamStudentGradeRow.builder()
@@ -175,7 +253,7 @@ public class ExamGradeService {
                     .studentName(enrollment.getStudent().getFullName())
                     .className(enrollment.getClassSection().getClassName())
                     .grades(studentGrades)
-                    .finalGrade(finalGrade != null ? Math.round(finalGrade * 10.0) / 10.0 : null)
+                    .finalGrade(finalGrade)
                     .status(status)
                     .build();
         }).collect(Collectors.toList());
@@ -186,21 +264,31 @@ public class ExamGradeService {
         // Filter student rows for RESIT type
         List<ExamStudentGradeRow> finalStudentRows = studentRows;
         if ("RESIT".equalsIgnoreCase(type)) {
-            finalStudentRows = studentRows.stream().filter(row -> {
-                // Điều kiện lọc danh sách thi lại giống frontend:
-                // 1. Điểm TB < 5 (FAILED)
-                // 2. Thiếu điểm thi cuối kỳ (finalGrade null hoặc logic check FE)
-                // 3. Status PENDING
-                boolean isFailed = "FAILED".equals(row.getStatus());
-                boolean isPending = "PENDING".equals(row.getStatus());
+            // Đã công bố điểm thi FE chưa?
+            boolean examGradesPublishedGlobal = classSections.stream()
+                    .anyMatch(cs -> Boolean.TRUE.equals(cs.getGradesPublished()));
 
-                // Kiểm tra xem có thiếu điểm Final Exam không
-                boolean missingFE = allComponents.stream()
-                        .filter(gc -> gc.getType() == GradeComponent.GradeType.FINAL_EXAM)
-                        .anyMatch(gc -> row.getGrades().get(gc.getId()) == null);
+            if (!examGradesPublishedGlobal) {
+                // Nếu chưa công bố điểm FE, danh sách thi lại phải rỗng
+                finalStudentRows = new ArrayList<>();
+            } else {
+                finalStudentRows = studentRows.stream().filter(row -> {
+                    // Điều kiện lọc danh sách thi lại:
+                    // 1. Điểm TB < 5 (FAILED)
+                    // 2. Thiếu điểm thi cuối kỳ (finalGrade null hoặc logic check FE)
+                    // 3. Status PENDING (chưa đủ cột điểm để tính)
+                    // 4. MỚI: Đã có điểm thi lại (RESIT) -> giữ lại trong danh sách ngay cả khi đã
+                    // pass
+                    boolean isFailed = "FAILED".equals(row.getStatus());
 
-                return isFailed || isPending || missingFE;
-            }).collect(Collectors.toList());
+                    // Kiểm tra xem đã có điểm thi lại chưa (giữ lại trong danh sách)
+                    boolean hasResitGrade = allComponents.stream()
+                            .filter(gc -> gc.getType() == GradeComponent.GradeType.RESIT)
+                            .anyMatch(gc -> row.getGrades().get(gc.getId()) != null);
+
+                    return isFailed || hasResitGrade;
+                }).collect(Collectors.toList());
+            }
         }
 
         // Calculate statistics based on the final (potentially filtered) list
@@ -215,19 +303,14 @@ public class ExamGradeService {
                 .count();
         double passRate = finalStudentRows.isEmpty() ? 0 : (double) passedCount / finalStudentRows.size() * 100;
 
-        // Check publish status (if ANY class in this course-semester is published,
-        // consider it published)
-        Set<ClassSection> classSections = enrollments.stream()
-                .map(Enrollment::getClassSection)
-                .collect(Collectors.toSet());
-
-        boolean isPublished;
+        // Re-evaluate isPublished based on loaded class sections (now we have them from
+        // above)
+        Set<ClassSection> classSectionsForPublished = classSections;
         String publishedAt = null;
         String publishedBy = null;
 
         if ("RESIT".equalsIgnoreCase(type)) {
-            isPublished = classSections.stream().anyMatch(ClassSection::getResitGradesPublished);
-            Optional<ClassSection> publishedClass = classSections.stream()
+            Optional<ClassSection> publishedClass = classSectionsForPublished.stream()
                     .filter(cs -> cs.getResitGradesPublished() && cs.getResitGradesPublishedAt() != null)
                     .findFirst();
 
@@ -239,8 +322,7 @@ public class ExamGradeService {
                 }
             }
         } else {
-            isPublished = classSections.stream().anyMatch(ClassSection::getGradesPublished);
-            Optional<ClassSection> publishedClass = classSections.stream()
+            Optional<ClassSection> publishedClass = classSectionsForPublished.stream()
                     .filter(cs -> cs.getGradesPublished() && cs.getGradesPublishedAt() != null)
                     .findFirst();
 
@@ -252,6 +334,12 @@ public class ExamGradeService {
                 }
             }
         }
+
+        // Check explicit statuses
+        boolean examPublishedFlag = classSections.stream()
+                .anyMatch(cs -> Boolean.TRUE.equals(cs.getGradesPublished()));
+        boolean resitPublishedFlag = classSections.stream()
+                .anyMatch(cs -> Boolean.TRUE.equals(cs.getResitGradesPublished()));
 
         return ExamGradeOverviewResponse.builder()
                 .courseCode(courseCode)
@@ -267,6 +355,8 @@ public class ExamGradeService {
                 .gradesPublished(isPublished)
                 .gradesPublishedAt(publishedAt)
                 .gradesPublishedBy(publishedBy)
+                .examGradesPublished(examPublishedFlag)
+                .resitGradesPublished(resitPublishedFlag)
                 .build();
     }
 
@@ -275,8 +365,8 @@ public class ExamGradeService {
      */
     @Transactional(readOnly = true)
     public void exportExamGradesToExcel(String courseCode, String semesterCode, String type,
-            HttpServletResponse response) throws IOException {
-        ExamGradeOverviewResponse overview = getExamGradeOverview(courseCode, semesterCode, type);
+            String callerRole, HttpServletResponse response) throws IOException {
+        ExamGradeOverviewResponse overview = getExamGradeOverview(courseCode, semesterCode, type, callerRole);
 
         try (Workbook workbook = new XSSFWorkbook()) {
             String sheetName = "RESIT".equalsIgnoreCase(type) ? "Điểm Thi Lại" : "Điểm Thi";
@@ -575,13 +665,42 @@ public class ExamGradeService {
                     continue;
                 }
 
-                // Check if grades already published
+                // ---- Check visibility/editability guards ----
                 if ("RESIT".equalsIgnoreCase(type)) {
+                    // Guard 1: Exam grades (EXAM type) must be published before allowing Resit
+                    // entry
+                    if (!Boolean.TRUE.equals(enrollment.getClassSection().getGradesPublished())) {
+                        skipped++;
+                        continue; // Cannot enter resit grades if exam grades are not published yet
+                    }
+                    // Guard 2: Resit grades already published – no more editing allowed
                     if (Boolean.TRUE.equals(enrollment.getClassSection().getResitGradesPublished())) {
-                        continue; // Skip if published
+                        skipped++;
+                        continue;
+                    }
+                    // Guard 3: Only allow resit for students whose current average is < 5.0
+                    // Calculate current average using ALL grade components for this enrollment
+                    List<StudentGrade> studentAllGrades = studentGradeRepository
+                            .findByEnrollmentIdIn(java.util.Collections.singletonList(enrollment.getId()));
+                    List<GradeComponent> allGradeComponents = gradeComponentRepository
+                            .findByCourseIdOrderById(courseRepository.findByCode(courseCode)
+                                    .orElseThrow(() -> new RuntimeException("Course not found")).getId());
+                    Map<Long, Double> currentScoresMap = studentAllGrades.stream()
+                            .collect(Collectors.toMap(sg -> sg.getGradeComponent().getId(), StudentGrade::getScore,
+                                    (a, b) -> a));
+                    Map<Long, Double> currentWeightsMap = allGradeComponents.stream()
+                            .filter(gc -> !gc.getIsResit())
+                            .collect(Collectors.toMap(GradeComponent::getId, GradeComponent::getWeight));
+
+                    Double currentAverage = GradeCalculator.calculateAverage(currentScoresMap, currentWeightsMap);
+                    if (currentAverage != null && currentAverage >= 5.0) {
+                        skipped++; // Student already passed – no resit allowed
+                        continue;
                     }
                 } else {
+                    // For EXAM type: skip if grades already published
                     if (Boolean.TRUE.equals(enrollment.getClassSection().getGradesPublished())) {
+                        skipped++;
                         continue; // Skip if published
                     }
                 }
@@ -736,24 +855,75 @@ public class ExamGradeService {
         int publishedCount = 0;
         boolean isResit = "RESIT".equalsIgnoreCase(type);
 
+        // Fetch components relevant to this publish type
+        List<GradeComponent> gradeComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId())
+                .stream()
+                .filter(gc -> isResit ? gc.getType() == GradeComponent.GradeType.RESIT
+                        : gc.getType() == GradeComponent.GradeType.FINAL_EXAM)
+                .collect(Collectors.toList());
+
+        List<Long> enrollmentIds = enrollments.stream().map(Enrollment::getId).collect(Collectors.toList());
+        List<StudentGrade> existingGrades = studentGradeRepository.findByEnrollmentIdIn(enrollmentIds);
+
+        // Create map enrollmentId -> componentId -> StudentGrade
+        Map<Long, Map<Long, StudentGrade>> gradesMap = new HashMap<>();
+        for (StudentGrade grade : existingGrades) {
+            gradesMap.computeIfAbsent(grade.getEnrollment().getId(), k -> new HashMap<>())
+                    .put(grade.getGradeComponent().getId(), grade);
+        }
+
+        List<StudentGrade> newGrades = new ArrayList<>();
+
         for (ClassSection classSection : classSections) {
+            boolean shouldPublish = false;
             if (isResit) {
                 if (!classSection.getResitGradesPublished()) {
                     classSection.setResitGradesPublished(true);
                     classSection.setResitGradesPublishedAt(LocalDateTime.now());
                     classSection.setResitGradesPublishedBy(publisher);
-                    classSectionRepository.save(classSection);
-                    publishedCount++;
+                    shouldPublish = true;
                 }
             } else {
                 if (!classSection.getGradesPublished()) {
                     classSection.setGradesPublished(true);
                     classSection.setGradesPublishedAt(LocalDateTime.now());
                     classSection.setGradesPublishedBy(publisher);
-                    classSectionRepository.save(classSection);
-                    publishedCount++;
+                    shouldPublish = true;
                 }
             }
+
+            if (shouldPublish) {
+                // Determine enrolled students for this class
+                List<Enrollment> classEnrollments = enrollments.stream()
+                        .filter(e -> e.getClassSection().getClassName().equals(classSection.getClassName()))
+                        .collect(Collectors.toList());
+
+                // Create missing grades (0.0)
+                for (Enrollment en : classEnrollments) {
+                    Map<Long, StudentGrade> studentGrades = gradesMap.getOrDefault(en.getId(), new HashMap<>());
+                    for (GradeComponent gc : gradeComponents) {
+                        if (!studentGrades.containsKey(gc.getId())) {
+                            StudentGrade newGrade = new StudentGrade();
+                            newGrade.setEnrollment(en);
+                            newGrade.setGradeComponent(gc);
+                            newGrade.setScore(0.0);
+                            newGrade.setNote("Tự động gán 0 điểm do báo vắng (hoặc không tham gia) khi công bố điểm "
+                                    + (isResit ? "Thi Lại" : "Cuối Kỳ"));
+                            newGrade.setGradedBy(publisher);
+                            newGrade.setGradedAt(LocalDateTime.now());
+                            newGrades.add(newGrade);
+                        }
+                    }
+                }
+
+                classSectionRepository.save(classSection);
+                publishedCount++;
+            }
+        }
+
+        if (!newGrades.isEmpty()) {
+            studentGradeRepository.saveAll(newGrades);
+            log.info("Auto-filled {} zero grades for course {} when publishing {}", newGrades.size(), courseCode, type);
         }
 
         log.info("Published {} grades for course {} semester {} by user {}: {} classes updated",
@@ -764,5 +934,44 @@ public class ExamGradeService {
         result.put("publishedClasses", publishedCount);
         result.put("message", "Đã công bố điểm cho " + publishedCount + " lớp học");
         return result;
+    }
+
+    /**
+     * Checks if a student is eligible for Resit grade entry.
+     * 1. Official exam grades must be published.
+     * 2. Resit grades must NOT be published yet.
+     * 3. Student's current average must be < 5.0.
+     */
+    public boolean isEligibleForResit(Enrollment enrollment, String courseCode) {
+        // Guard 1: Exam grades (EXAM type) must be published before allowing Resit
+        // entry
+        if (!Boolean.TRUE.equals(enrollment.getClassSection().getGradesPublished())) {
+            return false;
+        }
+
+        // Guard 2: Resit grades already published – no more editing allowed
+        if (Boolean.TRUE.equals(enrollment.getClassSection().getResitGradesPublished())) {
+            return false;
+        }
+
+        // Guard 3: Only allow resit for students whose current average is < 5.0
+        List<StudentGrade> studentAllGrades = studentGradeRepository
+                .findByEnrollmentIdIn(java.util.Collections.singletonList(enrollment.getId()));
+
+        Course course = courseRepository.findByCode(courseCode)
+                .orElseThrow(() -> new RuntimeException("Course not found: " + courseCode));
+
+        List<GradeComponent> allGradeComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId());
+
+        Map<Long, Double> scoresForCalc = studentAllGrades.stream()
+                .collect(java.util.stream.Collectors.toMap(sg -> sg.getGradeComponent().getId(), StudentGrade::getScore,
+                        (a, b) -> a));
+        Map<Long, Double> weightsForCalc = allGradeComponents.stream()
+                .filter(gc -> !Boolean.TRUE.equals(gc.getIsResit()) && gc.getType() != GradeComponent.GradeType.RESIT)
+                .collect(java.util.stream.Collectors.toMap(GradeComponent::getId, GradeComponent::getWeight));
+
+        Double currentAverage = GradeCalculator.calculateAverage(scoresForCalc, weightsForCalc);
+
+        return currentAverage != null && currentAverage < 5.0;
     }
 }

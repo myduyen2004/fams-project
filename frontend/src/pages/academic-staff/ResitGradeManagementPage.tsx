@@ -6,9 +6,10 @@ import { Course } from '../../types/course';
 import { examGradeService, ExamGradeOverviewResponse } from '../../services/api/examGradeService';
 import {
     ChevronDown, Download, FileSpreadsheet, Users, TrendingUp, Award,
-    Loader2, Search, Check, RefreshCw, Save, Edit3, X, AlertTriangle
+    Loader2, Search, Check, RefreshCw, Save, Edit3, X, AlertTriangle, Send, ShieldCheck
 } from 'lucide-react';
 import { ImportExamGradeModal } from '../../components/academic-staff/ImportExamGradeModal';
+import { StudentInfoModal } from '../../components/common/StudentInfoModal';
 import { studentGradeService } from '../../services/api/studentGradeService';
 import toast from 'react-hot-toast';
 
@@ -39,6 +40,10 @@ export const ResitGradeManagementPage: React.FC = () => {
     const [isEditMode, setIsEditMode] = useState(false);
     const [saving, setSaving] = useState(false);
     const [editedGrades, setEditedGrades] = useState<{ [key: string]: string }>({});
+
+    // Student Info Modal State
+    const [selectedStudentCode, setSelectedStudentCode] = useState<string | null>(null);
+    const [isStudentInfoModalOpen, setIsStudentInfoModalOpen] = useState(false);
 
     // Publish state
     const [showPublishConfirm, setShowPublishConfirm] = useState(false);
@@ -362,18 +367,7 @@ export const ResitGradeManagementPage: React.FC = () => {
         }
     };
 
-    // Lý do thi lại
-    const getResitReason = (student: typeof resitEligibleStudents[0]): string => {
-        if (!gradeOverview) return '';
-        const feComponents = gradeOverview.gradeComponents.filter(gc => gc.type === 'FINAL_EXAM');
-        const missingFE = feComponents.some(gc => student.grades[gc.id] == null);
 
-        if (student.finalGrade === null && missingFE) return 'Thiếu điểm FE';
-        if (student.finalGrade === null) return 'Chưa đủ điểm';
-        if (student.finalGrade < 5) return `TB: ${student.finalGrade.toFixed(1)}`;
-        if (missingFE) return 'Thiếu điểm FE';
-        return '';
-    };
 
     const getSelectedSemesterName = () => {
         const semester = semesters.find(s => s.code === selectedSemester);
@@ -571,23 +565,19 @@ export const ResitGradeManagementPage: React.FC = () => {
                             </button>
                             <button
                                 onClick={() => setShowImportModal(true)}
-                                className="flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-all disabled:opacity-50"
-                                disabled={!selectedCourse || !selectedSemester || !gradeOverview?.gradesPublished}
-                                title={!gradeOverview?.gradesPublished ? "Cần công bố điểm thi trước khi nhập điểm thi lại" : "Nhập điểm thi lại từ Excel"}
+                                className="flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={!selectedCourse || !selectedSemester || !gradeOverview?.examGradesPublished || gradeOverview?.resitGradesPublished}
+                                title={
+                                    !gradeOverview?.examGradesPublished
+                                        ? "Cần công bố điểm thi (FE) trước khi nhập điểm thi lại"
+                                        : gradeOverview?.resitGradesPublished
+                                            ? "Điểm thi lại đã được công bố, không thể chỉnh sửa"
+                                            : "Nhập điểm thi lại từ Excel"
+                                }
                             >
                                 <FileSpreadsheet size={16} />
                                 Nhập điểm
                             </button>
-                            {gradeOverview && !gradeOverview.gradesPublished && (
-                                <button
-                                    onClick={() => setShowPublishConfirm(true)}
-                                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-all disabled:opacity-50"
-                                    disabled={loadingGrades || !gradeOverview.studentGrades.length}
-                                >
-                                    <Check size={16} />
-                                    Công bố điểm
-                                </button>
-                            )}
                         </div>
                     </div>
                 </div>
@@ -700,15 +690,33 @@ export const ResitGradeManagementPage: React.FC = () => {
                                     </button>
                                 </>
                             ) : (
-                                <button
-                                    onClick={handleStartEdit}
-                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all disabled:opacity-50"
-                                    disabled={gradeOverview.gradesPublished}
-                                    title={gradeOverview.gradesPublished ? "Không thể chỉnh sửa sau khi đã công bố điểm" : "Chỉnh sửa điểm trực tiếp"}
-                                >
-                                    <Edit3 size={18} />
-                                    Chỉnh sửa
-                                </button>
+                                <>
+                                    <button
+                                        onClick={handleStartEdit}
+                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all disabled:opacity-50"
+                                        disabled={gradeOverview.gradesPublished}
+                                        title={gradeOverview.gradesPublished ? "Không thể chỉnh sửa sau khi đã công bố điểm" : "Chỉnh sửa điểm trực tiếp"}
+                                    >
+                                        <Edit3 size={18} />
+                                        Chỉnh sửa
+                                    </button>
+
+                                    {gradeOverview.gradesPublished ? (
+                                        <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-400">
+                                            <ShieldCheck size={18} />
+                                            <span>Đã công bố điểm</span>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => setShowPublishConfirm(true)}
+                                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-all disabled:opacity-50"
+                                            disabled={publishing || gradeOverview.totalStudents === 0}
+                                        >
+                                            {publishing ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                                            Công bố điểm
+                                        </button>
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>
@@ -732,14 +740,11 @@ export const ResitGradeManagementPage: React.FC = () => {
                                         <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider min-w-[200px]">
                                             Thông tin sinh viên
                                         </th>
+                                        <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider min-w-[120px]">
+                                            Mã SV
+                                        </th>
                                         <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider">
                                             Lớp
-                                        </th>
-                                        <th className="px-3 py-4 text-center text-xs font-semibold uppercase tracking-wider min-w-[90px]">
-                                            <div>Lý do</div>
-                                            <div className="text-orange-200 font-normal mt-0.5 text-[10px]">
-                                                Thi lại
-                                            </div>
                                         </th>
                                         {sortedGradeComponents.map((component) => (
                                             <th
@@ -776,20 +781,23 @@ export const ResitGradeManagementPage: React.FC = () => {
                                                 {(index + 1).toString().padStart(2, '0')}
                                             </td>
                                             <td className="px-4 py-2">
-                                                <div className="flex items-center gap-3">
-                                                    <div>
-                                                        <p className="font-medium text-gray-900 dark:text-white text-sm">{student.studentName}</p>
-                                                        <p className="text-xs text-gray-500 dark:text-zinc-400">{student.studentCode}</p>
-                                                    </div>
+                                                <div className="flex flex-col">
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedStudentCode(student.studentCode);
+                                                            setIsStudentInfoModalOpen(true);
+                                                        }}
+                                                        className="text-left font-bold text-gray-900 dark:text-white text-sm hover:text-fpt-orange transition-colors"
+                                                    >
+                                                        {student.studentName}
+                                                    </button>
                                                 </div>
+                                            </td>
+                                            <td className="px-4 py-2 text-sm font-medium text-gray-500 dark:text-zinc-400">
+                                                {student.studentCode}
                                             </td>
                                             <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">
                                                 {student.className}
-                                            </td>
-                                            <td className="px-3 py-2 text-center">
-                                                <span className="inline-block px-2 py-1 rounded-md text-[10px] font-semibold bg-red-50 text-red-600 border border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800">
-                                                    {getResitReason(student)}
-                                                </span>
                                             </td>
                                             {sortedGradeComponents.map((component) => {
                                                 const gradeKey = `${student.enrollmentId}_${component.id}`;
@@ -840,53 +848,61 @@ export const ResitGradeManagementPage: React.FC = () => {
             </div>
 
             {/* Import Modal */}
-            {showImportModal && selectedCourse && selectedSemester && (
-                <ImportExamGradeModal
-                    isOpen={showImportModal}
-                    onClose={() => setShowImportModal(false)}
-                    onSuccess={handleImportSuccess}
-                    courseCode={selectedCourse}
-                    semesterCode={selectedSemester}
-                    type="RESIT"
-                />
-            )}
+            {
+                showImportModal && selectedCourse && selectedSemester && (
+                    <ImportExamGradeModal
+                        isOpen={showImportModal}
+                        onClose={() => setShowImportModal(false)}
+                        onSuccess={handleImportSuccess}
+                        courseCode={selectedCourse}
+                        semesterCode={selectedSemester}
+                        type="RESIT"
+                    />
+                )
+            }
 
-            {/* Publish Confirmation Modal */}
-            {showPublishConfirm && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
-                        <div className="flex items-center gap-3 mb-4 text-orange-600">
-                            <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-full">
-                                <AlertTriangle size={24} />
+            {/* Submit Confirmation Modal */}
+            {
+                showPublishConfirm && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                        <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl animate-in zoom-in-95 duration-200">
+                            <div className="text-center mb-6">
+                                <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Check size={32} className="text-green-600 dark:text-green-400" />
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                                    Xác nhận công bố điểm
+                                </h3>
+                                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                                    Bạn có chắc chắn muốn công bố điểm thi lại cho sinh viên không?
+                                </p>
                             </div>
-                            <h3 className="text-xl font-bold dark:text-white">Xác nhận công bố điểm</h3>
-                        </div>
-
-                        <p className="text-gray-600 dark:text-gray-400 mb-6 font-medium">
-                            Bạn có chắc chắn muốn công bố điểm thi lại cho môn <span className="text-fpt-orange font-bold">{gradeOverview?.courseName}</span>?
-                            Sau khi công bố, sinh viên sẽ có thể xem điểm và bạn <span className="text-red-600 font-bold">không thể</span> chỉnh sửa điểm trực tiếp được nữa.
-                        </p>
-
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setShowPublishConfirm(false)}
-                                className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-zinc-700 transition-all"
-                                disabled={publishing}
-                            >
-                                Hủy bỏ
-                            </button>
-                            <button
-                                onClick={handleConfirmPublish}
-                                className="flex-1 px-4 py-2.5 bg-fpt-orange text-white rounded-xl font-bold hover:bg-orange-600 shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2"
-                                disabled={publishing}
-                            >
-                                {publishing ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
-                                Xác nhận công bố
-                            </button>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowPublishConfirm(false)}
+                                    className="flex-1 px-4 py-2 bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-zinc-700 transition-all font-semibold"
+                                    disabled={publishing}
+                                >
+                                    Hủy
+                                </button>
+                                <button
+                                    onClick={handleConfirmPublish}
+                                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-all font-semibold disabled:opacity-50"
+                                    disabled={publishing}
+                                >
+                                    {publishing ? <Loader2 size={18} className="animate-spin mx-auto" /> : "Xác nhận"}
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </AcademicStaffLayout>
+                )
+            }
+
+            <StudentInfoModal
+                isOpen={isStudentInfoModalOpen}
+                onClose={() => setIsStudentInfoModalOpen(false)}
+                studentCode={selectedStudentCode}
+            />
+        </AcademicStaffLayout >
     );
 };

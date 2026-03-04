@@ -4,6 +4,7 @@ import com.fams.backend.dto.request.UpdateGradeRequest;
 import com.fams.backend.dto.response.GradeOverviewResponse;
 import com.fams.backend.dto.response.StudentCourseOptionResponse;
 import com.fams.backend.dto.response.StudentMyGradeResponse;
+import com.fams.backend.dto.response.StudentResponse;
 import com.fams.backend.service.StudentGradeService;
 import com.fams.backend.entity.User;
 import com.fams.backend.repository.UserRepository;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -29,12 +31,22 @@ public class StudentGradeController {
     private final UserRepository userRepository;
 
     /**
-     * Get grade overview for a class section
+     * Get grade overview for a class section.
+     * - LECTURER: sees all grades (full access for management)
+     * - ACADEMIC_STAFF: sees grades only after Lecturer has submitted
+     * (gradesSubmitted=true)
      */
     @GetMapping("/class-sections/{className}/grades")
     public ResponseEntity<GradeOverviewResponse> getGradeOverview(
-            @PathVariable String className) {
-        GradeOverviewResponse response = studentGradeService.getGradeOverview(className);
+            @PathVariable String className,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        String role = userDetails != null
+                ? userDetails.getAuthorities().stream()
+                        .findFirst()
+                        .map(a -> a.getAuthority().replace("ROLE_", ""))
+                        .orElse("UNKNOWN")
+                : "UNKNOWN";
+        GradeOverviewResponse response = studentGradeService.getGradeOverview(className, role);
         return ResponseEntity.ok(response);
     }
 
@@ -138,6 +150,18 @@ public class StudentGradeController {
             @PathVariable Long studentId,
             @RequestParam String className) {
         StudentMyGradeResponse response = studentGradeService.getStudentGrades(studentId, className);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Get basic student information for profile popup
+     * Accessible by LECTURER, ACADEMIC_STAFF, and ADMIN
+     */
+    @GetMapping("/students/{studentCode}/info")
+    @PreAuthorize("hasAnyRole('LECTURER', 'ACADEMIC_STAFF', 'ADMIN')")
+    public ResponseEntity<StudentResponse> getStudentInfo(
+            @PathVariable String studentCode) {
+        StudentResponse response = studentGradeService.getStudentInfo(studentCode);
         return ResponseEntity.ok(response);
     }
 }

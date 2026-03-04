@@ -11,6 +11,7 @@ import {
     Save, Edit3
 } from 'lucide-react';
 import { ImportExamGradeModal } from '../../components/academic-staff/ImportExamGradeModal';
+import { StudentInfoModal } from '../../components/common/StudentInfoModal';
 import toast from 'react-hot-toast';
 
 export const ExamGradeManagementPage: React.FC = () => {
@@ -44,6 +45,10 @@ export const ExamGradeManagementPage: React.FC = () => {
     const [isEditMode, setIsEditMode] = useState(false);
     const [saving, setSaving] = useState(false);
     const [editedGrades, setEditedGrades] = useState<{ [key: string]: string }>({});
+
+    // Student Info Modal State
+    const [selectedStudentCode, setSelectedStudentCode] = useState<string | null>(null);
+    const [isStudentInfoModalOpen, setIsStudentInfoModalOpen] = useState(false);
 
     // Close dropdowns when clicking outside
     useEffect(() => {
@@ -701,6 +706,9 @@ export const ExamGradeManagementPage: React.FC = () => {
                                         <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider min-w-[200px]">
                                             Thông tin sinh viên
                                         </th>
+                                        <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider min-w-[120px]">
+                                            Mã SV
+                                        </th>
                                         <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider">
                                             Lớp
                                         </th>
@@ -739,12 +747,20 @@ export const ExamGradeManagementPage: React.FC = () => {
                                                 {(index + 1).toString().padStart(2, '0')}
                                             </td>
                                             <td className="px-4 py-2">
-                                                <div className="flex items-center gap-3">
-                                                    <div>
-                                                        <p className="font-medium text-gray-900 dark:text-white text-sm">{student.studentName}</p>
-                                                        <p className="text-xs text-gray-500 dark:text-zinc-400">{student.studentCode}</p>
-                                                    </div>
+                                                <div className="flex flex-col">
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedStudentCode(student.studentCode);
+                                                            setIsStudentInfoModalOpen(true);
+                                                        }}
+                                                        className="text-left font-bold text-gray-900 dark:text-white text-sm hover:text-fpt-orange transition-colors"
+                                                    >
+                                                        {student.studentName}
+                                                    </button>
                                                 </div>
+                                            </td>
+                                            <td className="px-4 py-2 text-sm font-medium text-gray-500 dark:text-zinc-400">
+                                                {student.studentCode}
                                             </td>
                                             <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">
                                                 {student.className}
@@ -865,6 +881,12 @@ export const ExamGradeManagementPage: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            <StudentInfoModal
+                isOpen={isStudentInfoModalOpen}
+                onClose={() => setIsStudentInfoModalOpen(false)}
+                studentCode={selectedStudentCode}
+            />
         </AcademicStaffLayout>
     );
 };
