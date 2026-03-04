@@ -21,7 +21,7 @@ export interface ScheduleRequestResponse {
     type: string;
     typeLabel: string; // Tiếng Việt
     reason: string;
-    status: 'PENDING' | 'APPROVED' | 'REJECTED';
+    status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'REVOKED';
     statusLabel: string; // Tiếng Việt
     approverName?: string;
     createdAt: string;

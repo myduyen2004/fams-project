@@ -54,6 +54,8 @@ export interface AssignmentSubmissionDTO {
     status: 'SUBMITTED' | 'NOT_SUBMITTED' | 'OVERDUE';
     submittedAt?: string;
     assignmentDueDate?: string;
+    referenceUrl?: string;
+    referenceName?: string;
 }
 
 export interface SubmitAssignmentRequest {
@@ -144,6 +146,15 @@ export const assignmentService = {
         await axios.delete(`${API_URL}/lecturer/assignments/${assignmentId}`, {
             headers: getAuthHeader()
         });
+    },
+
+    // Tải tất cả bài nộp dưới dạng ZIP
+    downloadAllSubmissions: async (assignmentId: number) => {
+        const resp = await axios.get(`${API_URL}/lecturer/assignments/${assignmentId}/download-all-submissions`, {
+            headers: getAuthHeader(),
+            responseType: 'blob'
+        });
+        return resp;
     },
 
     // === Student APIs ===

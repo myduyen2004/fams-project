@@ -6,7 +6,6 @@ import { LecturerLayout } from '../layouts/LecturerLayout';
 import { StudentLayout } from '../layouts/StudentLayout';
 import { Pagination } from '../components/common/Pagination';
 import { dashboardService } from '../services/api/dashboardService';
-import { academicStaffService } from '../services/api/academicStaffService';
 import { authService } from '../services/api/authService';
 import { AppNotification } from '../types/dashboard';
 import { Loader2, Search, Bell, AlertCircle, CheckCircle2, User, ArrowLeft } from 'lucide-react';
@@ -161,21 +160,9 @@ export const NotificationListPage: React.FC = () => {
     const loadNotifications = async () => {
       try {
         setLoading(true);
-        // If user is ACADEMIC_STAFF, we also want to consider the global notifications from the dashboard
-        const dashboardData = await academicStaffService.getDashboardData().catch(() => null);
         const recipientNotifications = await dashboardService.getNotifications();
 
         let allNotifs = [...recipientNotifications];
-
-        // Add dashboard notifications if they are not already in the list
-        if (dashboardData?.notifications) {
-          const existingIds = new Set(allNotifs.map(n => n.id));
-          dashboardData.notifications.forEach((dn: any) => {
-            if (!existingIds.has(dn.id)) {
-              allNotifs.push(dn);
-            }
-          });
-        }
 
         // Sort by timestamp desc (requires proper parsing)
         allNotifs.sort((a, b) => {
@@ -226,10 +213,7 @@ export const NotificationListPage: React.FC = () => {
   // Mark all as read
   const handleMarkAllAsRead = async () => {
     try {
-      const unreadNotifications = notifications.filter((n) => !n.isRead);
-      await Promise.all(
-        unreadNotifications.map((n) => dashboardService.markNotificationAsRead(n.id))
-      );
+      await dashboardService.markAllNotificationsAsRead();
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       toast.success('Đã đánh dấu tất cả là đã đọc');
     } catch (error) {
@@ -379,11 +363,27 @@ export const NotificationListPage: React.FC = () => {
               >
                 {/* Icon */}
                 <div
-                  className={`flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center ${getNotificationColor(
+                  className={`flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center overflow-hidden border border-white dark:border-zinc-900 shadow-sm ${getNotificationColor(
                     notification.type
                   )}`}
                 >
-                  {getNotificationIcon(notification.type)}
+                  {notification.senderAvatar ? (
+                    <img
+                      src={notification.senderAvatar}
+                      alt={notification.senderName || 'Avatar'}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : notification.senderName && notification.senderName !== 'System' ? (
+                    <span className="text-lg font-bold">
+                      {notification.senderName.charAt(0).toUpperCase()}
+                    </span>
+                  ) : (
+                    <img
+                      src="/fams-logo.png"
+                      alt="Hệ thống"
+                      className="w-7 h-7 object-contain"
+                    />
+                  )}
                 </div>
 
                 {/* Content */}

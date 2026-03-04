@@ -86,17 +86,11 @@ class CreateRequestScreen extends StatelessWidget {
                     isLoading: controller.isLoadingClasses.value,
                   )),
                   const SizedBox(height: 16),
-                  // Request type dropdown
-                  Obx(() => _buildDropdown(
+                  // Request type (fixed to RESCHEDULE)
+                  _buildReadOnlyField(
                     label: 'LOẠI YÊU CẦU',
-                    value: controller.selectedType.value,
-                    items: const [
-                      DropdownMenuItem(value: 'RESCHEDULE', child: Text('Đổi lịch')),
-                      DropdownMenuItem(value: 'ROOM_CHANGE', child: Text('Đổi phòng')),
-                    ],
-                    onChanged: (v) => controller.selectedType.value = v,
-                    hint: 'Chọn loại yêu cầu',
-                  )),
+                    value: 'Đổi lịch',
+                  ),
                 ],
               ),
             ),

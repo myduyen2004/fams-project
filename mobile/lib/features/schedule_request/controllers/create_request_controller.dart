@@ -33,7 +33,7 @@ class CreateRequestController extends GetxController {
   final RxnString newDate = RxnString(null);
   final RxnInt newSlot = RxnInt(null);
   final Rx<RoomAvailability?> selectedRoom = Rx<RoomAvailability?>(null);
-  final RxnString selectedType = RxnString(null); // Request type: RESCHEDULE or ROOM_CHANGE
+  final RxnString selectedType = RxnString('RESCHEDULE'); // Always RESCHEDULE
   final RxString reason = ''.obs;
 
   // Error states
@@ -313,11 +313,6 @@ class CreateRequestController extends GetxController {
   /// Submit request - returns created request ID on success, null on failure
   Future<int?> submitRequest() async {
     // Validation
-    if (selectedType.value == null) {
-      Get.snackbar('Lỗi', 'Vui lòng chọn loại yêu cầu',
-          snackPosition: SnackPosition.BOTTOM);
-      return null;
-    }
     if (selectedSlotId.value == null) {
       Get.snackbar('Lỗi', 'Vui lòng chọn slot cần thay đổi',
           snackPosition: SnackPosition.BOTTOM);
@@ -413,7 +408,7 @@ class CreateRequestController extends GetxController {
   /// Reset all selections
   void reset() {
     selectedClass.value = null;
-    selectedType.value = null;
+    selectedType.value = 'RESCHEDULE';
     slots.clear();
     selectedSlotId.value = null;
     selectedSlot.value = null;

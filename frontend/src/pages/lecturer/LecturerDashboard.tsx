@@ -359,30 +359,61 @@ export const LecturerDashboard: React.FC = () => {
         }
     };
 
-    const fetchMonthlySlotCounts = async () => {
+    const fetchMonthlySlotCounts = async (targetYear?: number, targetMonth?: number) => {
         try {
             const userStr = localStorage.getItem('user');
             if (!userStr) return;
 
             const user = JSON.parse(userStr);
-            const today = new Date();
+            const now = new Date();
+            const yr = targetYear ?? now.getFullYear();
+            const mo = targetMonth ?? now.getMonth(); // 0-indexed
 
-            // Fetch timetable for current month
-            const data = await timetableService.getLecturerTimetable(user.id, today.toISOString().split('T')[0]);
+            // Generate Monday of each week that overlaps the month
+            const firstOfMonth = new Date(yr, mo, 1);
+            const lastOfMonth = new Date(yr, mo + 1, 0);
 
-            // Count slots per day
-            const counts: Record<string, number> = {};
-            if (data && data.days) {
-                data.days.forEach(day => {
-                    if (day.slots && day.slots.length > 0) {
-                        // Only count SCHEDULED slots
-                        const scheduledSlots = day.slots.filter(s => s.status === 'SCHEDULED');
-                        if (scheduledSlots.length > 0) {
-                            counts[day.date] = scheduledSlots.length;
-                        }
-                    }
-                });
+            const getMonday = (d: Date) => {
+                const copy = new Date(d);
+                const day = copy.getDay();
+                const diff = copy.getDate() - day + (day === 0 ? -6 : 1);
+                copy.setDate(diff);
+                return copy;
+            };
+
+            let weekStart = getMonday(firstOfMonth);
+            const weekDates: string[] = [];
+
+            while (weekStart <= lastOfMonth) {
+                const y = weekStart.getFullYear();
+                const m = String(weekStart.getMonth() + 1).padStart(2, '0');
+                const d = String(weekStart.getDate()).padStart(2, '0');
+                weekDates.push(`${y}-${m}-${d}`);
+                weekStart = new Date(weekStart);
+                weekStart.setDate(weekStart.getDate() + 7);
             }
+
+            // Fetch all weeks in parallel
+            const results = await Promise.all(
+                weekDates.map(date =>
+                    timetableService.getLecturerTimetable(user.id, date).catch(() => null)
+                )
+            );
+
+            // Merge slot counts from all weeks
+            const counts: Record<string, number> = {};
+            results.forEach(data => {
+                if (data && data.days) {
+                    data.days.forEach(day => {
+                        if (day.slots && day.slots.length > 0) {
+                            const scheduledSlots = day.slots.filter(s => s.status === 'SCHEDULED');
+                            if (scheduledSlots.length > 0) {
+                                counts[day.date] = scheduledSlots.length;
+                            }
+                        }
+                    });
+                }
+            });
 
             setSlotCounts(counts);
         } catch (error) {
@@ -406,6 +437,7 @@ export const LecturerDashboard: React.FC = () => {
                             <MiniCalendar
                                 slotCounts={slotCounts}
                                 onDateSelect={handleDateSelect}
+                                onMonthChange={(yr, mo) => fetchMonthlySlotCounts(yr, mo)}
                                 selectedDate={selectedDate}
                             />
                         </div>

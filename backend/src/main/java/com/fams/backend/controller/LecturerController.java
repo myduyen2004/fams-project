@@ -51,6 +51,18 @@ public class LecturerController {
                 return ResponseEntity.ok(response);
         }
 
+        @PostMapping("/requests/{id}/revoke")
+        public ResponseEntity<?> revokeRequest(
+                        @PathVariable Long id,
+                        @AuthenticationPrincipal UserDetails userDetails) {
+
+                User lecturer = userRepository.findByUsername(userDetails.getUsername())
+                                .orElseThrow(() -> new RuntimeException("Logged in user not found"));
+
+                scheduleRequestService.revokeRequest(id, lecturer.getId());
+                return ResponseEntity.ok().body(java.util.Map.of("message", "Đã thu hồi đơn yêu cầu thành công"));
+        }
+
         @PostMapping("/requests")
         public ResponseEntity<ScheduleRequestResponse> createRequest(
                         @RequestBody com.fams.backend.dto.request.CreateScheduleRequest request,
