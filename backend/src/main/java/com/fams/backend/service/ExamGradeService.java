@@ -207,6 +207,15 @@ public class ExamGradeService {
                 if (replacedByResitIds.contains(gc.getId())) {
                     continue;
                 }
+
+                // If Resit is NOT published, skip Resit components entirely from calculation
+                // so that FE is used for the average instead
+                boolean isResitComponent = Boolean.TRUE.equals(gc.getIsResit())
+                        || gc.getType() == GradeComponent.GradeType.RESIT;
+                if (isResitComponent && !resitPublished) {
+                    continue;
+                }
+
                 Double score = studentGrades.get(gc.getId());
                 if (score != null) {
                     scoresForCalc.put(gc.getId(), score);
@@ -217,9 +226,7 @@ public class ExamGradeService {
                 }
 
                 // Only add to weightsForCalc if it's NOT a RESIT, OR if the student HAS a score
-                // for this RESIT
-                boolean isResitComponent = Boolean.TRUE.equals(gc.getIsResit())
-                        || gc.getType() == GradeComponent.GradeType.RESIT;
+                // for this RESIT (this branch is now only reached when resitPublished=true)
                 if (!isResitComponent || score != null) {
                     weightsForCalc.put(gc.getId(), gc.getWeight());
                 }

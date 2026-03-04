@@ -1170,6 +1170,8 @@ public class StudentGradeService {
 
         boolean hasFailedExam = false;
 
+        boolean resitPublishedForCalc = Boolean.TRUE.equals(classSection.getResitGradesPublished());
+
         for (Map.Entry<GradeComponent.GradeType, List<GradeComponent>> entry : componentsByType.entrySet()) {
             boolean isExamType = (entry.getKey() == GradeComponent.GradeType.FINAL_EXAM
                     || entry.getKey() == GradeComponent.GradeType.RESIT);
@@ -1177,6 +1179,15 @@ public class StudentGradeService {
                 if (replacedByResitIds.contains(gc.getId())) {
                     continue;
                 }
+
+                // If Resit is NOT published, skip Resit components from the average calculation
+                // so that FE is used for the average instead of being doubled with Resit
+                boolean isResitGc = Boolean.TRUE.equals(gc.getIsResit())
+                        || gc.getType() == GradeComponent.GradeType.RESIT;
+                if (isResitGc && !resitPublishedForCalc) {
+                    continue;
+                }
+
                 StudentGrade grade = gradesMap.get(gc.getId());
                 Double score = grade != null ? grade.getScore() : null;
                 if (score != null) {
