@@ -11,8 +11,15 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from dotenv import load_dotenv
 import logging
+import json
 from loguru import logger
-from app.services.chatbot_service import ChatbotService
+# Add chatbot submodules to path
+import sys
+chat_dir = os.path.join(os.path.dirname(__file__), "services/chat")
+if chat_dir not in sys.path:
+    sys.path.append(chat_dir)
+
+from app.services.chat.services.chatbot_service import ChatbotService
 
 load_dotenv()
 
@@ -109,10 +116,57 @@ def chat_full_flow():
         return jsonify({'error': 'userId is required'}), 400
         
     try:
-        result = chatbot_service.full_flow(user_id, user_role, user_code, message, history, routing_model, answer_model)
+        result = chatbot_service.chat(
+            user_id=user_id,
+            user_role=user_role,
+            user_code=user_code,
+            message=message,
+            history=history,
+            routing_model=routing_model,
+            answer_model=answer_model
+        )
         return jsonify(result)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/chat/stream', methods=['POST'])
+def chat_stream():
+    """
+    Streaming Chatbot endpoint using SSE (Server-Sent Events)
+    Payload: { "userId": int, "message": str, "routingModel": str, "answerModel": str }
+    """
+    data = request.json
+    user_id = data.get('userId')
+    user_role = data.get('userRole', 'STUDENT')
+    user_code = data.get('userCode', 'N/A')
+    message = data.get('message')
+    history = data.get('history', [])
+    routing_model = data.get('routingModel')
+    answer_model = data.get('answerModel')
+
+    if not message or user_id is None:
+        return jsonify({'error': 'Message and userId are required'}), 400
+
+    def generate():
+        try:
+            for chunk in chatbot_service.chat_stream(
+                user_id=user_id,
+                user_role=user_role,
+                user_code=user_code,
+                message=message,
+                history=history,
+                routing_model=routing_model,
+                answer_model=answer_model
+            ):
+                # Format as SSE: data: <json>\n\n
+                yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+        except Exception as e:
+            logger.error(f"Stream error: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    from flask import Response
+    return Response(generate(), mimetype='text/event-stream')
 
 
 @app.route('/api/chat/analyze-excel', methods=['POST'])
@@ -175,11 +229,15 @@ def analyze_excel():
 
     try:
         file_content = file.read()
-        result = chatbot_service.excel_flow(
-            user_id, user_role, user_code, 
-            file_content, file.filename, 
-            history, 
-            routing_model, answer_model
+        result = chatbot_service.chat_with_excel(
+            user_id=user_id,
+            user_role=user_role,
+            user_code=user_code,
+            file_content=file_content,
+            filename=file.filename,
+            history=history,
+            routing_model=routing_model,
+            answer_model=answer_model
         )
         return jsonify(result)
     except Exception as e:

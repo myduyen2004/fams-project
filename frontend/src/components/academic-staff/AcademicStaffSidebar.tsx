@@ -12,7 +12,6 @@ import {
   LogOut,
   ChevronDown,
   List as ListIcon,
-  Bot,
   LayoutDashboard
 } from 'lucide-react';
 
@@ -55,12 +54,6 @@ export const AcademicStaffSidebar: React.FC = () => {
       label: 'Dashboard',
       icon: <LayoutDashboard size={20} />,
       path: '/academic-staff/dashboard'
-    },
-    {
-      id: 'chatbot',
-      label: 'FAMS AI Assistant',
-      icon: <Bot size={20} className="text-fpt-orange" />,
-      path: '/chatbot'
     },
     {
       id: 'schedule',
