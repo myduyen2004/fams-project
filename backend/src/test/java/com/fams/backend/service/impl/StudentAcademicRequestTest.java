@@ -69,7 +69,8 @@ public class StudentAcademicRequestTest {
         semester = new Semester();
         semester.setId(1L);
         semester.setCode("SU24");
-        semester.setStartDate(LocalDate.now().plusWeeks(10)); // Distant future to avoid deadline issues in tests
+        semester.setStartDate(LocalDate.now().plusWeeks(6)); // Setting to 6 weeks ahead ensures 'now' is within [start,
+                                                             // due] for 5TB rule (starts at -7, due at -5)
 
         createDTO = CreateAcademicRequestDTO.builder()
                 .requestType(AcademicRequestType.CHANGE_MAJOR)
