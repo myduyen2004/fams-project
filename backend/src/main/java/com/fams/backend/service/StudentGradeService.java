@@ -1032,6 +1032,9 @@ public class StudentGradeService {
                 .courseAverage(courseAverage)
                 .courseStatus(status)
                 .gradesPublished(classSection.getGradesPublished())
+                .gradesPublishedAt(
+                        classSection.getGradesPublishedAt() != null ? classSection.getGradesPublishedAt().toString()
+                                : null)
                 .lastUpdatedAt(LocalDateTime.now().toString())
                 .build();
     }
