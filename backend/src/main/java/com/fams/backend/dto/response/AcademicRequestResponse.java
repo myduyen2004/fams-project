@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
  * Response DTO for academic request
  */
 @Data
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 public class AcademicRequestResponse {
@@ -27,6 +27,7 @@ public class AcademicRequestResponse {
     private String studentAvatar;
     private String studentMajor;
     private String studentSpecialization;
+    private String studentSubSpecialization;
 
     // Request type
     private String requestType;
@@ -72,6 +73,14 @@ public class AcademicRequestResponse {
     private String approverName;
     private LocalDateTime approvedAt;
     private String approverNote;
+    private String approverAvatar;
+
+    private Boolean isTransferPossible;
+    private String transferError;
+
+    // Universal validation
+    private Boolean isApprovable;
+    private String validationMessage;
 
     // Timestamps
     private LocalDateTime createdAt;

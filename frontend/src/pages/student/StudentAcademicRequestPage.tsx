@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { FileText, Plus, Clock, CheckCircle, XCircle, AlertCircle, Upload, X, Loader2, Info, Eye, Trash2, AlertTriangle } from 'lucide-react';
+import { FileText, Plus, Clock, CheckCircle, XCircle, AlertCircle, Upload, X, Loader2, Info, Trash2, AlertTriangle, FileText as FileIcon } from 'lucide-react';
 import { StudentLayout } from '../../layouts/StudentLayout';
 import { Pagination } from '../../components/common/Pagination';
 import { academicRequestService, AcademicRequest, AcademicRequestType, CreateAcademicRequestPayload } from '../../services/api/academicRequestService';
@@ -93,8 +93,9 @@ export const StudentAcademicRequestPage: React.FC = () => {
     const [infoType, setInfoType] = useState<AcademicRequestType | null>(null);
     const [fetchingMajors, setFetchingMajors] = useState(false);
 
-    // Cancel confirmation state
-    const [requestToCancel, setRequestToCancel] = useState<number | null>(null);
+    // Selection state
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [requestToCancel, setRequestToCancel] = useState<number[]>([]);
     const [cancelling, setCancelling] = useState(false);
 
     // Fetch requests
@@ -108,6 +109,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
             setRequests(response.content);
             setTotalPages(response.totalPages);
             setTotalElements(response.totalElements);
+            setSelectedIds([]); // Clear selection when page changes
         } catch (err: any) {
             toast.error(err.response?.data?.message || 'Không thể tải danh sách yêu cầu');
         } finally {
@@ -240,7 +242,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
 
     // Body scroll lock & backdrop cover
     useEffect(() => {
-        const isDialogOpen = showCreateDialog || showDetailDialog || infoType || requestToCancel !== null;
+        const isDialogOpen = !!showCreateDialog || !!showDetailDialog || !!infoType || requestToCancel.length > 0;
         if (isDialogOpen) {
             document.body.style.overflow = 'hidden';
             // Prevent layout shift if possible
@@ -386,6 +388,13 @@ export const StudentAcademicRequestPage: React.FC = () => {
             toast.error(isFuture ? 'Chưa đến thời gian tiếp nhận loại đơn này' : 'Đã hết hạn nộp loại đơn này');
             return;
         }
+
+        // New check for CHANGE_SPECIALIZATION
+        if (type.value === 'CHANGE_SPECIALIZATION' && !studentProfile?.subSpecializationId) {
+            toast.error('Sinh viên chưa đến kỳ đăng ký chuyên ngành hẹp');
+            return;
+        }
+
         setSelectedType(type);
         setFormData({
             requestType: type.value,
@@ -442,23 +451,65 @@ export const StudentAcademicRequestPage: React.FC = () => {
         }
     };
 
-    // Handle cancel request (called by button)
-    const handleCancelRequest = (id: number) => {
-        setRequestToCancel(id);
+    // Handle cancel request (called by button or bulk action)
+    const handleCancelRequest = (ids: number[]) => {
+        if (ids.length === 0) return;
+
+        // Only allow cancelling PENDING requests
+        const pendingIds = requests
+            .filter(r => ids.includes(r.id) && r.status === 'PENDING')
+            .map(r => r.id);
+
+        if (pendingIds.length === 0) {
+            toast.error('Chỉ có thể thu hồi các yêu cầu đang chờ xử lý');
+            return;
+        }
+
+        setRequestToCancel(pendingIds);
+    };
+
+    // Selection handlers
+    const toggleSelectAll = () => {
+        const pendingIds = requests.filter(r => r.status === 'PENDING').map(r => r.id);
+        if (pendingIds.length === 0) return;
+
+        const allPendingSelected = pendingIds.every(id => selectedIds.includes(id));
+        if (allPendingSelected) {
+            setSelectedIds(prev => prev.filter(id => !pendingIds.includes(id)));
+        } else {
+            setSelectedIds(prev => Array.from(new Set([...prev, ...pendingIds])));
+        }
+    };
+
+    const toggleSelect = (id: number) => {
+        const request = requests.find(r => r.id === id);
+        if (request?.status !== 'PENDING') return;
+
+        setSelectedIds(prev => prev.includes(id)
+            ? prev.filter(item => item !== id)
+            : [...prev, id]
+        );
+    };
+
+    const handleBulkCancel = () => {
+        handleCancelRequest(selectedIds);
     };
 
     // Perform cancel after confirmation
     const performCancel = async () => {
-        if (!requestToCancel) return;
+        if (requestToCancel.length === 0) return;
 
         try {
             setCancelling(true);
-            await academicRequestService.cancelRequest(requestToCancel);
-            toast.success('Đã hủy yêu cầu');
-            setRequestToCancel(null);
+            for (const id of requestToCancel) {
+                await academicRequestService.cancelRequest(id);
+            }
+            toast.success(requestToCancel.length > 1 ? `Đã thu hồi ${requestToCancel.length} yêu cầu` : 'Đã thu hồi yêu cầu');
+            setRequestToCancel([]);
+            setSelectedIds([]);
             fetchRequests();
         } catch (err: any) {
-            toast.error(err.response?.data?.message || 'Không thể hủy yêu cầu');
+            toast.error(err.response?.data?.message || 'Có lỗi xảy ra khi thu hồi yêu cầu');
         } finally {
             setCancelling(false);
         }
@@ -571,6 +622,18 @@ export const StudentAcademicRequestPage: React.FC = () => {
                     </div>
                 </div>
 
+                {selectedIds.length > 0 && (
+                    <div className="flex justify-end pr-2">
+                        <button
+                            onClick={handleBulkCancel}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors font-medium border border-red-200 shadow-sm"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                            Thu hồi ({selectedIds.length}) đã chọn
+                        </button>
+                    </div>
+                )}
+
                 {/* Request List */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200">
                     {loading ? (
@@ -587,17 +650,41 @@ export const StudentAcademicRequestPage: React.FC = () => {
                             <table className="w-full">
                                 <thead className="bg-orange-600 border-b">
                                     <tr>
+                                        <th className="px-4 py-3 text-center w-12">
+                                            <input
+                                                type="checkbox"
+                                                checked={requests.length > 0 && requests.filter(r => r.status === 'PENDING').length > 0 && requests.filter(r => r.status === 'PENDING').every(r => selectedIds.includes(r.id))}
+                                                onChange={toggleSelectAll}
+                                                disabled={requests.filter(r => r.status === 'PENDING').length === 0}
+                                                className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                            />
+                                        </th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase w-1/5">Loại yêu cầu</th>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase w-1/4">Tiêu đề</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase w-1/3">Tiêu đề</th>
                                         <th className="px-4 py-3 text-center text-xs font-medium text-white uppercase w-1/6">Trạng thái</th>
                                         <th className="px-4 py-3 text-center text-xs font-medium text-white uppercase w-1/6">Ngày tạo</th>
                                         <th className="px-4 py-3 text-center text-xs font-medium text-white uppercase w-1/6">Hạn nộp</th>
-                                        <th className="px-4 py-3 text-center text-xs font-medium text-white uppercase w-1/12">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
                                     {requests.map((request) => (
-                                        <tr key={request.id} className="hover:bg-gray-50">
+                                        <tr
+                                            key={request.id}
+                                            className="hover:bg-gray-50 cursor-pointer transition-colors"
+                                            onDoubleClick={() => {
+                                                setSelectedRequest(request);
+                                                setShowDetailDialog(true);
+                                            }}
+                                        >
+                                            <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedIds.includes(request.id)}
+                                                    onChange={() => toggleSelect(request.id)}
+                                                    disabled={request.status !== 'PENDING'}
+                                                    className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                                />
+                                            </td>
                                             <td className="px-4 py-3">
                                                 <span className="text-sm font-medium text-gray-900">
                                                     {request.requestTypeLabel}
@@ -614,29 +701,6 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                             </td>
                                             <td className="px-4 py-3 text-sm text-gray-500 text-center">
                                                 {request.dueDate || '—'}
-                                            </td>
-                                            <td className="px-4 py-3 text-center">
-                                                <div className="flex items-center justify-center gap-3">
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedRequest(request);
-                                                            setShowDetailDialog(true);
-                                                        }}
-                                                        className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
-                                                        title="Xem chi tiết"
-                                                    >
-                                                        <Eye className="w-5 h-5" />
-                                                    </button>
-                                                    {request.status === 'PENDING' && (
-                                                        <button
-                                                            onClick={() => handleCancelRequest(request.id)}
-                                                            className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
-                                                            title="Hủy yêu cầu"
-                                                        >
-                                                            <Trash2 className="w-5 h-5" />
-                                                        </button>
-                                                    )}
-                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -1370,25 +1434,25 @@ export const StudentAcademicRequestPage: React.FC = () => {
                 )}
 
                 {/* Cancel Confirmation Modal */}
-                {requestToCancel !== null && (
+                {requestToCancel.length > 0 && (
                     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 animate-in fade-in duration-200">
                         <div
                             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                            onClick={() => !cancelling && setRequestToCancel(null)}
+                            onClick={() => !cancelling && setRequestToCancel([])}
                         />
                         <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden relative z-10 transform animate-in zoom-in-95 duration-200">
                             <div className="p-8 text-center">
                                 <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                     <AlertTriangle className="w-8 h-8 text-red-600" />
                                 </div>
-                                <h3 className="text-xl font-bold text-gray-900 mb-2">Hủy yêu cầu?</h3>
+                                <h3 className="text-xl font-bold text-gray-900 mb-2">Thu hồi yêu cầu?</h3>
                                 <p className="text-gray-500">
-                                    Bạn có chắc chắn muốn hủy yêu cầu này không? Hành động này không thể hoàn tác.
+                                    Bạn có chắc chắn muốn thu hồi {requestToCancel.length > 1 ? `${requestToCancel.length} yêu cầu đã chọn` : 'yêu cầu này'} không? Hành động này không thể hoàn tác.
                                 </p>
                             </div>
                             <div className="px-8 pb-8 flex gap-3">
                                 <button
-                                    onClick={() => setRequestToCancel(null)}
+                                    onClick={() => setRequestToCancel([])}
                                     disabled={cancelling}
                                     className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors disabled:opacity-50"
                                 >
@@ -1402,7 +1466,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                     {cancelling ? (
                                         <Loader2 className="w-4 h-4 animate-spin" />
                                     ) : null}
-                                    Xác nhận hủy
+                                    Xác nhận
                                 </button>
                             </div>
                         </div>
