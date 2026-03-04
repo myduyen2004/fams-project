@@ -34,6 +34,12 @@ public class AcademicRequestServiceImpl implements AcademicRequestService {
     private final SemesterRepository semesterRepository;
     private final CourseRepository courseRepository;
     private final ClassSectionRepository classSectionRepository;
+    private final EnrollmentRepository enrollmentRepository;
+    private final TimetableSlotRepository timetableSlotRepository;
+    private final MajorRepository majorRepository;
+    private final SpecializationRepository specializationRepository;
+    private final SubSpecializationRepository subSpecializationRepository;
+    private final StudentProfileRepository studentProfileRepository;
     private final UploadService uploadService;
     private final NotificationService notificationService;
 
@@ -204,6 +210,16 @@ public class AcademicRequestServiceImpl implements AcademicRequestService {
         User approver = userRepository.findById(approverId)
                 .orElseThrow(() -> new BadRequestException("Approver not found"));
 
+        if (status == RequestStatus.APPROVED) {
+            if (request.getRequestType() == AcademicRequestType.CHANGE_CLASS) {
+                processClassTransfer(request);
+            } else if (request.getRequestType() == AcademicRequestType.CHANGE_MAJOR) {
+                processMajorChange(request);
+            } else if (request.getRequestType() == AcademicRequestType.CHANGE_SPECIALIZATION) {
+                processSpecializationChange(request);
+            }
+        }
+
         request.setStatus(status);
         request.setApprover(approver);
         request.setApprovedAt(LocalDateTime.now());
@@ -219,6 +235,149 @@ public class AcademicRequestServiceImpl implements AcademicRequestService {
         }
 
         return mapToResponse(request);
+    }
+
+    /**
+     * Perform class transfer for approved CHANGE_CLASS request
+     */
+    private void processClassTransfer(AcademicRequest request) {
+        String toClassName = request.getToClassName();
+        if (toClassName == null || toClassName.isBlank()) {
+            throw new BadRequestException("Target class name is missing");
+        }
+
+        ClassSection targetClass = classSectionRepository.findById(toClassName)
+                .orElseThrow(() -> new BadRequestException("Target class not found"));
+
+        // Final validation before transfer
+        if (targetClass.getCurrentEnrollment() >= targetClass.getMaxStudents()) {
+            throw new BadRequestException("Lớp đã đầy sinh viên không thể chuyển.");
+        }
+
+        // Re-check conflict just in case
+        AcademicRequestResponse.AcademicRequestResponseBuilder validationBuilder = AcademicRequestResponse.builder();
+        validateTransferPossibility(request, validationBuilder);
+        AcademicRequestResponse validationResult = validationBuilder.build();
+        if (Boolean.FALSE.equals(validationResult.getIsTransferPossible())) {
+            throw new BadRequestException(validationResult.getTransferError());
+        }
+
+        User student = request.getStudent();
+        ClassSection sourceClass = request.getClassSection();
+
+        // 1. Remove from source class
+        if (sourceClass != null) {
+            Optional<Enrollment> sourceEnrollment = enrollmentRepository.findByClassSection_ClassNameAndStudent_Id(
+                    sourceClass.getClassName(), student.getId());
+
+            if (sourceEnrollment.isPresent()) {
+                enrollmentRepository.delete(sourceEnrollment.get());
+                sourceClass.setCurrentEnrollment(sourceClass.getCurrentEnrollment() - 1);
+                classSectionRepository.save(sourceClass);
+            }
+        }
+
+        // 2. Add to target class
+        Enrollment newEnrollment = Enrollment.builder()
+                .student(student)
+                .classSection(targetClass)
+                .status(Enrollment.EnrollmentStatus.ENROLLED)
+                .build();
+
+        enrollmentRepository.save(newEnrollment);
+        targetClass.setCurrentEnrollment(targetClass.getCurrentEnrollment() + 1);
+        classSectionRepository.save(targetClass);
+
+        log.info("Student {} transferred from {} to {}", student.getCode(),
+                sourceClass != null ? sourceClass.getClassName() : "N/A", toClassName);
+    }
+
+    /**
+     * Update student profile when CHANGE_MAJOR is approved
+     */
+    private void processMajorChange(AcademicRequest request) {
+        User student = request.getStudent();
+        StudentProfile profile = student.getStudentProfile();
+        if (profile == null) {
+            log.warn("Student {} has no profile to update major", student.getCode());
+            return;
+        }
+
+        log.info("Processing major change for student {}. ToMajor: {}, ToSpec: {}",
+                student.getCode(), request.getToMajor(), request.getToSpecialization());
+
+        // 1. Resolve new Major
+        Major newMajor = null;
+        if (request.getToMajor() != null && !request.getToMajor().isBlank()) {
+            newMajor = majorRepository.findByNameIgnoreCase(request.getToMajor())
+                    .orElseGet(() -> majorRepository.findByCode(request.getToMajor()).orElse(null));
+        }
+
+        if (newMajor != null) {
+            profile.setMajor(newMajor);
+            log.info("Updated Major for student {} to {} (ID: {})", student.getCode(), newMajor.getName(),
+                    newMajor.getId());
+
+            // 2. Resolve new Specialization if provided
+            boolean hasToSpec = request.getToSpecialization() != null && !request.getToSpecialization().isBlank();
+            if (hasToSpec) {
+                Specialization newSpec = specializationRepository.findByNameIgnoreCase(request.getToSpecialization())
+                        .orElseGet(
+                                () -> specializationRepository.findByCode(request.getToSpecialization()).orElse(null));
+
+                if (newSpec != null) {
+                    profile.setSpecialization(newSpec);
+                    log.info("Updated Specialization for student {} to {} (ID: {})", student.getCode(),
+                            newSpec.getName(), newSpec.getId());
+                } else {
+                    log.warn("Could not find Specialization matching '{}' for student {}",
+                            request.getToSpecialization(), student.getCode());
+                    profile.setSpecialization(null); // Clear old spec as it doesn't match the new major/intent
+                }
+                // When changing both Major and Specialization, clear Sub-specialization
+                profile.setSubSpecialization(null);
+                log.info("Cleared SubSpecialization for student {} due to Major & Specialization change",
+                        student.getCode());
+            } else {
+                // When ONLY changing Major, clear both Specialization and Sub-specialization
+                profile.setSpecialization(null);
+                profile.setSubSpecialization(null);
+                log.info("Cleared Specialization and SubSpecialization for student {} due to ONLY Major change",
+                        student.getCode());
+            }
+        } else {
+            log.error("CRITICAL: Approved Major Change for student {} but target major '{}' not found!",
+                    student.getCode(), request.getToMajor());
+        }
+
+        studentProfileRepository.saveAndFlush(profile);
+    }
+
+    /**
+     * Update student profile when CHANGE_SPECIALIZATION (Sub-specialization/Combo)
+     * is
+     * approved
+     */
+    private void processSpecializationChange(AcademicRequest request) {
+        User student = request.getStudent();
+        StudentProfile profile = student.getStudentProfile();
+        if (profile == null) {
+            log.warn("Student {} has no profile to update sub-specialization", student.getCode());
+            return;
+        }
+
+        if (request.getToSubSpecialization() != null && !request.getToSubSpecialization().isBlank()) {
+            SubSpecialization newSubSpec = subSpecializationRepository.findByName(request.getToSubSpecialization())
+                    .orElseGet(() -> subSpecializationRepository.findByCode(request.getToSubSpecialization())
+                            .orElse(null));
+
+            if (newSubSpec != null) {
+                profile.setSubSpecialization(newSubSpec);
+                log.info("Updated SubSpecialization for student {} to {}", student.getCode(), newSubSpec.getName());
+            }
+        }
+
+        studentProfileRepository.save(profile);
     }
 
     @Override
@@ -497,6 +656,9 @@ public class AcademicRequestServiceImpl implements AcademicRequestService {
             if (studentProfile.getSpecialization() != null) {
                 builder.studentSpecialization(studentProfile.getSpecialization().getName());
             }
+            if (studentProfile.getSubSpecialization() != null) {
+                builder.studentSubSpecialization(studentProfile.getSubSpecialization().getName());
+            }
         }
 
         // Semester info
@@ -529,6 +691,7 @@ public class AcademicRequestServiceImpl implements AcademicRequestService {
         if (request.getApprover() != null) {
             builder.approverId(request.getApprover().getId())
                     .approverName(request.getApprover().getFullName())
+                    .approverAvatar(request.getApprover().getAvatar())
                     .approvedAt(request.getApprovedAt())
                     .approverNote(request.getApproverNote());
         }
@@ -544,7 +707,99 @@ public class AcademicRequestServiceImpl implements AcademicRequestService {
         }
         builder.isWithinDeadline(isWithinDeadline);
 
+        // Add transfer possibility info for CHANGE_CLASS
+        if (request.getRequestType() == AcademicRequestType.CHANGE_CLASS
+                && request.getStatus() == RequestStatus.PENDING) {
+            validateTransferPossibility(request, builder);
+        } else if (request.getRequestType() == AcademicRequestType.CHANGE_SPECIALIZATION
+                && request.getStatus() == RequestStatus.PENDING) {
+            if (studentProfile == null || studentProfile.getSubSpecialization() == null) {
+                builder.isApprovable(false);
+                builder.validationMessage("Sinh viên chưa đến kỳ đăng ký chuyên ngành hẹp");
+            } else {
+                builder.isApprovable(true);
+            }
+        } else {
+            builder.isApprovable(true);
+        }
+
         return builder.build();
+    }
+
+    /**
+     * Validate if a class transfer is possible (capacity + schedule conflict)
+     */
+    private void validateTransferPossibility(AcademicRequest request,
+            AcademicRequestResponse.AcademicRequestResponseBuilder builder) {
+        if (request.getToClassName() == null || request.getToClassName().isBlank()) {
+            builder.isTransferPossible(false);
+            builder.isApprovable(false);
+            builder.validationMessage("Chưa xác định lớp muốn chuyển đến.");
+            builder.transferError("Chưa xác định lớp muốn chuyển đến.");
+            return;
+        }
+
+        ClassSection targetClass = classSectionRepository.findById(request.getToClassName()).orElse(null);
+        if (targetClass == null) {
+            builder.isTransferPossible(false);
+            builder.isApprovable(false);
+            builder.validationMessage("Không tìm thấy lớp học phần mục tiêu.");
+            builder.transferError("Không tìm thấy lớp học phần mục tiêu.");
+            return;
+        }
+
+        // 1. Check Capacity
+        if (targetClass.getCurrentEnrollment() >= targetClass.getMaxStudents()) {
+            builder.isTransferPossible(false);
+            builder.isApprovable(false);
+            builder.validationMessage("Lớp đã đầy sinh viên không thể chuyển.");
+            builder.transferError("Lớp đã đầy sinh viên không thể chuyển.");
+            return;
+        }
+
+        // 2. Check Schedule Conflict
+        User student = request.getStudent();
+        List<TimetableSlot> targetSlots = timetableSlotRepository.findByClassName(targetClass.getClassName());
+
+        // Get student's other classes in the same semester (excluding current class of
+        // this request)
+        List<Enrollment> currentEnrollments = enrollmentRepository.findByStudentIdAndSemesterId(
+                student.getId(), targetClass.getSemester().getId());
+
+        for (TimetableSlot targetSlot : targetSlots) {
+            if (targetSlot.getStatus() == TimetableSlot.TimetableSlotStatus.CANCELLED)
+                continue;
+
+            for (Enrollment enrollment : currentEnrollments) {
+                // Skip the class the student is trying to move FROM
+                if (request.getClassSection() != null &&
+                        enrollment.getClassSection().getClassName().equals(request.getClassSection().getClassName())) {
+                    continue;
+                }
+
+                // Check for conflicts in other classes
+                boolean conflict = timetableSlotRepository.existsByClassNameAndDateAndSlotNumberExcludingSlot(
+                        enrollment.getClassSection().getClassName(),
+                        targetSlot.getDate(),
+                        targetSlot.getSlotNumber(),
+                        TimetableSlot.TimetableSlotStatus.CANCELLED,
+                        -1L // No slot to exclude
+                );
+
+                if (conflict) {
+                    builder.isTransferPossible(false);
+                    builder.isApprovable(false);
+                    builder.validationMessage(
+                            "Lớp không phù hợp để chuyển qua vì có xung đột với các lớp khác của sinh viên.");
+                    builder.transferError(
+                            "Lớp không phù hợp để chuyển qua vì có xung đột với các lớp khác của sinh viên.");
+                    return;
+                }
+            }
+        }
+
+        builder.isTransferPossible(true);
+        builder.isApprovable(true);
     }
 
     /**

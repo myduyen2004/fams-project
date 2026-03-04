@@ -1,12 +1,18 @@
 package com.fams.backend.dto.request;
 
 import com.fams.backend.entity.AcademicRequest.AcademicRequestType;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * Request DTO for creating an academic request
  */
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class CreateAcademicRequestDTO {
 
     // Loại yêu cầu (bắt buộc)

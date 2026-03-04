@@ -10,6 +10,7 @@ export interface AcademicRequest {
     studentAvatar?: string;
     studentMajor?: string;
     studentSpecialization?: string;
+    studentSubSpecialization?: string;
     requestType: string;
     requestTypeLabel: string;
     requestTitle: string;
@@ -33,10 +34,15 @@ export interface AcademicRequest {
     startDate?: string;
     dueDate?: string;
     isWithinDeadline?: boolean;
+    isTransferPossible?: boolean;
+    transferError?: string;
+    isApprovable?: boolean;
+    validationMessage?: string;
     approverId?: number;
     approverName?: string;
     approvedAt?: string;
     approverNote?: string;
+    approverAvatar?: string;
     createdAt: string;
     updatedAt: string;
 }
