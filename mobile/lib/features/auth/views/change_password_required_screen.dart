@@ -106,7 +106,7 @@ class _ChangePasswordRequiredScreenState extends State<ChangePasswordRequiredScr
                         const SizedBox(height: 16),
                         Text(
                           'Đổi mật khẩu',
-                          style: GoogleFonts.roboto(
+                          style: GoogleFonts.inter(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                             color: AppColors.textPrimary,
@@ -115,7 +115,7 @@ class _ChangePasswordRequiredScreenState extends State<ChangePasswordRequiredScr
                         const SizedBox(height: 8),
                         Text(
                           'Bạn cần đổi mật khẩu cho lần đăng nhập đầu tiên.',
-                          style: GoogleFonts.roboto(
+                          style: GoogleFonts.inter(
                             fontSize: 14,
                             color: AppColors.textSecondary,
                           ),
@@ -183,7 +183,7 @@ class _ChangePasswordRequiredScreenState extends State<ChangePasswordRequiredScr
                                   )
                                 : Text(
                                     'Đổi mật khẩu',
-                                    style: GoogleFonts.roboto(fontSize: 16, fontWeight: FontWeight.bold),
+                                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
                                   ),
                           ),
                         ),

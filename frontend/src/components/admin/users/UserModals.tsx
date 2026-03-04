@@ -333,7 +333,8 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
       setIsAsyncJob(true);
     }
     
-    if (data.statusMessage === 'DATA_PHASE_COMPLETE') {
+    if (data.statusMessage === 'DATA_PHASE_COMPLETE' && lastToastId.current !== 'DATA_PHASE_COMPLETE') {
+      lastToastId.current = 'DATA_PHASE_COMPLETE';
       toast.success('Dữ liệu đã sẵn sàng! Đang chuẩn bị ảnh nền...');
       setIsAsyncJob(false);
       onSuccess();
@@ -342,15 +343,18 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
     }
     
     if (data.status === 'COMPLETED') {
-      toast.success('Import hoàn tất thành công!');
+      toast.success('Nhập dữ liệu hoàn tất thành công!');
       setIsAsyncJob(false);
+      setLoading(false);
+      setProgress({ percentage: 100, message: 'Hoàn thành', status: 'COMPLETED' });
       setTimeout(() => {
         onSuccess();
         onClose();
       }, 1000);
-    } else if (data.status === 'CANCELLED') {
+    } else if (data.status === 'CANCELLED' || data.status === 'FAILED') {
       setIsAsyncJob(false);
-      toast.error('Tiến trình đã bị dừng.');
+      setLoading(false);
+      toast.error(data.status === 'CANCELLED' ? 'Tiến trình đã bị dừng.' : 'Nhập dữ liệu thất bại.');
     }
   });
 
@@ -361,6 +365,14 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
         const activeJob = await userService.getActiveImportJob();
         // Only show progress if job is actually running (PENDING or PROCESSING from DB)
         if (activeJob && ['PENDING', 'PROCESSING'].includes(activeJob.status)) {
+          // Stale job detection: if percentage is 100% or job is old (> 10 min), treat as completed
+          const isStale = activeJob.percentage >= 100;
+          if (isStale) {
+            // Job completed but wasn't finalized properly — don't show progress
+            console.log('Stale import job detected, ignoring:', activeJob.jobId);
+            return;
+          }
+          
           setIsAsyncJob(true);
           setLoading(true);
           setProgress({
@@ -369,7 +381,7 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
             status: activeJob.status
           });
           if (lastToastId.current !== activeJob.jobId) {
-            toast.success('Đang tiếp tục xử lý import...');
+            toast.success('Đang tiếp tục xử lý nhập dữ liệu...');
             lastToastId.current = activeJob.jobId;
           }
         }
@@ -427,7 +439,7 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
       const response = await userService.importUsers(formData);
       
       if (response.data.type === 'sync') {
-        toast.success('Import hoàn tất!');
+        toast.success('Nhập dữ liệu hoàn tất!');
         setProgress({ percentage: 100, message: 'Hoàn thành', status: 'COMPLETED' });
         setTimeout(() => {
           onSuccess();
@@ -438,16 +450,15 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
         toast.success('Đang xử lý trong nền...');
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Lỗi khi import');
+      toast.error(error.response?.data?.message || 'Lỗi khi nhập dữ liệu');
       setLoading(false);
     }
   };
 
   const validCount = previewData?.validRows || 0;
   const errorCount = previewData?.errorRows || 0;
-  // Only show progress when actually importing (async job detected or import in progress)
-  // Note: STARTING/PROCESSING/SAVING are WebSocket statuses, PENDING/PROCESSING are DB statuses
-  const showProgress = isAsyncJob || ['PENDING', 'STARTING', 'PROCESSING', 'SAVING'].includes(progress.status);
+  // Only show progress when actually importing AND job is actively running
+  const showProgress = isAsyncJob && !['COMPLETED', 'FAILED', 'CANCELLED'].includes(progress.status);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
@@ -456,7 +467,7 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800 shrink-0">
           <div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Import danh sách người dùng</h3>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Nhập danh sách người dùng từ file zip</h3>
             {previewData && (
               <p className="text-sm text-gray-500 mt-1">
                 Xem trước: <span className="text-green-600 font-medium">{validCount} hợp lệ</span> • <span className="text-red-500 font-medium">{errorCount} lỗi</span>
@@ -566,7 +577,7 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
               {/* Error summary alert */}
               {errorCount > 0 && (
                 <div className="p-4 bg-red-50 dark:bg-red-900/10 text-red-800 dark:text-red-300 rounded-xl border border-red-100 dark:border-red-800/20 text-sm">
-                  <p className="font-semibold mt-1">⚠️ Không thể import do có {errorCount} dòng bị lỗi. Vui lòng sửa file và thử lại.</p>
+                  <p className="font-semibold mt-1">⚠️ Không thể nhập file do có {errorCount} dòng bị lỗi. Vui lòng sửa file và thử lại.</p>
                 </div>
               )}
 
@@ -622,7 +633,7 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
                             {row.status === 'error' ? (
                               <span className="text-xs text-red-600 font-medium">{row.errorMessage}</span>
                             ) : (
-                              <span className="text-xs text-green-600">Sẵn sàng import</span>
+                              <span className="text-xs text-green-600">Sẵn sàng nhập dữ liệu</span>
                             )}
                           </td>
                         </tr>
@@ -647,7 +658,7 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
                     className="px-6 py-2 bg-fpt-orange text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-orange-500/20 flex items-center gap-2"
                   >
                     {loading && <Loader2 size={16} className="animate-spin" />}
-                    {errorCount > 0 ? `Có ${errorCount} dòng lỗi` : `Xác nhận import (${validCount})`}
+                    {errorCount > 0 ? `Có ${errorCount} dòng lỗi` : `Xác nhận nhập file zip (${validCount})`}
                   </button>
                 </div>
               </div>

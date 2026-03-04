@@ -63,7 +63,7 @@ export const userService = {
     },
 
     activateAllUsers: async () => {
-        await apiClient.post('/users/activate-all');
+        await apiClient.post('/users/activate-all', {});
     },
 
 
@@ -107,7 +107,7 @@ export const userService = {
     },
 
     cleanupStuckJobs: async () => {
-        await apiClient.post('/users/import-job/cleanup');
+        await apiClient.post('/users/import-job/cleanup', {});
     },
 
     previewImport: async (formData: FormData) => {
@@ -137,7 +137,7 @@ export const userService = {
      * Cancel the current user's active import job
      */
     cancelImportJob: async (): Promise<void> => {
-        await apiClient.post('/users/import-job/cancel');
+        await apiClient.post('/users/import-job/cancel', {});
     },
 
     getActivationProgress: async () => {

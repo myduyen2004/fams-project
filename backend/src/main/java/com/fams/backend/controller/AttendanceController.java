@@ -46,17 +46,4 @@ public class AttendanceController {
     public ResponseEntity<AttendanceDTO.SessionDetailResponse> getSessionBySlot(@PathVariable Long slotId) {
         return ResponseEntity.ok(attendanceService.getSessionBySlot(slotId));
     }
-
-    @PostMapping("/check-in")
-    @PreAuthorize("hasRole('STUDENT')")
-    @Operation(summary = "Student Check-in")
-    public ResponseEntity<AttendanceDTO.CheckInResponse> checkIn(
-            @RequestBody AttendanceDTO.CheckInRequest request,
-            @AuthenticationPrincipal UserDetails userDetails) {
-
-        User user = userRepository.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        return ResponseEntity.ok(attendanceService.checkIn(user.getId(), request));
-    }
 }

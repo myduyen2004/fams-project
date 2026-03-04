@@ -71,7 +71,7 @@ class ProfileScreen extends StatelessWidget {
                         // 2. Name
                         Text(
                           user?.fullName ?? 'Người dùng',
-                          style: GoogleFonts.roboto(
+                          style: GoogleFonts.inter(
                             fontSize: 26,
                             fontWeight: FontWeight.w500, // Medium/Regular looks cleaner
                             color: Colors.black87,
@@ -93,7 +93,7 @@ class ProfileScreen extends StatelessWidget {
                           ),
                           child: Text(
                             'ID: ${user?.username ?? "N/A"}',
-                            style: GoogleFonts.roboto(
+                            style: GoogleFonts.inter(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
                               color: Colors.black87,
@@ -135,63 +135,66 @@ class ProfileScreen extends StatelessWidget {
 
                         const SizedBox(height: 20),
 
-                        // Face Registration Section
-                        if (user?.hasFaceRegistered == true) ...[
-                          // Clickable container to view registered face info
-                          InkWell(
-                            onTap: () => Get.to(() => const ViewFaceInfoScreen()),
-                            borderRadius: BorderRadius.circular(16),
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              decoration: BoxDecoration(
-                                color: Colors.green.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: Colors.green.withOpacity(0.3)),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.check_circle, color: Colors.green, size: 24),
-                                  const SizedBox(width: 10),
-                                  Text(
-                                    'Đã đăng ký khuôn mặt',
-                                    style: GoogleFonts.roboto(
-                                      color: Colors.green,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Icon(Icons.arrow_forward_ios, color: Colors.green, size: 16),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ] else ...[
-                          // Show register button if face not registered
-                          SizedBox(
-                            width: double.infinity,
-                            height: 54,
-                            child: OutlinedButton.icon(
-                              onPressed: () => Get.to(() => const FaceRegistrationGuideScreen()),
-                              icon: const Icon(Icons.face, color: AppColors.primaryOrange),
-                              label: Text(
-                                'Đăng ký khuôn mặt',
-                                style: GoogleFonts.roboto(
-                                  color: AppColors.primaryOrange,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: AppColors.primaryOrange, width: 2),
-                                shape: RoundedRectangleBorder(
+                        // Face Registration Section (Students Only)
+                        if (user?.isLecturer != true) ...[
+                          if (user?.hasFaceRegistered == true) ...[
+                            // Clickable container to view registered face info
+                            InkWell(
+                              onTap: () => Get.to(() => const ViewFaceInfoScreen()),
+                              borderRadius: BorderRadius.circular(16),
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: Colors.green.withOpacity(0.3)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.check_circle, color: Colors.green, size: 24),
+                                    const SizedBox(width: 10),
+                                    Text(
+                                      'Đã đăng ký khuôn mặt',
+                                      style: GoogleFonts.inter(
+                                        color: Colors.green,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Icon(Icons.arrow_forward_ios, color: Colors.green, size: 16),
+                                  ],
                                 ),
                               ),
                             ),
-                          ),
+                          ] else ...[
+                            // Show register button if face not registered
+                            SizedBox(
+                              width: double.infinity,
+                              height: 54,
+                              child: OutlinedButton.icon(
+                                onPressed: () => Get.to(() => const FaceRegistrationGuideScreen()),
+                                icon: const Icon(Icons.face, color: AppColors.primaryOrange),
+                                label: Text(
+                                  'Đăng ký khuôn mặt',
+                                  style: GoogleFonts.inter(
+                                    color: AppColors.primaryOrange,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: AppColors.primaryOrange, width: 2),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 20),
                         ],
 
                         const SizedBox(height: 12),
@@ -205,7 +208,7 @@ class ProfileScreen extends StatelessWidget {
                             icon: const Icon(Icons.logout_rounded, color: Colors.white),
                             label: Text(
                               'Đăng xuất',
-                              style: GoogleFonts.roboto(
+                              style: GoogleFonts.inter(
                                 color: Colors.white,
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -263,7 +266,7 @@ class ProfileScreen extends StatelessWidget {
         Flexible(
           child: Text(
             text,
-            style: GoogleFonts.roboto(
+            style: GoogleFonts.inter(
               fontSize: 15,
               color: Colors.black87,
               fontWeight: FontWeight.w400,

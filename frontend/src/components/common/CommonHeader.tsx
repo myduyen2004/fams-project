@@ -24,6 +24,7 @@ export const CommonHeader: React.FC<CommonHeaderProps> = ({
   const [showDropdown, setShowDropdown] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [activeJob, setActiveJob] = useState<any>(null);
+  const [avatarError, setAvatarError] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -41,6 +42,26 @@ export const CommonHeader: React.FC<CommonHeaderProps> = ({
     // Check if dark mode is enabled
     const isDarkMode = document.documentElement.classList.contains('dark');
     setIsDark(isDarkMode);
+
+    // Listen for profile updates (e.g., avatar change from ProfilePage)
+    const handleProfileUpdate = (event: any) => {
+      setAvatarError(false);
+      if (event.detail) {
+        setUser(event.detail);
+      } else {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          try {
+            setUser(JSON.parse(userStr));
+          } catch (e) {
+            console.error('Failed to parse user data:', e);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('user-profile-updated', handleProfileUpdate);
+    return () => window.removeEventListener('user-profile-updated', handleProfileUpdate);
   }, []);
 
   // Click outside to close dropdown
@@ -63,7 +84,12 @@ export const CommonHeader: React.FC<CommonHeaderProps> = ({
   const handleLogout = async () => {
     try {
       if (activeJob) {
-        await userService.cleanupStuckJobs();
+        // User confirmed stopping the import — cancel it
+        try {
+          await userService.cancelImportJob();
+        } catch (err) {
+          console.warn('Failed to cancel import job:', err);
+        }
       }
       await authService.logout();
     } catch (error) {
@@ -128,8 +154,16 @@ export const CommonHeader: React.FC<CommonHeaderProps> = ({
           >
             {/* Avatar */}
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-fpt-orange to-orange-600 flex items-center justify-center overflow-hidden">
-              {user?.avatar ? (
-                <img src={user.avatar} alt={user.fullName} className="w-full h-full object-cover" />
+              {user?.avatar && !avatarError ? (
+                <img 
+                  src={user.avatar.startsWith('data:') 
+                    ? user.avatar 
+                    : `${user.avatar}${user.avatar.includes('?') ? '&' : '?'}t=${new Date().getTime()}`
+                  } 
+                  alt={user.fullName} 
+                  className="w-full h-full object-cover"
+                  onError={() => setAvatarError(true)}
+                />
               ) : (
                 <span className="text-white font-semibold text-sm">
                   {user?.fullName?.charAt(0).toUpperCase() || 'A'}

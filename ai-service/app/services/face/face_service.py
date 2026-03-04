@@ -27,7 +27,8 @@ class FaceRecognitionService:
     """
     
     # Default matching threshold (lower = stricter)
-    DEFAULT_TOLERANCE = 0.6
+    # [RE-TUNING]: Set to 0.5 for better stability/accuracy in FAMS context
+    DEFAULT_TOLERANCE = 0.5
     
     def __init__(self, tolerance: float = DEFAULT_TOLERANCE):
         """
@@ -98,13 +99,14 @@ class FaceRecognitionService:
                 )
             
             if len(face_locations) > 1:
-                return FaceDetectionResult(
-                    face_found=True,
-                    face_count=len(face_locations),
-                    error_message="Multiple faces detected. Please ensure only one face is visible."
-                )
+                # Multiple faces detected - use the LARGEST face (most likely the real one)
+                logger.info(f"Multiple faces detected ({len(face_locations)}), using largest one")
+                # Calculate face areas and find largest
+                face_areas = [(loc, (loc[2] - loc[0]) * (loc[1] - loc[3])) for loc in face_locations]
+                largest_face = max(face_areas, key=lambda x: abs(x[1]))[0]
+                face_locations = [largest_face]
             
-            # Get face encoding for the single face
+            # Get face encoding for the single/largest face
             face_encodings = face_recognition.face_encodings(image, face_locations)
             
             if not face_encodings:
@@ -203,14 +205,19 @@ class FaceRecognitionService:
             
             # Find the best match (minimum distance)
             best_match_index = np.argmin(face_distances)
-            min_distance = face_distances[best_match_index]
+            min_distance = float(face_distances[best_match_index])
             
             # Convert distance to confidence (higher = better match)
             confidence = max(0.0, 1.0 - min_distance)
             
             is_match = min_distance <= tolerance
             
-            logger.info(f"Verified against {len(reference_encodings)} angles. Best dist: {min_distance:.3f}, Conf: {confidence:.3f}")
+            logger.info(f"FACE VERIFICATION DEBUG:")
+            logger.info(f"  - Reference angles: {len(reference_encodings)}")
+            logger.info(f"  - Min distance: {min_distance:.4f}")
+            logger.info(f"  - Tolerance: {tolerance:.4f}")
+            logger.info(f"  - Confidence: {confidence:.4f}")
+            logger.info(f"  - Is match: {is_match}")
 
             if is_match:
                 return FaceVerificationResult.success(

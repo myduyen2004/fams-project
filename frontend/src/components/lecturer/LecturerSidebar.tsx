@@ -66,7 +66,8 @@ export const LecturerSidebar: React.FC = () => {
             icon: <FolderOpen size={20} />,
             submenu: [
                 { label: 'Điểm', path: '/lecturer/grades' },
-                { label: 'Lớp học', path: '/lecturer/classes' }
+                { label: 'Lớp học', path: '/lecturer/classes' },
+                { label: 'Bài tập', path: '/lecturer/assignments' }
             ]
         },
         {

@@ -10,8 +10,51 @@ import 'qr_scanner_screen.dart';
 
 import '../../../core/widgets/app_background.dart';
 
-class ScheduleScreen extends StatelessWidget {
+class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
+
+  @override
+  State<ScheduleScreen> createState() => _ScheduleScreenState();
+}
+
+class _ScheduleScreenState extends State<ScheduleScreen> {
+  late ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToActiveSlot() {
+    if (!_scrollController.hasClients) return;
+    
+    final controller = Get.find<ScheduleController>();
+    if (controller.selectedDaySlots.isEmpty) return;
+
+    // Find the index of the active or next slot
+    final targetSlot = controller.activeSlot.value ?? controller.nextSlot.value;
+    if (targetSlot == null) return;
+
+    final index = controller.selectedDaySlots.indexOf(targetSlot);
+    if (index == -1) return;
+
+    // Typical SlotCard height is around 120-140px. Let's aim for a middle-ground.
+    const double estimateItemHeight = 130.0;
+    final offset = (index * estimateItemHeight).clamp(0.0, _scrollController.position.maxScrollExtent);
+
+    _scrollController.animateTo(
+      offset,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeInOut,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +67,7 @@ class ScheduleScreen extends StatelessWidget {
           children: [
             // 1. Header with Semester Selector
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 28, 24, 10), // Restored padding
+              padding: const EdgeInsets.fromLTRB(24, 28, 24, 10),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -35,17 +78,17 @@ class ScheduleScreen extends StatelessWidget {
                         'Kì học',
                         style: TextStyle(fontSize: 13, color: Colors.grey[500], fontWeight: FontWeight.w600),
                       ),
-                      const SizedBox(height: 8), // Restored from 4
+                      const SizedBox(height: 8),
                       GestureDetector(
                         onTap: () => _showSemesterPicker(context, controller),
                         child: Row(
                           children: [
                             Obx(() => Text(
                               controller.selectedSemester.value?.code ?? 'CHỌN KỲ',
-                              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF2D3436)), // Restored 22
+                              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF2D3436)),
                             )),
                             const SizedBox(width: 4),
-                            Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey[800], size: 24), // Restored 24
+                            Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey[800], size: 24),
                           ],
                         ),
                       ),
@@ -85,23 +128,21 @@ class ScheduleScreen extends StatelessWidget {
                             ),
                     ),
                   )),
-                  
-
                 ],
               ),
             ),
 
             // 2. Redesigned Calendar
             const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16), // Restored
+              padding: EdgeInsets.symmetric(horizontal: 16),
               child: ScheduleCalendar(),
             ),
 
-            const SizedBox(height: 10), // Restored
+            const SizedBox(height: 10),
 
             // 3. Section Title and Slot Count Badge
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12), // Restored
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -115,7 +156,7 @@ class ScheduleScreen extends StatelessWidget {
                     ),
                   )),
                   Obx(() => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6), // Restored
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFF0E0),
                       borderRadius: BorderRadius.circular(20),
@@ -176,7 +217,13 @@ class ScheduleScreen extends StatelessWidget {
                   );
                 }
 
+                // Auto scroll after build when slots change or loading finishes
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _scrollToActiveSlot();
+                });
+
                 return ListView.builder(
+                  controller: _scrollController,
                   padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
                   physics: const BouncingScrollPhysics(),
                   itemCount: controller.selectedDaySlots.length,
@@ -195,7 +242,16 @@ class ScheduleScreen extends StatelessWidget {
   }
 
   void _showSemesterPicker(BuildContext context, ScheduleController controller) {
-    if (controller.semesters.isEmpty) return;
+    if (controller.semesters.isEmpty) {
+      Get.snackbar(
+        'Thông báo',
+        'Không tìm thấy danh sách học kỳ. Vui lòng thử lại sau hoặc kiểm tra kết nối mạng.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange.withOpacity(0.9),
+        colorText: Colors.white,
+      );
+      return;
+    }
 
     Get.bottomSheet(
       Container(

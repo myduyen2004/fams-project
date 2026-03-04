@@ -44,7 +44,6 @@ const RequestDetailPage = lazy(() => import('./pages/academic-staff/RequestDetai
 const StudentDashboard = lazy(() => import('./pages/student/StudentDashboard').then(m => ({ default: m.StudentDashboard })));
 const LecturerDashboard = lazy(() => import('./pages/lecturer/LecturerDashboard').then(m => ({ default: m.LecturerDashboard })));
 const StudentSchedulePage = lazy(() => import('./pages/student/StudentSchedulePage').then(m => ({ default: m.StudentSchedulePage })));
-const StudentGradesPage = lazy(() => import('./pages/student/StudentGradesPage').then(m => ({ default: m.StudentGradesPage })));
 const LeturerClassManagementPage = lazy(() => import('./pages/lecturer/LeturerClassManagementPage').then(m => ({ default: m.LeturerClassManagementPage })));
 const LeturerClassDetailPage = lazy(() => import('./pages/lecturer/LeturerClassDetailPage').then(m => ({ default: m.LeturerClassDetailPage })));
 const LecturerRequestPage = lazy(() => import('./pages/lecturer/LecturerRequestPage').then(m => ({ default: m.LecturerRequestPage })));
@@ -52,15 +51,17 @@ const LecturerRequestDetailPage = lazy(() => import('./pages/lecturer/LecturerRe
 const LecturerCreateRequestPage = lazy(() => import('./pages/lecturer/LecturerCreateRequestPage').then(m => ({ default: m.LecturerCreateRequestPage })));
 const LecturerSchedulePage = lazy(() => import('./pages/lecturer/LecturerSchedulePage').then(m => ({ default: m.LecturerSchedulePage })));
 const AttendanceSessionPage = lazy(() => import('./pages/lecturer/AttendanceSessionPage').then(m => ({ default: m.AttendanceSessionPage })));
-const LecturerMessagesPage = lazy(() => import('./pages/lecturer/LecturerMessagesPage').then(m => ({ default: m.LecturerMessagesPage })));
-const StudentMessagesPage = lazy(() => import('./pages/student/StudentMessagesPage').then(m => ({ default: m.StudentMessagesPage })));
+const RealTimeAttendancePage = lazy(() => import('./pages/lecturer/RealTimeAttendancePage').then(m => ({ default: m.RealTimeAttendancePage })));
 const LecturerGradeManagementPage = lazy(() => import('./pages/lecturer/LecturerGradeManagementPage').then(m => ({ default: m.LecturerGradeManagementPage })));
-const LecturerRoomList = lazy(() => import('./pages/lecturer/RoomList').then(m => ({ default: m.RoomList })));
-const LecturerRoomDetail = lazy(() => import('./pages/lecturer/RoomDetail').then(m => ({ default: m.RoomDetail })));
-const StudentRoomList = lazy(() => import('./pages/student/RoomList').then(m => ({ default: m.RoomList })));
-const StudentRoomDetail = lazy(() => import('./pages/student/RoomDetail').then(m => ({ default: m.RoomDetail })));
 const ExamGradeManagementPage = lazy(() => import('./pages/academic-staff/ExamGradeManagementPage').then(m => ({ default: m.ExamGradeManagementPage })));
 const ResitGradeManagementPage = lazy(() => import('./pages/academic-staff/ResitGradeManagementPage').then(m => ({ default: m.ResitGradeManagementPage })));
+const AttendanceConfigPage = lazy(() => import('./pages/academic-staff/AttendanceConfigPage').then(m => ({ default: m.AttendanceConfigPage })));
+const LecturerAssignmentPage = lazy(() => import('./pages/lecturer/LecturerAssignmentPage').then(m => ({ default: m.LecturerAssignmentPage })));
+const LecturerAssignmentDetailPage = lazy(() => import('./pages/lecturer/LecturerAssignmentDetailPage').then(m => ({ default: m.LecturerAssignmentDetailPage })));
+const LecturerMessagesPage = lazy(() => import('./pages/lecturer/LecturerMessagesPage').then(m => ({ default: m.LecturerMessagesPage })));
+const StudentGradesPage = lazy(() => import('./pages/student/StudentGradesPage').then(m => ({ default: m.StudentGradesPage })));
+const StudentAssignmentPage = lazy(() => import('./pages/student/StudentAssignmentPage').then(m => ({ default: m.StudentAssignmentPage })));
+const StudentMessagesPage = lazy(() => import('./pages/student/StudentMessagesPage').then(m => ({ default: m.StudentMessagesPage })));
 
 const PageLoader = () => (
   <div className="flex h-screen w-full items-center justify-center bg-gray-50 dark:bg-zinc-950">
@@ -296,13 +297,13 @@ function App() {
           />
           <Route path="/lecturer/schedule" element={<ProtectedRoute allowedRoles={['LECTURER']}><LecturerSchedulePage /></ProtectedRoute>} />
           <Route path="/lecturer/attendance/session/:sessionId" element={<ProtectedRoute allowedRoles={['LECTURER']}><AttendanceSessionPage /></ProtectedRoute>} />
+          <Route path="/lecturer/attendance/realtime/:slotId" element={<ProtectedRoute allowedRoles={['LECTURER']}><RealTimeAttendancePage /></ProtectedRoute>} />
           <Route path="/lecturer/attendance" element={<ProtectedRoute allowedRoles={['LECTURER']}><ComingSoon title="Điểm danh" /></ProtectedRoute>} />
           <Route path="/lecturer/grades" element={<ProtectedRoute allowedRoles={['LECTURER']}><LecturerGradeManagementPage /></ProtectedRoute>} />
+          <Route path="/lecturer/assignments" element={<ProtectedRoute allowedRoles={['LECTURER']}><LecturerAssignmentPage /></ProtectedRoute>} />
+          <Route path="/lecturer/assignments/:id" element={<ProtectedRoute allowedRoles={['LECTURER']}><LecturerAssignmentDetailPage /></ProtectedRoute>} />
           <Route path="/lecturer/classes" element={<ProtectedRoute allowedRoles={['LECTURER']}><LeturerClassManagementPage /></ProtectedRoute>} />
           <Route path="/lecturer/classes/:className" element={<ProtectedRoute allowedRoles={['LECTURER']}><LeturerClassDetailPage /></ProtectedRoute>} />
-          <Route path="/lecturer/rooms" element={<ProtectedRoute allowedRoles={['LECTURER']}><LecturerRoomList /></ProtectedRoute>} />
-          <Route path="/lecturer/rooms/:id" element={<ProtectedRoute allowedRoles={['LECTURER']}><LecturerRoomDetail /></ProtectedRoute>} />
-          <Route path="/lecturer/semesters" element={<ProtectedRoute allowedRoles={['LECTURER']}><ComingSoon title="Học kỳ" /></ProtectedRoute>} />
           <Route path="/lecturer/messages" element={<ProtectedRoute allowedRoles={['LECTURER']}><LecturerMessagesPage /></ProtectedRoute>} />
           <Route path="/lecturer/requests" element={<ProtectedRoute allowedRoles={['LECTURER']}><LecturerRequestPage /></ProtectedRoute>} />
           <Route path="/lecturer/requests/create" element={<ProtectedRoute allowedRoles={['LECTURER']}><LecturerCreateRequestPage /></ProtectedRoute>} />
@@ -334,11 +335,9 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/student/assignments" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentAssignmentPage /></ProtectedRoute>} />
           <Route path="/student/attendance" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Điểm danh" /></ProtectedRoute>} />
           <Route path="/student/study" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Học tập" /></ProtectedRoute>} />
-          <Route path="/student/rooms" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentRoomList /></ProtectedRoute>} />
-          <Route path="/student/rooms/:id" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentRoomDetail /></ProtectedRoute>} />
-          <Route path="/student/semesters" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Học kỳ" /></ProtectedRoute>} />
           <Route path="/student/messages" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentMessagesPage /></ProtectedRoute>} />
           <Route path="/student/requests" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Gửi đơn yêu cầu" /></ProtectedRoute>} />
           <Route path="/student/settings" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Cài đặt" /></ProtectedRoute>} />
@@ -470,7 +469,7 @@ function App() {
             </ProtectedRoute>}
           />
           <Route path="/academic-staff/announcements" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Cài đặt thông báo" /></ProtectedRoute>} />
-          <Route path="/academic-staff/attendance" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Cài đặt điểm danh" /></ProtectedRoute>} />
+          <Route path="/academic-staff/attendance" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><AttendanceConfigPage /></ProtectedRoute>} />
           <Route
             path="/academic-staff/wifi-aps"
             element={

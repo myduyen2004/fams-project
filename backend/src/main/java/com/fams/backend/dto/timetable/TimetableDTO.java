@@ -120,6 +120,12 @@ public class TimetableDTO {
         private LocalTime endTime;
         private String status;
         private String attendanceStatus;
+        // Assignment info (populated for lecturer & student timetable)
+        private Long assignmentId;
+        private String assignmentTitle;
+        private String assignmentStatus;
+        // Student submission status (SUBMITTED / NOT_SUBMITTED / null)
+        private String submissionStatus;
     }
 
     @Data
