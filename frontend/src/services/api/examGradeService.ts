@@ -32,10 +32,13 @@ export interface ExamGradeOverviewResponse {
     lastUpdated: string;
     gradeComponents: ExamGradeComponentInfo[];
     studentGrades: ExamStudentGradeRow[];
-    // For publishing grades to students
+    // For publishing grades to students (context aware)
     gradesPublished?: boolean;
     gradesPublishedAt?: string;
     gradesPublishedBy?: string;
+    // Explicit statuses for both exam types
+    examGradesPublished?: boolean;
+    resitGradesPublished?: boolean;
 }
 
 export interface ExamGradePreviewRow {

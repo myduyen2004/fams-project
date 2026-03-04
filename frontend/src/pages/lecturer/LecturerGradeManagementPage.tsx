@@ -6,6 +6,7 @@ import { lecturerOtpService } from '../../services/api/lecturerOtpService';
 import { authService } from '../../services/api/authService';
 import { ChevronDown, FileSpreadsheet, Download, Users, TrendingUp, Award, Check, Loader2, Edit3, Save, X, Search, Send } from 'lucide-react';
 import { ImportGradeModal } from '../../components/lecturer/ImportGradeModal';
+import { StudentInfoModal } from '../../components/common/StudentInfoModal';
 import { OtpSetupModal } from '../../components/lecturer/OtpSetupModal';
 import { OtpVerificationModal } from '../../components/lecturer/OtpVerificationModal';
 import toast from 'react-hot-toast';
@@ -27,6 +28,10 @@ export const LecturerGradeManagementPage: React.FC = () => {
     // Import modal state
     const [showImportModal, setShowImportModal] = useState(false);
     const [exporting, setExporting] = useState(false);
+
+    // Student Info Modal State
+    const [selectedStudentCode, setSelectedStudentCode] = useState<string | null>(null);
+    const [isStudentInfoModalOpen, setIsStudentInfoModalOpen] = useState(false);
 
     // Inline edit state - store as strings to allow typing decimals
     const [isEditMode, setIsEditMode] = useState(false);
@@ -727,6 +732,9 @@ export const LecturerGradeManagementPage: React.FC = () => {
                                         <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider min-w-[200px]">
                                             Thông tin sinh viên
                                         </th>
+                                        <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider min-w-[120px]">
+                                            Mã SV
+                                        </th>
                                         {sortedGradeComponents.map((component) => (
                                             <th
                                                 key={component.id}
@@ -765,16 +773,20 @@ export const LecturerGradeManagementPage: React.FC = () => {
                                                     {(index + 1).toString().padStart(2, '0')}
                                                 </td>
                                                 <td className="px-4 py-2">
-                                                    <div className="flex items-center gap-3">
-                                                        <div>
-                                                            <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                                                                {student.studentName}
-                                                            </div>
-                                                            <div className="text-xs text-gray-500 dark:text-zinc-500 font-mono">
-                                                                {student.studentCode}
-                                                            </div>
-                                                        </div>
+                                                    <div className="flex flex-col">
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedStudentCode(student.studentCode);
+                                                                setIsStudentInfoModalOpen(true);
+                                                            }}
+                                                            className="text-left font-bold text-gray-900 dark:text-white text-sm hover:text-fpt-orange transition-colors"
+                                                        >
+                                                            {student.studentName}
+                                                        </button>
                                                     </div>
+                                                </td>
+                                                <td className="px-4 py-2 text-sm font-medium text-gray-500 dark:text-zinc-400">
+                                                    {student.studentCode}
                                                 </td>
                                                 {sortedGradeComponents.map((component) => {
                                                     const score = student.grades[component.id];
@@ -887,7 +899,7 @@ export const LecturerGradeManagementPage: React.FC = () => {
             {/* Submit Confirmation Modal */}
             {showSubmitConfirm && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl animate-in zoom-in-95 duration-200">
                         <div className="text-center mb-6">
                             <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <Send size={28} className="text-green-600 dark:text-green-400" />
@@ -923,6 +935,12 @@ export const LecturerGradeManagementPage: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            <StudentInfoModal
+                isOpen={isStudentInfoModalOpen}
+                onClose={() => setIsStudentInfoModalOpen(false)}
+                studentCode={selectedStudentCode}
+            />
         </LecturerLayout>
     );
 };

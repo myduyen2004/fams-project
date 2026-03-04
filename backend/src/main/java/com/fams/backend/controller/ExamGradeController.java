@@ -28,8 +28,11 @@ public class ExamGradeController {
     private final UserRepository userRepository;
 
     /**
-     * Get exam grade overview for a course in a semester
-     * 
+     * Get exam grade overview for a course in a semester.
+     * - ACADEMIC_STAFF: sees all grades (full access for management)
+     * - LECTURER / STUDENT: sees grades only after Academic Staff has published
+     * them (gradesPublished=true)
+     *
      * @param courseCode   Course code
      * @param semesterCode Semester code
      * @param type         "EXAM" for ME/FE/PE, "RESIT" for resit grades
@@ -38,8 +41,16 @@ public class ExamGradeController {
     public ResponseEntity<ExamGradeOverviewResponse> getExamGradeOverview(
             @RequestParam String courseCode,
             @RequestParam String semesterCode,
-            @RequestParam(defaultValue = "EXAM") String type) {
-        ExamGradeOverviewResponse response = examGradeService.getExamGradeOverview(courseCode, semesterCode, type);
+            @RequestParam(defaultValue = "EXAM") String type,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        String role = userDetails != null
+                ? userDetails.getAuthorities().stream()
+                        .findFirst()
+                        .map(a -> a.getAuthority().replace("ROLE_", ""))
+                        .orElse("UNKNOWN")
+                : "UNKNOWN";
+        ExamGradeOverviewResponse response = examGradeService.getExamGradeOverview(courseCode, semesterCode, type,
+                role);
         return ResponseEntity.ok(response);
     }
 
@@ -51,8 +62,15 @@ public class ExamGradeController {
             @RequestParam String courseCode,
             @RequestParam String semesterCode,
             @RequestParam(defaultValue = "EXAM") String type,
+            @AuthenticationPrincipal UserDetails userDetails,
             HttpServletResponse response) throws IOException {
-        examGradeService.exportExamGradesToExcel(courseCode, semesterCode, type, response);
+        String role = userDetails != null
+                ? userDetails.getAuthorities().stream()
+                        .findFirst()
+                        .map(a -> a.getAuthority().replace("ROLE_", ""))
+                        .orElse("UNKNOWN")
+                : "UNKNOWN";
+        examGradeService.exportExamGradesToExcel(courseCode, semesterCode, type, role, response);
     }
 
     /**

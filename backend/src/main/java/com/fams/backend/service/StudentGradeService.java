@@ -5,8 +5,10 @@ import com.fams.backend.dto.response.GradeOverviewResponse;
 import com.fams.backend.dto.response.StudentCourseOptionResponse;
 import com.fams.backend.dto.response.StudentGradeRowDTO;
 import com.fams.backend.dto.response.StudentMyGradeResponse;
+import com.fams.backend.dto.response.StudentResponse;
 import com.fams.backend.entity.*;
 import com.fams.backend.repository.*;
+import com.fams.backend.util.GradeCalculator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,7 +33,7 @@ public class StudentGradeService {
      * Get grade overview for a class section
      */
     @Transactional(readOnly = true)
-    public GradeOverviewResponse getGradeOverview(String className) {
+    public GradeOverviewResponse getGradeOverview(String className, String callerRole) {
         ClassSection classSection = classSectionRepository.findByClassName(className)
                 .orElseThrow(() -> new RuntimeException("Class section not found: " + className));
 
@@ -59,6 +61,11 @@ public class StudentGradeService {
                         .build())
                 .collect(Collectors.toList());
 
+        // Academic Staff can only see grades after Lecturer has submitted them
+        // Lecturer has full access at all times (to manage & review their own grades)
+        boolean gradesSubmitted = Boolean.TRUE.equals(classSection.getGradesSubmitted());
+        boolean hideGradesForAcademic = "ACADEMIC_STAFF".equals(callerRole) && !gradesSubmitted;
+
         // Get all enrollments
         List<Enrollment> enrollments = enrollmentRepository.findByClassSectionClassName(className);
 
@@ -75,42 +82,60 @@ public class StudentGradeService {
 
         // Build student rows
         List<StudentGradeRowDTO> studentRows = enrollments.stream().map(enrollment -> {
+            // If role is ACADEMIC_STAFF and grades not submitted yet → hide all scores
+            if (hideGradesForAcademic) {
+                return StudentGradeRowDTO.builder()
+                        .enrollmentId(enrollment.getId())
+                        .studentCode(enrollment.getStudent().getCode())
+                        .studentName(enrollment.getStudent().getFullName())
+                        .studentEmail(enrollment.getStudent().getEmail())
+                        .enrollmentStatus(enrollment.getStatus().name())
+                        .grades(new HashMap<>())
+                        .finalGrade(null)
+                        .isPassing(null)
+                        .build();
+            }
+
             Map<Long, Double> studentGrades = gradesMap.getOrDefault(enrollment.getId(), new HashMap<>());
             Map<Long, Double> gradesForDto = new HashMap<>();
 
-            // Calculate final grade (Average)
-            // This logic depends on university rules. For now simple weighted average
-            // without Resit
-            double totalWeight = 0;
-            double weightedSum = 0;
+            Map<Long, Double> scoresForCalc = new HashMap<>();
+            Map<Long, Double> weightsForCalc = new HashMap<>();
+
             boolean hasAllRequired = true;
+            boolean hasMissingOrZero = false;
+            boolean hasFailedExam = false;
 
             for (GradeComponent gc : gradeComponents) {
                 if (gc.getIsResit())
-                    continue; // Skip Resit for main calculation (unless logic changes)
+                    continue; // Skip Resit for main calculation
 
                 Double score = studentGrades.get(gc.getId());
                 gradesForDto.put(gc.getId(), score);
 
                 if (score != null) {
-                    weightedSum += score * gc.getWeight();
-                    totalWeight += gc.getWeight();
-                } else if (gc.getIsRequired()) {
-                    hasAllRequired = false;
+                    scoresForCalc.put(gc.getId(), score);
+                    if (score <= 0.0) {
+                        hasMissingOrZero = true;
+                    }
+                    if (gc.getType() == GradeComponent.GradeType.FINAL_EXAM && score < 4.0) {
+                        hasFailedExam = true;
+                    }
+                } else {
+                    hasMissingOrZero = true;
+                    if (gc.getIsRequired()) {
+                        hasAllRequired = false;
+                    }
                 }
+                weightsForCalc.put(gc.getId(), gc.getWeight());
             }
 
-            Double finalGrade = null;
-            if (totalWeight > 0) {
-                // Average based on total 100%? Or total present? Usually total 100%.
-                // If some grades missing, final grade might be incomplete.
-                // Let's assume final grade is only ready if all required present?
-                // Or just show current average.
-                finalGrade = weightedSum / 100.0;
-            }
+            Double finalGrade = GradeCalculator.calculateAverage(scoresForCalc, weightsForCalc);
 
-            // Simple pass logic (>= 5.0)
-            boolean isPassing = finalGrade != null && finalGrade >= 5.0;
+            // Updated pass logic: must have all required, no 0/null values, no failed exam,
+            // and average >= 5.0
+            boolean isPassing = hasAllRequired && !hasMissingOrZero && !hasFailedExam && finalGrade != null
+                    && finalGrade >= 5.0;
 
             return StudentGradeRowDTO.builder()
                     .enrollmentId(enrollment.getId())
@@ -127,7 +152,7 @@ public class StudentGradeService {
         // Sort by student name
         studentRows.sort(Comparator.comparing(StudentGradeRowDTO::getStudentName));
 
-        // Calculate stats
+        // Calculate stats (only for visible data)
         double averageGrade = studentRows.stream()
                 .map(StudentGradeRowDTO::getFinalGrade)
                 .filter(Objects::nonNull)
@@ -275,6 +300,51 @@ public class StudentGradeService {
 
         User submittedBy = userRepository.findById(submittedById)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Điền 0.0 cho các cột điểm trống (do GV phụ trách) trước khi chốt
+        Course course = classSection.getCourse();
+        List<Enrollment> enrollments = enrollmentRepository.findByClassSectionClassName(className);
+        List<GradeComponent> editableComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId())
+                .stream()
+                .filter(gc -> !gc.getIsResit())
+                .filter(gc -> gc.getType() != GradeComponent.GradeType.FINAL_EXAM)
+                .filter(gc -> gc.getType() != GradeComponent.GradeType.RESIT)
+                .filter(gc -> gc.getType() != GradeComponent.GradeType.MID_TERM)
+                .filter(gc -> gc.getType() != GradeComponent.GradeType.PRACTICAL_EXAM)
+                .collect(Collectors.toList());
+
+        List<Long> enrollmentIds = enrollments.stream().map(Enrollment::getId).collect(Collectors.toList());
+        List<StudentGrade> existingGrades = studentGradeRepository.findByEnrollmentIdIn(enrollmentIds);
+
+        // Tạo map: enrollmentId -> componentId -> StudentGrade
+        Map<Long, Map<Long, StudentGrade>> gradesMap = new HashMap<>();
+        for (StudentGrade grade : existingGrades) {
+            gradesMap.computeIfAbsent(grade.getEnrollment().getId(), k -> new HashMap<>())
+                    .put(grade.getGradeComponent().getId(), grade);
+        }
+
+        List<StudentGrade> newGrades = new ArrayList<>();
+        for (Enrollment en : enrollments) {
+            Map<Long, StudentGrade> studentGrades = gradesMap.getOrDefault(en.getId(), new HashMap<>());
+            for (GradeComponent gc : editableComponents) {
+                if (!studentGrades.containsKey(gc.getId())) {
+                    // Chưa có điểm -> Tạo mới với điểm 0.0
+                    StudentGrade newGrade = new StudentGrade();
+                    newGrade.setEnrollment(en);
+                    newGrade.setGradeComponent(gc);
+                    newGrade.setScore(0.0);
+                    newGrade.setNote("Tự động gán 0 điểm do chưa nhập khi gửi điểm");
+                    newGrade.setGradedBy(submittedBy);
+                    newGrade.setGradedAt(LocalDateTime.now());
+                    newGrades.add(newGrade);
+                }
+            }
+        }
+
+        if (!newGrades.isEmpty()) {
+            studentGradeRepository.saveAll(newGrades);
+            log.info("Auto-filled {} zero grades for class {}", newGrades.size(), className);
+        }
 
         classSection.setGradesSubmitted(true);
         classSection.setGradesSubmittedAt(LocalDateTime.now());
@@ -1009,9 +1079,21 @@ public class StudentGradeService {
                 .collect(Collectors.groupingBy(GradeComponent::getType, LinkedHashMap::new, Collectors.toList()));
 
         // Build grade categories
+        // First, collect Resit components and their reference component IDs (when
+        // published)
+        Set<Long> replacedByResitIds = new HashSet<>();
+        if (Boolean.TRUE.equals(classSection.getResitGradesPublished())) {
+            for (GradeComponent gc : gradeComponents) {
+                if (Boolean.TRUE.equals(gc.getIsResit()) || gc.getType() == GradeComponent.GradeType.RESIT) {
+                    if (gc.getReferenceComponent() != null) {
+                        replacedByResitIds.add(gc.getReferenceComponent().getId());
+                    }
+                }
+            }
+        }
+
+        // Populate categories grouped by GradeType
         List<StudentMyGradeResponse.GradeCategoryDTO> categories = new ArrayList<>();
-        double totalWeightedSum = 0;
-        double totalWeight = 0;
 
         for (Map.Entry<GradeComponent.GradeType, List<GradeComponent>> entry : componentsByType.entrySet()) {
             GradeComponent.GradeType type = entry.getKey();
@@ -1031,11 +1113,11 @@ public class StudentGradeService {
                 // Determine visibility based on type and status
                 boolean isPublished;
                 if (gc.getIsResit() || gc.getType() == GradeComponent.GradeType.RESIT) {
-                    isPublished = classSection.getResitGradesPublished();
+                    isPublished = Boolean.TRUE.equals(classSection.getResitGradesPublished());
                 } else if (gc.getType() == GradeComponent.GradeType.FINAL_EXAM ||
                         gc.getType() == GradeComponent.GradeType.MID_TERM ||
                         gc.getType() == GradeComponent.GradeType.PRACTICAL_EXAM) {
-                    isPublished = classSection.getGradesPublished();
+                    isPublished = Boolean.TRUE.equals(classSection.getGradesPublished());
                 } else {
                     // Regular components are visible if submitted
                     isPublished = Boolean.TRUE.equals(classSection.getGradesSubmitted());
@@ -1044,17 +1126,20 @@ public class StudentGradeService {
                 items.add(StudentMyGradeResponse.GradeItemDTO.builder()
                         .itemName(gc.getName())
                         .weight(gc.getWeight())
-                        .value(score)
-                        .comment(comment)
+                        .value(isPublished ? score : null)
+                        .comment(isPublished ? comment : null)
                         .isPublished(isPublished)
                         .build());
 
                 categoryWeight += gc.getWeight();
-                if (score != null) {
+
+                // Only include in average if published.
+                // If this component is a "RESIT" → it replaces its referenceComponent.
+                // If this component was replaced by a Resit → skip it in average calculation.
+                boolean isReplacedByResit = replacedByResitIds.contains(gc.getId());
+                if (isPublished && score != null && !isReplacedByResit) {
                     categoryWeightedSum += score * gc.getWeight();
                     categoryGradeCount++;
-                    totalWeightedSum += score * gc.getWeight();
-                    totalWeight += gc.getWeight();
                 }
             }
 
@@ -1068,7 +1153,7 @@ public class StudentGradeService {
                     .weight(categoryWeight)
                     .value(categoryAverage)
                     .comment(null)
-                    .isPublished(classSection.getGradesPublished())
+                    .isPublished(Boolean.TRUE.equals(classSection.getGradesPublished()))
                     .build());
 
             categories.add(StudentMyGradeResponse.GradeCategoryDTO.builder()
@@ -1079,15 +1164,52 @@ public class StudentGradeService {
                     .build());
         }
 
-        // Calculate course average (out of 10)
-        Double courseAverage = totalWeight > 0
-                ? Math.round(totalWeightedSum / 100.0 * 10.0) / 10.0
-                : null;
+        // Calculate course average using GradeCalculator
+        Map<Long, Double> finalScoresMap = new HashMap<>();
+        Map<Long, Double> finalWeightsMap = new HashMap<>();
+
+        boolean hasFailedExam = false;
+
+        for (Map.Entry<GradeComponent.GradeType, List<GradeComponent>> entry : componentsByType.entrySet()) {
+            boolean isExamType = (entry.getKey() == GradeComponent.GradeType.FINAL_EXAM
+                    || entry.getKey() == GradeComponent.GradeType.RESIT);
+            for (GradeComponent gc : entry.getValue()) {
+                if (replacedByResitIds.contains(gc.getId())) {
+                    continue;
+                }
+                StudentGrade grade = gradesMap.get(gc.getId());
+                Double score = grade != null ? grade.getScore() : null;
+                if (score != null) {
+                    finalScoresMap.put(gc.getId(), score);
+                    if (isExamType && score < 4.0) {
+                        hasFailedExam = true;
+                    }
+                }
+                finalWeightsMap.put(gc.getId(), gc.getWeight());
+            }
+        }
+
+        Double courseAverage = GradeCalculator.calculateAverage(finalScoresMap, finalWeightsMap);
 
         // Determine status
         String status = "PENDING";
-        if (courseAverage != null) {
-            status = courseAverage >= 5.0 ? "PASSED" : "FAILED";
+        boolean isPublished = Boolean.TRUE.equals(classSection.getGradesPublished());
+
+        if (isPublished) {
+            boolean hasMissingOrZero = false;
+            for (Map.Entry<Long, Double> entry : finalWeightsMap.entrySet()) {
+                Double score = finalScoresMap.get(entry.getKey());
+                if (score == null || score <= 0.0) {
+                    hasMissingOrZero = true;
+                    break;
+                }
+            }
+
+            if (hasMissingOrZero || hasFailedExam || (courseAverage != null && courseAverage < 5.0)) {
+                status = "FAILED";
+            } else if (courseAverage != null && courseAverage >= 5.0) {
+                status = "PASSED";
+            }
         }
 
         return StudentMyGradeResponse.builder()
@@ -1108,6 +1230,8 @@ public class StudentGradeService {
      * Format grade type to display name
      */
     private String formatCategoryName(GradeComponent.GradeType type) {
+        if (type == null)
+            return "N/A";
         switch (type) {
             case PARTICIPATION:
                 return "Participation";
@@ -1136,5 +1260,17 @@ public class StudentGradeService {
             default:
                 return type.name();
         }
+    }
+
+    @Transactional(readOnly = true)
+    public StudentResponse getStudentInfo(String studentCode) {
+        User user = userRepository.findByCode(studentCode)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy sinh viên với mã: " + studentCode));
+
+        if (user.getRole() != User.UserRole.STUDENT) {
+            throw new RuntimeException("Người dùng không phải là sinh viên");
+        }
+
+        return StudentResponse.fromUserAndProfile(user, user.getStudentProfile());
     }
 }
