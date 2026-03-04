@@ -25,7 +25,7 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
         boolean existsByName(String name);
 
         @Query("SELECT c FROM Course c WHERE " +
-                        "(:keyword IS NULL OR :keyword = '' OR LOWER(c.code) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) "
+                        "(:keyword IS NULL OR :keyword = '' OR LOWER(c.code) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) OR LOWER(c.name) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%'))) "
                         +
                         "AND (:status IS NULL OR c.status = :status) " +
                         "ORDER BY c.code ASC")
@@ -34,7 +34,7 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
                         Pageable pageable);
 
         @Query("SELECT c FROM Course c WHERE " +
-                        "(:keyword IS NULL OR :keyword = '' OR LOWER(c.code) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) "
+                        "(:keyword IS NULL OR :keyword = '' OR LOWER(c.code) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) OR LOWER(c.name) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%'))) "
                         +
                         "AND c.status = 'ACTIVE' " +
                         "ORDER BY c.code ASC")
@@ -46,7 +46,7 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
                         "(SELECT ssc.course.id FROM SubSpecializationCourse ssc WHERE ssc.subSpecialization.specialization.id = :specId) "
                         +
                         "AND c.status = 'ACTIVE' " +
-                        "AND (:keyword IS NULL OR :keyword = '' OR LOWER(c.code) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) "
+                        "AND (:keyword IS NULL OR :keyword = '' OR LOWER(c.code) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) OR LOWER(c.name) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%'))) "
                         +
                         "ORDER BY c.code ASC")
         List<Course> searchCoursesNotInSpecialization(@Param("specId") Long specId,
@@ -59,7 +59,7 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
                         "AND c.id NOT IN " +
                         "(SELECT sc.course.id FROM SpecializationCourse sc WHERE sc.specialization.id = :specId) " +
                         "AND c.status = 'ACTIVE' " +
-                        "AND (:keyword IS NULL OR :keyword = '' OR LOWER(c.code) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) "
+                        "AND (:keyword IS NULL OR :keyword = '' OR LOWER(c.code) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) OR LOWER(c.name) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%'))) "
                         +
                         "ORDER BY c.code ASC")
         List<Course> searchCoursesNotInSubSpecialization(@Param("subSpecId") Long subSpecId,
