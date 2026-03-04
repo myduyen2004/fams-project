@@ -65,6 +65,22 @@ export const specializationService = {
         return response.data;
     },
 
+    previewImportSpecializationsBulk: async (file: File): Promise<SpecializationImportDTO[]> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await apiClient.post('/specializations/import/preview-bulk', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
+    },
+
+    saveImportedSpecializationsBulk: async (dtos: SpecializationImportDTO[]): Promise<SpecializationImportResult> => {
+        const response = await apiClient.post('/specializations/import/save-bulk', dtos);
+        return response.data;
+    },
+
     downloadImportTemplate: async (): Promise<void> => {
         const response = await apiClient.get('/specializations/import/template', {
             responseType: 'blob',
