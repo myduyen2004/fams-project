@@ -3,7 +3,7 @@ import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Upload, Info, Check, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { REQUEST_TYPE_LABELS, RequestType } from '../../types/requestType';
+// requestType is always 'RESCHEDULE'
 import { scheduleRequestService, ClassSlotResponse, CreateScheduleRequestPayload, ConflictCheckResponse } from '../../services/api/scheduleRequestService';
 import { RoomSelectionCard } from '../../components/lecturer/request/RoomSelectionCard';
 import { Room } from '../../types/room';
@@ -25,7 +25,7 @@ export const LecturerCreateRequestPage: React.FC = () => {
     const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
     const [dateError, setDateError] = useState<string>('');
     const [reason, setReason] = useState<string>('');
-    const [requestType, setRequestType] = useState<string>('');
+    const [requestType] = useState<string>('RESCHEDULE');
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [conflictResult, setConflictResult] = useState<ConflictCheckResponse | null>(null);
     const [checkingConflict, setCheckingConflict] = useState(false);
@@ -284,20 +284,9 @@ export const LecturerCreateRequestPage: React.FC = () => {
                             </div>
                             <div>
                                 <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">LOẠI YÊU CẦU</label>
-                                <select
-                                    className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all text-slate-700 dark:text-slate-200"
-                                    value={requestType}
-                                    onChange={(e) => setRequestType(e.target.value)}
-                                >
-                                    <option value="">Chọn loại yêu cầu</option>
-                                    {Object.keys(REQUEST_TYPE_LABELS)
-                                        .filter(key => key !== RequestType.CANCEL && key !== RequestType.SWAP)
-                                        .map((key) => (
-                                            <option key={key} value={key}>
-                                                {REQUEST_TYPE_LABELS[key]}
-                                            </option>
-                                        ))}
-                                </select>
+                                <div className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm text-slate-700 dark:text-slate-200 min-h-[46px] flex items-center">
+                                    Đổi lịch
+                                </div>
                             </div>
                         </div>
                     </section>

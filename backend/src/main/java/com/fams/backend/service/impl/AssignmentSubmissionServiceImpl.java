@@ -13,6 +13,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -20,6 +26,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 @Service
 @RequiredArgsConstructor
@@ -112,15 +120,16 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
             throw new RuntimeException("Bạn không phải người tạo bài tập này");
         }
 
-        if (assignment.getStatus() == Assignment.AssignmentStatus.CLOSED) {
-            throw new RuntimeException("Không thể chỉnh sửa bài tập đã đóng");
-        }
-
         if (newDueDate.isBefore(LocalDateTime.now())) {
             throw new RuntimeException("Hạn nộp bài phải sau thời điểm hiện tại");
         }
 
         assignment.setDueDate(newDueDate);
+        // Auto-reopen if new due date is in the future
+        if (assignment.getStatus() == Assignment.AssignmentStatus.CLOSED && newDueDate.isAfter(LocalDateTime.now())) {
+            assignment.setStatus(Assignment.AssignmentStatus.OPEN);
+            log.info("Assignment auto-reopened: id={}", assignmentId);
+        }
         assignmentRepository.save(assignment);
         log.info("Assignment due date updated: id={}, newDueDate={}, lecturer={}", assignmentId, newDueDate,
                 lecturerId);
@@ -290,6 +299,8 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
                             .studentName(enrollment.getStudent().getFullName())
                             .status(status)
                             .assignmentDueDate(assignment.getDueDate())
+                            .referenceUrl(assignment.getReferenceUrl())
+                            .referenceName(assignment.getReferenceName())
                             .build());
                 }
             }
@@ -321,6 +332,8 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
                 .courseName(assignment.getClassSection().getCourse().getName())
                 .status(AssignmentSubmission.SubmissionStatus.NOT_SUBMITTED)
                 .assignmentDueDate(assignment.getDueDate())
+                .referenceUrl(assignment.getReferenceUrl())
+                .referenceName(assignment.getReferenceName())
                 .build();
     }
 
@@ -485,6 +498,8 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
                 .status(submission.getStatus())
                 .submittedAt(submission.getSubmittedAt())
                 .assignmentDueDate(assignment.getDueDate())
+                .referenceUrl(assignment.getReferenceUrl())
+                .referenceName(assignment.getReferenceName())
                 .build();
     }
 
@@ -519,10 +534,6 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
             throw new RuntimeException("Bạn không phải giảng viên của lớp này");
         }
 
-        if (Assignment.AssignmentStatus.CLOSED.equals(assignment.getStatus())) {
-            throw new RuntimeException("Không thể chỉnh sửa bài tập đã đóng");
-        }
-
         if (title != null && !title.isBlank()) {
             assignment.setTitle(title);
         }
@@ -531,6 +542,11 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
         }
         if (dueDate != null) {
             assignment.setDueDate(dueDate);
+            // Auto-reopen if new due date is in the future
+            if (assignment.getStatus() == Assignment.AssignmentStatus.CLOSED && dueDate.isAfter(LocalDateTime.now())) {
+                assignment.setStatus(Assignment.AssignmentStatus.OPEN);
+                log.info("Assignment auto-reopened via update: id={}", assignmentId);
+            }
         }
         if (referenceUrl != null) {
             assignment.setReferenceUrl(referenceUrl);
@@ -542,5 +558,107 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
         assignmentRepository.save(assignment);
         log.info("Assignment updated: id={}, lecturer={}", assignmentId, lecturerId);
         return toAssignmentResponse(assignment);
+    }
+
+    @Override
+    public byte[] downloadAllSubmissionsAsZip(Long assignmentId, Long lecturerId) {
+        Assignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new RuntimeException("Bài tập không tồn tại"));
+
+        ClassSection cs = assignment.getClassSection();
+        if (!cs.getLecturer().getId().equals(lecturerId)) {
+            throw new RuntimeException("Bạn không phải giảng viên của lớp này");
+        }
+
+        if (assignment.getStatus() != Assignment.AssignmentStatus.CLOSED) {
+            throw new RuntimeException("Chỉ có thể tải bài nộp của bài tập đã đóng");
+        }
+
+        List<AssignmentSubmission> submissions = submissionRepository.findByAssignment_Id(assignmentId);
+        List<AssignmentSubmission> submittedList = submissions.stream()
+                .filter(s -> s.getStatus() == AssignmentSubmission.SubmissionStatus.SUBMITTED)
+                .filter(s -> s.getFileUrl() != null && !s.getFileUrl().isEmpty())
+                .toList();
+
+        if (submittedList.isEmpty()) {
+            throw new RuntimeException("Không có bài nộp nào có file đính kèm để tải");
+        }
+
+        log.info("Download ZIP: assignmentId={}, total submissions={}, submitted={}",
+                assignmentId, submissions.size(), submittedList.size());
+
+        String assignmentTitle = sanitizeFileName(assignment.getTitle());
+        String className = sanitizeFileName(cs.getClassName());
+
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                ZipOutputStream zos = new ZipOutputStream(baos)) {
+
+            HttpClient httpClient = HttpClient.newHttpClient();
+            int fileCount = 0;
+
+            for (AssignmentSubmission sub : submittedList) {
+                User student = sub.getStudent();
+                String studentName = sanitizeFileName(student.getFullName());
+                String studentCode = student.getCode();
+                String folderName = className + "_" + studentName + "_" + studentCode + "_" + assignmentTitle;
+
+                log.info("Processing submission: student={}, fileUrl={}, fileName={}",
+                        studentCode, sub.getFileUrl(), sub.getFileName());
+
+                List<String> fileUrls = sub.getFileUrl() != null && !sub.getFileUrl().isEmpty()
+                        ? Arrays.asList(sub.getFileUrl().split("\\|\\|\\|"))
+                        : Collections.emptyList();
+                List<String> fileNames = sub.getFileName() != null && !sub.getFileName().isEmpty()
+                        ? Arrays.asList(sub.getFileName().split("\\|\\|\\|"))
+                        : Collections.emptyList();
+
+                log.info("Parsed: {} URLs, {} names", fileUrls.size(), fileNames.size());
+
+                for (int i = 0; i < fileUrls.size(); i++) {
+                    String url = fileUrls.get(i).trim();
+                    String name = i < fileNames.size() ? fileNames.get(i).trim() : "file_" + (i + 1);
+
+                    try {
+                        log.info("Downloading file: {}", url);
+                        HttpRequest request = HttpRequest.newBuilder()
+                                .uri(URI.create(url))
+                                .GET()
+                                .build();
+                        HttpResponse<InputStream> response = httpClient.send(request,
+                                HttpResponse.BodyHandlers.ofInputStream());
+
+                        log.info("Download response status: {}", response.statusCode());
+
+                        if (response.statusCode() == 200) {
+                            ZipEntry entry = new ZipEntry(folderName + "/" + name);
+                            zos.putNextEntry(entry);
+                            response.body().transferTo(zos);
+                            zos.closeEntry();
+                            fileCount++;
+                        } else {
+                            log.warn("Failed to download file: {} (status={})", url, response.statusCode());
+                        }
+                    } catch (Exception e) {
+                        log.warn("Error downloading file: {} - {}", url, e.getMessage());
+                    }
+                }
+            }
+
+            zos.finish();
+            log.info("ZIP created for assignment id={}, {} submissions, {} files", assignmentId, submittedList.size(),
+                    fileCount);
+            return baos.toByteArray();
+
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi tạo file ZIP: " + e.getMessage(), e);
+        }
+    }
+
+    private String sanitizeFileName(String name) {
+        if (name == null)
+            return "unknown";
+        return name.replaceAll("[\\\\/:*?\"<>|]", "_").trim();
     }
 }

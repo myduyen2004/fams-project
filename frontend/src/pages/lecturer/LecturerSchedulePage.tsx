@@ -16,7 +16,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import timetableService, { WeeklyTimetableDTO, TimetableSlotDTO } from '../../services/api/timetableService';
-import { assignmentService } from '../../services/api/assignmentService';
+import { assignmentService, AssignmentDTO } from '../../services/api/assignmentService';
+import { scheduleRequestService } from '../../services/api/scheduleRequestService';
 import { uploadFile } from '../../services/utils/fileUploadService';
 import { useNavigate } from 'react-router-dom';
 
@@ -34,6 +35,17 @@ export const LecturerSchedulePage: React.FC = () => {
     const [selectedSlot, setSelectedSlot] = useState<TimetableSlotDTO | null>(null);
     const [exporting, setExporting] = useState(false);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+    // Download Submissions Dialog state
+    const [showDownloadDialog, setShowDownloadDialog] = useState(false);
+    const [dlClasses, setDlClasses] = useState<string[]>([]);
+    const [dlClassName, setDlClassName] = useState<string>('');
+    const [dlAssignments, setDlAssignments] = useState<AssignmentDTO[]>([]);
+    const [dlAssignmentId, setDlAssignmentId] = useState<number | null>(null);
+    const [dlAssignmentStatus, setDlAssignmentStatus] = useState<string>('');
+    const [dlAssignmentTitle, setDlAssignmentTitle] = useState<string>('');
+    const [downloadingZip, setDownloadingZip] = useState(false);
+    const [loadingDlData, setLoadingDlData] = useState(false);
 
     // Create Assignment Dialog state
     const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -204,13 +216,54 @@ export const LecturerSchedulePage: React.FC = () => {
         return `Thứ ${day + 1}`;
     };
 
-    const getStatusStyle = (status?: string) => {
+    const getStatusStyle = (status?: string, slot?: TimetableSlotDTO) => {
         if (status === 'CANCELLED') return 'bg-red-50 text-red-600 border-red-100';
+        // Use time-based check if slot is provided
+        if (slot) {
+            const label = getStatusLabel(slot);
+            if (label === 'Đã kết thúc') return 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700';
+            if (label === 'Đang diễn ra') return 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800';
+        }
         return 'bg-fpt-orange/10 text-fpt-orange border-fpt-orange/30';
+    };
+
+    const SLOT_TIMES: Record<number, { start: string; end: string }> = {
+        1: { start: '07:30', end: '09:45' },
+        2: { start: '10:00', end: '12:15' },
+        3: { start: '13:00', end: '15:15' },
+        4: { start: '15:30', end: '17:45' },
     };
 
     const getStatusLabel = (slot: TimetableSlotDTO) => {
         if (slot.status === 'CANCELLED') return 'Đã hủy';
+
+        // Time-based status check
+        if (slot.date && slot.slotNumber) {
+            const now = new Date();
+            const slotDate = new Date(slot.date);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            slotDate.setHours(0, 0, 0, 0);
+
+            if (slotDate < today) {
+                return 'Đã kết thúc';
+            }
+
+            if (slotDate.getTime() === today.getTime()) {
+                const times = SLOT_TIMES[slot.slotNumber];
+                if (times) {
+                    const [endH, endM] = times.end.split(':').map(Number);
+                    const [startH, startM] = times.start.split(':').map(Number);
+                    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                    const endMinutes = endH * 60 + endM;
+                    const startMinutes = startH * 60 + startM;
+
+                    if (currentMinutes >= endMinutes) return 'Đã kết thúc';
+                    if (currentMinutes >= startMinutes) return 'Đang diễn ra';
+                }
+            }
+        }
+
         return 'Chưa diễn ra';
     };
 
@@ -308,6 +361,83 @@ export const LecturerSchedulePage: React.FC = () => {
         }
     };
 
+    // Download submissions helpers
+    const handleOpenDownloadDialog = async () => {
+        setDlClassName('');
+        setDlAssignmentId(null);
+        setDlAssignmentStatus('');
+        setDlAssignmentTitle('');
+        setDlAssignments([]);
+        setShowDownloadDialog(true);
+        try {
+            setLoadingDlData(true);
+            const classes = await scheduleRequestService.getClasses();
+            setDlClasses(classes);
+        } catch {
+            toast.error('Không thể tải danh sách lớp');
+        } finally {
+            setLoadingDlData(false);
+        }
+    };
+
+    const handleDlClassChange = async (className: string) => {
+        setDlClassName(className);
+        setDlAssignmentId(null);
+        setDlAssignmentStatus('');
+        setDlAssignmentTitle('');
+        setDlAssignments([]);
+        if (!className) return;
+        try {
+            setLoadingDlData(true);
+            const assignments = await assignmentService.getAssignmentsByClass(className);
+            setDlAssignments(assignments);
+        } catch {
+            toast.error('Không thể tải danh sách bài tập');
+        } finally {
+            setLoadingDlData(false);
+        }
+    };
+
+    const handleDlAssignmentChange = (assignmentIdStr: string) => {
+        const aid = Number(assignmentIdStr);
+        setDlAssignmentId(aid || null);
+        const found = dlAssignments.find(a => a.id === aid);
+        setDlAssignmentStatus(found?.status || '');
+        setDlAssignmentTitle(found?.title || '');
+    };
+
+    const handleDownloadSubmissions = async () => {
+        if (!dlAssignmentId) return;
+        try {
+            setDownloadingZip(true);
+            const resp = await assignmentService.downloadAllSubmissions(dlAssignmentId);
+            const url = window.URL.createObjectURL(new Blob([resp.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `${dlClassName}_${dlAssignmentTitle}_submissions.zip`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+            toast.success('Đã tải bài nộp thành công');
+            setShowDownloadDialog(false);
+        } catch (err: any) {
+            let msg = 'Không thể tải bài nộp';
+            if (err.response?.data instanceof Blob) {
+                try {
+                    const text = await err.response.data.text();
+                    const json = JSON.parse(text);
+                    msg = json.message || json.error || msg;
+                } catch { /* ignore parse error */ }
+            } else if (err.response?.data?.message) {
+                msg = err.response.data.message;
+            }
+            toast.error(msg);
+        } finally {
+            setDownloadingZip(false);
+        }
+    };
+
 
     return (
         <LecturerLayout pageTitle="Lịch giảng dạy">
@@ -375,14 +505,23 @@ export const LecturerSchedulePage: React.FC = () => {
                             </div>
                         </div>
 
-                        <button
-                            onClick={handleExport}
-                            disabled={exporting}
-                            className={`flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white rounded-xl font-medium text-sm shadow-md shadow-orange-500/20 hover:bg-orange-600 transition-colors ${exporting ? 'opacity-70 cursor-not-allowed' : ''}`}
-                        >
-                            {exporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-                            <span>{exporting ? 'Đang xuất...' : 'Xuất file'}</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={handleOpenDownloadDialog}
+                                className="flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white rounded-xl font-medium text-sm shadow-md shadow-orange-500/20 hover:bg-orange-600 transition-colors"
+                            >
+                                <Download size={18} />
+                                <span>Tải bài nộp theo slot</span>
+                            </button>
+                            <button
+                                onClick={handleExport}
+                                disabled={exporting}
+                                className={`flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white rounded-xl font-medium text-sm shadow-md shadow-orange-500/20 hover:bg-orange-600 transition-colors ${exporting ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            >
+                                {exporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+                                <span>{exporting ? 'Đang xuất...' : 'Xuất file'}</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -452,7 +591,7 @@ export const LecturerSchedulePage: React.FC = () => {
 
                                                                 <div className={`
                                                                     inline-block px-1.5 py-0.5 rounded text-[8px] font-black border mb-1 uppercase tracking-tighter
-                                                                    ${getStatusStyle(slotData.status)}
+                                                                    ${getStatusStyle(slotData.status, slotData)}
                                                                 `}>
                                                                     {getStatusLabel(slotData)}
                                                                 </div>
@@ -553,7 +692,13 @@ export const LecturerSchedulePage: React.FC = () => {
                                         {selectedSlot.courseName}
                                     </p>
                                     <p className="text-sm text-fpt-orange font-bold mt-1">
-                                        Lớp: {selectedSlot.className} ({selectedSlot.courseCode})
+                                        Lớp:{' '}
+                                        <button
+                                            onClick={() => navigate(`/lecturer/classes/${selectedSlot.className}`)}
+                                            className="hover:underline hover:text-orange-600 transition-colors"
+                                        >
+                                            {selectedSlot.className}
+                                        </button>
                                     </p>
                                 </div>
                             </div>
@@ -602,7 +747,7 @@ export const LecturerSchedulePage: React.FC = () => {
                             <div className="flex items-center gap-4 pt-2 border-t border-gray-100 dark:border-zinc-800 mt-2">
                                 <div className="flex items-center gap-2 flex-1 justify-between">
                                     <p className="text-sm text-gray-500 dark:text-gray-400">Trạng thái:</p>
-                                    <span className={`font-bold uppercase px-3 py-1 rounded-full text-xs border ${getStatusStyle(selectedSlot.status)}`}>
+                                    <span className={`font-bold uppercase px-3 py-1 rounded-full text-xs border ${getStatusStyle(selectedSlot.status, selectedSlot)}`}>
                                         {getStatusLabel(selectedSlot)}
                                     </span>
                                 </div>
@@ -685,6 +830,96 @@ export const LecturerSchedulePage: React.FC = () => {
                             <button onClick={handleCreate} disabled={creating || !newTitle.trim() || uploadingFile}
                                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-fpt-orange hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
                                 {creating ? <><Loader2 size={16} className="animate-spin" /> Đang tạo...</> : <><Plus className="w-4 h-4" /> Tạo bài tập</>}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Download Submissions Dialog */}
+            {showDownloadDialog && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-md shadow-xl border border-gray-100 dark:border-zinc-800 animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800">
+                            <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <Download className="w-5 h-5 text-fpt-orange" /> Tải bài nộp theo slot
+                            </h2>
+                            <button onClick={() => setShowDownloadDialog(false)}
+                                className="text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
+                                    Lớp học <span className="text-red-500">*</span>
+                                </label>
+                                <select
+                                    value={dlClassName}
+                                    onChange={e => handleDlClassChange(e.target.value)}
+                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                >
+                                    <option value="">-- Chọn lớp --</option>
+                                    {loadingDlData && !dlClasses.length ? (
+                                        <option disabled>Đang tải...</option>
+                                    ) : dlClasses.map(c => (
+                                        <option key={c} value={c}>{c}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {dlClassName && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
+                                        Bài tập <span className="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        value={dlAssignmentId?.toString() || ''}
+                                        onChange={e => handleDlAssignmentChange(e.target.value)}
+                                        className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                    >
+                                        <option value="">-- Chọn bài tập --</option>
+                                        {loadingDlData ? (
+                                            <option disabled>Đang tải...</option>
+                                        ) : dlAssignments.map(a => (
+                                            <option key={a.id} value={a.id.toString()}>
+                                                {a.title} ({a.status === 'OPEN' ? 'Đang mở' : 'Đã đóng'})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {dlAssignmentId && (
+                                <div className="p-3 rounded-lg border border-gray-100 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm text-gray-600 dark:text-zinc-400">Trạng thái:</span>
+                                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${dlAssignmentStatus === 'CLOSED'
+                                            ? 'bg-gray-100 text-gray-600 border border-gray-200'
+                                            : 'bg-green-100 text-green-700 border border-green-200'
+                                            }`}>
+                                            {dlAssignmentStatus === 'CLOSED' ? 'Đã đóng' : 'Đang mở'}
+                                        </span>
+                                    </div>
+                                    {dlAssignmentStatus !== 'CLOSED' && (
+                                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                                            Chỉ bài tập đã đóng mới có thể tải xuống.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 dark:border-zinc-800">
+                            <button onClick={() => setShowDownloadDialog(false)}
+                                className="px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-zinc-400 hover:text-gray-800 transition-colors">
+                                Hủy
+                            </button>
+                            <button
+                                onClick={handleDownloadSubmissions}
+                                disabled={!dlAssignmentId || dlAssignmentStatus !== 'CLOSED' || downloadingZip}
+                                className="inline-flex items-center gap-2 px-5 py-2.5 bg-fpt-orange hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+                            >
+                                {downloadingZip ? <><Loader2 size={16} className="animate-spin" /> Đang tải...</> : <><Download className="w-4 h-4" /> Tải xuống</>}
                             </button>
                         </div>
                     </div>

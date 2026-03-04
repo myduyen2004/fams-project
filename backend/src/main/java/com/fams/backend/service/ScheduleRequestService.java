@@ -27,6 +27,8 @@ public interface ScheduleRequestService {
         ScheduleRequestResponse updateRequestStatus(Long id, ScheduleRequest.RequestStatus status, String note,
                         Long approverId);
 
+        void revokeRequest(Long requestId, Long lecturerId);
+
         Map<String, Long> getRequestStats();
 
         ScheduleRequestResponse getRequestById(Long id);

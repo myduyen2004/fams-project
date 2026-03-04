@@ -1,11 +1,21 @@
 import apiClient from '../api/authService';
 
+const removeAccents = (str: string) => {
+    return str.normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+        .replace(/\s+/g, '_');
+};
+
 /**
  * Upload file to Cloudinary via Backend proxy
  */
 export const uploadFile = async (file: File): Promise<any> => {
+    const safeFileName = removeAccents(file.name);
+    const safeFile = new File([file], safeFileName, { type: file.type });
+
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", safeFile);
 
     console.log("Attempting upload via apiClient to /upload");
 
