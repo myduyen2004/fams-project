@@ -18,7 +18,11 @@ import 'features/schedule_request/views/schedule_request_detail_screen.dart';
 import 'features/schedule_request/views/create_request_screen.dart';
 import 'features/schedule_request/bindings/schedule_request_bindings.dart';
 
+import 'features/chat/controllers/chat_controller.dart';
+import 'features/schedule/controllers/schedule_controller.dart';
+
 void main() {
+  GoogleFonts.config.allowRuntimeFetching = true;
   runApp(const MyApp());
 }
 
@@ -26,6 +30,9 @@ class InitialBinding extends Bindings {
   @override
   void dependencies() {
     Get.put(AuthController());
+    // Khởi tạo các controller dùng chung ở cấp độ toàn cục để tránh lỗi "not found" khi lướt các tab
+    Get.put(ChatController(), permanent: true);
+    Get.put(ScheduleController(), permanent: true);
   }
 }
 
@@ -43,10 +50,7 @@ class MyApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('vi', 'VN'),
-        Locale('en', 'US'),
-      ],
+      supportedLocales: const [Locale('vi', 'VN'), Locale('en', 'US')],
       locale: const Locale('vi', 'VN'),
       theme: ThemeData(
         primaryColor: AppColors.primaryOrange,
@@ -55,20 +59,15 @@ class MyApp extends StatelessWidget {
           seedColor: AppColors.primaryOrange,
           primary: AppColors.primaryOrange,
         ),
-        textTheme: GoogleFonts.robotoTextTheme(),
+        textTheme: GoogleFonts.interTextTheme(),
+        fontFamily: GoogleFonts.inter().fontFamily,
         useMaterial3: true,
       ),
       initialRoute: AppRoutes.splash,
       initialBinding: InitialBinding(),
       getPages: [
-        GetPage(
-          name: AppRoutes.splash,
-          page: () => const SplashScreen(),
-        ),
-        GetPage(
-          name: AppRoutes.login,
-          page: () => const LoginScreen(),
-        ),
+        GetPage(name: AppRoutes.splash, page: () => const SplashScreen()),
+        GetPage(name: AppRoutes.login, page: () => const LoginScreen()),
         GetPage(
           name: AppRoutes.forgotPassword,
           page: () => const ForgotPasswordScreen(),

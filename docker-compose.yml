@@ -53,12 +53,14 @@ services:
       retries: 3
 
   backend:
-    image: maven:3.9.6-eclipse-temurin-21
+    image: maven:3.9-eclipse-temurin-21-alpine
     container_name: fams-backend
     working_dir: /app
+    entrypoint: []
     volumes:
       - ./backend:/app
       - maven-repo:/root/.m2
+      - backend-target:/app/target
     ports:
       - "8080:8080"
     env_file: .env
@@ -69,7 +71,10 @@ services:
       - AI_SERVICE_URL=http://ai-service:5000
       - TZ=Asia/Ho_Chi_Minh
       - SPRING_DEVTOOLS_RESTART_ENABLED=true
-    command: mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Xms512m -Xmx1024m"
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+    command: mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Xms512m -Xmx1024m -XX:+TieredCompilation -XX:TieredStopAtLevel=1" -Dspring-boot.run.arguments="-T 1C"
     depends_on:
       postgres:
         condition: service_healthy
@@ -100,6 +105,7 @@ services:
 volumes:
   postgres_data:
   maven-repo:
+  backend-target:
 
 
 networks:

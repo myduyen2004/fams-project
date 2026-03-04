@@ -51,13 +51,6 @@ public class AttendanceSession {
     @Builder.Default
     private SessionStatus status = SessionStatus.OPEN;
 
-    // QR Code data (encrypted)
-    @Column(length = 500)
-    private String qrCodeData;
-
-    // Thời gian hết hạn QR
-    private LocalDateTime qrExpiresAt;
-
     // Danh sách điểm danh sinh viên
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL)
     @Builder.Default

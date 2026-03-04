@@ -241,6 +241,9 @@ export const UsersPage = () => {
       if (Array.isArray(date)) {
         const [year, month, day, hour = 0, minute = 0, second = 0] = date;
         d = new Date(year, month - 1, day, hour, minute, second);
+      } else if (typeof date === 'string') {
+        // Safari fix: Replace space with 'T' to make it a valid ISO string
+        d = new Date(date.replace(' ', 'T'));
       } else {
         d = new Date(date);
       }
@@ -332,7 +335,7 @@ export const UsersPage = () => {
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Họ và tên</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Mã số</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Role</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Khuôn mặt</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Ngày sinh</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Ngày tạo</th>
                 <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-lg">Hành động</th>
               </tr>

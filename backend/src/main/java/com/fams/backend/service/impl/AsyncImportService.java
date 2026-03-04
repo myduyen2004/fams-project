@@ -15,6 +15,7 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -43,7 +44,7 @@ public class AsyncImportService {
 
     private final ImportJobRepository importJobRepository;
     private final UserRepository userRepository;
-    private final com.fams.backend.repository.BulkUserRepository bulkUserRepository;
+    private final JdbcTemplate jdbcTemplate;
     private final PasswordEncoder passwordEncoder;
     private final UploadService uploadService;
     private final SimpMessagingTemplate messagingTemplate;
@@ -106,49 +107,60 @@ public class AsyncImportService {
             String importMode)
             throws IOException {
 
-        List<File> imageFiles = new ArrayList<>();
-        File excelFile = null;
+        long extractStart = System.currentTimeMillis();
+        Map<String, byte[]> imageDataMap = new HashMap<>();
+        byte[] excelBytes = null;
 
-        // Extract ZIP from byte array
+        // OPTIMIZATION: Extract ZIP 100% in-memory — ZERO disk I/O for images
         try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(fileBytes))) {
-            ZipEntry zipEntry = zis.getNextEntry();
-            while (zipEntry != null) {
-                File newFile = new File(tempDir.toFile(), zipEntry.getName());
-                if (zipEntry.isDirectory()) {
-                    newFile.mkdirs();
-                } else {
-                    newFile.getParentFile().mkdirs();
-                    Files.copy(zis, newFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    String fileName = newFile.getName().toLowerCase();
-                    if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
-                        excelFile = newFile;
-                    } else if (isImage(fileName)) {
-                        imageFiles.add(newFile);
-                    }
+            ZipEntry zipEntry;
+            while ((zipEntry = zis.getNextEntry()) != null) {
+                if (zipEntry.isDirectory())
+                    continue;
+
+                String entryName = zipEntry.getName().toLowerCase();
+                String baseName = entryName.contains("/") ? entryName.substring(entryName.lastIndexOf("/") + 1)
+                        : entryName;
+
+                if (baseName.endsWith(".xlsx") || baseName.endsWith(".xls")) {
+                    // Read Excel into memory
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    zis.transferTo(baos);
+                    excelBytes = baos.toByteArray();
+                } else if (isImage(baseName)) {
+                    // Read image into memory — NO disk write
+                    String code = baseName.contains(".")
+                            ? baseName.substring(0, baseName.lastIndexOf(".")).toLowerCase()
+                            : baseName.toLowerCase();
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    zis.transferTo(baos);
+                    imageDataMap.put(code, baos.toByteArray());
                 }
-                zipEntry = zis.getNextEntry();
             }
         }
 
-        if (excelFile == null) {
+        if (excelBytes == null) {
             throw new BadRequestException("No Excel file found in ZIP");
         }
 
-        Map<String, File> imageMap = new HashMap<>();
-        for (File img : imageFiles) {
-            String name = img.getName();
-            int lastDotIndex = name.lastIndexOf('.');
-            String code = (lastDotIndex > 0) ? name.substring(0, lastDotIndex).toLowerCase() : name.toLowerCase();
-            imageMap.put(code, img);
-        }
+        long extractElapsed = System.currentTimeMillis() - extractStart;
+        log.info("⚡ ZIP extracted in-memory: {} images + Excel in {}ms (ZERO disk I/O)",
+                imageDataMap.size(), extractElapsed);
 
-        try (InputStream is = new FileInputStream(excelFile)) {
-            processExcelWithImages(is, imageMap, job, username);
+        try (InputStream is = new ByteArrayInputStream(excelBytes)) {
+            processExcelWithImages(is, imageDataMap, job, username);
         }
     }
 
-    private void processExcelWithImages(InputStream is, Map<String, File> imageMap, ImportJob job, String username)
+    // Pre-computed placeholder password hash (INACTIVE users can't login anyway)
+    // Real password is set during activation phase
+    private static final String PLACEHOLDER_PASSWORD_HASH = "$2a$10$PLACEHOLDER_IMPORT_HASH_DO_NOT_USE_FOR_LOGIN";
+
+    private void processExcelWithImages(InputStream is, Map<String, byte[]> imageDataMap, ImportJob job,
+            String username)
             throws IOException {
+
+        long methodStart = System.currentTimeMillis();
 
         try (Workbook workbook = new XSSFWorkbook(is)) {
             Sheet sheet = workbook.getSheetAt(0);
@@ -204,79 +216,93 @@ public class AsyncImportService {
             }
 
             int totalValidRecords = validRowData.size();
-            // Total steps = record save + image uploads
             int totalImages = (int) validRowData.stream()
-                    .filter(data -> imageMap.containsKey(data.code.toLowerCase()))
+                    .filter(data -> imageDataMap.containsKey(data.code.toLowerCase()))
                     .count();
 
             job.setTotalRecords(totalValidRecords + totalImages);
             job.setProcessedRecords(0);
-            importJobRepository.save(job);
-            sendJobNotification(username, job, null);
-
-            // Parallel pre-hash passwords (BCrypt is slow)
-            Set<String> uniquePasswords = validRowData.stream()
-                    .map(data1 -> data1.dob.format(PASSWORD_FORMATTER))
-                    .collect(Collectors.toSet());
-            uniquePasswords.parallelStream()
-                    .forEach(rawPassword -> passwordHashCache.computeIfAbsent(rawPassword, passwordEncoder::encode));
-
-            // Process with Instant Data + Background Media Enrichment
-            final int BATCH_SIZE = 100;
             job.setStatus(ImportJob.JobStatus.PROCESSING);
             job.setSuccessCount(0);
             job.setFailedCount(0);
-            job.setProcessedRecords(0);
             importJobRepository.save(job);
+            sendJobNotification(username, job, null);
 
-            // Phase 1: Instant Metadata Save (Nano-Speed)
-            log.info("Phase 1: Saving {} user metadata records instantly...", validRowData.size());
+            // ==========================================
+            // PHASE 1: LIGHTNING-SPEED METADATA INSERT
+            // ==========================================
+            long phase1Start = System.currentTimeMillis();
+            log.info("⚡ Phase 1: LIGHTNING INSERT {} users (BCrypt DEFERRED)...", totalValidRecords);
+
             List<User> initialUsers = validRowData.stream()
                     .map(data -> User.builder()
                             .fullName(data.fullName).code(data.code).username(data.code.toLowerCase())
-                            .password(passwordHashCache.get(data.dob.format(PASSWORD_FORMATTER)))
+                            .password(PLACEHOLDER_PASSWORD_HASH)
                             .email(data.email).phone(data.phone).dob(data.dob)
                             .role(mapRole(data.roleStr)).status(User.UserStatus.INACTIVE)
                             .faceDataStatus(User.FaceDataStatus.NOT_REGISTERED)
                             .avatar(null).build())
                     .collect(Collectors.toList());
 
-            for (int i = 0; i < initialUsers.size(); i += BATCH_SIZE) {
-                int end = Math.min(i + BATCH_SIZE, initialUsers.size());
-                List<User> savedBatch = userRepository.saveAll(initialUsers.subList(i, end));
+            bulkInsertUsers(initialUsers);
 
-                job.setSuccessCount(job.getSuccessCount() + (end - i));
-                job.setProcessedRecords(end);
-                job.setStatusMessage("Đang tạo tài khoản: " + end + "/" + totalValidRecords);
-                importJobRepository.save(job);
-                sendJobNotification(username, job, savedBatch);
-            }
-            log.info("Phase 1 Complete: 2000 users created in seconds.");
+            long phase1Elapsed = System.currentTimeMillis() - phase1Start;
+            log.info("⚡ Phase 1 DONE: {} users in {}ms", totalValidRecords, phase1Elapsed);
 
-            // Explicitly signal that Phase 1 (Data) is done to the frontend
+            job.setSuccessCount(totalValidRecords);
+            job.setProcessedRecords(totalValidRecords);
             job.setStatusMessage("DATA_PHASE_COMPLETE");
             importJobRepository.save(job);
-            sendJobNotification(username, job, null);
 
-            // Phase 2: Background Image Enrichment (Massive Parallel I/O)
-            log.info("Phase 2: Starting Background Media Enrichment...");
+            // REAL-TIME: Fetch inserted users and send to frontend immediately
+            List<String> insertedCodes = validRowData.stream()
+                    .map(d -> d.code.toLowerCase()).collect(Collectors.toList());
+            List<User> insertedUsers = userRepository.findByCodeInIgnoreCase(insertedCodes);
+            // Send in batches of 50 to avoid huge WebSocket messages
+            for (int i = 0; i < insertedUsers.size(); i += 50) {
+                List<User> batch = insertedUsers.subList(i, Math.min(i + 50, insertedUsers.size()));
+                sendJobNotification(username, job, batch);
+            }
+            log.info("⚡ Sent {} users to frontend in real-time", insertedUsers.size());
 
-            // Phase 2.1: Parallel High-Speed Compression
+            // ==========================================
+            // PHASE 2: VIRTUAL-THREAD IMAGE ENRICHMENT
+            // ==========================================
+            if (totalImages == 0) {
+                long totalElapsed = System.currentTimeMillis() - methodStart;
+                log.info("🏁 TOTAL IMPORT TIME: {}ms for {} users (no images)", totalElapsed, totalValidRecords);
+                finalizeJob(job, username);
+                return;
+            }
+
+            log.info("⚡ Phase 2: {} images via Virtual Threads → 'fams_users/avatars'...", totalImages);
+
+            // OPTIMIZATION: Compress in-memory byte arrays directly — NO disk read
             Map<String, byte[]> compressedImageMap = validRowData.parallelStream()
-                    .filter(data -> imageMap.containsKey(data.code.toLowerCase()))
+                    .filter(data -> imageDataMap.containsKey(data.code.toLowerCase()))
                     .collect(Collectors.toConcurrentMap(
                             data -> data.code.toLowerCase(),
                             data -> {
                                 try {
-                                    File imgFile = imageMap.get(data.code.toLowerCase());
-                                    return compressImage(Files.readAllBytes(imgFile.toPath()));
+                                    byte[] raw = imageDataMap.get(data.code.toLowerCase());
+                                    return compressImage(raw);
                                 } catch (Exception e) {
                                     return new byte[0];
                                 }
                             }));
 
-            // Phase 2.2: Async Upload & Dynamic Association
+            // Free original uncompressed images from memory
+            imageDataMap.clear();
+
+            // Virtual Threads for unlimited I/O concurrency
+            java.util.concurrent.ExecutorService virtualExecutor = java.util.concurrent.Executors
+                    .newVirtualThreadPerTaskExecutor();
             AtomicInteger completedImages = new AtomicInteger(0);
+            Map<String, String> avatarUrlMap = new ConcurrentHashMap<>();
+
+            // Throttle with semaphore to avoid overwhelming Cloudinary API
+            java.util.concurrent.Semaphore uploadSemaphore = new java.util.concurrent.Semaphore(50);
+
             List<CompletableFuture<Void>> futures = validRowData.stream()
                     .filter(data -> compressedImageMap.containsKey(data.code.toLowerCase()))
                     .map(data -> CompletableFuture.runAsync(() -> {
@@ -286,172 +312,175 @@ public class AsyncImportService {
                         byte[] content = compressedImageMap.get(data.code.toLowerCase());
                         if (content != null && content.length > 0) {
                             try {
-                                String url = uploadService.uploadFile(createMultipartFile(data.code + ".jpg", content));
-                                userRepository.findByCode(data.code).ifPresent(user -> {
-                                    user.setAvatar(url);
-                                    user.setFaceDataStatus(User.FaceDataStatus.REGISTERED);
-                                    userRepository.save(user); // Individual update for dynamic refresh
+                                String url = null;
+                                uploadSemaphore.acquire();
+                                try {
+                                    url = uploadService.uploadFile(
+                                            createMultipartFile(data.code + ".jpg", content),
+                                            "fams_users/avatars");
+                                    if (url != null) {
+                                        avatarUrlMap.put(data.code, url);
+                                    }
+                                } finally {
+                                    uploadSemaphore.release();
+                                }
 
-                                    int current = completedImages.incrementAndGet();
-                                    job.setProcessedRecords(totalValidRecords + current); // Continue progress
+                                int current = completedImages.incrementAndGet();
+                                if (current % 5 == 0 || current == totalImages) {
+                                    job.setProcessedRecords(totalValidRecords + current);
                                     job.setStatusMessage(
-                                            String.format("Đang làm giàu dữ liệu: %d/%d ảnh...", current, totalImages));
+                                            String.format("Đang tải ảnh: %d/%d...", current, totalImages));
                                     importJobRepository.save(job);
+                                    sendJobNotification(username, job, null);
+                                }
 
-                                    // Real-time UI refresh for this specific user with full job context
-                                    sendUserUpdateNotification(username, job, user);
-                                });
+                                // REAL-TIME: Send individual avatar update to frontend
+                                if (url != null) {
+                                    final String avatarUrl = url;
+                                    userRepository.findByCodeIgnoreCase(data.code).ifPresent(u -> {
+                                        u.setAvatar(avatarUrl);
+                                        sendJobNotification(username, job, List.of(u));
+                                    });
+                                }
                             } catch (Exception ex) {
-                                log.error("Background enrichment failed for {}: {}", data.code, ex.getMessage());
+                                log.error("Upload failed for {}: {}", data.code, ex.getMessage());
                             }
                         }
-                    }, importExecutor))
+                    }, virtualExecutor))
                     .collect(Collectors.toList());
 
-            if (futures.isEmpty()) {
-                finalizeJob(job, username);
-            } else {
-                CompletableFuture<?>[] futuresArray = futures.toArray(new CompletableFuture[0]);
-                CompletableFuture.allOf(futuresArray)
-                        .thenRun(() -> finalizeJob(job, username));
-                log.info("Background Media Enrichment kicked off for {} images.", totalImages);
-            }
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                    .thenRun(() -> {
+                        try {
+                            if (!avatarUrlMap.isEmpty()) {
+                                bulkUpdateAvatars(avatarUrlMap);
+                            }
+                            long totalElapsed = System.currentTimeMillis() - methodStart;
+                            log.info("🏁 TOTAL IMPORT TIME: {}ms for {} users + {} images",
+                                    totalElapsed, totalValidRecords, totalImages);
+                        } catch (Exception e) {
+                            log.error("Error during Phase 2 finalization: {}", e.getMessage(), e);
+                        } finally {
+                            // ALWAYS finalize — never leave job stuck as PROCESSING
+                            try {
+                                virtualExecutor.close();
+                            } catch (Exception ignored) {
+                            }
+                            finalizeJob(job, username);
+                        }
+                    })
+                    .exceptionally(ex -> {
+                        log.error("Phase 2 CompletableFuture failed: {}", ex.getMessage(), ex);
+                        // Safety net: finalize job even if thenRun itself throws
+                        finalizeJob(job, username);
+                        return null;
+                    });
+
+            log.info("⚡ Phase 2 kicked off: {} images on Virtual Threads (50 concurrent max).", totalImages);
         }
     }
 
     @Async("asyncImportExecutor")
     public void activateAllUsersAsync(String adminUsername) {
         String topic = "/topic/activation-progress/" + adminUsername;
-        log.info("Starting Background Activation Job for admin: {}", adminUsername);
+        log.info("Starting Extreme Optimized Background Activation Job for: {}", adminUsername);
 
         List<User> inactiveUsers = userRepository.findByStatusOrderByIdDesc(User.UserStatus.INACTIVE);
         if (inactiveUsers.isEmpty()) {
-            log.info("No inactive users to activate.");
-            sendActivationProgress(topic, "COMPLETED", 0, 0, "Không có tài khoản nào cần kích hoạt", null);
+            sendActivationProgressWithPercentage(topic, "COMPLETED", 0, 0, "Không còn tài khoản chờ kích hoạt", null,
+                    100);
             return;
         }
 
         int total = inactiveUsers.size();
-        log.info("Found {} inactive users. Starting background activation...", total);
+        sendActivationProgressWithPercentage(topic, "STARTED", 0, total,
+                String.format("Phát hiện %d tài khoản chờ kích hoạt...", total), null, 0);
 
-        // Send initial notification (job started in background)
-        sendActivationProgress(topic, "STARTED", 0, total, "Đang khởi tạo tiến trình...", null);
-
-        // STEP 1: Optimized Parallel Hashing (Extremely Fast)
-        log.info("Starting extreme parallel hashing for {} users...", total);
-
-        // Group by raw password to avoid any redundant work (even with cache)
+        // PHASE 1: Extreme Parallel Hashing (Preparation - 10% of bar)
         Map<String, List<User>> usersByPassword = inactiveUsers.parallelStream().collect(Collectors.groupingBy(user -> {
             String fullName = user.getFullName();
             int lastSpace = fullName.lastIndexOf(' ');
             String lastWord = (lastSpace >= 0) ? fullName.substring(lastSpace + 1) : fullName;
             String unaccentedName = unaccent(lastWord).toLowerCase();
-            String dobStr = user.getDob().format(PASSWORD_FORMATTER);
-            return unaccentedName + "@" + dobStr;
+            return unaccentedName + "@" + user.getDob().format(PASSWORD_FORMATTER);
         }));
 
-        int totalUnique = usersByPassword.size();
         AtomicInteger uniqueHashed = new AtomicInteger(0);
+        int totalUnique = usersByPassword.size();
 
         usersByPassword.entrySet().parallelStream().forEach(entry -> {
-            String rawPassword = entry.getKey();
-            String hashedPassword = getHashedPassword(rawPassword);
-
+            String hashedPassword = getHashedPassword(entry.getKey());
             for (User user : entry.getValue()) {
                 user.setUsername(user.getCode());
                 user.setPassword(hashedPassword);
                 user.setStatus(User.UserStatus.ACTIVE);
                 user.setIsPasswordChanged(false);
             }
-
-            int current = uniqueHashed.incrementAndGet();
-            if (current % 10 == 0 || current == totalUnique) {
-                // Hashing phase is preparation - only 5% of the total bar
-                int percentage = (int) ((double) current / totalUnique * 5);
-                sendActivationProgressWithPercentage(topic, "HASHING", current, totalUnique,
-                        "Chuẩn bị bảo mật: " + current + "/" + totalUnique + " nhóm", null, percentage);
+            int currentGroup = uniqueHashed.incrementAndGet();
+            if (currentGroup % 20 == 0 || currentGroup == totalUnique) {
+                int percentage = (int) ((double) currentGroup / totalUnique * 10);
+                // Keep 'current' at 0 during hashing phase as no users are committed yet
+                sendActivationProgressWithPercentage(topic, "HASHING", 0, total,
+                        String.format("Đang chuẩn bị bảo mật cho %d nhóm tài khoản...", totalUnique), null, percentage);
             }
         });
-        log.info("Parallel hashing completed for {} unique password groups.", totalUnique);
 
-        // STEP 2: Large Batch Database Update (I/O Bound)
-        final int BATCH_SIZE = 200; // Increased for less noise
-        int processed = 0;
+        // PHASE 2: Concurrent Batch Activation & Concurrent Email Queuing (90% of bar)
+        log.info("Phase 2: Concurrent batch processing via Virtual Threads...");
+        final int BATCH_SIZE = 50;
+        String activationJobId = "ACT_ALL_" + System.currentTimeMillis();
+        AtomicInteger processedCount = new AtomicInteger(0);
 
-        for (int i = 0; i < inactiveUsers.size(); i += BATCH_SIZE) {
-            int end = Math.min(i + BATCH_SIZE, inactiveUsers.size());
-            List<User> batch = inactiveUsers.subList(i, end);
+        try (java.util.concurrent.ExecutorService virtualExecutor = java.util.concurrent.Executors
+                .newVirtualThreadPerTaskExecutor()) {
+            List<CompletableFuture<Void>> futures = new ArrayList<>();
 
-            // Update database for this batch
-            bulkUserRepository.bulkActivateUsers(batch);
-            processed = end;
+            for (int i = 0; i < inactiveUsers.size(); i += BATCH_SIZE) {
+                final int start = i;
+                final int end = Math.min(i + BATCH_SIZE, inactiveUsers.size());
+                final List<User> batch = inactiveUsers.subList(start, end);
 
-            // Database phase is from 5% to 100%
-            int percentage = 5 + (int) ((double) processed / total * 95);
+                futures.add(CompletableFuture.runAsync(() -> {
+                    // Update Database
+                    bulkActivateUsers(batch);
 
-            // CRITICAL: Evict cache now so any frontend refetch sees fresh data
-            try {
-                java.util.Set<String> keys = redisTemplate.keys("users*");
-                if (keys != null && !keys.isEmpty()) {
-                    redisTemplate.delete(keys);
-                }
-            } catch (Exception e) {
-                log.warn("Soft cache eviction failed in batch: {}", e.getMessage());
+                    // Create and Push Email Tasks immediately
+                    List<EmailQueueService.EmailTask> emailTasks = batch.stream().map(user -> {
+                        String fullName = user.getFullName();
+                        int lastSpace = fullName.lastIndexOf(' ');
+                        String lastWord = (lastSpace >= 0) ? fullName.substring(lastSpace + 1) : fullName;
+                        String unaccentedName = unaccent(lastWord).toLowerCase();
+                        String rawPassword = unaccentedName + "@" + user.getDob().format(PASSWORD_FORMATTER);
+                        return new EmailQueueService.EmailTask(activationJobId, user.getEmail(), user.getFullName(),
+                                user.getUsername(), rawPassword);
+                    }).collect(Collectors.toList());
+                    emailQueueService.pushEmailTasks(emailTasks);
+
+                    // Update Progress
+                    int currentProcessed = processedCount.addAndGet(batch.size());
+                    int percentage = 10 + (int) ((double) currentProcessed / total * 90);
+                    List<Long> activatedIds = batch.stream().map(User::getId).collect(Collectors.toList());
+
+                    sendActivationProgressWithPercentage(topic, "PROCESSING", currentProcessed, total,
+                            String.format("Đang kích hoạt tài khoản: %d/%d", currentProcessed, total), activatedIds,
+                            percentage);
+                }, virtualExecutor));
             }
 
-            // Send real-time update
-            List<Long> activatedIds = batch.stream().map(User::getId).collect(Collectors.toList());
-            sendActivationProgressWithPercentage(topic, "PROCESSING", processed, total,
-                    "Đang kích hoạt tài khoản: " + processed + "/" + total, activatedIds, percentage);
-
-            log.info("Batch {}-{} activated successfully.", i, end);
-
-            try {
-                Thread.sleep(100); // Slightly longer delay for UI to settle
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
         }
 
-        // STEP 3: Push emails to Redis queue (background - instant return)
-        emailQueueService.resetStats();
-        String activationJobId = "ACTIVATE_" + System.currentTimeMillis();
-        List<EmailQueueService.EmailTask> emailTasks = inactiveUsers.parallelStream()
-                .map(user -> {
-                    String fullName = user.getFullName();
-                    int lastSpace = fullName.lastIndexOf(' ');
-                    String lastWord = (lastSpace >= 0) ? fullName.substring(lastSpace + 1) : fullName;
-                    String unaccentedName = unaccent(lastWord).toLowerCase();
-                    String dobStr = user.getDob().format(PASSWORD_FORMATTER);
-                    String rawPassword = unaccentedName + "@" + dobStr;
-                    return new EmailQueueService.EmailTask(activationJobId, user.getEmail(), user.getFullName(),
-                            user.getUsername(), rawPassword);
-                })
-                .collect(Collectors.toList());
-
-        emailQueueService.pushEmailTasks(emailTasks);
-        log.info("Pushed {} email tasks to Redis queue. Workers processing in background.", emailTasks.size());
-
-        // STEP 4: Final completion notification
-        log.info("Background Activation Job fully completed for {} users.", total);
-
-        // One last cache clear just in case
+        // PHASE 3: Final Flush
+        log.info("Final Phase: Cache eviction and completion notification.");
         try {
             java.util.Set<String> keys = redisTemplate.keys("users*");
-            if (keys != null && !keys.isEmpty()) {
+            if (keys != null && !keys.isEmpty())
                 redisTemplate.delete(keys);
-            }
-        } catch (Exception e) {
+        } catch (Exception ignored) {
         }
 
-        // Set IDs for final cleanup (last 200 users)
-        List<Long> finalIds = inactiveUsers.size() > 200
-                ? inactiveUsers.subList(inactiveUsers.size() - 200, inactiveUsers.size()).stream().map(User::getId)
-                        .collect(Collectors.toList())
-                : inactiveUsers.stream().map(User::getId).collect(Collectors.toList());
-
-        sendActivationProgress(topic, "COMPLETED", total, total,
-                "Đã kích hoạt toàn bộ " + total + " tài khoản thành công.", finalIds);
+        sendActivationProgressWithPercentage(topic, "COMPLETED", total, total,
+                "Đã kích hoạt toàn bộ " + total + " tài khoản thành công!", null, 100);
     }
 
     private void sendActivationProgress(String topic, String status, int current, int total, String message,
@@ -640,21 +669,32 @@ public class AsyncImportService {
     }
 
     private byte[] compressImage(byte[] data) {
+        // OPTIMIZATION: Skip compression for small images (< 100KB)
+        if (data.length < 100 * 1024) {
+            return data;
+        }
+
         try {
             java.awt.image.BufferedImage originalImage = javax.imageio.ImageIO
                     .read(new java.io.ByteArrayInputStream(data));
             if (originalImage == null)
                 return data;
 
+            // Skip if already small enough
+            if (originalImage.getWidth() <= 400 && originalImage.getHeight() <= 400) {
+                return data;
+            }
+
             int targetWidth = 400;
             int targetHeight = 400;
 
-            // Faster & Modern Bilinear Scaling
+            // NEAREST_NEIGHBOR is 10x faster than BILINEAR — good enough for 400x400
+            // avatars
             java.awt.image.BufferedImage outputImage = new java.awt.image.BufferedImage(targetWidth, targetHeight,
                     java.awt.image.BufferedImage.TYPE_INT_RGB);
             java.awt.Graphics2D g2d = outputImage.createGraphics();
             g2d.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,
-                    java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                    java.awt.RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
             g2d.setRenderingHint(java.awt.RenderingHints.KEY_RENDERING, java.awt.RenderingHints.VALUE_RENDER_SPEED);
             g2d.drawImage(originalImage, 0, 0, targetWidth, targetHeight, null);
             g2d.dispose();
@@ -674,5 +714,95 @@ public class AsyncImportService {
         response.setStatusMessage("Đang làm giàu dữ liệu: " + user.getFullName());
         response.setNewUsers(Collections.singletonList(UserResponse.fromUser(user)));
         messagingTemplate.convertAndSend(destination, response);
+    }
+
+    /**
+     * Ultra-fast bulk insertion using native JDBC batch update.
+     * Bypasses Hibernate overhead for extreme speed.
+     */
+    private void bulkInsertUsers(List<User> users) {
+        if (users.isEmpty())
+            return;
+
+        String sql = "INSERT INTO users (full_name, code, username, password, email, phone, dob, role, status, face_data_status, avatar, created_at, updated_at, is_password_changed) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        long start = System.currentTimeMillis();
+        LocalDateTime now = LocalDateTime.now();
+
+        jdbcTemplate.batchUpdate(sql, users, 500, (ps, user) -> {
+            ps.setString(1, user.getFullName());
+            ps.setString(2, user.getCode());
+            ps.setString(3, user.getUsername());
+            ps.setString(4, user.getPassword());
+            ps.setString(5, user.getEmail());
+            ps.setString(6, user.getPhone());
+            ps.setObject(7, user.getDob());
+            ps.setString(8, user.getRole().name());
+            ps.setString(9, user.getStatus().name());
+            ps.setString(10, user.getFaceDataStatus().name());
+            ps.setString(11, user.getAvatar());
+            ps.setObject(12, now);
+            ps.setObject(13, now);
+            ps.setBoolean(14, false);
+        });
+
+        long elapsed = System.currentTimeMillis() - start;
+        log.info("JDBC Bulk Insert: {} users in {}ms", users.size(), elapsed);
+    }
+
+    /**
+     * Ultra-fast bulk activation using native JDBC batch update.
+     * Bypasses Hibernate overhead for extreme speed.
+     */
+    private int bulkActivateUsers(List<User> users) {
+        if (users.isEmpty())
+            return 0;
+
+        String sql = "UPDATE users SET username = ?, password = ?, status = 'ACTIVE', is_password_changed = false WHERE id = ?";
+
+        long start = System.currentTimeMillis();
+
+        int[][] results = jdbcTemplate.batchUpdate(sql, users, 500, (ps, user) -> {
+            ps.setString(1, user.getUsername());
+            ps.setString(2, user.getPassword());
+            ps.setLong(3, user.getId());
+        });
+
+        int totalUpdated = 0;
+        for (int[] batch : results) {
+            for (int r : batch) {
+                totalUpdated += r;
+            }
+        }
+
+        long elapsed = System.currentTimeMillis() - start;
+        log.info("JDBC Bulk Update: {} users in {}ms", totalUpdated, elapsed);
+
+        return totalUpdated;
+    }
+
+    /**
+     * Ultra-fast bulk avatar update using native JDBC.
+     * Single batch UPDATE for all avatar URLs after Cloudinary uploads complete.
+     */
+    private void bulkUpdateAvatars(Map<String, String> codeToUrlMap) {
+        if (codeToUrlMap.isEmpty())
+            return;
+
+        String sql = "UPDATE users SET avatar = ?, updated_at = ? WHERE code = ?";
+
+        long start = System.currentTimeMillis();
+        LocalDateTime now = LocalDateTime.now();
+
+        List<Map.Entry<String, String>> entries = new ArrayList<>(codeToUrlMap.entrySet());
+        jdbcTemplate.batchUpdate(sql, entries, 500, (ps, entry) -> {
+            ps.setString(1, entry.getValue()); // avatar URL
+            ps.setObject(2, now); // updated_at
+            ps.setString(3, entry.getKey()); // code
+        });
+
+        long elapsed = System.currentTimeMillis() - start;
+        log.info("JDBC Bulk Avatar Update: {} users in {}ms", codeToUrlMap.size(), elapsed);
     }
 }

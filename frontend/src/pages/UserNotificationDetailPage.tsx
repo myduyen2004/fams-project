@@ -7,8 +7,7 @@ import { StudentLayout } from '../layouts/StudentLayout';
 import { authService } from '../services/api/authService';
 import { dashboardService } from '../services/api/dashboardService';
 import { AppNotification } from '../types/dashboard';
-import { Loader2, ArrowLeft } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { Loader2, ArrowLeft, RefreshCw } from 'lucide-react';
 
 export const UserNotificationDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -32,34 +31,44 @@ export const UserNotificationDetailPage: React.FC = () => {
 
   const [notification, setNotification] = useState<AppNotification | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const loadNotification = async () => {
-      if (!id) {
-        navigate(-1);
+  const loadNotification = async (retries = 3) => {
+    if (!id) {
+      navigate(-1);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await dashboardService.getNotificationById(parseInt(id));
+      if (data) {
+        setNotification(data);
+        // Auto-mark as read when opening detail page
+        if (!data.isRead) {
+          dashboardService.markNotificationAsRead(data.id).catch(console.warn);
+          setNotification({ ...data, isRead: true });
+        }
+      } else {
+        setError('Không tìm thấy thông báo');
+      }
+    } catch (err) {
+      console.error('Failed to load notification:', err);
+      if (retries > 0) {
+        // Retry after 600ms to handle WebSocket/DB race condition
+        setTimeout(() => loadNotification(retries - 1), 600);
         return;
       }
+      setError('Không thể tải thông báo. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      try {
-        setLoading(true);
-        const data = await dashboardService.getNotificationById(parseInt(id));
-        if (data) {
-          setNotification(data);
-        } else {
-          toast.error('Không tìm thấy thông báo');
-          navigate(-1);
-        }
-      } catch (error) {
-        console.error('Failed to load notification:', error);
-        toast.error('Không thể tải thông báo');
-        navigate(-1);
-      } finally {
-        setLoading(false);
-      }
-    };
-
+  useEffect(() => {
     loadNotification();
-  }, [id, navigate]);
+  }, [id]);
 
   if (loading) {
     return (
@@ -71,11 +80,26 @@ export const UserNotificationDetailPage: React.FC = () => {
     );
   }
 
-  if (!notification) {
+  if (error || !notification) {
     return (
       <Layout pageTitle="Chi tiết thông báo">
-        <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-xl">
-          <p className="text-gray-500 dark:text-gray-400 mb-4">Không tìm thấy thông báo</p>
+        <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-xl flex flex-col items-center gap-4">
+          <p className="text-gray-500 dark:text-gray-400">{error || 'Không tìm thấy thông báo'}</p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => loadNotification()}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white text-sm font-semibold rounded-lg hover:bg-orange-600 transition-colors"
+            >
+              <RefreshCw size={14} />
+              Thử lại
+            </button>
+            <button
+              onClick={() => navigate('/notifications')}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-gray-300 text-sm font-semibold rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              Quay lại
+            </button>
+          </div>
         </div>
       </Layout>
     );
@@ -133,28 +157,6 @@ export const UserNotificationDetailPage: React.FC = () => {
                   </p>
                 </div>
               </div>
-
-              {/* Right Side: Mark as Read Button */}
-              {!notification.isRead && (
-                <div className="pb-1">
-                  <button
-                    onClick={async () => {
-                      try {
-                        await dashboardService.markNotificationAsRead(notification.id);
-                        setNotification(prev => prev ? { ...prev, isRead: true } : null);
-                        toast.success('Đã đánh dấu là đã đọc');
-                        // Optional: trigger refresh
-                        window.dispatchEvent(new Event('notificationRefresh'));
-                      } catch (error) {
-                        toast.error('Không thể cập nhật trạng thái');
-                      }
-                    }}
-                    className="inline-flex items-center gap-2 px-5 py-2 bg-fpt-orange text-white text-sm font-bold rounded-lg hover:bg-orange-600 transition-colors shadow-sm"
-                  >
-                    Đánh dấu đã đọc
-                  </button>
-                </div>
-              )}
             </div>
           </div>
 

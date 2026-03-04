@@ -15,6 +15,7 @@ class TimetableSlot {
   final String? endTime;
   final String? status;
   final String? attendanceStatus;
+  final DateTime? checkInTime;
 
   TimetableSlot({
     this.id,
@@ -31,6 +32,7 @@ class TimetableSlot {
     this.endTime,
     this.status,
     this.attendanceStatus,
+    this.checkInTime,
   });
 
   factory TimetableSlot.fromJson(Map<String, dynamic> json) {
@@ -49,6 +51,7 @@ class TimetableSlot {
       endTime: json['endTime'],
       status: json['status'],
       attendanceStatus: json['attendanceStatus'],
+      checkInTime: json['checkInTime'] != null ? DateTime.parse(json['checkInTime']) : null,
     );
   }
 
@@ -128,6 +131,7 @@ class Semester {
   final DateTime? startDate;
   final DateTime? endDate;
   final bool isPublished;
+  final String? status;
 
   Semester({
     required this.code,
@@ -135,15 +139,62 @@ class Semester {
     this.startDate,
     this.endDate,
     required this.isPublished,
+    this.status,
   });
 
   factory Semester.fromJson(Map<String, dynamic> json) {
-    return Semester(
-      code: json['code'] ?? '',
-      name: json['name'] ?? '',
-      startDate: json['startDate'] != null ? DateTime.parse(json['startDate']) : null,
-      endDate: json['endDate'] != null ? DateTime.parse(json['endDate']) : null,
-      isPublished: json['isPublished'] ?? false,
+    try {
+      return Semester(
+        code: json['code'] ?? '',
+        name: json['name'] ?? '',
+        startDate: json['startDate'] != null ? DateTime.tryParse(json['startDate']) : null,
+        endDate: json['endDate'] != null ? DateTime.tryParse(json['endDate']) : null,
+        isPublished: json['isPublished'] ?? false,
+        status: json['status'],
+      );
+    } catch (e) {
+      print('Error parsing Semester JSON: $e');
+      return Semester(
+        code: json['code'] ?? 'ERR',
+        name: json['name'] ?? 'Error Parsing',
+        isPublished: false,
+      );
+    }
+  }
+}
+
+class AttendanceConfig {
+  final bool faceRecognitionEnabled;
+  final bool wifiLocationEnabled;
+  final bool manualEnabled;
+  final int absentThresholdMinutes;
+  final int maxAttempts;
+
+  AttendanceConfig({
+    required this.faceRecognitionEnabled,
+    required this.wifiLocationEnabled,
+    required this.manualEnabled,
+    required this.absentThresholdMinutes,
+    required this.maxAttempts,
+  });
+
+  factory AttendanceConfig.fromJson(Map<String, dynamic> json) {
+    return AttendanceConfig(
+      faceRecognitionEnabled: json['faceRecognitionEnabled'] ?? true,
+      wifiLocationEnabled: json['wifiLocationEnabled'] ?? true,
+      manualEnabled: json['manualEnabled'] ?? true,
+      absentThresholdMinutes: json['absentThresholdMinutes'] ?? 15,
+      maxAttempts: json['maxAttempts'] ?? 5,
+    );
+  }
+
+  factory AttendanceConfig.defaultConfig() {
+    return AttendanceConfig(
+      faceRecognitionEnabled: true,
+      wifiLocationEnabled: true,
+      manualEnabled: true,
+      absentThresholdMinutes: 15,
+      maxAttempts: 5,
     );
   }
 }

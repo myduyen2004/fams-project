@@ -47,6 +47,7 @@ export interface ClassDetailResponse {
     courseCode: string;
     courseName: string;
     semesterName: string;
+    semesterCode: string;
     majorName: string;
     courseYear: string;
     studentCount: number;

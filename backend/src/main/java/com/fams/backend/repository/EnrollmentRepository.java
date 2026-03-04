@@ -45,6 +45,10 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
 
         Optional<Enrollment> findByClassSection_ClassNameAndStudentCode(String className, String studentCode);
 
+        Optional<Enrollment> findByClassSection_ClassNameAndStudent_Id(String className, Long studentId);
+
+        List<Enrollment> findByStudent_Id(Long studentId);
+
         // ==================== QUERIES FOR GA TIMETABLE GENERATION ====================
 
         /**

@@ -118,14 +118,13 @@ public class DashboardServiceImpl implements DashboardService {
                                         Notification notification = recipient.getNotification();
                                         User sender = notification.getSender();
 
-                                        // Debug logging
                                         log.debug("Processing notification ID: {}, Sender: {}, FullName: {}",
                                                         notification.getId(),
                                                         sender != null ? sender.getUsername() : "NULL",
                                                         sender != null ? sender.getFullName() : "NULL");
 
-                                        DashboardNotificationResponse response = DashboardNotificationResponse.builder()
-                                                        .id(notification.getId())
+                                        return DashboardNotificationResponse.builder()
+                                                        .id(recipient.getId())
                                                         .title(notification.getTitle())
                                                         .description(notification.getContent())
                                                         .timestamp(recipient.getCreatedAt().format(DATE_TIME_FORMATTER))
@@ -133,6 +132,7 @@ public class DashboardServiceImpl implements DashboardService {
                                                         .type(notification.getType() != null
                                                                         ? notification.getType().name()
                                                                         : null)
+                                                        .targetUrl(notification.getTargetUrl())
                                                         .senderName(sender != null ? sender.getUsername() : null)
                                                         .senderFullName(sender != null ? sender.getFullName() : null)
                                                         .senderAvatar(sender != null ? sender.getAvatar() : null)
@@ -141,8 +141,6 @@ public class DashboardServiceImpl implements DashboardService {
                                                                                         .getAttachmentUrls())
                                                                         : new java.util.ArrayList<>())
                                                         .build();
-
-                                        return response;
                                 })
                                 .collect(Collectors.toList());
         }
@@ -159,15 +157,13 @@ public class DashboardServiceImpl implements DashboardService {
                 User user = userRepository.findByUsername(username)
                                 .orElseThrow(() -> new NotFoundException("Người dùng không tìm thấy"));
 
-                // Try to find the recipient record for this user and this notification ID
-                java.util.Optional<NotificationRecipient> recipientOpt = notificationRecipientRepository
-                                .findByNotificationIdAndRecipient(id, user);
-
-                if (recipientOpt.isPresent()) {
-                        NotificationRecipient recipient = recipientOpt.get();
+                // 1) Thử tìm theo recipient ID trực tiếp (id trả về từ NotificationServiceImpl
+                // là nr.getId())
+                java.util.Optional<NotificationRecipient> byRecipientId = notificationRecipientRepository.findById(id);
+                if (byRecipientId.isPresent() && byRecipientId.get().getRecipient().getId().equals(user.getId())) {
+                        NotificationRecipient recipient = byRecipientId.get();
                         Notification notification = recipient.getNotification();
                         User sender = notification.getSender();
-
                         return DashboardNotificationResponse.builder()
                                         .id(notification.getId())
                                         .title(notification.getTitle())
@@ -175,6 +171,7 @@ public class DashboardServiceImpl implements DashboardService {
                                         .timestamp(recipient.getCreatedAt().format(DATE_TIME_FORMATTER))
                                         .isRead(recipient.getIsRead())
                                         .type(notification.getType() != null ? notification.getType().name() : null)
+                                        .targetUrl(notification.getTargetUrl())
                                         .senderName(sender != null ? sender.getUsername() : null)
                                         .senderFullName(sender != null ? sender.getFullName() : null)
                                         .senderAvatar(sender != null ? sender.getAvatar() : null)
@@ -184,20 +181,43 @@ public class DashboardServiceImpl implements DashboardService {
                                         .build();
                 }
 
-                // If no recipient record, check if user has direct access rights
-                // (ADMIN/ACADEMIC_STAFF)
+                // 2) Thử tìm theo notification_id (fallback)
+                java.util.Optional<NotificationRecipient> byNotifId = notificationRecipientRepository
+                                .findByNotificationIdAndRecipient(id, user);
+                if (byNotifId.isPresent()) {
+                        NotificationRecipient recipient = byNotifId.get();
+                        Notification notification = recipient.getNotification();
+                        User sender = notification.getSender();
+                        return DashboardNotificationResponse.builder()
+                                        .id(notification.getId())
+                                        .title(notification.getTitle())
+                                        .description(notification.getContent())
+                                        .timestamp(recipient.getCreatedAt().format(DATE_TIME_FORMATTER))
+                                        .isRead(recipient.getIsRead())
+                                        .type(notification.getType() != null ? notification.getType().name() : null)
+                                        .targetUrl(notification.getTargetUrl())
+                                        .senderName(sender != null ? sender.getUsername() : null)
+                                        .senderFullName(sender != null ? sender.getFullName() : null)
+                                        .senderAvatar(sender != null ? sender.getAvatar() : null)
+                                        .attachmentUrls(notification.getAttachmentUrls() != null
+                                                        ? new java.util.ArrayList<>(notification.getAttachmentUrls())
+                                                        : new java.util.ArrayList<>())
+                                        .build();
+                }
+
+                // 3) Admin/Academic staff có thể xem trực tiếp theo notification ID
                 if (user.getRole() == User.UserRole.ADMIN || user.getRole() == User.UserRole.ACADEMIC_STAFF) {
                         Notification notification = notificationRepository.findById(id)
                                         .orElseThrow(() -> new NotFoundException("Không tìm thấy thông báo"));
                         User sender = notification.getSender();
-
                         return DashboardNotificationResponse.builder()
                                         .id(notification.getId())
                                         .title(notification.getTitle())
                                         .description(notification.getContent())
                                         .timestamp(notification.getCreatedAt().format(DATE_TIME_FORMATTER))
-                                        .isRead(true) // For staff viewing original, we can say it's read
+                                        .isRead(true)
                                         .type(notification.getType() != null ? notification.getType().name() : null)
+                                        .targetUrl(notification.getTargetUrl())
                                         .senderName(sender != null ? sender.getUsername() : null)
                                         .senderFullName(sender != null ? sender.getFullName() : null)
                                         .senderAvatar(sender != null ? sender.getAvatar() : null)
