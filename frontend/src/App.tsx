@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { PublicRoute } from './components/common/PublicRoute';
+import { FloatingChatWidget } from './components/common/FloatingChatWidget';
 // Lazy load pages
 const Login = lazy(() => import('./pages/auth/Login').then(m => ({ default: m.Login })));
 const ChangePasswordPage = lazy(() => import('./pages/auth/ChangePasswordPage').then(m => ({ default: m.ChangePasswordPage })));
@@ -506,6 +507,9 @@ function App() {
           <Route path="/academic-staff/alerts" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Cảnh báo hệ thống" /></ProtectedRoute>} />
           <Route path="/academic-staff/logs" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Nhật ký hệ thống" /></ProtectedRoute>} />
         </Routes>
+
+        {/* Floating AI Chat Widget — visible on all authenticated pages */}
+        <FloatingChatWidget />
       </Suspense>
     </BrowserRouter>
   );

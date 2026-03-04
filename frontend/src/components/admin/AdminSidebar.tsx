@@ -8,8 +8,7 @@ import {
   Clock,
   LogOut,
   ChevronDown,
-  Cog,
-  Bot
+  Cog
 } from 'lucide-react';
 import { authService } from '../../services/api/authService';
 import { ConfirmModal } from '../common/ConfirmModal';
@@ -41,12 +40,6 @@ export const AdminSidebar: React.FC = () => {
       label: 'Dashboard',
       icon: <Home size={20} />,
       path: '/admin/dashboard'
-    },
-    {
-      id: 'chatbot',
-      label: 'FAMS AI Assistant',
-      icon: <Bot size={20} className="text-fpt-orange" />,
-      path: '/chatbot'
     },
     {
       id: 'manage',

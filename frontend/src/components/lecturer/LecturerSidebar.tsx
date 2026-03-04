@@ -10,10 +10,8 @@ import {
     Settings,
     LogOut,
     ChevronDown,
-    ChevronRight,
     KeyRound,
-    List,
-    Bot
+    List
 } from 'lucide-react';
 import { authService } from '../../services/api/authService';
 import { ConfirmModal } from '../common/ConfirmModal';
@@ -55,12 +53,6 @@ export const LecturerSidebar: React.FC = () => {
             label: 'Lịch giảng dạy',
             icon: <Calendar size={20} />,
             path: '/lecturer/schedule'
-        },
-        {
-            id: 'chatbot',
-            label: 'FAMS AI Assistant',
-            icon: <Bot size={20} />,
-            path: '/chatbot'
         },
         {
             id: 'attendance',

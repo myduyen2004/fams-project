@@ -482,22 +482,34 @@ public class StudentServiceImpl implements StudentService {
         Map<String, User> userMap = userRepository.findByCodeInIgnoreCase(codesInFile).stream()
                 .collect(Collectors.toMap(u -> u.getCode().trim().toLowerCase(), u -> u, (a, b) -> a));
 
-        Map<String, Major> majorMap = majorRepository.findAll().stream()
-                .collect(Collectors.toMap(m -> m.getName().trim().toLowerCase(), m -> m, (a, b) -> a));
+        // Maps for flexible lookup (by name or code)
+        List<Major> allMajors = majorRepository.findAll();
+        Map<String, Major> majorLookupMap = new HashMap<>();
+        for (Major m : allMajors) {
+            majorLookupMap.put(m.getName().trim().toLowerCase(), m);
+            majorLookupMap.put(m.getCode().trim().toLowerCase(), m);
+        }
 
-        Map<String, Specialization> specMap = specializationRepository.findAll().stream()
+        List<Specialization> allSpecs = specializationRepository.findAll();
+        Map<String, Specialization> specByCodeMap = allSpecs.stream()
+                .collect(Collectors.toMap(s -> s.getCode().trim().toLowerCase(), s -> s, (a, b) -> a));
+        Map<String, Specialization> specByNameAndMajorMap = allSpecs.stream()
                 .collect(Collectors.toMap(s -> s.getName().trim().toLowerCase() + "|" + s.getMajor().getId(), s -> s,
                         (a, b) -> a));
 
-        Map<String, SubSpecialization> subSpecMap = subSpecializationRepository.findAll().stream()
-                .collect(Collectors.toMap(
-                        ss -> ss.getName().trim().toLowerCase() + "|" + ss.getSpecialization().getId(),
-                        ss -> ss, (a, b) -> a));
+        List<SubSpecialization> allSubSpecs = subSpecializationRepository.findAll();
+        Map<String, SubSpecialization> subSpecByCodeMap = allSubSpecs.stream()
+                .collect(Collectors.toMap(ss -> ss.getCode().trim().toLowerCase(), ss -> ss, (a, b) -> a));
+        Map<String, SubSpecialization> subSpecByNameAndSpecMap = allSubSpecs.stream()
+                .collect(
+                        Collectors.toMap(ss -> ss.getName().trim().toLowerCase() + "|" + ss.getSpecialization().getId(),
+                                ss -> ss, (a, b) -> a));
 
         // Phase 3: Process rows in-memory
         Set<String> seenCodes = new HashSet<>();
         for (Map<String, String> data : rowDataList) {
             String code = data.get("code");
+
             int currentRowNum = Integer.parseInt(data.get("rowNumber"));
 
             Double gpa = null;
@@ -566,47 +578,68 @@ public class StudentServiceImpl implements StudentService {
                         }
 
                         Major foundMajor = null;
-                        String majorName = data.get("major");
-                        if (majorName != null && !majorName.trim().isEmpty()) {
-                            foundMajor = majorMap.get(majorName.trim().toLowerCase());
+                        String majorInput = data.get("major");
+                        if (majorInput != null && !majorInput.trim().isEmpty()) {
+                            foundMajor = majorLookupMap.get(majorInput.trim().toLowerCase());
                             if (foundMajor == null) {
-                                errorMsg.append("Ngành học không tồn tại: ").append(majorName).append(". ");
+                                errorMsg.append("Ngành học không tồn tại: ").append(majorInput).append(". ");
                                 hasError = true;
                             }
                         }
 
                         Specialization foundSpec = null;
-                        String specName = data.get("specialization");
-                        if (specName != null && !specName.trim().isEmpty()) {
-                            if (foundMajor == null) {
-                                errorMsg.append("Chuyên ngành '").append(specName)
-                                        .append("' yêu cầu Ngành học hợp lệ. ");
-                                hasError = true;
-                            } else {
-                                foundSpec = specMap.get(specName.trim().toLowerCase() + "|" + foundMajor.getId());
-                                if (foundSpec == null) {
-                                    errorMsg.append("Chuyên ngành '").append(specName)
-                                            .append("' không thuộc Ngành '").append(majorName).append("'. ");
-                                    hasError = true;
+                        String specInput = data.get("specialization");
+                        if (specInput != null && !specInput.trim().isEmpty()) {
+                            // 1. Try lookup by code
+                            foundSpec = specByCodeMap.get(specInput.trim().toLowerCase());
+
+                            // 2. If not found or found but belongs to wrong major, try lookup by name
+                            // within major
+                            if (foundMajor != null) {
+                                if (foundSpec == null || !foundSpec.getMajor().getId().equals(foundMajor.getId())) {
+                                    Specialization specByName = specByNameAndMajorMap
+                                            .get(specInput.trim().toLowerCase() + "|" + foundMajor.getId());
+                                    if (specByName != null) {
+                                        foundSpec = specByName;
+                                    }
                                 }
+                            }
+
+                            if (foundSpec == null) {
+                                errorMsg.append("Chuyên ngành '").append(specInput)
+                                        .append("' không hợp lệ hoặc không thuộc Ngành tương ứng. ");
+                                hasError = true;
+                            } else if (foundMajor != null && !foundSpec.getMajor().getId().equals(foundMajor.getId())) {
+                                errorMsg.append("Chuyên ngành '").append(specInput).append("' không thuộc Ngành '")
+                                        .append(foundMajor.getName()).append("'. ");
+                                hasError = true;
                             }
                         }
 
-                        String subSpecName = data.get("subSpecialization");
-                        if (subSpecName != null && !subSpecName.trim().isEmpty()) {
-                            if (foundSpec == null) {
-                                errorMsg.append("Combo '").append(subSpecName)
-                                        .append("' yêu cầu Chuyên ngành hợp lệ. ");
-                                hasError = true;
-                            } else {
-                                SubSpecialization foundSub = subSpecMap
-                                        .get(subSpecName.trim().toLowerCase() + "|" + foundSpec.getId());
-                                if (foundSub == null) {
-                                    errorMsg.append("Combo '").append(subSpecName)
-                                            .append(" không thuộc Chuyên ngành '").append(specName)
-                                            .append("'. ");
-                                    hasError = true;
+                        String subSpecInput = data.get("subSpecialization");
+                        if (subSpecInput != null && !subSpecInput.trim().isEmpty()) {
+                            SubSpecialization foundSub = subSpecByCodeMap.get(subSpecInput.trim().toLowerCase());
+
+                            if (foundSpec != null) {
+                                if (foundSub == null
+                                        || !foundSub.getSpecialization().getId().equals(foundSpec.getId())) {
+                                    SubSpecialization subByName = subSpecByNameAndSpecMap
+                                            .get(subSpecInput.trim().toLowerCase() + "|" + foundSpec.getId());
+                                    if (subByName != null) {
+                                        foundSub = subByName;
+                                    }
                                 }
+                            }
+
+                            if (foundSub == null) {
+                                errorMsg.append("Combo '").append(subSpecInput)
+                                        .append("' không hợp lệ hoặc không thuộc Chuyên ngành tương ứng. ");
+                                hasError = true;
+                            } else if (foundSpec != null
+                                    && !foundSub.getSpecialization().getId().equals(foundSpec.getId())) {
+                                errorMsg.append("Combo '").append(subSpecInput).append("' không thuộc Chuyên ngành '")
+                                        .append(foundSpec.getName()).append("'. ");
+                                hasError = true;
                             }
                         }
 
@@ -642,15 +675,25 @@ public class StudentServiceImpl implements StudentService {
         // Phase 1: Pre-fetch & Cache for O(1) performance
         log.info("Starting high-speed import processing for {} students", dtos.size());
 
-        // Cache Academic Entities with case-insensitive keys
-        Map<String, Major> majorMap = majorRepository.findAll().stream()
-                .collect(Collectors.toMap(m -> m.getName().trim().toLowerCase(), m -> m, (a, b) -> a));
+        // Cache Academic Entities with flexible lookup
+        List<Major> allMajors = majorRepository.findAll();
+        Map<String, Major> majorLookupMap = new HashMap<>();
+        for (Major m : allMajors) {
+            majorLookupMap.put(m.getName().trim().toLowerCase(), m);
+            majorLookupMap.put(m.getCode().trim().toLowerCase(), m);
+        }
 
-        Map<String, Specialization> specMap = specializationRepository.findAll().stream()
+        List<Specialization> allSpecs = specializationRepository.findAll();
+        Map<String, Specialization> specByCodeMap = allSpecs.stream()
+                .collect(Collectors.toMap(s -> s.getCode().trim().toLowerCase(), s -> s, (a, b) -> a));
+        Map<String, Specialization> specByNameAndMajorMap = allSpecs.stream()
                 .collect(Collectors.toMap(s -> s.getName().trim().toLowerCase() + "|" + s.getMajor().getId(), s -> s,
                         (a, b) -> a));
 
-        Map<String, SubSpecialization> subSpecMap = subSpecializationRepository.findAll().stream()
+        List<SubSpecialization> allSubSpecs = subSpecializationRepository.findAll();
+        Map<String, SubSpecialization> subSpecByCodeMap = allSubSpecs.stream()
+                .collect(Collectors.toMap(ss -> ss.getCode().trim().toLowerCase(), ss -> ss, (a, b) -> a));
+        Map<String, SubSpecialization> subSpecByNameAndSpecMap = allSubSpecs.stream()
                 .collect(
                         Collectors.toMap(ss -> ss.getName().trim().toLowerCase() + "|" + ss.getSpecialization().getId(),
                                 ss -> ss, (a, b) -> a));
@@ -687,19 +730,27 @@ public class StudentServiceImpl implements StudentService {
 
                 Major major = null;
                 if (dto.getMajor() != null && !dto.getMajor().trim().isEmpty()) {
-                    major = majorMap.get(dto.getMajor().trim().toLowerCase());
+                    major = majorLookupMap.get(dto.getMajor().trim().toLowerCase());
                 }
 
                 Specialization specialization = null;
-                if (dto.getSpecialization() != null && !dto.getSpecialization().trim().isEmpty() && major != null) {
-                    specialization = specMap.get(dto.getSpecialization().trim().toLowerCase() + "|" + major.getId());
+                if (dto.getSpecialization() != null && !dto.getSpecialization().trim().isEmpty()) {
+                    specialization = specByCodeMap.get(dto.getSpecialization().trim().toLowerCase());
+                    if (major != null
+                            && (specialization == null || !specialization.getMajor().getId().equals(major.getId()))) {
+                        specialization = specByNameAndMajorMap
+                                .get(dto.getSpecialization().trim().toLowerCase() + "|" + major.getId());
+                    }
                 }
 
                 SubSpecialization subSpecialization = null;
-                if (dto.getSubSpecialization() != null && !dto.getSubSpecialization().trim().isEmpty()
-                        && specialization != null) {
-                    subSpecialization = subSpecMap
-                            .get(dto.getSubSpecialization().trim().toLowerCase() + "|" + specialization.getId());
+                if (dto.getSubSpecialization() != null && !dto.getSubSpecialization().trim().isEmpty()) {
+                    subSpecialization = subSpecByCodeMap.get(dto.getSubSpecialization().trim().toLowerCase());
+                    if (specialization != null && (subSpecialization == null
+                            || !subSpecialization.getSpecialization().getId().equals(specialization.getId()))) {
+                        subSpecialization = subSpecByNameAndSpecMap
+                                .get(dto.getSubSpecialization().trim().toLowerCase() + "|" + specialization.getId());
+                    }
                 }
 
                 if (profile == null) {
@@ -826,10 +877,16 @@ public class StudentServiceImpl implements StudentService {
                 .orElse(new ArrayList<>());
     }
 
-    @Override
-    public Page<StudentResponse> getAllStudents(String search, String status, String majorStr, String specializationStr,
-            String subSpecializationStr, Pageable pageable) {
+    public Page<StudentResponse> getAllStudents(String search, String status, String major, String specialization,
+            Pageable pageable) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getAllStudents'");
+    }
+
+    @Override
+    public Page<StudentResponse> getAllStudents1(String search, String status, String major, String specialization,
+            String subSpecialization, Pageable pageable) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getAllStudents1'");
     }
 }
