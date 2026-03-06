@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ChevronRight, Search, Download, FileText, Trash2, RefreshCw, Calendar, Plus, Edit } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Search, FileText, Trash2, RefreshCw, Calendar, Plus, Edit } from 'lucide-react';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { Pagination } from '../../components/common/Pagination';
+import { Tooltip } from '../../components/common/Tooltip';
 import { ImportClassSectionModal } from '../../components/academic-staff/ImportClassSectionModal';
 import { EnrollmentListModal } from '../../components/academic-staff/EnrollmentListModal';
 import { ImportEnrollmentModal } from '../../components/academic-staff/ImportEnrollmentModal';
@@ -175,25 +176,6 @@ export const ClassSectionManagement: React.FC = () => {
     );
   };
 
-  const handleDownloadTemplate = async () => {
-    try {
-      const response = await axios.get('/api/v1/class-sections/import/template', {
-        responseType: 'blob',
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', 'class_section_import_template.xlsx');
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      toast.success('Tải xuống template thành công');
-    } catch (error) {
-      console.error('Error downloading template:', error);
-      toast.error('Không thể tải xuống template');
-    }
-  };
 
   const handleImportList = () => {
     if (!canEdit) {
@@ -284,26 +266,6 @@ export const ClassSectionManagement: React.FC = () => {
     setIsEnrollmentModalOpen(true);
   };
 
-  // Handle download enrollment template
-  const handleDownloadEnrollmentTemplate = async () => {
-    try {
-      const response = await axios.get(`/api/v1/class-sections/semester/${semesterCode}/enrollments/import/template`, {
-        responseType: 'blob',
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `enrollment_import_template_${semesterCode}.xlsx`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      toast.success('Tải xuống template thành công');
-    } catch (error) {
-      console.error('Error downloading template:', error);
-      toast.error('Không thể tải xuống template');
-    }
-  };
 
   // Handle import enrollment (open modal)
   const handleImportEnrollment = () => {
@@ -376,69 +338,42 @@ export const ClassSectionManagement: React.FC = () => {
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex gap-3">
-              <div className="relative group">
+              <Tooltip content="1. Nhập danh sách lớp học phần từ file Excel" position="bottom">
                 <button
-                  onClick={handleDownloadEnrollmentTemplate}
-                  className="px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 bg-white hover:bg-gray-50 transition-all flex items-center gap-2"
+                  onClick={handleImportList}
+                  disabled={!canEdit}
+                  className={`px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold transition-all flex items-center gap-2
+                    ${canEdit ? 'text-gray-600 bg-white hover:bg-gray-50' : 'text-gray-400 bg-gray-100 cursor-not-allowed'}`}
                 >
-                  <Download className="w-4 h-4" />
+                  <FileText className="w-4 h-4" /> Nhập danh sách lớp học phần
                 </button>
-                {/* Tooltip */}
-                <div
-                  className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2
-                            whitespace-nowrap rounded bg-gray-800 px-2 py-1
-                            text-[10px] text-white opacity-0
-                            group-hover:opacity-100 transition-opacity pointer-events-none"
-                >
-                  Tải mẫu danh sách đăng ký
-                </div>
-              </div>
-              <button
-                onClick={handleImportEnrollment}
-                disabled={!canEdit}
-                className={`px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold transition-all flex items-center gap-2
-                  ${canEdit ? 'text-gray-600 bg-white hover:bg-gray-50' : 'text-gray-400 bg-gray-100 cursor-not-allowed'}`}
-              >
-                <FileText className="w-4 h-4" /> Nhập danh sách đăng ký
-              </button>
-              <div className="relative group">
+              </Tooltip>
+
+              <Tooltip content="2. Nhập danh sách sinh viên vào các lớp từ file Excel" position="bottom">
                 <button
-                  onClick={handleDownloadTemplate}
-                  className="px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 bg-white hover:bg-gray-50 transition-all flex items-center gap-2"
+                  onClick={handleImportEnrollment}
+                  disabled={!canEdit}
+                  className={`px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold transition-all flex items-center gap-2
+                    ${canEdit ? 'text-gray-600 bg-white hover:bg-gray-50' : 'text-gray-400 bg-gray-100 cursor-not-allowed'}`}
                 >
-                  <Download className="w-4 h-4" />
+                  <FileText className="w-4 h-4" /> Nhập danh sách đăng ký
                 </button>
-                {/* Tooltip */}
-                <div
-                  className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2
-                            whitespace-nowrap rounded bg-gray-800 px-2 py-1
-                            text-[10px] text-white opacity-0
-                            group-hover:opacity-100 transition-opacity pointer-events-none"
-                >
-                  Tải mẫu danh sách lớp học phần
-                </div>
-              </div>
-              <button
-                onClick={handleImportList}
-                disabled={!canEdit}
-                className={`px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold transition-all flex items-center gap-2
-                  ${canEdit ? 'text-gray-600 bg-white hover:bg-gray-50' : 'text-gray-400 bg-gray-100 cursor-not-allowed'}`}
-              >
-                <FileText className="w-4 h-4" /> Nhập danh sách lớp học phần
-              </button>
+              </Tooltip>
             </div>
 
             <div className="flex gap-3">
-              <button
-                onClick={handleCreateClassSection}
-                disabled={!canEdit}
-                className={`px-4 py-2 rounded-lg text-xs font-bold shadow-lg transition-all flex items-center gap-2
-                  ${canEdit
-                    ? 'bg-orange-600 hover:bg-orange-700 text-white shadow-orange-600/20'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'}`}
-              >
-                <Plus className="w-4 h-4" /> Tạo lớp học phần
-              </button>
+              <Tooltip content="Tạo mới một lớp học phần" position="bottom">
+                <button
+                  onClick={handleCreateClassSection}
+                  disabled={!canEdit}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold shadow-lg transition-all flex items-center gap-2
+                    ${canEdit
+                      ? 'bg-orange-600 hover:bg-orange-700 text-white shadow-orange-600/20'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'}`}
+                >
+                  <Plus className="w-4 h-4" /> Tạo lớp học phần
+                </button>
+              </Tooltip>
               <button
                 onClick={() => navigate('/academic-staff/schedule')}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs font-bold text-white shadow-lg shadow-blue-600/20 transition-all flex items-center gap-2"

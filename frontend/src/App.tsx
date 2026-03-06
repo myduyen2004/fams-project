@@ -62,6 +62,7 @@ const LecturerMessagesPage = lazy(() => import('./pages/lecturer/LecturerMessage
 const StudentGradesPage = lazy(() => import('./pages/student/StudentGradesPage').then(m => ({ default: m.StudentGradesPage })));
 const StudentAssignmentPage = lazy(() => import('./pages/student/StudentAssignmentPage').then(m => ({ default: m.StudentAssignmentPage })));
 const StudentMessagesPage = lazy(() => import('./pages/student/StudentMessagesPage').then(m => ({ default: m.StudentMessagesPage })));
+const AcademicStaffClassDetailPage = lazy(() => import('./pages/academic-staff/AcademicStaffClassDetailPage').then(m => ({ default: m.AcademicStaffClassDetailPage })));
 
 const PageLoader = () => (
   <div className="flex h-screen w-full items-center justify-center bg-gray-50 dark:bg-zinc-950">
@@ -403,6 +404,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
                 <ClassSectionManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/academic-staff/class-sections/:className"
+            element={
+              <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
+                <AcademicStaffClassDetailPage />
               </ProtectedRoute>
             }
           />

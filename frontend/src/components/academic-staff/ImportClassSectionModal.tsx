@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Upload, Loader2, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
+import { X, Upload, Loader2, CheckCircle, AlertTriangle, XCircle, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 
@@ -45,11 +45,11 @@ const getErrorMessage = (error: unknown, defaultMessage: string): string => {
     return defaultMessage;
 };
 
-export const ImportClassSectionModal: React.FC<ImportClassSectionModalProps> = ({ 
-    isOpen, 
+export const ImportClassSectionModal: React.FC<ImportClassSectionModalProps> = ({
+    isOpen,
     semesterCode,
-    onClose, 
-    onSuccess 
+    onClose,
+    onSuccess
 }) => {
     const [file, setFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
@@ -78,15 +78,15 @@ export const ImportClassSectionModal: React.FC<ImportClassSectionModalProps> = (
             setLoading(true);
             const formData = new FormData();
             formData.append('file', file);
-            
+
             const response = await axios.post<FastPreviewResponse>(
                 `/api/v1/class-sections/semester/${semesterCode}/fast-preview`,
                 formData,
                 { headers: { 'Content-Type': 'multipart/form-data' } }
             );
-            
+
             setPreviewResult(response.data);
-            
+
             if (response.data.canImport) {
                 toast.success(`${response.data.validRows} dòng hợp lệ, sẵn sàng import!`);
             } else if (response.data.errorRows > 0) {
@@ -107,13 +107,13 @@ export const ImportClassSectionModal: React.FC<ImportClassSectionModalProps> = (
             setLoading(true);
             const formData = new FormData();
             formData.append('file', file);
-            
+
             const response = await axios.post<BulkImportResponse>(
                 `/api/v1/class-sections/semester/${semesterCode}/bulk-import`,
                 formData,
                 { headers: { 'Content-Type': 'multipart/form-data' } }
             );
-            
+
             setImportResult(response.data);
 
             if (response.data.created > 0) {
@@ -157,7 +157,7 @@ export const ImportClassSectionModal: React.FC<ImportClassSectionModalProps> = (
 
                 {/* Content */}
                 <div className="p-6 overflow-y-auto flex-1">
-                    
+
                     {/* Step 1: Upload Form */}
                     {!previewResult && !importResult && (
                         <form onSubmit={handlePreview} className="space-y-4">
@@ -170,6 +170,33 @@ export const ImportClassSectionModal: React.FC<ImportClassSectionModalProps> = (
                                     <li>Course Code: Mã môn học (phải tồn tại trong hệ thống)</li>
                                 </ul>
                             </div>
+
+                            {/* Download Template Button */}
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    try {
+                                        const response = await axios.get('/api/v1/class-sections/import/template', {
+                                            responseType: 'blob',
+                                        });
+                                        const url = window.URL.createObjectURL(new Blob([response.data]));
+                                        const link = document.createElement('a');
+                                        link.href = url;
+                                        link.setAttribute('download', 'class_section_import_template.xlsx');
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        link.remove();
+                                        window.URL.revokeObjectURL(url);
+                                        toast.success('Tải xuống template thành công');
+                                    } catch (error) {
+                                        console.error('Error downloading template:', error);
+                                        toast.error('Không thể tải xuống template');
+                                    }
+                                }}
+                                className="w-full px-4 py-2 border border-orange-200 rounded-lg text-sm font-medium text-orange-600 bg-orange-50 hover:bg-orange-100 transition-colors flex items-center justify-center gap-2"
+                            >
+                                <Download size={16} /> Tải xuống file mẫu
+                            </button>
 
                             <div className="border-2 border-dashed border-gray-300 dark:border-zinc-700 rounded-lg p-6 flex flex-col items-center text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors relative">
                                 <input required type="file" accept=".xlsx, .xls" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileChange} />
@@ -308,7 +335,7 @@ export const ImportClassSectionModal: React.FC<ImportClassSectionModalProps> = (
                                     <p className="text-gray-600 dark:text-gray-400">{importResult.message}</p>
                                 </>
                             )}
-                            
+
                             <button onClick={handleClose} className="mt-4 px-8 py-2 bg-fpt-orange text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors">
                                 Đóng
                             </button>

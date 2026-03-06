@@ -45,13 +45,13 @@ public class TimetableDataLoader {
         Semester semester = semesterRepository.findAll().stream()
                 .filter(s -> s.getCode().equals(semesterCode))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Semester not found: " + semesterCode));
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy học kỳ: " + semesterCode));
 
         // Load semester config
         SemesterConfig config = semesterConfigRepository.findAll().stream()
                 .filter(c -> c.getSemester().getId().equals(semester.getId()))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Semester config not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy cấu hình học kỳ"));
 
         // Load weekdays
         List<SemesterWeekday> weekdays = semesterWeekdayRepository.findAll().stream()
