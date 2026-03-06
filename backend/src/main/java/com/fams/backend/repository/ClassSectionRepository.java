@@ -9,7 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface ClassSectionRepository extends JpaRepository<ClassSection, Long> {
+public interface ClassSectionRepository extends JpaRepository<ClassSection, String> {
 
         // Find by className (primary business key)
         java.util.Optional<ClassSection> findByClassName(String className);

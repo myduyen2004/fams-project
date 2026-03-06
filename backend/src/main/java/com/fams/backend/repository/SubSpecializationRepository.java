@@ -26,7 +26,7 @@ public interface SubSpecializationRepository extends JpaRepository<SubSpecializa
         List<SubSpecialization> findBySpecializationId(Long specializationId);
 
         @Query("SELECT ss FROM SubSpecialization ss WHERE ss.specialization.id = :specId " +
-                        "AND (:keyword IS NULL OR :keyword = '' OR LOWER(ss.code) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(ss.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) "
+                        "AND (:keyword IS NULL OR :keyword = '' OR LOWER(ss.code) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) OR LOWER(ss.name) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%'))) "
                         +
                         "AND (:status IS NULL OR ss.status = :status) " +
                         "ORDER BY ss.code ASC")

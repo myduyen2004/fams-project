@@ -162,6 +162,7 @@ public class SemesterServiceImpl implements SemesterService {
 
     private SemesterResponse convertToDTO(Semester semester) {
         SemesterResponse dto = new SemesterResponse();
+        dto.setId(semester.getId());
         dto.setCode(semester.getCode());
         dto.setName(semester.getName());
         if (semester.getStartDate() != null) {

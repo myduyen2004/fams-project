@@ -21,6 +21,7 @@ public class StudentMyGradeResponse {
     private Double courseAverage;
     private String courseStatus; // PASSED, FAILED, PENDING
     private Boolean gradesPublished;
+    private String gradesPublishedAt;
     private String lastUpdatedAt;
 
     @Data

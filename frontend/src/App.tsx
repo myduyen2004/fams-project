@@ -62,6 +62,8 @@ const LecturerMessagesPage = lazy(() => import('./pages/lecturer/LecturerMessage
 const StudentGradesPage = lazy(() => import('./pages/student/StudentGradesPage').then(m => ({ default: m.StudentGradesPage })));
 const StudentAssignmentPage = lazy(() => import('./pages/student/StudentAssignmentPage').then(m => ({ default: m.StudentAssignmentPage })));
 const StudentMessagesPage = lazy(() => import('./pages/student/StudentMessagesPage').then(m => ({ default: m.StudentMessagesPage })));
+const StudentAcademicRequestPage = lazy(() => import('./pages/student/StudentAcademicRequestPage').then(m => ({ default: m.StudentAcademicRequestPage })));
+const StudentRequestDetailPage = lazy(() => import('./pages/academic-staff/StudentRequestDetailPage').then(m => ({ default: m.StudentRequestDetailPage })));
 
 const PageLoader = () => (
   <div className="flex h-screen w-full items-center justify-center bg-gray-50 dark:bg-zinc-950">
@@ -339,7 +341,7 @@ function App() {
           <Route path="/student/attendance" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Điểm danh" /></ProtectedRoute>} />
           <Route path="/student/study" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Học tập" /></ProtectedRoute>} />
           <Route path="/student/messages" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentMessagesPage /></ProtectedRoute>} />
-          <Route path="/student/requests" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Gửi đơn yêu cầu" /></ProtectedRoute>} />
+          <Route path="/student/requests" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentAcademicRequestPage /></ProtectedRoute>} />
           <Route path="/student/settings" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Cài đặt" /></ProtectedRoute>} />
           <Route path="/student/profile" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Hồ sơ cá nhân" /></ProtectedRoute>} />
           <Route
@@ -449,6 +451,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
                 <RequestDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/academic-staff/student-requests/:id"
+            element={
+              <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
+                <StudentRequestDetailPage />
               </ProtectedRoute>
             }
           />
