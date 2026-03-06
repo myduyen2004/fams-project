@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Upload, Loader2, Download, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from 'axios';
@@ -45,11 +46,11 @@ const getErrorMessage = (error: unknown, defaultMessage: string): string => {
     return defaultMessage;
 };
 
-export const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({ 
-    isOpen, 
+export const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
+    isOpen,
     semesterCode,
-    onClose, 
-    onSuccess 
+    onClose,
+    onSuccess
 }) => {
     const [file, setFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
@@ -98,15 +99,15 @@ export const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
             setLoading(true);
             const formData = new FormData();
             formData.append('file', file);
-            
+
             const response = await axios.post<FastPreviewResponse>(
                 `/api/v1/class-sections/semester/${encodeURIComponent(semesterCode)}/enrollments/fast-preview`,
                 formData,
                 { headers: { 'Content-Type': 'multipart/form-data' } }
             );
-            
+
             setPreviewResult(response.data);
-            
+
             if (response.data.canImport) {
                 toast.success(`${response.data.validRows.toLocaleString()} dòng hợp lệ, sẵn sàng import!`);
             } else if (response.data.errorRows > 0) {
@@ -127,13 +128,13 @@ export const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
             setLoading(true);
             const formData = new FormData();
             formData.append('file', file);
-            
+
             const response = await axios.post<BulkImportResponse>(
                 `/api/v1/class-sections/semester/${encodeURIComponent(semesterCode)}/enrollments/bulk-import`,
                 formData,
                 { headers: { 'Content-Type': 'multipart/form-data' } }
             );
-            
+
             setImportResult(response.data);
 
             if (response.data.created > 0) {
@@ -162,8 +163,8 @@ export const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
         setImportResult(null);
     };
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+    return createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-2xl border border-gray-100 dark:border-zinc-800 overflow-hidden transition-all duration-300 flex flex-col max-h-[90vh]">
 
                 {/* Header */}
@@ -177,7 +178,7 @@ export const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
 
                 {/* Content */}
                 <div className="p-6 overflow-y-auto flex-1">
-                    
+
                     {/* Step 1: Upload Form */}
                     {!previewResult && !importResult && (
                         <form onSubmit={handlePreview} className="space-y-4">
@@ -339,7 +340,7 @@ export const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                                     <p className="text-gray-600 dark:text-gray-400">{importResult.message}</p>
                                 </>
                             )}
-                            
+
                             <button onClick={handleClose} className="mt-4 px-8 py-2 bg-fpt-orange text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors">
                                 Đóng
                             </button>
@@ -347,6 +348,7 @@ export const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                     )}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };

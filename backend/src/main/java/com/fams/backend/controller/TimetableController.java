@@ -115,7 +115,7 @@ public class TimetableController {
                 return ResponseEntity.accepted()
                                 .body(Map.of(
                                                 "jobId", jobId,
-                                                "message", "Timetable generation started",
+                                                "message", "Quá trình tạo thời khóa biểu đã bắt đầu",
                                                 "status", "RUNNING"));
         }
 
@@ -152,7 +152,8 @@ public class TimetableController {
                 return ResponseEntity.ok(Map.of(
                                 "jobId", jobId,
                                 "cancelled", cancelled,
-                                "message", cancelled ? "Job cancelled" : "Job not found or already completed"));
+                                "message",
+                                cancelled ? "Đã hủy tiến trình" : "Tiến trình không tồn tại hoặc đã hoàn tất"));
         }
 
         // ==================== QUERY APIs ====================
@@ -285,7 +286,7 @@ public class TimetableController {
                                 "configUpdatedAt", configUpdatedAt != null ? configUpdatedAt.toString() : "null",
                                 "message", configChanged
                                                 ? "Cấu hình học kỳ đã thay đổi. Vui lòng tạo thời khóa biểu mới."
-                                                : "Semester config is up to date"));
+                                                : "Cấu hình học kỳ đã được cập nhật"));
         }
 
         @GetMapping("/class/{className}")
@@ -336,7 +337,7 @@ public class TimetableController {
                         LocalDate weekEnd = weekStart.plusDays(6);
 
                         User student = userRepository.findById(studentId)
-                                        .orElseThrow(() -> new RuntimeException("Student not found"));
+                                        .orElseThrow(() -> new RuntimeException("Không tìm thấy sinh viên"));
 
                         log.info("Fetching timetable for student {} (code: {}) from {} to {}", studentId,
                                         student.getCode(),
@@ -578,7 +579,7 @@ public class TimetableController {
                 // Check if semester is published
                 com.fams.backend.entity.SemesterConfig config = semester.getConfig();
                 if (config != null && !Boolean.TRUE.equals(config.getIsPublished())) {
-                        response.sendError(HttpServletResponse.SC_FORBIDDEN, "Schedule is not published");
+                        response.sendError(HttpServletResponse.SC_FORBIDDEN, "Thời khóa biểu chưa được công khai");
                         return;
                 }
 
@@ -691,7 +692,7 @@ public class TimetableController {
                         semester = semesters.isEmpty() ? null : semesters.get(0);
 
                         if (semester == null) {
-                                throw new RuntimeException("Semester not found for the given criteria");
+                                throw new RuntimeException("Không tìm thấy học kỳ cho tiêu chí này");
                         }
                 }
 

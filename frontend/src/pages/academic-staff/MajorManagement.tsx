@@ -10,6 +10,7 @@ import { StatusFilter, Pagination, SelectionActionBar } from '../../components/a
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { Major, MajorImportDTO } from '../../types/major';
 import { usePagination } from '../../hooks/usePagination';
+import { Tooltip } from '../../components/common/Tooltip';
 
 // --- Types ---
 
@@ -561,6 +562,7 @@ const MajorUpdateModal: React.FC<MajorUpdateModalProps> = ({ isOpen, onClose, on
     );
 };
 
+
 // --- Main Page Component ---
 
 export const MajorManagement: React.FC = () => {
@@ -743,41 +745,47 @@ export const MajorManagement: React.FC = () => {
                 <div className="flex items-center justify-between">
                     <div></div> {/* Spacer */}
                     <div className="flex gap-3">
-                        <button
-                            onClick={async () => {
-                                try {
-                                    const blob = await majorService.downloadImportTemplate();
-                                    const url = window.URL.createObjectURL(blob);
-                                    const a = document.createElement('a');
-                                    a.href = url;
-                                    a.download = 'major_import_template.xlsx';
-                                    document.body.appendChild(a);
-                                    a.click();
-                                    window.URL.revokeObjectURL(url);
-                                    document.body.removeChild(a);
-                                } catch (error) {
-                                    toast.error('Lỗi khi tải template');
-                                }
-                            }}
-                            className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-                        >
-                            <Download className="h-4 w-4" />
-                            Tải template
-                        </button>
-                        <button
-                            onClick={() => setIsImportModalOpen(true)}
-                            className="flex items-center gap-2 rounded-lg border border-fpt-orange bg-orange-50 px-4 py-2 text-sm font-medium text-fpt-orange hover:bg-orange-100"
-                        >
-                            <Upload className="h-4 w-4" />
-                            Import danh sách ngành
-                        </button>
-                        <button
-                            onClick={() => setIsCreateModalOpen(true)}
-                            className="flex items-center gap-2 rounded-lg bg-fpt-orange px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
-                        >
-                            <Plus className="h-4 w-4" />
-                            Tạo ngành
-                        </button>
+                        <Tooltip content="Tải file Excel mẫu để nhập dữ liệu" position="bottom">
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        const blob = await majorService.downloadImportTemplate();
+                                        const url = window.URL.createObjectURL(blob);
+                                        const a = document.createElement('a');
+                                        a.href = url;
+                                        a.download = 'major_import_template.xlsx';
+                                        document.body.appendChild(a);
+                                        a.click();
+                                        window.URL.revokeObjectURL(url);
+                                        document.body.removeChild(a);
+                                    } catch (error) {
+                                        toast.error('Lỗi khi tải template');
+                                    }
+                                }}
+                                className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 transition-colors"
+                            >
+                                <Download className="h-4 w-4" />
+                                Tải template
+                            </button>
+                        </Tooltip>
+                        <Tooltip content="Tải lên file Excel để nhập danh sách ngành. Import ngành trước khi import chuyên ngành" position="bottom">
+                            <button
+                                onClick={() => setIsImportModalOpen(true)}
+                                className="flex items-center gap-2 rounded-lg border border-fpt-orange bg-orange-50 px-4 py-2 text-sm font-medium text-fpt-orange hover:bg-orange-100 transition-colors"
+                            >
+                                <Upload className="h-4 w-4" />
+                                Import danh sách ngành
+                            </button>
+                        </Tooltip>
+                        <Tooltip content="Thêm một ngành học mới" position="bottom">
+                            <button
+                                onClick={() => setIsCreateModalOpen(true)}
+                                className="flex items-center gap-2 rounded-lg bg-fpt-orange px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 transition-colors"
+                            >
+                                <Plus className="h-4 w-4" />
+                                Tạo ngành
+                            </button>
+                        </Tooltip>
                     </div>
                 </div>
 
