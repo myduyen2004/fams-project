@@ -12,6 +12,7 @@ import {
     ChevronRight,
     BookOpen,
     Plus,
+    Lock,
     FileText
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -32,6 +33,7 @@ export const LecturerSchedulePage: React.FC = () => {
     const [timetable, setTimetable] = useState<WeeklyTimetableDTO | null>(null);
     const [loading, setLoading] = useState(true);
     const [currentDate, setCurrentDate] = useState(new Date());
+    const [isScheduleHidden, setIsScheduleHidden] = useState(false);
     const [selectedSlot, setSelectedSlot] = useState<TimetableSlotDTO | null>(null);
     const [exporting, setExporting] = useState(false);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -174,6 +176,7 @@ export const LecturerSchedulePage: React.FC = () => {
 
     const fetchTimetable = async () => {
         setLoading(true);
+        setIsScheduleHidden(false);
         try {
             const userStr = localStorage.getItem('user');
             if (!userStr) return;
@@ -184,13 +187,18 @@ export const LecturerSchedulePage: React.FC = () => {
             setTimetable(data);
         } catch (error: any) {
             console.error('Failed to fetch timetable:', error);
-            const serverMsg = error.response?.data?.message || error.response?.data?.error || null;
-            if (serverMsg) {
-                toast.error(`Lỗi server: ${serverMsg}`);
+            if (error.response && error.response.status === 403) {
+                setIsScheduleHidden(true);
+                setTimetable(null);
             } else {
-                toast.error('Không thể tải thời khóa biểu');
+                const serverMsg = error.response?.data?.message || error.response?.data?.error || null;
+                if (serverMsg) {
+                    toast.error(`Lỗi server: ${serverMsg}`);
+                } else {
+                    toast.error('Không thể tải thời khóa biểu');
+                }
+                setTimetable(null);
             }
-            setTimetable(null);
         } finally {
             setLoading(false);
         }
@@ -505,23 +513,25 @@ export const LecturerSchedulePage: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={handleOpenDownloadDialog}
-                                className="flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white rounded-xl font-medium text-sm shadow-md shadow-orange-500/20 hover:bg-orange-600 transition-colors"
-                            >
-                                <Download size={18} />
-                                <span>Tải bài nộp theo slot</span>
-                            </button>
-                            <button
-                                onClick={handleExport}
-                                disabled={exporting}
-                                className={`flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white rounded-xl font-medium text-sm shadow-md shadow-orange-500/20 hover:bg-orange-600 transition-colors ${exporting ? 'opacity-70 cursor-not-allowed' : ''}`}
-                            >
-                                {exporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-                                <span>{exporting ? 'Đang xuất...' : 'Xuất file'}</span>
-                            </button>
-                        </div>
+                        {!isScheduleHidden && (
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleOpenDownloadDialog}
+                                    className="flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white rounded-xl font-medium text-sm shadow-md shadow-orange-500/20 hover:bg-orange-600 transition-colors"
+                                >
+                                    <Download size={18} />
+                                    <span>Tải bài nộp theo slot</span>
+                                </button>
+                                <button
+                                    onClick={handleExport}
+                                    disabled={exporting}
+                                    className={`flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white rounded-xl font-medium text-sm shadow-md shadow-orange-500/20 hover:bg-orange-600 transition-colors ${exporting ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                >
+                                    {exporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+                                    <span>{exporting ? 'Đang xuất...' : 'Xuất file'}</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -530,6 +540,16 @@ export const LecturerSchedulePage: React.FC = () => {
                         {loading ? (
                             <div className="flex items-center justify-center p-20">
                                 <Loader2 className="w-8 h-8 animate-spin text-fpt-orange" />
+                            </div>
+                        ) : isScheduleHidden ? (
+                            <div className="p-12 text-center text-gray-500">
+                                <div className="bg-orange-50 dark:bg-orange-900/10 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                                    <Lock size={32} className="text-fpt-orange" />
+                                </div>
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Lịch giảng dạy chưa được công bố</h3>
+                                <p className="text-gray-500 dark:text-gray-400">
+                                    Vui lòng quay lại sau khi nhà trường công bố lịch dạy chính thức.
+                                </p>
                             </div>
                         ) : timetable && timetable.days ? (
                             <table className="w-full border-collapse min-w-[1000px]">
@@ -718,13 +738,16 @@ export const LecturerSchedulePage: React.FC = () => {
 
                             {/* Assignment info section */}
                             {selectedSlot.assignmentId ? (
-                                <div className="flex items-start gap-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
+                                <div
+                                    className="flex items-start gap-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                                    onClick={() => navigate(`/lecturer/assignments/${selectedSlot.assignmentId}`)}
+                                >
                                     <div className="w-8 flex justify-center pt-1">
                                         <FileText className="text-blue-500" size={20} />
                                     </div>
                                     <div className="flex-1">
                                         <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">Bài tập đã giao</p>
-                                        <p className="font-bold text-gray-900 dark:text-white text-sm mt-0.5">
+                                        <p className="font-bold text-gray-900 dark:text-white text-sm mt-0.5 hover:text-fpt-orange transition-colors">
                                             {selectedSlot.assignmentTitle}
                                         </p>
                                         <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${selectedSlot.assignmentStatus === 'OPEN'
@@ -890,24 +913,8 @@ export const LecturerSchedulePage: React.FC = () => {
                                 </div>
                             )}
 
-                            {dlAssignmentId && (
-                                <div className="p-3 rounded-lg border border-gray-100 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-gray-600 dark:text-zinc-400">Trạng thái:</span>
-                                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${dlAssignmentStatus === 'CLOSED'
-                                            ? 'bg-gray-100 text-gray-600 border border-gray-200'
-                                            : 'bg-green-100 text-green-700 border border-green-200'
-                                            }`}>
-                                            {dlAssignmentStatus === 'CLOSED' ? 'Đã đóng' : 'Đang mở'}
-                                        </span>
-                                    </div>
-                                    {dlAssignmentStatus !== 'CLOSED' && (
-                                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
-                                            Chỉ bài tập đã đóng mới có thể tải xuống.
-                                        </p>
-                                    )}
-                                </div>
-                            )}
+
+
                         </div>
                         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 dark:border-zinc-800">
                             <button onClick={() => setShowDownloadDialog(false)}
@@ -916,7 +923,7 @@ export const LecturerSchedulePage: React.FC = () => {
                             </button>
                             <button
                                 onClick={handleDownloadSubmissions}
-                                disabled={!dlAssignmentId || dlAssignmentStatus !== 'CLOSED' || downloadingZip}
+                                disabled={!dlAssignmentId || downloadingZip}
                                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-fpt-orange hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
                             >
                                 {downloadingZip ? <><Loader2 size={16} className="animate-spin" /> Đang tải...</> : <><Download className="w-4 h-4" /> Tải xuống</>}

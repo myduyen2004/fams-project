@@ -99,10 +99,15 @@ export const LecturerCreateRequestPage: React.FC = () => {
     useEffect(() => {
         const fetchClasses = async () => {
             try {
+                console.log('[DEBUG] Fetching classes from API...');
                 const data = await scheduleRequestService.getClasses();
+                console.log('[DEBUG] Classes API response:', data);
+                console.log('[DEBUG] Classes count:', data?.length);
+                console.log('[DEBUG] Classes type:', typeof data, Array.isArray(data));
                 setClasses(data);
-            } catch (error) {
-                console.error("Error fetching classes:", error);
+            } catch (error: any) {
+                console.error("[DEBUG] Error fetching classes:", error);
+                console.error("[DEBUG] Error response:", error?.response?.status, error?.response?.data);
                 toast.error("Không thể tải danh sách lớp học");
             }
         };

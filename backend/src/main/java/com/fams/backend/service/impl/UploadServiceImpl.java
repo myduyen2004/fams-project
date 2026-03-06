@@ -59,21 +59,11 @@ public class UploadServiceImpl implements UploadService {
                     ObjectUtils.asMap(
                             "resource_type", resourceType,
                             "type", "upload", // Make files publicly accessible
-                            "access_mode", "public", // Ensure public access even with strict security settings
                             "folder", "fams_notifications",
                             "use_filename", true,
                             "unique_filename", true,
                             "filename", file.getOriginalFilename()));
-
             String url = (String) uploadResult.get("secure_url");
-
-            // Strip any Cloudinary signing from URL (s--xxx--) to avoid 404 errors
-            // Files are uploaded with type=upload & access_mode=public, so signing is
-            // unnecessary
-            if (url != null && url.contains("/s--")) {
-                url = url.replaceAll("/s--[^/]+--/", "/");
-            }
-
             log.info("Upload successful: {}", url);
             return url;
         } catch (Exception e) {
@@ -91,7 +81,7 @@ public class UploadServiceImpl implements UploadService {
 
         try {
             String filename = file.getOriginalFilename();
-            log.info("Uploading file to Cloudinary folder {}: {}", folder, filename);
+            log.info("Uploading file to Cloudinary in folder {}: {}", folder, filename);
 
             String resourceType = "auto";
             if (filename != null) {
@@ -111,27 +101,17 @@ public class UploadServiceImpl implements UploadService {
                     ObjectUtils.asMap(
                             "resource_type", resourceType,
                             "type", "upload",
-                            "access_mode", "public",
                             "folder", folder,
                             "use_filename", true,
                             "unique_filename", true,
                             "filename", file.getOriginalFilename()));
-
             String url = (String) uploadResult.get("secure_url");
-            if (url != null && url.contains("/s--")) {
-                url = url.replaceAll("/s--[^/]+--/", "/");
-            }
             log.info("Upload successful: {}", url);
             return url;
         } catch (Exception e) {
             log.error("Cloudinary upload failed for file: {}. Error: {}", file.getOriginalFilename(), e.getMessage());
             throw new RuntimeException("Upload file thất bại: " + e.getMessage());
         }
-    }
-
-    private String getFileExtension(String filename) {
-        int lastDot = filename.lastIndexOf('.');
-        return lastDot >= 0 ? filename.substring(lastDot + 1) : "";
     }
 
     @Override

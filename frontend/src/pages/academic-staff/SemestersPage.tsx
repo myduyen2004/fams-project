@@ -137,7 +137,10 @@ export const SemestersPage: React.FC = () => {
   // Checkbox handlers
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      setSelectedSemesters(paginatedSemesters.map(s => s.code));
+      const upcomingCodes = paginatedSemesters
+        .filter(s => s.status === 'upcoming')
+        .map(s => s.code);
+      setSelectedSemesters(upcomingCodes);
     } else {
       setSelectedSemesters([]);
     }
@@ -305,8 +308,8 @@ export const SemestersPage: React.FC = () => {
                       setIsBulkDeleteModalOpen(true);
                     }}
                     className={`px-4 py-1.5 text-sm rounded-lg font-medium flex items-center gap-2 transition-colors ${hasNonUpcoming
-                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        : 'bg-red-600 text-white hover:bg-red-700'
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-red-600 text-white hover:bg-red-700'
                       }`}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -327,7 +330,10 @@ export const SemestersPage: React.FC = () => {
                       type="checkbox"
                       className="w-4 h-4 rounded border-white/20 text-white focus:ring-0 focus:ring-offset-0 bg-transparent cursor-pointer"
                       onChange={handleSelectAll}
-                      checked={paginatedSemesters.length > 0 && selectedSemesters.length === paginatedSemesters.length}
+                      checked={
+                        paginatedSemesters.filter(s => s.status === 'upcoming').length > 0 &&
+                        paginatedSemesters.filter(s => s.status === 'upcoming').every(s => selectedSemesters.includes(s.code))
+                      }
                     />
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Mã học kỳ</th>
@@ -368,16 +374,17 @@ export const SemestersPage: React.FC = () => {
                     <tr
                       key={semester.code}
                       className={`border-b transition-colors ${selectedSemesters.includes(semester.code)
-                          ? 'bg-orange-50 dark:bg-orange-900/20'
-                          : 'bg-white hover:bg-gray-50 dark:bg-zinc-900 dark:hover:bg-zinc-800/50'
+                        ? 'bg-orange-50 dark:bg-orange-900/20'
+                        : 'bg-white hover:bg-gray-50 dark:bg-zinc-900 dark:hover:bg-zinc-800/50'
                         } dark:border-zinc-800`}
                     >
                       <td className="px-4 py-3">
                         <input
                           type="checkbox"
-                          className="w-4 h-4 rounded border-gray-300 text-fpt-orange focus:ring-fpt-orange dark:border-zinc-600 dark:bg-zinc-700 cursor-pointer"
+                          className="w-4 h-4 rounded border-gray-300 text-fpt-orange focus:ring-fpt-orange dark:border-zinc-600 dark:bg-zinc-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                           checked={selectedSemesters.includes(semester.code)}
                           onChange={() => handleSelectOne(semester.code)}
+                          disabled={semester.status !== 'upcoming'}
                         />
                       </td>
                       <td className="px-4 py-3 font-medium font-semibold text-gray-900">{semester.code}</td>

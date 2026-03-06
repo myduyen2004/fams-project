@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { assignmentService, AssignmentDTO, AssignmentSubmissionDTO } from '../../services/api/assignmentService';
+import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
 import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
 import { Pagination } from '../../components/common/Pagination';
 import {
@@ -26,6 +27,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
     const [savingComment, setSavingComment] = useState(false);
     const [closingAssignment, setClosingAssignment] = useState(false);
     const [downloadingZip, setDownloadingZip] = useState(false);
+    const [slotInfo, setSlotInfo] = useState<TimetableSlotDTO | null>(null);
 
     useEffect(() => {
         if (!assignmentId || isNaN(assignmentId)) return;
@@ -42,7 +44,17 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                 const first = subsData[0];
                 const classAssignments = await assignmentService.getAssignmentsByClass(first.className);
                 const found = classAssignments.find(a => a.id === assignmentId);
-                if (found) setAssignment(found);
+                if (found) {
+                    setAssignment(found);
+                    // Fetch slot info
+                    if (found.timetableSlotId) {
+                        try {
+                            const slots = await timetableService.getTimetableByClass(found.className);
+                            const slot = slots.find(s => s.id === found.timetableSlotId);
+                            if (slot) setSlotInfo(slot);
+                        } catch { /* slot info is optional */ }
+                    }
+                }
             }
         } catch (err: any) {
             toast.error('Không thể tải dữ liệu bài tập');
@@ -183,7 +195,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                         Quay lại danh sách bài tập
                     </button>
                     <div className="flex items-center gap-2">
-                        {assignment?.status === 'CLOSED' && submittedCount > 0 && (
+                        {submittedCount > 0 && (
                             <button
                                 onClick={handleDownloadAll}
                                 disabled={downloadingZip}
@@ -218,15 +230,31 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                         </div>
 
                         {/* Info row with dividers */}
-                        <div className="px-5 py-2.5 grid grid-cols-4 divide-x divide-gray-200 dark:divide-zinc-700 text-sm">
+                        <div className="px-5 py-2.5 grid grid-cols-3 md:grid-cols-6 divide-x divide-gray-200 dark:divide-zinc-700 text-sm">
                             <div className="flex items-center gap-2 px-2 justify-center">
                                 <span className="text-[11px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider">Lớp</span>
                                 <span className="font-semibold text-gray-900 dark:text-white text-sm">{assignment.className}</span>
                             </div>
-                            <div className="flex items-center gap-2 px-2 justify-center">
-                                <span className="text-[11px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider text-nowrap">Môn học</span>
-                                <span className="font-semibold text-gray-900 dark:text-white text-sm truncate" title={assignment.courseCode}>{assignment.courseCode}</span>
-                            </div>
+                            {slotInfo?.date && (
+                                <div className="flex items-center gap-2 px-2 justify-center">
+                                    <span className="text-[11px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider text-nowrap">Ngày học</span>
+                                    <span className="font-semibold text-gray-900 dark:text-white text-sm">
+                                        {new Date(slotInfo.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                    </span>
+                                </div>
+                            )}
+                            {slotInfo?.slotNumber && (
+                                <div className="flex items-center gap-2 px-2 justify-center">
+                                    <span className="text-[11px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider">Slot</span>
+                                    <span className="font-semibold text-gray-900 dark:text-white text-sm">Slot {slotInfo.slotNumber}</span>
+                                </div>
+                            )}
+                            {(slotInfo?.roomCode || slotInfo?.roomName) && (
+                                <div className="flex items-center gap-2 px-2 justify-center">
+                                    <span className="text-[11px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider">Phòng</span>
+                                    <span className="font-semibold text-gray-900 dark:text-white text-sm">{slotInfo.roomCode || slotInfo.roomName}</span>
+                                </div>
+                            )}
                             <div className="flex items-center gap-2 px-2 justify-center">
                                 <span className="text-[11px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider text-nowrap">Hạn nộp</span>
                                 <span className="font-semibold text-gray-900 dark:text-white text-sm inline-flex items-center gap-1">
