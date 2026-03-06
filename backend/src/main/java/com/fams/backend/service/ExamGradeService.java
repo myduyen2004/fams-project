@@ -190,6 +190,7 @@ public class ExamGradeService {
                     if ((Boolean.TRUE.equals(gc.getIsResit()) || gc.getType() == GradeComponent.GradeType.RESIT)
                             && gc.getReferenceComponent() != null
                             && studentGrades.containsKey(gc.getId())) {
+                        // Student has a RESIT record (any score, including 0) → RESIT replaces FE
                         replacedByResitIds.add(gc.getReferenceComponent().getId());
                     }
                 }
@@ -208,10 +209,11 @@ public class ExamGradeService {
                     continue;
                 }
 
-                // If Resit is NOT published, skip Resit components entirely from calculation
-                // so that FE is used for the average instead
                 boolean isResitComponent = Boolean.TRUE.equals(gc.getIsResit())
                         || gc.getType() == GradeComponent.GradeType.RESIT;
+
+                // If Resit is NOT published, skip Resit components entirely from calculation
+                // so that FE is used for the average instead
                 if (isResitComponent && !resitPublished) {
                     continue;
                 }
@@ -226,7 +228,8 @@ public class ExamGradeService {
                 }
 
                 // Only add to weightsForCalc if it's NOT a RESIT, OR if the student HAS a score
-                // for this RESIT (this branch is now only reached when resitPublished=true)
+                // for this RESIT (this branch is now only reached when resitPublished=true AND
+                // resitScore > 0)
                 if (!isResitComponent || score != null) {
                     weightsForCalc.put(gc.getId(), gc.getWeight());
                 }
@@ -284,11 +287,13 @@ public class ExamGradeService {
                     // 1. Điểm TB < 5 (FAILED)
                     // 2. Thiếu điểm thi cuối kỳ (finalGrade null hoặc logic check FE)
                     // 3. Status PENDING (chưa đủ cột điểm để tính)
-                    // 4. MỚI: Đã có điểm thi lại (RESIT) -> giữ lại trong danh sách ngay cả khi đã
+                    // 4. MỚI: Đã có điểm thi lại thực sự (>0) -> giữ lại trong danh sách ngay cả
+                    // khi đã
                     // pass
                     boolean isFailed = "FAILED".equals(row.getStatus());
 
-                    // Kiểm tra xem đã có điểm thi lại chưa (giữ lại trong danh sách)
+                    // Kiểm tra xem sinh viên đã được thêm vào danh sách thi lại chưa
+                    // (có record RESIT trong DB, bất kể điểm bao nhiêu kể cả 0)
                     boolean hasResitGrade = allComponents.stream()
                             .filter(gc -> gc.getType() == GradeComponent.GradeType.RESIT)
                             .anyMatch(gc -> row.getGrades().get(gc.getId()) != null);
@@ -905,20 +910,57 @@ public class ExamGradeService {
                         .filter(e -> e.getClassSection().getClassName().equals(classSection.getClassName()))
                         .collect(Collectors.toList());
 
+                // Get all grade components for eligibility check
+                List<GradeComponent> allCourseComponents = gradeComponentRepository
+                        .findByCourseIdOrderById(course.getId());
+
                 // Create missing grades (0.0)
                 for (Enrollment en : classEnrollments) {
                     Map<Long, StudentGrade> studentGrades = gradesMap.getOrDefault(en.getId(), new HashMap<>());
                     for (GradeComponent gc : gradeComponents) {
                         if (!studentGrades.containsKey(gc.getId())) {
-                            StudentGrade newGrade = new StudentGrade();
-                            newGrade.setEnrollment(en);
-                            newGrade.setGradeComponent(gc);
-                            newGrade.setScore(0.0);
-                            newGrade.setNote("Tự động gán 0 điểm do báo vắng (hoặc không tham gia) khi công bố điểm "
-                                    + (isResit ? "Thi Lại" : "Cuối Kỳ"));
-                            newGrade.setGradedBy(publisher);
-                            newGrade.setGradedAt(LocalDateTime.now());
-                            newGrades.add(newGrade);
+                            if (isResit) {
+                                // For RESIT publish: only auto-fill 0 for students who are actually
+                                // eligible for resit (average < 5.0). Students who already passed
+                                // should NOT get a 0 RESIT score, otherwise they will show up in the
+                                // resit list after publishing.
+                                List<StudentGrade> studentAllGrades = existingGrades.stream()
+                                        .filter(sg -> sg.getEnrollment().getId().equals(en.getId()))
+                                        .collect(Collectors.toList());
+                                Map<Long, Double> studentScoresMap = studentAllGrades.stream()
+                                        .collect(Collectors.toMap(
+                                                sg -> sg.getGradeComponent().getId(),
+                                                StudentGrade::getScore,
+                                                (a, b) -> a));
+                                Map<Long, Double> studentWeightsMap = allCourseComponents.stream()
+                                        .filter(comp -> !Boolean.TRUE.equals(comp.getIsResit())
+                                                && comp.getType() != GradeComponent.GradeType.RESIT)
+                                        .collect(Collectors.toMap(GradeComponent::getId, GradeComponent::getWeight));
+                                Double currentAverage = GradeCalculator.calculateAverage(studentScoresMap,
+                                        studentWeightsMap);
+                                // Only add a 0 resit score if the student was failing (eligible for resit)
+                                if (currentAverage == null || currentAverage < 5.0) {
+                                    StudentGrade newGrade = new StudentGrade();
+                                    newGrade.setEnrollment(en);
+                                    newGrade.setGradeComponent(gc);
+                                    newGrade.setScore(0.0);
+                                    newGrade.setNote("Tự động gán 0 điểm do vắng thi lại khi công bố điểm Thi Lại");
+                                    newGrade.setGradedBy(publisher);
+                                    newGrade.setGradedAt(LocalDateTime.now());
+                                    newGrades.add(newGrade);
+                                }
+                                // If student already passed → do NOT create a 0 resit score
+                            } else {
+                                StudentGrade newGrade = new StudentGrade();
+                                newGrade.setEnrollment(en);
+                                newGrade.setGradeComponent(gc);
+                                newGrade.setScore(0.0);
+                                newGrade.setNote(
+                                        "Tự động gán 0 điểm do báo vắng (hoặc không tham gia) khi công bố điểm Cuối Kỳ");
+                                newGrade.setGradedBy(publisher);
+                                newGrade.setGradedAt(LocalDateTime.now());
+                                newGrades.add(newGrade);
+                            }
                         }
                     }
                 }

@@ -640,6 +640,7 @@ export const MajorManagement: React.FC = () => {
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.checked) {
             setSelectedIds(data.map(m => m.id));
+        } else {
             setSelectedIds([]);
         }
     };
