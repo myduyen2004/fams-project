@@ -135,18 +135,7 @@ export const UserNotificationDetailPage: React.FC = () => {
                     }`}>
                     {notification.isRead ? 'Đã đọc' : 'Mới'}
                   </span>
-                  {/* Show approval status badge for schedule request notifications */}
-                  {notification.type === 'SCHEDULE' && (
-                    notification.description?.includes('Đã duyệt') ? (
-                      <span className="text-xs font-bold px-3 py-1 rounded uppercase tracking-wider bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                        Đã duyệt
-                      </span>
-                    ) : notification.description?.includes('Từ chối') ? (
-                      <span className="text-xs font-bold px-3 py-1 rounded uppercase tracking-wider bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                        Từ chối
-                      </span>
-                    ) : null
-                  )}
+
                 </div>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-slate-500 dark:text-slate-400">
                   <p className="text-sm font-medium">
@@ -160,10 +149,10 @@ export const UserNotificationDetailPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Main Grid Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
-            {/* Left Column: Content */}
-            <div className="lg:col-span-2 flex">
+          {/* Main Layout */}
+          <div className="flex flex-col gap-8 items-stretch">
+            {/* Content */}
+            <div className="flex w-full">
               <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 p-8 shadow-sm w-full flex flex-col">
                 <h3 className="text-slate-400 dark:text-gray-500 text-xs font-bold uppercase tracking-widest mb-6">
                   Nội dung thông báo
@@ -173,36 +162,6 @@ export const UserNotificationDetailPage: React.FC = () => {
                   <div
                     dangerouslySetInnerHTML={{ __html: notification.description }}
                   />
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column: Details */}
-            <div className="flex">
-              <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 p-8 shadow-sm w-full">
-                <div className="flex items-center justify-between mb-6 border-b border-slate-100 dark:border-zinc-800 pb-3">
-                  <h3 className="text-slate-900 dark:text-white text-base font-bold">
-                    Thông tin chi tiết
-                  </h3>
-                </div>
-                <div className="space-y-6">
-                  <div>
-                    <p className="text-slate-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">
-                      Người gửi
-                    </p>
-                    <p className="text-slate-900 dark:text-white text-sm font-semibold">
-                      {notification.senderFullName || notification.senderName || 'Hệ thống'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-slate-400 dark:text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">
-                      Thời gian nhận
-                    </p>
-                    <p className="text-slate-700 dark:text-gray-300 text-sm">
-                      {notification.timestamp}
-                    </p>
-                  </div>
-
                 </div>
               </div>
             </div>
