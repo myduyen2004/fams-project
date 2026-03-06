@@ -6,6 +6,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
 
@@ -21,13 +23,13 @@ public interface SpecializationRepository extends JpaRepository<Specialization, 
 
         @Query("SELECT DISTINCT s FROM Specialization s LEFT JOIN s.subSpecializations sub WHERE " +
                         "s.major.id = :majorId AND " +
-                        "(:keyword IS NULL OR LOWER(s.code) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(s.name) LIKE LOWER(CONCAT('%', :keyword, '%')) "
+                        "(:keyword IS NULL OR LOWER(s.code) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) OR LOWER(s.name) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) "
                         +
-                        "OR LOWER(sub.code) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(sub.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) "
+                        "OR LOWER(sub.code) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) OR LOWER(sub.name) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%'))) "
                         +
                         "AND (:status IS NULL OR s.status = :status)")
-        Page<Specialization> findByMajorIdAndSearch(Long majorId, String keyword,
-                        Specialization.SpecializationStatus status, Pageable pageable);
+        Page<Specialization> findByMajorIdAndSearch(@Param("majorId") Long majorId, @Param("keyword") String keyword,
+                        @Param("status") Specialization.SpecializationStatus status, Pageable pageable);
 
         Optional<Specialization> findByCode(String code);
 

@@ -12,6 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SemesterResponse {
+    private Long id;
     private String code;
     private String name;
     private String startDate;
