@@ -44,7 +44,7 @@ export const LecturerSchedulePage: React.FC = () => {
     const [dlClassName, setDlClassName] = useState<string>('');
     const [dlAssignments, setDlAssignments] = useState<AssignmentDTO[]>([]);
     const [dlAssignmentId, setDlAssignmentId] = useState<number | null>(null);
-    const [dlAssignmentStatus, setDlAssignmentStatus] = useState<string>('');
+
     const [dlAssignmentTitle, setDlAssignmentTitle] = useState<string>('');
     const [downloadingZip, setDownloadingZip] = useState(false);
     const [loadingDlData, setLoadingDlData] = useState(false);
@@ -373,7 +373,7 @@ export const LecturerSchedulePage: React.FC = () => {
     const handleOpenDownloadDialog = async () => {
         setDlClassName('');
         setDlAssignmentId(null);
-        setDlAssignmentStatus('');
+
         setDlAssignmentTitle('');
         setDlAssignments([]);
         setShowDownloadDialog(true);
@@ -391,7 +391,7 @@ export const LecturerSchedulePage: React.FC = () => {
     const handleDlClassChange = async (className: string) => {
         setDlClassName(className);
         setDlAssignmentId(null);
-        setDlAssignmentStatus('');
+
         setDlAssignmentTitle('');
         setDlAssignments([]);
         if (!className) return;
@@ -410,7 +410,7 @@ export const LecturerSchedulePage: React.FC = () => {
         const aid = Number(assignmentIdStr);
         setDlAssignmentId(aid || null);
         const found = dlAssignments.find(a => a.id === aid);
-        setDlAssignmentStatus(found?.status || '');
+
         setDlAssignmentTitle(found?.title || '');
     };
 

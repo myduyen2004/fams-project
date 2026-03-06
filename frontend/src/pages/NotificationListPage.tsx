@@ -8,24 +8,13 @@ import { Pagination } from '../components/common/Pagination';
 import { dashboardService } from '../services/api/dashboardService';
 import { authService } from '../services/api/authService';
 import { AppNotification } from '../types/dashboard';
-import { Loader2, Search, Bell, AlertCircle, CheckCircle2, User, ArrowLeft } from 'lucide-react';
+import { Loader2, Search, Bell, CheckCircle2, User, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePagination } from '../hooks/usePagination';
 
 type FilterType = 'all' | 'unread' | 'system';
 
-const getNotificationIcon = (type?: string) => {
-  switch (type) {
-    case 'SYSTEM':
-      return <AlertCircle className="w-5 h-5" />;
-    case 'ALERT':
-      return <AlertCircle className="w-5 h-5" />;
-    case 'IMPORT':
-      return <CheckCircle2 className="w-5 h-5" />;
-    default:
-      return <Bell className="w-5 h-5" />;
-  }
-};
+
 
 const getNotificationColor = (type?: string) => {
   switch (type) {

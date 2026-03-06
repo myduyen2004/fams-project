@@ -7,7 +7,7 @@ import { uploadFile } from '../../services/utils/fileUploadService';
 import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
 import {
     ArrowLeft, Clock, BookOpen, FileText, Upload, CheckCircle, AlertCircle,
-    XCircle, ExternalLink, Loader2, Trash2, Paperclip, MessageSquare, RotateCcw, Calendar, MapPin
+    XCircle, ExternalLink, Loader2, Trash2, Paperclip, RotateCcw, Calendar, MapPin
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';

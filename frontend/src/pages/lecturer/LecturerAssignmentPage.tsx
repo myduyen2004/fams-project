@@ -2,14 +2,14 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { lecturerClassService, SemesterResponse, ClassSectionResponse } from '../../services/api/LecturerClass';
-import { assignmentService, AssignmentDTO, AssignmentSubmissionDTO } from '../../services/api/assignmentService';
+import { assignmentService, AssignmentDTO } from '../../services/api/assignmentService';
 import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
 import { authService } from '../../services/api/authService';
 import { uploadFile } from '../../services/utils/fileUploadService';
 import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
 import { Pagination } from '../../components/common/Pagination';
 import {
-    ChevronDown, Check, Users, Clock, ChevronUp, ExternalLink, Search,
+    ChevronDown, Check, Users, Clock, Search,
     FileText, Loader2, Plus, X, BookOpen, Lock, Edit3, AlertCircle, Trash2, Download
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -37,9 +37,6 @@ export const LecturerAssignmentPage: React.FC = () => {
     const [assignments, setAssignments] = useState<AssignmentDTO[]>([]);
     const [slots, setSlots] = useState<TimetableSlotDTO[]>([]);
     const [loadingAssignments, setLoadingAssignments] = useState(false);
-    const [expandedId, setExpandedId] = useState<number | null>(null);
-    const [submissions, setSubmissions] = useState<Record<number, AssignmentSubmissionDTO[]>>({});
-    const [loadingSubmissions, setLoadingSubmissions] = useState<number | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(0);
     const PAGE_SIZE = 10;
@@ -194,25 +191,6 @@ export const LecturerAssignmentPage: React.FC = () => {
         }
     }, [selectedSemester, user?.id, classes]);
 
-    const toggleExpand = async (assignmentId: number) => {
-        if (expandedId === assignmentId) {
-            setExpandedId(null);
-            return;
-        }
-        setExpandedId(assignmentId);
-        if (!submissions[assignmentId]) {
-            try {
-                setLoadingSubmissions(assignmentId);
-                const data = await assignmentService.getAssignmentSubmissions(assignmentId);
-                setSubmissions(prev => ({ ...prev, [assignmentId]: data }));
-            } catch {
-                setSubmissions(prev => ({ ...prev, [assignmentId]: [] }));
-            } finally {
-                setLoadingSubmissions(null);
-            }
-        }
-    };
-
     // Fetch slots for selected class in create modal
     useEffect(() => {
         if (!createClassName) {
@@ -287,15 +265,7 @@ export const LecturerAssignmentPage: React.FC = () => {
         }
     };
 
-    const handleClose = async (assignmentId: number) => {
-        try {
-            await assignmentService.closeAssignment(assignmentId);
-            toast.success('Đã đóng bài tập');
-            fetchAllData();
-        } catch (err: any) {
-            toast.error(err.response?.data?.message || 'Không thể đóng bài tập');
-        }
-    };
+
 
     const resetCreateForm = () => {
         setNewTitle('');
@@ -839,44 +809,7 @@ export const LecturerAssignmentPage: React.FC = () => {
                                                     </td>
 
                                                 </tr>
-                                                {assignment && expandedId === assignment.id && (
-                                                    <tr>
-                                                        <td colSpan={8} className="bg-gray-50 dark:bg-zinc-950 px-4 py-4">
-                                                            {loadingSubmissions === assignment.id ? (
-                                                                <div className="text-center py-4">
-                                                                    <Loader2 size={24} className="animate-spin mx-auto text-fpt-orange" />
-                                                                </div>
-                                                            ) : (submissions[assignment.id]?.length || 0) === 0 ? (
-                                                                <p className="text-sm text-gray-500 dark:text-zinc-400 text-center py-3">Chưa có sinh viên nào nộp bài</p>
-                                                            ) : (
-                                                                <div className="space-y-2">
-                                                                    <div className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2">
-                                                                        {submissions[assignment.id]?.length} bài nộp
-                                                                    </div>
-                                                                    {submissions[assignment.id]?.map(sub => (
-                                                                        <div key={sub.id} className="flex items-center justify-between bg-white dark:bg-zinc-900 rounded-lg p-3 border border-gray-200 dark:border-zinc-800">
-                                                                            <div>
-                                                                                <div className="font-medium text-sm text-gray-900 dark:text-white">
-                                                                                    {sub.studentCode} — {sub.studentName}
-                                                                                </div>
-                                                                                <div className="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">
-                                                                                    {sub.fileNames?.[0] || 'File'} • Nộp lúc {sub.submittedAt ? new Date(sub.submittedAt).toLocaleString('vi-VN') : '—'}
-                                                                                </div>
-                                                                                {sub.note && <div className="text-xs text-gray-400 mt-0.5">Ghi chú: {sub.note}</div>}
-                                                                            </div>
-                                                                            {sub.fileUrls?.[0] && (
-                                                                                <a href={getViewableFileUrl(sub.fileUrls[0])} target="_blank" rel="noopener noreferrer"
-                                                                                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 text-fpt-orange rounded-lg text-xs transition-colors">
-                                                                                    <ExternalLink className="w-3 h-3" /> Xem file
-                                                                                </a>
-                                                                            )}
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                )}
+
                                             </React.Fragment>
                                         ))}
                                     </tbody>
