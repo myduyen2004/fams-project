@@ -332,6 +332,7 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
                 .courseName(assignment.getClassSection().getCourse().getName())
                 .status(AssignmentSubmission.SubmissionStatus.NOT_SUBMITTED)
                 .assignmentDueDate(assignment.getDueDate())
+                .timetableSlotId(assignment.getTimetableSlot() != null ? assignment.getTimetableSlot().getId() : null)
                 .referenceUrl(assignment.getReferenceUrl())
                 .referenceName(assignment.getReferenceName())
                 .build();
@@ -498,6 +499,7 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
                 .status(submission.getStatus())
                 .submittedAt(submission.getSubmittedAt())
                 .assignmentDueDate(assignment.getDueDate())
+                .timetableSlotId(assignment.getTimetableSlot() != null ? assignment.getTimetableSlot().getId() : null)
                 .referenceUrl(assignment.getReferenceUrl())
                 .referenceName(assignment.getReferenceName())
                 .build();
@@ -568,10 +570,6 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
         ClassSection cs = assignment.getClassSection();
         if (!cs.getLecturer().getId().equals(lecturerId)) {
             throw new RuntimeException("Bạn không phải giảng viên của lớp này");
-        }
-
-        if (assignment.getStatus() != Assignment.AssignmentStatus.CLOSED) {
-            throw new RuntimeException("Chỉ có thể tải bài nộp của bài tập đã đóng");
         }
 
         List<AssignmentSubmission> submissions = submissionRepository.findByAssignment_Id(assignmentId);

@@ -86,8 +86,6 @@ export const LecturerAssignmentPage: React.FC = () => {
     const [dlClassName, setDlClassName] = useState<string>('');
     const [dlAssignments, setDlAssignments] = useState<AssignmentDTO[]>([]);
     const [dlAssignmentId, setDlAssignmentId] = useState<number | null>(null);
-    const [dlAssignmentStatus, setDlAssignmentStatus] = useState<string>('');
-    const [dlAssignmentTitle, setDlAssignmentTitle] = useState<string>('');
     const [downloadingZip, setDownloadingZip] = useState(false);
     const [loadingDlAssignments, setLoadingDlAssignments] = useState(false);
 
@@ -263,10 +261,8 @@ export const LecturerAssignmentPage: React.FC = () => {
             toast.error('Vui lòng nhập hạn nộp bài');
             return;
         }
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        if (new Date(newDueDate) < today) {
-            toast.error('Hạn nộp bài phải từ hôm nay trở đi');
+        if (new Date(newDueDate) < new Date()) {
+            toast.error('Hạn nộp bài phải từ thời điểm hiện tại trở đi');
             return;
         }
         try {
@@ -480,6 +476,12 @@ export const LecturerAssignmentPage: React.FC = () => {
 
     const handleBatchEditSubmit = async () => {
         if (!editAssignmentId || !editTitle.trim()) { toast.error('Tiêu đề không được để trống'); return; }
+        if (editDueDate) {
+            if (new Date(editDueDate) < new Date()) {
+                toast.error('Hạn nộp bài phải từ thời điểm hiện tại trở đi');
+                return;
+            }
+        }
         try {
             setBatchEditing(true);
             await assignmentService.updateAssignment(editAssignmentId, {
@@ -528,8 +530,6 @@ export const LecturerAssignmentPage: React.FC = () => {
     const handleOpenDownloadDialog = () => {
         setDlClassName('');
         setDlAssignmentId(null);
-        setDlAssignmentStatus('');
-        setDlAssignmentTitle('');
         setDlAssignments([]);
         setShowDownloadDialog(true);
     };
@@ -537,8 +537,6 @@ export const LecturerAssignmentPage: React.FC = () => {
     const handleDlClassChange = async (className: string) => {
         setDlClassName(className);
         setDlAssignmentId(null);
-        setDlAssignmentStatus('');
-        setDlAssignmentTitle('');
         setDlAssignments([]);
         if (!className) return;
         try {
@@ -555,9 +553,6 @@ export const LecturerAssignmentPage: React.FC = () => {
     const handleDlAssignmentChange = (idStr: string) => {
         const aid = Number(idStr);
         setDlAssignmentId(aid || null);
-        const found = dlAssignments.find(a => a.id === aid);
-        setDlAssignmentStatus(found?.status || '');
-        setDlAssignmentTitle(found?.title || '');
     };
 
     const handleDownloadSubmissions = async () => {
@@ -568,7 +563,8 @@ export const LecturerAssignmentPage: React.FC = () => {
             const url = window.URL.createObjectURL(new Blob([resp.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `${dlClassName}_${dlAssignmentTitle}_submissions.zip`);
+            const found = dlAssignments.find(a => a.id === dlAssignmentId);
+            link.setAttribute('download', `${dlClassName}_${found?.title || dlAssignmentId}_submissions.zip`);
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -711,9 +707,16 @@ export const LecturerAssignmentPage: React.FC = () => {
                         <p className="text-gray-500">Đang tải dữ liệu...</p>
                     </div>
                 ) : filteredRows.length === 0 ? (
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 p-12 text-center">
-                        <FileText size={48} className="mx-auto text-gray-300 dark:text-zinc-600 mb-4" />
-                        <p className="text-gray-500 dark:text-zinc-400">Không có bài tập nào phù hợp</p>
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 p-16 text-center">
+                        <div className="w-24 h-24 rounded-full bg-orange-50 dark:bg-zinc-800 mx-auto mb-6 flex items-center justify-center">
+                            <FileText size={48} className="text-fpt-orange" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                            Không có bài tập nào
+                        </h3>
+                        <p className="text-gray-500 dark:text-zinc-400">
+                            Chưa có bài tập phù hợp với bộ lọc hiện tại. Hãy thử thay đổi bộ lọc hoặc tạo bài tập mới.
+                        </p>
                     </div>
                 ) : (
                     <>
@@ -732,10 +735,33 @@ export const LecturerAssignmentPage: React.FC = () => {
                                     Đã chọn {selectedIds.size} bài tập
                                 </span>
                                 <div className="flex items-center gap-2">
-                                    <button onClick={handleBatchEditOpen}
-                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-medium transition-colors">
-                                        <Edit3 className="w-3.5 h-3.5" /> Chỉnh sửa bài tập
-                                    </button>
+                                    {selectedIds.size === 1 && (
+                                        <button onClick={handleBatchEditOpen}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-medium transition-colors">
+                                            <Edit3 className="w-3.5 h-3.5" /> Chỉnh sửa bài tập
+                                        </button>
+                                    )}
+                                    {Array.from(selectedIds).some(id => {
+                                        const row = filteredRows.find(r => r.assignment.id === id);
+                                        return row?.assignment.status === 'OPEN';
+                                    }) && (
+                                            <button onClick={() => {
+                                                const openIds = Array.from(selectedIds).filter(id => {
+                                                    const row = filteredRows.find(r => r.assignment.id === id);
+                                                    return row?.assignment.status === 'OPEN';
+                                                });
+                                                Promise.all(openIds.map(id => assignmentService.closeAssignment(id)))
+                                                    .then(() => {
+                                                        toast.success(`Đã đóng ${openIds.length} bài tập`);
+                                                        setSelectedIds(new Set());
+                                                        fetchAllData();
+                                                    })
+                                                    .catch((err: any) => toast.error(err.response?.data?.message || 'Không thể đóng bài tập'));
+                                            }}
+                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors">
+                                                <Lock className="w-3.5 h-3.5" /> Đóng
+                                            </button>
+                                        )}
                                     <button onClick={handleBatchDelete}
                                         className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-medium transition-colors">
                                         <Trash2 className="w-3.5 h-3.5" /> Xóa
@@ -760,7 +786,7 @@ export const LecturerAssignmentPage: React.FC = () => {
                                             <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Bài tập</th>
                                             <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Trạng thái</th>
                                             <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Nộp</th>
-                                            <th className="text-right px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Thao tác</th>
+
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
@@ -811,25 +837,11 @@ export const LecturerAssignmentPage: React.FC = () => {
                                                     <td className="px-4 py-3 text-gray-700 dark:text-zinc-300">
                                                         {`${assignment.totalSubmissions}/${assignment.totalStudents}`}
                                                     </td>
-                                                    <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}>
-                                                        <div className="flex items-center justify-end gap-1.5">
-                                                            <button onClick={() => toggleExpand(assignment.id)}
-                                                                className="inline-flex items-center gap-1 px-2 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 rounded-lg text-xs transition-colors">
-                                                                <Users className="w-3.5 h-3.5" />
-                                                                {expandedId === assignment.id ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                                                            </button>
-                                                            {assignment.status === 'OPEN' && (
-                                                                <button onClick={() => handleClose(assignment.id)}
-                                                                    className="inline-flex items-center gap-1 px-2 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-xs transition-colors">
-                                                                    <Lock className="w-3.5 h-3.5" /> Đóng
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    </td>
+
                                                 </tr>
                                                 {assignment && expandedId === assignment.id && (
                                                     <tr>
-                                                        <td colSpan={9} className="bg-gray-50 dark:bg-zinc-950 px-4 py-4">
+                                                        <td colSpan={8} className="bg-gray-50 dark:bg-zinc-950 px-4 py-4">
                                                             {loadingSubmissions === assignment.id ? (
                                                                 <div className="text-center py-4">
                                                                     <Loader2 size={24} className="animate-spin mx-auto text-fpt-orange" />
@@ -1147,29 +1159,17 @@ export const LecturerAssignmentPage: React.FC = () => {
                                             <option disabled>Đang tải...</option>
                                         ) : dlAssignments.map(a => (
                                             <option key={a.id} value={a.id.toString()}>
-                                                {a.title} ({a.status === 'OPEN' ? 'Đang mở' : 'Đã đóng'})
+                                                {a.title}
                                             </option>
                                         ))}
                                     </select>
                                 </div>
                             )}
-                            {dlAssignmentId && (
-                                <div className="p-3 rounded-lg border border-gray-100 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-gray-600 dark:text-zinc-400">Trạng thái:</span>
-                                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${dlAssignmentStatus === 'CLOSED' ? 'bg-gray-100 text-gray-600 border border-gray-200' : 'bg-green-100 text-green-700 border border-green-200'}`}>
-                                            {dlAssignmentStatus === 'CLOSED' ? 'Đã đóng' : 'Đang mở'}
-                                        </span>
-                                    </div>
-                                    {dlAssignmentStatus !== 'CLOSED' && (
-                                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">Chỉ bài tập đã đóng mới có thể tải xuống.</p>
-                                    )}
-                                </div>
-                            )}
+
                         </div>
                         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 dark:border-zinc-800">
                             <button onClick={() => setShowDownloadDialog(false)} className="px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-zinc-400 hover:text-gray-800 transition-colors">Hủy</button>
-                            <button onClick={handleDownloadSubmissions} disabled={!dlAssignmentId || dlAssignmentStatus !== 'CLOSED' || downloadingZip}
+                            <button onClick={handleDownloadSubmissions} disabled={!dlAssignmentId || downloadingZip}
                                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-fpt-orange hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
                                 {downloadingZip ? <><Loader2 size={16} className="animate-spin" /> Đang tải...</> : <><Download className="w-4 h-4" /> Tải xuống</>}
                             </button>

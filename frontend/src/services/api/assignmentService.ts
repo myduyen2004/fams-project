@@ -56,6 +56,7 @@ export interface AssignmentSubmissionDTO {
     assignmentDueDate?: string;
     referenceUrl?: string;
     referenceName?: string;
+    timetableSlotId?: number;
 }
 
 export interface SubmitAssignmentRequest {

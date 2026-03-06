@@ -5,13 +5,15 @@ import 'package:app_badge_plus/app_badge_plus.dart';
 import 'package:get/get.dart';
 import '../models/notification_model.dart';
 import '../views/notification_detail_screen.dart';
+import '../views/notification_list_screen.dart';
 import '../../auth/controllers/auth_controller.dart';
 import 'notification_service.dart';
-
+import '../controllers/notification_controller.dart';
 class NotificationPollingService {
   final NotificationService _notificationService = NotificationService();
   Timer? _timer;
   final _unreadCountController = StreamController<int>.broadcast();
+  final _newNotificationController = StreamController<bool>.broadcast();
   bool _isPolling = false;
   int _lastUnreadCount = 0;
 
@@ -57,13 +59,25 @@ class NotificationPollingService {
         final parts = response.payload!.split('_');
         final id = int.tryParse(parts.last);
 
+        // Wait for the app to finish splash/init and land on /home
+        // This prevents Get.offAllNamed('/home') from wiping our navigation
+        await _waitForAppReady();
+
         if (id != null) {
           try {
             final NotificationModel? notification =
                 await _notificationService.getNotificationById(id);
             if (notification != null) {
-              // Open list first so back-button works correctly
-              Get.toNamed('/notifications');
+              if (!notification.isRead) {
+                // Fire-and-forget: mark as read on backend without blocking navigation
+                _notificationService.markAsRead(id).catchError((e) {
+                  debugPrint('Could not mark as read via service: $e');
+                });
+              }
+              // Use Get.to() because /notifications is not a registered named route
+              Get.to(() => const NotificationListScreen());
+              // Wait for the list screen to be fully mounted
+              await Future.delayed(const Duration(milliseconds: 300));
               Get.to(() => NotificationDetailScreen(notification: notification));
               return;
             }
@@ -73,12 +87,37 @@ class NotificationPollingService {
         }
 
         // Fallback: open notification list
-        Get.toNamed('/notifications');
+        Get.to(() => const NotificationListScreen());
       },
     );
   }
 
+  /// Waits until the splash screen has finished and the app
+  /// has settled on /home before allowing deep-link navigation.
+  Future<void> _waitForAppReady() async {
+    int attempts = 0;
+    const maxAttempts = 100; // 5 seconds max (100 * 50ms)
+    while (attempts < maxAttempts) {
+      try {
+        final authController = Get.find<AuthController>();
+        if (authController.isAuthenticated.value &&
+            authController.isInitialized.value) {
+          // Also make sure route is /home (splash finished offAllNamed)
+          final currentRoute = Get.currentRoute;
+          if (currentRoute == '/home') {
+            break;
+          }
+        }
+      } catch (_) {}
+      await Future.delayed(const Duration(milliseconds: 50));
+      attempts++;
+    }
+    // Extra delay to ensure the home screen is fully built
+    await Future.delayed(const Duration(milliseconds: 300));
+  }
+
   Stream<int> get unreadCountStream => _unreadCountController.stream;
+  Stream<bool> get newNotificationStream => _newNotificationController.stream;
 
   void startPolling({Duration interval = const Duration(seconds: 15)}) { 
     if (_isPolling) return;
@@ -124,6 +163,8 @@ class NotificationPollingService {
 
       // Check if new notifications arrived (simple logic: count increased)
       if (count > _lastUnreadCount) {
+        // Trigger UI refresh
+        _newNotificationController.add(true);
         await _showLocalNotification(count);
       }
       
@@ -157,7 +198,7 @@ class NotificationPollingService {
         await _notificationsPlugin.show(
           latest.id, // Notification ID
           latest.title, // Title
-          latest.cleanDescription, // Body (cleaned HTML)
+          latest.firstLineDescription, // Body (first line)
           platformChannelSpecifics,
           payload: '${latest.type ?? "notification"}_${latest.id}',
         );
@@ -185,5 +226,6 @@ class NotificationPollingService {
   void dispose() {
     stopPolling();
     _unreadCountController.close();
+    _newNotificationController.close();
   }
 }

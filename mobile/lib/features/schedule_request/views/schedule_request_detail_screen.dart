@@ -152,6 +152,10 @@ class _ScheduleRequestDetailScreenState extends State<ScheduleRequestDetailScree
                     ),
                     const SizedBox(height: 8),
                     _InfoRow(
+                      label: 'Ngày:',
+                      value: _formatDateOnly(request.originalDate),
+                    ),
+                    _InfoRow(
                       label: 'Slot:',
                       value: request.originalSlotNumber != null
                           ? 'Slot ${request.originalSlotNumber}'
@@ -262,6 +266,41 @@ class _ScheduleRequestDetailScreenState extends State<ScheduleRequestDetailScree
                             status: request.status,
                             label: request.statusLabel,
                           ),
+                          if (request.status == 'PENDING') ...[
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: Obx(() => ElevatedButton(
+                                onPressed: controller.isRevoking.value 
+                                    ? null 
+                                    : () => _showRevokeConfirmation(context, request.id),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: Colors.red[700],
+                                  elevation: 0,
+                                  side: BorderSide(color: Colors.red[200]!),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: controller.isRevoking.value
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      )
+                                    : const Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.cancel_outlined, size: 18),
+                                          SizedBox(width: 8),
+                                          Text('Thu hồi đơn', style: TextStyle(fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                              )),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -303,6 +342,34 @@ class _ScheduleRequestDetailScreenState extends State<ScheduleRequestDetailScree
         );
       }),
         ),
+      ),
+    );
+  }
+
+  void _showRevokeConfirmation(BuildContext context, int requestId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xác nhận thu hồi'),
+        content: const Text('Bạn có chắc chắn muốn thu hồi đơn yêu cầu này không? Hành động này không thể hoàn tác.'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              controller.revokeRequest(requestId);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[600],
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Đồng ý thu hồi'),
+          ),
+        ],
       ),
     );
   }

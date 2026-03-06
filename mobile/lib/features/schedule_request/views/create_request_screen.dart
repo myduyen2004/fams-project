@@ -362,6 +362,20 @@ class CreateRequestScreen extends StatelessWidget {
                 onRoomSelect: controller.onRoomSelected,
                 activeFloor: controller.activeFloor.value,
                 onFloorChange: (floor) => controller.activeFloor.value = floor,
+                activeBuilding: controller.activeBuilding.value,
+                onBuildingChange: (building) {
+                  controller.activeBuilding.value = building;
+                  // Auto-select first available floor for the new building
+                  final floorsForBuilding = controller.rooms
+                      .where((r) => r.building == building)
+                      .map((r) => r.floor)
+                      .toSet()
+                      .toList()
+                    ..sort();
+                  if (floorsForBuilding.isNotEmpty) {
+                    controller.activeFloor.value = floorsForBuilding.first;
+                  }
+                },
                 isLoading: controller.isLoadingRooms.value,
                 hasFilters: controller.newDate.value != null && controller.newSlot.value != null,
                 selectedDate: controller.newDate.value,

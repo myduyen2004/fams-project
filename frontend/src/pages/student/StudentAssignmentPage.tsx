@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { FileText, Upload, CheckCircle, AlertCircle, XCircle, ExternalLink, Search, Trash2, RotateCcw, Paperclip } from 'lucide-react';
 import { assignmentService, AssignmentSubmissionDTO, SubmitAssignmentRequest } from '../../services/api/assignmentService';
@@ -12,6 +13,7 @@ type StatusFilter = 'ALL' | 'NOT_SUBMITTED' | 'SUBMITTED' | 'OVERDUE';
 const PAGE_SIZE = 10;
 
 export const StudentAssignmentPage: React.FC = () => {
+    const navigate = useNavigate();
     const [assignments, setAssignments] = useState<AssignmentSubmissionDTO[]>([]);
     const [enrolledClasses, setEnrolledClasses] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
@@ -75,17 +77,6 @@ export const StudentAssignmentPage: React.FC = () => {
         return new Date(dueDate) > new Date();
     };
 
-    const renderNoteWithLinks = (text?: string) => {
-        if (!text) return '—';
-        const urlRegex = /(https?:\/\/[^\s]+)/;
-        const parts = text.split(urlRegex);
-        return parts.filter(Boolean).map((part, i) => {
-            if (urlRegex.test(part)) {
-                return <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-fpt-orange hover:underline break-all">{part}</a>;
-            }
-            return <span key={i}>{part}</span>;
-        });
-    };
 
     const openUploadDialog = (assignmentId: number) => {
         setSelectedAssignmentId(assignmentId);
@@ -290,7 +281,6 @@ export const StudentAssignmentPage: React.FC = () => {
                                             <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider whitespace-nowrap">Trạng thái</th>
                                             <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">File bài tập</th>
                                             <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">File nộp</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Ghi chú</th>
                                             <th className="text-center px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider whitespace-nowrap">Hành động</th>
                                         </tr>
                                     </thead>
@@ -298,10 +288,14 @@ export const StudentAssignmentPage: React.FC = () => {
                                         {paginatedAssignments.map((assignment) => (
                                             <tr
                                                 key={`${assignment.assignmentId}-${assignment.studentCode}`}
-                                                className="hover:bg-gray-50 dark:hover:bg-zinc-800/30 transition-colors"
+                                                className="hover:bg-gray-50 dark:hover:bg-zinc-800/30 transition-colors cursor-pointer"
+                                                onClick={() => navigate(`/student/assignments/${assignment.assignmentId}`)}
                                             >
                                                 <td className="px-4 py-3 whitespace-nowrap">
-                                                    <div className="font-medium text-gray-900 dark:text-white" title={assignment.assignmentTitle}>
+                                                    <div
+                                                        className="font-medium text-gray-900 dark:text-white"
+                                                        title={assignment.assignmentTitle}
+                                                    >
                                                         {assignment.assignmentTitle}
                                                     </div>
                                                 </td>
@@ -348,9 +342,6 @@ export const StudentAssignmentPage: React.FC = () => {
                                                     ) : (
                                                         <span className="text-gray-300 dark:text-zinc-600">—</span>
                                                     )}
-                                                </td>
-                                                <td className="px-4 py-3 text-gray-500 dark:text-zinc-400 text-xs max-w-[200px] break-words whitespace-normal">
-                                                    {renderNoteWithLinks(assignment.note)}
                                                 </td>
                                                 <td className="px-4 py-3 text-center whitespace-nowrap">
                                                     <div className="flex items-center justify-center gap-1.5">

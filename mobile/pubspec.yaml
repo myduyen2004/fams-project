@@ -98,6 +98,7 @@ dependencies:
   add_2_calendar: ^3.0.1
   open_filex: ^4.3.4
   path_provider: ^2.1.1
+  flutter_html: ^3.0.0
 
 dev_dependencies:
   flutter_test:

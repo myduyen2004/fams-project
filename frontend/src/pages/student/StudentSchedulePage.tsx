@@ -675,7 +675,7 @@ export const StudentSchedulePage: React.FC = () => {
                                                             : <span className="text-amber-500 dark:text-amber-400 font-semibold">Chưa nộp</span>}
                                                 </p>
                                                 <button
-                                                    onClick={() => { setSelectedSlot(null); navigate('/student/assignments'); }}
+                                                    onClick={() => { setSelectedSlot(null); navigate(`/student/assignments/${selectedSlot.assignmentId}`); }}
                                                     className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-fpt-orange/10 hover:bg-fpt-orange/20 text-fpt-orange rounded-lg text-xs font-semibold transition-colors"
                                                 >
                                                     <FileText className="w-3.5 h-3.5" />
