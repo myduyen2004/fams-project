@@ -47,7 +47,7 @@ class CreateRequestController extends GetxController {
   final RxnString selectedOriginalDate = RxnString(null);
 
   // Floor and building selection for room
-  final RxInt activeFloor = 1.obs;
+  final RxInt activeFloor = 2.obs;
   final RxString activeBuilding = 'Alpha'.obs;
 
   @override

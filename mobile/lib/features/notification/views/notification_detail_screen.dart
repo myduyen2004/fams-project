@@ -51,109 +51,125 @@ class NotificationDetailScreen extends StatelessWidget {
               ),
 
               Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                      border: Border.all(color: Colors.grey.withOpacity(0.1)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Header Row (Sender & Timestamp)
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: AppColors.primaryOrange.withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                notification.senderFullName?.toUpperCase() ?? 'HỆ THỐNG',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primaryOrange,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ),
-                            const Spacer(),
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text(
-                                _getExactTime(notification.timestamp),
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: const Color(0xFF9CA3AF),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        
-                        // Title
-                        Text(
-                          notification.title,
-                          style: GoogleFonts.inter(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF111827), // gray-900
-                            height: 1.3,
+                child: Scrollbar(
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
                           ),
-                        ),
-                        
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 24),
-                          child: Divider(color: Color(0xFFF3F4F6), thickness: 1),
-                        ),
-                        
-                        // Content (HTML)
-                        Html(
-                          data: notification.description,
-                          style: {
-                            "body": Style(
-                              fontSize: FontSize(15.0),
-                              color: const Color(0xFF374151),
-                              lineHeight: LineHeight(1.6),
-                              margin: Margins.zero,
-                              padding: HtmlPaddings.zero,
-                            ),
-                          },
-                        ),
-                        
-                        // Attachments Section
-                        if (notification.attachmentUrls.isNotEmpty) ...[
-                          const SizedBox(height: 32),
-                          const Divider(color: Color(0xFFF3F4F6), thickness: 1),
-                          const SizedBox(height: 20),
-                          Text(
-                            'TỆP ĐÍNH KÈM',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF9CA3AF), // gray-400
-                              letterSpacing: 1.0,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          ...notification.attachmentUrls.map((url) => _buildAttachmentCard(url)),
                         ],
-                      ],
+                        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Header Row (Sender & Timestamp)
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryOrange.withOpacity(0.08),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  notification.senderFullName?.toUpperCase() ?? 'HỆ THỐNG',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primaryOrange,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                              const Spacer(),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  _getExactTime(notification.timestamp),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: const Color(0xFF9CA3AF),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          
+                          // Title
+                          Text(
+                            notification.title,
+                            style: GoogleFonts.inter(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF111827), // gray-900
+                              height: 1.3,
+                            ),
+                          ),
+                          
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 20),
+                            child: Divider(color: Color(0xFFF3F4F6), thickness: 1),
+                          ),
+                          
+                          // Content (HTML)
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight: MediaQuery.of(context).size.height * 0.5, // Giới hạn chiều cao max 50% màn hình
+                            ),
+                            child: Scrollbar(
+                              thumbVisibility: true,
+                              child: SingleChildScrollView(
+                                child: Html(
+                                  data: notification.description,
+                                  style: {
+                                    "body": Style(
+                                      fontSize: FontSize(15.0),
+                                      color: const Color(0xFF374151),
+                                      lineHeight: LineHeight(1.0),
+                                      margin: Margins.zero,
+                                      padding: HtmlPaddings.zero,
+                                    ),
+                                    "p": Style(
+                                      margin: Margins.only(bottom: 8),
+                                    ),
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+                          
+                          // Attachments Section
+                          if (notification.attachmentUrls.isNotEmpty) ...[
+                            const SizedBox(height: 32),
+                            const Divider(color: Color(0xFFF3F4F6), thickness: 1),
+                            const SizedBox(height: 20),
+                            Text(
+                              'TỆP ĐÍNH KÈM',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF9CA3AF), // gray-400
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            ...notification.attachmentUrls.map((url) => _buildAttachmentCard(url)),
+                          ],
+                        ],
+                      ),
                     ),
                   ),
                 ),

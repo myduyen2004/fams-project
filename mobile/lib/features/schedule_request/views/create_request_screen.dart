@@ -242,6 +242,84 @@ class CreateRequestScreen extends StatelessWidget {
                       ),
                     ],
                   ),
+                  // Show selected room inline after slot selection
+                  Obx(() {
+                    if (controller.isLoadingRooms.value && controller.newSlot.value != null) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.grey[400],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Đang tải danh sách phòng...',
+                              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    if (controller.selectedRoom.value != null) {
+                      final room = controller.selectedRoom.value!;
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.green[50],
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.green[200]!),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.meeting_room_rounded, size: 18, color: Colors.green[700]),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Phòng đã chọn: ',
+                                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                              ),
+                              Text(
+                                room.name,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green[800],
+                                ),
+                              ),
+                              const Spacer(),
+                              Text(
+                                '${room.building} - Tầng ${room.floor}',
+                                style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    if (controller.newSlot.value != null && controller.newDate.value != null && !controller.isLoadingRooms.value && controller.rooms.isNotEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline, size: 14, color: Colors.orange[400]),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Vui lòng chọn phòng bên dưới',
+                              style: TextStyle(fontSize: 12, color: Colors.orange[600], fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  }),
                 ],
               )),
             ),

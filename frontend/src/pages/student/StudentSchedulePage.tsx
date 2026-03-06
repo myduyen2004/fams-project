@@ -503,7 +503,7 @@ export const StudentSchedulePage: React.FC = () => {
                                                         {slotData ? (
                                                             <div
                                                                 onClick={() => setSelectedSlot(slotData)}
-                                                                className="relative group bg-white dark:bg-zinc-800 rounded-xl p-3 pl-5 shadow-sm hover:shadow-md transition-all cursor-pointer border border-gray-100 dark:border-zinc-700 overflow-hidden"
+                                                                className="relative group bg-white dark:bg-zinc-800 rounded-xl p-3 pl-5 shadow-sm hover:shadow-md transition-all cursor-pointer border border-gray-100 dark:border-zinc-700 overflow-hidden h-[150px] max-w-[220px]"
                                                             >
                                                                 {/* Left Orange Accent Bar - Absolute positioned for perfect rounding */}
                                                                 <div className="absolute left-0 top-0 bottom-0 w-[6px] bg-fpt-orange" />
@@ -525,7 +525,7 @@ export const StudentSchedulePage: React.FC = () => {
 
                                                                 {/* Details */}
                                                                 <div className="space-y-0.5 text-[11px] font-medium">
-                                                                    <div className="text-gray-500 dark:text-gray-400 leading-tight">
+                                                                    <div className="text-gray-500 dark:text-gray-400 leading-tight truncate">
                                                                         Lớp: {slotData.className}
                                                                     </div>
                                                                     <div className="text-gray-500 dark:text-gray-400 truncate">
