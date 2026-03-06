@@ -101,6 +101,22 @@ public class SpecializationController {
         return ResponseEntity.ok(specializationService.saveImportedSpecializations(majorId, dtos));
     }
 
+    @PostMapping("/import/preview-bulk")
+    public ResponseEntity<List<SpecializationImportDTO>> previewImportSpecializationsBulk(
+            @RequestParam("file") MultipartFile file) {
+        try {
+            return ResponseEntity.ok(specializationService.previewImportSpecializationsBulk(file));
+        } catch (IOException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/import/save-bulk")
+    public ResponseEntity<Map<String, Object>> saveImportedSpecializationsBulk(
+            @RequestBody List<SpecializationImportDTO> dtos) {
+        return ResponseEntity.ok(specializationService.saveImportedSpecializationsBulk(dtos));
+    }
+
     @GetMapping("/import/template")
     public ResponseEntity<Resource> downloadImportTemplate() throws IOException {
         byte[] data = specializationService.exportSpecializationTemplate();
