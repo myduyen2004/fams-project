@@ -51,4 +51,9 @@ class ApiConstants {
   // Chat Endpoints
   static const String chatGroups = '/api/v1/chat-groups';
   static const String chatMessages = '/api/v1/chat-messages';
+
+  // Academic Request Endpoints (Student)
+  static const String academicRequests = '/api/v1/academic-requests';
+  static const String academicRequestTypes = '/api/v1/academic-requests/types';
+  static const String academicRequestMyRequests = '/api/v1/academic-requests/my-requests';
 }
