@@ -37,8 +37,11 @@ public class StudentResponse implements Serializable {
 
     // StudentProfile fields
     private String major;
+    private Long majorId;
     private String specialization;
+    private Long specializationId;
     private String subSpecialization;
+    private Long subSpecializationId;
     private String course;
     private Double gpa;
 
@@ -65,13 +68,16 @@ public class StudentResponse implements Serializable {
                     .gpa(profile.getGpa());
 
             if (profile.getMajor() != null) {
-                builder.major(profile.getMajor().getName());
+                builder.major(profile.getMajor().getName())
+                        .majorId(profile.getMajor().getId());
             }
             if (profile.getSpecialization() != null) {
-                builder.specialization(profile.getSpecialization().getName());
+                builder.specialization(profile.getSpecialization().getName())
+                        .specializationId(profile.getSpecialization().getId());
             }
             if (profile.getSubSpecialization() != null) {
-                builder.subSpecialization(profile.getSubSpecialization().getName());
+                builder.subSpecialization(profile.getSubSpecialization().getName())
+                        .subSpecializationId(profile.getSubSpecialization().getId());
             }
         }
 
