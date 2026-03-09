@@ -40,6 +40,7 @@ export interface StudentEnrollmentDTO {
     majorName: string;
     studentCode: string;
     status: string;
+    avatar?: string;
 }
 
 export interface ClassDetailResponse {

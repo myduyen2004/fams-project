@@ -130,12 +130,12 @@ public class StagingImportService {
                     WHERE s.error_message IS NULL
                     AND NOT EXISTS (
                         SELECT 1 FROM class_sections cs
-                        WHERE cs.class_name = s.class_name AND cs.semester_id = ?
+                        WHERE UPPER(cs.class_name) = UPPER(s.class_name)
                     )
                     """
                     .formatted(stagingTable);
 
-            int created = jdbcTemplate.update(insertSql, semesterId, semesterId);
+            int created = jdbcTemplate.update(insertSql, semesterId);
 
             Integer failedCount = jdbcTemplate.queryForObject(
                     "SELECT COUNT(*) FROM " + stagingTable + " WHERE error_message IS NOT NULL",
@@ -284,8 +284,11 @@ public class StagingImportService {
                         NOW()
                     FROM %s s
                     JOIN users u ON UPPER(TRIM(s.student_code)) = UPPER(u.code) AND u.role = 'STUDENT'
+                    JOIN student_profiles sp ON u.id = sp.user_id
                     JOIN class_sections cs ON TRIM(s.class_name) = cs.class_name AND cs.semester_id = ?
                     WHERE s.error_message IS NULL
+                    AND sp.major_id IS NOT NULL
+                    AND sp.specialization_id IS NOT NULL
                     AND NOT EXISTS (
                         SELECT 1 FROM enrollments e
                         WHERE e.student_id = u.id AND e.class_name = cs.class_name
@@ -524,14 +527,14 @@ public class StagingImportService {
         // Mark rows where class_name already exists in database
         jdbcTemplate
                 .update("""
-                        UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Lớp học phần đã tồn tại trong học kỳ này'
+                        UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Lớp học phần đã tồn tại trong hệ thống'
                         WHERE EXISTS (
                             SELECT 1 FROM class_sections cs
-                            WHERE cs.class_name = TRIM(s.class_name) AND cs.semester_id = ?
+                            WHERE UPPER(cs.class_name) = UPPER(TRIM(s.class_name))
                         )
                         AND s.error_message IS NULL
                         """
-                        .formatted(stagingTable), semesterId);
+                        .formatted(stagingTable));
 
         return getValidationResult(stagingTable, "class_name", "course_code");
     }
@@ -597,6 +600,35 @@ public class StagingImportService {
                         AND s.error_message IS NULL
                         """
                         .formatted(stagingTable), semesterId);
+
+        // Mark rows where student has no student_profile
+        jdbcTemplate
+                .update("""
+                        UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Sinh viên chưa có hồ sơ (student profile)'
+                        WHERE s.error_message IS NULL
+                        AND NOT EXISTS (
+                            SELECT 1 FROM users u
+                            JOIN student_profiles sp ON u.id = sp.user_id
+                            WHERE UPPER(TRIM(s.student_code)) = UPPER(u.code)
+                            AND u.role = 'STUDENT'
+                        )
+                        """
+                        .formatted(stagingTable));
+
+        // Mark rows where student_profile exists but major or specialization is missing
+        jdbcTemplate
+                .update("""
+                        UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Sinh viên có hồ sơ nhưng chưa được gán ngành hoặc chuyên ngành'
+                        WHERE s.error_message IS NULL
+                        AND EXISTS (
+                            SELECT 1 FROM users u
+                            JOIN student_profiles sp ON u.id = sp.user_id
+                            WHERE UPPER(TRIM(s.student_code)) = UPPER(u.code)
+                            AND u.role = 'STUDENT'
+                            AND (sp.major_id IS NULL OR sp.specialization_id IS NULL)
+                        )
+                        """
+                        .formatted(stagingTable));
 
         // Mark rows where course is not in student's specialization or
         // sub-specialization
