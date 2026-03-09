@@ -570,7 +570,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
         });
     };
 
-    const isGradeAppealBlocked = selectedType?.value === 'GRADE_APPEAL' && formData.classSectionId && (
+    const isGradeAppealBlocked = !!(selectedType?.value === 'GRADE_APPEAL' && formData.classSectionId && (
         fetchingGrade ||
         !gradeDetail?.gradesPublished ||
         (() => {
@@ -580,7 +580,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
             deadline.setDate(deadline.getDate() + 3);
             return new Date() > deadline;
         })()
-    );
+    ));
 
     return (
         <StudentLayout pageTitle="Yêu Cầu Học Thuật">
