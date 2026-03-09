@@ -7,8 +7,6 @@ import { toast } from 'react-hot-toast';
 import { Calendar, BookOpen, ChevronLeft, ChevronRight, X, Clock, MapPin, User, GraduationCap, AlertTriangle, Check, ChevronsUpDown, Eye, EyeOff, Loader2, Play, Users, School, Download, MoreVertical, Home, RefreshCw, Save } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Combobox, Transition, Listbox } from '@headlessui/react';
-import { roomService } from '../../services/api/roomService';
-import { Room } from '../../types/room';
 
 interface FilterComboboxProps {
   value: string | null; // Changed to allow null
@@ -240,7 +238,6 @@ export const SchedulePage: React.FC = () => {
   const [selectedTeacher, setSelectedTeacher] = useState<string | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
   const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
-  const [allRooms, setAllRooms] = useState<Room[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [semesterStartDate, setSemesterStartDate] = useState<string>('');
   const [semesterEndDate, setSemesterEndDate] = useState<string>('');
@@ -283,16 +280,6 @@ export const SchedulePage: React.FC = () => {
     }
   };
 
-  const fetchAllRooms = async () => {
-    try {
-      const data = await roomService.getAllRooms();
-      // Sort rooms by code ascending
-      const sorted = data.sort((a, b) => a.code.localeCompare(b.code, 'vi', { numeric: true }));
-      setAllRooms(sorted);
-    } catch (err) {
-      console.error('Failed to load rooms', err);
-    }
-  };
 
   const fetchSemesterDetails = async (semesterCode: string) => {
     try {
@@ -426,7 +413,6 @@ export const SchedulePage: React.FC = () => {
 
   useEffect(() => {
     fetchSemesters();
-    fetchAllRooms();
   }, []);
 
   useEffect(() => {
