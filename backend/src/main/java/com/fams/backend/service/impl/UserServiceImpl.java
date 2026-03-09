@@ -1096,4 +1096,26 @@ public class UserServiceImpl implements UserService {
             return null;
         }
     }
+
+    @Override
+    public byte[] downloadSampleFile() {
+        try {
+            // Priority 1: Direct path (more reliable in Docker volumes)
+            Path directPath = Paths.get("src/main/resources/static/samples/user_import_sample.zip");
+            if (Files.exists(directPath)) {
+                return Files.readAllBytes(directPath);
+            }
+
+            // Priority 2: Classpath resource
+            InputStream is = getClass().getResourceAsStream("/static/samples/user_import_sample.zip");
+            if (is != null) {
+                return is.readAllBytes();
+            }
+
+            throw new NotFoundException("Sample file not found");
+        } catch (IOException e) {
+            log.error("Failed to read sample file", e);
+            throw new RuntimeException("Lỗi khi đọc file mẫu: " + e.getMessage());
+        }
+    }
 }

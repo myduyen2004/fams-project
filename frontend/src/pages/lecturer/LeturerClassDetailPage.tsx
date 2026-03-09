@@ -195,7 +195,9 @@ export const LeturerClassDetailPage: React.FC = () => {
                             <button className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-zinc-900 text-gray-700 dark:text-gray-200 rounded-2xl font-bold border-2 border-gray-100 transition-all shadow-sm">
                                 Quản lý điểm số
                             </button>
-                            <button className="flex items-center gap-2 px-6 py-3 bg-fpt-orange text-white rounded-2xl font-bold active:translate-y-0">
+                            <button 
+                                onClick={() => navigate(`/lecturer/classes/${className}/attendance-report`)}
+                                className="flex items-center gap-2 px-6 py-3 bg-fpt-orange text-white rounded-2xl font-bold active:translate-y-0 shadow-md shadow-orange-500/20 hover:bg-orange-600 transition-all">
                                 Phần trăm điểm danh
                             </button>
                             <button

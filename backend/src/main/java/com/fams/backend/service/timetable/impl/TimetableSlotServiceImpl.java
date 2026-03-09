@@ -186,6 +186,7 @@ public class TimetableSlotServiceImpl implements TimetableSlotService {
                                 .className(cs != null ? cs.getClassName() : null)
                                 .courseCode(course != null ? course.getCode() : null)
                                 .courseName(course != null ? course.getName() : null)
+                                .lecturerId(lecturer != null ? lecturer.getId() : null)
                                 .lecturerName(lecturer != null ? lecturer.getFullName() : null)
                                 .roomCode(room != null ? room.getCode() : null)
                                 .roomName(room != null ? room.getName() : null)

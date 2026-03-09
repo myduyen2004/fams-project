@@ -34,11 +34,19 @@ class ApiService {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          // Add token to header
           final token = await _storage.read(key: ApiConstants.keyToken);
-          if (token != null) {
+          final bool isExternal = options.path.startsWith('http') && 
+                                 !options.path.startsWith(ApiConstants.baseUrl);
+          
+          if (isExternal) {
+            // Strip default JSON headers for external requests (Cloudinary/S3 etc)
+            // as they can cause 401/403 errors on some CDNs
+            options.headers.remove('Content-Type');
+            options.headers.remove('Accept');
+          } else if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
+          
           return handler.next(options);
         },
         onError: (error, handler) async {
@@ -52,6 +60,14 @@ class ApiService {
             bool hasToken = error.requestOptions.headers.containsKey('Authorization');
             if (!hasToken) {
               debugPrint('[ApiService] 401 error but no Authorization header was sent. Ignoring for session management.');
+              return handler.next(error);
+            }
+            
+            // Check for ignoreUnauthorized flag in extra
+            final ignoreUnauthorized = error.requestOptions.extra['ignoreUnauthorized'] == true;
+            
+            if (ignoreUnauthorized) {
+              debugPrint('[ApiService] 401 error suppressed by ignoreUnauthorized flag for ${error.requestOptions.path}');
               return handler.next(error);
             }
             
@@ -114,6 +130,35 @@ class ApiService {
   Future<Response> delete(String path) async {
     try {
       return await _dio.delete(path);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Download Request
+  Future<Response> download(
+    String urlPath,
+    dynamic savePath, {
+    ProgressCallback? onReceiveProgress,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+    bool deleteOnError = true,
+    String lengthHeader = Headers.contentLengthHeader,
+    Object? data,
+  }) async {
+    try {
+      return await _dio.download(
+        urlPath,
+        savePath,
+        onReceiveProgress: onReceiveProgress,
+        queryParameters: queryParameters,
+        options: options,
+        cancelToken: cancelToken,
+        deleteOnError: deleteOnError,
+        lengthHeader: lengthHeader,
+        data: data,
+      );
     } catch (e) {
       rethrow;
     }

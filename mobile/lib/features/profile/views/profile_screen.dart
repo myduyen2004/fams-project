@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../../core/constants/app_colors.dart';
 import 'edit_profile_screen.dart';
@@ -32,16 +33,16 @@ class ProfileScreen extends StatelessWidget {
                   physics: const ClampingScrollPhysics(),
                   child: Center(
                     child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
-                      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
+                      margin: EdgeInsets.symmetric(horizontal: 24.0.w, vertical: 20.0.h),
+                      padding: EdgeInsets.symmetric(horizontal: 20.0.w, vertical: 24.0.h),
                       decoration: BoxDecoration(
                         color: cardColor,
-                        borderRadius: BorderRadius.circular(40.0),
+                        borderRadius: BorderRadius.circular(40.0.r),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.05),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
+                            blurRadius: 20.r,
+                            offset: Offset(0, 10.h),
                           ),
                         ],
                       ),
@@ -59,20 +60,20 @@ class ProfileScreen extends StatelessWidget {
                           ),
                           child: ClipOval(
                             child: SizedBox(
-                              width: 130, // 2 * radius 65
-                              height: 130,
+                              width: 110.r, // 2 * radius 55
+                              height: 110.r,
                               child: _buildAvatarImage(authController, user?.avatarUrl),
                             ),
                           ),
                         ),
 
-                        const SizedBox(height: 20),
+                        20.verticalSpace,
 
                         // 2. Name
                         Text(
                           user?.fullName ?? 'Người dùng',
                           style: GoogleFonts.inter(
-                            fontSize: 26,
+                            fontSize: 26.sp,
                             fontWeight: FontWeight.w500, // Medium/Regular looks cleaner
                             color: Colors.black87,
                             height: 1.2,
@@ -82,38 +83,38 @@ class ProfileScreen extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
 
-                        const SizedBox(height: 12),
+                        12.verticalSpace,
 
                         // 3. ID Capsule
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFFE0B2), // Light orange fill
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(20.r),
                           ),
                           child: Text(
                             'ID: ${user?.username ?? "N/A"}',
                             style: GoogleFonts.inter(
-                              fontSize: 16,
+                              fontSize: 16.sp,
                               fontWeight: FontWeight.w500,
                               color: Colors.black87,
                             ),
                           ),
                         ),
 
-                        const SizedBox(height: 20),
-                        Divider(color: Colors.grey[400], thickness: 1, indent: 20, endIndent: 20),
-                        const SizedBox(height: 20),
+                        20.verticalSpace,
+                        Divider(color: Colors.grey[400], thickness: 1, indent: 20.w, endIndent: 20.w),
+                        20.verticalSpace,
 
                         // 4. QR Code
                         QrImageView(
                           data: user?.username ?? 'FAMS_USER_ID',
                           version: QrVersions.auto,
-                          size: 180.0,
+                          size: 180.0.r,
                           gapless: false,
                         ),
 
-                        const SizedBox(height: 24),
+                        24.verticalSpace,
 
                         // 5. Details (Major & Email)
                         if (user != null) ...[
@@ -124,7 +125,7 @@ class ProfileScreen extends StatelessWidget {
                                 : 'Chuyên ngành: ${user.major ?? "Kỹ thuật phần mềm"}',
                             iconColor: const Color(0xFFFF6B00),
                           ),
-                          const SizedBox(height: 12),
+                          12.verticalSpace,
                           _buildInfoRow(
                             icon: Icons.email_outlined,
                             text: 'Email: ${user.email}',
@@ -147,7 +148,7 @@ class ProfileScreen extends StatelessWidget {
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                                 decoration: BoxDecoration(
                                   color: Colors.green.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(16.r),
                                   border: Border.all(color: Colors.green.withOpacity(0.3)),
                                 ),
                                 child: Row(
@@ -159,12 +160,12 @@ class ProfileScreen extends StatelessWidget {
                                       'Đã đăng ký khuôn mặt',
                                       style: GoogleFonts.inter(
                                         color: Colors.green,
-                                        fontSize: 16,
+                                        fontSize: 16.sp,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
-                                    const Icon(Icons.arrow_forward_ios, color: Colors.green, size: 16),
+                                    8.horizontalSpace,
+                                    Icon(Icons.arrow_forward_ios, color: Colors.green, size: 16.r),
                                   ],
                                 ),
                               ),
@@ -173,54 +174,54 @@ class ProfileScreen extends StatelessWidget {
                             // Show register button if face not registered
                             SizedBox(
                               width: double.infinity,
-                              height: 54,
+                              height: 54.h,
                               child: OutlinedButton.icon(
                                 onPressed: () => Get.to(() => const FaceRegistrationGuideScreen()),
-                                icon: const Icon(Icons.face, color: AppColors.primaryOrange),
+                                icon: Icon(Icons.face, color: AppColors.primaryOrange, size: 24.r),
                                 label: Text(
                                   'Đăng ký khuôn mặt',
                                   style: GoogleFonts.inter(
                                     color: AppColors.primaryOrange,
-                                    fontSize: 16,
+                                    fontSize: 16.sp,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                                 style: OutlinedButton.styleFrom(
                                   side: const BorderSide(color: AppColors.primaryOrange, width: 2),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
+                                    borderRadius: BorderRadius.circular(16.r),
                                   ),
                                 ),
                               ),
                             ),
                           ],
-                          const SizedBox(height: 20),
+                          20.verticalSpace,
                         ],
 
-                        const SizedBox(height: 12),
+                        12.verticalSpace,
 
                         // Logout Button
                         SizedBox(
                           width: double.infinity,
-                          height: 54,
+                          height: 54.h,
                           child: ElevatedButton.icon(
                             onPressed: () => authController.logout(),
-                            icon: const Icon(Icons.logout_rounded, color: Colors.white),
+                            icon: Icon(Icons.logout_rounded, color: Colors.white, size: 24.r),
                             label: Text(
                               'Đăng xuất',
                               style: GoogleFonts.inter(
                                 color: Colors.white,
-                                fontSize: 18,
+                                fontSize: 18.sp,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primaryOrange,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              padding: EdgeInsets.symmetric(vertical: 12.h),
                               elevation: 4,
                               shadowColor: AppColors.primaryOrange.withOpacity(0.4),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(16.r),
                               ),
                             ),
                           ),
@@ -240,11 +241,11 @@ class ProfileScreen extends StatelessWidget {
                       color: Colors.white,
                       shape: BoxShape.circle,
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 5)
+                        BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 5.r)
                       ]
                     ),
                     child: IconButton(
-                      icon: const Icon(Icons.edit, color: Color(0xFFFF6B00)),
+                      icon: Icon(Icons.edit, color: const Color(0xFFFF6B00), size: 24.r),
                       onPressed: () => Get.to(() => const EditProfileScreen()),
                     ),
                   ),
@@ -261,13 +262,13 @@ class ProfileScreen extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(icon, color: iconColor, size: 20),
-        const SizedBox(width: 10),
+        Icon(icon, color: iconColor, size: 20.r),
+        10.horizontalSpace,
         Flexible(
           child: Text(
             text,
             style: GoogleFonts.inter(
-              fontSize: 15,
+              fontSize: 15.sp,
               color: Colors.black87,
               fontWeight: FontWeight.w400,
             ),
