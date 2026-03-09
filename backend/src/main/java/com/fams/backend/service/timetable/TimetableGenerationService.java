@@ -73,7 +73,7 @@ public class TimetableGenerationService {
             runningJobs.put(actualJobId, job);
 
             // Phase 1: Load data
-            job.setPhase("Loading data");
+            job.setPhase("Đang tải dữ liệu");
             TimetableData data = dataLoader.loadDataForSemester(semesterCode);
 
             if (data.getClasses().isEmpty()) {
@@ -89,7 +89,7 @@ public class TimetableGenerationService {
             }
 
             // Phase 2: Run GA
-            job.setPhase("Running Genetic Algorithm");
+            job.setPhase("Đang chạy thuật toán GA");
             GeneticAlgorithm ga = new GeneticAlgorithm(data, config != null ? config : GAConfig.defaultConfig());
 
             // Set progress callback
@@ -107,6 +107,7 @@ public class TimetableGenerationService {
 
             if (!gaResult.isSuccess()) {
                 job.setStatus(JobStatus.FAILED);
+                job.setErrorMessage(gaResult.getMessage());
                 return CompletableFuture.completedFuture(
                         GenerationResult.builder()
                                 .success(false)
@@ -116,12 +117,12 @@ public class TimetableGenerationService {
             }
 
             // Phase 3: Room Assignment
-            job.setPhase("Assigning rooms");
+            job.setPhase("Đang gán phòng học");
             Chromosome bestSolution = gaResult.getBestChromosome();
             Map<String, Map<Integer, Long>> roomAssignments = assignRooms(data, bestSolution);
 
             // Phase 4: Save to database
-            job.setPhase("Saving timetable");
+            job.setPhase("Đang lưu thời khóa biểu");
             saveTimetable(semesterCode, data, bestSolution, roomAssignments);
 
             // Complete
@@ -135,7 +136,7 @@ public class TimetableGenerationService {
                     GenerationResult.builder()
                             .success(true)
                             .jobId(actualJobId)
-                            .message("Timetable generated successfully")
+                            .message("Tạo thời khóa biểu thành công")
                             .fitness(gaResult.getBestFitness())
                             .totalGenerations(gaResult.getTotalGenerations())
                             .durationMs(gaResult.getDuration().toMillis())
@@ -156,7 +157,7 @@ public class TimetableGenerationService {
                     GenerationResult.builder()
                             .success(false)
                             .jobId(actualJobId)
-                            .message("Error: " + e.getMessage())
+                            .message("Lỗi: " + e.getMessage())
                             .build());
         } finally {
             // Cleanup after some time
