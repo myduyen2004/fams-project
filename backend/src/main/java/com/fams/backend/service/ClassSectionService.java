@@ -4,6 +4,7 @@ import com.fams.backend.dto.request.ClassSectionRequest;
 import com.fams.backend.dto.request.EnrollmentRequest;
 import com.fams.backend.dto.response.ClassDetailResponse;
 import com.fams.backend.dto.response.ClassSectionResponse;
+import com.fams.backend.dto.response.ClassSectionTransferResponse;
 import com.fams.backend.dto.response.EnrollmentResponse;
 import com.fams.backend.dto.response.LecturerOptionResponse;
 import org.springframework.data.domain.Page;
@@ -128,6 +129,13 @@ public interface ClassSectionService {
          * Only returns class sections that have available slots.
          */
         List<ClassSectionResponse> getAvailableClassSectionsForTransfer(String currentClassName);
+
+        /**
+         * Get available class sections with same course for enrollment transfer,
+         * including conflict check for a specific student.
+         */
+        List<ClassSectionTransferResponse> getAvailableClassSectionsForTransferWithConflict(String currentClassName,
+                        Long studentId);
 
         /**
          * Transfer enrollments to a different class section.

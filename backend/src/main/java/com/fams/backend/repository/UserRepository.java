@@ -39,7 +39,13 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     /**
      * Tìm user theo username kèm theo thông tin profiles
      */
-    @Query("SELECT u FROM User u LEFT JOIN FETCH u.studentProfile LEFT JOIN FETCH u.lecturerProfile WHERE u.username = :username")
+    @Query("SELECT u FROM User u " +
+            "LEFT JOIN FETCH u.studentProfile sp " +
+            "LEFT JOIN FETCH sp.major " +
+            "LEFT JOIN FETCH sp.specialization " +
+            "LEFT JOIN FETCH sp.subSpecialization " +
+            "LEFT JOIN FETCH u.lecturerProfile " +
+            "WHERE u.username = :username")
     Optional<User> findByUsernameWithProfiles(String username);
 
     /**

@@ -2,7 +2,9 @@ package com.fams.backend.service;
 
 import com.fams.backend.dto.MajorImportDTO;
 import com.fams.backend.dto.request.MajorRequest;
+import com.fams.backend.dto.response.CourseResponse;
 import com.fams.backend.dto.response.MajorResponse;
+import com.fams.backend.entity.Course;
 import com.fams.backend.entity.Major;
 import com.fams.backend.repository.MajorRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -111,6 +114,25 @@ public class MajorService {
             throw new IllegalArgumentException("Không thể xóa ngành này vì đã có sinh viên theo học.");
         }
         majorRepository.deleteById(id);
+    }
+
+    public List<MajorResponse> getAllMajors() {
+        return majorRepository.findAll().stream()
+                .map(this::convertToResponse)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    public List<CourseResponse> getCourses(Long majorId) {
+        List<Course> courses = majorRepository.findCoursesByMajorId(majorId);
+        return courses.stream()
+                .map(c -> CourseResponse.builder()
+                        .id(c.getId())
+                        .code(c.getCode())
+                        .name(c.getName())
+                        .credits(c.getCredits())
+                        .status(c.getStatus())
+                        .build())
+                .collect(Collectors.toList());
     }
 
     private MajorResponse convertToResponse(Major major) {

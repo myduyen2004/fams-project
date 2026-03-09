@@ -2,27 +2,9 @@ package com.fams.backend.service.impl;
 
 import com.fams.backend.dto.request.ClassSectionRequest;
 import com.fams.backend.dto.request.EnrollmentRequest;
-import com.fams.backend.dto.response.ClassDetailResponse;
-import com.fams.backend.dto.response.ClassSectionResponse;
-import com.fams.backend.dto.response.EnrollmentResponse;
-import com.fams.backend.dto.response.LecturerOptionResponse;
-import com.fams.backend.dto.response.StudentEnrollmentDTO;
-import com.fams.backend.entity.ChatGroup;
-import com.fams.backend.dto.response.StudentOptionResponse;
-import com.fams.backend.entity.ClassSection;
-import com.fams.backend.entity.Course;
-import com.fams.backend.entity.Enrollment;
-import com.fams.backend.entity.Semester;
-import com.fams.backend.entity.StudentProfile;
-import com.fams.backend.entity.User;
-import com.fams.backend.repository.ChatGroupRepository;
-import com.fams.backend.repository.ClassSectionRepository;
-import com.fams.backend.repository.CourseRepository;
-import com.fams.backend.repository.EnrollmentRepository;
-import com.fams.backend.repository.SemesterRepository;
-import com.fams.backend.repository.SpecializationCourseRepository;
-import com.fams.backend.repository.SubSpecializationCourseRepository;
-import com.fams.backend.repository.UserRepository;
+import com.fams.backend.dto.response.*;
+import com.fams.backend.entity.*;
+import com.fams.backend.repository.*;
 import com.fams.backend.service.ClassSectionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -56,6 +38,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
     private final UserRepository userRepository;
     private final SpecializationCourseRepository specializationCourseRepository;
     private final SubSpecializationCourseRepository subSpecializationCourseRepository;
+    private final TimetableSlotRepository timetableSlotRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -454,23 +437,81 @@ public class ClassSectionServiceImpl implements ClassSectionService {
     @Override
     @Transactional(readOnly = true)
     public List<ClassSectionResponse> getAvailableClassSectionsForTransfer(String currentClassName) {
-        log.info("Getting available class sections for transfer from: {}", currentClassName);
+        log.info("Checking transfer targets from class: {}", currentClassName);
 
-        ClassSection currentClassSection = classSectionRepository.findByClassNameWithDetails(currentClassName)
+        ClassSection currentClass = classSectionRepository.findByClassNameWithDetails(currentClassName)
                 .orElseThrow(() -> new RuntimeException("Lớp học phần không tồn tại: " + currentClassName));
 
-        String courseCode = currentClassSection.getCourse().getCode();
-        String semesterCode = currentClassSection.getSemester().getCode();
+        String courseCode = currentClass.getCourse().getCode();
+        String semesterCode = currentClass.getSemester().getCode();
 
-        // Get all class sections with the same course in same semester
-        List<ClassSection> classSections = classSectionRepository.findBySemesterCode(semesterCode);
-
-        return classSections.stream()
-                .filter(cs -> cs.getCourse().getCode().equals(courseCode)) // Same course
-                .filter(cs -> !cs.getClassName().equals(currentClassName)) // Exclude current class
-                .filter(cs -> cs.getCurrentEnrollment() < cs.getMaxStudents()) // Has available slots
+        return classSectionRepository.findBySemesterCode(semesterCode).stream()
+                .filter(cs -> cs.getCourse().getCode().equals(courseCode))
+                .filter(cs -> !cs.getClassName().equals(currentClassName))
+                .filter(cs -> cs.getCurrentEnrollment() < cs.getMaxStudents())
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ClassSectionTransferResponse> getAvailableClassSectionsForTransferWithConflict(String currentClassName,
+            Long studentId) {
+        log.info("Checking transfer targets with conflicts for student {} from class: {}", studentId, currentClassName);
+
+        ClassSection currentClass = classSectionRepository.findByClassNameWithDetails(currentClassName)
+                .orElseThrow(() -> new RuntimeException("Lớp học phần không tồn tại: " + currentClassName));
+
+        User student = userRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Sinh viên không tồn tại: " + studentId));
+
+        String courseCode = currentClass.getCourse().getCode();
+        String semesterCode = currentClass.getSemester().getCode();
+
+        // Get all potential class sections
+        List<ClassSection> potentialClasses = classSectionRepository.findBySemesterCode(semesterCode).stream()
+                .filter(cs -> cs.getCourse().getCode().equals(courseCode))
+                .filter(cs -> !cs.getClassName().equals(currentClassName))
+                .filter(cs -> cs.getCurrentEnrollment() < cs.getMaxStudents())
+                .collect(Collectors.toList());
+
+        // Get student's current slots in this semester (excluding the class they are
+        // leaving)
+        List<TimetableSlot> studentSlots = timetableSlotRepository.findByStudentCodeAndDateBetween(
+                student.getCode(),
+                currentClass.getSemester().getStartDate(),
+                currentClass.getSemester().getEndDate());
+
+        // Filter out slots of the current class
+        List<TimetableSlot> otherSlots = studentSlots.stream()
+                .filter(s -> !s.getClassSection().getClassName().equals(currentClassName))
+                .collect(Collectors.toList());
+
+        return potentialClasses.stream().map(targetCS -> {
+            List<TimetableSlot> targetSlots = timetableSlotRepository.findByClassName(targetCS.getClassName());
+            List<String> conflicts = new ArrayList<>();
+
+            for (TimetableSlot targetSlot : targetSlots) {
+                for (TimetableSlot otherSlot : otherSlots) {
+                    if (targetSlot.getDate().equals(otherSlot.getDate()) &&
+                            targetSlot.getSlotNumber().equals(otherSlot.getSlotNumber()) &&
+                            targetSlot.getStatus() == TimetableSlot.TimetableSlotStatus.SCHEDULED &&
+                            otherSlot.getStatus() == TimetableSlot.TimetableSlotStatus.SCHEDULED) {
+                        conflicts.add(String.format("Xung đột với %s (%s) vào %s Slot %d",
+                                otherSlot.getClassSection().getCourse().getCode(),
+                                otherSlot.getClassSection().getClassName(),
+                                targetSlot.getDate().toString(),
+                                targetSlot.getSlotNumber()));
+                    }
+                }
+            }
+
+            return ClassSectionTransferResponse.builder()
+                    .classSection(convertToResponse(targetCS))
+                    .hasConflict(!conflicts.isEmpty())
+                    .conflictDetails(conflicts)
+                    .build();
+        }).collect(Collectors.toList());
     }
 
     @Override

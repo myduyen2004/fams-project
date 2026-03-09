@@ -463,4 +463,95 @@ public class NotificationService {
             log.warn("No recipients found for target type {}", notification.getTargetType());
         }
     }
+
+    /**
+     * Notify academic staff about a new academic request from student
+     */
+    @Transactional
+    public void notifyAcademicStaffNewRequest(com.fams.backend.entity.AcademicRequest academicRequest) {
+        String title = "Yêu cầu học thuật mới: " + academicRequest.getRequestTitle();
+        String content = String.format(
+                "Sinh viên %s (%s) đã gửi yêu cầu: %s. Vui lòng xem xét và xử lý.",
+                academicRequest.getStudent().getFullName(),
+                academicRequest.getStudent().getCode(),
+                academicRequest.getRequestTitle());
+
+        // Create notification for academic staff
+        Notification notification = Notification.builder()
+                .title(title)
+                .content(content)
+                .type(Notification.NotificationType.ACADEMIC)
+                .targetType(Notification.TargetType.USER)
+                .sender(academicRequest.getStudent())
+                .priority(Notification.NotificationPriority.MEDIUM)
+                .status(Notification.NotificationStatus.SENT)
+                .build();
+
+        notification = notificationRepository.save(notification);
+
+        // Send to all academic staff
+        List<User> academicStaff = userRepository.findByRole(User.UserRole.ACADEMIC_STAFF)
+                .orElse(new ArrayList<>());
+
+        for (User staff : academicStaff) {
+            if (staff.getStatus() == User.UserStatus.ACTIVE) {
+                NotificationRecipient recipient = NotificationRecipient.builder()
+                        .notification(notification)
+                        .recipient(staff)
+                        .isRead(false)
+                        .build();
+                notificationRecipientRepository.save(recipient);
+            }
+        }
+
+        log.info("Sent notification to {} academic staff for new academic request {}",
+                academicStaff.size(), academicRequest.getId());
+    }
+
+    /**
+     * Notify student about academic request status change
+     */
+    @Transactional
+    public void notifyStudentRequestStatusChange(com.fams.backend.entity.AcademicRequest academicRequest) {
+        String statusText = switch (academicRequest.getStatus()) {
+            case APPROVED -> "đã được duyệt";
+            case REJECTED -> "đã bị từ chối";
+            case CANCELLED -> "đã được hủy";
+            default -> "đã được cập nhật";
+        };
+
+        String title = "Yêu cầu học thuật " + statusText;
+        String content = String.format(
+                "Yêu cầu \"%s\" của bạn %s.%s",
+                academicRequest.getRequestTitle(),
+                statusText,
+                academicRequest.getApproverNote() != null ? " Ghi chú: " + academicRequest.getApproverNote() : "");
+
+        // Create notification
+        User sender = academicRequest.getApprover() != null ? academicRequest.getApprover()
+                : academicRequest.getStudent();
+
+        Notification notification = Notification.builder()
+                .title(title)
+                .content(content)
+                .type(Notification.NotificationType.ACADEMIC)
+                .targetType(Notification.TargetType.USER)
+                .sender(sender)
+                .priority(Notification.NotificationPriority.HIGH)
+                .status(Notification.NotificationStatus.SENT)
+                .build();
+
+        notification = notificationRepository.save(notification);
+
+        // Send to student
+        NotificationRecipient recipient = NotificationRecipient.builder()
+                .notification(notification)
+                .recipient(academicRequest.getStudent())
+                .isRead(false)
+                .build();
+        notificationRecipientRepository.save(recipient);
+
+        log.info("Sent notification to student {} for academic request {} status change to {}",
+                academicRequest.getStudent().getId(), academicRequest.getId(), academicRequest.getStatus());
+    }
 }
