@@ -912,43 +912,43 @@ export const MajorDetail: React.FC = () => {
                             itemLabel="chuyên ngành"
                         />
                     </div>
-
-                    {id && (
-                        <SpecializationCreateModal
-                            isOpen={isCreateModalOpen}
-                            onClose={() => setIsCreateModalOpen(false)}
-                            majorId={parseInt(id)}
-                            onSuccess={fetchSpecializations}
-                        />
-                    )}
-
-                    {selectedIds.length === 1 && (
-                        <SpecializationUpdateModal
-                            isOpen={isUpdateModalOpen}
-                            onClose={() => setIsUpdateModalOpen(false)}
-                            onSuccess={fetchSpecializations}
-                            specialization={specializations.find(s => s.id === selectedIds[0])!}
-                        />
-                    )}
-
-                    <ImportSpecializationModal
-                        isOpen={isImportModalOpen}
-                        onClose={() => setIsImportModalOpen(false)}
-                        majorId={parseInt(id!)}
-                        onSuccess={fetchSpecializations}
-                    />
-
-                    <ConfirmModal
-                        isOpen={confirmModal.isOpen}
-                        onClose={closeConfirmModal}
-                        onConfirm={confirmModal.onConfirm}
-                        title={confirmModal.title}
-                        message={confirmModal.message}
-                        type={confirmModal.type}
-                        confirmLabel={confirmModal.confirmLabel}
-                    />
                 </div>
             </div>
+
+            {id && (
+                <SpecializationCreateModal
+                    isOpen={isCreateModalOpen}
+                    onClose={() => setIsCreateModalOpen(false)}
+                    majorId={parseInt(id)}
+                    onSuccess={fetchSpecializations}
+                />
+            )}
+
+            {selectedIds.length === 1 && (
+                <SpecializationUpdateModal
+                    isOpen={isUpdateModalOpen}
+                    onClose={() => setIsUpdateModalOpen(false)}
+                    onSuccess={fetchSpecializations}
+                    specialization={specializations.find(s => s.id === selectedIds[0])!}
+                />
+            )}
+
+            <ImportSpecializationModal
+                isOpen={isImportModalOpen}
+                onClose={() => setIsImportModalOpen(false)}
+                majorId={parseInt(id!)}
+                onSuccess={fetchSpecializations}
+            />
+
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                onClose={closeConfirmModal}
+                onConfirm={confirmModal.onConfirm}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                type={confirmModal.type}
+                confirmLabel={confirmModal.confirmLabel}
+            />
         </AcademicStaffLayout>
     );
 };
