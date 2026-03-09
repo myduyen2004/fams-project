@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { StudentLayout } from '../../layouts/StudentLayout';
 import { Card } from '../../components/common/Card';
 import {
@@ -34,6 +35,7 @@ interface Semester {
 }
 
 export const StudentSchedulePage: React.FC = () => {
+    const navigate = useNavigate();
     const [timetable, setTimetable] = useState<WeeklyTimetableDTO | null>(null);
     const [loading, setLoading] = useState(true);
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -209,19 +211,12 @@ export const StudentSchedulePage: React.FC = () => {
             if (error.response && error.response.status === 403) {
                 setIsScheduleHidden(true);
                 setTimetable(null);
-                toast.error('Thời khóa biểu chưa được công bố');
             } else if (axios.isAxiosError(error) && error.response?.status === 403) {
                 // Double check axios error format
                 setIsScheduleHidden(true);
                 setTimetable(null);
-                toast.error('Thời khóa biểu chưa được công bố');
             } else {
-                const serverMsg = error.response?.data?.message || error.response?.data?.error || null;
-                if (serverMsg) {
-                    toast.error(`Lỗi server: ${serverMsg}`);
-                } else {
-                    toast.error('Không thể tải thời khóa biểu');
-                }
+                console.warn('Timetable fetch error:', error.response?.data?.message || error.message);
                 setTimetable(null);
             }
         } finally {
@@ -250,21 +245,57 @@ export const StudentSchedulePage: React.FC = () => {
         return `Thứ ${day + 1}`;
     };
 
-    const getStatusStyle = () => {
+    const getStatusStyle = (slot?: TimetableSlotDTO) => {
+        if (slot) {
+            const label = getStatusLabel(slot);
+            if (label === 'Đã hủy') return 'bg-red-50 text-red-600 border-red-100';
+            if (label === 'Đã kết thúc') return 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700';
+            if (label === 'Đang diễn ra') return 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800';
+        }
         // Uniform Orange Theme for all statuses per user request
         return 'bg-fpt-orange/10 text-fpt-orange border-fpt-orange/30';
+    };
+
+    const SLOT_TIMES: Record<number, { start: string; end: string }> = {
+        1: { start: '07:30', end: '09:45' },
+        2: { start: '10:00', end: '12:15' },
+        3: { start: '13:00', end: '15:15' },
+        4: { start: '15:30', end: '17:45' },
     };
 
     const getStatusLabel = (slot: TimetableSlotDTO) => {
         if (slot.attendanceStatus === 'PRESENT') return 'Có mặt';
         if (slot.attendanceStatus === 'ABSENT') return 'Vắng mặt';
+        if (slot.status === 'CANCELLED') return 'Đã hủy';
 
-        switch (slot.status) {
-            case 'COMPLETED': return 'Chưa diễn ra';
-            case 'CANCELLED': return 'Đã hủy';
-            case 'SCHEDULED': return 'Chưa diễn ra';
-            default: return 'Chưa diễn ra';
+        // Time-based status check
+        if (slot.date && slot.slotNumber) {
+            const now = new Date();
+            const slotDate = new Date(slot.date);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            slotDate.setHours(0, 0, 0, 0);
+
+            if (slotDate < today) {
+                return 'Đã kết thúc';
+            }
+
+            if (slotDate.getTime() === today.getTime()) {
+                const times = SLOT_TIMES[slot.slotNumber];
+                if (times) {
+                    const [endH, endM] = times.end.split(':').map(Number);
+                    const [startH, startM] = times.start.split(':').map(Number);
+                    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                    const endMinutes = endH * 60 + endM;
+                    const startMinutes = startH * 60 + startM;
+
+                    if (currentMinutes >= endMinutes) return 'Đã kết thúc';
+                    if (currentMinutes >= startMinutes) return 'Đang diễn ra';
+                }
+            }
         }
+
+        return 'Chưa diễn ra';
     };
 
     const getSlotForCell = (daySlots: TimetableSlotDTO[], slotNumber: number) => {
@@ -472,7 +503,7 @@ export const StudentSchedulePage: React.FC = () => {
                                                         {slotData ? (
                                                             <div
                                                                 onClick={() => setSelectedSlot(slotData)}
-                                                                className="relative group bg-white dark:bg-zinc-800 rounded-xl p-3 pl-5 shadow-sm hover:shadow-md transition-all cursor-pointer border border-gray-100 dark:border-zinc-700 overflow-hidden"
+                                                                className="relative group bg-white dark:bg-zinc-800 rounded-xl p-3 pl-5 shadow-sm hover:shadow-md transition-all cursor-pointer border border-gray-100 dark:border-zinc-700 overflow-hidden h-[150px] max-w-[220px]"
                                                             >
                                                                 {/* Left Orange Accent Bar - Absolute positioned for perfect rounding */}
                                                                 <div className="absolute left-0 top-0 bottom-0 w-[6px] bg-fpt-orange" />
@@ -481,7 +512,7 @@ export const StudentSchedulePage: React.FC = () => {
                                                                 {(slotData.status || slotData.attendanceStatus) && (
                                                                     <div className={`
                                                                         inline-block px-1.5 py-0.5 rounded text-[8px] font-black border mb-1 uppercase tracking-tighter
-                                                                        bg-orange-50 dark:bg-orange-950/30 text-fpt-orange border-orange-100 dark:border-orange-900/50
+                                                                        ${getStatusStyle(slotData)}
                                                                     `}>
                                                                         {getStatusLabel(slotData)}
                                                                     </div>
@@ -494,7 +525,7 @@ export const StudentSchedulePage: React.FC = () => {
 
                                                                 {/* Details */}
                                                                 <div className="space-y-0.5 text-[11px] font-medium">
-                                                                    <div className="text-gray-500 dark:text-gray-400 leading-tight">
+                                                                    <div className="text-gray-500 dark:text-gray-400 leading-tight truncate">
                                                                         Lớp: {slotData.className}
                                                                     </div>
                                                                     <div className="text-gray-500 dark:text-gray-400 truncate">
@@ -507,10 +538,10 @@ export const StudentSchedulePage: React.FC = () => {
                                                                         Bài tập: {!slotData.assignmentId
                                                                             ? 'Chưa có'
                                                                             : slotData.submissionStatus === 'SUBMITTED'
-                                                                                ? 'Đã nộp'
+                                                                                ? <span className="text-green-600 dark:text-green-400 font-semibold">Đã nộp</span>
                                                                                 : slotData.assignmentStatus === 'CLOSED'
-                                                                                    ? 'Đã đóng'
-                                                                                    : 'Chưa nộp'
+                                                                                    ? <span className="text-red-500 dark:text-red-400 font-semibold">Đã đóng</span>
+                                                                                    : <span className="text-amber-500 dark:text-amber-400 font-semibold">Chưa nộp</span>
                                                                         }
                                                                     </div>
                                                                 </div>
@@ -635,13 +666,22 @@ export const StudentSchedulePage: React.FC = () => {
                                                 : 'Chưa có bài tập'}
                                         </p>
                                         {selectedSlot.assignmentId && (
-                                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                                Trạng thái: {selectedSlot.submissionStatus === 'SUBMITTED'
-                                                    ? 'Đã nộp'
-                                                    : selectedSlot.assignmentStatus === 'CLOSED'
-                                                        ? 'Đã đóng'
-                                                        : 'Chưa nộp'}
-                                            </p>
+                                            <>
+                                                <p className="text-sm mt-1">
+                                                    Trạng thái: {selectedSlot.submissionStatus === 'SUBMITTED'
+                                                        ? <span className="text-green-600 dark:text-green-400 font-semibold">Đã nộp</span>
+                                                        : selectedSlot.assignmentStatus === 'CLOSED'
+                                                            ? <span className="text-red-500 dark:text-red-400 font-semibold">Đã đóng</span>
+                                                            : <span className="text-amber-500 dark:text-amber-400 font-semibold">Chưa nộp</span>}
+                                                </p>
+                                                <button
+                                                    onClick={() => { setSelectedSlot(null); navigate(`/student/assignments/${selectedSlot.assignmentId}`); }}
+                                                    className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-fpt-orange/10 hover:bg-fpt-orange/20 text-fpt-orange rounded-lg text-xs font-semibold transition-colors"
+                                                >
+                                                    <FileText className="w-3.5 h-3.5" />
+                                                    Xem bài tập
+                                                </button>
+                                            </>
                                         )}
                                     </div>
                                 </div>
@@ -651,7 +691,7 @@ export const StudentSchedulePage: React.FC = () => {
                                     </div>
                                     <div className="flex items-center gap-2 w-full justify-between">
                                         <p className="text-sm text-gray-500 dark:text-gray-400">Trạng thái điểm danh:</p>
-                                        <span className={`font-bold uppercase px-3 py-1 rounded-full text-xs border ${getStatusStyle()}`}>
+                                        <span className={`font-bold uppercase px-3 py-1 rounded-full text-xs border ${getStatusStyle(selectedSlot)}`}>
                                             {getStatusLabel(selectedSlot)}
                                         </span>
                                     </div>

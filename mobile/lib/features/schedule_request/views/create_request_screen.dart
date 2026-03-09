@@ -86,17 +86,11 @@ class CreateRequestScreen extends StatelessWidget {
                     isLoading: controller.isLoadingClasses.value,
                   )),
                   const SizedBox(height: 16),
-                  // Request type dropdown
-                  Obx(() => _buildDropdown(
+                  // Request type (fixed to RESCHEDULE)
+                  _buildReadOnlyField(
                     label: 'LOẠI YÊU CẦU',
-                    value: controller.selectedType.value,
-                    items: const [
-                      DropdownMenuItem(value: 'RESCHEDULE', child: Text('Đổi lịch')),
-                      DropdownMenuItem(value: 'ROOM_CHANGE', child: Text('Đổi phòng')),
-                    ],
-                    onChanged: (v) => controller.selectedType.value = v,
-                    hint: 'Chọn loại yêu cầu',
-                  )),
+                    value: 'Đổi lịch',
+                  ),
                 ],
               ),
             ),
@@ -248,6 +242,84 @@ class CreateRequestScreen extends StatelessWidget {
                       ),
                     ],
                   ),
+                  // Show selected room inline after slot selection
+                  Obx(() {
+                    if (controller.isLoadingRooms.value && controller.newSlot.value != null) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.grey[400],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Đang tải danh sách phòng...',
+                              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    if (controller.selectedRoom.value != null) {
+                      final room = controller.selectedRoom.value!;
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.green[50],
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.green[200]!),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.meeting_room_rounded, size: 18, color: Colors.green[700]),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Phòng đã chọn: ',
+                                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                              ),
+                              Text(
+                                room.name,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green[800],
+                                ),
+                              ),
+                              const Spacer(),
+                              Text(
+                                '${room.building} - Tầng ${room.floor}',
+                                style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    if (controller.newSlot.value != null && controller.newDate.value != null && !controller.isLoadingRooms.value && controller.rooms.isNotEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline, size: 14, color: Colors.orange[400]),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Vui lòng chọn phòng bên dưới',
+                              style: TextStyle(fontSize: 12, color: Colors.orange[600], fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  }),
                 ],
               )),
             ),
@@ -368,6 +440,20 @@ class CreateRequestScreen extends StatelessWidget {
                 onRoomSelect: controller.onRoomSelected,
                 activeFloor: controller.activeFloor.value,
                 onFloorChange: (floor) => controller.activeFloor.value = floor,
+                activeBuilding: controller.activeBuilding.value,
+                onBuildingChange: (building) {
+                  controller.activeBuilding.value = building;
+                  // Auto-select first available floor for the new building
+                  final floorsForBuilding = controller.rooms
+                      .where((r) => r.building == building)
+                      .map((r) => r.floor)
+                      .toSet()
+                      .toList()
+                    ..sort();
+                  if (floorsForBuilding.isNotEmpty) {
+                    controller.activeFloor.value = floorsForBuilding.first;
+                  }
+                },
                 isLoading: controller.isLoadingRooms.value,
                 hasFilters: controller.newDate.value != null && controller.newSlot.value != null,
                 selectedDate: controller.newDate.value,

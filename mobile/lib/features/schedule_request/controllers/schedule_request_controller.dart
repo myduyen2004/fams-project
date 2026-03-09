@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../models/schedule_request_model.dart';
 import '../services/schedule_request_service.dart';
@@ -10,6 +11,7 @@ class ScheduleRequestController extends GetxController {
   // Observable state
   final RxBool isLoading = false.obs;
   final RxBool isLoadingDetail = false.obs;
+  final RxBool isRevoking = false.obs;
   final RxInt errorStatusCode = (-1).obs;
   final RxList<ScheduleRequest> requests = <ScheduleRequest>[].obs;
   final Rx<ScheduleRequest?> selectedRequest = Rx<ScheduleRequest?>(null);
@@ -105,6 +107,45 @@ class ScheduleRequestController extends GetxController {
   /// Refresh list (pull-to-refresh)
   Future<void> refreshList() async {
     await fetchRequests(refresh: true);
+  }
+
+  /// Revoke a pending request
+  Future<bool> revokeRequest(int id) async {
+    try {
+      isRevoking.value = true;
+      final success = await _service.revokeRequest(id);
+      
+      if (success) {
+        // Refresh detail if currently viewing
+        if (selectedRequest.value?.id == id) {
+          await fetchRequestDetail(id);
+        }
+        // Refresh the list
+        await fetchRequests();
+        
+        Get.snackbar(
+          'Thành công',
+          'Đã thu hồi đơn yêu cầu',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFFDCFCE7),
+          colorText: const Color(0xFF166534),
+          margin: const EdgeInsets.all(16),
+        );
+      }
+      return success;
+    } catch (e) {
+      Get.snackbar(
+        'Lỗi',
+        'Không thể thu hồi đơn yêu cầu. Vui lòng thử lại sau.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFFFEE2E2),
+        colorText: const Color(0xFF991B1B),
+        margin: const EdgeInsets.all(16),
+      );
+      return false;
+    } finally {
+      isRevoking.value = false;
+    }
   }
 
   /// Clear selected request when leaving detail screen

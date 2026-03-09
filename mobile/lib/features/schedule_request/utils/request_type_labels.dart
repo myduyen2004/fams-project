@@ -5,7 +5,7 @@ class RequestTypeLabels {
   RequestTypeLabels._();
 
   static const Map<String, String> labels = {
-    'RESCHEDULE': 'Dời lịch',
+    'RESCHEDULE': 'Đổi lịch',
     'CANCEL': 'Hủy lịch',
     'SWAP': 'Đổi lịch',
     'ROOM_CHANGE': 'Đổi phòng',
