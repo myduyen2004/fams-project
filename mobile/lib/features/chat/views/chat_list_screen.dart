@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../controllers/chat_controller.dart';
@@ -240,20 +241,94 @@ class ChatListScreen extends StatelessWidget {
         child: Row(
           children: [
             // Group Avatar
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF1E7),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Center(
-                child: Icon(
-                  Icons.people_rounded,
-                  color: Color(0xFFFF8C33),
-                  size: 28,
-                ),
-              ),
+            Builder(
+              builder: (context) {
+                final studentMembers =
+                    group.members?.where((m) => m.role == 'STUDENT').toList() ??
+                    [];
+                final avatarsToDisplay = studentMembers.take(2).toList();
+
+                if (avatarsToDisplay.isEmpty) {
+                  return Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF1E7),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.people_rounded,
+                        color: Color(0xFFFF8C33),
+                        size: 26,
+                      ),
+                    ),
+                  );
+                }
+
+                return SizedBox(
+                  width: avatarsToDisplay.length > 1
+                      ? 70.0
+                      : 48.0, // 48 + 22 = 70
+                  height: 48,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: avatarsToDisplay
+                        .asMap()
+                        .entries
+                        .map((entry) {
+                          final idx = entry.key;
+                          final member = entry.value;
+
+                          return Positioned(
+                            left:
+                                idx *
+                                22.0, // Adjust overlap distance (about half of 48)
+                            child: Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 3,
+                                ),
+                                color: idx == 0
+                                    ? Colors.white
+                                    : const Color(0xFFFFD8B2),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.08),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: ClipOval(
+                                child:
+                                    member.avatarUrl != null &&
+                                        member.avatarUrl!.isNotEmpty
+                                    ? CachedNetworkImage(
+                                        imageUrl: member.avatarUrl!,
+                                        fit: BoxFit.cover,
+                                        errorWidget: (context, url, error) =>
+                                            _buildInitialAvatar(
+                                              member.fullName,
+                                            ),
+                                        placeholder: (context, url) =>
+                                            Container(color: Colors.grey[200]),
+                                      )
+                                    : _buildInitialAvatar(member.fullName),
+                              ),
+                            ),
+                          );
+                        })
+                        .toList()
+                        .reversed
+                        .toList(), // Reverse to make first index on top
+                  ),
+                );
+              },
             ),
             const SizedBox(width: 14),
             // Group Info
@@ -372,5 +447,22 @@ class ChatListScreen extends StatelessWidget {
     } catch (_) {
       return '';
     }
+  }
+
+  Widget _buildInitialAvatar(String fullName) {
+    final initial = fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U';
+    return Container(
+      color: const Color(0xFFFFEEDD),
+      child: Center(
+        child: Text(
+          initial,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFFFF8C33),
+          ),
+        ),
+      ),
+    );
   }
 }

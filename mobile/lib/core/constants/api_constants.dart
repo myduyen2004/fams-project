@@ -25,8 +25,10 @@ class ApiConstants {
   // Timetable Endpoints
   static const String studentSchedule = '/api/v1/timetable/student';
   static const String lecturerSchedule = '/api/v1/timetable/lecturer';
-  static const String studentSemesterSchedule = '/api/v1/timetable/student'; // + /{id}/semester?semesterCode=X
-  static const String lecturerSemesterSchedule = '/api/v1/timetable/lecturer'; // + /{id}/semester?semesterCode=X
+  static const String studentSemesterSchedule =
+      '/api/v1/timetable/student'; // + /{id}/semester?semesterCode=X
+  static const String lecturerSemesterSchedule =
+      '/api/v1/timetable/lecturer'; // + /{id}/semester?semesterCode=X
   static const String attendanceConfig = '/api/v1/attendance-config';
   static const String checkIn = '/api/v1/attendance/check-in';
 
