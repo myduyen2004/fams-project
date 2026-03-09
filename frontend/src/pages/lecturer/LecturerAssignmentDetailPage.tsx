@@ -2,14 +2,15 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { assignmentService, AssignmentDTO, AssignmentSubmissionDTO } from '../../services/api/assignmentService';
+import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
 import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
 import { Pagination } from '../../components/common/Pagination';
 import {
-    ArrowLeft, Clock, ExternalLink, Search, Loader2, BookOpen, Lock, X
+    ArrowLeft, Clock, ExternalLink, Search, Loader2, BookOpen, Lock, X, Download
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 30;
 
 export const LecturerAssignmentDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -25,6 +26,8 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
     const [commentDraft, setCommentDraft] = useState('');
     const [savingComment, setSavingComment] = useState(false);
     const [closingAssignment, setClosingAssignment] = useState(false);
+    const [downloadingZip, setDownloadingZip] = useState(false);
+    const [slotInfo, setSlotInfo] = useState<TimetableSlotDTO | null>(null);
 
     useEffect(() => {
         if (!assignmentId || isNaN(assignmentId)) return;
@@ -41,7 +44,17 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                 const first = subsData[0];
                 const classAssignments = await assignmentService.getAssignmentsByClass(first.className);
                 const found = classAssignments.find(a => a.id === assignmentId);
-                if (found) setAssignment(found);
+                if (found) {
+                    setAssignment(found);
+                    // Fetch slot info
+                    if (found.timetableSlotId) {
+                        try {
+                            const slots = await timetableService.getTimetableByClass(found.className);
+                            const slot = slots.find(s => s.id === found.timetableSlotId);
+                            if (slot) setSlotInfo(slot);
+                        } catch { /* slot info is optional */ }
+                    }
+                }
             }
         } catch (err: any) {
             toast.error('Không thể tải dữ liệu bài tập');
@@ -104,6 +117,37 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
         }
     };
 
+    const handleDownloadAll = async () => {
+        if (!assignment) return;
+        try {
+            setDownloadingZip(true);
+            const resp = await assignmentService.downloadAllSubmissions(assignmentId);
+            const url = window.URL.createObjectURL(new Blob([resp.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `${assignment.className}_${assignment.title}_submissions.zip`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+            toast.success('Đã tải bài nộp thành công');
+        } catch (err: any) {
+            let msg = 'Không thể tải bài nộp';
+            if (err.response?.data instanceof Blob) {
+                try {
+                    const text = await err.response.data.text();
+                    const json = JSON.parse(text);
+                    msg = json.message || json.error || msg;
+                } catch { /* ignore parse error */ }
+            } else if (err.response?.data?.message) {
+                msg = err.response.data.message;
+            }
+            toast.error(msg);
+        } finally {
+            setDownloadingZip(false);
+        }
+    };
+
     // Stats
     const totalStudents = submissions.length;
     const submittedCount = submissions.filter(s => s.status === 'SUBMITTED').length;
@@ -139,7 +183,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
 
     return (
         <LecturerLayout pageTitle="Chi tiết bài tập">
-            <div className="mt-5 ml-10 mr-10 space-y-6">
+            <div className="mt-4 ml-10 mr-10 space-y-3">
 
                 {/* Top bar: Back + Close */}
                 <div className="flex items-center justify-between">
@@ -150,94 +194,119 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                         <ArrowLeft className="w-4 h-4" />
                         Quay lại danh sách bài tập
                     </button>
-                    {assignment?.status === 'OPEN' && (
-                        <button
-                            onClick={handleCloseAssignment}
-                            disabled={closingAssignment}
-                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-                        >
-                            <Lock className="w-4 h-4" />
-                            {closingAssignment ? 'Đang đóng...' : 'Đóng bài tập'}
-                        </button>
-                    )}
+                    <div className="flex items-center gap-2">
+                        {submittedCount > 0 && (
+                            <button
+                                onClick={handleDownloadAll}
+                                disabled={downloadingZip}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                            >
+                                {downloadingZip ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                                {downloadingZip ? 'Đang tải...' : 'Tải bài nộp'}
+                            </button>
+                        )}
+                        {assignment?.status === 'OPEN' && (
+                            <button
+                                onClick={handleCloseAssignment}
+                                disabled={closingAssignment}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                            >
+                                <Lock className="w-4 h-4" />
+                                {closingAssignment ? 'Đang đóng...' : 'Đóng bài tập'}
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Assignment Header Card */}
                 {assignment && (
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden">
+                    <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden">
                         {/* Title bar */}
-                        <div className="bg-orange-500 dark:bg-orange-600 px-6 py-4">
-                            <h2 className="text-lg font-bold text-white">{assignment.title}</h2>
+                        <div className="bg-orange-500 dark:bg-orange-600 px-5 py-2">
+                            <h2 className="text-base font-bold text-white">{assignment.title}</h2>
                             {assignment.description && (
-                                <p className="text-orange-100 text-sm mt-1">{assignment.description}</p>
+                                <p className="text-orange-100 text-xs mt-0.5">{assignment.description}</p>
                             )}
                         </div>
 
-                        {/* Info grid */}
-                        <div className="p-6">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                                <div>
-                                    <p className="text-xs text-gray-400 dark:text-zinc-500 uppercase tracking-wider mb-1">Lớp</p>
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{assignment.className}</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-gray-400 dark:text-zinc-500 uppercase tracking-wider mb-1">Môn học</p>
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{assignment.courseName}</p>
-                                    <p className="text-xs text-gray-400 mt-0.5">{assignment.courseCode}</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-gray-400 dark:text-zinc-500 uppercase tracking-wider mb-1">Hạn nộp</p>
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-white inline-flex items-center gap-1">
-                                        <Clock className="w-3.5 h-3.5 text-gray-400" />
-                                        {formatDateTime(assignment.dueDate)}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-gray-400 dark:text-zinc-500 uppercase tracking-wider mb-1">Trạng thái</p>
-                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${assignment.status === 'OPEN'
-                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                        : 'bg-gray-100 text-gray-500 dark:bg-zinc-800 dark:text-zinc-400'
-                                        }`}>
-                                        {assignment.status === 'OPEN' ? 'Đang mở' : 'Đã đóng'}
+                        {/* Info row with dividers */}
+                        <div className="px-5 py-2.5 grid grid-cols-3 md:grid-cols-6 divide-x divide-gray-200 dark:divide-zinc-700 text-sm">
+                            <div className="flex items-center gap-2 px-2 justify-center">
+                                <span className="text-[11px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider">Lớp</span>
+                                <span className="font-semibold text-gray-900 dark:text-white text-sm">{assignment.className}</span>
+                            </div>
+                            {slotInfo?.date && (
+                                <div className="flex items-center gap-2 px-2 justify-center">
+                                    <span className="text-[11px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider text-nowrap">Ngày học</span>
+                                    <span className="font-semibold text-gray-900 dark:text-white text-sm">
+                                        {new Date(slotInfo.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                     </span>
                                 </div>
-                            </div>
-                            {assignment.referenceUrl && (
-                                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-zinc-800">
-                                    <a href={getViewableFileUrl(assignment.referenceUrl)} target="_blank" rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-1.5 text-sm text-fpt-orange hover:text-orange-600 transition-colors">
-                                        <BookOpen className="w-4 h-4" />
-                                        {assignment.referenceName || 'Tài liệu tham khảo'}
-                                    </a>
+                            )}
+                            {slotInfo?.slotNumber && (
+                                <div className="flex items-center gap-2 px-2 justify-center">
+                                    <span className="text-[11px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider">Slot</span>
+                                    <span className="font-semibold text-gray-900 dark:text-white text-sm">Slot {slotInfo.slotNumber}</span>
                                 </div>
                             )}
+                            {(slotInfo?.roomCode || slotInfo?.roomName) && (
+                                <div className="flex items-center gap-2 px-2 justify-center">
+                                    <span className="text-[11px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider">Phòng</span>
+                                    <span className="font-semibold text-gray-900 dark:text-white text-sm">{slotInfo.roomCode || slotInfo.roomName}</span>
+                                </div>
+                            )}
+                            <div className="flex items-center gap-2 px-2 justify-center">
+                                <span className="text-[11px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider text-nowrap">Hạn nộp</span>
+                                <span className="font-semibold text-gray-900 dark:text-white text-sm inline-flex items-center gap-1">
+                                    <Clock className="w-3.5 h-3.5 text-gray-400" />
+                                    {formatDateTime(assignment.dueDate)}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2 px-2 justify-center">
+                                <span className="text-[11px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider">Trạng thái</span>
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${assignment.status === 'OPEN'
+                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                    : 'bg-gray-100 text-gray-500 dark:bg-zinc-800 dark:text-zinc-400'
+                                    }`}>
+                                    {assignment.status === 'OPEN' ? 'Đang mở' : 'Đã đóng'}
+                                </span>
+                            </div>
                         </div>
+                        {assignment.referenceUrl && (
+                            <div className="px-5 pb-2.5 -mt-0.5">
+                                <a href={getViewableFileUrl(assignment.referenceUrl)} target="_blank" rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 text-xs text-fpt-orange hover:text-orange-600 transition-colors">
+                                    <BookOpen className="w-3.5 h-3.5" />
+                                    {assignment.referenceName || 'Tài liệu tham khảo'}
+                                </a>
+                            </div>
+                        )}
                     </div>
                 )}
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 p-4 shadow-sm">
-                        <p className="text-xs text-gray-400 dark:text-zinc-500 mb-1">Tổng sinh viên</p>
-                        <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalStudents}</p>
+                <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-white dark:bg-zinc-900 rounded-lg border border-gray-100 dark:border-zinc-800 px-4 py-2 shadow-sm flex items-center justify-between">
+                        <span className="text-xs text-gray-500 dark:text-zinc-400">Tổng sinh viên</span>
+                        <span className="text-base font-bold text-gray-900 dark:text-white">{totalStudents}</span>
                     </div>
-                    <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 p-4 shadow-sm">
-                        <p className="text-xs text-gray-400 dark:text-zinc-500 mb-1">Đã nộp</p>
-                        <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <div className="bg-white dark:bg-zinc-900 rounded-lg border border-gray-100 dark:border-zinc-800 px-4 py-2 shadow-sm flex items-center justify-between">
+                        <span className="text-xs text-gray-500 dark:text-zinc-400">Đã nộp</span>
+                        <span className="text-base font-bold text-gray-900 dark:text-white">
                             {submittedCount}
-                            <span className="text-sm font-normal text-gray-400 ml-1">
+                            <span className="text-[11px] font-normal text-gray-400 ml-1">
                                 ({totalStudents > 0 ? Math.round(submittedCount / totalStudents * 100) : 0}%)
                             </span>
-                        </p>
+                        </span>
                     </div>
-                    <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 p-4 shadow-sm">
-                        <p className="text-xs text-gray-400 dark:text-zinc-500 mb-1">Chưa nộp</p>
-                        <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <div className="bg-white dark:bg-zinc-900 rounded-lg border border-gray-100 dark:border-zinc-800 px-4 py-2 shadow-sm flex items-center justify-between">
+                        <span className="text-xs text-gray-500 dark:text-zinc-400">Chưa nộp</span>
+                        <span className="text-base font-bold text-gray-900 dark:text-white">
                             {notSubmittedCount}
-                            <span className="text-sm font-normal text-gray-400 ml-1">
+                            <span className="text-[11px] font-normal text-gray-400 ml-1">
                                 ({totalStudents > 0 ? Math.round(notSubmittedCount / totalStudents * 100) : 0}%)
                             </span>
-                        </p>
+                        </span>
                     </div>
                 </div>
 

@@ -628,7 +628,7 @@ public class TimetableController {
 
         @GetMapping("/lecturer/{lecturerId}")
         @Operation(summary = "Get timetable for a lecturer")
-        public ResponseEntity<TimetableDTO.WeeklyTimetableDTO> getLecturerTimetable(
+        public ResponseEntity<Object> getLecturerTimetable(
                         @PathVariable Long lecturerId,
                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
@@ -636,8 +636,76 @@ public class TimetableController {
                 LocalDate weekStart = targetDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
                 LocalDate weekEnd = weekStart.plusDays(6);
 
+                // Check if semester is published for this date (same logic as student
+                // timetable)
+                List<Semester> semesters = semesterRepository.findSemestersByDate(targetDate);
+                Semester semester = semesters.stream()
+                                .filter(s -> s.getConfig() != null
+                                                && Boolean.TRUE.equals(s.getConfig().getIsPublished()))
+                                .findFirst()
+                                .orElse(semesters.isEmpty() ? null : semesters.get(0));
+
+                if (semester != null) {
+                        com.fams.backend.entity.SemesterConfig config = semester.getConfig();
+                        boolean isPublished = config != null && Boolean.TRUE.equals(config.getIsPublished());
+
+                        if (!isPublished) {
+                                // Allow if User has ROLE_ADMIN or ROLE_ACADEMIC_STAFF
+                                org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
+                                                .getContext().getAuthentication();
+                                boolean isAdminOrStaff = auth != null && auth.getAuthorities().stream()
+                                                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")
+                                                                || a.getAuthority().equals("ROLE_ACADEMIC_STAFF"));
+
+                                if (!isAdminOrStaff) {
+                                        log.warn("Semester {} is not published. Access denied for lecturer {}.",
+                                                        semester.getCode(), lecturerId);
+                                        return ResponseEntity.status(403).body(Map.of(
+                                                        "status", 403,
+                                                        "error", "Forbidden",
+                                                        "message", "Lịch dạy chưa được công bố: "
+                                                                        + semester.getCode()));
+                                }
+                        }
+                }
+
                 List<TimetableSlot> slots = timetableSlotRepository.findByLecturerIdAndDateBetween(
                                 lecturerId, weekStart, weekEnd);
+
+                // Fallback: check semester from slots if not found by date
+                if (semester == null && !slots.isEmpty()) {
+                        TimetableSlot firstSlot = slots.get(0);
+                        if (firstSlot.getClassSection() != null
+                                        && firstSlot.getClassSection().getSemester() != null) {
+                                Long semesterId = firstSlot.getClassSection().getSemester().getId();
+                                semester = semesterRepository.findById(semesterId).orElse(null);
+
+                                if (semester != null) {
+                                        com.fams.backend.entity.SemesterConfig config = semester.getConfig();
+                                        boolean isPublished = config != null
+                                                        && Boolean.TRUE.equals(config.getIsPublished());
+
+                                        if (!isPublished) {
+                                                org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
+                                                                .getContext().getAuthentication();
+                                                boolean isAdminOrStaff = auth != null && auth.getAuthorities().stream()
+                                                                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")
+                                                                                || a.getAuthority().equals(
+                                                                                                "ROLE_ACADEMIC_STAFF"));
+
+                                                if (!isAdminOrStaff) {
+                                                        log.warn("Semester {} (from slots) is not published. Access denied for lecturer {}.",
+                                                                        semester.getCode(), lecturerId);
+                                                        return ResponseEntity.status(403).body(Map.of(
+                                                                        "status", 403,
+                                                                        "error", "Forbidden",
+                                                                        "message", "Lịch dạy chưa được công bố: "
+                                                                                        + semester.getCode()));
+                                                }
+                                        }
+                                }
+                        }
+                }
 
                 TimetableDTO.WeeklyTimetableDTO weeklyDto = buildWeeklyTimetable(weekStart, weekEnd, slots);
 

@@ -4,7 +4,7 @@ import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { REQUEST_TYPE_LABELS } from '../../types/requestType';
 import { scheduleRequestService, ScheduleRequest } from '../../services/api/scheduleRequestService';
 import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
-import { Loader2, ArrowLeft, FileText } from 'lucide-react';
+import { Loader2, ArrowLeft, FileText, XCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const LecturerRequestDetailPage: React.FC = () => {
@@ -77,6 +77,25 @@ export const LecturerRequestDetailPage: React.FC = () => {
                         </Link>
                         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Chi tiết yêu cầu thay đổi lịch dạy</h1>
                     </div>
+                    {request.status === 'PENDING' && (
+                        <button
+                            onClick={() => {
+                                if (window.confirm('Bạn có chắc chắn muốn thu hồi đơn yêu cầu này?')) {
+                                    scheduleRequestService.revokeRequest(request.id)
+                                        .then(() => {
+                                            toast.success('Đã thu hồi đơn yêu cầu thành công');
+                                            // Reload data
+                                            scheduleRequestService.getRequestById(Number(id)).then(setRequest);
+                                        })
+                                        .catch(() => toast.error('Lỗi khi thu hồi đơn yêu cầu'));
+                                }
+                            }}
+                            className="bg-red-50 hover:bg-red-100 text-red-600 font-bold py-2 px-4 rounded-lg shadow-sm transition-colors flex items-center gap-2 border border-red-200"
+                        >
+                            <XCircle size={18} />
+                            Thu hồi đơn
+                        </button>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -223,7 +242,8 @@ export const LecturerRequestDetailPage: React.FC = () => {
                                 <p className="text-xs font-bold text-fpt-orange uppercase tracking-widest mb-3">TRẠNG THÁI HIỆN TẠI</p>
                                 <span className={`inline-block px-8 py-2.5 rounded-full text-lg font-bold shadow-lg text-white ${request.status === 'APPROVED' ? 'bg-green-500 shadow-green-500/30' :
                                     request.status === 'REJECTED' ? 'bg-red-500 shadow-red-500/30' :
-                                        'bg-fpt-orange shadow-orange-500/30'
+                                        request.status === 'REVOKED' ? 'bg-gray-500 shadow-gray-500/30' :
+                                            'bg-fpt-orange shadow-orange-500/30'
                                     }`}>
                                     {request.statusLabel}
                                 </span>

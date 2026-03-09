@@ -72,11 +72,12 @@ export const RequestDetailPage = () => {
 
     const isPending = request.status === 'PENDING';
     const statusInfo = {
-        label: request.status === 'PENDING' ? 'Đang xử lý' : request.status === 'APPROVED' ? 'Đã duyệt' : 'Đã từ chối',
+        label: request.status === 'PENDING' ? 'Đang xử lý' : request.status === 'APPROVED' ? 'Đã duyệt' : request.status === 'REVOKED' ? 'Đã thu hồi' : 'Đã từ chối',
         color: request.status === 'PENDING' ? 'bg-amber-50 text-amber-600 border-amber-200' :
             request.status === 'APPROVED' ? 'bg-green-50 text-green-600 border-green-200' :
-                'bg-red-50 text-red-600 border-red-200',
-        dot: request.status === 'PENDING' ? 'bg-amber-500' : request.status === 'APPROVED' ? 'bg-green-500' : 'bg-red-500'
+                request.status === 'REVOKED' ? 'bg-gray-50 text-gray-600 border-gray-200' :
+                    'bg-red-50 text-red-600 border-red-200',
+        dot: request.status === 'PENDING' ? 'bg-amber-500' : request.status === 'APPROVED' ? 'bg-green-500' : request.status === 'REVOKED' ? 'bg-gray-500' : 'bg-red-500'
     };
 
     return (
@@ -305,23 +306,7 @@ export const RequestDetailPage = () => {
                                             />
                                         </div>
 
-                                        <div className="flex gap-3">
-                                            <button
-                                                onClick={() => handleUpdateStatus('APPROVED')}
-                                                disabled={updating}
-                                                className="flex-1 py-3 bg-fpt-orange hover:bg-orange-600 text-white font-bold rounded-xl shadow-lg border border-orange-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
-                                            >
-                                                {updating ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
-                                                Duyệt
-                                            </button>
-                                            <button
-                                                onClick={() => handleUpdateStatus('REJECTED')}
-                                                disabled={updating}
-                                                className="flex-1 py-3 bg-white dark:bg-zinc-800 text-red-600 font-bold rounded-xl border border-red-200 dark:border-red-900/30 hover:bg-red-50 dark:hover:bg-red-900/10 active:scale-95 transition-all flex items-center justify-center gap-2"
-                                            >
-                                                Từ chối
-                                            </button>
-                                        </div>
+
                                     </>
                                 ) : (
                                     <div className="p-4 bg-gray-50 dark:bg-zinc-800/50 rounded-xl border border-gray-100 dark:border-zinc-700">

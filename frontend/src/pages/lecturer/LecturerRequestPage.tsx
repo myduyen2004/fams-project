@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { REQUEST_TYPE_LABELS } from '../../types/requestType';
-import { Eye, Loader2, ArrowLeft } from 'lucide-react';
+import { Eye, Loader2, ArrowLeft, XCircle } from 'lucide-react';
 import { Card } from '../../components/common/Card';
 import { scheduleRequestService, ScheduleRequest } from '../../services/api/scheduleRequestService';
 import toast from 'react-hot-toast';
@@ -41,8 +41,10 @@ export const LecturerRequestPage: React.FC = () => {
                 return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-500 text-white whitespace-nowrap">{label}</span>;
             case 'REJECTED':
                 return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-500 text-white whitespace-nowrap">{label}</span>;
-            default:
+            case 'REVOKED':
                 return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gray-500 text-white whitespace-nowrap">{label}</span>;
+            default:
+                return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gray-400 text-white whitespace-nowrap">{label}</span>;
         }
     };
 
@@ -133,9 +135,29 @@ export const LecturerRequestPage: React.FC = () => {
                                         </td>
                                         <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{formatDate(req.createdAt)}</td>
                                         <td className="px-6 py-4 text-center whitespace-nowrap">
-                                            <Link to={`/lecturer/requests/${req.id}`} className="text-gray-500 hover:text-fpt-orange transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800 inline-block">
-                                                <Eye size={20} />
-                                            </Link>
+                                            <div className="flex items-center justify-center gap-2">
+                                                <Link to={`/lecturer/requests/${req.id}`} className="text-gray-500 hover:text-fpt-orange transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-800" title="Xem chi tiết">
+                                                    <Eye size={20} />
+                                                </Link>
+                                                {req.status === 'PENDING' && (
+                                                    <button
+                                                        onClick={() => {
+                                                            if (window.confirm('Bạn có chắc chắn muốn thu hồi đơn yêu cầu này?')) {
+                                                                scheduleRequestService.revokeRequest(req.id)
+                                                                    .then(() => {
+                                                                        toast.success('Đã thu hồi đơn yêu cầu thành công');
+                                                                        fetchRequests();
+                                                                    })
+                                                                    .catch(() => toast.error('Lỗi khi thu hồi đơn yêu cầu'));
+                                                            }
+                                                        }}
+                                                        className="text-gray-400 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20"
+                                                        title="Thu hồi đơn"
+                                                    >
+                                                        <XCircle size={20} />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Bell, Check, Trash2, Clock, CheckCircle2, AlertCircle, Loader2, Settings, MoreVertical } from 'lucide-react';
+import { Bell, Check, Trash2, Clock, CheckCircle2, AlertCircle, Loader2, Settings } from 'lucide-react';
 import { userService } from '../../services/api/userService';
 import { authService } from '../../services/api/authService';
 import { dashboardService } from '../../services/api/dashboardService';
@@ -342,16 +342,18 @@ export const NotificationBell: React.FC = () => {
                   <Check size={18} />
                 </button>
               )}
-              <button
-                onClick={() => {
-                  navigate('/admin/notification-management');
-                  setShowDropdown(false);
-                }}
-                className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-gray-500"
-                title="Quản lý thông báo"
-              >
-                <Settings size={18} />
-              </button>
+              {(role === 'admin' || role === 'academic_staff') && (
+                <button
+                  onClick={() => {
+                    navigate('/admin/notification-management');
+                    setShowDropdown(false);
+                  }}
+                  className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-gray-500"
+                  title="Quản lý thông báo"
+                >
+                  <Settings size={18} />
+                </button>
+              )}
             </div>
           </div>
 
@@ -465,9 +467,6 @@ export const NotificationBell: React.FC = () => {
                             <span className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">{n.timestamp}</span>
                           </div>
                         </div>
-                        <button className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                          <MoreVertical size={16} />
-                        </button>
                       </div>
                     </div>
                   </div>
@@ -545,12 +544,21 @@ export const NotificationBell: React.FC = () => {
             )}
           </div>
 
-          <div className="p-4 flex justify-center bg-white dark:bg-zinc-900">
+          <div className="p-4 flex justify-between items-center bg-gray-50 dark:bg-zinc-800/50 border-t border-gray-100 dark:border-zinc-800">
+            <button
+              onClick={() => {
+                navigate('/notifications');
+                setShowDropdown(false);
+              }}
+              className="text-sm font-semibold text-fpt-orange hover:text-orange-600 transition-colors flex items-center gap-1"
+            >
+              Xem tất cả thông báo
+            </button>
             <button
               onClick={() => setShowDropdown(false)}
               className="text-xs font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
             >
-              Ẩn bảng thông báo
+              Đóng
             </button>
           </div>
         </div>
