@@ -15,6 +15,9 @@ public class StudentEnrollmentDTO {
     private String phone;
     private String idCard;
     private String majorName;
+    private String specializationName;
+    private String subSpecializationName;
     private String studentCode;
+    private String avatar;
     private String status;
 }

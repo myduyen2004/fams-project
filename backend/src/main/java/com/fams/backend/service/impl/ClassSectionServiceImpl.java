@@ -735,6 +735,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                             .idCard("")
                             .majorName(studentSpecialization)
                             .studentCode(student.getCode())
+                            .avatar(student.getAvatar())
                             .status(enrollment.getStatus().name())
                             .build();
                 })

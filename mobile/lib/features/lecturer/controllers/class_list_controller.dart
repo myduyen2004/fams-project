@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../../chat/models/chat_models.dart';
 import '../../chat/controllers/chat_controller.dart';
 import '../../chat/views/chat_detail_screen.dart';
+import '../../chat/services/chat_service.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../schedule/controllers/schedule_controller.dart';
 import '../models/class_section_model.dart';
@@ -50,7 +51,7 @@ class ClassListController extends GetxController {
 
       // Get active semester from schedule controller
       final scheduleController = Get.find<ScheduleController>();
-      
+
       // If semesters list is empty, try to fetch them first
       if (scheduleController.semesters.isEmpty) {
         await scheduleController.fetchSemesters();
@@ -145,6 +146,29 @@ class ClassListController extends GetxController {
 
     try {
       isLoading.value = true;
+
+      // Step 1: Check if group exists on server (created by another device/student)
+      final chatService = ChatService();
+      final hasGroupOnServer = await chatService.checkGroupExists(
+        classSection.className,
+      );
+
+      if (hasGroupOnServer) {
+        // Just reload chat groups and navigate
+        final chatController = Get.find<ChatController>();
+        await chatController.loadGroups();
+        final group = chatController.groups.firstWhereOrNull(
+          (g) => g.className == classSection.className,
+        );
+        if (group != null) {
+          _updateLocalClassState(classSection, group.id);
+          chatController.selectGroup(group);
+          Get.to(() => const ChatDetailScreen());
+          return;
+        }
+      }
+
+      // Step 2: If it doesn't exist, create it
       final result = await _lecturerService.createChatGroup(
         classSection.className,
       );
@@ -153,28 +177,7 @@ class ClassListController extends GetxController {
         final groupId = result['id'] as int;
 
         // Update local class object
-        final index = classes.indexWhere(
-          (c) => c.className == classSection.className,
-        );
-        if (index != -1) {
-          final updated = ClassSection(
-            className: classes[index].className,
-            courseCode: classes[index].courseCode,
-            courseName: classes[index].courseName,
-            semesterCode: classes[index].semesterCode,
-            semesterName: classes[index].semesterName,
-            lecturerName: classes[index].lecturerName,
-            enrollmentInfo: classes[index].enrollmentInfo,
-            slots: classes[index].slots,
-            status: classes[index].status,
-            hasChatGroup: true,
-            chatGroupId: groupId,
-          );
-          classes[index] = updated;
-          if (selectedClass.value?.className == classSection.className) {
-            selectedClass.value = updated;
-          }
-        }
+        _updateLocalClassState(classSection, groupId);
 
         // Navigate to chat
         final chatController = Get.find<ChatController>();
@@ -201,6 +204,31 @@ class ClassListController extends GetxController {
       );
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  void _updateLocalClassState(ClassSection classSection, int groupId) {
+    final index = classes.indexWhere(
+      (c) => c.className == classSection.className,
+    );
+    if (index != -1) {
+      final updated = ClassSection(
+        className: classes[index].className,
+        courseCode: classes[index].courseCode,
+        courseName: classes[index].courseName,
+        semesterCode: classes[index].semesterCode,
+        semesterName: classes[index].semesterName,
+        lecturerName: classes[index].lecturerName,
+        enrollmentInfo: classes[index].enrollmentInfo,
+        slots: classes[index].slots,
+        status: classes[index].status,
+        hasChatGroup: true,
+        chatGroupId: groupId,
+      );
+      classes[index] = updated;
+      if (selectedClass.value?.className == classSection.className) {
+        selectedClass.value = updated;
+      }
     }
   }
 

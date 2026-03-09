@@ -13,6 +13,7 @@ export interface ChatGroupResponse {
         senderName: string;
         content: string;
         type: string;
+        attachmentName?: string;
         sentAt: string;
     } | null;
     members?: ChatMemberDTO[];

@@ -6,6 +6,7 @@ import '../models/chat_models.dart';
 import '../services/chat_service.dart';
 import '../services/websocket_service.dart';
 import '../../auth/controllers/auth_controller.dart';
+import '../../notification/services/notification_polling_service.dart';
 
 /// Chat Controller — manages all chat state (mirrors MessagesPage.tsx state)
 class ChatController extends GetxController {
@@ -108,27 +109,30 @@ class ChatController extends GetxController {
 
   // ── WebSocket ──
 
-  void _initWebSocket() {
-    _wsService.connect(
-      onConnected: () {
-        // Subscribe to all groups
-        for (final group in groups) {
-          _wsService.subscribeToGroup(
-            group.id,
-            onMessage: (data) => _handleNewMessage(data, group.id),
-            onReadReceipt: (data) => _handleReadReceipt(data, group.id),
-            onDelete: (data) => _handleDelete(data, group.id),
-          );
-        }
-        // Subscribe to user notifications
-        _wsService.subscribeToNotifications((data) {
-          _handleNotification(data);
-        });
-      },
-      onError: (error) {
-        debugPrint('[Chat] WebSocket error: $error');
-      },
-    );
+  void _initWebSocket() async {
+    try {
+      await _wsService.connect(
+        onError: (err) =>
+            debugPrint('[Chat] WebSocket connection failed: $err'),
+        onConnected: () {
+          // Subscribe to all groups
+          for (final group in groups) {
+            _wsService.subscribeToGroup(
+              group.id,
+              onMessage: (data) => _handleNewMessage(data, group.id),
+              onReadReceipt: (data) => _handleReadReceipt(data, group.id),
+              onDelete: (data) => _handleDelete(data, group.id),
+            );
+          }
+          // Subscribe to user notifications
+          _wsService.subscribeToNotifications((data) {
+            _handleNotification(data);
+          });
+        },
+      );
+    } catch (e) {
+      debugPrint('[Chat] WebSocket connection failed: $e');
+    }
   }
 
   void _handleNewMessage(Map<String, dynamic> data, int groupId) {
@@ -178,6 +182,16 @@ class ChatController extends GetxController {
 
       // Mark as read
       _triggerMarkAsRead(groupId);
+    } else if (!msg.isOwn) {
+      // Show local notification if not in this group and not own message
+      NotificationPollingService().showImmediateNotification(
+        id: groupId,
+        title:
+            groups.firstWhereOrNull((g) => g.id == groupId)?.name ??
+            'Tin nhắn mới',
+        body: '${msg.senderName}: ${msg.content}',
+        payload: 'CHAT_$groupId',
+      );
     }
   }
 
@@ -334,6 +348,23 @@ class ChatController extends GetxController {
     typingUsers.clear();
     replyingTo.value = null;
 
+    // Ensure WebSocket is connected before subscribing
+    if (!_wsService.isConnected) {
+      try {
+        await _wsService.connect(
+          onConnected: () => _subscribeToNewGroup(group),
+          onError: (err) => debugPrint('Retry connect error: $err'),
+        );
+      } catch (e) {
+        debugPrint('Could not connect to WebSocket: $e');
+        return; // Don't try to subscribe if connect failed
+      }
+    } else {
+      _subscribeToNewGroup(group);
+    }
+  }
+
+  void _subscribeToNewGroup(ChatGroup group) async {
     // Subscribe to typing for this group
     _wsService.subscribeToTyping(group.id, (data) {
       final senderName = data['senderName'] as String? ?? '';
