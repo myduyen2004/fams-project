@@ -2,6 +2,7 @@ package com.fams.backend.controller;
 
 import com.fams.backend.dto.MajorImportDTO;
 import com.fams.backend.dto.request.MajorRequest;
+import com.fams.backend.dto.response.CourseResponse;
 import com.fams.backend.dto.response.MajorResponse;
 import com.fams.backend.entity.Major;
 import com.fams.backend.service.MajorService;
@@ -56,6 +57,11 @@ public class MajorController {
     @PutMapping("/{id}")
     public ResponseEntity<Major> updateMajor(@PathVariable Long id, @RequestBody MajorRequest request) {
         return ResponseEntity.ok(majorService.updateMajor(id, request));
+    }
+
+    @GetMapping("/{id}/courses")
+    public ResponseEntity<List<CourseResponse>> getCourses(@PathVariable Long id) {
+        return ResponseEntity.ok(majorService.getCourses(id));
     }
 
     @PutMapping("/{id}/status")

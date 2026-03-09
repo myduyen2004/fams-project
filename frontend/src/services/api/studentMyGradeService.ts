@@ -35,6 +35,7 @@ export interface StudentGradeDetailResponse {
     courseAverage: number | null;
     courseStatus: 'PASSED' | 'FAILED' | 'PENDING';
     gradesPublished: boolean;
+    gradesPublishedAt: string | null;
     lastUpdatedAt: string;
 }
 
