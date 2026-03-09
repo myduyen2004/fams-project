@@ -1,0 +1,501 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:intl/intl.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/widgets/app_background.dart';
+import '../controllers/academic_request_controller.dart';
+import '../models/academic_request_model.dart';
+import '../widgets/academic_request_status_badge.dart';
+
+/// Screen showing the student's academic request list
+class AcademicRequestListScreen extends StatelessWidget {
+  const AcademicRequestListScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.isRegistered<AcademicRequestController>()
+        ? Get.find<AcademicRequestController>()
+        : Get.put(AcademicRequestController());
+
+    return Scaffold(
+      body: AppBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(controller),
+              _buildFilterBar(controller),
+              Expanded(
+                child: Obx(() {
+                  if (controller.isLoading.value && controller.requests.isEmpty) {
+                    return const Center(
+                      child: CircularProgressIndicator(color: AppColors.primaryOrange),
+                    );
+                  }
+                  if (controller.requests.isEmpty) {
+                    return _buildEmptyState(controller);
+                  }
+                  return RefreshIndicator(
+                    onRefresh: controller.refreshList,
+                    color: AppColors.primaryOrange,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: controller.requests.length,
+                      itemBuilder: (context, index) {
+                        final req = controller.requests[index];
+                        return _AcademicRequestCard(
+                          request: req,
+                          onTap: () => _showDetailSheet(context, req, controller),
+                        );
+                      },
+                    ),
+                  );
+                }),
+              ),
+            ],
+          ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.primaryOrange,
+        onPressed: () => Get.toNamed('/student/academic-requests/create'),
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text('Tạo yêu cầu', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
+  Widget _buildHeader(AcademicRequestController controller) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+      child: Row(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+              onPressed: () => Get.back(),
+              color: const Color(0xFF2D3436),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Yêu Cầu Học Thuật',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2D3436),
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                Obx(() => Text(
+                  '${controller.totalElements.value} yêu cầu',
+                  style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                )),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterBar(AcademicRequestController controller) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Obx(() => Row(
+          children: [
+            _FilterChip(label: 'Tất cả', isSelected: controller.statusFilter.value == '',
+                onTap: () => controller.changeStatusFilter('')),
+            const SizedBox(width: 8),
+            _FilterChip(label: 'Chờ xử lý', color: Colors.amber,
+                isSelected: controller.statusFilter.value == 'PENDING',
+                onTap: () => controller.changeStatusFilter('PENDING')),
+            const SizedBox(width: 8),
+            _FilterChip(label: 'Đã duyệt', color: Colors.green,
+                isSelected: controller.statusFilter.value == 'APPROVED',
+                onTap: () => controller.changeStatusFilter('APPROVED')),
+            const SizedBox(width: 8),
+            _FilterChip(label: 'Từ chối', color: Colors.red,
+                isSelected: controller.statusFilter.value == 'REJECTED',
+                onTap: () => controller.changeStatusFilter('REJECTED')),
+            const SizedBox(width: 8),
+            _FilterChip(label: 'Đã hủy', color: Colors.grey,
+                isSelected: controller.statusFilter.value == 'CANCELLED',
+                onTap: () => controller.changeStatusFilter('CANCELLED')),
+          ],
+        )),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(AcademicRequestController controller) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.inbox_outlined, size: 80, color: Colors.grey[300]),
+            const SizedBox(height: 16),
+            Text(
+              controller.statusFilter.value.isNotEmpty
+                  ? 'Không có yêu cầu nào với trạng thái này'
+                  : 'Chưa có yêu cầu nào.\nNhấn "Tạo yêu cầu" để bắt đầu!',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 15, color: Colors.grey[500]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDetailSheet(
+      BuildContext context, AcademicRequest req, AcademicRequestController controller) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _DetailSheet(request: req, controller: controller),
+    );
+  }
+}
+
+// ─── Request Card ─────────────────────────────────────────────────────────────
+
+class _AcademicRequestCard extends StatelessWidget {
+  final AcademicRequest request;
+  final VoidCallback onTap;
+
+  const _AcademicRequestCard({required this.request, required this.onTap});
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '—';
+    try {
+      return DateFormat('dd/MM/yyyy').format(DateTime.parse(dateStr));
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Row: type label + status badge
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF0E0),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        request.requestTypeLabel,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.primaryOrange,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    AcademicRequestStatusBadge(
+                      status: request.status,
+                      label: request.statusLabel,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                // Title
+                Text(
+                  request.requestTitle,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2D3436),
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                // Footer: dates
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today_rounded, size: 12, color: Colors.grey[500]),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Ngày tạo: ${_formatDate(request.createdAt)}',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    ),
+                    if (request.dueDate != null) ...[
+                      const SizedBox(width: 12),
+                      Icon(Icons.timer_outlined, size: 12, color: Colors.grey[500]),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Hạn: ${request.dueDate}',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Detail Bottom Sheet ──────────────────────────────────────────────────────
+
+class _DetailSheet extends StatelessWidget {
+  final AcademicRequest request;
+  final AcademicRequestController controller;
+
+  const _DetailSheet({required this.request, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      maxChildSize: 0.92,
+      minChildSize: 0.4,
+      expand: false,
+      builder: (_, scrollController) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Title row
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    request.requestTitle,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2D3436),
+                    ),
+                  ),
+                ),
+                AcademicRequestStatusBadge(status: request.status, label: request.statusLabel),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(request.requestTypeLabel,
+                style: TextStyle(fontSize: 13, color: Colors.grey[600])),
+            const Divider(height: 24),
+            Expanded(
+              child: ListView(
+                controller: scrollController,
+                children: [
+                  if (request.semesterName != null)
+                    _DetailRow('Học kỳ', request.semesterName!),
+                  if (request.courseName != null)
+                    _DetailRow('Môn học', '${request.courseCode ?? ''} - ${request.courseName}'),
+                  if (request.className != null)
+                    _DetailRow('Lớp học phần', request.className!),
+                  if (request.toClassName != null)
+                    _DetailRow('Lớp muốn chuyển', request.toClassName!),
+                  if (request.toMajor != null)
+                    _DetailRow('Ngành muốn chuyển', request.toMajor!),
+                  if (request.toSpecialization != null)
+                    _DetailRow('Chuyên ngành', request.toSpecialization!),
+                  if (request.toSubSpecialization != null)
+                    _DetailRow('Chuyên ngành hẹp', request.toSubSpecialization!),
+                  if (request.reason != null)
+                    _DetailRow('Lý do', request.reason!),
+                  if (request.note != null && request.note!.isNotEmpty)
+                    _DetailRow('Ghi chú', request.note!),
+                  if (request.dueDate != null)
+                    _DetailRow('Hạn nộp', request.dueDate!),
+                  _DetailRow('Ngày tạo', request.createdAt.split('T').first),
+                  if (request.approverName != null)
+                    _DetailRow('Người xét duyệt', request.approverName!),
+                  if (request.approvedAt != null)
+                    _DetailRow('Ngày xét duyệt', request.approvedAt!.split('T').first),
+                  if (request.approverNote != null && request.approverNote!.isNotEmpty)
+                    _DetailRow('Ghi chú người duyệt', request.approverNote!),
+                  if (request.fileUrl != null && request.fileUrl!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.attach_file_rounded, size: 16, color: AppColors.primaryOrange),
+                          const SizedBox(width: 8),
+                          const Text('File đính kèm: ', style: TextStyle(fontWeight: FontWeight.w600)),
+                          const Expanded(
+                            child: Text('Có file đính kèm',
+                                style: TextStyle(color: AppColors.primaryOrange)),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            // Cancel button if PENDING
+            if (request.status == 'PENDING') ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.cancel_outlined, color: Colors.red),
+                  label: const Text('Thu hồi yêu cầu', style: TextStyle(color: Colors.red)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.red),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () {
+                    Get.back();
+                    Get.dialog(
+                      AlertDialog(
+                        title: const Text('Xác nhận thu hồi'),
+                        content: const Text('Bạn có chắc muốn thu hồi yêu cầu này?'),
+                        actions: [
+                          TextButton(onPressed: () => Get.back(), child: const Text('Hủy')),
+                          TextButton(
+                            onPressed: () {
+                              Get.back();
+                              controller.cancelRequest(request.id);
+                            },
+                            child: const Text('Thu hồi', style: TextStyle(color: Colors.red)),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _DetailRow(this.label, this.value);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 150,
+            child: Text(label,
+                style: TextStyle(fontSize: 13, color: Colors.grey[600], fontWeight: FontWeight.w500)),
+          ),
+          Expanded(
+            child: Text(value,
+                style: const TextStyle(fontSize: 13, color: Color(0xFF2D3436), fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final Color? color;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _FilterChip({
+    required this.label,
+    this.color,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? (color ?? AppColors.primaryOrange) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? (color ?? AppColors.primaryOrange) : Colors.grey[300]!,
+            width: 1.5,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: isSelected ? Colors.white : Colors.grey[700],
+          ),
+        ),
+      ),
+    );
+  }
+}

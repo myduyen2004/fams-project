@@ -17,6 +17,9 @@ import 'features/schedule_request/views/schedule_request_list_screen.dart';
 import 'features/schedule_request/views/schedule_request_detail_screen.dart';
 import 'features/schedule_request/views/create_request_screen.dart';
 import 'features/schedule_request/bindings/schedule_request_bindings.dart';
+import 'features/academic_request/views/academic_request_list_screen.dart';
+import 'features/academic_request/views/academic_request_create_screen.dart';
+import 'features/academic_request/bindings/academic_request_bindings.dart';
 
 import 'features/chat/controllers/chat_controller.dart';
 import 'features/schedule/controllers/schedule_controller.dart';
@@ -105,6 +108,17 @@ class MyApp extends StatelessWidget {
           name: AppRoutes.lecturerRequestDetail,
           page: () => const ScheduleRequestDetailScreen(),
           binding: ScheduleRequestBinding(),
+        ),
+        // Student Academic Request Routes
+        GetPage(
+          name: AppRoutes.studentAcademicRequests,
+          page: () => const AcademicRequestListScreen(),
+          binding: AcademicRequestBinding(),
+        ),
+        GetPage(
+          name: AppRoutes.studentAcademicRequestCreate,
+          page: () => const AcademicRequestCreateScreen(),
+          binding: AcademicRequestBinding(),
         ),
       ],
     );
