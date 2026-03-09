@@ -112,4 +112,17 @@ class ScheduleService {
       return AttendanceConfig.defaultConfig();
     }
   }
+
+  Future<dynamic> getStudentSubmission(int assignmentId) async {
+    try {
+      final response = await _apiService.get('/api/student/assignments/$assignmentId/submission');
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ScheduleService] Fetch submission failed: $e');
+      return null;
+    }
+  }
 }

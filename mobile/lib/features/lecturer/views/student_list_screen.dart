@@ -5,6 +5,7 @@ import '../controllers/class_list_controller.dart';
 import '../models/class_section_model.dart';
 import '../../../core/constants/api_constants.dart';
 import 'student_detail_screen.dart';
+import '../../auth/controllers/auth_controller.dart';
 
 class StudentListScreen extends StatefulWidget {
   final ClassSection classSection;
@@ -329,8 +330,12 @@ class _StudentListScreenState extends State<StudentListScreen> {
   }
 
   Widget _buildStudentCard(Enrollment student, int index) {
+    final isLecturer = Get.isRegistered<AuthController>() 
+        ? (Get.find<AuthController>().currentUser.value?.isLecturer ?? false) 
+        : false;
+
     return GestureDetector(
-      onTap: () => Get.to(() => StudentDetailScreen(student: student)),
+      onTap: isLecturer ? () => Get.to(() => StudentDetailScreen(student: student)) : null,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(14),
@@ -417,7 +422,8 @@ class _StudentListScreenState extends State<StudentListScreen> {
               ),
             ),
 
-            const Icon(Icons.chevron_right, color: Color(0xFFEF7623)),
+            if (isLecturer)
+              const Icon(Icons.chevron_right, color: Color(0xFFEF7623)),
           ],
         ),
       ),

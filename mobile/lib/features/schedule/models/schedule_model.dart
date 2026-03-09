@@ -5,7 +5,14 @@ class TimetableSlot {
   final String? className;
   final String? courseCode;
   final String? courseName;
+  final int? lecturerId;
   final String? lecturerName;
+  final int? assignmentId;
+  final String? assignmentTitle;
+  final String? assignmentDescription;
+  final String? assignmentReferenceUrl;
+  final String? assignmentReferenceName;
+  final DateTime? assignmentDueDate;
   final String? roomCode;
   final String? roomName;
   final DateTime date;
@@ -22,7 +29,14 @@ class TimetableSlot {
     this.className,
     this.courseCode,
     this.courseName,
+    this.lecturerId,
     this.lecturerName,
+    this.assignmentId,
+    this.assignmentTitle,
+    this.assignmentDescription,
+    this.assignmentReferenceUrl,
+    this.assignmentReferenceName,
+    this.assignmentDueDate,
     this.roomCode,
     this.roomName,
     required this.date,
@@ -41,7 +55,14 @@ class TimetableSlot {
       className: json['className'],
       courseCode: json['courseCode'],
       courseName: json['courseName'],
+      lecturerId: json['lecturerId'],
       lecturerName: json['lecturerName'],
+      assignmentId: json['assignmentId'],
+      assignmentTitle: json['assignmentTitle'],
+      assignmentDescription: json['assignmentDescription'],
+      assignmentReferenceUrl: json['assignmentReferenceUrl'],
+      assignmentReferenceName: json['assignmentReferenceName'],
+      assignmentDueDate: json['assignmentDueDate'] != null ? DateTime.parse(json['assignmentDueDate']) : null,
       roomCode: json['roomCode'],
       roomName: json['roomName'],
       date: json['date'] != null ? DateTime.parse(json['date']) : DateTime.now(),
@@ -61,7 +82,14 @@ class TimetableSlot {
       'className': className,
       'courseCode': courseCode,
       'courseName': courseName,
+      'lecturerId': lecturerId,
       'lecturerName': lecturerName,
+      'assignmentId': assignmentId,
+      'assignmentTitle': assignmentTitle,
+      'assignmentDescription': assignmentDescription,
+      'assignmentReferenceUrl': assignmentReferenceUrl,
+      'assignmentReferenceName': assignmentReferenceName,
+      'assignmentDueDate': assignmentDueDate?.toIso8601String(),
       'roomCode': roomCode,
       'roomName': roomName,
       'date': DateFormat('yyyy-MM-dd').format(date),

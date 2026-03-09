@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Camera, User as UserIcon, Loader2, Upload } from 'lucide-react';
+import { X, Camera, User as UserIcon, Loader2, Upload, Download } from 'lucide-react';
 import { userService, UserResponse } from '../../../services/api/userService';
 import { authService } from '../../../services/api/authService';
 import { useWebSocket } from '../../../hooks/useWebSocket';
@@ -548,6 +548,14 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
                   <li>Nhấn "Xem trước" để kiểm tra dữ liệu trước khi lưu.</li>
                 </ul>
               </div>
+
+              <button
+                type="button"
+                onClick={() => userService.downloadSampleZip()}
+                className="w-full px-4 py-2 border border-orange-200 rounded-lg text-sm font-medium text-orange-600 bg-orange-50 hover:bg-orange-100 transition-colors flex items-center justify-center gap-2"
+              >
+                <Download size={16} /> Tải xuống file mẫu (.zip)
+              </button>
 
               <div className="border-2 border-dashed border-gray-300 dark:border-zinc-700 rounded-lg p-6 flex flex-col items-center text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors relative">
                 <input required type="file" accept=".xlsx, .xls, .zip" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileChange} />
