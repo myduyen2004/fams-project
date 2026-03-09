@@ -434,6 +434,27 @@ export const StudentAcademicRequestPage: React.FC = () => {
             }
         }
 
+        // Extra validation for Remark Request
+        if (selectedType.value === 'GRADE_APPEAL' && formData.classSectionId) {
+            if (fetchingGrade) {
+                toast.error('Vui lòng đợi hệ thống kiểm tra trạng thái điểm');
+                return;
+            }
+            if (!gradeDetail?.gradesPublished) {
+                toast.error('Điểm thi chưa được công bố. Bạn chưa thể gửi đơn phúc khảo cho lớp này.');
+                return;
+            }
+            if (gradeDetail.gradesPublishedAt) {
+                const pubDate = new Date(gradeDetail.gradesPublishedAt);
+                const dueDate = new Date(pubDate);
+                dueDate.setDate(dueDate.getDate() + 3);
+                if (new Date() > dueDate) {
+                    toast.error('Đã hết thời hạn nộp đơn phúc khảo cho lớp này (Hạn nộp: 3 ngày kể từ khi công bố điểm).');
+                    return;
+                }
+            }
+        }
+
         try {
             setSubmitting(true);
             await academicRequestService.createRequest(formData, selectedFile || undefined);
@@ -548,6 +569,18 @@ export const StudentAcademicRequestPage: React.FC = () => {
             minute: '2-digit'
         });
     };
+
+    const isGradeAppealBlocked = selectedType?.value === 'GRADE_APPEAL' && formData.classSectionId && (
+        fetchingGrade ||
+        !gradeDetail?.gradesPublished ||
+        (() => {
+            if (!gradeDetail?.gradesPublishedAt) return false;
+            const pubDate = new Date(gradeDetail.gradesPublishedAt);
+            const deadline = new Date(pubDate);
+            deadline.setDate(deadline.getDate() + 3);
+            return new Date() > deadline;
+        })()
+    );
 
     return (
         <StudentLayout pageTitle="Yêu Cầu Học Thuật">
@@ -1200,10 +1233,13 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                             </button>
                                             <button
                                                 onClick={handleSubmit}
-                                                disabled={submitting}
-                                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                                                disabled={submitting || isGradeAppealBlocked}
+                                                className={`px-4 py-2 text-white rounded-lg transition-colors flex items-center gap-2 ${isGradeAppealBlocked
+                                                    ? 'bg-gray-400 cursor-not-allowed opacity-70'
+                                                    : 'bg-blue-600 hover:bg-blue-700 disabled:opacity-50'
+                                                    }`}
                                             >
-                                                {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                                                {(submitting || (selectedType?.value === 'GRADE_APPEAL' && fetchingGrade)) && <Loader2 className="w-4 h-4 animate-spin" />}
                                                 Gửi yêu cầu
                                             </button>
                                         </div>
