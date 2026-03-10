@@ -449,6 +449,7 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
                 status.setMaxAttempts(config.getMaxAttempts());
                 status.setFaceRecognitionEnabled(config.getFaceRecognitionEnabled());
                 status.setWifiLocationEnabled(config.getWifiLocationEnabled());
+                status.setAbsentThresholdMinutes(config.getAbsentThresholdMinutes());
 
                 // Find session for slot
                 AttendanceSession session = sessionRepository.findByTimetableSlotId(slotId).orElse(null);

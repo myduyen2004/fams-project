@@ -46,6 +46,7 @@ export interface ClassAttendanceReportResponse {
     className: string;
     courseCode: string;
     courseName: string;
+    semesterName?: string;
     slots: {
         slotId: number;
         slotIndex: number;

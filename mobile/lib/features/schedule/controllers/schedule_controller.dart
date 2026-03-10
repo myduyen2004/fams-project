@@ -5,12 +5,14 @@ import 'package:get/get.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../auth/controllers/auth_controller.dart';
+import '../../../core/services/websocket_service.dart';
 import '../models/schedule_model.dart';
 import '../services/schedule_service.dart';
 
 class ScheduleController extends GetxController {
   final ScheduleService _scheduleService = ScheduleService();
   final AuthController _authController = Get.find<AuthController>();
+  final WebSocketService _wsService = Get.find<WebSocketService>();
 
   // Observable state
   final RxBool isLoading = false.obs;
@@ -19,6 +21,7 @@ class ScheduleController extends GetxController {
   final Rx<Semester?> selectedSemester = Rx<Semester?>(null);
   final Rx<WeeklyTimetable?> weeklyTimetable = Rx<WeeklyTimetable?>(null);
   final Rx<DateTime> selectedDate = DateTime.now().obs;
+  final Rx<DateTime> currentTime = DateTime.now().obs;
   final RxList<TimetableSlot> selectedDaySlots = <TimetableSlot>[].obs;
   final Rx<AttendanceConfig> attendanceConfig = AttendanceConfig.defaultConfig().obs;
 
@@ -73,10 +76,11 @@ class ScheduleController extends GetxController {
 
   void _startTimer() {
     _updateActiveStatus();
-    // Update every 10 seconds for a more responsive countdown
-    Future.delayed(const Duration(seconds: 10), () {
+    currentTime.value = DateTime.now();
+    
+    // Update every 1 second for sharp real-time feel
+    Future.delayed(const Duration(seconds: 1), () {
       if (!isClosed) {
-        _updateActiveStatus();
         _startTimer();
       }
     });
@@ -180,8 +184,29 @@ class ScheduleController extends GetxController {
     }
   }
 
+  void _initWebSocket() {
+    _wsService.connect(
+      onConnected: () {
+        debugPrint('[ScheduleController] WS connected, subscribing to config');
+        _wsService.subscribe('/topic/attendance-config', (data) {
+          debugPrint('[ScheduleController] Received config update: $data');
+          attendanceConfig.value = AttendanceConfig.fromJson(data);
+          // If a slot list is visible, current timer will already pick up the change
+          // because it uses attendanceConfig.value in Obx blocks.
+        });
+      },
+    );
+  }
+
   Future<void> fetchAttendanceConfig() async {
-    attendanceConfig.value = await _scheduleService.getAttendanceConfig();
+    try {
+      attendanceConfig.value = await _scheduleService.getAttendanceConfig();
+      _initWebSocket(); // Initialize WS after we have initial config
+    } catch (e) {
+      debugPrint('[ScheduleController] Could not fetch global attendance config (likely expected 403): $e');
+      // Still try to connect WS if possible
+      _initWebSocket();
+    }
   }
 
   void selectDate(DateTime date) {

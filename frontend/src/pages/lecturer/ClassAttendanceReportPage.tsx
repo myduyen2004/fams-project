@@ -2,9 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
-import { ArrowLeft, Users } from 'lucide-react';
+import { ArrowLeft, Users, BookOpen } from 'lucide-react';
 import attendanceService, { ClassAttendanceReportResponse } from '../../services/api/attendanceService';
 import { toast } from 'react-hot-toast';
+import { ViewStudentModal } from '../../components/academic-staff/students/StudentModals';
+import { studentGradeService } from '../../services/api/studentGradeService';
+import { StudentResponse } from '../../services/api/academicStaffService';
 
 export const ClassAttendanceReportPage: React.FC = () => {
     const { className } = useParams<{ className: string }>();
@@ -16,6 +19,25 @@ export const ClassAttendanceReportPage: React.FC = () => {
     
     const [report, setReport] = useState<ClassAttendanceReportResponse | null>(null);
     const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState<'all' | 'danger' | 'warning' | 'safe'>('all');
+    
+    // View Student Modal State
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+    const [viewingStudent, setViewingStudent] = useState<StudentResponse | null>(null);
+    const [isFetchingStudent, setIsFetchingStudent] = useState(false);
+
+    const filteredStudents = report?.studentReports?.filter(student => {
+        const matchesSearch = student.studentName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                             student.studentCode.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        let matchesStatus = true;
+        if (statusFilter === 'danger') matchesStatus = student.absentPercentage >= 20;
+        else if (statusFilter === 'warning') matchesStatus = student.absentPercentage >= 10 && student.absentPercentage <= 15;
+        else if (statusFilter === 'safe') matchesStatus = student.absentPercentage < 10;
+        
+        return matchesSearch && matchesStatus;
+    });
 
     useEffect(() => {
         if (className) {
@@ -36,55 +58,130 @@ export const ClassAttendanceReportPage: React.FC = () => {
         }
     };
 
+    const handleViewStudentDetail = async (studentCode: string) => {
+        setIsFetchingStudent(true);
+        try {
+            const student = await studentGradeService.getStudentInfo(studentCode);
+            setViewingStudent(student);
+            setIsViewModalOpen(true);
+        } catch (error) {
+            console.error("Failed to fetch student info", error);
+            toast.error('Lỗi khi tải thông tin sinh viên');
+        } finally {
+            setIsFetchingStudent(false);
+        }
+    };
+
     return (
         <Layout pageTitle="Báo cáo điểm danh">
             <div className="max-w-[1600px] mx-auto space-y-6 animate-in fade-in duration-500">
                 <div className="flex flex-col gap-4">
                     <button
                         onClick={() => navigate(-1)}
-                        className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-fpt-orange transition-colors w-fit group"
+                        className="flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-fpt-orange transition-colors w-fit group"
                     >
                         <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
                         Quay lại 
                     </button>
                     
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white uppercase">
-                                {className} - BÁO CÁO ĐIỂM DANH
-                            </h1>
-                            <div className="flex items-center gap-2 mt-2">
-                                <div className="p-1 rounded-md bg-orange-100 dark:bg-orange-900/20">
-                                    <Users size={18} className="text-fpt-orange" />
+                    <div className="flex flex-col gap-4">
+                        <div className="flex items-center gap-3">
+                            <span className="px-3 py-1 bg-orange-50 dark:bg-orange-900/10 text-fpt-orange rounded-full text-[11px] font-black uppercase tracking-widest border border-orange-100 dark:border-orange-900/20">
+                                {report?.semesterName || 'HỌC KỲ ...'}
+                            </span>
+                            <h2 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">
+                                Báo cáo điểm danh
+                            </h2>
+                        </div>
+                        
+                        <div className="flex flex-col lg:flex-row lg:items-stretch gap-10 bg-white dark:bg-zinc-900 p-3.5 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm w-fit">
+                            <div className="flex items-start gap-4">
+                                <div className="w-11 h-11 bg-orange-50 dark:bg-orange-900/10 rounded-2xl flex items-center justify-center shrink-0 mt-0.5">
+                                    <BookOpen size={22} className="text-fpt-orange" />
                                 </div>
-                                <span className="text-lg font-bold text-fpt-orange">
-                                    {report?.courseCode || '...'} - {report?.courseName || '...'}
-                                </span>
+                                <div>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 leading-none">MÔN HỌC</p>
+                                    <h1 className="text-xl font-black text-[#04162e] dark:text-white tracking-tight leading-none">
+                                        {report?.courseCode}
+                                    </h1>
+                                    <p className="text-[13px] font-bold text-gray-500 mt-1.5 leading-tight max-w-[250px]">{report?.courseName}</p>
+                                </div>
+                            </div>
+
+                            <div className="hidden lg:block w-px bg-gray-100 dark:border-zinc-800 my-1" />
+
+                            <div className="flex items-start gap-4">
+                                <div className="w-11 h-11 bg-orange-50 dark:bg-orange-900/10 rounded-2xl flex items-center justify-center shrink-0 mt-0.5">
+                                    <Users size={22} className="text-fpt-orange" />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 leading-none">LỚP HỌC</p>
+                                    <p className="text-xl font-black text-[#04162e] dark:text-white tracking-tight leading-none uppercase">
+                                        {className?.split('-')[0]}
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-white dark:bg-zinc-900 rounded-[32px] border border-gray-100 dark:border-zinc-800 shadow-xl shadow-gray-200/40 dark:shadow-none overflow-hidden">
+                <div className="flex flex-col md:flex-row gap-4 items-center justify-between pb-2">
+                    <div className="relative w-full md:w-80">
+                        <input
+                            type="text"
+                            placeholder="Tìm tên hoặc mã sinh viên..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-xl text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all shadow-sm"
+                        />
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 no-scrollbar">
+                        {(['all', 'danger', 'warning', 'safe'] as const).map((filter) => (
+                            <button
+                                key={filter}
+                                onClick={() => setStatusFilter(filter)}
+                                className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border ${
+                                    statusFilter === filter
+                                        ? 'bg-fpt-orange text-white border-fpt-orange shadow-md shadow-orange-200'
+                                        : 'bg-white dark:bg-zinc-900 text-gray-500 border-gray-100 dark:border-zinc-800 hover:border-fpt-orange/30'
+                                }`}
+                            >
+                                {filter === 'all' && 'Tất cả'}
+                                {filter === 'danger' && 'Nguy cơ cao (≥ 20%)'}
+                                {filter === 'warning' && 'Cảnh báo (10-15%)'}
+                                {filter === 'safe' && 'An toàn (< 10%)'}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
+                        <table className="w-full text-left border-separate border-spacing-0 table-fixed">
                             <thead>
-                                <tr className="bg-fpt-orange text-white">
-                                    <th className="px-6 py-4 text-left text-[11px] font-black uppercase tracking-widest whitespace-nowrap sticky left-0 z-10 bg-fpt-orange">
+                                <tr className="bg-[#f97316] text-white">
+                                    <th className="px-4 py-4 text-xs font-bold uppercase tracking-widest bg-[#f97316] sticky left-0 z-20 w-[100px] min-w-[100px] border-none">
+                                        Mã SV
+                                    </th>
+                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest bg-[#f97316] sticky left-[100px] z-20 w-[220px] min-w-[220px] border-none shadow-[1px_0_0_0_rgba(255,255,255,0.1)]">
                                         Họ và tên
                                     </th>
                                     {loading ? (
                                         [...Array(10)].map((_, i) => (
-                                            <th key={i} className="px-3 py-4 text-center text-[11px] font-black uppercase tracking-widest whitespace-nowrap">
+                                            <th key={i} className="px-3 py-4 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap w-[80px] min-w-[80px]">
                                                 Slot {i + 1}
                                             </th>
                                         ))
                                     ) : report?.slots?.map((slot) => (
-                                        <th key={slot.slotId} className="px-2 py-4 text-center text-[11px] font-black uppercase tracking-widest whitespace-nowrap min-w-[60px]">
+                                        <th key={slot.slotId} className="px-3 py-4 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap w-[80px] min-w-[80px]">
                                             Slot {slot.slotIndex}
                                         </th>
                                     ))}
-                                    <th className="px-6 py-4 text-center text-[11px] font-black uppercase tracking-widest whitespace-nowrap sticky right-0 z-10 bg-fpt-orange">
+                                    <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap sticky right-0 z-20 bg-[#f97316] w-[100px] min-w-[100px]">
                                         % Absent
                                     </th>
                                 </tr>
@@ -93,7 +190,10 @@ export const ClassAttendanceReportPage: React.FC = () => {
                                 {loading ? (
                                     [...Array(5)].map((_, i) => (
                                         <tr key={i} className="animate-pulse">
-                                            <td className="px-6 py-4 sticky left-0 z-10 bg-white dark:bg-zinc-900 border-r border-gray-50 dark:border-zinc-800">
+                                            <td className="px-4 py-4 bg-white dark:bg-zinc-900 sticky left-0 z-10 border-none w-[100px] min-w-[100px]">
+                                                <div className="h-4 bg-gray-200 dark:bg-zinc-700 rounded w-16"></div>
+                                            </td>
+                                            <td className="px-6 py-4 bg-white dark:bg-zinc-900 sticky left-[100px] z-10 border-none w-[220px] min-w-[220px] shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)]">
                                                 <div className="h-4 bg-gray-200 dark:bg-zinc-700 rounded w-32"></div>
                                             </td>
                                             {[...Array(10)].map((_, j) => (
@@ -104,45 +204,62 @@ export const ClassAttendanceReportPage: React.FC = () => {
                                             </td>
                                         </tr>
                                     ))
-                                ) : report?.studentReports?.length === 0 ? (
+                                ) : filteredStudents?.length === 0 ? (
                                     <tr>
-                                        <td colSpan={(report.slots?.length || 0) + 2} className="px-6 py-12 text-center text-gray-500 font-medium">
-                                            Không có dữ liệu sinh viên
+                                        <td colSpan={(report?.slots?.length || 0) + 3} className="px-6 py-12 text-center text-gray-400 font-medium">
+                                            Không tìm thấy sinh viên nào phù hợp
                                         </td>
                                     </tr>
-                                ) : report?.studentReports?.map((student) => (
-                                    <tr key={student.studentId} className="hover:bg-gray-50/80 dark:hover:bg-zinc-800/50 transition-colors group">
-                                        <td className="px-6 py-4 text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap sticky left-0 z-10 bg-white dark:bg-zinc-900 group-hover:bg-gray-50/80 dark:group-hover:bg-zinc-800/80 border-r border-gray-100 dark:border-zinc-800 transition-colors">
+                                ) : filteredStudents?.map((student) => (
+                                    <tr key={student.studentId} className="border-b border-gray-50 dark:border-zinc-800/50 hover:bg-gray-50/50 dark:hover:bg-zinc-800/30 group">
+                                        <td 
+                                            className="px-4 py-4 text-sm font-bold text-fpt-orange whitespace-nowrap bg-white dark:bg-zinc-900 group-hover:bg-gray-50 dark:group-hover:bg-zinc-800/50 sticky left-0 z-10 w-[100px] min-w-[100px] border-none cursor-pointer hover:underline"
+                                            onClick={() => handleViewStudentDetail(student.studentCode)}
+                                        >
+                                            {student.studentCode}
+                                        </td>
+                                        <td 
+                                            className="px-6 py-4 text-sm font-semibold text-gray-700 dark:text-zinc-200 whitespace-nowrap bg-white dark:bg-zinc-900 group-hover:bg-gray-50 dark:group-hover:bg-zinc-800/50 sticky left-[100px] z-10 w-[220px] min-w-[220px] border-none shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] cursor-pointer hover:underline"
+                                            onClick={() => handleViewStudentDetail(student.studentCode)}
+                                        >
                                             {student.studentName}
                                         </td>
                                         
-                                        {report.slots?.map((slot) => {
+                                        {report?.slots?.map((slot) => {
                                             const detail = student.attendanceDetails?.find(d => d.slotId === slot.slotId);
                                             const status = detail?.status;
                                             
-                                            let displayClass = "text-gray-300 dark:text-zinc-600";
+                                            let displayClass = "text-gray-400 font-medium";
                                             let displayText = "-";
+                                            let cellBg = "";
                                             
                                             if (status === 'P') {
-                                                displayClass = "text-gray-900 dark:text-gray-200 font-bold";
+                                                displayClass = "text-[#04162e] dark:text-gray-200 font-bold";
                                                 displayText = "P";
                                             } else if (status === 'A') {
-                                                displayClass = "text-red-500 font-bold";
+                                                displayClass = "text-red-600 font-bold";
                                                 displayText = "A";
+                                                cellBg = "bg-red-100 dark:bg-red-900/20";
                                             } else if (status === 'E') {
                                                 displayClass = "text-yellow-600 dark:text-yellow-500 font-bold";
                                                 displayText = "E";
                                             }
 
                                             return (
-                                                <td key={slot.slotId} className={`px-2 py-4 text-center text-sm ${displayClass}`}>
+                                                <td key={slot.slotId} className={`px-3 py-4 text-center text-sm w-[80px] min-w-[80px] ${cellBg} ${displayClass}`}>
                                                     {displayText}
                                                 </td>
                                             );
                                         })}
                                         
-                                        <td className="px-6 py-4 text-center font-bold text-gray-900 dark:text-white sticky right-0 z-10 bg-white dark:bg-zinc-900 group-hover:bg-gray-50/80 dark:group-hover:bg-zinc-800/80 border-l border-gray-100 dark:border-zinc-800 transition-colors">
-                                            <span className={student.absentPercentage >= 20 ? 'text-red-500' : ''}>
+                                        <td className="px-6 py-4 text-center sticky right-0 z-10 bg-white dark:bg-zinc-900 group-hover:bg-gray-50 dark:group-hover:bg-zinc-800/50 border-l border-gray-100 dark:border-zinc-800 w-[100px] min-w-[100px]">
+                                            <span className={`text-sm font-bold ${
+                                                student.absentPercentage >= 20 
+                                                    ? 'text-red-600' 
+                                                    : (student.absentPercentage >= 10 && student.absentPercentage <= 15)
+                                                        ? 'text-yellow-600'
+                                                        : 'text-[#04162e]'
+                                            }`}>
                                                 {student.absentPercentage}
                                             </span>
                                         </td>
@@ -153,6 +270,22 @@ export const ClassAttendanceReportPage: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {isViewModalOpen && viewingStudent && (
+                <ViewStudentModal
+                    student={viewingStudent!}
+                    onClose={() => setIsViewModalOpen(false)}
+                />
+            )}
+            
+            {isFetchingStudent && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
+                    <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl shadow-xl flex items-center gap-3">
+                        <div className="w-5 h-5 border-2 border-fpt-orange border-t-transparent rounded-full animate-spin"></div>
+                        <span className="text-sm font-medium">Đang tải thông tin...</span>
+                    </div>
+                </div>
+            )}
         </Layout>
     );
 };
