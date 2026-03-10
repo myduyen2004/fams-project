@@ -59,11 +59,11 @@ export const GradeConfigurationPage: React.FC = () => {
     const [showModal, setShowModal] = useState(false);
     const [isTypeSelectorOpen, setIsTypeSelectorOpen] = useState(false);
     const [editingComponent, setEditingComponent] = useState<GradeComponent | null>(null);
-    const [formData, setFormData] = useState<GradeComponentRequest>({
+    const [formData, setFormData] = useState<GradeComponentRequest | any>({
         name: '',
         description: '',
         type: 'ASSIGNMENT',
-        weight: 0,
+        weight: '',
         isRequired: true,
         isResit: false,
     });
@@ -149,7 +149,7 @@ export const GradeConfigurationPage: React.FC = () => {
             name: 'Assignment', // Default name matches default type
             description: '',
             type: 'ASSIGNMENT',
-            weight: 0,
+            weight: '',
             isRequired: true,
             isResit: false,
         });
@@ -175,7 +175,8 @@ export const GradeConfigurationPage: React.FC = () => {
 
         // Rounding Logic: Round to nearest integer, 0.5 rounds down (3.5 -> 3)
         // Math.ceil(x - 0.5) achieves this: 3.5-0.5=3->3, 3.6-0.5=3.1->4, 3.4-0.5=2.9->3
-        const roundedWeight = Math.ceil(formData.weight - 0.5);
+        const weightValue = Number(formData.weight) || 0;
+        const roundedWeight = Math.ceil(weightValue - 0.5);
 
         // Create processed data object to ensure consistency
         const processedData = {
@@ -627,7 +628,7 @@ export const GradeConfigurationPage: React.FC = () => {
                                                 max="100"
                                                 step="0.1"
                                                 value={formData.weight}
-                                                onChange={(e) => setFormData({ ...formData, weight: parseFloat(e.target.value) || 0 })}
+                                                onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
                                                 className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-fpt-orange focus:border-transparent"
                                             />
                                         </div>
@@ -655,7 +656,7 @@ export const GradeConfigurationPage: React.FC = () => {
                                         </button>
                                         <button
                                             onClick={handleSave}
-                                            disabled={saving || !formData.name || formData.weight < 0}
+                                            disabled={saving || !formData.name || Number(formData.weight) < 0}
                                             className="px-4 py-2 text-sm font-medium text-white bg-fpt-orange hover:bg-orange-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                                         >
                                             {saving && <Loader2 className="w-4 h-4 animate-spin" />}

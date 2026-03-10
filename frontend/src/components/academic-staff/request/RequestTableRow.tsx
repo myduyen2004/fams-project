@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, Clock, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Clock, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { ScheduleRequestResponse } from '../../../services/api/academicStaffService';
 import dayjs from 'dayjs';
 
@@ -31,6 +31,13 @@ const getStatusBadge = (status: string) => {
                     Đã từ chối
                 </span>
             );
+        case 'REVOKED':
+            return (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded-full border border-gray-200">
+                    <ShieldAlert size={12} />
+                    Đã thu hồi
+                </span>
+            );
         default:
             return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">{status}</span>;
     }
@@ -50,7 +57,10 @@ const getRoleBadge = (role: string) => {
 
 const RequestTableRow: React.FC<RequestTableRowProps> = ({ request, onView }) => {
     return (
-        <tr className="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors text-sm border-b border-gray-100 dark:border-zinc-800">
+        <tr
+            onDoubleClick={onView}
+            className="hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all text-sm border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
+        >
             <td className="px-4 py-4">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-zinc-700 flex items-center justify-center text-gray-500 font-bold overflow-hidden border border-gray-200 dark:border-zinc-600 flex-shrink-0">
@@ -93,15 +103,6 @@ const RequestTableRow: React.FC<RequestTableRowProps> = ({ request, onView }) =>
             </td>
             <td className="px-4 py-4">
                 {getStatusBadge(request.status)}
-            </td>
-            <td className="px-4 py-4 text-center">
-                <button
-                    onClick={onView}
-                    className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors group"
-                    title="Xem chi tiết"
-                >
-                    <Eye size={18} className="group-hover:scale-110 transition-transform" />
-                </button>
             </td>
         </tr>
     );

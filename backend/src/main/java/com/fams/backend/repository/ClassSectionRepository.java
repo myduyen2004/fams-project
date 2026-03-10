@@ -9,7 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface ClassSectionRepository extends JpaRepository<ClassSection, Long> {
+public interface ClassSectionRepository extends JpaRepository<ClassSection, String> {
 
         // Find by className (primary business key)
         java.util.Optional<ClassSection> findByClassName(String className);
@@ -104,6 +104,15 @@ public interface ClassSectionRepository extends JpaRepository<ClassSection, Long
         java.util.List<ClassSection> findByLecturerIdAndSemesterCode(
                         @Param("lecturerId") Long lecturerId,
                         @Param("semesterCode") String semesterCode);
+
+        /**
+         * Find all class names taught by lecturer across semesters.
+         * Used as fallback when semester status data is not in expected state.
+         */
+        @Query("SELECT DISTINCT cs.className FROM ClassSection cs " +
+                        "WHERE cs.lecturer.id = :lecturerId " +
+                        "ORDER BY cs.className")
+        java.util.List<String> findDistinctClassNamesByLecturerId(@Param("lecturerId") Long lecturerId);
 
         /**
          * Get all unique lecturer IDs for a semester

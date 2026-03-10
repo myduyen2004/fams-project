@@ -117,7 +117,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Cacheable(value = CACHE_USER_DETAILS, key = "#id")
+    @Transactional(readOnly = true)
     public UserResponse getUserById(Long id) {
         return userRepository.findById(id)
                 .map(UserResponse::fromUser)
@@ -125,9 +125,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Cacheable(value = CACHE_USER_DETAILS, key = "#username")
+    @Transactional(readOnly = true)
     public UserResponse getUserByUsername(String username) {
-        return userRepository.findByUsername(username)
+        return userRepository.findByUsernameWithProfiles(username)
                 .map(UserResponse::fromUser)
                 .orElseThrow(() -> new NotFoundException("User not found: " + username));
     }

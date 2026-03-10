@@ -44,6 +44,9 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
     private final RoomRepository roomRepository;
     private final SlotTypeRepository slotTypeRepository;
     private final com.fams.backend.repository.EnrollmentRepository enrollmentRepository;
+    private final com.fams.backend.repository.NotificationRepository notificationRepository;
+    private final com.fams.backend.repository.NotificationRecipientRepository notificationRecipientRepository;
+    private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
     @Override
     public ScheduleRequestResponse createRequest(CreateScheduleRequest request, Long requesterId) {
@@ -430,6 +433,87 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
         }
     }
 
+    @Override
+    public void revokeRequest(Long requestId, Long lecturerId) {
+        log.info("Revoking schedule request {} by user {}", requestId, lecturerId);
+
+        ScheduleRequest request = scheduleRequestRepository.findById(requestId)
+                .orElseThrow(() -> new BadRequestException("Không tìm thấy đơn yêu cầu"));
+
+        if (!request.getRequester().getId().equals(lecturerId)) {
+            throw new BadRequestException("Bạn không có quyền thu hồi đơn này");
+        }
+
+        if (request.getStatus() != ScheduleRequest.RequestStatus.PENDING) {
+            throw new BadRequestException("Chỉ có thể thu hồi đơn đang ở trạng thái chờ duyệt");
+        }
+
+        request.setStatus(ScheduleRequest.RequestStatus.REVOKED);
+        scheduleRequestRepository.save(request);
+
+        sendRevokeNotificationToAcademicStaff(request);
+    }
+
+    private void sendRevokeNotificationToAcademicStaff(ScheduleRequest request) {
+        try {
+            List<User> academicStaffs = userRepository.findByRole(User.UserRole.ACADEMIC_STAFF)
+                    .orElse(new ArrayList<>());
+
+            if (academicStaffs.isEmpty()) {
+                log.info("No Academic Staff found to notify about revocation");
+                return;
+            }
+
+            String requesterName = request.getRequester().getFullName();
+            String className = request.getClassSection() != null ? request.getClassSection().getClassName() : "N/A";
+            String title = "Đơn yêu cầu thay đổi lịch đã bị thu hồi";
+            String hiddenStatusMarker = "<span style=\"display:none;\">Đã thu hồi</span>";
+            String content = hiddenStatusMarker + String.format(
+                    "Hệ thống ghi nhận Giảng viên %s đã thu hồi đơn yêu cầu %s cho lớp %s.",
+                    requesterName, getTypeLabel(request.getType()), className);
+
+            // Tạo notification trực tiếp với sender = null để hiển thị "Người gửi: Hệ
+            // thống"
+            User recipient = academicStaffs.get(0);
+            com.fams.backend.entity.Notification notification = com.fams.backend.entity.Notification.builder()
+                    .title(title)
+                    .content(content)
+                    .type(com.fams.backend.entity.Notification.NotificationType.SYSTEM)
+                    .status(com.fams.backend.entity.Notification.NotificationStatus.SENT)
+                    .sentAt(java.time.LocalDateTime.now())
+                    .targetType(com.fams.backend.entity.Notification.TargetType.USER)
+                    .sender(null)
+                    .build();
+            com.fams.backend.entity.Notification savedNotification = notificationRepository.save(notification);
+
+            com.fams.backend.entity.NotificationRecipient nr = com.fams.backend.entity.NotificationRecipient.builder()
+                    .notification(savedNotification)
+                    .recipient(recipient)
+                    .isRead(false)
+                    .build();
+            notificationRecipientRepository.save(nr);
+
+            // Broadcast qua WebSocket
+            com.fams.backend.dto.response.NotificationResponse response = com.fams.backend.dto.response.NotificationResponse
+                    .builder()
+                    .id(nr.getId())
+                    .title(title)
+                    .content(content)
+                    .type(com.fams.backend.entity.Notification.NotificationType.SYSTEM.name())
+                    .status(com.fams.backend.entity.Notification.NotificationStatus.SENT.name())
+                    .sentAt(java.time.LocalDateTime.now())
+                    .createdAt(java.time.LocalDateTime.now())
+                    .sender(null)
+                    .build();
+            messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/notifications",
+                    java.util.Collections.singletonList(response));
+
+            log.info("Sent revocation notification to Academic Staff (sender=null for Hệ thống)");
+        } catch (Exception e) {
+            log.error("Error sending revocation notification to Academic Staff: {}", e.getMessage(), e);
+        }
+    }
+
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     protected void sendNotificationAsync(ScheduleRequest savedRequest, ScheduleRequest.RequestStatus status,
             String note) {
@@ -441,12 +525,26 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
             // Hidden status marker for frontend detection (not visible to user)
             String hiddenStatusMarker = "<span style=\"display:none;\">" + statusVN + "</span>";
             String content;
-            if (note != null && !note.isEmpty()) {
-                // Chỉ hiển thị ghi chú của người duyệt
-                content = hiddenStatusMarker + note;
+            if (status == ScheduleRequest.RequestStatus.APPROVED) {
+                StringBuilder contentBuilder = new StringBuilder();
+                contentBuilder.append(hiddenStatusMarker);
+                contentBuilder.append("Dear Giảng Viên,<br/>");
+                contentBuilder.append(
+                        "Phòng đào tạo đã chấp nhận đơn yêu cầu thay đổi lịch học của giảng viên. Vui lòng cập nhật lịch dạy chi tiết ở trang thời khóa biểu.<br/>");
+                contentBuilder.append("Thân mến");
+
+                if (note != null && !note.isEmpty()) {
+                    contentBuilder.append("<br/><br/><strong>Ghi chú từ admin:</strong><br/>").append(note);
+                }
+                content = contentBuilder.toString();
             } else {
-                // Không có ghi chú, chỉ lưu hidden status marker
-                content = hiddenStatusMarker;
+                if (note != null && !note.isEmpty()) {
+                    // Chỉ hiển thị ghi chú của người duyệt
+                    content = hiddenStatusMarker + note;
+                } else {
+                    // Không có ghi chú, chỉ lưu hidden status marker
+                    content = hiddenStatusMarker;
+                }
             }
 
             com.fams.backend.dto.request.NotificationRequest notifRequest = com.fams.backend.dto.request.NotificationRequest
@@ -737,6 +835,8 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
                 return "Đã duyệt";
             case REJECTED:
                 return "Đã từ chối";
+            case REVOKED:
+                return "Đã thu hồi";
             default:
                 return status.name();
         }

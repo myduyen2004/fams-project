@@ -40,5 +40,6 @@ public class NotificationResponse {
         private String username;
         private String fullName;
         private String role;
+        private String avatarUrl;
     }
 }

@@ -3,6 +3,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
 import 'core/constants/app_colors.dart';
 import 'core/constants/app_routes.dart';
 import 'features/auth/controllers/auth_controller.dart';
@@ -18,11 +21,38 @@ import 'features/schedule_request/views/schedule_request_list_screen.dart';
 import 'features/schedule_request/views/schedule_request_detail_screen.dart';
 import 'features/schedule_request/views/create_request_screen.dart';
 import 'features/schedule_request/bindings/schedule_request_bindings.dart';
+import 'features/academic_request/views/academic_request_list_screen.dart';
+import 'features/academic_request/views/academic_request_create_screen.dart';
+import 'features/academic_request/bindings/academic_request_bindings.dart';
 
 import 'features/chat/controllers/chat_controller.dart';
 import 'features/schedule/controllers/schedule_controller.dart';
+import 'features/notification/services/fcm_service.dart';
+import 'core/services/api_service.dart';
 
-void main() {
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  print("Handling a background message: ${message.messageId}");
+}
+
+bool isFirebaseInitialized = false;
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    isFirebaseInitialized = true;
+    print('Firebase initialized successfully');
+  } catch (e) {
+    print(
+      'Firebase initialization failed (likely missing google-services.json): $e',
+    );
+    isFirebaseInitialized = false;
+  }
+
   GoogleFonts.config.allowRuntimeFetching = true;
   runApp(const MyApp());
 }
@@ -30,10 +60,21 @@ void main() {
 class InitialBinding extends Bindings {
   @override
   void dependencies() {
+    // Core Services
+    Get.put(ApiService()..init(), permanent: true);
+
     Get.put(AuthController());
     // Khởi tạo các controller dùng chung ở cấp độ toàn cục để tránh lỗi "not found" khi lướt các tab
     Get.put(ChatController(), permanent: true);
     Get.put(ScheduleController(), permanent: true);
+
+    // Initialize FcmService
+    Get.put(FcmService(), permanent: true);
+    if (isFirebaseInitialized) {
+      FcmService.to.init();
+    } else {
+      print('Skipping FcmService initialization as Firebase is not ready');
+    }
   }
 }
 
@@ -51,7 +92,7 @@ class MyApp extends StatelessWidget {
           title: 'FAMS Mobile',
           debugShowCheckedModeBanner: false,
           // Localization for date picker
-          localizationsDelegates: [
+          localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
@@ -111,6 +152,17 @@ class MyApp extends StatelessWidget {
               name: AppRoutes.lecturerRequestDetail,
               page: () => const ScheduleRequestDetailScreen(),
               binding: ScheduleRequestBinding(),
+            ),
+            // Student Academic Request Routes
+            GetPage(
+              name: AppRoutes.studentAcademicRequests,
+              page: () => const AcademicRequestListScreen(),
+              binding: AcademicRequestBinding(),
+            ),
+            GetPage(
+              name: AppRoutes.studentAcademicRequestCreate,
+              page: () => const AcademicRequestCreateScreen(),
+              binding: AcademicRequestBinding(),
             ),
           ],
         );

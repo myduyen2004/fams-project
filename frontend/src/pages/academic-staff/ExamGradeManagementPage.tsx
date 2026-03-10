@@ -4,12 +4,14 @@ import { lecturerClassService, SemesterResponse } from '../../services/api/Lectu
 import { courseService } from '../../services/api/courseService';
 import { Course } from '../../types/course';
 import { examGradeService, ExamGradeOverviewResponse } from '../../services/api/examGradeService';
+import { studentGradeService } from '../../services/api/studentGradeService';
 import {
     ChevronDown, Download, FileSpreadsheet, Users, TrendingUp, Award,
     Loader2, Search, Check, BookOpen, Send, AlertCircle, X, ShieldCheck,
     Save, Edit3
 } from 'lucide-react';
 import { ImportExamGradeModal } from '../../components/academic-staff/ImportExamGradeModal';
+import { StudentInfoModal } from '../../components/common/StudentInfoModal';
 import toast from 'react-hot-toast';
 
 export const ExamGradeManagementPage: React.FC = () => {
@@ -42,7 +44,11 @@ export const ExamGradeManagementPage: React.FC = () => {
     // Edit mode state
     const [isEditMode, setIsEditMode] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [editedGrades, setEditedGrades] = useState<{ [key: string]: number | null }>({});
+    const [editedGrades, setEditedGrades] = useState<{ [key: string]: string }>({});
+
+    // Student Info Modal State
+    const [selectedStudentCode, setSelectedStudentCode] = useState<string | null>(null);
+    const [isStudentInfoModalOpen, setIsStudentInfoModalOpen] = useState(false);
 
     // Close dropdowns when clicking outside
     useEffect(() => {
@@ -143,7 +149,7 @@ export const ExamGradeManagementPage: React.FC = () => {
 
         setPublishing(true);
         try {
-            await examGradeService.publishGrades(selectedCourse, selectedSemester);
+            await examGradeService.publishGrades(selectedCourse, selectedSemester, 'EXAM');
             toast.success('Công bố điểm thành công!');
             setShowPublishConfirm(false);
             fetchGrades(); // Reload to get updated status
@@ -167,13 +173,17 @@ export const ExamGradeManagementPage: React.FC = () => {
     };
 
     const handleGradeChange = (enrollmentId: number, componentId: number, value: string) => {
-        const score = value === '' ? null : parseFloat(value);
-        if (score !== null && (isNaN(score) || score < 0 || score > 10)) return;
+        const key = `${enrollmentId}_${componentId}`;
+        const cleanValue = value.replace(',', '.');
 
-        setEditedGrades(prev => ({
-            ...prev,
-            [`${enrollmentId}_${componentId}`]: score
-        }));
+        // Only allow valid number patterns: digits, optional decimal, optional more digits
+        if (cleanValue === '' || /^(\d{1,2})?(\.\d?)?$/.test(cleanValue)) {
+            const numValue = parseFloat(cleanValue);
+            // Allow empty, or valid numbers 0-10
+            if (cleanValue === '' || cleanValue === '.' || (numValue >= 0 && numValue <= 10)) {
+                setEditedGrades(prev => ({ ...prev, [key]: cleanValue }));
+            }
+        }
     };
 
     const handleSaveGrades = async () => {
@@ -184,11 +194,40 @@ export const ExamGradeManagementPage: React.FC = () => {
 
         setSaving(true);
         try {
-            // TODO: Implement batch save API if needed, or use existing import logic
-            // For now, this is a UI placeholder until the backend save API is ready
-            toast.success('Đã lưu thay đổi tạm thời (Chức năng lưu trực tiếp đang được cập nhật)');
+            const updates: any[] = [];
+            for (const [key, valueStr] of Object.entries(editedGrades)) {
+                const [enrollmentId, componentId] = key.split('_').map(Number);
+
+                // Find original score to compare
+                const student = gradeOverview?.studentGrades.find(s => s.enrollmentId === enrollmentId);
+                const originalScore = student?.grades[componentId] ?? null;
+
+                // Parse string to number or null
+                const newScore = valueStr.trim() === '' ? null : parseFloat(valueStr.replace(',', '.'));
+                const finalScore = newScore !== null && !isNaN(newScore) ? Math.round(newScore * 10) / 10 : null;
+
+                // Only save if changed
+                if (finalScore !== originalScore) {
+                    updates.push({
+                        enrollmentId,
+                        gradeComponentId: componentId,
+                        score: finalScore
+                    });
+                }
+            }
+
+            if (updates.length > 0) {
+                await studentGradeService.updateGradesBatch(updates);
+                toast.success(`Đã lưu ${updates.length} thay đổi`);
+            } else {
+                toast.success('Không có thay đổi nào cần lưu');
+            }
+
             setIsEditMode(false);
+            setEditedGrades({});
+            fetchGrades(); // Refresh data
         } catch (error) {
+            console.error(error);
             toast.error('Lỗi khi lưu điểm');
         } finally {
             setSaving(false);
@@ -667,6 +706,9 @@ export const ExamGradeManagementPage: React.FC = () => {
                                         <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider min-w-[200px]">
                                             Thông tin sinh viên
                                         </th>
+                                        <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider min-w-[120px]">
+                                            Mã SV
+                                        </th>
                                         <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider">
                                             Lớp
                                         </th>
@@ -705,36 +747,42 @@ export const ExamGradeManagementPage: React.FC = () => {
                                                 {(index + 1).toString().padStart(2, '0')}
                                             </td>
                                             <td className="px-4 py-2">
-                                                <div className="flex items-center gap-3">
-                                                    <div>
-                                                        <p className="font-medium text-gray-900 dark:text-white text-sm">{student.studentName}</p>
-                                                        <p className="text-xs text-gray-500 dark:text-zinc-400">{student.studentCode}</p>
-                                                    </div>
+                                                <div className="flex flex-col">
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedStudentCode(student.studentCode);
+                                                            setIsStudentInfoModalOpen(true);
+                                                        }}
+                                                        className="text-left font-bold text-gray-900 dark:text-white text-sm hover:text-fpt-orange transition-colors"
+                                                    >
+                                                        {student.studentName}
+                                                    </button>
                                                 </div>
+                                            </td>
+                                            <td className="px-4 py-2 text-sm font-medium text-gray-500 dark:text-zinc-400">
+                                                {student.studentCode}
                                             </td>
                                             <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">
                                                 {student.className}
                                             </td>
                                             {sortedGradeComponents.map((component) => {
                                                 const gradeKey = `${student.enrollmentId}_${component.id}`;
-                                                const score = editedGrades.hasOwnProperty(gradeKey)
-                                                    ? editedGrades[gradeKey]
-                                                    : student.grades[component.id];
+                                                const score = student.grades[component.id];
+                                                const editValue = editedGrades[gradeKey];
 
                                                 return (
                                                     <td key={component.id} className="px-2 py-2 text-center">
                                                         {isEditMode && component.isEditable ? (
                                                             <input
-                                                                type="number"
-                                                                step="0.1"
-                                                                min="0"
-                                                                max="10"
-                                                                value={score === null ? '' : score}
+                                                                type="text"
+                                                                inputMode="decimal"
+                                                                value={editValue ?? (score !== null && score !== undefined ? score.toFixed(1) : '')}
                                                                 onChange={(e) => handleGradeChange(student.enrollmentId, component.id, e.target.value)}
-                                                                className="w-16 px-1 py-1 text-center border border-fpt-orange rounded bg-white dark:bg-zinc-800 text-sm focus:ring-1 focus:ring-fpt-orange outline-none"
+                                                                className="w-14 text-center px-1 py-1 rounded-lg border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-gray-900 dark:text-white font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                                placeholder="--"
                                                             />
                                                         ) : (
-                                                            <span className={`inline-block min-w-[40px] px-2 py-1 rounded border text-sm font-medium ${getScoreColor(score)} border-gray-200 dark:border-zinc-600`}>
+                                                            <span className={`inline-block px-2 py-1 rounded-lg font-semibold text-sm border border-gray-200 dark:border-zinc-600 ${getScoreColor(score)}`}>
                                                                 {formatScore(score)}
                                                             </span>
                                                         )}
@@ -833,6 +881,12 @@ export const ExamGradeManagementPage: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            <StudentInfoModal
+                isOpen={isStudentInfoModalOpen}
+                onClose={() => setIsStudentInfoModalOpen(false)}
+                studentCode={selectedStudentCode}
+            />
         </AcademicStaffLayout>
     );
 };

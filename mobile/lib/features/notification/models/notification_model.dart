@@ -1,4 +1,3 @@
-import 'package:intl/intl.dart';
 
 class NotificationModel {
   final int id;
@@ -109,5 +108,15 @@ class NotificationModel {
                .replaceAll('&amp;', '&');
                
     return text.trim();
+  }
+
+  String get firstLineDescription {
+    final text = cleanDescription;
+    final lines = text.split('\n');
+    for (var line in lines) {
+      final trimmed = line.trim();
+      if (trimmed.isNotEmpty) return trimmed;
+    }
+    return text;
   }
 }

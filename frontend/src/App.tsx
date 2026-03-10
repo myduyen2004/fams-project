@@ -63,7 +63,12 @@ const LecturerAssignmentDetailPage = lazy(() => import('./pages/lecturer/Lecture
 const LecturerMessagesPage = lazy(() => import('./pages/lecturer/LecturerMessagesPage').then(m => ({ default: m.LecturerMessagesPage })));
 const StudentGradesPage = lazy(() => import('./pages/student/StudentGradesPage').then(m => ({ default: m.StudentGradesPage })));
 const StudentAssignmentPage = lazy(() => import('./pages/student/StudentAssignmentPage').then(m => ({ default: m.StudentAssignmentPage })));
+const StudentAssignmentDetailPage = lazy(() => import('./pages/student/StudentAssignmentDetailPage').then(m => ({ default: m.StudentAssignmentDetailPage })));
 const StudentMessagesPage = lazy(() => import('./pages/student/StudentMessagesPage').then(m => ({ default: m.StudentMessagesPage })));
+const AcademicStaffClassDetailPage = lazy(() => import('./pages/academic-staff/AcademicStaffClassDetailPage').then(m => ({ default: m.AcademicStaffClassDetailPage })));
+const StudentAcademicRequestPage = lazy(() => import('./pages/student/StudentAcademicRequestPage').then(m => ({ default: m.StudentAcademicRequestPage })));
+const StudentRequestDetailPage = lazy(() => import('./pages/academic-staff/StudentRequestDetailPage').then(m => ({ default: m.StudentRequestDetailPage })));
+const ClassSectionRedirect = lazy(() => import('./pages/academic-staff/ClassSectionRedirect').then(m => ({ default: m.ClassSectionRedirect })));
 
 const PageLoader = () => (
   <div className="flex h-screen w-full items-center justify-center bg-gray-50 dark:bg-zinc-950">
@@ -340,10 +345,11 @@ function App() {
             }
           />
           <Route path="/student/assignments" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentAssignmentPage /></ProtectedRoute>} />
+          <Route path="/student/assignments/:id" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentAssignmentDetailPage /></ProtectedRoute>} />
           <Route path="/student/attendance" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Điểm danh" /></ProtectedRoute>} />
           <Route path="/student/study" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Học tập" /></ProtectedRoute>} />
           <Route path="/student/messages" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentMessagesPage /></ProtectedRoute>} />
-          <Route path="/student/requests" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Gửi đơn yêu cầu" /></ProtectedRoute>} />
+          <Route path="/student/requests" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentAcademicRequestPage /></ProtectedRoute>} />
           <Route path="/student/settings" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Cài đặt" /></ProtectedRoute>} />
           <Route path="/student/profile" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Hồ sơ cá nhân" /></ProtectedRoute>} />
           <Route
@@ -411,6 +417,14 @@ function App() {
             }
           />
           <Route
+            path="/academic-staff/class-sections/:className"
+            element={
+              <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
+                <AcademicStaffClassDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/academic-staff/specializations/:id"
             element={
               <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
@@ -437,7 +451,7 @@ function App() {
 
           {/* Academic Staff Coming Soon Routes */}
           <Route path="/academic-staff/schedule" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><SchedulePage /></ProtectedRoute>} />
-          <Route path="/academic-staff/classes" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Quản lý lớp học" /></ProtectedRoute>} />
+          <Route path="/academic-staff/classes" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ClassSectionRedirect /></ProtectedRoute>} />
           <Route path="/academic-staff/exam-grades" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ExamGradeManagementPage /></ProtectedRoute>} />
           <Route path="/academic-staff/resit-grades" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ResitGradeManagementPage /></ProtectedRoute>} />
           <Route
@@ -453,6 +467,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
                 <RequestDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/academic-staff/student-requests/:id"
+            element={
+              <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
+                <StudentRequestDetailPage />
               </ProtectedRoute>
             }
           />
