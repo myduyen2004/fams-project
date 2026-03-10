@@ -36,6 +36,7 @@ public class ExamGradeService {
     private final SemesterRepository semesterRepository;
     private final UserRepository userRepository;
     private final ClassSectionRepository classSectionRepository;
+    private final NotificationService notificationService;
 
     // Grade types for exam page (ME, FE, PE)
     private static final List<GradeComponent.GradeType> EXAM_TYPES = Arrays.asList(
@@ -977,6 +978,14 @@ public class ExamGradeService {
 
         log.info("Published {} grades for course {} semester {} by user {}: {} classes updated",
                 type, courseCode, semesterCode, publishedById, publishedCount);
+
+        // --- ADDED: Send Notification to Students ---
+        if (publishedCount > 0) {
+            List<User> studentsToNotify = enrollments.stream()
+                    .map(Enrollment::getStudent)
+                    .collect(Collectors.toList());
+            notificationService.notifyStudentsGradesPublished(studentsToNotify, course, type, publisher);
+        }
 
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);

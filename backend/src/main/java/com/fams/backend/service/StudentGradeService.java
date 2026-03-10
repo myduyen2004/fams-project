@@ -2,6 +2,7 @@ package com.fams.backend.service;
 
 import com.fams.backend.dto.request.UpdateGradeRequest;
 import com.fams.backend.dto.response.GradeOverviewResponse;
+import com.fams.backend.dto.response.StudentAllGradesSummaryResponse;
 import com.fams.backend.dto.response.StudentCourseOptionResponse;
 import com.fams.backend.dto.response.StudentGradeRowDTO;
 import com.fams.backend.dto.response.StudentMyGradeResponse;
@@ -28,6 +29,7 @@ public class StudentGradeService {
     private final GradeComponentRepository gradeComponentRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     /**
      * Get grade overview for a class section
@@ -56,7 +58,6 @@ public class StudentGradeService {
                         .name(gc.getName())
                         .type(gc.getType().name())
                         .weight(gc.getWeight())
-                        .isRequired(gc.getIsRequired())
                         .isResit(gc.getIsResit())
                         .build())
                 .collect(Collectors.toList());
@@ -102,7 +103,6 @@ public class StudentGradeService {
             Map<Long, Double> scoresForCalc = new HashMap<>();
             Map<Long, Double> weightsForCalc = new HashMap<>();
 
-            boolean hasAllRequired = true;
             boolean hasMissingOrZero = false;
             boolean hasFailedExam = false;
 
@@ -123,9 +123,6 @@ public class StudentGradeService {
                     }
                 } else {
                     hasMissingOrZero = true;
-                    if (gc.getIsRequired()) {
-                        hasAllRequired = false;
-                    }
                 }
                 weightsForCalc.put(gc.getId(), gc.getWeight());
             }
@@ -134,7 +131,7 @@ public class StudentGradeService {
 
             // Updated pass logic: must have all required, no 0/null values, no failed exam,
             // and average >= 5.0
-            boolean isPassing = hasAllRequired && !hasMissingOrZero && !hasFailedExam && finalGrade != null
+            boolean isPassing = !hasMissingOrZero && !hasFailedExam && finalGrade != null
                     && finalGrade >= 5.0;
 
             return StudentGradeRowDTO.builder()
@@ -352,6 +349,12 @@ public class StudentGradeService {
 
         classSectionRepository.save(classSection);
         log.info("Grades submitted for class {} by user {}", className, submittedById);
+
+        // --- ADDED: Send Notification to Students ---
+        List<User> studentsToNotify = enrollments.stream()
+                .map(Enrollment::getStudent)
+                .collect(Collectors.toList());
+        notificationService.notifyStudentsGradesPublished(studentsToNotify, course, "COMPONENT", submittedBy);
     }
 
     /**
@@ -1286,5 +1289,162 @@ public class StudentGradeService {
         }
 
         return StudentResponse.fromUserAndProfile(user, user.getStudentProfile());
+    }
+
+    /**
+     * Get a comprehensive summary of all grades for a student across all semesters
+     */
+    @Transactional(readOnly = true)
+    public StudentAllGradesSummaryResponse getAllGradesSummary(Long studentId) {
+        List<Enrollment> enrollments = enrollmentRepository.findByStudentId(studentId);
+
+        // Sort enrollments by semester order (from earliest semester to latest)
+        enrollments.sort(Comparator.comparing(
+                e -> e.getClassSection().getSemester().getStartDate() != null
+                        ? e.getClassSection().getSemester().getStartDate()
+                        : java.time.LocalDate.now()));
+
+        // Assign term number per semester (Sem 1st, Sem 2nd...)
+        java.util.Map<Long, Integer> semesterToTermMap = new java.util.LinkedHashMap<>();
+        int termCounter = 0;
+        for (Enrollment e : enrollments) {
+            Long semId = e.getClassSection().getSemester().getId();
+            if (!semesterToTermMap.containsKey(semId)) {
+                semesterToTermMap.put(semId, termCounter);
+                termCounter++;
+            }
+        }
+
+        List<StudentAllGradesSummaryResponse.CourseGradeSummary> courses = new ArrayList<>();
+        int no = 1;
+        int passed = 0, failed = 0, pending = 0;
+        double totalWeightedScore = 0;
+        int totalCreditsForGPA = 0;
+
+        for (Enrollment enrollment : enrollments) {
+            ClassSection cs = enrollment.getClassSection();
+            Course course = cs.getCourse();
+            Semester semester = cs.getSemester();
+
+            int term = semesterToTermMap.getOrDefault(semester.getId(), 0);
+
+            // Prerequisite codes
+            String prerequisiteCodes = course.getPrerequisites() != null && !course.getPrerequisites().isEmpty()
+                    ? course.getPrerequisites().stream()
+                            .map(Course::getCode)
+                            .collect(java.util.stream.Collectors.joining(", "))
+                    : "";
+
+            // Load all student grades for this enrollment
+            List<StudentGrade> grades = studentGradeRepository.findByEnrollmentIdIn(
+                    java.util.Collections.singletonList(enrollment.getId()));
+
+            List<GradeComponent> allComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId());
+
+            // Build scores and weights maps like in getStudentGrades
+            Map<Long, Double> scoresMap = grades.stream()
+                    .collect(Collectors.toMap(g -> g.getGradeComponent().getId(), StudentGrade::getScore, (a, b) -> a));
+
+            boolean resitPublished = Boolean.TRUE.equals(cs.getResitGradesPublished());
+
+            // Find components replaced by resit
+            Set<Long> replacedByResitIds = new HashSet<>();
+            if (resitPublished) {
+                for (GradeComponent gc : allComponents) {
+                    if ((Boolean.TRUE.equals(gc.getIsResit()) || gc.getType() == GradeComponent.GradeType.RESIT)
+                            && gc.getReferenceComponent() != null) {
+                        replacedByResitIds.add(gc.getReferenceComponent().getId());
+                    }
+                }
+            }
+
+            Map<Long, Double> weightsMap = new HashMap<>();
+            boolean hasFailedExam = false;
+
+            for (GradeComponent gc : allComponents) {
+                if (replacedByResitIds.contains(gc.getId()))
+                    continue;
+
+                boolean isResitGc = Boolean.TRUE.equals(gc.getIsResit())
+                        || gc.getType() == GradeComponent.GradeType.RESIT;
+                if (isResitGc && !resitPublished)
+                    continue;
+
+                weightsMap.put(gc.getId(), gc.getWeight());
+
+                Double score = scoresMap.get(gc.getId());
+                if (score != null) {
+                    boolean isExamType = gc.getType() == GradeComponent.GradeType.FINAL_EXAM
+                            || gc.getType() == GradeComponent.GradeType.RESIT;
+                    if (isExamType && score < 4.0) {
+                        hasFailedExam = true;
+                    }
+                }
+            }
+
+            Double courseAverage = GradeCalculator.calculateAverage(scoresMap, weightsMap);
+
+            // Determine status
+            String status = "PENDING";
+            boolean isPublished = Boolean.TRUE.equals(cs.getGradesPublished());
+
+            if (isPublished) {
+                boolean hasMissingOrZero = false;
+                for (Map.Entry<Long, Double> entry : weightsMap.entrySet()) {
+                    Double score = scoresMap.get(entry.getKey());
+                    if (score == null || score <= 0.0) {
+                        hasMissingOrZero = true;
+                        break;
+                    }
+                }
+
+                if (hasMissingOrZero || hasFailedExam || (courseAverage != null && courseAverage < 5.0)) {
+                    status = "FAILED";
+                } else if (courseAverage != null && courseAverage >= 5.0) {
+                    status = "PASSED";
+                }
+            }
+
+            courses.add(StudentAllGradesSummaryResponse.CourseGradeSummary.builder()
+                    .no(no++)
+                    .term(term)
+                    .semesterCode(semester.getCode())
+                    .semesterName(semester.getName())
+                    .courseCode(course.getCode())
+                    .courseName(course.getName())
+                    .credits(course.getCredits())
+                    .prerequisiteCodes(prerequisiteCodes)
+                    .className(cs.getClassName())
+                    .grade(isPublished && courseAverage != null ? Math.round(courseAverage * 10.0) / 10.0 : null)
+                    .status(status)
+                    .gradesPublished(isPublished)
+                    .isCalculatedInGpa(course.getIsCalculatedInGpa())
+                    .build());
+
+            if ("PASSED".equals(status)) {
+                passed++;
+                if (Boolean.TRUE.equals(course.getIsCalculatedInGpa()) && courseAverage != null
+                        && course.getCredits() != null) {
+                    totalWeightedScore += courseAverage * course.getCredits();
+                    totalCreditsForGPA += course.getCredits();
+                }
+            } else if ("FAILED".equals(status)) {
+                failed++;
+            } else {
+                pending++;
+            }
+        }
+
+        Double gpa = totalCreditsForGPA > 0 ? Math.round(totalWeightedScore / totalCreditsForGPA * 100.0) / 100.0
+                : null;
+
+        return StudentAllGradesSummaryResponse.builder()
+                .courses(courses)
+                .totalCourses(courses.size())
+                .passedCourses(passed)
+                .failedCourses(failed)
+                .pendingCourses(pending)
+                .gpa(gpa)
+                .build();
     }
 }
