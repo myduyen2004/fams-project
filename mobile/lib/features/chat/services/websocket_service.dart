@@ -28,6 +28,8 @@ class WebSocketService {
     // Disconnect existing connection
     disconnect();
 
+    final completer = Completer<void>();
+
     _stompClient = StompClient(
       config: StompConfig.sockJS(
         url: '${ApiConstants.baseUrl}/ws',
@@ -37,6 +39,7 @@ class WebSocketService {
           _isConnected = true;
           _reconnectTimer?.cancel();
           debugPrint('[WS] Connected');
+          if (!completer.isCompleted) completer.complete();
           onConnected();
         },
         onDisconnect: (StompFrame frame) {
@@ -47,20 +50,22 @@ class WebSocketService {
         onStompError: (StompFrame frame) {
           _isConnected = false;
           debugPrint('[WS] STOMP Error: ${frame.body}');
+          if (!completer.isCompleted)
+            completer.completeError(frame.body ?? 'STOMP Error');
           onError(frame.body ?? 'STOMP Error');
         },
         onWebSocketError: (dynamic error) {
           _isConnected = false;
           debugPrint('[WS] WebSocket Error: $error');
+          if (!completer.isCompleted) completer.completeError(error.toString());
           _scheduleReconnect(onConnected: onConnected, onError: onError);
         },
-        reconnectDelay: const Duration(
-          seconds: 0,
-        ), // we handle reconnect ourselves
+        reconnectDelay: const Duration(seconds: 0),
       ),
     );
 
     _stompClient!.activate();
+    return completer.future;
   }
 
   /// Schedule reconnection after 5 seconds

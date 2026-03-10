@@ -1,3 +1,4 @@
+import 'package:fams_mobile/features/chat/controllers/chat_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -5,6 +6,7 @@ import '../controllers/class_list_controller.dart';
 import '../models/class_section_model.dart';
 import '../../../core/constants/api_constants.dart';
 import 'student_detail_screen.dart';
+import '../../auth/controllers/auth_controller.dart';
 
 class StudentListScreen extends StatefulWidget {
   final ClassSection classSection;
@@ -88,7 +90,9 @@ class _StudentListScreenState extends State<StudentListScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          _isSearching ? 'Không tìm thấy sinh viên nào' : 'Chưa có sinh viên',
+                          _isSearching
+                              ? 'Không tìm thấy sinh viên nào'
+                              : 'Chưa có sinh viên',
                           style: GoogleFonts.inter(
                             color: Colors.grey[600],
                             fontSize: 16,
@@ -146,61 +150,67 @@ class _StudentListScreenState extends State<StudentListScreen> {
           ),
           const SizedBox(width: 16),
           Expanded(
-            child: _isSearching 
-              ? Container(
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 8,
+            child: _isSearching
+                ? Container(
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      autofocus: true,
+                      onChanged: (val) => controller.searchStudents(val),
+                      decoration: InputDecoration(
+                        hintText: 'Tìm tên hoặc mã SV...',
+                        hintStyle: GoogleFonts.inter(
+                          color: Colors.grey[400],
+                          fontSize: 14,
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.close, color: Colors.grey),
+                          onPressed: () {
+                            _searchController.clear();
+                            controller.searchStudents('');
+                          },
+                        ),
+                      ),
+                    ),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _extractClassCode(widget.classSection.className),
+                        style: GoogleFonts.inter(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${widget.classSection.courseCode} - ${widget.classSection.courseName}',
+                        style: GoogleFonts.roboto(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey[600],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    autofocus: true,
-                    onChanged: (val) => controller.searchStudents(val),
-                    decoration: InputDecoration(
-                      hintText: 'Tìm tên hoặc mã SV...',
-                      hintStyle: GoogleFonts.inter(color: Colors.grey[400], fontSize: 14),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.close, color: Colors.grey),
-                        onPressed: () {
-                          _searchController.clear();
-                          controller.searchStudents('');
-                        },
-                      ),
-                    ),
-                  ),
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _extractClassCode(widget.classSection.className),
-                      style: GoogleFonts.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${widget.classSection.courseCode} - ${widget.classSection.courseName}',
-                      style: GoogleFonts.roboto(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey[600],
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
                   ),
           ),
           const SizedBox(width: 16),
@@ -239,14 +249,38 @@ class _StudentListScreenState extends State<StudentListScreen> {
             final classSection = controller.selectedClass.value;
             if (classSection == null) return const SizedBox.shrink();
 
-            final chatGroup = controller.getChatGroupForClass(classSection);
-            final hasGroup = chatGroup != null;
+            final authController = Get.find<AuthController>();
+            final isStudent =
+                authController.currentUser.value?.isStudent ?? false;
+
+            // Check if group exists via ChatController
+            final chatController = Get.find<ChatController>();
+            final chatGroup = chatController.groups.firstWhereOrNull(
+              (g) => g.className == classSection.className,
+            );
+
+            // Re-evaluate hasGroup using latest state
+            final hasGroup = classSection.hasChatGroup || chatGroup != null;
+            final groupId = classSection.chatGroupId ?? chatGroup?.id;
+
+            final buttonText = hasGroup
+                ? 'Vào nhóm'
+                : (isStudent ? 'Chưa tạo nhóm' : 'Tạo nhóm');
+
             return GestureDetector(
-              onTap: () {
-                if (hasGroup) {
-                  controller.goToChat(chatGroup.id);
+              onTap: () async {
+                if (hasGroup && groupId != null) {
+                  controller.goToChat(groupId);
+                } else if (!isStudent) {
+                  // If lecturer presses, it will check server first (handled in controller)
+                  await controller.createGroupChat(classSection);
                 } else {
-                  controller.createGroupChat(classSection);
+                  Get.snackbar(
+                    'Thông báo',
+                    'Nhóm chat chưa được tạo. Vui lòng đợi giảng viên tạo nhóm.',
+                    backgroundColor: Colors.orange.withOpacity(0.1),
+                    snackPosition: SnackPosition.BOTTOM,
+                  );
                 }
               },
               child: Container(
@@ -257,9 +291,11 @@ class _StudentListScreenState extends State<StudentListScreen> {
                 decoration: BoxDecoration(
                   color: hasGroup
                       ? const Color(0xFF4CAF50)
-                      : const Color(0xFFEF7623).withOpacity(0.1),
+                      : (isStudent
+                            ? Colors.grey.withOpacity(0.2)
+                            : const Color(0xFFEF7623).withOpacity(0.1)),
                   borderRadius: BorderRadius.circular(12),
-                  border: hasGroup
+                  border: (hasGroup || isStudent)
                       ? null
                       : Border.all(color: const Color(0xFFEF7623), width: 1),
                   boxShadow: hasGroup
@@ -275,17 +311,25 @@ class _StudentListScreenState extends State<StudentListScreen> {
                 child: Row(
                   children: [
                     Icon(
-                      hasGroup ? Icons.chat_rounded : Icons.chat_outlined,
-                      color: hasGroup ? Colors.white : const Color(0xFFEF7623),
+                      hasGroup
+                          ? Icons.chat_rounded
+                          : (isStudent
+                                ? Icons.lock_clock_outlined
+                                : Icons.chat_outlined),
+                      color: hasGroup
+                          ? Colors.white
+                          : (isStudent ? Colors.grey : const Color(0xFFEF7623)),
                       size: 18,
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      hasGroup ? 'Vào nhóm' : 'Tạo nhóm',
+                      buttonText,
                       style: GoogleFonts.roboto(
                         color: hasGroup
                             ? Colors.white
-                            : const Color(0xFFEF7623),
+                            : (isStudent
+                                  ? Colors.grey
+                                  : const Color(0xFFEF7623)),
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
                       ),
@@ -301,28 +345,29 @@ class _StudentListScreenState extends State<StudentListScreen> {
   }
 
   Widget _buildStudentCountHeader() {
-    return Obx(() => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'TẤT CẢ SINH VIÊN',
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[600],
+    return Obx(
+      () => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'TẤT CẢ SINH VIÊN',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[600],
+              ),
             ),
-          ),
-          Text(
-            '${controller.filteredStudents.length} Sinh viên',
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFFEF7623),
+            Text(
+              '${controller.filteredStudents.length} Sinh viên',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFFEF7623),
+              ),
             ),
-          ),
-        ],
+          ],
         ),
       ),
     );
