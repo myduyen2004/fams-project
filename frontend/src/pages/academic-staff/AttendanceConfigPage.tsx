@@ -31,7 +31,7 @@ const DEFAULT_CONFIG: AttendanceConfig = {
   minAttendancePercentage: 80,
   faceRecognitionEnabled: true,
   maxAttempts: 5,
-  wifiLocationEnabled: false
+  wifiLocationEnabled: true
 };
 
 export const AttendanceConfigPage: React.FC = () => {
@@ -47,8 +47,9 @@ export const AttendanceConfigPage: React.FC = () => {
       try {
         const response = await apiClient.get('/attendance-configs');
         if (response.data) {
-          setConfig(response.data);
-          setOriginalConfig(response.data);
+          const mergedConfig = { ...DEFAULT_CONFIG, ...response.data };
+          setConfig(mergedConfig);
+          setOriginalConfig(mergedConfig);
         }
       } catch (error) {
         console.error('Failed to fetch config:', error);

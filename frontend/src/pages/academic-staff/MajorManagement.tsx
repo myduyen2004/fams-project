@@ -12,6 +12,7 @@ import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { Major, MajorImportDTO } from '../../types/major';
 import { SpecializationImportDTO } from '../../types/specialization';
 import { usePagination } from '../../hooks/usePagination';
+import { Tooltip } from '../../components/common/Tooltip';
 
 // --- Types ---
 
@@ -863,6 +864,7 @@ const MajorUpdateModal: React.FC<MajorUpdateModalProps> = ({ isOpen, onClose, on
     );
 };
 
+
 // --- Main Page Component ---
 
 export const MajorManagement: React.FC = () => {
@@ -1046,20 +1048,17 @@ export const MajorManagement: React.FC = () => {
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
                     <div></div> {/* Spacer */}
-                    <div className="flex flex-wrap gap-2">
-                        {/* Major buttons */}
-                        <div className="flex gap-2 border-r border-gray-200 dark:border-zinc-800 pr-2">
+                    <div className="flex gap-3">
+                        <Tooltip content="Tải file Excel mẫu để nhập dữ liệu" position="bottom">
                             <button
                                 onClick={() => setIsImportModalOpen(true)}
-                                className="flex items-center gap-2 rounded-lg border border-fpt-orange bg-orange-50 px-3 py-2 text-sm font-medium text-fpt-orange hover:bg-orange-100"
+                                className="flex items-center gap-2 rounded-lg border border-fpt-orange bg-orange-50 px-4 py-2 text-sm font-medium text-fpt-orange hover:bg-orange-100 transition-colors"
                             >
                                 <Upload className="h-4 w-4" />
-                                Import ngành
+                                Import danh sách ngành
                             </button>
-                        </div>
-
-                        {/* Specialization buttons */}
-                        <div className="flex gap-2 border-r border-gray-200 dark:border-zinc-800 pr-2">
+                        </Tooltip>
+                        <Tooltip content="Thêm một ngành học mới" position="bottom">
                             <button
                                 onClick={() => setIsImportSpecModalOpen(true)}
                                 className="flex items-center gap-2 rounded-lg border border-fpt-orange bg-orange-50 px-3 py-2 text-sm font-medium text-fpt-orange hover:bg-orange-100"

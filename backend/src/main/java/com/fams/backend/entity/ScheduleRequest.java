@@ -106,6 +106,7 @@ public class ScheduleRequest {
     public enum RequestStatus {
         PENDING, // Đang chờ duyệt
         APPROVED, // Đã duyệt
-        REJECTED // Đã từ chối
+        REJECTED, // Đã từ chối
+        REVOKED // Đã thu hồi
     }
 }

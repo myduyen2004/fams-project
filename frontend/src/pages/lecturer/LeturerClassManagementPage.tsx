@@ -111,20 +111,22 @@ export const LeturerClassManagementPage: React.FC = () => {
                         <table className="w-full text-left">
                             <thead className="bg-[#f97316] text-white">
                                 <tr>
-                                    <th className="px-6 py-4 text-sm font-semibold uppercase tracking-wider text-center w-16">STT</th>
-                                    <th className="px-6 py-4 text-sm font-semibold uppercase tracking-wider text-center">Tên học kỳ</th>
-                                    <th className="px-6 py-4 text-sm font-semibold uppercase tracking-wider text-center">Mã môn học</th>
-                                    <th className="px-6 py-4 text-sm font-semibold uppercase tracking-wider text-center">Lớp học</th>
-                                    <th className="px-6 py-4 text-sm font-semibold uppercase tracking-wider text-center">Tên môn học</th>
+                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-center w-20">STT</th>
+                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-center">Học kỳ</th>
+                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-center">Mã môn học</th>
+                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-center">Lớp học</th>
+                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-center">Tên môn học</th>
+                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-center w-40">Trạng thái</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50 dark:divide-zinc-800">
                                 {loading ? (
-                                    <tr>
-                                        <td colSpan={4} className="px-6 py-10 text-center text-gray-500 dark:text-gray-400">
-                                            Đang tải dữ liệu...
-                                        </td>
-                                    </tr>
+                                    <td colSpan={6} className="px-6 py-24 text-center">
+                                        <div className="flex flex-col items-center gap-4">
+                                            <div className="w-12 h-12 border-4 border-fpt-orange/20 border-t-fpt-orange rounded-full animate-spin"></div>
+                                            <p className="text-gray-500 dark:text-gray-400 font-medium tracking-wide">Đang tải dữ liệu...</p>
+                                        </div>
+                                    </td>
                                 ) : classes.length > 0 ? (
                                     classes.map((cls, index) => (
                                         <ClassRowTable
@@ -134,11 +136,14 @@ export const LeturerClassManagementPage: React.FC = () => {
                                         />
                                     ))
                                 ) : (
-                                    <tr>
-                                        <td colSpan={4} className="px-6 py-10 text-center text-gray-500 dark:text-gray-400">
-                                            Không có dữ liệu lớp học cho học kỳ này.
-                                        </td>
-                                    </tr>
+                                    <td colSpan={6} className="px-6 py-20 text-center">
+                                        <div className="flex flex-col items-center gap-3">
+                                            <div className="w-16 h-16 rounded-2xl bg-gray-50 dark:bg-zinc-900 flex items-center justify-center">
+                                                <span className="text-gray-300 dark:text-zinc-700 text-xs font-bold uppercase tracking-widest">Trống</span>
+                                            </div>
+                                            <p className="text-gray-500 dark:text-gray-400 font-medium tracking-tight">Không có dữ liệu lớp học cho học kỳ này.</p>
+                                        </div>
+                                    </td>
                                 )}
                             </tbody>
                         </table>

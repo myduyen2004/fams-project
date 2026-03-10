@@ -80,4 +80,18 @@ class LecturerService {
       rethrow;
     }
   }
+
+  /// Get public lecturer profile
+  Future<Map<String, dynamic>> getLecturerProfile(int lecturerId) async {
+    try {
+      final response = await _apiService.get('/api/auth/user/$lecturerId/profile');
+      if (response.statusCode == 200) {
+        return response.data as Map<String, dynamic>;
+      }
+      throw 'Không thể tải thông tin giảng viên';
+    } catch (e) {
+      print('[LecturerService] Error in getLecturerProfile: $e');
+      rethrow;
+    }
+  }
 }

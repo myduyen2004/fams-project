@@ -268,8 +268,15 @@ public class ClassSectionServiceImpl implements ClassSectionService {
             throw new RuntimeException("Người dùng không phải là sinh viên: " + request.getStudentCode());
         }
 
-        // Validate course belongs to student's specialization
+        // Validate student profile and specialized info
         StudentProfile studentProfile = student.getStudentProfile();
+        if (studentProfile == null) {
+            throw new RuntimeException("Sinh viên chưa có hồ sơ (student profile)");
+        }
+        if (studentProfile.getMajor() == null || studentProfile.getSpecialization() == null) {
+            throw new RuntimeException("Sinh viên chưa được gán ngành hoặc chuyên ngành");
+        }
+
         Long courseId = classSection.getCourse().getId();
         boolean courseInSpecialization = false;
 
@@ -776,6 +783,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                             .idCard("")
                             .majorName(studentSpecialization)
                             .studentCode(student.getCode())
+                            .avatar(student.getAvatar())
                             .status(enrollment.getStatus().name())
                             .build();
                 })

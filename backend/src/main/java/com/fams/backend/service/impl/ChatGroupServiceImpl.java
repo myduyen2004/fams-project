@@ -141,15 +141,7 @@ public class ChatGroupServiceImpl implements ChatGroupService {
 
         // Load members
         List<ChatGroupMember> members = chatGroupMemberRepository.findActiveMembersWithUser(groupId);
-        response.setMembers(members.stream()
-                .map(m -> ChatGroupResponse.ChatMemberDTO.builder()
-                        .userId(m.getUser().getId())
-                        .fullName(m.getUser().getFullName())
-                        .avatar(m.getUser().getAvatar())
-                        .role(m.getUser().getRole().name())
-                        .memberRole(m.getRole().name())
-                        .build())
-                .collect(Collectors.toList()));
+        response.setMembers(mapMembers(members));
 
         return response;
     }
@@ -256,17 +248,8 @@ public class ChatGroupServiceImpl implements ChatGroupService {
             lecturerName = group.getClassSection().getLecturer().getFullName();
         }
 
-        List<ChatGroupResponse.ChatMemberDTO> members = chatGroupMemberRepository
-                .findActiveMembersWithUser(group.getId())
-                .stream()
-                .map(m -> ChatGroupResponse.ChatMemberDTO.builder()
-                        .userId(m.getUser().getId())
-                        .fullName(m.getUser().getFullName())
-                        .avatar(m.getUser().getAvatar())
-                        .role(m.getUser().getRole().name())
-                        .memberRole(m.getRole().name())
-                        .build())
-                .collect(java.util.stream.Collectors.toList());
+        List<ChatGroupResponse.ChatMemberDTO> members = mapMembers(
+                chatGroupMemberRepository.findActiveMembersWithUser(group.getId()));
 
         String displayName = group.getName();
         if (group.getType() == ChatGroup.ChatGroupType.CLASS && group.getClassSection() != null) {
@@ -285,9 +268,10 @@ public class ChatGroupServiceImpl implements ChatGroupService {
 
         ChatGroupResponse response = ChatGroupResponse.builder()
                 .id(group.getId())
-                .name(displayName)
-                .className(group.getClassSection() != null ? group.getClassSection().getClassName() : null)
-                .lecturerName(lecturerName)
+                .name(displayName != null ? displayName : "Nhóm chưa đặt tên")
+                .className(group.getClassSection() != null ? group.getClassSection().getClassName() : "")
+                .type(group.getType() != null ? group.getType().name() : "CLASS")
+                .lecturerName(lecturerName != null ? lecturerName : "")
                 .memberCount(members.size())
                 .members(members)
                 .createdAt(group.getCreatedAt())
@@ -299,6 +283,7 @@ public class ChatGroupServiceImpl implements ChatGroupService {
                     .senderName(msg.getSender().getFullName())
                     .content(msg.getContent())
                     .type(msg.getType().name())
+                    .attachmentName(msg.getAttachmentName())
                     .sentAt(msg.getSentAt())
                     .build());
         }
@@ -365,9 +350,9 @@ public class ChatGroupServiceImpl implements ChatGroupService {
             String replyContent = message.getReplyTo().getContent();
             if (replyContent == null || replyContent.isEmpty()) {
                 if (message.getReplyTo().getType() == ChatMessage.MessageType.IMAGE) {
-                    replyContent = "[Hình ảnh]";
+                    replyContent = "🖼️ Hình ảnh";
                 } else if (message.getReplyTo().getType() == ChatMessage.MessageType.FILE) {
-                    replyContent = "[Tệp tin]";
+                    replyContent = "📎 " + message.getReplyTo().getAttachmentName();
                 }
             }
             response.setReplyToContent(replyContent);
@@ -384,5 +369,27 @@ public class ChatGroupServiceImpl implements ChatGroupService {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+    }
+
+    private List<ChatGroupResponse.ChatMemberDTO> mapMembers(List<ChatGroupMember> members) {
+        return members.stream()
+                .map(m -> {
+                    String code = m.getUser().getCode();
+                    if (code == null || code.trim().isEmpty()) {
+                        code = m.getUser().getUsername();
+                    }
+                    String fullName = m.getUser().getFullName();
+                    log.error("DEBUG: Mapping chat member: userId={}, fullName={}, code={}", m.getUser().getId(),
+                            fullName, code);
+                    return ChatGroupResponse.ChatMemberDTO.builder()
+                            .userId(m.getUser().getId())
+                            .code(code)
+                            .fullName(fullName)
+                            .avatar(m.getUser().getAvatar())
+                            .role(m.getUser().getRole().name())
+                            .memberRole(m.getRole().name())
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 }

@@ -18,6 +18,7 @@ export interface StudentAttendanceResponse {
     fullName: string;
     avatarUrl?: string;
     status: string;
+    checkInMethod?: string;
     checkInTime: string;
     capturedFaceUrl?: string;
 }
@@ -33,9 +34,35 @@ export interface SessionDetailResponse {
     status: string;
     openedAt: string;
     closedAt?: string;
+    date?: string;
+    startTime?: string;
+    endTime?: string;
     totalStudents: number;
     presentCount: number;
     students: StudentAttendanceResponse[];
+}
+
+export interface ClassAttendanceReportResponse {
+    className: string;
+    courseCode: string;
+    courseName: string;
+    slots: {
+        slotId: number;
+        slotIndex: number;
+        date: string;
+    }[];
+    studentReports: {
+        studentId: number;
+        studentCode: string;
+        studentName: string;
+        avatarUrl?: string;
+        absentPercentage: number;
+        attendanceDetails: {
+            slotId: number;
+            slotIndex: number;
+            status?: string; // 'P', 'A', 'E' or null
+        }[];
+    }[];
 }
 
 const attendanceService = {
@@ -55,6 +82,26 @@ const attendanceService = {
 
     getSessionBySlot: async (slotId: number): Promise<SessionDetailResponse> => {
         const response = await axios.get(`${API_URL}/v1/attendance/session/slot/${slotId}`, {
+            headers: getAuthHeader()
+        });
+        return response.data;
+    },
+
+    updateManualAttendance: async (sessionId: number, studentId: number, status: string, slotId?: number, note?: string): Promise<SessionDetailResponse> => {
+        const response = await axios.post(`${API_URL}/v1/attendance/session/manual`, {
+            sessionId,
+            slotId,
+            studentId,
+            status,
+            note
+        }, {
+            headers: getAuthHeader()
+        });
+        return response.data;
+    },
+
+    getClassAttendanceReport: async (className: string): Promise<ClassAttendanceReportResponse> => {
+        const response = await axios.get(`${API_URL}/v1/attendance/class/${className}/report`, {
             headers: getAuthHeader()
         });
         return response.data;
