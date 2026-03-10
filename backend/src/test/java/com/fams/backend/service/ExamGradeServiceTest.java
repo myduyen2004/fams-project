@@ -17,6 +17,7 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import com.fams.backend.service.NotificationService;
 
 /**
  * Unit tests for ExamGradeService
@@ -46,6 +47,8 @@ public class ExamGradeServiceTest {
         private UserRepository userRepository;
         @Mock
         private ClassSectionRepository classSectionRepository;
+        @Mock
+        private NotificationService notificationService;
 
         @InjectMocks
         private ExamGradeService examGradeService;
