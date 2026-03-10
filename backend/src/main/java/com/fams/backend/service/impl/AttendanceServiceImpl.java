@@ -347,12 +347,8 @@ public class AttendanceServiceImpl implements AttendanceService {
                                         LocalDateTime slotEndDateTime = LocalDateTime.of(slot.getDate(),
                                                         slot.getSlotType().getEndTime());
                                         if (now.isAfter(slotEndDateTime)) {
-                                                // Slot passed without any session started, consider it not conducted or
-                                                // default absent?
-                                                // Usually if lecturer forgot to take attendance, it should be
-                                                // null/empty, or absent?
-                                                // We'll leave it as null to indicate no session was made.
-                                                status = null;
+                                                // Slot passed without any session started, consider it absent
+                                                status = "A";
                                         }
                                 }
 
@@ -384,6 +380,7 @@ public class AttendanceServiceImpl implements AttendanceService {
                                 .className(classSection.getClassName())
                                 .courseCode(classSection.getCourse().getCode())
                                 .courseName(classSection.getCourse().getName())
+                                .semesterName(classSection.getSemester().getName())
                                 .slots(slotInfos)
                                 .studentReports(studentReports)
                                 .build();

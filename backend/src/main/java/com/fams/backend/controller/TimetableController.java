@@ -58,6 +58,7 @@ public class TimetableController {
         private final com.fams.backend.repository.ClassSectionRepository classSectionRepository;
         private final com.fams.backend.repository.SemesterConfigRepository semesterConfigRepository;
         private final com.fams.backend.service.timetable.TimetableSlotService timetableSlotService;
+        private final com.fams.backend.service.AttendanceConfigService attendanceConfigService;
 
         // ==================== GENERATION APIs ====================
 
@@ -924,6 +925,7 @@ public class TimetableController {
                                 .startTime(slotType != null ? slotType.getStartTime() : null)
                                 .endTime(slotType != null ? slotType.getEndTime() : null)
                                 .status(slot.getStatus() != null ? slot.getStatus().name() : null)
+                                .absentThresholdMinutes(attendanceConfigService.getConfig().getAbsentThresholdMinutes())
                                 .build();
         }
 

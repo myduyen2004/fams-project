@@ -110,6 +110,7 @@ public class FaceDTO {
         private String attendanceStatus;
         private Boolean faceRecognitionEnabled;
         private Boolean wifiLocationEnabled;
+        private Integer absentThresholdMinutes;
     }
 
     @Data

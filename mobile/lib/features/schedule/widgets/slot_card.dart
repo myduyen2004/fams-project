@@ -189,23 +189,23 @@ class SlotCard extends StatelessWidget {
     if (slot.attendanceStatus == 'PRESENT') return 'Có mặt';
     if (slot.attendanceStatus == 'ABSENT') return 'Vắng';
 
-    if (slot.startTime == null || slot.endTime == null || slot.date == null) {
+    if (slot.startTime == null || slot.date == null) {
       return 'Chưa điểm danh';
     }
 
     try {
-      final now = DateTime.now();
-      final endParts = slot.endTime!.split(':');
-      final endDate = DateTime(
+      final now = controller.currentTime.value;
+      final startParts = slot.startTime!.split(':');
+      final startDate = DateTime(
         slot.date.year,
         slot.date.month,
         slot.date.day,
-        int.parse(endParts[0]),
-        int.parse(endParts[1]),
+        int.parse(startParts[0]),
+        int.parse(startParts[1]),
       );
 
-      final configMinutes = controller.attendanceConfig.value.absentThresholdMinutes;
-      final limitTime = endDate.add(Duration(minutes: configMinutes));
+      final threshold = slot.absentThresholdMinutes ?? controller.attendanceConfig.value.absentThresholdMinutes;
+      final limitTime = startDate.add(Duration(minutes: threshold));
 
       if (now.isAfter(limitTime)) {
         return 'Vắng';
