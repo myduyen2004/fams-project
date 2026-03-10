@@ -22,6 +22,8 @@ public interface CourseService {
 
     CourseResponse updateStatus(Long id, Course.CourseStatus status);
 
+    CourseResponse updateGpaStatus(Long id, Boolean isCalculatedInGpa);
+
     void deleteCourse(Long id);
 
     List<CourseResponse> searchCourses(String keyword, int limit);
@@ -29,6 +31,13 @@ public interface CourseService {
     List<CourseResponse> searchCoursesNotInSpecialization(Long specId, String keyword, int limit);
 
     List<CourseResponse> searchCoursesNotInSubSpecialization(Long subSpecId, String keyword, int limit);
+
+    // Prerequisite methods
+    List<CourseResponse.PrerequisiteDTO> getPrerequisites(Long courseId);
+
+    List<CourseResponse.PrerequisiteDTO> addPrerequisite(Long courseId, Long prereqId);
+
+    List<CourseResponse.PrerequisiteDTO> removePrerequisite(Long courseId, Long prereqId);
 
     // Import methods
     List<CourseImportDTO> previewImportCourses(MultipartFile file);

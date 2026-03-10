@@ -5,7 +5,6 @@ export interface GradeComponentInfo {
     name: string;
     type: string;
     weight: number;
-    isRequired: boolean;
     isResit: boolean;
 }
 

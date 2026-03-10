@@ -115,17 +115,8 @@ public class GradeComponentController {
     }
 
     /**
-     * Toggle isRequired for a grade component
-     */
-    @PatchMapping("/grade-components/{id}/toggle-required")
-    public ResponseEntity<GradeComponentResponse> toggleRequired(@PathVariable Long id) {
-        log.info("PATCH /grade-components/{}/toggle-required", id);
-        return ResponseEntity.ok(gradeComponentService.toggleRequired(id));
-    }
-
-    /**
      * Import grade components from Excel
-     * Expected format: courseCode, name, type, weight, description, isRequired
+     * Expected format: courseCode, name, type, weight, description
      */
     @PostMapping("/grade-components/import")
     public ResponseEntity<Map<String, Object>> importGradeComponents(@RequestBody List<Map<String, Object>> rows) {
