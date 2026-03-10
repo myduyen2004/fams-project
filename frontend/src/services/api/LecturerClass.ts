@@ -43,7 +43,6 @@ export interface StudentEnrollmentDTO {
     studentCode: string;
     avatar?: string;
     status: string;
-    avatar?: string;
 }
 
 export interface ClassDetailResponse {
