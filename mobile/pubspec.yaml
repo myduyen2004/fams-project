@@ -51,6 +51,7 @@ dependencies:
   qr_flutter: ^4.1.0
   google_fonts: ^6.1.0
   flutter_svg: ^2.0.9
+  flutter_screenutil: any
 
   # Utils
   intl: ^0.20.2
@@ -95,6 +96,11 @@ dependencies:
   
   # URL Launcher (for opening attachments)
   url_launcher: ^6.2.5
+
+  # File Content Parsing (Deep-Content Vision)
+  excel: ^4.0.6
+  archive: ^3.6.1
+  pdfx: ^2.4.0
 
   # Calendar Integration
   add_2_calendar: ^3.0.1

@@ -462,7 +462,11 @@ public class TimetableController {
                                         if (assignment != null) {
                                                 slotDto.setAssignmentId(assignment.getId());
                                                 slotDto.setAssignmentTitle(assignment.getTitle());
+                                                slotDto.setAssignmentDescription(assignment.getDescription());
                                                 slotDto.setAssignmentStatus(assignment.getStatus().name());
+                                                slotDto.setAssignmentReferenceUrl(assignment.getReferenceUrl());
+                                                slotDto.setAssignmentReferenceName(assignment.getReferenceName());
+                                                slotDto.setAssignmentDueDate(assignment.getDueDate());
                                                 String subStatus = submissionStatusMap.get(assignment.getId());
                                                 slotDto.setSubmissionStatus(
                                                                 subStatus != null ? subStatus : "NOT_SUBMITTED");
@@ -725,7 +729,11 @@ public class TimetableController {
                                 if (assignment != null) {
                                         slotDto.setAssignmentId(assignment.getId());
                                         slotDto.setAssignmentTitle(assignment.getTitle());
+                                        slotDto.setAssignmentDescription(assignment.getDescription());
                                         slotDto.setAssignmentStatus(assignment.getStatus().name());
+                                        slotDto.setAssignmentReferenceUrl(assignment.getReferenceUrl());
+                                        slotDto.setAssignmentReferenceName(assignment.getReferenceName());
+                                        slotDto.setAssignmentDueDate(assignment.getDueDate());
                                 }
                         }));
                 }
@@ -906,6 +914,7 @@ public class TimetableController {
                                 .className(cs != null ? cs.getClassName() : null)
                                 .courseCode(course != null ? course.getCode() : null)
                                 .courseName(course != null ? course.getName() : null)
+                                .lecturerId(lecturer != null ? lecturer.getId() : null)
                                 .lecturerName(lecturer != null ? lecturer.getFullName() : null)
                                 .roomCode(room != null ? room.getCode() : null)
                                 .roomName(room != null ? room.getName() : null)

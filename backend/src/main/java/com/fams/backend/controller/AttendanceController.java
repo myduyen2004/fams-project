@@ -34,16 +34,37 @@ public class AttendanceController {
     }
 
     @GetMapping("/session/{sessionId}")
-    @PreAuthorize("hasAnyRole('LECTURER', 'STUDENT')")
+    @PreAuthorize("hasAnyRole('LECTURER', 'STUDENT', 'ACADEMIC_STAFF')")
     @Operation(summary = "Get session detail")
     public ResponseEntity<AttendanceDTO.SessionDetailResponse> getSession(@PathVariable Long sessionId) {
         return ResponseEntity.ok(attendanceService.getSessionDetail(sessionId));
     }
 
     @GetMapping("/session/slot/{slotId}")
-    @PreAuthorize("hasRole('LECTURER')")
+    @PreAuthorize("hasAnyRole('LECTURER', 'ACADEMIC_STAFF')")
     @Operation(summary = "Get session by slot")
     public ResponseEntity<AttendanceDTO.SessionDetailResponse> getSessionBySlot(@PathVariable Long slotId) {
         return ResponseEntity.ok(attendanceService.getSessionBySlot(slotId));
+    }
+
+    @PostMapping("/session/manual")
+    @PreAuthorize("hasRole('LECTURER')")
+    @Operation(summary = "Update manual attendance", description = "For lecturer to manually update student attendance status")
+    public ResponseEntity<AttendanceDTO.SessionDetailResponse> updateManualAttendance(
+            @RequestBody AttendanceDTO.ManualAttendanceRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        User lecturer = userRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("Lecturer not found"));
+
+        return ResponseEntity.ok(attendanceService.updateManualAttendance(lecturer.getId(), request));
+    }
+
+    @GetMapping("/class/{className}/report")
+    @PreAuthorize("hasAnyRole('LECTURER', 'ACADEMIC_STAFF')")
+    @Operation(summary = "Get class attendance report")
+    public ResponseEntity<AttendanceDTO.ClassAttendanceReportResponse> getClassAttendanceReport(
+            @PathVariable String className) {
+        return ResponseEntity.ok(attendanceService.getClassAttendanceReport(className));
     }
 }

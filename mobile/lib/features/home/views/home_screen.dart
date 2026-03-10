@@ -616,7 +616,10 @@ class HomeScreen extends StatelessWidget {
                   color: AppColors.primaryOrange,
                 ),
                 title: const Text('Thông tin cá nhân'),
-                onTap: () => Get.back(),
+                onTap: () {
+                  Get.back();
+                  homeController.changeTab(4);
+                },
               ),
               ListTile(
                 leading: const Icon(

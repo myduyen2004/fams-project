@@ -4,7 +4,7 @@ import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import axios from 'axios';
 import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
 import { toast } from 'react-hot-toast';
-import { Calendar, BookOpen, ChevronLeft, ChevronRight, X, Clock, MapPin, User, GraduationCap, AlertTriangle, Check, ChevronsUpDown, Eye, EyeOff, Loader2, Play, Users, School, Download, MoreVertical, Home, RefreshCw, Save } from 'lucide-react';
+import { Calendar, BookOpen, ChevronLeft, ChevronRight, X, Clock, MapPin, User, GraduationCap, AlertTriangle, Check, ChevronsUpDown, Eye, EyeOff, Loader2, Play, Users, School, Download, MoreVertical, Home, RefreshCw, Save, List } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Combobox, Transition, Listbox } from '@headlessui/react';
 
@@ -1407,26 +1407,35 @@ export const SchedulePage: React.FC = () => {
             {/* Actions */}
             <div className="mt-6 flex justify-end gap-3">
               {!isRescheduling ? (
-                <>
+                <div className="w-full flex justify-between items-center sm:w-auto sm:justify-end gap-3">
                   <button
-                    onClick={() => {
-                      setIsRescheduling(true);
-                      setRescheduleDate(selectedSlot.date || '');
-                      setRescheduleSlot(selectedSlot.slotNumber || null);
-                      setRescheduleRoom(null);
-                    }}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-fpt-orange hover:bg-orange-600 text-white rounded-xl font-medium transition-colors"
+                    onClick={() => window.open(`/academic-staff/attendance/realtime/${selectedSlot.id}`, '_blank')}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl font-medium transition-colors"
                   >
-                    <RefreshCw size={18} />
-                    Cập nhật
+                    <List size={18} />
+                    Xem điểm danh
                   </button>
-                  <button
-                    onClick={() => setSelectedSlot(null)}
-                    className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
-                  >
-                    Đóng
-                  </button>
-                </>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setIsRescheduling(true);
+                        setRescheduleDate(selectedSlot.date || '');
+                        setRescheduleSlot(selectedSlot.slotNumber || null);
+                        setRescheduleRoom(null);
+                      }}
+                      className="flex items-center gap-2 px-6 py-2.5 bg-fpt-orange hover:bg-orange-600 text-white rounded-xl font-medium transition-colors"
+                    >
+                      <RefreshCw size={18} />
+                      Cập nhật
+                    </button>
+                    <button
+                      onClick={() => setSelectedSlot(null)}
+                      className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
+                    >
+                      Đóng
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <>
                   <button

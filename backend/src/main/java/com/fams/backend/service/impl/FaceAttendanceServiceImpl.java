@@ -345,6 +345,7 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
                                                 .avatarUrl(student.getAvatar())
                                                 .status(savedAttendance.getStatus().toString())
                                                 .checkInTime(savedAttendance.getCheckInTime())
+                                                .checkInMethod("FACE")
                                                 .capturedFaceUrl(savedAttendance.getCapturedFaceUrl())
                                                 .build();
 
@@ -417,6 +418,8 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
                         return "Hình ảnh không hợp lệ. Vui lòng chụp ảnh trực tiếp, không sử dụng ảnh in hoặc chụp lại qua màn hình thiết bị khác.";
                 } else if (msg.contains("no face")) {
                         return "Không tìm thấy khuôn mặt trong ảnh.";
+                } else if (msg.contains("kính") || msg.contains("glasses")) {
+                        return "Khuôn mặt không khớp. Có thể do kính của bạn, hãy thử tháo kính hoặc điều chỉnh góc mặt.";
                 }
 
                 return "Không thể xác thực danh tính.";

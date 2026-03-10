@@ -175,4 +175,16 @@ public class UserController {
         userService.cancelMyActiveImportJob();
         return ResponseEntity.ok().build();
     }
+
+    @GetMapping("/import/sample")
+    @Operation(summary = "Tải xuống file mẫu (ZIP)")
+    public ResponseEntity<byte[]> downloadSample() {
+        log.info("GET /users/import/sample");
+        byte[] content = userService.downloadSampleFile();
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"user_import_sample.zip\"")
+                .contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM)
+                .body(content);
+    }
 }
