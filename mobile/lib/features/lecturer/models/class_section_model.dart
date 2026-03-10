@@ -100,8 +100,8 @@ class Enrollment {
     return Enrollment(
       id: int.tryParse(json['id']?.toString() ?? '0') ?? 0,
       className: json['className'] ?? '',
-      studentCode: json['studentCode'] ?? '',
-      studentName: json['studentName'] ?? '',
+      studentCode: json['studentCode'] ?? json['code'] ?? '',
+      studentName: json['studentName'] ?? json['fullName'] ?? '',
       avatar: json['avatar'],
       status: json['status'] ?? 'ACTIVE',
       email: json['email'],

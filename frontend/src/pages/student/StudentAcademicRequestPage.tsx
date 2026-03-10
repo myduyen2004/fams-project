@@ -434,6 +434,27 @@ export const StudentAcademicRequestPage: React.FC = () => {
             }
         }
 
+        // Extra validation for Remark Request
+        if (selectedType.value === 'GRADE_APPEAL' && formData.classSectionId) {
+            if (fetchingGrade) {
+                toast.error('Vui lòng đợi hệ thống kiểm tra trạng thái điểm');
+                return;
+            }
+            if (!gradeDetail?.gradesPublished) {
+                toast.error('Điểm thi chưa được công bố. Bạn chưa thể gửi đơn phúc khảo cho lớp này.');
+                return;
+            }
+            if (gradeDetail.gradesPublishedAt) {
+                const pubDate = new Date(gradeDetail.gradesPublishedAt);
+                const dueDate = new Date(pubDate);
+                dueDate.setDate(dueDate.getDate() + 3);
+                if (new Date() > dueDate) {
+                    toast.error('Đã hết thời hạn nộp đơn phúc khảo cho lớp này (Hạn nộp: 3 ngày kể từ khi công bố điểm).');
+                    return;
+                }
+            }
+        }
+
         try {
             setSubmitting(true);
             await academicRequestService.createRequest(formData, selectedFile || undefined);
@@ -548,6 +569,18 @@ export const StudentAcademicRequestPage: React.FC = () => {
             minute: '2-digit'
         });
     };
+
+    const isGradeAppealBlocked = !!(selectedType?.value === 'GRADE_APPEAL' && formData.classSectionId && (
+        fetchingGrade ||
+        !gradeDetail?.gradesPublished ||
+        (() => {
+            if (!gradeDetail?.gradesPublishedAt) return false;
+            const pubDate = new Date(gradeDetail.gradesPublishedAt);
+            const deadline = new Date(pubDate);
+            deadline.setDate(deadline.getDate() + 3);
+            return new Date() > deadline;
+        })()
+    ));
 
     return (
         <StudentLayout pageTitle="Yêu Cầu Học Thuật">

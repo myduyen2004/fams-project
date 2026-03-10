@@ -11,6 +11,7 @@ import { ImportGradeComponentModal } from '../../components/academic-staff/Impor
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { Course } from '../../types/course';
 import { usePagination } from '../../hooks/usePagination';
+import { Tooltip } from '../../components/common/Tooltip';
 
 export const CourseManagement: React.FC = () => {
     const navigate = useNavigate();
@@ -215,48 +216,56 @@ export const CourseManagement: React.FC = () => {
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button
-                            onClick={async () => {
-                                try {
-                                    const blob = await courseService.downloadImportTemplate();
-                                    const url = window.URL.createObjectURL(blob);
-                                    const link = document.createElement('a');
-                                    link.href = url;
-                                    link.download = 'template-import-mon-hoc.xlsx';
-                                    document.body.appendChild(link);
-                                    link.click();
-                                    document.body.removeChild(link);
-                                    window.URL.revokeObjectURL(url);
-                                } catch (error) {
-                                    toast.error('Lỗi khi tải template');
-                                }
-                            }}
-                            className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-                        >
-                            <Download className="h-4 w-4" />
-                            Tải template
-                        </button>
-                        <button
-                            onClick={() => setIsImportOpen(true)}
-                            className="flex items-center gap-2 rounded-lg border border-fpt-orange bg-orange-50 px-4 py-2 text-sm font-medium text-fpt-orange hover:bg-orange-100"
-                        >
-                            <Upload className="h-4 w-4" />
-                            Import môn học
-                        </button>
-                        <button
-                            onClick={() => setIsImportGradeComponentOpen(true)}
-                            className="flex items-center gap-2 rounded-lg border border-blue-500 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-100"
-                        >
-                            <Layers className="h-4 w-4" />
-                            Import thành phần điểm
-                        </button>
-                        <button
-                            onClick={() => { setEditingCourse(null); setIsFormOpen(true); }}
-                            className="flex items-center gap-2 rounded-lg bg-fpt-orange px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
-                        >
-                            <Plus className="h-4 w-4" />
-                            Tạo môn học
-                        </button>
+                        <Tooltip content="Tải file Excel mẫu để nhập dữ liệu môn học" position="bottom">
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        const blob = await courseService.downloadImportTemplate();
+                                        const url = window.URL.createObjectURL(blob);
+                                        const link = document.createElement('a');
+                                        link.href = url;
+                                        link.download = 'template-import-mon-hoc.xlsx';
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        document.body.removeChild(link);
+                                        window.URL.revokeObjectURL(url);
+                                    } catch (error) {
+                                        toast.error('Lỗi khi tải template');
+                                    }
+                                }}
+                                className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 transition-colors"
+                            >
+                                <Download className="h-4 w-4" />
+                                Tải template
+                            </button>
+                        </Tooltip>
+                        <Tooltip content="Tải lên file Excel để nhập danh sách môn học" position="bottom">
+                            <button
+                                onClick={() => setIsImportOpen(true)}
+                                className="flex items-center gap-2 rounded-lg border border-fpt-orange bg-orange-50 px-4 py-2 text-sm font-medium text-fpt-orange hover:bg-orange-100 transition-colors"
+                            >
+                                <Upload className="h-4 w-4" />
+                                Import môn học
+                            </button>
+                        </Tooltip>
+                        <Tooltip content="Tải lên file Excel để nhập các thành phần điểm cho môn học" position="bottom">
+                            <button
+                                onClick={() => setIsImportGradeComponentOpen(true)}
+                                className="flex items-center gap-2 rounded-lg border border-blue-500 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-100 transition-colors"
+                            >
+                                <Layers className="h-4 w-4" />
+                                Import thành phần điểm
+                            </button>
+                        </Tooltip>
+                        <Tooltip content="Tạo một môn học mới" position="bottom">
+                            <button
+                                onClick={() => { setEditingCourse(null); setIsFormOpen(true); }}
+                                className="flex items-center gap-2 rounded-lg bg-fpt-orange px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 transition-colors"
+                            >
+                                <Plus className="h-4 w-4" />
+                                Tạo môn học
+                            </button>
+                        </Tooltip>
                     </div>
                 </div>
 

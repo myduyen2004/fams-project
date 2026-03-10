@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Upload, Plus, Search, Loader2, ArrowLeft, X, Download } from 'lucide-react';
 import { useFormik } from 'formik';
@@ -12,7 +13,7 @@ import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { Major } from '../../types/major';
 import { Specialization, SpecializationImportDTO } from '../../types/specialization';
 import { usePagination } from '../../hooks/usePagination';
-
+import { Tooltip } from '../../components/common/Tooltip';
 // --- Types ---
 
 interface SpecializationCreateModalProps {
@@ -78,9 +79,8 @@ const SpecializationCreateModal: React.FC<SpecializationCreateModalProps> = ({ i
     });
 
     if (!isOpen) return null;
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+    return createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="w-full max-w-lg rounded-xl bg-white shadow-xl dark:bg-zinc-900">
                 <div className="flex items-center justify-between border-b border-gray-100 p-4 dark:border-zinc-800">
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Tạo chuyên ngành mới</h2>
@@ -153,7 +153,8 @@ const SpecializationCreateModal: React.FC<SpecializationCreateModalProps> = ({ i
                     </div>
                 </form>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
@@ -203,8 +204,8 @@ const SpecializationUpdateModal: React.FC<SpecializationUpdateModalProps> = ({ i
 
     if (!isOpen) return null;
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+    return createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="w-full max-w-lg rounded-xl bg-white shadow-xl dark:bg-zinc-900">
                 <div className="flex items-center justify-between border-b border-gray-100 p-4 dark:border-zinc-800">
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Cập nhật chuyên ngành</h2>
@@ -275,7 +276,8 @@ const SpecializationUpdateModal: React.FC<SpecializationUpdateModalProps> = ({ i
                     </div>
                 </form>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
@@ -369,8 +371,8 @@ const ImportSpecializationModal: React.FC<ImportSpecializationModalProps> = ({ i
 
     if (!isOpen) return null;
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+    return createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
             <div className={`bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full ${previewData ? 'max-w-6xl' : 'max-w-md'} border border-gray-100 dark:border-zinc-800 overflow-hidden transition-all duration-300 flex flex-col max-h-[90vh]`}>
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800 shrink-0">
@@ -532,7 +534,8 @@ const ImportSpecializationModal: React.FC<ImportSpecializationModalProps> = ({ i
                     )}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
@@ -771,27 +774,33 @@ export const MajorDetail: React.FC = () => {
                         </div>
 
                         <div className="flex gap-3">
-                            <button
-                                onClick={handleDownloadTemplate}
-                                className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-                            >
-                                <Download className="h-4 w-4" />
-                                Tải file mẫu
-                            </button>
-                            <button
-                                onClick={() => setIsImportModalOpen(true)}
-                                className="flex items-center gap-2 rounded-lg border border-fpt-orange bg-orange-50 px-4 py-2 text-sm font-medium text-fpt-orange hover:bg-orange-100"
-                            >
-                                <Upload className="h-4 w-4" />
-                                Import danh sách chuyên ngành
-                            </button>
-                            <button
-                                onClick={() => setIsCreateModalOpen(true)}
-                                className="flex items-center gap-2 rounded-lg bg-fpt-orange px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
-                            >
-                                <Plus className="h-4 w-4" />
-                                Tạo chuyên ngành
-                            </button>
+                            <Tooltip content="Tải file Excel mẫu để nhập dữ liệu chuyên ngành" position="bottom">
+                                <button
+                                    onClick={handleDownloadTemplate}
+                                    className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 transition-colors"
+                                >
+                                    <Download className="h-4 w-4" />
+                                    Tải file mẫu
+                                </button>
+                            </Tooltip>
+                            <Tooltip content="Tải lên file Excel để nhập danh sách chuyên ngành" position="bottom">
+                                <button
+                                    onClick={() => setIsImportModalOpen(true)}
+                                    className="flex items-center gap-2 rounded-lg border border-fpt-orange bg-orange-50 px-4 py-2 text-sm font-medium text-fpt-orange hover:bg-orange-100 transition-colors"
+                                >
+                                    <Upload className="h-4 w-4" />
+                                    Import danh sách chuyên ngành
+                                </button>
+                            </Tooltip>
+                            <Tooltip content="Thêm một chuyên ngành mới" position="bottom">
+                                <button
+                                    onClick={() => setIsCreateModalOpen(true)}
+                                    className="flex items-center gap-2 rounded-lg bg-fpt-orange px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 transition-colors"
+                                >
+                                    <Plus className="h-4 w-4" />
+                                    Tạo chuyên ngành
+                                </button>
+                            </Tooltip>
                         </div>
                     </div>
 
