@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -22,4 +24,16 @@ public class CourseResponse {
     private Course.CourseStatus status;
     private Integer orderIndex; // Thứ tự trong specialization/subspecialization
     private boolean canDelete;
+    private Boolean isCalculatedInGpa;
+    private List<PrerequisiteDTO> prerequisites;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PrerequisiteDTO {
+        private Long id;
+        private String code;
+        private String name;
+    }
 }

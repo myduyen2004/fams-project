@@ -33,4 +33,6 @@ public class CourseRequest {
     @jakarta.validation.constraints.Min(value = 1, message = "Số slot phải từ 1-100")
     @jakarta.validation.constraints.Max(value = 100, message = "Số slot phải từ 1-100")
     private Integer numberOfSlots;
+
+    private Boolean isCalculatedInGpa;
 }

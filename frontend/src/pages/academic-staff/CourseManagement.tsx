@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Upload, Download, Layers } from 'lucide-react';
+import { Plus, Search, Upload, Layers } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { courseService } from '../../services/api/courseService';
@@ -11,7 +11,6 @@ import { ImportGradeComponentModal } from '../../components/academic-staff/Impor
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { Course } from '../../types/course';
 import { usePagination } from '../../hooks/usePagination';
-import { Tooltip } from '../../components/common/Tooltip';
 
 export const CourseManagement: React.FC = () => {
     const navigate = useNavigate();
@@ -216,56 +215,27 @@ export const CourseManagement: React.FC = () => {
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Tooltip content="Tải file Excel mẫu để nhập dữ liệu môn học" position="bottom">
-                            <button
-                                onClick={async () => {
-                                    try {
-                                        const blob = await courseService.downloadImportTemplate();
-                                        const url = window.URL.createObjectURL(blob);
-                                        const link = document.createElement('a');
-                                        link.href = url;
-                                        link.download = 'template-import-mon-hoc.xlsx';
-                                        document.body.appendChild(link);
-                                        link.click();
-                                        document.body.removeChild(link);
-                                        window.URL.revokeObjectURL(url);
-                                    } catch (error) {
-                                        toast.error('Lỗi khi tải template');
-                                    }
-                                }}
-                                className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 transition-colors"
-                            >
-                                <Download className="h-4 w-4" />
-                                Tải template
-                            </button>
-                        </Tooltip>
-                        <Tooltip content="Tải lên file Excel để nhập danh sách môn học" position="bottom">
-                            <button
-                                onClick={() => setIsImportOpen(true)}
-                                className="flex items-center gap-2 rounded-lg border border-fpt-orange bg-orange-50 px-4 py-2 text-sm font-medium text-fpt-orange hover:bg-orange-100 transition-colors"
-                            >
-                                <Upload className="h-4 w-4" />
-                                Import môn học
-                            </button>
-                        </Tooltip>
-                        <Tooltip content="Tải lên file Excel để nhập các thành phần điểm cho môn học" position="bottom">
-                            <button
-                                onClick={() => setIsImportGradeComponentOpen(true)}
-                                className="flex items-center gap-2 rounded-lg border border-blue-500 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-100 transition-colors"
-                            >
-                                <Layers className="h-4 w-4" />
-                                Import thành phần điểm
-                            </button>
-                        </Tooltip>
-                        <Tooltip content="Tạo một môn học mới" position="bottom">
-                            <button
-                                onClick={() => { setEditingCourse(null); setIsFormOpen(true); }}
-                                className="flex items-center gap-2 rounded-lg bg-fpt-orange px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 transition-colors"
-                            >
-                                <Plus className="h-4 w-4" />
-                                Tạo môn học
-                            </button>
-                        </Tooltip>
+                        <button
+                            onClick={() => setIsImportOpen(true)}
+                            className="flex items-center gap-2 rounded-lg border border-fpt-orange bg-orange-50 px-4 py-2 text-sm font-medium text-fpt-orange hover:bg-orange-100"
+                        >
+                            <Upload className="h-4 w-4" />
+                            Import môn học
+                        </button>
+                        <button
+                            onClick={() => setIsImportGradeComponentOpen(true)}
+                            className="flex items-center gap-2 rounded-lg border border-blue-500 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-100"
+                        >
+                            <Layers className="h-4 w-4" />
+                            Import thành phần điểm
+                        </button>
+                        <button
+                            onClick={() => { setEditingCourse(null); setIsFormOpen(true); }}
+                            className="flex items-center gap-2 rounded-lg bg-fpt-orange px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
+                        >
+                            <Plus className="h-4 w-4" />
+                            Tạo môn học
+                        </button>
                     </div>
                 </div>
 
@@ -315,6 +285,7 @@ export const CourseManagement: React.FC = () => {
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Tên môn học</th>
                                     <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Số tín chỉ</th>
                                     <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Tổng trọng số</th>
+                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Tính GPA</th>
                                     <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-lg">Trạng thái</th>
                                 </tr>
                             </thead>
@@ -366,6 +337,31 @@ export const CourseManagement: React.FC = () => {
                                                         {course.totalWeight}%
                                                     </span>
                                                 )}
+                                            </td>
+                                            <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <button
+                                                        onClick={async () => {
+                                                            try {
+                                                                const newStatus = !course.isCalculatedInGpa;
+                                                                await courseService.updateGpaStatus(course.id, newStatus);
+                                                                toast.success(`Đã ${newStatus ? 'bật' : 'tắt'} tính GPA cho môn ${course.code}`);
+                                                                fetchData();
+                                                            } catch (error) {
+                                                                toast.error('Không thể cập nhật trạng thái GPA');
+                                                            }
+                                                        }}
+                                                        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-fpt-orange focus-visible:ring-offset-2 ${course.isCalculatedInGpa ? 'bg-fpt-orange shadow-[0_0_10px_rgba(242,113,37,0.3)]' : 'bg-gray-200 dark:bg-zinc-700'}`}
+                                                        title={course.isCalculatedInGpa ? 'Đang tính GPA' : 'Không tính GPA'}
+                                                    >
+                                                        <span
+                                                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${course.isCalculatedInGpa ? 'translate-x-4' : 'translate-x-0'}`}
+                                                        />
+                                                    </button>
+                                                    <span className={`text-[10px] font-bold w-6 text-left ${course.isCalculatedInGpa ? 'text-fpt-orange' : 'text-gray-400 dark:text-zinc-500'}`}>
+                                                        {course.isCalculatedInGpa ? 'ON' : 'OFF'}
+                                                    </span>
+                                                </div>
                                             </td>
                                             <td className="px-4 py-3 text-center">
                                                 {course.status === 'ACTIVE' ? (

@@ -2,6 +2,7 @@ package com.fams.backend.controller;
 
 import com.fams.backend.dto.request.UpdateGradeRequest;
 import com.fams.backend.dto.response.GradeOverviewResponse;
+import com.fams.backend.dto.response.StudentAllGradesSummaryResponse;
 import com.fams.backend.dto.response.StudentCourseOptionResponse;
 import com.fams.backend.dto.response.StudentMyGradeResponse;
 import com.fams.backend.dto.response.StudentResponse;
@@ -162,6 +163,16 @@ public class StudentGradeController {
     public ResponseEntity<StudentResponse> getStudentInfo(
             @PathVariable String studentCode) {
         StudentResponse response = studentGradeService.getStudentInfo(studentCode);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Get a comprehensive summary of all grades for a student across all semesters
+     */
+    @GetMapping("/students/{studentId}/all-grades")
+    public ResponseEntity<StudentAllGradesSummaryResponse> getAllGradesSummary(
+            @PathVariable Long studentId) {
+        StudentAllGradesSummaryResponse response = studentGradeService.getAllGradesSummary(studentId);
         return ResponseEntity.ok(response);
     }
 }
