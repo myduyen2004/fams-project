@@ -271,7 +271,6 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
             if (isLecturer) return const SizedBox.shrink();
 
             final hasFace = user?.hasFaceRegistered ?? false;
-            final isDuringTime = _isDuringSlotTime();
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -288,34 +287,49 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
                       ),
                     ),
                   ),
-                if (!_hasCheckedIn && !isDuringTime)
-                  Padding(
-                    padding: EdgeInsets.only(top: 16.h),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.info_outline, color: Colors.red, size: 16.r),
-                          8.horizontalSpace,
-                          Expanded(
-                            child: Text(
-                              _getTimeStatusMessage(),
-                              style: GoogleFonts.inter(
-                                color: Colors.red,
-                                fontSize: 13.sp,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                if (!_hasCheckedIn)
+                  Obx(() {
+                    final config = Get.find<ScheduleController>().attendanceConfig.value;
+                    final start = _getSlotDateTime(widget.slot.startTime);
+                    if (start == null) return const SizedBox.shrink();
+                    
+                    final threshold = widget.slot.absentThresholdMinutes ?? config.absentThresholdMinutes;
+                    final deadline = start.add(Duration(minutes: threshold));
+                    final now = Get.find<ScheduleController>().currentTime.value;
+                    final isPastDeadline = now.isAfter(deadline);
+                    final isBeforeStart = now.isBefore(start);
+
+                    if (isBeforeStart || isPastDeadline) {
+                      return Padding(
+                        padding: EdgeInsets.only(top: 16.h),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12.r),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.info_outline, color: Colors.red, size: 16.r),
+                              8.horizontalSpace,
+                              Expanded(
+                                child: Text(
+                                  isBeforeStart ? "Chưa đến giờ điểm danh" : "Đã hết thời gian điểm danh khuôn mặt",
+                                  style: GoogleFonts.inter(
+                                    color: Colors.red,
+                                    fontSize: 13.sp,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  }),
               ],
             );
           }),
@@ -605,13 +619,13 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
       final scheduleController = Get.find<ScheduleController>();
       final config = scheduleController.attendanceConfig.value;
       final faceEnabled = config.faceRecognitionEnabled;
-      final threshold = config.absentThresholdMinutes;
+      final threshold = widget.slot.absentThresholdMinutes ?? config.absentThresholdMinutes;
       
       if (_hasCheckedIn) {
         return _buildStatusChip('Đã điểm danh', const Color(0xFF27AE60), Icons.check_circle_rounded);
       }
 
-      final now = DateTime.now();
+      final now = scheduleController.currentTime.value;
       final start = _getSlotDateTime(widget.slot.startTime);
       
       if (start == null) return const SizedBox.shrink();
@@ -740,18 +754,21 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
     return time;
   }
 
-  bool _isDuringSlotTime() {
-    final now = DateTime.now();
+  bool _isDuringAttendanceTime() {
+    final scheduleController = Get.find<ScheduleController>();
+    final now = scheduleController.currentTime.value;
     final start = _getSlotDateTime(widget.slot.startTime);
-    final end = _getSlotDateTime(widget.slot.endTime);
+    if (start == null) return false;
     
-    if (start == null || end == null) return false;
+    final threshold = widget.slot.absentThresholdMinutes ?? scheduleController.attendanceConfig.value.absentThresholdMinutes;
+    final deadline = start.add(Duration(minutes: threshold));
     
-    return now.isAfter(start) && now.isBefore(end);
+    return now.isAfter(start) && now.isBefore(deadline);
   }
 
   String _getTimeStatusMessage() {
-    final now = DateTime.now();
+    final scheduleController = Get.find<ScheduleController>();
+    final now = scheduleController.currentTime.value;
     if (!_isSameDay(now, widget.slot.date)) {
       return "Không đúng ngày điểm danh";
     }

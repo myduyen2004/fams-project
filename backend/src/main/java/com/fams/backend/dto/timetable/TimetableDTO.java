@@ -131,6 +131,7 @@ public class TimetableDTO {
         private java.time.LocalDateTime assignmentDueDate;
         // Student submission status (SUBMITTED / NOT_SUBMITTED / null)
         private String submissionStatus;
+        private Integer absentThresholdMinutes;
     }
 
     @Data

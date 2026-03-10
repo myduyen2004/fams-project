@@ -80,6 +80,7 @@ public class AttendanceDTO {
         private String className;
         private String courseCode;
         private String courseName;
+        private String semesterName;
         private List<SlotInfo> slots;
         private List<StudentReport> studentReports;
     }

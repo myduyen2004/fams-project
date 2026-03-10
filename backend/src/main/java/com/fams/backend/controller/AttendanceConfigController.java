@@ -8,7 +8,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/attendance-configs")
+@RequestMapping("/api/v1/attendance-config")
 @RequiredArgsConstructor
 public class AttendanceConfigController {
 
