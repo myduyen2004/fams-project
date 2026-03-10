@@ -91,6 +91,11 @@ public class AcademicRequestServiceImpl implements AcademicRequestService {
             startDate = deadlines.get("startDate");
             dueDate = deadlines.get("dueDate");
 
+            if (rule == DeadlineRule.THREE_DAYS_AFTER && (startDate == null || dueDate == null)) {
+                throw new BadRequestException(
+                        "Điểm thi chưa được công bố. Bạn chưa thể gửi đơn phúc khảo cho lớp này.");
+            }
+
             // Validate if within deadline window
             LocalDate today = LocalDate.now();
             if (startDate != null && today.isBefore(startDate)) {

@@ -31,6 +31,13 @@ const getStatusBadge = (status: string) => {
                     Đã từ chối
                 </span>
             );
+        case 'REVOKED':
+            return (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded-full border border-gray-200">
+                    <ShieldAlert size={12} />
+                    Đã thu hồi
+                </span>
+            );
         default:
             return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">{status}</span>;
     }

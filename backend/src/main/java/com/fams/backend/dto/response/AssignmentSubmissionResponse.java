@@ -38,4 +38,10 @@ public class AssignmentSubmissionResponse {
 
     // Assignment config
     private LocalDateTime assignmentDueDate;
+
+    // Lecturer reference file
+    private String referenceUrl;
+    private String referenceName;
+
+    private Long timetableSlotId;
 }

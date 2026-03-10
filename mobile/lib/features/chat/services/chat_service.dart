@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/services/api_service.dart';
 import '../models/chat_models.dart';
+import '../../lecturer/models/class_section_model.dart';
 
 /// Chat API Service — mirrors web's chatGroupService.ts
 class ChatService {
@@ -19,6 +20,18 @@ class ChatService {
   Future<ChatGroup> getGroupById(int groupId) async {
     final response = await _api.get('${ApiConstants.chatGroups}/$groupId');
     return ChatGroup.fromJson(response.data);
+  }
+
+  /// GET /api/v1/chat-groups/class/{className}/exists
+  Future<bool> checkGroupExists(String className) async {
+    try {
+      final response = await _api.get(
+        '${ApiConstants.chatGroups}/class/$className/exists',
+      );
+      return response.data['exists'] ?? false;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// GET /api/v1/chat-groups/{id}/messages?page=&size=
@@ -88,5 +101,11 @@ class ChatService {
   /// POST /api/v1/chat-messages/groups/{groupId}/read
   Future<void> markAsRead(int groupId) async {
     await _api.post('${ApiConstants.chatMessages}/groups/$groupId/read');
+  }
+
+  /// GET /api/v1/students/{studentCode}/info (maps to the info endpoint in StudentGradeController)
+  Future<Enrollment> getStudentInfo(String studentCode) async {
+    final response = await _api.get('/api/v1/students/$studentCode/info');
+    return Enrollment.fromJson(response.data);
   }
 }

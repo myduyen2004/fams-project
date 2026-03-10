@@ -4,12 +4,14 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 interface MiniCalendarProps {
     slotCounts?: Record<string, number>; // Map of date (YYYY-MM-DD) to slot count
     onDateSelect?: (date: Date) => void; // Callback when a date is clicked
+    onMonthChange?: (year: number, month: number) => void; // Callback when month changes (0-indexed month)
     selectedDate?: Date; // Currently selected date
 }
 
 export const MiniCalendar: React.FC<MiniCalendarProps> = ({
     slotCounts = {},
     onDateSelect,
+    onMonthChange,
     selectedDate
 }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -74,13 +76,21 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
                 </h4>
                 <div className="flex gap-1">
                     <button
-                        onClick={() => setCurrentDate(new Date(year, month - 1))}
+                        onClick={() => {
+                            const newDate = new Date(year, month - 1);
+                            setCurrentDate(newDate);
+                            onMonthChange?.(newDate.getFullYear(), newDate.getMonth());
+                        }}
                         className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
                     >
                         <ChevronLeft size={16} className="text-gray-500" />
                     </button>
                     <button
-                        onClick={() => setCurrentDate(new Date(year, month + 1))}
+                        onClick={() => {
+                            const newDate = new Date(year, month + 1);
+                            setCurrentDate(newDate);
+                            onMonthChange?.(newDate.getFullYear(), newDate.getMonth());
+                        }}
                         className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
                     >
                         <ChevronRight size={16} className="text-gray-500" />

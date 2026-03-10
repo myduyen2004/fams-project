@@ -111,8 +111,17 @@ public class TimetableSlotServiceImpl implements TimetableSlotService {
 
                 if (classConflicts.stream().anyMatch(s -> !s.getId().equals(slotId))) {
                         throw new BadRequestException(
-                                        "Class " + className + " already has a session on " + newDate + " at slot "
+                                        "Lớp " + className + " đã có tiết học vào " + newDate + " tại slot "
                                                         + newSlotNumber);
+                }
+
+                // Check Student Conflict (Overlapping schedules for students in this class)
+                long studentConflictCount = timetableSlotRepository.countStudentConflicts(className, newDate,
+                                newSlotNumber);
+                if (studentConflictCount > 0) {
+                        throw new BadRequestException(
+                                        String.format("Lớp %s có %d sinh viên bị trùng lịch học khác vào ngày %s tiết %d. Vui lòng chọn thời gian khác.",
+                                                        className, studentConflictCount, newDate, newSlotNumber));
                 }
         }
 

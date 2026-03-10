@@ -158,7 +158,7 @@ public class StudentGradeController {
      * Accessible by LECTURER, ACADEMIC_STAFF, and ADMIN
      */
     @GetMapping("/students/{studentCode}/info")
-    @PreAuthorize("hasAnyRole('LECTURER', 'ACADEMIC_STAFF', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('LECTURER', 'ACADEMIC_STAFF', 'ADMIN', 'STUDENT')")
     public ResponseEntity<StudentResponse> getStudentInfo(
             @PathVariable String studentCode) {
         StudentResponse response = studentGradeService.getStudentInfo(studentCode);

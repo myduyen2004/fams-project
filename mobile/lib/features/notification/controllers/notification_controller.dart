@@ -20,6 +20,11 @@ class NotificationController extends GetxController {
       unreadCount.value = count;
     });
     
+    _pollingService.newNotificationStream.listen((_) {
+      // Fetch latest list when new notifications arrive
+      fetchNotifications();
+    });
+    
     // Start polling when controller is initialized
     // Usually called after login
     startPolling();
@@ -78,6 +83,7 @@ class NotificationController extends GetxController {
         final notification = notifications[index];
         if (!notification.isRead) {
           notifications[index] = notification.copyWith(isRead: true);
+          notifications.refresh(); // Trigger Obx UI update
           unreadCount.value = (unreadCount.value - 1).clamp(0, 999);
         }
       }

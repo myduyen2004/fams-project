@@ -9,13 +9,19 @@ class User {
   final bool isPasswordChanged;
   final String? phone;
   final DateTime? dob;
-  
-  // Profile Info
+
+  // Profile Info (display names)
   final String? major;
   final String? specialization;
+  final String? subSpecialization;
   final String? department;
   final String? expertise;
   final String? faceDataStatus; // REGISTERED, NOT_REGISTERED, etc.
+
+  // Profile IDs (needed for dependent dropdowns)
+  final int? majorId;
+  final int? specializationId;
+  final int? subSpecializationId;
 
   User({
     required this.id,
@@ -29,9 +35,13 @@ class User {
     this.dob,
     this.major,
     this.specialization,
+    this.subSpecialization,
     this.department,
     this.expertise,
     this.faceDataStatus,
+    this.majorId,
+    this.specializationId,
+    this.subSpecializationId,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -47,9 +57,13 @@ class User {
       dob: json['dob'] != null ? DateTime.tryParse(json['dob'].toString()) : null,
       major: json['major'],
       specialization: json['specialization'],
+      subSpecialization: json['subSpecialization'],
       department: json['department'],
       expertise: json['expertise'],
       faceDataStatus: json['faceDataStatus'],
+      majorId: json['majorId'] as int?,
+      specializationId: json['specializationId'] as int?,
+      subSpecializationId: json['subSpecializationId'] as int?,
     );
   }
 
@@ -61,15 +75,19 @@ class User {
       'email': email,
       'role': role,
       'avatar': avatarUrl,
-      'avatarUrl': avatarUrl, 
+      'avatarUrl': avatarUrl,
       'isPasswordChanged': isPasswordChanged,
       'phone': phone,
       'dob': dob?.toIso8601String(),
       'major': major,
       'specialization': specialization,
+      'subSpecialization': subSpecialization,
       'department': department,
       'expertise': expertise,
       'faceDataStatus': faceDataStatus,
+      'majorId': majorId,
+      'specializationId': specializationId,
+      'subSpecializationId': subSpecializationId,
     };
   }
 

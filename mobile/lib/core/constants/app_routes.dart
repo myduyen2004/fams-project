@@ -14,4 +14,8 @@ class AppRoutes {
   static const String lecturerRequests = '/lecturer/requests';
   static const String lecturerRequestDetail = '/lecturer/requests/:id';
   static const String lecturerCreateRequest = '/lecturer/requests/create';
+
+  // Student Academic Request Routes
+  static const String studentAcademicRequests = '/student/academic-requests';
+  static const String studentAcademicRequestCreate = '/student/academic-requests/create';
 }

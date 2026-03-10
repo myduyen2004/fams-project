@@ -67,6 +67,7 @@ public class NotificationServiceImpl {
                                                 .id(sender.getId())
                                                 .username(sender.getUsername())
                                                 .fullName(sender.getFullName())
+                                                .avatarUrl(sender.getAvatar())
                                                 .build() : null)
                                 .build();
 
@@ -111,6 +112,9 @@ public class NotificationServiceImpl {
                                                                                 .fullName(nr.getNotification()
                                                                                                 .getSender()
                                                                                                 .getFullName())
+                                                                                .avatarUrl(nr.getNotification()
+                                                                                                .getSender()
+                                                                                                .getAvatar())
                                                                                 .build()
                                                                 : null)
                                                 .build())
