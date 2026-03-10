@@ -15,9 +15,9 @@ spring:
 
   # ---------------- Database (Default uses Neon Production) ----------------
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://ep-ancient-glitter-a1qpw4b8-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&rewriteBatchedInserts=true}
-    username: ${DATABASE_USERNAME:neondb_owner}
-    password: ${DATABASE_PASSWORD_PROD}
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/fams_db}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:postgres123}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: ${DB_POOL_SIZE:100}
@@ -185,4 +185,4 @@ app:
     allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000,http://localhost:8080,http://127.0.0.1:5173}
   base-url: ${APP_BASE_URL:http://localhost:8080}
   firebase:
-    config-path: ${FIREBASE_CONFIG_PATH:backend/service-account.json}
+    config-path: ${FIREBASE_CONFIG_PATH:}

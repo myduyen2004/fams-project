@@ -23,6 +23,7 @@ class TimetableSlot {
   final String? status;
   final String? attendanceStatus;
   final DateTime? checkInTime;
+  final int? absentThresholdMinutes;
 
   TimetableSlot({
     this.id,
@@ -47,6 +48,7 @@ class TimetableSlot {
     this.status,
     this.attendanceStatus,
     this.checkInTime,
+    this.absentThresholdMinutes,
   });
 
   factory TimetableSlot.fromJson(Map<String, dynamic> json) {
@@ -73,6 +75,7 @@ class TimetableSlot {
       status: json['status'],
       attendanceStatus: json['attendanceStatus'],
       checkInTime: json['checkInTime'] != null ? DateTime.parse(json['checkInTime']) : null,
+      absentThresholdMinutes: json['absentThresholdMinutes'],
     );
   }
 
@@ -99,6 +102,7 @@ class TimetableSlot {
       'endTime': endTime,
       'status': status,
       'attendanceStatus': attendanceStatus,
+      'absentThresholdMinutes': absentThresholdMinutes,
     };
   }
 }

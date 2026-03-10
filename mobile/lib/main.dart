@@ -29,6 +29,7 @@ import 'features/chat/controllers/chat_controller.dart';
 import 'features/schedule/controllers/schedule_controller.dart';
 import 'features/notification/services/fcm_service.dart';
 import 'core/services/api_service.dart';
+import 'core/services/websocket_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -62,6 +63,7 @@ class InitialBinding extends Bindings {
   void dependencies() {
     // Core Services
     Get.put(ApiService()..init(), permanent: true);
+    Get.put(WebSocketService(), permanent: true);
 
     Get.put(AuthController());
     // Khởi tạo các controller dùng chung ở cấp độ toàn cục để tránh lỗi "not found" khi lướt các tab

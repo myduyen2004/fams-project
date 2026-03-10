@@ -4,14 +4,14 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../models/chat_models.dart';
 import '../services/chat_service.dart';
-import '../services/websocket_service.dart';
+import '../../../core/services/websocket_service.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../notification/services/notification_polling_service.dart';
 
 /// Chat Controller — manages all chat state (mirrors MessagesPage.tsx state)
 class ChatController extends GetxController {
   final ChatService _chatService = ChatService();
-  final WebSocketService _wsService = WebSocketService();
+  final WebSocketService _wsService = Get.find<WebSocketService>();
 
   // ── Reactive State ──
   final groups = <ChatGroup>[].obs;
