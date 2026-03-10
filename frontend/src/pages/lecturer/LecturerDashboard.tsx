@@ -25,6 +25,7 @@ const QuickStats = () => {
         nextClass: null
     });
     const [loading, setLoading] = useState(true);
+    const [isScheduleHidden, setIsScheduleHidden] = useState(false);
 
     // Helper to format date as YYYY-MM-DD (Local time)
     const formatDateToLocal = (date: Date) => {
@@ -49,32 +50,39 @@ const QuickStats = () => {
                 if (userStr) {
                     const user = JSON.parse(userStr);
                     const today = formatDateToLocal(new Date());
-                    const timetable = await timetableService.getLecturerTimetable(user.id, today);
+                    try {
+                        const timetable = await timetableService.getLecturerTimetable(user.id, today);
 
-                    // Find today's slots
-                    const todayData = timetable?.days?.find(d => d.date?.startsWith(today));
-                    const todaySlots = todayData?.slots?.filter(s => s.status === 'SCHEDULED') || [];
+                        // Find today's slots
+                        const todayData = timetable?.days?.find(d => d.date?.startsWith(today));
+                        const todaySlots = todayData?.slots?.filter(s => s.status === 'SCHEDULED') || [];
 
-                    // Find next class (upcoming slot)
-                    const now = new Date();
-                    const currentTime = now.getHours() * 60 + now.getMinutes();
+                        // Find next class (upcoming slot)
+                        const now = new Date();
+                        const currentTime = now.getHours() * 60 + now.getMinutes();
 
-                    let nextClass: TimetableSlotDTO | null = null;
-                    for (const slot of todaySlots) {
-                        if (slot.startTime) {
-                            const [hours, minutes] = slot.startTime.split(':').map(Number);
-                            const slotTime = hours * 60 + minutes;
-                            if (slotTime > currentTime) {
-                                nextClass = slot;
-                                break;
+                        let nextClass: TimetableSlotDTO | null = null;
+                        for (const slot of todaySlots) {
+                            if (slot.startTime) {
+                                const [hours, minutes] = slot.startTime.split(':').map(Number);
+                                const slotTime = hours * 60 + minutes;
+                                if (slotTime > currentTime) {
+                                    nextClass = slot;
+                                    break;
+                                }
                             }
                         }
-                    }
 
-                    setScheduleData({
-                        todayClassCount: todaySlots.length,
-                        nextClass
-                    });
+                        setScheduleData({
+                            todayClassCount: todaySlots.length,
+                            nextClass
+                        });
+                    } catch (timetableError: any) {
+                        if (timetableError.response && timetableError.response.status === 403) {
+                            setIsScheduleHidden(true);
+                        }
+                        console.error("Failed to fetch timetable", timetableError);
+                    }
                 }
             } catch (error) {
                 console.error("Failed to fetch dashboard data", error);
@@ -106,10 +114,12 @@ const QuickStats = () => {
                 </div>
                 <div>
                     <h3 className="text-3xl font-bold text-gray-900 dark:text-white">
-                        {loading ? '...' : scheduleData.todayClassCount}
+                        {loading ? '...' : isScheduleHidden ? '--' : scheduleData.todayClassCount}
                     </h3>
                     <p className="text-base font-medium text-gray-900 dark:text-white mt-1">Lớp học hôm nay</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Tổng quan trong ngày</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        {isScheduleHidden ? 'Lịch chưa được công bố' : 'Tổng quan trong ngày'}
+                    </p>
                 </div>
             </Card>
 
@@ -118,9 +128,11 @@ const QuickStats = () => {
                 <div className="flex justify-between items-start">
                 </div>
                 <div>
-                    <h3 className="text-3xl font-bold text-gray-900 dark:text-white">92%</h3>
+                    <h3 className="text-3xl font-bold text-gray-900 dark:text-white">{isScheduleHidden ? '--' : '92%'}</h3>
                     <p className="text-base font-medium text-gray-900 dark:text-white mt-1">Tỷ lệ điểm danh</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">+2% so với tuần trước</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        {isScheduleHidden ? 'Lịch chưa được công bố' : '+2% so với tuần trước'}
+                    </p>
                 </div>
             </Card>
 
@@ -160,11 +172,11 @@ const QuickStats = () => {
                 </div>
                 <div>
                     <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {loading ? '...' : (scheduleData.nextClass ? formatTime(scheduleData.nextClass.startTime) : 'Không có')}
+                        {loading ? '...' : isScheduleHidden ? '--' : (scheduleData.nextClass ? formatTime(scheduleData.nextClass.startTime) : 'Không có')}
                     </h3>
                     <p className="text-base font-medium text-gray-900 dark:text-white mt-1">Lớp tiếp theo</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        {loading ? '...' : (
+                        {loading ? '...' : isScheduleHidden ? 'Lịch chưa được công bố' : (
                             scheduleData.nextClass
                                 ? `${scheduleData.nextClass.courseCode} - Phòng: ${scheduleData.nextClass.roomCode || scheduleData.nextClass.roomName}`
                                 : 'Hôm nay không còn lớp'
@@ -236,6 +248,9 @@ const TeachingSchedule: React.FC<TeachingScheduleProps> = ({ selectedDate, daySc
                                         daySchedule.slots.filter((slot: any) => slot.status === 'SCHEDULED').map((slot: any, index: number) => {
                                             const isCurrentlyActive = () => {
                                                 if (!slot.startTime || !slot.endTime) return false;
+                                                // Only highlight if selectedDate is today
+                                                const today = new Date();
+                                                if (selectedDate.toDateString() !== today.toDateString()) return false;
                                                 const now = new Date();
                                                 const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
                                                 return timeStr >= slot.startTime.substring(0, 5) && timeStr <= slot.endTime.substring(0, 5);
@@ -359,30 +374,61 @@ export const LecturerDashboard: React.FC = () => {
         }
     };
 
-    const fetchMonthlySlotCounts = async () => {
+    const fetchMonthlySlotCounts = async (targetYear?: number, targetMonth?: number) => {
         try {
             const userStr = localStorage.getItem('user');
             if (!userStr) return;
 
             const user = JSON.parse(userStr);
-            const today = new Date();
+            const now = new Date();
+            const yr = targetYear ?? now.getFullYear();
+            const mo = targetMonth ?? now.getMonth(); // 0-indexed
 
-            // Fetch timetable for current month
-            const data = await timetableService.getLecturerTimetable(user.id, today.toISOString().split('T')[0]);
+            // Generate Monday of each week that overlaps the month
+            const firstOfMonth = new Date(yr, mo, 1);
+            const lastOfMonth = new Date(yr, mo + 1, 0);
 
-            // Count slots per day
-            const counts: Record<string, number> = {};
-            if (data && data.days) {
-                data.days.forEach(day => {
-                    if (day.slots && day.slots.length > 0) {
-                        // Only count SCHEDULED slots
-                        const scheduledSlots = day.slots.filter(s => s.status === 'SCHEDULED');
-                        if (scheduledSlots.length > 0) {
-                            counts[day.date] = scheduledSlots.length;
-                        }
-                    }
-                });
+            const getMonday = (d: Date) => {
+                const copy = new Date(d);
+                const day = copy.getDay();
+                const diff = copy.getDate() - day + (day === 0 ? -6 : 1);
+                copy.setDate(diff);
+                return copy;
+            };
+
+            let weekStart = getMonday(firstOfMonth);
+            const weekDates: string[] = [];
+
+            while (weekStart <= lastOfMonth) {
+                const y = weekStart.getFullYear();
+                const m = String(weekStart.getMonth() + 1).padStart(2, '0');
+                const d = String(weekStart.getDate()).padStart(2, '0');
+                weekDates.push(`${y}-${m}-${d}`);
+                weekStart = new Date(weekStart);
+                weekStart.setDate(weekStart.getDate() + 7);
             }
+
+            // Fetch all weeks in parallel
+            const results = await Promise.all(
+                weekDates.map(date =>
+                    timetableService.getLecturerTimetable(user.id, date).catch(() => null)
+                )
+            );
+
+            // Merge slot counts from all weeks
+            const counts: Record<string, number> = {};
+            results.forEach(data => {
+                if (data && data.days) {
+                    data.days.forEach(day => {
+                        if (day.slots && day.slots.length > 0) {
+                            const scheduledSlots = day.slots.filter(s => s.status === 'SCHEDULED');
+                            if (scheduledSlots.length > 0) {
+                                counts[day.date] = scheduledSlots.length;
+                            }
+                        }
+                    });
+                }
+            });
 
             setSlotCounts(counts);
         } catch (error) {
@@ -406,6 +452,7 @@ export const LecturerDashboard: React.FC = () => {
                             <MiniCalendar
                                 slotCounts={slotCounts}
                                 onDateSelect={handleDateSelect}
+                                onMonthChange={(yr, mo) => fetchMonthlySlotCounts(yr, mo)}
                                 selectedDate={selectedDate}
                             />
                         </div>

@@ -33,7 +33,7 @@ class CreateRequestController extends GetxController {
   final RxnString newDate = RxnString(null);
   final RxnInt newSlot = RxnInt(null);
   final Rx<RoomAvailability?> selectedRoom = Rx<RoomAvailability?>(null);
-  final RxnString selectedType = RxnString(null); // Request type: RESCHEDULE or ROOM_CHANGE
+  final RxnString selectedType = RxnString('RESCHEDULE'); // Always RESCHEDULE
   final RxString reason = ''.obs;
 
   // Error states
@@ -46,8 +46,9 @@ class CreateRequestController extends GetxController {
   // Separated date selection state
   final RxnString selectedOriginalDate = RxnString(null);
 
-  // Floor selection for room
+  // Floor and building selection for room
   final RxInt activeFloor = 2.obs;
+  final RxString activeBuilding = 'Alpha'.obs;
 
   @override
   void onInit() {
@@ -158,7 +159,7 @@ class CreateRequestController extends GetxController {
   }
 
   /// Handle new date change (for requested date)
-  void onNewDateChanged(String? date) {
+  void onNewDateChanged(String? date) async {
     if (date == null || date.isEmpty) {
       newDate.value = null;
       return;
@@ -173,25 +174,27 @@ class CreateRequestController extends GetxController {
 
     dateError.value = null;
     newDate.value = date;
-    // Reset selected room when date changes
+    // Reset selected room and conflict when date changes
     selectedRoom.value = null;
+    conflictResult.value = null;
     
     // Fetch room availability if both date and slot are selected
     if (newSlot.value != null) {
-      checkConflicts();
+      await checkConflicts();
       fetchRoomAvailability();
     }
   }
 
   /// Handle new slot change
-  void onNewSlotChanged(int? slot) {
+  void onNewSlotChanged(int? slot) async {
     newSlot.value = slot;
-    // Reset selected room when slot changes
+    // Reset selected room and conflict when slot changes
     selectedRoom.value = null;
+    conflictResult.value = null;
     
     // Fetch room availability if both date and slot are selected
     if (newDate.value != null && slot != null) {
-      checkConflicts();
+      await checkConflicts();
       fetchRoomAvailability();
     }
   }
@@ -255,7 +258,7 @@ class CreateRequestController extends GetxController {
       
       final data = await _service.getRoomAvailability(newDate.value!, newSlot.value!);
       // Filter only Gamma building rooms
-      rooms.value = data.where((r) => r.building == 'Gamma').toList();
+      rooms.value = data;
       print('Loaded ${rooms.length} rooms');
     } catch (e) {
       print('Error fetching room availability: $e');
@@ -313,11 +316,6 @@ class CreateRequestController extends GetxController {
   /// Submit request - returns created request ID on success, null on failure
   Future<int?> submitRequest() async {
     // Validation
-    if (selectedType.value == null) {
-      Get.snackbar('Lỗi', 'Vui lòng chọn loại yêu cầu',
-          snackPosition: SnackPosition.BOTTOM);
-      return null;
-    }
     if (selectedSlotId.value == null) {
       Get.snackbar('Lỗi', 'Vui lòng chọn slot cần thay đổi',
           snackPosition: SnackPosition.BOTTOM);
@@ -413,7 +411,7 @@ class CreateRequestController extends GetxController {
   /// Reset all selections
   void reset() {
     selectedClass.value = null;
-    selectedType.value = null;
+    selectedType.value = 'RESCHEDULE';
     slots.clear();
     selectedSlotId.value = null;
     selectedSlot.value = null;

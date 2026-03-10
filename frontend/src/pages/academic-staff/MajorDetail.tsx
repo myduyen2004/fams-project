@@ -13,7 +13,7 @@ import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { Major } from '../../types/major';
 import { Specialization, SpecializationImportDTO } from '../../types/specialization';
 import { usePagination } from '../../hooks/usePagination';
-
+import { Tooltip } from '../../components/common/Tooltip';
 // --- Types ---
 
 interface SpecializationCreateModalProps {
@@ -79,9 +79,8 @@ const SpecializationCreateModal: React.FC<SpecializationCreateModalProps> = ({ i
     });
 
     if (!isOpen) return null;
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+    return createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="w-full max-w-lg rounded-xl bg-white shadow-xl dark:bg-zinc-900">
                 <div className="flex items-center justify-between border-b border-gray-100 p-4 dark:border-zinc-800">
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Tạo chuyên ngành mới</h2>
@@ -154,7 +153,8 @@ const SpecializationCreateModal: React.FC<SpecializationCreateModalProps> = ({ i
                     </div>
                 </form>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
@@ -204,8 +204,8 @@ const SpecializationUpdateModal: React.FC<SpecializationUpdateModalProps> = ({ i
 
     if (!isOpen) return null;
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+    return createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="w-full max-w-lg rounded-xl bg-white shadow-xl dark:bg-zinc-900">
                 <div className="flex items-center justify-between border-b border-gray-100 p-4 dark:border-zinc-800">
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Cập nhật chuyên ngành</h2>
@@ -276,7 +276,8 @@ const SpecializationUpdateModal: React.FC<SpecializationUpdateModalProps> = ({ i
                     </div>
                 </form>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
@@ -534,7 +535,8 @@ const ImportSpecializationModal: React.FC<ImportSpecializationModalProps> = ({ i
                     )}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 
     return createPortal(modalContent, document.body);
@@ -916,43 +918,43 @@ export const MajorDetail: React.FC = () => {
                             itemLabel="chuyên ngành"
                         />
                     </div>
-
-                    {id && (
-                        <SpecializationCreateModal
-                            isOpen={isCreateModalOpen}
-                            onClose={() => setIsCreateModalOpen(false)}
-                            majorId={parseInt(id)}
-                            onSuccess={fetchSpecializations}
-                        />
-                    )}
-
-                    {selectedIds.length === 1 && (
-                        <SpecializationUpdateModal
-                            isOpen={isUpdateModalOpen}
-                            onClose={() => setIsUpdateModalOpen(false)}
-                            onSuccess={fetchSpecializations}
-                            specialization={specializations.find(s => s.id === selectedIds[0])!}
-                        />
-                    )}
-
-                    <ImportSpecializationModal
-                        isOpen={isImportModalOpen}
-                        onClose={() => setIsImportModalOpen(false)}
-                        majorId={parseInt(id!)}
-                        onSuccess={fetchSpecializations}
-                    />
-
-                    <ConfirmModal
-                        isOpen={confirmModal.isOpen}
-                        onClose={closeConfirmModal}
-                        onConfirm={confirmModal.onConfirm}
-                        title={confirmModal.title}
-                        message={confirmModal.message}
-                        type={confirmModal.type}
-                        confirmLabel={confirmModal.confirmLabel}
-                    />
                 </div>
             </div>
+
+            {id && (
+                <SpecializationCreateModal
+                    isOpen={isCreateModalOpen}
+                    onClose={() => setIsCreateModalOpen(false)}
+                    majorId={parseInt(id)}
+                    onSuccess={fetchSpecializations}
+                />
+            )}
+
+            {selectedIds.length === 1 && (
+                <SpecializationUpdateModal
+                    isOpen={isUpdateModalOpen}
+                    onClose={() => setIsUpdateModalOpen(false)}
+                    onSuccess={fetchSpecializations}
+                    specialization={specializations.find(s => s.id === selectedIds[0])!}
+                />
+            )}
+
+            <ImportSpecializationModal
+                isOpen={isImportModalOpen}
+                onClose={() => setIsImportModalOpen(false)}
+                majorId={parseInt(id!)}
+                onSuccess={fetchSpecializations}
+            />
+
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                onClose={closeConfirmModal}
+                onConfirm={confirmModal.onConfirm}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                type={confirmModal.type}
+                confirmLabel={confirmModal.confirmLabel}
+            />
         </AcademicStaffLayout>
     );
 };

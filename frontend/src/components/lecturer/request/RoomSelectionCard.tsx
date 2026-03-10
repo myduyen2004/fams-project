@@ -4,8 +4,7 @@ import { roomService, RoomWithAvailability } from '../../../services/api/roomSer
 import { Room } from '../../../types/room';
 import toast from 'react-hot-toast';
 
-// Building configuration for Gamma
-const FLOORS = [2, 3, 4];
+const BUILDINGS = ['Alpha', 'Gamma'];
 
 interface RoomSelectionCardProps {
     selectedRoom: Room | null;
@@ -22,7 +21,8 @@ export const RoomSelectionCard: React.FC<RoomSelectionCardProps> = ({
 }) => {
     const [rooms, setRooms] = useState<RoomWithAvailability[]>([]);
     const [loading, setLoading] = useState(false);
-    const [activeFloor, setActiveFloor] = useState(2);
+    const [activeBuilding, setActiveBuilding] = useState('Alpha');
+    const [activeFloor, setActiveFloor] = useState(1);
 
     // Check if date and slot are selected
     const hasFilters = selectedDate && selectedSlot;
@@ -31,11 +31,9 @@ export const RoomSelectionCard: React.FC<RoomSelectionCardProps> = ({
     useEffect(() => {
         const fetchRooms = async () => {
             if (!selectedDate || !selectedSlot) {
-                // If no date/slot selected, just fetch all rooms with all marked as unavailable
                 try {
                     const data = await roomService.getAllRooms();
-                    const gammaRooms = data.filter(room => room.building === 'Gamma');
-                    setRooms(gammaRooms.map(room => ({ ...room, isAvailable: false })));
+                    setRooms(data.map(room => ({ ...room, isAvailable: false })));
                 } catch (error) {
                     console.error('Error fetching rooms:', error);
                 }
@@ -44,19 +42,14 @@ export const RoomSelectionCard: React.FC<RoomSelectionCardProps> = ({
 
             try {
                 setLoading(true);
-                // Fetch rooms with availability from new API
                 const data = await roomService.getRoomAvailability(selectedDate, selectedSlot);
-                // Filter only Gamma building rooms
-                const gammaRooms = data.filter(room => room.building === 'Gamma');
-                setRooms(gammaRooms);
+                setRooms(data);
             } catch (error) {
                 console.error('Error fetching room availability:', error);
                 toast.error('Không thể tải trạng thái phòng học');
-                // Fallback: fetch all rooms and mark as unknown
                 try {
                     const data = await roomService.getAllRooms();
-                    const gammaRooms = data.filter(room => room.building === 'Gamma');
-                    setRooms(gammaRooms.map(room => ({ ...room, isAvailable: room.status === 'ACTIVE' })));
+                    setRooms(data.map(room => ({ ...room, isAvailable: room.status === 'ACTIVE' })));
                 } catch (fallbackError) {
                     console.error('Fallback error:', fallbackError);
                 }
@@ -67,25 +60,51 @@ export const RoomSelectionCard: React.FC<RoomSelectionCardProps> = ({
         fetchRooms();
     }, [selectedDate, selectedSlot]);
 
-    // Filter rooms by active floor
+    // Rooms for the active building
+    const buildingRooms = useMemo(() => {
+        return rooms.filter(room => room.building === activeBuilding);
+    }, [rooms, activeBuilding]);
+
+    // Dynamic floors for the active building
+    const availableFloors = useMemo(() => {
+        const floors = [...new Set(buildingRooms.map(r => r.floor))];
+        floors.sort((a, b) => a - b);
+        return floors;
+    }, [buildingRooms]);
+
+    // Auto-select first floor when building changes
+    useEffect(() => {
+        if (availableFloors.length > 0 && !availableFloors.includes(activeFloor)) {
+            setActiveFloor(availableFloors[0]);
+        }
+    }, [availableFloors, activeFloor]);
+
+    // Filter rooms by active floor within selected building
     const filteredRooms = useMemo(() => {
-        return rooms.filter(room => room.floor === activeFloor);
-    }, [rooms, activeFloor]);
+        return buildingRooms.filter(room => room.floor === activeFloor);
+    }, [buildingRooms, activeFloor]);
 
     // Handle room click
     const handleRoomClick = (room: RoomWithAvailability) => {
         if (!room.isAvailable) return;
 
         if (selectedRoom?.id === room.id) {
-            onRoomSelect(null); // Deselect if clicking the same room
+            onRoomSelect(null);
         } else {
             onRoomSelect(room);
         }
     };
 
-    // Count rooms per floor
+    // Building stats
+    const getBuildingStats = (building: string) => {
+        const bRooms = rooms.filter(r => r.building === building);
+        const available = bRooms.filter(r => r.isAvailable).length;
+        return { total: bRooms.length, available };
+    };
+
+    // Count rooms per floor (within active building)
     const getFloorStats = (floor: number) => {
-        const floorRooms = rooms.filter(r => r.floor === floor);
+        const floorRooms = buildingRooms.filter(r => r.floor === floor);
         const availableCount = floorRooms.filter(r => r.isAvailable).length;
         return { total: floorRooms.length, available: availableCount };
     };
@@ -98,7 +117,7 @@ export const RoomSelectionCard: React.FC<RoomSelectionCardProps> = ({
                     <div>
                         <h3 className="text-lg font-bold text-slate-900 dark:text-white">Chọn phòng học mới</h3>
                         <p className="text-xs text-slate-500 dark:text-slate-400">
-                            Gamma Building • {hasFilters ? `Ngày ${selectedDate} - Slot ${selectedSlot}` : 'Chọn ngày và slot để xem phòng trống'}
+                            Tòa {activeBuilding} • {hasFilters ? `Ngày ${selectedDate} - Slot ${selectedSlot}` : 'Chọn ngày và slot để xem phòng trống'}
                         </p>
                     </div>
                 </div>
@@ -121,10 +140,38 @@ export const RoomSelectionCard: React.FC<RoomSelectionCardProps> = ({
                 </div>
             )}
 
+            {/* Building Tabs */}
+            {BUILDINGS.length > 1 && (
+                <div className="mx-6 mt-4 flex bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+                    {BUILDINGS.map((building) => {
+                        const isActive = activeBuilding === building;
+                        const stats = getBuildingStats(building);
+                        return (
+                            <button
+                                key={building}
+                                type="button"
+                                onClick={() => setActiveBuilding(building)}
+                                className={`flex-1 py-2.5 rounded-md text-center transition-all ${isActive
+                                    ? 'bg-white dark:bg-zinc-900 shadow-sm font-bold text-fpt-orange'
+                                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                                    }`}
+                            >
+                                <span className="text-sm">Tòa {building}</span>
+                                {hasFilters && (
+                                    <span className={`block text-[10px] mt-0.5 ${isActive ? 'text-green-600' : 'text-slate-400'}`}>
+                                        {stats.available}/{stats.total} trống
+                                    </span>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+
             <div className="flex">
                 {/* Floor Sidebar */}
                 <aside className="w-20 flex-shrink-0 border-r border-slate-200 dark:border-slate-800 flex flex-col items-center py-4 gap-2 bg-slate-50/50 dark:bg-slate-950/30">
-                    {FLOORS.map((floor) => {
+                    {availableFloors.map((floor) => {
                         const isActive = activeFloor === floor;
                         const stats = getFloorStats(floor);
 

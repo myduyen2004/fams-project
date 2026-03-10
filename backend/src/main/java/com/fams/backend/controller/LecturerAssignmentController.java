@@ -135,6 +135,21 @@ public class LecturerAssignmentController {
     }
 
     /**
+     * Tải tất cả bài nộp dưới dạng file ZIP
+     */
+    @GetMapping("/{id}/download-all-submissions")
+    public ResponseEntity<byte[]> downloadAllSubmissions(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long lecturerId = getUserId(userDetails);
+        byte[] zipData = assignmentSubmissionService.downloadAllSubmissionsAsZip(id, lecturerId);
+        return ResponseEntity.ok()
+                .header("Content-Type", "application/zip")
+                .header("Content-Disposition", "attachment; filename=\"submissions_" + id + ".zip\"")
+                .body(zipData);
+    }
+
+    /**
      * Giảng viên xóa bài tập
      */
     @DeleteMapping("/{id}")

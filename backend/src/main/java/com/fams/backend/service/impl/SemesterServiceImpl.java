@@ -171,7 +171,19 @@ public class SemesterServiceImpl implements SemesterService {
         if (semester.getEndDate() != null) {
             dto.setEndDate(semester.getEndDate().toString());
         }
-        dto.setStatus(mapStatus(semester.getStatus()));
+
+        // Dynamically compute status based on current date
+        LocalDate today = LocalDate.now();
+        Semester.SemesterStatus computedStatus;
+        if (semester.getStartDate() != null && today.isBefore(semester.getStartDate())) {
+            computedStatus = Semester.SemesterStatus.UPCOMING;
+        } else if (semester.getEndDate() != null && today.isAfter(semester.getEndDate())) {
+            computedStatus = Semester.SemesterStatus.COMPLETED;
+        } else {
+            computedStatus = Semester.SemesterStatus.ONGOING;
+        }
+        dto.setStatus(mapStatus(computedStatus));
+
         return dto;
     }
 
@@ -203,6 +215,9 @@ public class SemesterServiceImpl implements SemesterService {
             response.setSlotDuration(config.getSlotDuration());
         } else {
             response.setIsPublished(false);
+            response.setMaxSlotsPerDay(4); // Default
+            response.setSlotsPerSubjectPerWeek(2); // Default
+            response.setSlotDuration(90); // Default
         }
 
         // Map Weekdays

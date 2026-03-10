@@ -145,4 +145,23 @@ export const userService = {
         if (response.status === 204) return null;
         return response.data;
     },
+
+    downloadSampleZip: async () => {
+        const response = await apiClient.get('/users/import/sample', {
+            responseType: 'arraybuffer'
+        });
+        const blob = new Blob([response.data], { type: 'application/zip' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'user_import_sample.zip');
+        document.body.appendChild(link);
+        link.click();
+
+        // Use a small delay for older browsers or complex environments
+        setTimeout(() => {
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        }, 150);
+    }
 };

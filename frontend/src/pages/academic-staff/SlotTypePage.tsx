@@ -144,17 +144,17 @@ export const SlotTypePage: React.FC = () => {
           const data = response.data;
           const loadedConfig: SemesterConfig = {
             ...config,
-            semesterName: data.name,
-            startDate: data.startDate,
-            endDate: data.endDate,
+            semesterName: data.name || '',
+            startDate: data.startDate || '',
+            endDate: data.endDate || '',
             isPublished: data.isPublished || false,
-            // Load configuration if exists
-            selectedDays: data.selectedDays || config.selectedDays,
-            maxSlotsPerDay: data.maxSlotsPerDay || config.maxSlotsPerDay,
-            slotsPerSubjectPerWeek: data.slotsPerSubjectPerWeek || config.slotsPerSubjectPerWeek,
-            slotType: data.slotDuration ? data.slotDuration.toString() : config.slotType,
-            slots: data.slots || config.slots,
-            holidays: data.holidays || config.holidays,
+            // Load configuration if exists, with fallbacks to DEFAULT_CONFIG
+            selectedDays: data.selectedDays || DEFAULT_CONFIG.selectedDays,
+            maxSlotsPerDay: data.maxSlotsPerDay || DEFAULT_CONFIG.maxSlotsPerDay,
+            slotsPerSubjectPerWeek: data.slotsPerSubjectPerWeek || DEFAULT_CONFIG.slotsPerSubjectPerWeek,
+            slotType: data.slotDuration ? data.slotDuration.toString() : DEFAULT_CONFIG.slotType,
+            slots: (data.slots && data.slots.length > 0) ? data.slots : DEFAULT_CONFIG.slots,
+            holidays: data.holidays || DEFAULT_CONFIG.holidays,
             status: data.status || 'upcoming'
           };
           

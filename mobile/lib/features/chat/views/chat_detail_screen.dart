@@ -231,20 +231,94 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         if (group == null) return const SizedBox.shrink();
         return Row(
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: const BoxDecoration(
-                color: Color(0xFFFFF1E7),
-                shape: BoxShape.circle,
-              ),
-              child: const Center(
-                child: Icon(
-                  Icons.people_rounded,
-                  color: Color(0xFFFF8C33),
-                  size: 20,
-                ),
-              ),
+            Builder(
+              builder: (context) {
+                final studentMembers =
+                    group.members?.where((m) => m.role == 'STUDENT').toList() ??
+                    [];
+                final avatarsToDisplay = studentMembers.take(2).toList();
+
+                if (avatarsToDisplay.isEmpty) {
+                  return Container(
+                    width: 38,
+                    height: 38,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFFF1E7),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.people_rounded,
+                        color: Color(0xFFFF8C33),
+                        size: 20,
+                      ),
+                    ),
+                  );
+                }
+
+                return SizedBox(
+                  width: avatarsToDisplay.length > 1
+                      ? 54.0
+                      : 38.0, // 38 + 16 = 54
+                  height: 38,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: avatarsToDisplay
+                        .asMap()
+                        .entries
+                        .map((entry) {
+                          final idx = entry.key;
+                          final member = entry.value;
+
+                          return Positioned(
+                            left: idx * 16.0, // Adjust overlap distance
+                            child: Container(
+                              width: 38,
+                              height: 38,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                                color: idx == 0
+                                    ? Colors.white
+                                    : const Color(0xFFFFD8B2),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.08),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: ClipOval(
+                                child:
+                                    member.avatarUrl != null &&
+                                        member.avatarUrl!.isNotEmpty
+                                    ? CachedNetworkImage(
+                                        imageUrl: member.avatarUrl!,
+                                        fit: BoxFit.cover,
+                                        errorWidget: (context, url, error) =>
+                                            _buildInitialAvatarForHeader(
+                                              member.fullName,
+                                            ),
+                                        placeholder: (context, url) =>
+                                            Container(color: Colors.grey[200]),
+                                      )
+                                    : _buildInitialAvatarForHeader(
+                                        member.fullName,
+                                      ),
+                              ),
+                            ),
+                          );
+                        })
+                        .toList()
+                        .reversed
+                        .toList(), // Reverse to make first index on top
+                  ),
+                );
+              },
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1190,6 +1264,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   IconData _getFileIcon(String fileName) {
     final ext = fileName.split('.').last.toLowerCase();
+
     switch (ext) {
       case 'pdf':
         return Icons.picture_as_pdf_rounded;
@@ -1208,6 +1283,23 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       default:
         return Icons.insert_drive_file_rounded;
     }
+  }
+
+  Widget _buildInitialAvatarForHeader(String fullName) {
+    final initial = fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U';
+    return Container(
+      color: const Color(0xFFFFEEDD),
+      child: Center(
+        child: Text(
+          initial,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFFFF8C33),
+          ),
+        ),
+      ),
+    );
   }
 }
 

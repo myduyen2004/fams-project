@@ -57,9 +57,11 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
     });
   };
 
+  const isActive = semester?.status === 'active';
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validation
     if (!formData.name || !formData.startDate || !formData.endDate) {
       setError('Vui lòng điền đầy đủ thông tin');
@@ -69,6 +71,19 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
     if (new Date(formData.startDate) >= new Date(formData.endDate)) {
       setError('Ngày kết thúc phải sau ngày bắt đầu');
       return;
+    }
+
+    // For upcoming semesters, validate that start date is in the future
+    if (semester?.status === 'upcoming') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const [startYear, startMonth, startDay] = formData.startDate.split('-').map(Number);
+      const startDate = new Date(startYear, startMonth - 1, startDay);
+
+      if (startDate <= today) {
+        setError('Ngày bắt đầu học kỳ phải sau ngày hôm nay');
+        return;
+      }
     }
 
     // Check for duplicate name (excluding current semester)
@@ -165,29 +180,49 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                 Ngày bắt đầu <span className="text-red-500">*</span>
+                {isActive && <Lock className="w-3 h-3 inline ml-1 text-gray-400" />}
               </label>
-              <input
-                type="date"
-                name="startDate"
-                value={formData.startDate}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-orange-500 transition shadow-sm bg-white"
-                disabled={loading}
-              />
+              <div className="relative">
+                <input
+                  type="date"
+                  name="startDate"
+                  value={formData.startDate}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-orange-500 transition shadow-sm text-transparent caret-transparent ${isActive ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
+                    }`}
+                  disabled={loading || isActive}
+                  style={{ colorScheme: 'light' }}
+                />
+                <div className={`absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-sm ${isActive ? 'text-gray-500' : 'text-gray-700'}`}>
+                  {formData.startDate
+                    ? formData.startDate.split('-').reverse().join('/')
+                    : <span className="text-gray-400">dd/mm/yyyy</span>}
+                </div>
+              </div>
             </div>
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                 Ngày kết thúc <span className="text-red-500">*</span>
+                {isActive && <Lock className="w-3 h-3 inline ml-1 text-gray-400" />}
               </label>
-              <input
-                type="date"
-                name="endDate"
-                value={formData.endDate}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-orange-500 transition shadow-sm bg-white"
-                disabled={loading}
-              />
+              <div className="relative">
+                <input
+                  type="date"
+                  name="endDate"
+                  value={formData.endDate}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-orange-500 transition shadow-sm text-transparent caret-transparent ${isActive ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
+                    }`}
+                  disabled={loading || isActive}
+                  style={{ colorScheme: 'light' }}
+                />
+                <div className={`absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-sm ${isActive ? 'text-gray-500' : 'text-gray-700'}`}>
+                  {formData.endDate
+                    ? formData.endDate.split('-').reverse().join('/')
+                    : <span className="text-gray-400">dd/mm/yyyy</span>}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -195,7 +230,9 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
           <div className="flex items-start gap-2 text-amber-600">
             <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
             <p className="text-[11px] font-medium">
-              Lưu ý: Chỉ có thể cập nhật các học kỳ sắp diễn ra hoặc đang diễn ra.
+              {isActive
+                ? 'Học kỳ đang diễn ra: Không được phép thay đổi ngày bắt đầu và kết thúc. Chỉ có thể cập nhật tên học kỳ.'
+                : 'Lưu ý: Ngày bắt đầu học kỳ phải sau ngày hôm nay.'}
             </p>
           </div>
 
@@ -205,18 +242,16 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
               type="button"
               onClick={handleCancel}
               disabled={loading}
-              className="flex items-center gap-2 px-5 py-2.5 bg-gray-400 hover:bg-gray-500 text-white rounded-lg font-semibold text-sm transition shadow-md disabled:opacity-50"
+              className="px-5 py-2.5 bg-gray-400 hover:bg-gray-500 text-white rounded-lg font-semibold text-sm transition shadow-md disabled:opacity-50"
             >
-              <Lock className="w-3 h-3" />
               Hủy
             </button>
 
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold text-sm transition shadow-md disabled:opacity-50"
+              className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold text-sm transition shadow-md disabled:opacity-50"
             >
-              <Lock className="w-3 h-3" />
               {loading ? 'Đang cập nhật...' : 'Cập nhật học kỳ'}
             </button>
           </div>

@@ -1,13 +1,12 @@
 import React, { useEffect, useState, useRef, useMemo, Fragment } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import axios from 'axios';
 import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
 import { toast } from 'react-hot-toast';
-import { Calendar, BookOpen, ChevronLeft, ChevronRight, X, Clock, MapPin, User, GraduationCap, AlertTriangle, Check, ChevronsUpDown, Eye, EyeOff, Loader2, Play, Users, School, Download, MoreVertical, Home, RefreshCw, Save } from 'lucide-react';
+import { Calendar, BookOpen, ChevronLeft, ChevronRight, X, Clock, MapPin, User, GraduationCap, AlertTriangle, Check, ChevronsUpDown, Eye, EyeOff, Loader2, Play, Users, School, Download, MoreVertical, Home, RefreshCw, Save, List } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Combobox, Transition, Listbox } from '@headlessui/react';
-import { roomService } from '../../services/api/roomService';
-import { Room } from '../../types/room';
 
 interface FilterComboboxProps {
   value: string | null; // Changed to allow null
@@ -143,7 +142,81 @@ const getWeekEnd = (date: Date): Date => {
   return end;
 };
 
+const ErrorSuggestionsPanel: React.FC<{ error: string; onClose: () => void }> = ({ error, onClose }) => {
+  return (
+    <div className="bg-red-50 border border-red-100 rounded-2xl p-6 mt-4 animate-in slide-in-from-top-4 duration-500 relative">
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 text-red-400 hover:text-red-600 transition-colors"
+      >
+        <X size={20} />
+      </button>
+
+      <div className="flex items-start gap-3 mb-4">
+        <div className="bg-red-500 p-1.5 rounded-lg text-white">
+          <AlertTriangle size={20} />
+        </div>
+        <div>
+          <h3 className="text-lg font-bold text-red-900">Tạo thời khóa biểu thất bại</h3>
+          <p className="text-sm text-red-700 font-medium pt-1">Lý do: {error}</p>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <p className="text-sm text-red-800 font-semibold uppercase tracking-wider border-b border-red-100 pb-2">Gợi ý cách khắc phục:</p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white/60 p-4 rounded-xl border border-red-100">
+            <h4 className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-2">
+              <RefreshCw size={16} className="text-fpt-orange" />
+              Nới lỏng cấu hình học kỳ
+            </h4>
+            <ul className="text-xs text-gray-600 space-y-1 list-disc pl-4">
+              <li>Tăng <b>Số slot tối đa mỗi ngày</b> cho SV (gợi ý: 3-4 slot).</li>
+              <li>Mở rộng ngày học trong tuần (nên bật thêm <b>Thứ 7</b>).</li>
+            </ul>
+          </div>
+
+          <div className="bg-white/60 p-4 rounded-xl border border-red-100">
+            <h4 className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-2">
+              <Users size={16} className="text-fpt-orange" />
+              Kiểm tra dữ liệu đăng ký
+            </h4>
+            <ul className="text-xs text-gray-600 space-y-1 list-disc pl-4">
+              <li>Giảm số môn đăng ký cho SV học quá mức ( &gt; 5 môn).</li>
+              <li>Kiểm tra giảng viên có bị phân công quá nhiều lớp không.</li>
+            </ul>
+          </div>
+
+          <div className="bg-white/60 p-4 rounded-xl border border-red-100">
+            <h4 className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-2">
+              <Home size={16} className="text-fpt-orange" />
+              Kiểm tra phòng học
+            </h4>
+            <ul className="text-xs text-gray-600 space-y-1 list-disc pl-4">
+              <li>Đảm bảo danh sách phòng học đầy đủ và ở trạng thái <b>Hoạt động</b>.</li>
+              <li>Tăng số lượng phòng nếu số lớp học phần quá lớn.</li>
+            </ul>
+          </div>
+
+          <div className="bg-white/60 p-4 rounded-xl border border-red-100">
+            <h4 className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-2">
+              <Save size={16} className="text-fpt-orange" />
+              Chiến thuật xếp lịch
+            </h4>
+            <ul className="text-xs text-gray-600 space-y-1 list-disc pl-4">
+              <li>Xếp lịch thủ công cho các lớp bị kẹt sau khi chạy tự động.</li>
+              <li>Liên hệ Admin để tăng tham số <b>Tiến hóa</b> cho thuật toán.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const SchedulePage: React.FC = () => {
+  const navigate = useNavigate();
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [slotTimes, setSlotTimes] = useState<SlotTime[]>(DEFAULT_SLOT_TIMES);
@@ -155,6 +228,8 @@ export const SchedulePage: React.FC = () => {
   const pollingRef = useRef<number | null>(null);
   const [generationProgress, setGenerationProgress] = useState<number | null>(null);
   const [generationPhase, setGenerationPhase] = useState<string | null>(null);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const [showErrorSuggestions, setShowErrorSuggestions] = useState(false);
 
   // Toggle for showing locked schedule (isPublished)
   const [showLockedSchedule, setShowLockedSchedule] = useState(false);
@@ -163,7 +238,6 @@ export const SchedulePage: React.FC = () => {
   const [selectedTeacher, setSelectedTeacher] = useState<string | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
   const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
-  const [allRooms, setAllRooms] = useState<Room[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [semesterStartDate, setSemesterStartDate] = useState<string>('');
   const [semesterEndDate, setSemesterEndDate] = useState<string>('');
@@ -206,16 +280,6 @@ export const SchedulePage: React.FC = () => {
     }
   };
 
-  const fetchAllRooms = async () => {
-    try {
-      const data = await roomService.getAllRooms();
-      // Sort rooms by code ascending
-      const sorted = data.sort((a, b) => a.code.localeCompare(b.code, 'vi', { numeric: true }));
-      setAllRooms(sorted);
-    } catch (err) {
-      console.error('Failed to load rooms', err);
-    }
-  };
 
   const fetchSemesterDetails = async (semesterCode: string) => {
     try {
@@ -335,7 +399,11 @@ export const SchedulePage: React.FC = () => {
           setGenerating(false);
           setGenerationJobId(null);
           localStorage.removeItem(GENERATION_JOB_KEY);
-          toast.error(statusResp?.errorMessage || statusResp?.message || 'Tạo thời khóa biểu thất bại');
+
+          const reason = statusResp?.errorMessage || statusResp?.message;
+          setGenerationError(reason || 'Lỗi không xác định');
+          setShowErrorSuggestions(true);
+          toast.error(reason ? `Tạo thời khóa biểu thất bại: ${reason}` : 'Tạo thời khóa biểu thất bại');
         }
       } catch (err) {
         console.error('Polling error', err);
@@ -345,7 +413,6 @@ export const SchedulePage: React.FC = () => {
 
   useEffect(() => {
     fetchSemesters();
-    fetchAllRooms();
   }, []);
 
   useEffect(() => {
@@ -446,11 +513,12 @@ export const SchedulePage: React.FC = () => {
   const startGeneration = async () => {
     if (!selected) return toast.error('Vui lòng chọn học kỳ');
     try {
-      // Reset all progress states
       setGenerating(true);
       setGenerationProgress(0);
       setGenerationPhase(null);
       setGenerationStatus('RUNNING');
+      setGenerationError(null);
+      setShowErrorSuggestions(false);
 
       const resp = await timetableService.startAsyncGeneration(selected);
       const jobId = resp?.jobId || resp?.id || resp?.data?.jobId || null;
@@ -684,36 +752,38 @@ export const SchedulePage: React.FC = () => {
 
   // Filters logic handled by Combobox components
 
-  // Build data structure: rooms -> slotNumber
-  // Use allRooms from API, sorted ascending. If empty, fall back to unique rooms from slots.
-  const displayRooms = useMemo(() => {
-    const roomCodes = allRooms.map(r => r.code);
-    if (roomCodes.length === 0) {
-      // Fallback: unique rooms from slots, sorted
-      const fromSlots = Array.from(new Set(slots.map(s => s.roomCode || s.roomName || 'Phòng'))).sort((a, b) => a.localeCompare(b, 'vi', { numeric: true }));
-      return fromSlots;
-    }
-    return roomCodes;
-  }, [allRooms, slots]);
-
-  // Filter rooms by selected room filter
-  const filteredDisplayRooms = useMemo(() => {
-    if (selectedRooms.length === 0) return displayRooms;
-    return displayRooms.filter(r => selectedRooms.includes(r));
-  }, [displayRooms, selectedRooms]);
-
   // Filter slots based on selected filters
-  const filteredSlots = slots.filter(slot => {
-    if (selectedClass && !slot.className?.startsWith(selectedClass.split('-')[0])) return false;
-    if (selectedTeacher && slot.lecturerName !== selectedTeacher) return false;
-    if (selectedCourse && (slot.courseCode !== selectedCourse && slot.courseName !== selectedCourse)) return false;
-    if (selectedDate && slot.date !== selectedDate) return false;
-    if (selectedRooms.length > 0) {
-      const slotRoom = slot.roomCode || slot.roomName || 'Phòng';
-      if (!selectedRooms.includes(slotRoom)) return false;
-    }
-    return true;
-  });
+  const filteredSlots = useMemo(() => {
+    return slots.filter(slot => {
+      if (selectedClass && !slot.className?.startsWith(selectedClass.split('-')[0])) return false;
+      if (selectedTeacher && slot.lecturerName !== selectedTeacher) return false;
+      if (selectedCourse && (slot.courseCode !== selectedCourse && slot.courseName !== selectedCourse)) return false;
+      if (selectedDate && slot.date !== selectedDate) return false;
+      if (selectedRooms.length > 0) {
+        const slotRoom = slot.roomCode || slot.roomName || 'Phòng';
+        if (!selectedRooms.includes(slotRoom)) return false;
+      }
+      return true;
+    });
+  }, [slots, selectedClass, selectedTeacher, selectedCourse, selectedDate, selectedRooms]);
+
+  // All rooms that have at least one slot in the current list (used for the dropdown)
+  const displayRooms = useMemo(() => {
+    return Array.from(new Set(slots.map(s => s.roomCode || s.roomName || 'Phòng')))
+      .sort((a, b) => a.localeCompare(b, 'vi', { numeric: true }));
+  }, [slots]);
+
+  // Rooms matching the current filters to be displayed in the table
+  const filteredDisplayRooms = useMemo(() => {
+    // Only show rooms that actually have at least one slot matching ALL active filters
+    return Array.from(new Set(filteredSlots.map(s => s.roomCode || s.roomName || 'Phòng')))
+      .sort((a, b) => a.localeCompare(b, 'vi', { numeric: true }));
+  }, [filteredSlots]);
+
+  // Calculate rooms in use for the selected date
+  const roomsInUseCount = useMemo(() => {
+    return new Set(slots.map(s => s.roomCode || s.roomName || 'Phòng')).size;
+  }, [slots]);
 
   const getCell = (room: string, slotNum: number) => {
     return filteredSlots.find(s =>
@@ -1000,6 +1070,14 @@ export const SchedulePage: React.FC = () => {
           </div>
         )}
 
+        {/* Error Suggestions */}
+        {showErrorSuggestions && generationError && (
+          <ErrorSuggestionsPanel
+            error={generationError}
+            onClose={() => setShowErrorSuggestions(false)}
+          />
+        )}
+
         {/* Warning banner for unscheduled class sections */}
         {unscheduledCount > 0 && !generating && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3">
@@ -1033,7 +1111,7 @@ export const SchedulePage: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             {/* Date Header */}
             {selectedDate && (
-              <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-fpt-orange/5 to-transparent">
+              <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-fpt-orange/5 to-transparent flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-800">
                   {new Date(selectedDate).toLocaleDateString('vi-VN', {
                     weekday: 'long',
@@ -1042,6 +1120,10 @@ export const SchedulePage: React.FC = () => {
                     year: 'numeric'
                   })}
                 </h2>
+                <div className="flex items-center gap-2 text-sm text-gray-600 bg-white/50 px-4 py-1.5 rounded-full border border-orange-100 shadow-sm">
+                  <MapPin size={16} className="text-fpt-orange" />
+                  <span>Số phòng đang sử dụng: <span className="font-bold text-gray-900">{roomsInUseCount}</span></span>
+                </div>
               </div>
             )}
 
@@ -1210,18 +1292,21 @@ export const SchedulePage: React.FC = () => {
               {/* Class */}
               <div className="bg-gray-50 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <GraduationCap size={16} className="text-blue-500" />
+                  <GraduationCap size={16} className="text-fpt-orange" />
                   <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Lớp</span>
                 </div>
-                <div className="text-sm font-semibold text-gray-800">
+                <button
+                  onClick={() => navigate(`/academic-staff/class-sections/${selectedSlot.className}`)}
+                  className="text-sm font-semibold text-fpt-orange hover:underline text-left block w-full"
+                >
                   {selectedSlot.className || 'N/A'}
-                </div>
+                </button>
               </div>
 
               {/* Lecturer */}
               <div className="bg-gray-50 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <User size={16} className="text-green-500" />
+                  <User size={16} className="text-fpt-orange" />
                   <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Giảng viên</span>
                 </div>
                 <div className="text-sm font-semibold text-gray-800">
@@ -1232,7 +1317,7 @@ export const SchedulePage: React.FC = () => {
               {/* Room */}
               <div className="bg-gray-50 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <MapPin size={16} className="text-red-500" />
+                  <MapPin size={16} className="text-fpt-orange" />
                   <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Phòng</span>
                 </div>
                 <div className="text-sm font-semibold text-gray-800">
@@ -1243,7 +1328,7 @@ export const SchedulePage: React.FC = () => {
               {/* Time Slot */}
               <div className="bg-gray-50 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <Clock size={16} className="text-purple-500" />
+                  <Clock size={16} className="text-fpt-orange" />
                   <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Tiết</span>
                 </div>
                 <div className="text-sm font-semibold text-gray-800">
@@ -1257,22 +1342,6 @@ export const SchedulePage: React.FC = () => {
               </div>
             </div>
 
-            {/* Status */}
-            {selectedSlot.status && !isRescheduling && (
-              <div className="border-t border-gray-100 pt-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái:</span>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${selectedSlot.status === 'ACTIVE' || selectedSlot.status === 'CONFIRMED'
-                    ? 'bg-green-100 text-green-700'
-                    : selectedSlot.status === 'PENDING'
-                      ? 'bg-yellow-100 text-yellow-700'
-                      : 'bg-gray-100 text-gray-700'
-                    }`}>
-                    {selectedSlot.status}
-                  </span>
-                </div>
-              </div>
-            )}
 
             {/* Rescheduling Form */}
             {isRescheduling && (
@@ -1338,26 +1407,35 @@ export const SchedulePage: React.FC = () => {
             {/* Actions */}
             <div className="mt-6 flex justify-end gap-3">
               {!isRescheduling ? (
-                <>
+                <div className="w-full flex justify-between items-center sm:w-auto sm:justify-end gap-3">
                   <button
-                    onClick={() => {
-                      setIsRescheduling(true);
-                      setRescheduleDate(selectedSlot.date || '');
-                      setRescheduleSlot(selectedSlot.slotNumber || null);
-                      setRescheduleRoom(null);
-                    }}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-fpt-orange hover:bg-orange-600 text-white rounded-xl font-medium transition-colors"
+                    onClick={() => window.open(`/academic-staff/attendance/realtime/${selectedSlot.id}`, '_blank')}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl font-medium transition-colors"
                   >
-                    <RefreshCw size={18} />
-                    Cập nhật
+                    <List size={18} />
+                    Xem điểm danh
                   </button>
-                  <button
-                    onClick={() => setSelectedSlot(null)}
-                    className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
-                  >
-                    Đóng
-                  </button>
-                </>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setIsRescheduling(true);
+                        setRescheduleDate(selectedSlot.date || '');
+                        setRescheduleSlot(selectedSlot.slotNumber || null);
+                        setRescheduleRoom(null);
+                      }}
+                      className="flex items-center gap-2 px-6 py-2.5 bg-fpt-orange hover:bg-orange-600 text-white rounded-xl font-medium transition-colors"
+                    >
+                      <RefreshCw size={18} />
+                      Cập nhật
+                    </button>
+                    <button
+                      onClick={() => setSelectedSlot(null)}
+                      className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
+                    >
+                      Đóng
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <>
                   <button

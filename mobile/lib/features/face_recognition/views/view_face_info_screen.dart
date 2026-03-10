@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../auth/controllers/auth_controller.dart';
 import '../../../core/services/api_service.dart';
 
 /// Screen to view registered face information
@@ -19,6 +21,7 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
   Map<String, dynamic>? _faceStatus;
   Map<String, dynamic>? _faceImage;
   String? _error;
+  final authController = Get.find<AuthController>();
 
   @override
   void initState() {
@@ -88,7 +91,7 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 20.r),
           onPressed: () => Get.back(),
         ),
       ),
@@ -137,38 +140,38 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
     final faceImageBase64 = _faceImage?['faceImage'] as String?;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(24.r),
       child: Column(
         children: [
           // Face Image or Icon Container
           _buildFaceImageWidget(faceImageBase64),
 
-          const SizedBox(height: 24),
+          24.verticalSpace,
 
           // Status Text
           Text(
             hasFaceData ? 'Đã đăng ký khuôn mặt' : 'Chưa đăng ký',
             style: GoogleFonts.inter(
-              fontSize: 24,
+              fontSize: 24.sp,
               fontWeight: FontWeight.bold,
               color: hasFaceData ? Colors.green : Colors.red,
             ),
           ),
 
-          const SizedBox(height: 32),
+          32.verticalSpace,
 
           // Info Card
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.all(20.r),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(16.r),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+                  blurRadius: 10.r,
+                  offset: Offset(0, 4.h),
                 ),
               ],
             ),
@@ -180,14 +183,14 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
                   value: hasFaceData ? 'Đã xác minh' : 'Chưa xác minh',
                   valueColor: hasFaceData ? Colors.green : Colors.red,
                 ),
-                const Divider(height: 24),
+                Divider(height: 24.h),
                 _buildInfoRow(
                   icon: Icons.calendar_today,
                   label: 'Ngày đăng ký',
                   value: _formatDateTime(registeredAt),
                   valueColor: Colors.black87,
                 ),
-                const Divider(height: 24),
+                Divider(height: 24.h),
                 _buildInfoRow(
                   icon: Icons.security,
                   label: 'Bảo mật',
@@ -198,113 +201,100 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
             ),
           ),
 
-          const SizedBox(height: 24),
+          24.verticalSpace,
 
           // Info Note
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16.r),
             decoration: BoxDecoration(
               color: Colors.blue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(12.r),
               border: Border.all(color: Colors.blue.withOpacity(0.3)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.info_outline, color: Colors.blue, size: 24),
-                const SizedBox(width: 12),
+                Icon(Icons.info_outline, color: Colors.blue, size: 24.r),
+                12.horizontalSpace,
                 Expanded(
                   child: Text(
                     'Khuôn mặt của bạn được sử dụng để điểm danh tự động. Dữ liệu được bảo mật và chỉ dùng trong hệ thống FAMS.',
                     style: GoogleFonts.inter(
                       color: Colors.blue[800],
-                      fontSize: 13,
+                      fontSize: 13.sp,
                     ),
                   ),
                 ),
               ],
             ),
           ),
-
-          const SizedBox(height: 32),
-
-          // Back Button
-          SizedBox(
-            width: double.infinity,
-            height: 54,
-            child: ElevatedButton(
-              onPressed: () => Get.back(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryOrange,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 2,
-              ),
-              child: Text(
-                'Quay lại',
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
+          
+          32.verticalSpace,
         ],
       ),
     );
   }
 
-  Widget _buildFaceImageWidget(String? faceImageBase64) {
-    if (faceImageBase64 != null && faceImageBase64.isNotEmpty) {
-      // Decode base64 and display image
-      try {
-        final bytes = base64Decode(faceImageBase64);
-        return Container(
-          width: 150,
-          height: 150,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.green, width: 3),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: ClipOval(
-            child: Image.memory(
-              bytes,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return _buildDefaultFaceIcon();
-              },
-            ),
-          ),
-        );
-      } catch (e) {
-        return _buildDefaultFaceIcon();
+  Widget _buildFaceImageWidget(String? faceImageData) {
+    // 1. Try Base64 or URL from _faceImage response
+    if (faceImageData != null && faceImageData.isNotEmpty) {
+      if (faceImageData.startsWith('http')) {
+        return _buildCircleImage(Image.network(faceImageData, fit: BoxFit.cover));
       }
-    } else {
-      return _buildDefaultFaceIcon();
+      try {
+        final bytes = base64Decode(faceImageData);
+        return _buildCircleImage(Image.memory(bytes, fit: BoxFit.cover));
+      } catch (_) {}
     }
+
+    // 2. Try URL from other potential keys in _faceImage
+    final altUrl = _faceImage?['url'] ?? _faceImage?['imageUrl'] ?? _faceImage?['faceImageUrl'];
+    if (altUrl != null && altUrl is String && altUrl.startsWith('http')) {
+      return _buildCircleImage(Image.network(altUrl, fit: BoxFit.cover));
+    }
+
+    // 3. Fallback to Profile Avatar if registered
+    final userAvatar = authController.currentUser.value?.avatarUrl;
+    if (userAvatar != null && userAvatar.isNotEmpty) {
+      return _buildCircleImage(Image.network(userAvatar, fit: BoxFit.cover));
+    }
+
+    return _buildDefaultFaceIcon();
+  }
+
+  Widget _buildCircleImage(Widget imageWidget) {
+    return Container(
+      width: 150.r,
+      height: 150.r,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.green, width: 3.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 10.r,
+            offset: Offset(0, 4.h),
+          ),
+        ],
+      ),
+      child: ClipOval(
+        child: imageWidget,
+      ),
+    );
   }
 
   Widget _buildDefaultFaceIcon() {
     return Container(
-      width: 120,
-      height: 120,
+      width: 120.r,
+      height: 120.r,
       decoration: BoxDecoration(
         color: Colors.green.withOpacity(0.1),
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.green, width: 3),
+        border: Border.all(color: Colors.green, width: 3.r),
       ),
-      child: const Icon(
+      child: Icon(
         Icons.face,
-        size: 64,
+        size: 64.r,
         color: Colors.green,
       ),
     );
@@ -318,8 +308,8 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
   }) {
     return Row(
       children: [
-        Icon(icon, color: AppColors.primaryOrange, size: 24),
-        const SizedBox(width: 12),
+        Icon(icon, color: AppColors.primaryOrange, size: 24.r),
+        12.horizontalSpace,
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -328,7 +318,7 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
                 label,
                 style: GoogleFonts.inter(
                   color: Colors.grey[600],
-                  fontSize: 13,
+                  fontSize: 13.sp,
                 ),
               ),
               const SizedBox(height: 4),
@@ -336,7 +326,7 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
                 value,
                 style: GoogleFonts.inter(
                   color: valueColor,
-                  fontSize: 15,
+                  fontSize: 15.sp,
                   fontWeight: FontWeight.w500,
                 ),
               ),

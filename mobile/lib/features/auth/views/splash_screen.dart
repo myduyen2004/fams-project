@@ -26,11 +26,11 @@ class _SplashScreenState extends State<SplashScreen> {
     debugPrint('SplashScreen: Starting _navigateToNext');
     // Wait for at least 1 second to show the brand
     final minDelay = Future.delayed(const Duration(milliseconds: 1000));
-    
+
     debugPrint('SplashScreen: Waiting for AuthController initialization...');
     await _waitForInitialization();
     debugPrint('SplashScreen: AuthController initialized.');
-    
+
     await minDelay;
     debugPrint('SplashScreen: Minimum delay completed. Navigating...');
 
@@ -45,16 +45,22 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _waitForInitialization() async {
-    int attempts = 0;
-    const maxAttempts = 100; // 5 seconds max (100 * 50ms)
-    
-    while (!_authController.isInitialized.value && attempts < maxAttempts) {
-      await Future.delayed(const Duration(milliseconds: 50));
-      attempts++;
+    // Wait until isInitialized becomes true, up to 5 seconds.
+    // Replace the while loop with a cleaner GetX worker or Future.any approach
+    try {
+      if (_authController.isInitialized.value) return;
+
+      // We wait for the value to change to true, but timeout after 5 seconds
+      await interval(_authController.isInitialized, (bool init) {
+        if (init) return;
+      }, time: const Duration(seconds: 5));
+    } catch (e) {
+      debugPrint('SplashScreen: WARNING: Waiting for init failed: $e');
     }
-    
-    if (attempts >= maxAttempts) {
-      debugPrint('SplashScreen: WARNING: Initialization timed out after 5 seconds');
+
+    // Fallback: Just wait 1 second absolute max if it's still false
+    if (!_authController.isInitialized.value) {
+      await Future.delayed(const Duration(seconds: 1));
     }
   }
 
@@ -83,7 +89,9 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
               const SizedBox(height: 48),
               const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryOrange),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  AppColors.primaryOrange,
+                ),
               ),
             ],
           ),

@@ -46,4 +46,6 @@ public interface UserService {
     com.fams.backend.dto.response.PreviewImportResponse previewImportFile(MultipartFile file);
 
     Object getActivationProgress(String username);
+
+    byte[] downloadSampleFile();
 }
