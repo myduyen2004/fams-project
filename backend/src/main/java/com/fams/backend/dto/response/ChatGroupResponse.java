@@ -33,6 +33,7 @@ public class ChatGroupResponse {
         private String senderName;
         private String content;
         private String type;
+        private String attachmentName;
         private LocalDateTime sentAt;
     }
 
@@ -42,6 +43,7 @@ public class ChatGroupResponse {
     @AllArgsConstructor
     public static class ChatMemberDTO {
         private Long userId;
+        private String code;
         private String fullName;
         private String avatar;
         private String role;
