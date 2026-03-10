@@ -54,8 +54,8 @@ const DraggableCourseRow: React.FC<DraggableCourseRowProps> = ({
             <td className="px-4 py-3">
                 <GripVertical className="h-4 w-4 text-gray-400 group-hover:text-fpt-orange transition-colors" />
             </td>
-            <td className="px-4 py-3 font-medium font-semibold text-gray-900">{course.code}</td>
-            <td className="px-4 py-3 text-gray-900 dark:text-white">{course.name}</td>
+            <td className="px-4 py-3 font-medium font-semibold text-gray-900 w-24 truncate" title={course.code}>{course.code}</td>
+            <td className="px-4 py-3 text-gray-900 dark:text-white truncate max-w-[250px]" title={course.name}>{course.name}</td>
             <td className="px-4 py-3 text-center">
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
                     {course.credits} Tín chỉ
