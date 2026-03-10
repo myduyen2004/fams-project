@@ -1099,6 +1099,7 @@ export const MajorManagement: React.FC = () => {
                                 }}
                                 isOpen={isFilterOpen}
                                 onToggle={() => setIsFilterOpen(!isFilterOpen)}
+                                inactiveLabel="Ngừng đào tạo"
                             />
                         </div>
 
@@ -1113,6 +1114,8 @@ export const MajorManagement: React.FC = () => {
                                 return item?.status === 'INACTIVE' && item?.canDelete;
                             })}
                             itemLabel="ngành"
+                            activateLabel="Mở lại"
+                            deactivateLabel="Ngừng đào tạo"
                         />
                     </div>
 

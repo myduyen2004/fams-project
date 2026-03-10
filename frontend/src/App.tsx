@@ -70,7 +70,12 @@ const AcademicStaffClassDetailPage = lazy(() => import('./pages/academic-staff/A
 const StudentAcademicRequestPage = lazy(() => import('./pages/student/StudentAcademicRequestPage').then(m => ({ default: m.StudentAcademicRequestPage })));
 const StudentRequestDetailPage = lazy(() => import('./pages/academic-staff/StudentRequestDetailPage').then(m => ({ default: m.StudentRequestDetailPage })));
 const ClassSectionRedirect = lazy(() => import('./pages/academic-staff/ClassSectionRedirect').then(m => ({ default: m.ClassSectionRedirect })));
-
+const StudentRoomList = lazy(() => import('./pages/student/RoomList').then(m => ({ default: m.RoomList })));
+const StudentRoomDetail = lazy(() => import('./pages/student/RoomDetail').then(m => ({ default: m.RoomDetail })));
+const StudentSemestersPage = lazy(() => import('./pages/student/SemestersPage').then(m => ({ default: m.SemestersPage })));
+const LecturerRoomList = lazy(() => import('./pages/lecturer/RoomList').then(m => ({ default: m.RoomList })));
+const LecturerRoomDetail = lazy(() => import('./pages/lecturer/RoomDetail').then(m => ({ default: m.RoomDetail })));
+const LecturerSemestersPage = lazy(() => import('./pages/lecturer/SemestersPage').then(m => ({ default: m.SemestersPage })));
 const PageLoader = () => (
   <div className="flex h-screen w-full items-center justify-center bg-gray-50 dark:bg-zinc-950">
     <div className="flex flex-col items-center gap-2">
@@ -319,6 +324,9 @@ function App() {
           <Route path="/lecturer/requests/create" element={<ProtectedRoute allowedRoles={['LECTURER']}><LecturerCreateRequestPage /></ProtectedRoute>} />
           <Route path="/lecturer/requests/:id" element={<ProtectedRoute allowedRoles={['LECTURER']}><LecturerRequestDetailPage /></ProtectedRoute>} />
           <Route path="/lecturer/settings" element={<ProtectedRoute allowedRoles={['LECTURER']}><ComingSoon title="Cài đặt" /></ProtectedRoute>} />
+          <Route path="/lecturer/rooms" element={<ProtectedRoute allowedRoles={['LECTURER']}><LecturerRoomList /></ProtectedRoute>} />
+          <Route path="/lecturer/rooms/:id" element={<ProtectedRoute allowedRoles={['LECTURER']}><LecturerRoomDetail /></ProtectedRoute>} />
+          <Route path="/lecturer/semesters" element={<ProtectedRoute allowedRoles={['LECTURER']}><LecturerSemestersPage /></ProtectedRoute>} />
 
           {/* Student Routes */}
           <Route
@@ -361,6 +369,9 @@ function App() {
           <Route path="/student/requests" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentAcademicRequestPage /></ProtectedRoute>} />
           <Route path="/student/settings" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Cài đặt" /></ProtectedRoute>} />
           <Route path="/student/profile" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Hồ sơ cá nhân" /></ProtectedRoute>} />
+          <Route path="/student/rooms" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentRoomList /></ProtectedRoute>} />
+          <Route path="/student/rooms/:id" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentRoomDetail /></ProtectedRoute>} />
+          <Route path="/student/semesters" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentSemestersPage /></ProtectedRoute>} />
           <Route
             path="/academic-staff/dashboard"
             element={

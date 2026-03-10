@@ -4,7 +4,7 @@ import { roomService } from '../../services/api/roomService';
 import { Room } from '../../types/room';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import { BUILDING_CONFIG, getFloorElements, getRoomTypeLabel, filterPositionedRooms, FloorElement, ROOM_TYPE_OPTIONS, getRoomTypeDisplayLabel } from '../../utils/roomUtils';
+import { BUILDING_CONFIG, getFloorElements, getRoomTypeLabel, FloorElement, ROOM_TYPE_OPTIONS, getRoomTypeDisplayLabel } from '../../utils/roomUtils';
 
 const BUILDINGS = Object.keys(BUILDING_CONFIG);
 
@@ -72,9 +72,9 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
         }
     }, [selectedBuilding, availableFloors, selectedFloor]);
 
-    // Only show positioned rooms for student/lecturer
+    // Show all rooms (positioned and unpositioned)
     const filteredRooms = useMemo(() => {
-        let result = filterPositionedRooms(rooms);
+        let result = rooms;
 
         if (selectedBuilding !== 'ALL') {
             result = result.filter(r => r.building === selectedBuilding && r.floor === selectedFloor);
@@ -95,9 +95,15 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
         return filteredRooms.filter(r => r.gridRow != null && r.gridCol != null);
     }, [filteredRooms, selectedBuilding]);
 
-    // Sidebar rooms sorted by name
+    // Sidebar rooms sorted by name, unpositioned first
     const sidebarRooms = useMemo(() => {
-        return [...filteredRooms].sort((a, b) => a.name.localeCompare(b.name));
+        return [...filteredRooms].sort((a, b) => {
+            const aUnpositioned = a.gridRow == null || a.gridCol == null;
+            const bUnpositioned = b.gridRow == null || b.gridCol == null;
+            if (aUnpositioned && !bUnpositioned) return -1;
+            if (!aUnpositioned && bUnpositioned) return 1;
+            return a.name.localeCompare(b.name);
+        });
     }, [filteredRooms]);
 
     // Get floor elements for current building/floor
@@ -282,15 +288,17 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
                                 {filteredRooms.map(room => {
                                     const isComputerLab = room.type === 'COMPUTER_LAB';
                                     const isClassroom = room.type === 'CLASSROOM';
+                                    const isPositioned = room.gridRow != null && room.gridCol != null;
 
                                     return (
                                         <div
                                             key={room.id}
                                             onClick={() => handleRoomClick(room)}
                                             className={`p-4 rounded-xl border transition-all hover:shadow-md cursor-pointer group
-                                                ${isComputerLab ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-100 dark:border-blue-800' :
-                                                    isClassroom ? 'bg-orange-50 dark:bg-orange-950/20 border-orange-100 dark:border-orange-900/40' :
+                                                ${room.type === 'COMPUTER_LAB' ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-100 dark:border-blue-800' :
+                                                    room.type === 'CLASSROOM' ? 'bg-orange-50 dark:bg-orange-950/20 border-orange-100 dark:border-orange-900/40' :
                                                         'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-100 dark:border-emerald-800'}
+                                                ${!isPositioned ? 'ring-2 ring-fpt-orange ring-offset-2' : ''}
                                             `}
                                         >
                                             <div className="flex items-center justify-between mb-3">
@@ -301,7 +309,9 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
                                                     {getRoomTypeLabel(room.type)}
                                                 </span>
                                             </div>
-                                            <h4 className="font-bold text-gray-900 dark:text-white group-hover:text-fpt-orange transition-colors">{room.name}</h4>
+                                            <h4 className="font-bold text-gray-900 dark:text-white group-hover:text-fpt-orange transition-colors">
+                                                {room.name} {!isPositioned && <span className="text-red-500 text-xs ml-1">(Chưa xếp)</span>}
+                                            </h4>
                                             <div className="mt-3 pt-3 border-t border-gray-100 dark:border-zinc-700/50 space-y-1 text-xs text-gray-500 dark:text-zinc-400">
                                                 <div className="flex justify-between">
                                                     <span>Vị trí:</span>
@@ -419,6 +429,7 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
 
                         <div className="space-y-2">
                             {sidebarRooms.map(room => {
+                                const isPositioned = room.gridRow != null && room.gridCol != null;
 
                                 return (
                                     <div
@@ -427,6 +438,7 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
                                                 ${room.type === 'COMPUTER_LAB' ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30' :
                                                 room.type === 'CLASSROOM' ? 'bg-orange-50/50 dark:bg-orange-950/10 border-orange-100 dark:border-orange-900/30' :
                                                     'bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30'}
+                                                ${!isPositioned ? 'border-dashed border-2 border-fpt-orange/50' : ''}
                                         `}
                                         onClick={() => handleRoomClick(room)}
                                     >
@@ -442,6 +454,9 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
                                             </div>
                                         </div>
                                         <div className="flex flex-col gap-1 mt-2 text-[10px] opacity-60">
+                                            {!isPositioned && (
+                                                <span className="text-red-500 font-medium">Chưa xếp vị trí trên sơ đồ</span>
+                                            )}
                                             <span className="flex items-center gap-1">
                                                 <Users size={12} /> {room.capacity} người
                                             </span>
