@@ -13,7 +13,6 @@ import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { Major } from '../../types/major';
 import { Specialization, SpecializationImportDTO } from '../../types/specialization';
 import { usePagination } from '../../hooks/usePagination';
-import { Tooltip } from '../../components/common/Tooltip';
 // --- Types ---
 
 interface SpecializationCreateModalProps {
@@ -372,7 +371,7 @@ const ImportSpecializationModal: React.FC<ImportSpecializationModalProps> = ({ i
 
     if (!isOpen) return null;
 
-    const modalContent = (
+    return createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
             <div className={`bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full ${previewData ? 'max-w-6xl' : 'max-w-md'} border border-gray-100 dark:border-zinc-800 overflow-hidden transition-all duration-300 flex flex-col max-h-[90vh]`}>
                 {/* Header */}
@@ -538,8 +537,6 @@ const ImportSpecializationModal: React.FC<ImportSpecializationModalProps> = ({ i
         </div>,
         document.body
     );
-
-    return createPortal(modalContent, document.body);
 };
 
 // --- Main Page Component ---
