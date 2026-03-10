@@ -1066,7 +1066,7 @@ export const MajorManagement: React.FC = () => {
                                 <Upload className="h-4 w-4" />
                                 Import chuyên ngành
                             </button>
-                        </div>
+                        </Tooltip>
 
                         <button
                             onClick={() => setIsCreateModalOpen(true)}
