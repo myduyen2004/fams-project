@@ -28,20 +28,16 @@ public class UploadServiceImpl implements UploadService {
     @Value("${file.upload-dir:./uploads}")
     private String uploadDir;
 
+    @SuppressWarnings("unchecked")
     @Override
     public String uploadFile(MultipartFile file) {
-        return uploadFile(file, "fams_general");
-    }
-
-    @Override
-    public String uploadFile(MultipartFile file, String folder) {
         if (file == null || file.isEmpty()) {
             return null;
         }
 
         try {
             String filename = file.getOriginalFilename();
-            log.info("Uploading file to Cloudinary folder {}: {}", folder, filename);
+            log.info("Uploading file to Cloudinary: {}", filename);
 
             // Determine resource type based on file extension
             String resourceType = "auto";
@@ -59,24 +55,15 @@ public class UploadServiceImpl implements UploadService {
             }
 
             log.info("Using resource_type: {} for file: {}", resourceType, filename);
-            Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(),
+            Map<Object, Object> uploadResult = (Map<Object, Object>) cloudinary.uploader().upload(file.getBytes(),
                     ObjectUtils.asMap(
                             "resource_type", resourceType,
                             "type", "upload", // Make files publicly accessible
-                            "folder", folder,
+                            "folder", "fams_notifications",
                             "use_filename", true,
                             "unique_filename", true,
                             "filename", file.getOriginalFilename()));
-
             String url = (String) uploadResult.get("secure_url");
-
-            // Strip any Cloudinary signing from URL (s--xxx--) to avoid 404 errors
-            // Files are uploaded with type=upload & access_mode=public, so signing is
-            // unnecessary
-            if (url != null && url.contains("/s--")) {
-                url = url.replaceAll("/s--[^/]+--/", "/");
-            }
-
             log.info("Upload successful: {}", url);
             return url;
         } catch (Exception e) {
@@ -85,9 +72,46 @@ public class UploadServiceImpl implements UploadService {
         }
     }
 
-    private String getFileExtension(String filename) {
-        int lastDot = filename.lastIndexOf('.');
-        return lastDot >= 0 ? filename.substring(lastDot + 1) : "";
+    @SuppressWarnings("unchecked")
+    @Override
+    public String uploadFile(MultipartFile file, String folder) {
+        if (file == null || file.isEmpty()) {
+            return null;
+        }
+
+        try {
+            String filename = file.getOriginalFilename();
+            log.info("Uploading file to Cloudinary in folder {}: {}", folder, filename);
+
+            String resourceType = "auto";
+            if (filename != null) {
+                String lowerFilename = filename.toLowerCase();
+                if (lowerFilename.endsWith(".doc") ||
+                        lowerFilename.endsWith(".docx") ||
+                        lowerFilename.endsWith(".xls") ||
+                        lowerFilename.endsWith(".xlsx") ||
+                        lowerFilename.endsWith(".txt") ||
+                        lowerFilename.endsWith(".zip") ||
+                        lowerFilename.endsWith(".rar")) {
+                    resourceType = "raw";
+                }
+            }
+
+            Map<Object, Object> uploadResult = (Map<Object, Object>) cloudinary.uploader().upload(file.getBytes(),
+                    ObjectUtils.asMap(
+                            "resource_type", resourceType,
+                            "type", "upload",
+                            "folder", folder,
+                            "use_filename", true,
+                            "unique_filename", true,
+                            "filename", file.getOriginalFilename()));
+            String url = (String) uploadResult.get("secure_url");
+            log.info("Upload successful: {}", url);
+            return url;
+        } catch (Exception e) {
+            log.error("Cloudinary upload failed for file: {}. Error: {}", file.getOriginalFilename(), e.getMessage());
+            throw new RuntimeException("Upload file thất bại: " + e.getMessage());
+        }
     }
 
     @Override
@@ -98,7 +122,7 @@ public class UploadServiceImpl implements UploadService {
 
         try {
             log.info("Uploading bytes to Cloudinary folder {}: {}", folder, fileName);
-            Map<?, ?> uploadResult = cloudinary.uploader().upload(bytes,
+            Map<Object, Object> uploadResult = (Map<Object, Object>) cloudinary.uploader().upload(bytes,
                     ObjectUtils.asMap(
                             "resource_type", "auto",
                             "folder", folder,

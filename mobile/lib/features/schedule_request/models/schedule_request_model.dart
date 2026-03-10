@@ -21,6 +21,7 @@ class ScheduleRequest {
   final String? file;
   final String? approverName;
   final String? approvedAt;
+  final String? originalDate;
 
   ScheduleRequest({
     required this.id,
@@ -42,6 +43,7 @@ class ScheduleRequest {
     this.file,
     this.approverName,
     this.approvedAt,
+    this.originalDate,
   });
 
   factory ScheduleRequest.fromJson(Map<String, dynamic> json) {
@@ -65,6 +67,7 @@ class ScheduleRequest {
       file: json['file'],
       approverName: json['approverName'],
       approvedAt: json['approvedAt'],
+      originalDate: json['originalDate'],
     );
   }
 
@@ -89,6 +92,7 @@ class ScheduleRequest {
       'file': file,
       'approverName': approverName,
       'approvedAt': approvedAt,
+      'originalDate': originalDate,
     };
   }
 }

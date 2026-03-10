@@ -24,6 +24,12 @@ public class AttendanceConfigServiceImpl implements AttendanceConfigService {
                     log.info("Config not found, creating default configuration");
                     AttendanceConfig defaultConfig = AttendanceConfig.builder()
                             .configKey(DEFAULT_CONFIG_KEY)
+                            .manualEnabled(true)
+                            .absentThresholdMinutes(30)
+                            .minAttendancePercentage(80.0)
+                            .faceRecognitionEnabled(true)
+                            .maxAttempts(5)
+                            .wifiLocationEnabled(true)
                             .build();
                     return configRepository.save(defaultConfig);
                 });

@@ -150,7 +150,8 @@ def _perform_unified_liveness_check(image_base64: str, mode: str = "attendance")
         "laplacian": laplacian,
         "is_replay": replay_result.get("is_replay", False),
         "replay_score": replay_score,
-        "decision": decision["decision"]
+        "decision": decision["decision"],
+        "has_glasses": has_glasses
     }
     
     return is_spoof, message, debug_data
@@ -314,11 +315,30 @@ def verify_face():
         face_service = get_face_service()
         result = face_service.verify_face(captured_image, reference_encodings, tolerance)
         
+        # [SMART TOLERANCE] If wearing glasses and very close to original tolerance, allow a minor boost
+        is_match = result.is_match
+        confidence = result.confidence
+        message = "Match!" if is_match else result.error_message
+
+        if not is_match and debug_data.get("has_glasses"):
+            # Try once more with a slightly more lenient tolerance (e.g., +0.10)
+            lenient_tolerance = tolerance + 0.10
+            lenient_result = face_service.verify_face(captured_image, reference_encodings, lenient_tolerance)
+            
+            if lenient_result.is_match:
+                logger.info(f"VERIFY: Glasses detected. Loosening tolerance {tolerance} -> {lenient_tolerance}. Match found!")
+                is_match = True
+                confidence = lenient_result.confidence
+                message = "Match! (Glasses similarity boost applied)"
+            else:
+                # Still no match, but we know they have glasses
+                message = "Khuôn mặt không khớp. Có thể do kính của bạn, hãy thử tháo kính hoặc điều chỉnh góc mặt."
+
         return jsonify({
             "success": True,
-            "is_match": result.is_match,
-            "confidence": result.confidence,
-            "message": "Match!" if result.is_match else result.error_message
+            "is_match": is_match,
+            "confidence": confidence,
+            "message": message
         })
         
     except Exception as e:

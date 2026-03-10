@@ -109,6 +109,19 @@ class ScheduleRequestService {
       rethrow;
     }
   }
+
+  /// Revoke (Withdraw) a pending schedule request
+  Future<bool> revokeRequest(int id) async {
+    try {
+      final response = await _apiService.post(
+        '${ApiConstants.lecturerRequests}/$id/revoke',
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   /// Check for conflicts (Lecturer, Pending Request, Student)
   Future<ConflictCheckResponse?> checkConflicts(
       String className, String date, int slotNumber, int originalSlotId) async {

@@ -203,14 +203,22 @@ export const AddSemesterModal: React.FC<AddSemesterModalProps> = ({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Ngày bắt đầu <span className="text-red-500">*</span>
             </label>
-            <input
-              type="date"
-              name="startDate"
-              value={formData.startDate}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              disabled={loading}
-            />
+            <div className="relative">
+              <input
+                type="date"
+                name="startDate"
+                value={formData.startDate}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-transparent caret-transparent"
+                disabled={loading}
+                style={{ colorScheme: 'light' }}
+              />
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-700">
+                {formData.startDate
+                  ? formData.startDate.split('-').reverse().join('/')
+                  : <span className="text-gray-400">dd/mm/yyyy</span>}
+              </div>
+            </div>
           </div>
 
           {/* Ngày kết thúc */}
@@ -218,14 +226,22 @@ export const AddSemesterModal: React.FC<AddSemesterModalProps> = ({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Ngày kết thúc <span className="text-red-500">*</span>
             </label>
-            <input
-              type="date"
-              name="endDate"
-              value={formData.endDate}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              disabled={loading}
-            />
+            <div className="relative">
+              <input
+                type="date"
+                name="endDate"
+                value={formData.endDate}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-transparent caret-transparent"
+                disabled={loading}
+                style={{ colorScheme: 'light' }}
+              />
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-700">
+                {formData.endDate
+                  ? formData.endDate.split('-').reverse().join('/')
+                  : <span className="text-gray-400">dd/mm/yyyy</span>}
+              </div>
+            </div>
           </div>
 
           {/* Status Note */}

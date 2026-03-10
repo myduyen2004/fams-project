@@ -56,7 +56,7 @@ public class AttendanceConfig {
     // === WiFi Location Settings ===
     @Column(name = "wifi_location_enabled", nullable = false)
     @Builder.Default
-    private Boolean wifiLocationEnabled = false;
+    private Boolean wifiLocationEnabled = true;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

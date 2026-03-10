@@ -2,23 +2,27 @@
 
 class ChatMember {
   final int id;
+  final String code;
   final String fullName;
   final String role;
   final String? avatarUrl;
 
   ChatMember({
     required this.id,
+    required this.code,
     required this.fullName,
     required this.role,
     this.avatarUrl,
   });
 
   factory ChatMember.fromJson(Map<String, dynamic> json) {
+    print('DEBUG: ChatMember.fromJson raw: $json');
     return ChatMember(
       id: int.tryParse(json['userId']?.toString() ?? '0') ?? 0,
-      fullName: json['fullName'] ?? '',
-      role: json['role'] ?? '',
-      avatarUrl: json['avatar'],
+      code: json['code']?.toString() ?? '',
+      fullName: json['fullName']?.toString() ?? '',
+      role: json['role']?.toString() ?? '',
+      avatarUrl: json['avatar']?.toString(),
     );
   }
 }
@@ -39,13 +43,12 @@ class LastMessage {
   });
 
   factory LastMessage.fromJson(Map<String, dynamic> json) {
-    final bool isDeleted = json['isDeleted'] ?? false;
     return LastMessage(
-      senderName: json['senderName'] ?? '',
-      content: isDeleted ? 'Tin nhắn đã được thu hồi' : (json['content'] ?? ''),
-      type: json['type'] ?? 'TEXT',
-      sentAt: json['sentAt'] ?? '',
-      deleted: isDeleted,
+      senderName: json['senderName']?.toString() ?? '',
+      content: json['content']?.toString() ?? '',
+      type: json['type']?.toString() ?? 'TEXT',
+      sentAt: json['sentAt']?.toString() ?? '',
+      deleted: json['deleted'] ?? false,
     );
   }
 }
@@ -80,20 +83,20 @@ class ChatGroup {
   factory ChatGroup.fromJson(Map<String, dynamic> json) {
     return ChatGroup(
       id: int.tryParse(json['id']?.toString() ?? '0') ?? 0,
-      name: json['name'] ?? '',
-      className: json['className'] ?? '',
-      type: json['type'] ?? 'CLASS',
-      lecturerName: json['lecturerName'] ?? '',
+      name: json['name']?.toString() ?? '',
+      className: json['className']?.toString() ?? '',
+      type: json['type']?.toString() ?? 'CLASS',
+      lecturerName: json['lecturerName']?.toString() ?? '',
       memberCount: int.tryParse(json['memberCount']?.toString() ?? '0') ?? 0,
-      createdAt: json['createdAt'] ?? '',
+      createdAt: json['createdAt']?.toString() ?? '',
       lastMessage: json['lastMessage'] != null
-          ? LastMessage.fromJson(json['lastMessage'])
+          ? LastMessage.fromJson(json['lastMessage'] as Map<String, dynamic>)
           : null,
       members: json['members'] != null
           ? (json['members'] as List)
-                .map((m) => ChatMember.fromJson(m))
+                .map((m) => ChatMember.fromJson(m as Map<String, dynamic>))
                 .toList()
-          : null,
+          : [],
       unreadCount: int.tryParse(json['unreadCount']?.toString() ?? '0') ?? 0,
       firstUnreadMessageId: json['firstUnreadMessageId'] != null
           ? int.tryParse(json['firstUnreadMessageId'].toString())

@@ -11,6 +11,7 @@ import { ImportGradeComponentModal } from '../../components/academic-staff/Impor
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { Course } from '../../types/course';
 import { usePagination } from '../../hooks/usePagination';
+import { Tooltip } from '../../components/common/Tooltip';
 
 export const CourseManagement: React.FC = () => {
     const navigate = useNavigate();

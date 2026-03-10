@@ -110,6 +110,13 @@ public class AuthController {
         return ResponseEntity.ok(userService.updateMyProfile(username, request, avatar));
     }
 
+    @GetMapping("/user/{id}/profile")
+    @Operation(summary = "Lấy thông tin công khai của người dùng", description = "Sử dụng cho sinh viên xem thông tin giảng viên")
+    public ResponseEntity<com.fams.backend.dto.response.UserResponse> getPublicUserProfile(@PathVariable Long id) {
+        log.info("GET /auth/user/{}/profile", id);
+        return ResponseEntity.ok(userService.getUserById(id));
+    }
+
     /**
      * GET /auth/me
      * Lấy thông tin user hiện tại (cần JWT token)

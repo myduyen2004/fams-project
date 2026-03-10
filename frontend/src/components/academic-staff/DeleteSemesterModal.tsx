@@ -17,7 +17,7 @@ export const DeleteSemesterModal: React.FC<DeleteSemesterModalProps> = ({
   semesterStatus,
 }) => {
   const [loading, setLoading] = React.useState(false);
-  
+
   const canDelete = semesterStatus === 'upcoming';
 
   const handleConfirm = async () => {
@@ -49,21 +49,23 @@ export const DeleteSemesterModal: React.FC<DeleteSemesterModalProps> = ({
 
           {/* Icon with Animation */}
           <div className="relative mb-6">
-            <div className="absolute inset-0 bg-red-100 rounded-full animate-pulse"></div>
-            <div className="relative w-20 h-20 bg-gradient-to-tr from-red-500 to-orange-400 rounded-full flex items-center justify-center shadow-lg shadow-red-200">
-              <Trash2 className="text-white w-8 h-8" />
+            <div className={`absolute inset-0 ${canDelete ? 'bg-red-100' : 'bg-amber-100'} rounded-full animate-pulse`}></div>
+            <div className={`relative w-20 h-20 ${canDelete ? 'bg-gradient-to-tr from-red-500 to-orange-400 shadow-red-200' : 'bg-gradient-to-tr from-amber-500 to-yellow-400 shadow-amber-200'} rounded-full flex items-center justify-center shadow-lg`}>
+              {canDelete ? <Trash2 className="text-white w-8 h-8" /> : <XCircle className="text-white w-8 h-8" />}
             </div>
           </div>
 
           {/* Title */}
-          <h2 className="text-2xl font-bold text-slate-800 mb-3">Xác nhận xóa</h2>
+          <h2 className="text-2xl font-bold text-slate-800 mb-3">
+            {canDelete ? 'Xác nhận xóa' : 'Không thể xóa'}
+          </h2>
 
           {/* Message */}
           <p className="text-slate-500 leading-relaxed text-center px-2">
             {canDelete ? (
               <>Bạn có chắc chắn muốn xóa học kỳ này không?</>
             ) : (
-              <>Không thể xóa học kỳ này!</>
+              <>Không thể xóa học kỳ này vì học kỳ đã bắt đầu hoặc đã kết thúc.</>
             )}
             <span className="block mt-1 font-semibold text-slate-700 underline decoration-red-300 decoration-2">
               {semesterName}
@@ -79,26 +81,25 @@ export const DeleteSemesterModal: React.FC<DeleteSemesterModalProps> = ({
               </p>
             </div>
           ) : (
-            <div className="mt-6 w-full py-3 px-4 bg-red-50 border-l-4 border-red-500 rounded-r-xl flex items-center gap-3">
-              <XCircle className="text-red-500 w-5 h-5 flex-shrink-0" />
-              <p className="text-xs text-red-600 font-medium">
-                Chỉ được xóa học kỳ có trạng thái "Sắp diễn ra"
+            <div className="mt-6 w-full py-3 px-4 bg-amber-50 border-l-4 border-amber-500 rounded-r-xl flex items-center gap-3">
+              <AlertCircle className="text-amber-500 w-5 h-5 flex-shrink-0" />
+              <p className="text-xs text-amber-700 font-medium">
+                Chỉ có thể xóa học kỳ có trạng thái "Sắp diễn ra"
               </p>
             </div>
           )}
 
           {/* Action Buttons */}
-          <div className="grid grid-cols-2 gap-4 w-full mt-10">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-bold text-sm transition-all duration-200 active:scale-95 disabled:opacity-50"
-            >
-              Quay lại
-            </button>
-
-            {canDelete ? (
+          {canDelete ? (
+            <div className="grid grid-cols-2 gap-4 w-full mt-10">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={loading}
+                className="py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-bold text-sm transition-all duration-200 active:scale-95 disabled:opacity-50"
+              >
+                Quay lại
+              </button>
               <button
                 type="button"
                 onClick={handleConfirm}
@@ -107,17 +108,18 @@ export const DeleteSemesterModal: React.FC<DeleteSemesterModalProps> = ({
               >
                 {loading ? 'Đang xóa...' : 'Đồng ý xóa'}
               </button>
-            ) : (
+            </div>
+          ) : (
+            <div className="w-full mt-10">
               <button
                 type="button"
                 onClick={onClose}
-                className="py-3.5 bg-gray-400 text-white rounded-2xl font-bold text-sm cursor-not-allowed"
-                disabled
+                className="w-full py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-bold text-sm transition-all duration-200 active:scale-95"
               >
-                Không thể xóa
+                Đóng
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

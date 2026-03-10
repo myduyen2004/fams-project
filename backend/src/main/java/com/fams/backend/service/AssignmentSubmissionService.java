@@ -42,4 +42,6 @@ public interface AssignmentSubmissionService {
      * Được gọi bởi AssignmentReminderScheduler.
      */
     void sendDueDateReminderNotifications(Assignment assignment);
+
+    byte[] downloadAllSubmissionsAsZip(Long assignmentId, Long lecturerId);
 }
