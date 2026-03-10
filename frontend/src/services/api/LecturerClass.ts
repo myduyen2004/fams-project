@@ -38,9 +38,11 @@ export interface StudentEnrollmentDTO {
     phone: string;
     idCard: string;
     majorName: string;
+    specializationName: string;
+    subSpecializationName: string;
     studentCode: string;
-    status: string;
     avatar?: string;
+    status: string;
 }
 
 export interface ClassDetailResponse {

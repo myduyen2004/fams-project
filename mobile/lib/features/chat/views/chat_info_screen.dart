@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
 import '../controllers/chat_controller.dart';
 import '../models/chat_models.dart';
+import '../services/chat_service.dart';
+import '../../lecturer/views/student_detail_screen.dart';
 import 'image_preview_screen.dart';
 
 /// Group detail / info screen — matches web detail sidebar
@@ -54,28 +57,121 @@ class ChatInfoScreen extends StatelessWidget {
           child: Column(
             children: [
               // ── Group Avatar ──
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFEEDD),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 4),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+              Builder(
+                builder: (context) {
+                  final studentMembers =
+                      group.members
+                          ?.where((m) => m.role == 'STUDENT')
+                          .toList() ??
+                      [];
+                  final avatarsToDisplay = studentMembers.take(2).toList();
+
+                  if (avatarsToDisplay.isEmpty) {
+                    return Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFEEDD),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 4),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.people_rounded,
+                          color: Color(0xFFFF8C33),
+                          size: 64,
+                        ),
+                      ),
+                    );
+                  }
+
+                  return SizedBox(
+                    width:
+                        120 +
+                        (avatarsToDisplay.length > 1
+                            ? 60.0
+                            : 0.0), // Adjust width for overlap
+                    height: 120,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      alignment: Alignment.center,
+                      children: avatarsToDisplay
+                          .asMap()
+                          .entries
+                          .map((entry) {
+                            final idx = entry.key;
+                            final member = entry.value;
+
+                            // Calculate position to center the stack
+                            final totalWidth =
+                                120 +
+                                (avatarsToDisplay.length > 1 ? 60.0 : 0.0);
+                            final startLeft =
+                                (totalWidth -
+                                    (120 +
+                                        (avatarsToDisplay.length - 1) * 60.0)) /
+                                2;
+
+                            return Positioned(
+                              left:
+                                  startLeft +
+                                  idx * 60.0, // 1/2 overlap (120/2 = 60)
+                              child: Container(
+                                width: 120,
+                                height: 120,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 6,
+                                  ),
+                                  color: idx == 0
+                                      ? Colors.white
+                                      : const Color(0xFFFFD8B2),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.08),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: ClipOval(
+                                  child:
+                                      member.avatarUrl != null &&
+                                          member.avatarUrl!.isNotEmpty
+                                      ? CachedNetworkImage(
+                                          imageUrl: member.avatarUrl!,
+                                          fit: BoxFit.cover,
+                                          errorWidget: (context, url, error) =>
+                                              _buildInitialAvatarForInfo(
+                                                member.fullName,
+                                              ),
+                                          placeholder: (context, url) =>
+                                              Container(
+                                                color: Colors.grey[200],
+                                              ),
+                                        )
+                                      : _buildInitialAvatarForInfo(
+                                          member.fullName,
+                                        ),
+                                ),
+                              ),
+                            );
+                          })
+                          .toList()
+                          .reversed
+                          .toList(),
                     ),
-                  ],
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.people_rounded,
-                    color: Color(0xFFFF8C33),
-                    size: 64,
-                  ),
-                ),
+                  );
+                },
               ),
               const SizedBox(height: 12),
               Text(
@@ -206,22 +302,34 @@ class ChatInfoScreen extends StatelessWidget {
 
   Widget _buildInfoRow(IconData icon, String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: AppColors.primaryOrange),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.primaryOrange.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 18, color: AppColors.primaryOrange),
+          ),
           const SizedBox(width: 12),
-          Text(label, style: TextStyle(fontSize: 14, color: Colors.grey[500])),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w400,
+            ),
+          ),
           const Spacer(),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF2D3436),
-              ),
+          Text(
+            value,
+            textAlign: TextAlign.right,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF2D3436),
             ),
           ),
         ],
@@ -232,6 +340,45 @@ class ChatInfoScreen extends StatelessWidget {
   Widget _buildMemberTile(ChatMember member) {
     final isLecturer = member.role == 'LECTURER';
     return ListTile(
+      onTap: () async {
+        print(
+          'DEBUG: Tapped member: ${member.fullName}, role: ${member.role}, code: ${member.code}',
+        );
+        if (!isLecturer && member.code.isNotEmpty) {
+          print('DEBUG: Conditions met, fetching info for ${member.code}');
+          final chatService = ChatService();
+          try {
+            Get.dialog(
+              const Center(
+                child: CircularProgressIndicator(
+                  color: AppColors.primaryOrange,
+                ),
+              ),
+              barrierDismissible: false,
+            );
+
+            final enrollment = await chatService.getStudentInfo(member.code);
+            print('DEBUG: Success fetching info for ${member.code}');
+            Get.back(); // Close loading dialog
+
+            Get.to(() => StudentDetailScreen(student: enrollment));
+          } catch (e) {
+            print('DEBUG: Error fetching info for ${member.code}: $e');
+            Get.back(); // Close loading dialog
+            Get.snackbar(
+              'Lỗi',
+              'Không thể tải thông tin sinh viên (${member.code}): $e',
+              backgroundColor: Colors.red.withOpacity(0.1),
+              colorText: Colors.red,
+              duration: const Duration(seconds: 5),
+            );
+          }
+        } else {
+          print(
+            'DEBUG: Conditions NOT met: isLecturer=$isLecturer, codeEmpty=${member.code.isEmpty}',
+          );
+        }
+      },
       dense: true,
       leading: Container(
         width: 38,
@@ -257,6 +404,12 @@ class ChatInfoScreen extends StatelessWidget {
         member.fullName,
         style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
       ),
+      subtitle: !isLecturer
+          ? Text(
+              member.code.isNotEmpty ? member.code : 'Chưa có MSSV',
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            )
+          : null,
       trailing: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
@@ -442,5 +595,22 @@ class ChatInfoScreen extends StatelessWidget {
     } catch (_) {
       return isoString;
     }
+  }
+
+  Widget _buildInitialAvatarForInfo(String fullName) {
+    final initial = fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U';
+    return Container(
+      color: const Color(0xFFFFEEDD),
+      child: Center(
+        child: Text(
+          initial,
+          style: const TextStyle(
+            fontSize: 48,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFFFF8C33),
+          ),
+        ),
+      ),
+    );
   }
 }
