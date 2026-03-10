@@ -17,7 +17,6 @@ public class GradeComponentResponse {
     private String description;
     private GradeType type;
     private Double weight;
-    private Boolean isRequired;
     private Boolean isResit;
     private Long referenceComponentId;
     private String referenceComponentName;
@@ -34,7 +33,6 @@ public class GradeComponentResponse {
                 .description(entity.getDescription())
                 .type(entity.getType())
                 .weight(entity.getWeight())
-                .isRequired(entity.getIsRequired())
                 .isResit(entity.getIsResit())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt());

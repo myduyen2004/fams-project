@@ -45,7 +45,6 @@ public class GradeOverviewResponse {
         private String name;
         private String type;
         private Double weight;
-        private Boolean isRequired;
         private Boolean isResit;
     }
 }

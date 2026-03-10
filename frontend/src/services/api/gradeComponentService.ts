@@ -8,7 +8,6 @@ export interface GradeComponent {
     description?: string;
     type: GradeType;
     weight: number;
-    isRequired: boolean;
     isResit: boolean;
     referenceComponentId?: number;
     referenceComponentName?: string;
@@ -38,7 +37,6 @@ export interface GradeComponentRequest {
     description?: string;
     type: GradeType;
     weight: number;
-    isRequired?: boolean;
     isResit?: boolean;
     referenceComponentId?: number;
 }
@@ -143,16 +141,6 @@ export const gradeComponentService = {
      */
     duplicateGradeComponent: async (id: number): Promise<GradeComponent> => {
         const response = await axios.post(`${API_URL}/grade-components/${id}/duplicate`, null, {
-            headers: getAuthHeader()
-        });
-        return response.data;
-    },
-
-    /**
-     * Toggle isRequired for a grade component
-     */
-    toggleRequired: async (id: number): Promise<GradeComponent> => {
-        const response = await axios.patch(`${API_URL}/grade-components/${id}/toggle-required`, null, {
             headers: getAuthHeader()
         });
         return response.data;

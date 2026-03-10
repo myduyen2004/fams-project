@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, Loader2, Plus, Trash2, BookOpen, Search, Info } from 'lucide-react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { Course, CourseCreateRequest } from '../../types/course';
+import { Course, CourseCreateRequest, CoursePrerequisite } from '../../types/course';
 import { courseService } from '../../services/api/courseService';
 import toast from 'react-hot-toast';
 
@@ -39,6 +39,17 @@ const validationSchema = Yup.object({
 
 export const CourseFormModal: React.FC<CourseFormModalProps> = ({ isOpen, onClose, onSuccess, course }) => {
     const [loading, setLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState<'info' | 'prerequisites'>('info');
+
+    // Prerequisite state
+    const [prerequisites, setPrerequisites] = useState<CoursePrerequisite[]>([]);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<Course[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [showDropdown, setShowDropdown] = useState(false);
+    const [prereqLoading, setPrereqLoading] = useState<number | null>(null);
+    const searchRef = useRef<HTMLDivElement>(null);
+    const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
     const formik = useFormik<CourseCreateRequest>({
         initialValues: {
@@ -46,7 +57,8 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({ isOpen, onClos
             name: '',
             description: '',
             credits: 3,
-            numberOfSlots: 45
+            numberOfSlots: 45,
+            isCalculatedInGpa: true
         },
         validationSchema,
         onSubmit: async (values) => {
@@ -77,19 +89,101 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({ isOpen, onClos
                 name: course.name,
                 description: course.description || '',
                 credits: course.credits,
-                numberOfSlots: course.numberOfSlots
+                numberOfSlots: course.numberOfSlots,
+                isCalculatedInGpa: course.isCalculatedInGpa ?? true
             });
+            setPrerequisites(course.prerequisites || []);
         } else {
             formik.resetForm();
+            setPrerequisites([]);
         }
+        setActiveTab('info');
+        setSearchQuery('');
+        setSearchResults([]);
+        setShowDropdown(false);
     }, [course, isOpen]);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+                setShowDropdown(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const handleSearchChange = (value: string) => {
+        setSearchQuery(value);
+        if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+        if (!value.trim()) {
+            setSearchResults([]);
+            setShowDropdown(false);
+            return;
+        }
+        setIsSearching(true);
+        searchTimeoutRef.current = setTimeout(async () => {
+            try {
+                const results = await courseService.searchCourses(value, 20);
+                // Filter out current course and already-added prerequisites
+                const filtered = results.filter(r =>
+                    r.id !== course?.id &&
+                    !prerequisites.some(p => p.id === r.id) &&
+                    !(r.prerequisites?.some(p => p.id === course?.id))
+                );
+                setSearchResults(filtered);
+                setShowDropdown(true);
+            } catch {
+                setSearchResults([]);
+            } finally {
+                setIsSearching(false);
+            }
+        }, 300);
+    };
+
+    const handleAddPrerequisite = async (prereq: Course) => {
+        if (!course) {
+            // For new course - just add locally, will need to save first
+            toast.error('Vui lòng lưu môn học trước khi thêm môn tiên quyết');
+            return;
+        }
+        setPrereqLoading(prereq.id);
+        try {
+            const updated = await courseService.addPrerequisite(course.id, prereq.id);
+            setPrerequisites(updated);
+            setSearchQuery('');
+            setSearchResults([]);
+            setShowDropdown(false);
+            toast.success(`Đã thêm môn tiên quyết: ${prereq.name}`);
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Không thể thêm môn tiên quyết');
+        } finally {
+            setPrereqLoading(null);
+        }
+    };
+
+    const handleRemovePrerequisite = async (prereqId: number) => {
+        if (!course) return;
+        setPrereqLoading(prereqId);
+        try {
+            const updated = await courseService.removePrerequisite(course.id, prereqId);
+            setPrerequisites(updated);
+            toast.success('Đã xóa môn tiên quyết');
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Không thể xóa môn tiên quyết');
+        } finally {
+            setPrereqLoading(null);
+        }
+    };
 
     if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-lg rounded-xl bg-white shadow-xl dark:bg-zinc-900">
-                <div className="flex items-center justify-between border-b border-gray-100 p-4 dark:border-zinc-800">
+            <div className="w-full max-w-lg rounded-xl bg-white shadow-xl dark:bg-zinc-900 flex flex-col max-h-[90vh]">
+                {/* Header */}
+                <div className="flex items-center justify-between border-b border-gray-100 p-4 dark:border-zinc-800 flex-shrink-0">
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                         {course ? 'Chỉnh sửa môn học' : 'Thêm môn học mới'}
                     </h2>
@@ -97,46 +191,206 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({ isOpen, onClos
                         <X className="h-5 w-5 text-gray-500" />
                     </button>
                 </div>
-                <form onSubmit={formik.handleSubmit} className="p-4 space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Mã môn *</label>
-                        <input type="text" name="code" value={formik.values.code} onChange={formik.handleChange} onBlur={formik.handleBlur}
-                            className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none dark:bg-zinc-800 dark:text-white ${formik.touched.code && formik.errors.code ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-fpt-orange dark:border-zinc-700'}`} placeholder="VD: PRF192" />
-                        {formik.touched.code && formik.errors.code && <p className="mt-1 text-xs text-red-500">{formik.errors.code}</p>}
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Tên môn học *</label>
-                        <input type="text" name="name" value={formik.values.name} onChange={formik.handleChange} onBlur={formik.handleBlur}
-                            className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none dark:bg-zinc-800 dark:text-white ${formik.touched.name && formik.errors.name ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-fpt-orange dark:border-zinc-700'}`} placeholder="VD: Programming Fundamentals" />
-                        {formik.touched.name && formik.errors.name && <p className="mt-1 text-xs text-red-500">{formik.errors.name}</p>}
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Số tín chỉ *</label>
-                            <input type="number" name="credits" value={formik.values.credits} onChange={formik.handleChange} onBlur={formik.handleBlur}
-                                className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none dark:bg-zinc-800 dark:text-white ${formik.touched.credits && formik.errors.credits ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-fpt-orange dark:border-zinc-700'}`} min={1} max={10} />
-                            {formik.touched.credits && formik.errors.credits && <p className="mt-1 text-xs text-red-500">{formik.errors.credits}</p>}
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Số slot</label>
-                            <input type="number" name="numberOfSlots" value={formik.values.numberOfSlots} onChange={formik.handleChange} onBlur={formik.handleBlur}
-                                className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none dark:bg-zinc-800 dark:text-white ${formik.touched.numberOfSlots && formik.errors.numberOfSlots ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-fpt-orange dark:border-zinc-700'}`} min={1} max={100} />
-                            {formik.touched.numberOfSlots && formik.errors.numberOfSlots && <p className="mt-1 text-xs text-red-500">{formik.errors.numberOfSlots}</p>}
-                        </div>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Mô tả</label>
-                        <textarea name="description" value={formik.values.description} onChange={formik.handleChange} onBlur={formik.handleBlur}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-fpt-orange focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-white" rows={3} />
-                    </div>
-                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-zinc-800">
-                        <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg dark:text-zinc-300 dark:hover:bg-zinc-800">Hủy</button>
-                        <button type="submit" disabled={loading} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-fpt-orange rounded-lg hover:bg-orange-600 disabled:opacity-50">
-                            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                            {course ? 'Cập nhật' : 'Tạo mới'}
+
+                {/* Tabs - only show when editing */}
+                {course && (
+                    <div className="flex border-b border-gray-100 dark:border-zinc-800 flex-shrink-0">
+                        <button
+                            onClick={() => setActiveTab('info')}
+                            className={`flex-1 py-2.5 text-sm font-medium transition-colors ${activeTab === 'info' ? 'border-b-2 border-fpt-orange text-fpt-orange' : 'text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200'}`}
+                        >
+                            Thông tin môn học
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('prerequisites')}
+                            className={`flex-1 py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${activeTab === 'prerequisites' ? 'border-b-2 border-fpt-orange text-fpt-orange' : 'text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200'}`}
+                        >
+                            <BookOpen className="h-4 w-4" />
+                            Môn tiên quyết
+                            {prerequisites.length > 0 && (
+                                <span className="ml-1 rounded-full bg-fpt-orange px-1.5 py-0.5 text-xs text-white">
+                                    {prerequisites.length}
+                                </span>
+                            )}
                         </button>
                     </div>
-                </form>
+                )}
+
+                {/* Content */}
+                <div className="overflow-y-auto flex-1">
+                    {/* Info Tab */}
+                    {activeTab === 'info' && (
+                        <form onSubmit={formik.handleSubmit} className="p-4 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Mã môn *</label>
+                                <input type="text" name="code" value={formik.values.code} onChange={formik.handleChange} onBlur={formik.handleBlur}
+                                    className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none dark:bg-zinc-800 dark:text-white ${formik.touched.code && formik.errors.code ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-fpt-orange dark:border-zinc-700'}`} placeholder="VD: PRF192" />
+                                {formik.touched.code && formik.errors.code && <p className="mt-1 text-xs text-red-500">{formik.errors.code}</p>}
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Tên môn học *</label>
+                                <input type="text" name="name" value={formik.values.name} onChange={formik.handleChange} onBlur={formik.handleBlur}
+                                    className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none dark:bg-zinc-800 dark:text-white ${formik.touched.name && formik.errors.name ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-fpt-orange dark:border-zinc-700'}`} placeholder="VD: Programming Fundamentals" />
+                                {formik.touched.name && formik.errors.name && <p className="mt-1 text-xs text-red-500">{formik.errors.name}</p>}
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Số tín chỉ *</label>
+                                    <input type="number" name="credits" value={formik.values.credits} onChange={formik.handleChange} onBlur={formik.handleBlur}
+                                        className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none dark:bg-zinc-800 dark:text-white ${formik.touched.credits && formik.errors.credits ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-fpt-orange dark:border-zinc-700'}`} min={1} max={10} />
+                                    {formik.touched.credits && formik.errors.credits && <p className="mt-1 text-xs text-red-500">{formik.errors.credits}</p>}
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Số slot</label>
+                                    <input type="number" name="numberOfSlots" value={formik.values.numberOfSlots} onChange={formik.handleChange} onBlur={formik.handleBlur}
+                                        className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none dark:bg-zinc-800 dark:text-white ${formik.touched.numberOfSlots && formik.errors.numberOfSlots ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-fpt-orange dark:border-zinc-700'}`} min={1} max={100} />
+                                    {formik.touched.numberOfSlots && formik.errors.numberOfSlots && <p className="mt-1 text-xs text-red-500">{formik.errors.numberOfSlots}</p>}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Mô tả</label>
+                                <textarea name="description" value={formik.values.description} onChange={formik.handleChange} onBlur={formik.handleBlur}
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-fpt-orange focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-white" rows={3} />
+                            </div>
+                            <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800 mt-2 mb-2">
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-lg transition-colors ${formik.values.isCalculatedInGpa ? 'bg-orange-100 text-fpt-orange dark:bg-orange-900/30' : 'bg-gray-200 text-gray-500 dark:bg-zinc-700'}`}>
+                                        <Info className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-white">Tính vào điểm trung bình (GPA)</p>
+                                        <p className="text-[11px] text-gray-500 dark:text-zinc-400">Môn học sẽ được dùng để tính điểm trung bình tích lũy</p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => formik.setFieldValue('isCalculatedInGpa', !formik.values.isCalculatedInGpa)}
+                                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-fpt-orange focus-visible:ring-offset-2 ${formik.values.isCalculatedInGpa ? 'bg-fpt-orange shadow-[0_0_15px_rgba(242,113,37,0.4)]' : 'bg-gray-300 dark:bg-zinc-600'}`}
+                                >
+                                    <span
+                                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${formik.values.isCalculatedInGpa ? 'translate-x-5' : 'translate-x-0'}`}
+                                    />
+                                </button>
+                            </div>
+                            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-zinc-800">
+                                <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg dark:text-zinc-300 dark:hover:bg-zinc-800">Hủy</button>
+                                <button type="submit" disabled={loading} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-fpt-orange rounded-lg hover:bg-orange-600 disabled:opacity-50">
+                                    {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                                    {course ? 'Cập nhật' : 'Tạo mới'}
+                                </button>
+                            </div>
+                        </form>
+                    )}
+
+                    {/* Prerequisites Tab */}
+                    {activeTab === 'prerequisites' && (
+                        <div className="p-4 space-y-4">
+                            {/* Info banner */}
+                            <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-sm text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300">
+                                Sinh viên phải hoàn thành (pass) các môn tiên quyết trước khi đăng ký môn này.
+                            </div>
+
+                            {/* Search */}
+                            <div ref={searchRef} className="relative">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
+                                    Tìm và thêm môn tiên quyết
+                                </label>
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={(e) => handleSearchChange(e.target.value)}
+                                        onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
+                                        placeholder="Tìm môn học theo mã hoặc tên..."
+                                        className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm focus:border-fpt-orange focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                                    />
+                                    {isSearching && (
+                                        <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-gray-400" />
+                                    )}
+                                </div>
+
+                                {/* Dropdown */}
+                                {showDropdown && searchResults.length > 0 && (
+                                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-800 max-h-52 overflow-y-auto">
+                                        {searchResults.map(result => (
+                                            <button
+                                                key={result.id}
+                                                onClick={() => handleAddPrerequisite(result)}
+                                                disabled={prereqLoading === result.id}
+                                                className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 disabled:opacity-50 transition-colors border-b border-gray-100 dark:border-zinc-700 last:border-0"
+                                            >
+                                                <div>
+                                                    <span className="font-medium text-gray-900 dark:text-white">{result.code}</span>
+                                                    <span className="ml-2 text-gray-500 dark:text-zinc-400">{result.name}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1 text-fpt-orange flex-shrink-0 ml-2">
+                                                    {prereqLoading === result.id ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <Plus className="h-4 w-4" />
+                                                    )}
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                                {showDropdown && searchResults.length === 0 && !isSearching && searchQuery.trim() && (
+                                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-800 p-3 text-sm text-gray-500 dark:text-zinc-400">
+                                        Không tìm thấy môn học phù hợp
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Current prerequisites list */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2">
+                                    Danh sách môn tiên quyết ({prerequisites.length})
+                                </label>
+                                {prerequisites.length === 0 ? (
+                                    <div className="rounded-lg border-2 border-dashed border-gray-200 dark:border-zinc-700 p-6 text-center text-sm text-gray-400 dark:text-zinc-500">
+                                        <BookOpen className="mx-auto mb-2 h-8 w-8 opacity-40" />
+                                        Chưa có môn tiên quyết nào
+                                    </div>
+                                ) : (
+                                    <div className="rounded-lg border border-gray-200 dark:border-zinc-700 overflow-hidden">
+                                        {prerequisites.map((prereq, index) => (
+                                            <div
+                                                key={prereq.id}
+                                                className={`flex items-center justify-between px-3 py-2.5 ${index !== prerequisites.length - 1 ? 'border-b border-gray-100 dark:border-zinc-700' : ''} hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors`}
+                                            >
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <span className="inline-flex items-center rounded-md bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 flex-shrink-0">
+                                                        {prereq.code}
+                                                    </span>
+                                                    <span className="text-sm text-gray-700 dark:text-zinc-300 truncate">{prereq.name}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleRemovePrerequisite(prereq.id)}
+                                                    disabled={prereqLoading === prereq.id}
+                                                    className="flex-shrink-0 ml-2 rounded-md p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors disabled:opacity-50"
+                                                    title="Xóa môn tiên quyết"
+                                                >
+                                                    {prereqLoading === prereq.id ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <Trash2 className="h-4 w-4" />
+                                                    )}
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex justify-end pt-2 border-t border-gray-100 dark:border-zinc-800">
+                                <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-white bg-fpt-orange rounded-lg hover:bg-orange-600">
+                                    Xong
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

@@ -60,6 +60,7 @@ const LecturerAssignmentPage = lazy(() => import('./pages/lecturer/LecturerAssig
 const LecturerAssignmentDetailPage = lazy(() => import('./pages/lecturer/LecturerAssignmentDetailPage').then(m => ({ default: m.LecturerAssignmentDetailPage })));
 const LecturerMessagesPage = lazy(() => import('./pages/lecturer/LecturerMessagesPage').then(m => ({ default: m.LecturerMessagesPage })));
 const StudentGradesPage = lazy(() => import('./pages/student/StudentGradesPage').then(m => ({ default: m.StudentGradesPage })));
+const StudentAllGradesPage = lazy(() => import('./pages/student/StudentAllGradesPage').then(m => ({ default: m.StudentAllGradesPage })));
 const StudentAssignmentPage = lazy(() => import('./pages/student/StudentAssignmentPage').then(m => ({ default: m.StudentAssignmentPage })));
 const StudentMessagesPage = lazy(() => import('./pages/student/StudentMessagesPage').then(m => ({ default: m.StudentMessagesPage })));
 const StudentAcademicRequestPage = lazy(() => import('./pages/student/StudentAcademicRequestPage').then(m => ({ default: m.StudentAcademicRequestPage })));
@@ -335,6 +336,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['STUDENT']}>
                 <StudentGradesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/all-grades"
+            element={
+              <ProtectedRoute allowedRoles={['STUDENT']}>
+                <StudentAllGradesPage />
               </ProtectedRoute>
             }
           />

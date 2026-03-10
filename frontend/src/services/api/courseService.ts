@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { API_URL } from './config';
-import { Course, CourseSearchParams, CourseCreateRequest, CourseImportDTO } from '../../types/course';
+import { Course, CourseSearchParams, CourseCreateRequest, CourseImportDTO, CoursePrerequisite } from '../../types/course';
 import { Page } from '../../types/major';
 
 const getAuthHeader = () => {
@@ -41,6 +41,14 @@ export const courseService = {
     updateStatus: async (id: number, status: 'ACTIVE' | 'INACTIVE'): Promise<Course> => {
         const response = await axios.put(`${API_URL}/courses/${id}/status`, null, {
             params: { status },
+            headers: getAuthHeader()
+        });
+        return response.data;
+    },
+
+    updateGpaStatus: async (id: number, isCalculatedInGpa: boolean): Promise<Course> => {
+        const response = await axios.put(`${API_URL}/courses/${id}/gpa-status`, null, {
+            params: { isCalculatedInGpa },
             headers: getAuthHeader()
         });
         return response.data;
@@ -101,6 +109,28 @@ export const courseService = {
             params,
             headers: getAuthHeader(),
             responseType: 'blob'
+        });
+        return response.data;
+    },
+
+    // Prerequisite methods
+    getPrerequisites: async (courseId: number): Promise<CoursePrerequisite[]> => {
+        const response = await axios.get(`${API_URL}/courses/${courseId}/prerequisites`, {
+            headers: getAuthHeader()
+        });
+        return response.data;
+    },
+
+    addPrerequisite: async (courseId: number, prereqId: number): Promise<CoursePrerequisite[]> => {
+        const response = await axios.post(`${API_URL}/courses/${courseId}/prerequisites/${prereqId}`, null, {
+            headers: getAuthHeader()
+        });
+        return response.data;
+    },
+
+    removePrerequisite: async (courseId: number, prereqId: number): Promise<CoursePrerequisite[]> => {
+        const response = await axios.delete(`${API_URL}/courses/${courseId}/prerequisites/${prereqId}`, {
+            headers: getAuthHeader()
         });
         return response.data;
     },

@@ -62,6 +62,12 @@ public class CourseController {
         return ResponseEntity.noContent().build();
     }
 
+    @PutMapping("/{id}/gpa-status")
+    public ResponseEntity<CourseResponse> updateGpaStatus(@PathVariable Long id,
+            @RequestParam Boolean isCalculatedInGpa) {
+        return ResponseEntity.ok(courseService.updateGpaStatus(id, isCalculatedInGpa));
+    }
+
     @GetMapping("/search")
     public ResponseEntity<List<CourseResponse>> searchCourses(
             @RequestParam(required = false) String keyword,
@@ -83,6 +89,37 @@ public class CourseController {
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "1000") int limit) {
         return ResponseEntity.ok(courseService.searchCoursesNotInSubSpecialization(subSpecId, keyword, limit));
+    }
+
+    // ==================== PREREQUISITE ENDPOINTS ====================
+
+    /**
+     * Lấy danh sách môn tiên quyết của một môn học
+     */
+    @GetMapping("/{id}/prerequisites")
+    public ResponseEntity<List<CourseResponse.PrerequisiteDTO>> getPrerequisites(@PathVariable Long id) {
+        log.info("GET /courses/{}/prerequisites", id);
+        return ResponseEntity.ok(courseService.getPrerequisites(id));
+    }
+
+    /**
+     * Thêm một môn tiên quyết cho môn học
+     */
+    @PostMapping("/{id}/prerequisites/{prereqId}")
+    public ResponseEntity<List<CourseResponse.PrerequisiteDTO>> addPrerequisite(
+            @PathVariable Long id, @PathVariable Long prereqId) {
+        log.info("POST /courses/{}/prerequisites/{}", id, prereqId);
+        return ResponseEntity.ok(courseService.addPrerequisite(id, prereqId));
+    }
+
+    /**
+     * Xóa một môn tiên quyết khỏi môn học
+     */
+    @DeleteMapping("/{id}/prerequisites/{prereqId}")
+    public ResponseEntity<List<CourseResponse.PrerequisiteDTO>> removePrerequisite(
+            @PathVariable Long id, @PathVariable Long prereqId) {
+        log.info("DELETE /courses/{}/prerequisites/{}", id, prereqId);
+        return ResponseEntity.ok(courseService.removePrerequisite(id, prereqId));
     }
 
     // ==================== IMPORT/EXPORT ENDPOINTS ====================
