@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { MessageCircle, Send, FileText, X, Search, Users, ArrowLeft, Image as ImageIcon, Info, Plus, Trash2, Download, Folder, File as FileIcon, ExternalLink, Reply } from 'lucide-react';
+import { MessageCircle, Send, FileText, X, Search, Users, ArrowLeft, Image as ImageIcon, Info, Plus, Trash2, Download, Folder, File as FileIcon, ExternalLink, Reply, Eye } from 'lucide-react';
 import { chatGroupService, ChatGroupResponse, ChatMessageResponse } from '../../services/api/chatGroupService';
+import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import { WS_URL } from '../../services/api/config';
@@ -465,95 +466,34 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
     };
 
     const downloadFile = async (url: string, fileName: string) => {
-        // Check if it's a local file:// URL
-        if (url.startsWith('file://')) {
+        // Check if it's a local file:// URL (optimistic/unsaved upload)
+        if (url.startsWith('file://') || url.startsWith('blob:')) {
             toast.error('File này chưa được tải lên server. Vui lòng gửi lại file!', {
                 duration: 5000
             });
-            console.error('Cannot download file:// URL:', url);
             return;
         }
 
-        // For Cloudinary files, use backend emergency download endpoint
-        // Backend will use Cloudinary credentials to fetch the file
-        if (url.includes('cloudinary.com')) {
-            console.log('Using backend emergency download for:', url);
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-            const { publicId, resourceType } = extractCloudinaryPublicId(url);
+        // Strip Cloudinary signing component to get clean public URL
+        let cleanUrl = url.replace(/\/s--[^/]+--\//, '/');
 
-            if (publicId) {
-                try {
-                    const emergencyUrl = `${API_URL}/api/v1/files/download?publicId=${encodeURIComponent(publicId)}&resourceType=${resourceType}&filename=${encodeURIComponent(fileName)}`;
-                    const link = document.createElement('a');
-                    link.href = emergencyUrl;
-                    link.download = removeAccents(fileName);
-                    link.target = '_blank';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    toast.success('Đang tải file qua server...');
-                    return;
-                } catch (error) {
-                    console.error('Emergency download failed:', error);
-                }
-            }
-        }
-
-        // For other files, try direct download
         try {
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            const blob = await response.blob();
-            if (blob.size === 0) {
-                throw new Error('Downloaded file is empty');
-            }
-            const blobUrl = window.URL.createObjectURL(blob);
+            // Create an anchor and trigger download directly from the clean URL
             const link = document.createElement('a');
-            link.href = blobUrl;
+            link.href = cleanUrl;
             link.download = removeAccents(fileName);
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            window.URL.revokeObjectURL(blobUrl);
-            toast.success('Đã tải xuống file thành công!');
+            toast.success('Đang tải file...');
         } catch (error) {
             console.error('Download failed:', error);
             toast.error('Không thể tải file. Vui lòng thử lại sau.');
         }
     };
 
-    // Helper function to extract Cloudinary public_id and resource type from URL
-    const extractCloudinaryPublicId = (url: string): { publicId: string | null, resourceType: string } => {
-        // Example: https://res.cloudinary.com/cloud/raw/upload/v\d+/folder/file.pdf
-        const match = url.match(/\/res\.cloudinary\.com\/[^/]+\/([^/]+)\/upload\/v\d+\/(.+)$/);
-
-        let resourceType = 'auto';
-        let publicId: string | null = null;
-
-        if (match) {
-            resourceType = match[1];
-            publicId = match[2];
-
-            // For non-raw resources, Cloudinary typically expects publicId without extension
-            if (resourceType !== 'raw') {
-                publicId = publicId.replace(/\.[^/.]+$/, '');
-            }
-        } else {
-            // Fallback for different URL patterns
-            const simpleMatch = url.match(/\/upload\/v\d+\/(.+)$/);
-            if (simpleMatch) {
-                publicId = simpleMatch[1];
-                if (url.includes('/raw/')) resourceType = 'raw';
-                if (resourceType !== 'raw') {
-                    publicId = publicId.replace(/\.[^/.]+$/, '');
-                }
-            }
-        }
-
-        return { publicId, resourceType };
-    };
 
     const handleSendMessage = async () => {
         if ((!newMessage.trim() && selectedFiles.length === 0) || !selectedGroup) return;
@@ -800,9 +740,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
             const isWord = fileName.toLowerCase().endsWith('.doc') || fileName.toLowerCase().endsWith('.docx');
             const isExcel = fileName.toLowerCase().endsWith('.xls') || fileName.toLowerCase().endsWith('.xlsx');
 
-            // 1. Logic for Thumbnail (Cloudinary only)
-            if (isPDF && msg.attachmentUrl.includes('cloudinary.com') && !msg.attachmentUrl.includes('/s--')) {
-            }
+            const viewableUrl = getViewableFileUrl(msg.attachmentUrl);
 
             const handleDownload = (e: React.MouseEvent) => {
                 e.stopPropagation();
@@ -815,7 +753,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                     onClick={(e) => {
                         if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('a')) return;
                         if (isPDF) {
-                            downloadFile(msg.attachmentUrl!, fileName);
+                            window.open(viewableUrl, '_blank', 'noopener,noreferrer');
                         } else {
                             handleOpenPreview(msg.attachmentUrl!, fileName, 'FILE');
                         }
@@ -839,7 +777,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1 bg-white/80 rounded-full border border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
                             <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
                             <span className="text-[10px] font-bold text-gray-500">
-                                {isPDF ? 'Click để xem' : 'Trạng thái: Sẵn sàng'}
+                                {isPDF ? 'Click để xem PDF' : 'Trạng thái: Sẵn sàng'}
                             </span>
                         </div>
                     </div>
@@ -873,17 +811,29 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
 
                         {/* Actions */}
                         <div className="flex items-center gap-1.5">
-                            <button
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    // Logic for open folder if needed
-                                }}
-                                className="p-1.5 bg-white text-gray-400 hover:text-blue-600 rounded-lg border border-gray-100 transition-colors shadow-sm"
-                                title="Xem thư mục"
-                            >
-                                <Folder size={18} />
-                            </button>
+                            {isPDF ? (
+                                <a
+                                    href={viewableUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="p-1.5 bg-white text-gray-400 hover:text-red-600 rounded-lg border border-gray-100 transition-colors shadow-sm"
+                                    title="Xem PDF"
+                                >
+                                    <Eye size={18} />
+                                </a>
+                            ) : (
+                                <button
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                    }}
+                                    className="p-1.5 bg-white text-gray-400 hover:text-blue-600 rounded-lg border border-gray-100 transition-colors shadow-sm"
+                                    title="Xem thư mục"
+                                >
+                                    <Folder size={18} />
+                                </button>
+                            )}
                             <button
                                 onClick={handleDownload}
                                 className="p-1.5 bg-white text-gray-400 hover:text-blue-600 rounded-lg border border-gray-100 transition-colors shadow-sm"
@@ -970,9 +920,50 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                                             }`}
                                     >
                                         <div className="flex items-center gap-4">
-                                            <div className={`w-14 h-14 ${isSelected ? 'bg-orange-100' : 'bg-[#FFF1E7]'} rounded-[20px] flex items-center justify-center transition-colors`}>
-                                                <Users className={isSelected ? 'text-orange-600' : 'text-[#FF8C33]'} size={28} />
-                                            </div>
+                                            {(() => {
+                                                const studentMembers = group.members?.filter(m => m.role === 'STUDENT') || [];
+                                                const avatars = studentMembers.slice(0, 2);
+
+                                                if (avatars.length === 0) {
+                                                    return (
+                                                        <div className={`w-14 h-14 ${isSelected ? 'bg-orange-100' : 'bg-[#FFF1E7]'} rounded-[20px] flex items-center justify-center transition-colors flex-shrink-0`}>
+                                                            <Users className={isSelected ? 'text-orange-600' : 'text-[#FF8C33]'} size={28} />
+                                                        </div>
+                                                    );
+                                                }
+
+                                                return (
+                                                    <div className="flex -space-x-8 -space-y-4 mx-1 flex-shrink-0">
+                                                        {avatars.map((member, idx) => (
+                                                            <div
+                                                                key={member.userId}
+                                                                className={`w-12 h-12 rounded-full border-[3px] border-white dark:border-zinc-950 overflow-hidden shadow-sm relative ${idx === 0 ? 'z-20' : 'z-10 bg-orange-200'}`}
+                                                            >
+                                                                {member.avatar ? (
+                                                                    <>
+                                                                        <img
+                                                                            src={`${member.avatar}${member.avatar.includes('?') ? '&' : '?'}t=${new Date().getTime()}`}
+                                                                            alt={member.fullName}
+                                                                            className="w-full h-full object-cover"
+                                                                            onError={(e) => {
+                                                                                (e.target as HTMLElement).style.display = 'none';
+                                                                                (e.target as HTMLElement).nextElementSibling?.classList.remove('hidden');
+                                                                            }}
+                                                                        />
+                                                                        <div className="hidden w-full h-full bg-orange-100 flex text-fpt-orange flex-col items-center justify-center font-bold text-lg uppercase">
+                                                                            {member.fullName.split(' ').pop()?.charAt(0) || 'U'}
+                                                                        </div>
+                                                                    </>
+                                                                ) : (
+                                                                    <div className="w-full h-full bg-orange-100 flex text-fpt-orange flex-col items-center justify-center font-bold text-lg uppercase">
+                                                                        {member.fullName.split(' ').pop()?.charAt(0) || 'U'}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                );
+                                            })()}
                                             <div className=" flex-1 min-w-0">
                                                 <div className="flex justify-between items-start mb-1">
                                                     <h3 className="font-bold text-lg text-gray-900 truncate tracking-tight">{group.name}</h3>
@@ -983,7 +974,15 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                                                 <div className="flex justify-between items-center gap-2">
                                                     <p className="text-sm text-gray-500 truncate font-bold">
                                                         {group.lastMessage
-                                                            ? <>{group.lastMessage.senderName}: {group.lastMessage.content}</>
+                                                            ? (() => {
+                                                                const lm = group.lastMessage;
+                                                                let preview = '';
+                                                                if (lm.type === 'IMAGE') preview = '🖼️ Hình ảnh';
+                                                                else if (lm.type === 'FILE') preview = `📎 ${lm.attachmentName || lm.content || 'Tệp tin'}`;
+                                                                else if (lm.type === 'LINK') preview = `🔗 ${lm.content || 'Liên kết'}`;
+                                                                else preview = lm.content || '';
+                                                                return <>{lm.senderName}: {preview}</>;
+                                                            })()
                                                             : `Mr.${group.lecturerName || 'An'}: `
                                                         }
                                                     </p>
@@ -1016,9 +1015,50 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                                 >
                                     <ArrowLeft size={20} />
                                 </button>
-                                <div className={`w-10 h-10 ${bgColorLight} rounded-full flex items-center justify-center`}>
-                                    <Users className={textColor} size={20} />
-                                </div>
+                                {(() => {
+                                    const studentMembers = selectedGroup.members?.filter(m => m.role === 'STUDENT') || [];
+                                    const avatars = studentMembers.slice(0, 2);
+
+                                    if (avatars.length === 0) {
+                                        return (
+                                            <div className={`w-10 h-10 ${bgColorLight} rounded-full flex items-center justify-center flex-shrink-0`}>
+                                                <Users className={textColor} size={20} />
+                                            </div>
+                                        );
+                                    }
+
+                                    return (
+                                        <div className="flex  -space-x-6 -space-y-2 mx-1 flex-shrink-0">
+                                            {avatars.map((member, idx) => (
+                                                <div
+                                                    key={member.userId}
+                                                    className={`w-10 h-10 rounded-full border-[2px] border-white dark:border-zinc-950 overflow-hidden shadow-sm relative ${idx === 0 ? 'z-20' : 'z-10 bg-orange-200'}`}
+                                                >
+                                                    {member.avatar ? (
+                                                        <>
+                                                            <img
+                                                                src={`${member.avatar}${member.avatar.includes('?') ? '&' : '?'}t=${new Date().getTime()}`}
+                                                                alt={member.fullName}
+                                                                className="w-full h-full object-cover"
+                                                                onError={(e) => {
+                                                                    (e.target as HTMLElement).style.display = 'none';
+                                                                    (e.target as HTMLElement).nextElementSibling?.classList.remove('hidden');
+                                                                }}
+                                                            />
+                                                            <div className="hidden w-full h-full bg-orange-100 flex text-fpt-orange flex-col items-center justify-center font-bold text-sm uppercase">
+                                                                {member.fullName.split(' ').pop()?.charAt(0) || 'U'}
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <div className="w-full h-full bg-orange-100 flex text-fpt-orange flex-col items-center justify-center font-bold text-sm uppercase">
+                                                            {member.fullName.split(' ').pop()?.charAt(0) || 'U'}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    );
+                                })()}
                                 <div className="flex-1">
                                     <h2 className="font-extrabold text-2xl text-gray-900 uppercase tracking-tight">{selectedGroup.name}</h2>
                                 </div>
@@ -1396,9 +1436,50 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                                         <div className="flex flex-col">
                                             {/* Group Banner */}
                                             <div className="py-12 flex flex-col items-center px-6">
-                                                <div className="w-32 h-32 bg-[#FFEEDD] rounded-full flex items-center justify-center mb-6 shadow-inner border-[6px] border-white">
-                                                    <Users className="text-[#FF8C33]" size={56} />
-                                                </div>
+                                                {(() => {
+                                                    const studentMembers = selectedGroup.members?.filter(m => m.role === 'STUDENT') || [];
+                                                    const avatars = studentMembers.slice(0, 2);
+
+                                                    if (avatars.length === 0) {
+                                                        return (
+                                                            <div className={`w-24 h-24 ${bgColorLight} rounded-[32px] flex items-center justify-center mb-4 transition-transform hover:rotate-3 cursor-pointer`}>
+                                                                <Users className="text-[#FF8C33]" size={56} />
+                                                            </div>
+                                                        );
+                                                    }
+
+                                                    return (
+                                                        <div className="flex -space-x-10 -space-y-6 mb-4 cursor-pointer">
+                                                            {avatars.map((member, idx) => (
+                                                                <div
+                                                                    key={member.userId}
+                                                                    className={`w-24 h-24 rounded-full border-[4px] border-white dark:border-zinc-950 overflow-hidden shadow-md relative transition-transform hover:-translate-y-1 ${idx === 0 ? 'z-20' : 'z-10 bg-orange-200'}`}
+                                                                >
+                                                                    {member.avatar ? (
+                                                                        <>
+                                                                            <img
+                                                                                src={`${member.avatar}${member.avatar.includes('?') ? '&' : '?'}t=${new Date().getTime()}`}
+                                                                                alt={member.fullName}
+                                                                                className="w-full h-full object-cover"
+                                                                                onError={(e) => {
+                                                                                    (e.target as HTMLElement).style.display = 'none';
+                                                                                    (e.target as HTMLElement).nextElementSibling?.classList.remove('hidden');
+                                                                                }}
+                                                                            />
+                                                                            <div className="hidden w-full h-full bg-orange-100 flex text-fpt-orange flex-col items-center justify-center font-bold text-3xl uppercase">
+                                                                                {member.fullName.split(' ').pop()?.charAt(0) || 'U'}
+                                                                            </div>
+                                                                        </>
+                                                                    ) : (
+                                                                        <div className="w-full h-full bg-orange-100 flex text-fpt-orange flex-col items-center justify-center font-bold text-3xl uppercase">
+                                                                            {member.fullName.split(' ').pop()?.charAt(0) || 'U'}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    );
+                                                })()}
                                                 <h3 className="text-2xl font-black text-gray-800 text-center leading-tight mb-2 uppercase tracking-tight">{selectedGroup.name}</h3>
                                                 <p className="text-gray-500 font-bold text-sm">Giảng viên: {selectedGroup.lecturerName || 'Mr. Alex'}</p>
                                             </div>

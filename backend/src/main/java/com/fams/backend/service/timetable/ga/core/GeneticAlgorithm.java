@@ -89,7 +89,7 @@ public class GeneticAlgorithm {
             log.error("Failed to create initial population");
             return GAResult.builder()
                     .success(false)
-                    .message("Failed to create initial valid population")
+                    .message("Không thể tạo quần thể hợp lệ ban đầu")
                     .build();
         }
 
@@ -136,8 +136,8 @@ public class GeneticAlgorithm {
                 .duration(duration)
                 .history(new ArrayList<>(history))
                 .message(bestChromosome != null && bestChromosome.isValid()
-                        ? "Successfully generated timetable"
-                        : "Failed to generate valid timetable")
+                        ? "Tạo thời khóa biểu thành công"
+                        : "Không tìm thấy phương án thời khóa biểu hợp lệ")
                 .build();
     }
 

@@ -10,7 +10,7 @@ export interface ScheduleRequest {
     type: string;
     typeLabel: string;
     reason: string;
-    status: string;
+    status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'REVOKED' | string;
     statusLabel: string;
     createdAt: string;
     approverNote?: string;
@@ -72,6 +72,11 @@ export const scheduleRequestService = {
         const response = await apiClient.get(`/lecturer/check-conflicts`, {
             params: { className, date, slotNumber, originalSlotId }
         });
+        return response.data;
+    },
+
+    revokeRequest: async (id: number): Promise<{ message: string }> => {
+        const response = await apiClient.post(`/lecturer/requests/${id}/revoke`);
         return response.data;
     }
 };

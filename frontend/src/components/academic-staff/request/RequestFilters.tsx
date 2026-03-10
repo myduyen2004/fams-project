@@ -4,24 +4,31 @@ import { Search, Download, Calendar, Loader2 } from 'lucide-react';
 interface RequestFiltersProps {
     filters: {
         search: string;
-        role: string;
         reason: string;
         status: string;
         startDate: string;
         endDate: string;
+        requestType?: string;
     };
     onFilterChange: (newFilters: Partial<RequestFiltersProps['filters']>) => void;
     onExportClick?: () => void;
     isExporting?: boolean;
+    showRequestTypeFilter?: boolean;
 }
 
-const RequestFilters: React.FC<RequestFiltersProps> = ({ filters, onFilterChange, onExportClick, isExporting }) => {
+const RequestFilters: React.FC<RequestFiltersProps> = ({
+    filters,
+    onFilterChange,
+    onExportClick,
+    isExporting,
+    showRequestTypeFilter = false
+}) => {
     return (
         <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-xl p-4 border border-gray-100 dark:border-zinc-700 w-full mb-6">
-            <div className="flex flex-col lg:flex-row lg:items-end gap-4">
+            <div className="flex flex-col lg:flex-row lg:items-end gap-4 overflow-x-auto pb-1">
 
                 {/* Search */}
-                <div className="flex-1 lg:max-w-xs relative">
+                <div className="flex-1 lg:min-w-[200px] relative">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block mb-1.5 ml-1">Tìm kiếm</label>
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -35,19 +42,28 @@ const RequestFilters: React.FC<RequestFiltersProps> = ({ filters, onFilterChange
                     </div>
                 </div>
 
-                {/* Role */}
-                <div className="w-full lg:w-32">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block mb-1.5 ml-1">Vai trò</label>
-                    <select
-                        value={filters.role}
-                        onChange={(e) => onFilterChange({ role: e.target.value })}
-                        className="px-3 py-2 w-full border border-gray-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white transition-all shadow-sm"
-                    >
-                        <option value="">Tất cả vai trò</option>
-                        <option value="STUDENT">Sinh viên</option>
-                        <option value="LECTURER">Giảng viên</option>
-                    </select>
-                </div>
+                {/* Request Type Filter - Conditionally Shown */}
+                {showRequestTypeFilter && (
+                    <div className="w-full lg:w-64">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block mb-1.5 ml-1">Loại yêu cầu</label>
+                        <select
+                            value={filters.requestType || ''}
+                            onChange={(e) => onFilterChange({ requestType: e.target.value })}
+                            className="px-3 py-2 w-full border border-gray-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 dark:text-white transition-all shadow-sm"
+                        >
+                            <option value="">Tất cả loại</option>
+                            <option value="PAUSE_SEMESTER">Xin tạm nghỉ học</option>
+                            <option value="RETAKE_COURSE">Đăng ký học lại</option>
+                            <option value="CHANGE_CLASS">Yêu cầu đổi lớp</option>
+                            <option value="OVERLOAD_STUDY">Đăng ký học vượt</option>
+                            <option value="ABSENT_REQUEST">Đề nghị miễn điểm danh</option>
+                            <option value="GRADE_APPEAL">Đề nghị phúc khảo</option>
+                            <option value="CHANGE_MAJOR">Đề nghị chuyển ngành</option>
+                            <option value="CHANGE_SPECIALIZATION">Đề nghị đổi chuyên ngành hẹp</option>
+                            <option value="OTHERS">Các loại đơn khác</option>
+                        </select>
+                    </div>
+                )}
 
                 {/* Status */}
                 <div className="w-full lg:w-40">
@@ -91,7 +107,6 @@ const RequestFilters: React.FC<RequestFiltersProps> = ({ filters, onFilterChange
                             />
                         </div>
                     </div>
-
                 </div>
 
                 {/* Export Button */}

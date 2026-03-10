@@ -2,15 +2,15 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { lecturerClassService, SemesterResponse, ClassSectionResponse } from '../../services/api/LecturerClass';
-import { assignmentService, AssignmentDTO, AssignmentSubmissionDTO } from '../../services/api/assignmentService';
+import { assignmentService, AssignmentDTO } from '../../services/api/assignmentService';
 import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
 import { authService } from '../../services/api/authService';
 import { uploadFile } from '../../services/utils/fileUploadService';
 import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
 import { Pagination } from '../../components/common/Pagination';
 import {
-    ChevronDown, Check, Users, Clock, ChevronUp, ExternalLink, Search,
-    FileText, Loader2, Plus, X, BookOpen, Lock, Eye, Edit3, AlertCircle, Trash2
+    ChevronDown, Check, Users, Clock, Search,
+    FileText, Loader2, Plus, X, BookOpen, Lock, Edit3, AlertCircle, Trash2, Download
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -37,9 +37,6 @@ export const LecturerAssignmentPage: React.FC = () => {
     const [assignments, setAssignments] = useState<AssignmentDTO[]>([]);
     const [slots, setSlots] = useState<TimetableSlotDTO[]>([]);
     const [loadingAssignments, setLoadingAssignments] = useState(false);
-    const [expandedId, setExpandedId] = useState<number | null>(null);
-    const [submissions, setSubmissions] = useState<Record<number, AssignmentSubmissionDTO[]>>({});
-    const [loadingSubmissions, setLoadingSubmissions] = useState<number | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(0);
     const PAGE_SIZE = 10;
@@ -80,6 +77,14 @@ export const LecturerAssignmentPage: React.FC = () => {
     const [isCreateSlotOpen, setIsCreateSlotOpen] = useState(false);
     const createClassDropdownRef = useRef<HTMLDivElement>(null);
     const createSlotDropdownRef = useRef<HTMLDivElement>(null);
+
+    // Download dialog state
+    const [showDownloadDialog, setShowDownloadDialog] = useState(false);
+    const [dlClassName, setDlClassName] = useState<string>('');
+    const [dlAssignments, setDlAssignments] = useState<AssignmentDTO[]>([]);
+    const [dlAssignmentId, setDlAssignmentId] = useState<number | null>(null);
+    const [downloadingZip, setDownloadingZip] = useState(false);
+    const [loadingDlAssignments, setLoadingDlAssignments] = useState(false);
 
     // Close dropdowns when clicking outside
     useEffect(() => {
@@ -186,25 +191,6 @@ export const LecturerAssignmentPage: React.FC = () => {
         }
     }, [selectedSemester, user?.id, classes]);
 
-    const toggleExpand = async (assignmentId: number) => {
-        if (expandedId === assignmentId) {
-            setExpandedId(null);
-            return;
-        }
-        setExpandedId(assignmentId);
-        if (!submissions[assignmentId]) {
-            try {
-                setLoadingSubmissions(assignmentId);
-                const data = await assignmentService.getAssignmentSubmissions(assignmentId);
-                setSubmissions(prev => ({ ...prev, [assignmentId]: data }));
-            } catch {
-                setSubmissions(prev => ({ ...prev, [assignmentId]: [] }));
-            } finally {
-                setLoadingSubmissions(null);
-            }
-        }
-    };
-
     // Fetch slots for selected class in create modal
     useEffect(() => {
         if (!createClassName) {
@@ -253,10 +239,8 @@ export const LecturerAssignmentPage: React.FC = () => {
             toast.error('Vui lòng nhập hạn nộp bài');
             return;
         }
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        if (new Date(newDueDate) < today) {
-            toast.error('Hạn nộp bài phải từ hôm nay trở đi');
+        if (new Date(newDueDate) < new Date()) {
+            toast.error('Hạn nộp bài phải từ thời điểm hiện tại trở đi');
             return;
         }
         try {
@@ -281,15 +265,7 @@ export const LecturerAssignmentPage: React.FC = () => {
         }
     };
 
-    const handleClose = async (assignmentId: number) => {
-        try {
-            await assignmentService.closeAssignment(assignmentId);
-            toast.success('Đã đóng bài tập');
-            fetchAllData();
-        } catch (err: any) {
-            toast.error(err.response?.data?.message || 'Không thể đóng bài tập');
-        }
-    };
+
 
     const resetCreateForm = () => {
         setNewTitle('');
@@ -351,34 +327,30 @@ export const LecturerAssignmentPage: React.FC = () => {
         return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
     };
 
-    // Build a merged list: each slot + its linked assignment (if any)
-    const assignmentBySlotId = new Map<number, AssignmentDTO>();
-    assignments.forEach(a => {
-        if (a.timetableSlotId) assignmentBySlotId.set(a.timetableSlotId, a);
-    });
+    // Build a merged list: each assignment + its linked slot (if any)
+    const slotById = new Map<number, TimetableSlotDTO>();
+    slots.forEach(s => slotById.set(s.id, s));
 
-    const slotRows = slots.map(slot => ({
-        slot,
-        assignment: assignmentBySlotId.get(slot.id) || null
+    const assignmentRows = assignments.map(assignment => ({
+        assignment,
+        slot: assignment.timetableSlotId ? slotById.get(assignment.timetableSlotId) || null : null
     }));
 
     // Filter: class + status + search
-    const filteredRows = slotRows.filter(row => {
+    const filteredRows = assignmentRows.filter(row => {
         // Class filter (optional)
-        if (selectedClass && row.slot.className !== selectedClass) return false;
+        if (selectedClass && row.slot?.className !== selectedClass) return false;
         // Status filter
-        if (statusFilter === 'OPEN' && (!row.assignment || row.assignment.status !== 'OPEN')) return false;
-        if (statusFilter === 'CLOSED' && (!row.assignment || row.assignment.status !== 'CLOSED')) return false;
+        if (statusFilter === 'OPEN' && row.assignment.status !== 'OPEN') return false;
+        if (statusFilter === 'CLOSED' && row.assignment.status !== 'CLOSED') return false;
         // Search filter
         if (searchTerm) {
             const term = searchTerm.toLowerCase();
-            const matchSlot = (row.slot.courseName || '').toLowerCase().includes(term)
-                || (row.slot.roomCode || '').toLowerCase().includes(term)
-                || (row.slot.className || '').toLowerCase().includes(term);
-            const matchAssignment = row.assignment && (
-                row.assignment.title.toLowerCase().includes(term)
-                || (row.assignment.description || '').toLowerCase().includes(term)
-            );
+            const matchSlot = (row.slot?.courseName || '').toLowerCase().includes(term)
+                || (row.slot?.roomCode || '').toLowerCase().includes(term)
+                || (row.slot?.className || '').toLowerCase().includes(term);
+            const matchAssignment = row.assignment.title.toLowerCase().includes(term)
+                || (row.assignment.description || '').toLowerCase().includes(term);
             return matchSlot || matchAssignment;
         }
         return true;
@@ -396,7 +368,7 @@ export const LecturerAssignmentPage: React.FC = () => {
     const paginatedRows = filteredRows.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
 
     // Multi-select helpers
-    const assignmentIdsOnPage = paginatedRows.filter(r => r.assignment).map(r => r.assignment!.id);
+    const assignmentIdsOnPage = paginatedRows.map(r => r.assignment.id);
     const allOnPageSelected = assignmentIdsOnPage.length > 0 && assignmentIdsOnPage.every(id => selectedIds.has(id));
 
     const toggleSelect = (assignmentId: number) => {
@@ -425,7 +397,7 @@ export const LecturerAssignmentPage: React.FC = () => {
             });
             const hasClosedOnPage = paginatedRows.some(r => r.assignment && r.assignment.status === 'CLOSED');
             if (hasClosedOnPage) {
-                setBatchWarning('Không thể chỉnh sửa hoặc xóa bài tập đã đóng. Vui lòng chỉ chọn bài tập đang mở.');
+                setBatchWarning('Lưu ý: Không thể xóa bài tập đã đóng. Bạn vẫn có thể chỉnh sửa.');
             } else {
                 setBatchWarning('');
             }
@@ -435,11 +407,6 @@ export const LecturerAssignmentPage: React.FC = () => {
     const handleBatchEditOpen = () => {
         if (selectedIds.size === 0) { toast.error('Vui lòng chọn ít nhất một bài tập'); return; }
         if (selectedIds.size > 1) { toast.error('Chỉ có thể chỉnh sửa từng bài tập một'); return; }
-        const hasClosedAssignment = assignments.some(a => selectedIds.has(a.id) && a.status === 'CLOSED');
-        if (hasClosedAssignment) {
-            setBatchWarning('Không thể chỉnh sửa hoặc xóa bài tập đã đóng. Vui lòng chỉ chọn bài tập đang mở.');
-            return;
-        }
         const assignmentId = Array.from(selectedIds)[0];
         const assignment = assignments.find(a => a.id === assignmentId);
         if (!assignment) return;
@@ -479,6 +446,12 @@ export const LecturerAssignmentPage: React.FC = () => {
 
     const handleBatchEditSubmit = async () => {
         if (!editAssignmentId || !editTitle.trim()) { toast.error('Tiêu đề không được để trống'); return; }
+        if (editDueDate) {
+            if (new Date(editDueDate) < new Date()) {
+                toast.error('Hạn nộp bài phải từ thời điểm hiện tại trở đi');
+                return;
+            }
+        }
         try {
             setBatchEditing(true);
             await assignmentService.updateAssignment(editAssignmentId, {
@@ -503,7 +476,7 @@ export const LecturerAssignmentPage: React.FC = () => {
         if (selectedIds.size === 0) { toast.error('Vui lòng chọn ít nhất một bài tập'); return; }
         const hasClosedAssignment = assignments.some(a => selectedIds.has(a.id) && a.status === 'CLOSED');
         if (hasClosedAssignment) {
-            setBatchWarning('Không thể chỉnh sửa hoặc xóa bài tập đã đóng. Vui lòng chỉ chọn bài tập đang mở.');
+            setBatchWarning('Không thể xóa bài tập đã đóng. Vui lòng chỉ chọn bài tập đang mở để xóa.');
             return;
         }
         if (!window.confirm(`Bạn có chắc muốn xóa ${selectedIds.size} bài tập? Hành động này không thể hoàn tác.`)) return;
@@ -520,6 +493,68 @@ export const LecturerAssignmentPage: React.FC = () => {
             toast.error(err?.response?.data?.message || 'Không thể xóa bài tập');
         } finally {
             setBatchEditing(false);
+        }
+    };
+
+    // Download dialog handlers
+    const handleOpenDownloadDialog = () => {
+        setDlClassName('');
+        setDlAssignmentId(null);
+        setDlAssignments([]);
+        setShowDownloadDialog(true);
+    };
+
+    const handleDlClassChange = async (className: string) => {
+        setDlClassName(className);
+        setDlAssignmentId(null);
+        setDlAssignments([]);
+        if (!className) return;
+        try {
+            setLoadingDlAssignments(true);
+            const data = await assignmentService.getAssignmentsByClass(className);
+            setDlAssignments(data);
+        } catch {
+            toast.error('Không thể tải danh sách bài tập');
+        } finally {
+            setLoadingDlAssignments(false);
+        }
+    };
+
+    const handleDlAssignmentChange = (idStr: string) => {
+        const aid = Number(idStr);
+        setDlAssignmentId(aid || null);
+    };
+
+    const handleDownloadSubmissions = async () => {
+        if (!dlAssignmentId) return;
+        try {
+            setDownloadingZip(true);
+            const resp = await assignmentService.downloadAllSubmissions(dlAssignmentId);
+            const url = window.URL.createObjectURL(new Blob([resp.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            const found = dlAssignments.find(a => a.id === dlAssignmentId);
+            link.setAttribute('download', `${dlClassName}_${found?.title || dlAssignmentId}_submissions.zip`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+            toast.success('Đã tải bài nộp thành công');
+            setShowDownloadDialog(false);
+        } catch (err: any) {
+            let msg = 'Không thể tải bài nộp';
+            if (err.response?.data instanceof Blob) {
+                try {
+                    const text = await err.response.data.text();
+                    const json = JSON.parse(text);
+                    msg = json.message || json.error || msg;
+                } catch { /* ignore */ }
+            } else if (err.response?.data?.message) {
+                msg = err.response.data.message;
+            }
+            toast.error(msg);
+        } finally {
+            setDownloadingZip(false);
         }
     };
 
@@ -621,11 +656,18 @@ export const LecturerAssignmentPage: React.FC = () => {
                             value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
                             className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange focus:border-transparent outline-none" />
                     </div>
-                    <button
-                        onClick={() => { resetCreateForm(); setShowCreateDialog(true); }}
-                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-fpt-orange hover:bg-orange-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm whitespace-nowrap">
-                        <Plus className="w-4 h-4" /> Tạo bài tập mới
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleOpenDownloadDialog}
+                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-fpt-orange hover:bg-orange-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm whitespace-nowrap">
+                            <Download className="w-4 h-4" /> Tải bài nộp theo slot
+                        </button>
+                        <button
+                            onClick={() => { resetCreateForm(); setShowCreateDialog(true); }}
+                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-fpt-orange hover:bg-orange-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm whitespace-nowrap">
+                            <Plus className="w-4 h-4" /> Tạo bài tập mới
+                        </button>
+                    </div>
                 </div>
 
                 {/* Slot-Based Assignment Table */}
@@ -635,9 +677,16 @@ export const LecturerAssignmentPage: React.FC = () => {
                         <p className="text-gray-500">Đang tải dữ liệu...</p>
                     </div>
                 ) : filteredRows.length === 0 ? (
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 p-12 text-center">
-                        <FileText size={48} className="mx-auto text-gray-300 dark:text-zinc-600 mb-4" />
-                        <p className="text-gray-500 dark:text-zinc-400">Không có buổi học nào phù hợp</p>
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 p-16 text-center">
+                        <div className="w-24 h-24 rounded-full bg-orange-50 dark:bg-zinc-800 mx-auto mb-6 flex items-center justify-center">
+                            <FileText size={48} className="text-fpt-orange" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                            Không có bài tập nào
+                        </h3>
+                        <p className="text-gray-500 dark:text-zinc-400">
+                            Chưa có bài tập phù hợp với bộ lọc hiện tại. Hãy thử thay đổi bộ lọc hoặc tạo bài tập mới.
+                        </p>
                     </div>
                 ) : (
                     <>
@@ -656,10 +705,33 @@ export const LecturerAssignmentPage: React.FC = () => {
                                     Đã chọn {selectedIds.size} bài tập
                                 </span>
                                 <div className="flex items-center gap-2">
-                                    <button onClick={handleBatchEditOpen}
-                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-medium transition-colors">
-                                        <Edit3 className="w-3.5 h-3.5" /> Chỉnh sửa bài tập
-                                    </button>
+                                    {selectedIds.size === 1 && (
+                                        <button onClick={handleBatchEditOpen}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-medium transition-colors">
+                                            <Edit3 className="w-3.5 h-3.5" /> Chỉnh sửa bài tập
+                                        </button>
+                                    )}
+                                    {Array.from(selectedIds).some(id => {
+                                        const row = filteredRows.find(r => r.assignment.id === id);
+                                        return row?.assignment.status === 'OPEN';
+                                    }) && (
+                                            <button onClick={() => {
+                                                const openIds = Array.from(selectedIds).filter(id => {
+                                                    const row = filteredRows.find(r => r.assignment.id === id);
+                                                    return row?.assignment.status === 'OPEN';
+                                                });
+                                                Promise.all(openIds.map(id => assignmentService.closeAssignment(id)))
+                                                    .then(() => {
+                                                        toast.success(`Đã đóng ${openIds.length} bài tập`);
+                                                        setSelectedIds(new Set());
+                                                        fetchAllData();
+                                                    })
+                                                    .catch((err: any) => toast.error(err.response?.data?.message || 'Không thể đóng bài tập'));
+                                            }}
+                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors">
+                                                <Lock className="w-3.5 h-3.5" /> Đóng
+                                            </button>
+                                        )}
                                     <button onClick={handleBatchDelete}
                                         className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-medium transition-colors">
                                         <Trash2 className="w-3.5 h-3.5" /> Xóa
@@ -684,130 +756,60 @@ export const LecturerAssignmentPage: React.FC = () => {
                                             <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Bài tập</th>
                                             <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Trạng thái</th>
                                             <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Nộp</th>
-                                            <th className="text-right px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Thao tác</th>
+
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
                                         {paginatedRows.map(({ slot, assignment }) => (
-                                            <React.Fragment key={slot.id}>
-                                                <tr className="hover:bg-gray-50 dark:hover:bg-zinc-800/30 transition-colors">
-                                                    <td className="px-4 py-3 w-10">
-                                                        {assignment ? (
-                                                            <input type="checkbox" checked={selectedIds.has(assignment.id)}
-                                                                onChange={() => toggleSelect(assignment.id)}
-                                                                className="w-4 h-4 rounded border-gray-300 dark:border-zinc-600 text-orange-500 focus:ring-orange-500 accent-orange-500" />
-                                                        ) : <span className="w-4 h-4 block" />}
+                                            <React.Fragment key={assignment.id}>
+                                                <tr onClick={() => navigate(`/lecturer/assignments/${assignment.id}`)}
+                                                    className="hover:bg-gray-50 dark:hover:bg-zinc-800/30 transition-colors cursor-pointer">
+                                                    <td className="px-4 py-3 w-10" onClick={e => e.stopPropagation()}>
+                                                        <input type="checkbox" checked={selectedIds.has(assignment.id)}
+                                                            onChange={() => toggleSelect(assignment.id)}
+                                                            className="w-4 h-4 rounded border-gray-300 dark:border-zinc-600 text-orange-500 focus:ring-orange-500 accent-orange-500" />
                                                     </td>
                                                     <td className="px-4 py-3 text-gray-700 dark:text-zinc-300 whitespace-nowrap">
-                                                        {slot.className || '—'}
+                                                        {slot?.className || '—'}
                                                     </td>
                                                     <td className="px-4 py-3 text-gray-900 dark:text-white whitespace-nowrap">
-                                                        {formatSlotDate(slot.date)}
+                                                        {formatSlotDate(slot?.date)}
                                                     </td>
                                                     <td className="px-4 py-3 text-gray-700 dark:text-zinc-300 whitespace-nowrap">
-                                                        Slot {slot.slotNumber}
+                                                        {slot ? `Slot ${slot.slotNumber}` : '—'}
                                                     </td>
-                                                    <td className="px-4 py-3 text-gray-700 dark:text-zinc-300">{slot.roomCode || '—'}</td>
+                                                    <td className="px-4 py-3 text-gray-700 dark:text-zinc-300">{slot?.roomCode || '—'}</td>
                                                     <td className="px-4 py-3">
-                                                        {assignment ? (
-                                                            <div>
-                                                                <div className="font-medium text-gray-900 dark:text-white">{assignment.title}</div>
-                                                                {assignment.dueDate && (
-                                                                    <div className="text-xs text-gray-400 mt-0.5">
-                                                                        <Clock className="w-3 h-3 inline mr-1" />Hạn: {formatDate(assignment.dueDate)}
-                                                                    </div>
-                                                                )}
-                                                                {assignment.referenceUrl && (
-                                                                    <a href={getViewableFileUrl(assignment.referenceUrl)} target="_blank" rel="noopener noreferrer"
-                                                                        className="inline-flex items-center gap-1 text-xs text-fpt-orange hover:text-orange-600 mt-0.5">
-                                                                        <BookOpen className="w-3 h-3" /> {assignment.referenceName || 'Tài liệu'}
-                                                                    </a>
-                                                                )}
-                                                            </div>
-                                                        ) : (
-                                                            <span className="text-gray-400 dark:text-zinc-500 italic">Chưa có bài tập</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-4 py-3">
-                                                        {assignment ? (
-                                                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ${assignment.status === 'OPEN'
-                                                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                                : 'bg-gray-100 text-gray-500 dark:bg-zinc-800 dark:text-zinc-400'
-                                                                }`}>
-                                                                {assignment.status === 'OPEN' ? 'Đang mở' : 'Đã đóng'}
-                                                            </span>
-                                                        ) : (
-                                                            <span className="text-gray-300 dark:text-zinc-600">—</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-gray-700 dark:text-zinc-300">
-                                                        {assignment ? `${assignment.totalSubmissions}/${assignment.totalStudents}` : '—'}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-right">
-                                                        <div className="flex items-center justify-end gap-1.5">
-                                                            {assignment ? (
-                                                                <>
-                                                                    <button onClick={() => navigate(`/lecturer/assignments/${assignment.id}`)}
-                                                                        className="inline-flex items-center gap-1 px-2 py-1.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg text-xs transition-colors"
-                                                                        title="Chi tiết">
-                                                                        <Eye className="w-3.5 h-3.5" /> Chi tiết
-                                                                    </button>
-                                                                    <button onClick={() => toggleExpand(assignment.id)}
-                                                                        className="inline-flex items-center gap-1 px-2 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 rounded-lg text-xs transition-colors">
-                                                                        <Users className="w-3.5 h-3.5" />
-                                                                        {expandedId === assignment.id ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                                                                    </button>
-                                                                    {assignment.status === 'OPEN' && (
-                                                                        <button onClick={() => handleClose(assignment.id)}
-                                                                            className="inline-flex items-center gap-1 px-2 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-xs transition-colors">
-                                                                            <Lock className="w-3.5 h-3.5" /> Đóng
-                                                                        </button>
-                                                                    )}
-                                                                </>
-                                                            ) : (
-                                                                <span className="text-gray-300 dark:text-zinc-600 text-xs italic">—</span>
+                                                        <div>
+                                                            <div className="font-medium text-gray-900 dark:text-white">{assignment.title}</div>
+                                                            {assignment.dueDate && (
+                                                                <div className="text-xs text-gray-400 mt-0.5">
+                                                                    <Clock className="w-3 h-3 inline mr-1" />Hạn: {formatDate(assignment.dueDate)}
+                                                                </div>
+                                                            )}
+                                                            {assignment.referenceUrl && (
+                                                                <a href={getViewableFileUrl(assignment.referenceUrl)} target="_blank" rel="noopener noreferrer"
+                                                                    onClick={e => e.stopPropagation()}
+                                                                    className="inline-flex items-center gap-1 text-xs text-fpt-orange hover:text-orange-600 mt-0.5">
+                                                                    <BookOpen className="w-3 h-3" /> {assignment.referenceName || 'Tài liệu'}
+                                                                </a>
                                                             )}
                                                         </div>
                                                     </td>
+                                                    <td className="px-4 py-3">
+                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ${assignment.status === 'OPEN'
+                                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                            : 'bg-gray-100 text-gray-500 dark:bg-zinc-800 dark:text-zinc-400'
+                                                            }`}>
+                                                            {assignment.status === 'OPEN' ? 'Đang mở' : 'Đã đóng'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-gray-700 dark:text-zinc-300">
+                                                        {`${assignment.totalSubmissions}/${assignment.totalStudents}`}
+                                                    </td>
+
                                                 </tr>
-                                                {assignment && expandedId === assignment.id && (
-                                                    <tr>
-                                                        <td colSpan={9} className="bg-gray-50 dark:bg-zinc-950 px-4 py-4">
-                                                            {loadingSubmissions === assignment.id ? (
-                                                                <div className="text-center py-4">
-                                                                    <Loader2 size={24} className="animate-spin mx-auto text-fpt-orange" />
-                                                                </div>
-                                                            ) : (submissions[assignment.id]?.length || 0) === 0 ? (
-                                                                <p className="text-sm text-gray-500 dark:text-zinc-400 text-center py-3">Chưa có sinh viên nào nộp bài</p>
-                                                            ) : (
-                                                                <div className="space-y-2">
-                                                                    <div className="text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2">
-                                                                        {submissions[assignment.id]?.length} bài nộp
-                                                                    </div>
-                                                                    {submissions[assignment.id]?.map(sub => (
-                                                                        <div key={sub.id} className="flex items-center justify-between bg-white dark:bg-zinc-900 rounded-lg p-3 border border-gray-200 dark:border-zinc-800">
-                                                                            <div>
-                                                                                <div className="font-medium text-sm text-gray-900 dark:text-white">
-                                                                                    {sub.studentCode} — {sub.studentName}
-                                                                                </div>
-                                                                                <div className="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">
-                                                                                    {sub.fileNames?.[0] || 'File'} • Nộp lúc {sub.submittedAt ? new Date(sub.submittedAt).toLocaleString('vi-VN') : '—'}
-                                                                                </div>
-                                                                                {sub.note && <div className="text-xs text-gray-400 mt-0.5">Ghi chú: {sub.note}</div>}
-                                                                            </div>
-                                                                            {sub.fileUrls?.[0] && (
-                                                                                <a href={getViewableFileUrl(sub.fileUrls[0])} target="_blank" rel="noopener noreferrer"
-                                                                                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 text-fpt-orange rounded-lg text-xs transition-colors">
-                                                                                    <ExternalLink className="w-3 h-3" /> Xem file
-                                                                                </a>
-                                                                            )}
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                )}
+
                                             </React.Fragment>
                                         ))}
                                     </tbody>
@@ -1051,6 +1053,58 @@ export const LecturerAssignmentPage: React.FC = () => {
                             <button onClick={handleCreate} disabled={creating || !newTitle.trim() || !createClassName || selectedSessionNumber === null || !newDueDate || uploadingFile}
                                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-fpt-orange hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
                                 {creating ? <><Loader2 size={16} className="animate-spin" /> Đang tạo...</> : <><Plus className="w-4 h-4" /> Tạo bài tập</>}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Download Submissions Dialog */}
+            {showDownloadDialog && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-md shadow-xl border border-gray-100 dark:border-zinc-800">
+                        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800">
+                            <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <Download className="w-5 h-5 text-fpt-orange" /> Tải bài nộp theo slot
+                            </h2>
+                            <button onClick={() => setShowDownloadDialog(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Lớp học <span className="text-red-500">*</span></label>
+                                <select value={dlClassName} onChange={e => handleDlClassChange(e.target.value)}
+                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                    <option value="">-- Chọn lớp --</option>
+                                    {classes.map(c => (
+                                        <option key={c.className} value={c.className}>{c.className}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            {dlClassName && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Bài tập <span className="text-red-500">*</span></label>
+                                    <select value={dlAssignmentId?.toString() || ''} onChange={e => handleDlAssignmentChange(e.target.value)}
+                                        className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                        <option value="">-- Chọn bài tập --</option>
+                                        {loadingDlAssignments ? (
+                                            <option disabled>Đang tải...</option>
+                                        ) : dlAssignments.map(a => (
+                                            <option key={a.id} value={a.id.toString()}>
+                                                {a.title}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                        </div>
+                        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 dark:border-zinc-800">
+                            <button onClick={() => setShowDownloadDialog(false)} className="px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-zinc-400 hover:text-gray-800 transition-colors">Hủy</button>
+                            <button onClick={handleDownloadSubmissions} disabled={!dlAssignmentId || downloadingZip}
+                                className="inline-flex items-center gap-2 px-5 py-2.5 bg-fpt-orange hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
+                                {downloadingZip ? <><Loader2 size={16} className="animate-spin" /> Đang tải...</> : <><Download className="w-4 h-4" /> Tải xuống</>}
                             </button>
                         </div>
                     </div>

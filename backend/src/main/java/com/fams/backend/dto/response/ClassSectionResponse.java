@@ -22,4 +22,6 @@ public class ClassSectionResponse {
     private Integer maxStudents;
     private String status; // UPCOMING, ONGOING, FINISHED
     private String semesterStatus; // UPCOMING, ONGOING, COMPLETED
+    private Boolean hasChatGroup;
+    private Long chatGroupId;
 }

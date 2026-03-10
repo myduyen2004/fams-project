@@ -126,6 +126,19 @@ class ApiService {
     }
   }
 
+  /// POST Multipart Request (for file uploads)
+  Future<Response> postMultipart(String path, {required FormData formData}) async {
+    try {
+      return await _dio.post(
+        path,
+        data: formData,
+        options: Options(contentType: 'multipart/form-data'),
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   /// DELETE Request
   Future<Response> delete(String path) async {
     try {

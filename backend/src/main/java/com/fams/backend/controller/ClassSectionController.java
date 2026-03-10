@@ -4,6 +4,7 @@ import com.fams.backend.dto.request.ClassSectionRequest;
 import com.fams.backend.dto.request.EnrollmentRequest;
 import com.fams.backend.dto.response.ClassDetailResponse;
 import com.fams.backend.dto.response.ClassSectionResponse;
+import com.fams.backend.dto.response.ClassSectionTransferResponse;
 import com.fams.backend.dto.response.EnrollmentResponse;
 import com.fams.backend.dto.response.LecturerOptionResponse;
 import com.fams.backend.dto.response.StudentOptionResponse;
@@ -180,6 +181,17 @@ public class ClassSectionController {
                         @PathVariable String className) {
                 log.info("GET /api/v1/class-sections/{}/transfer-targets", className);
                 return ResponseEntity.ok(classSectionService.getAvailableClassSectionsForTransfer(className));
+        }
+
+        @GetMapping("/{className}/transfer-targets-with-conflict")
+        @Operation(summary = "Get available class sections for transfer with conflict check", description = "Get list of class sections with same course that have available slots, including conflict check for a student")
+        public ResponseEntity<List<ClassSectionTransferResponse>> getAvailableClassSectionsForTransferWithConflict(
+                        @PathVariable String className,
+                        @RequestParam Long studentId) {
+                log.info("GET /api/v1/class-sections/{}/transfer-targets-with-conflict?studentId={}", className,
+                                studentId);
+                return ResponseEntity.ok(classSectionService.getAvailableClassSectionsForTransferWithConflict(className,
+                                studentId));
         }
 
         @PostMapping("/enrollments/transfer")

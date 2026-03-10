@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_html/flutter_html.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/app_background.dart';
 import '../models/notification_model.dart';
@@ -51,122 +51,129 @@ class NotificationDetailScreen extends StatelessWidget {
               ),
 
               Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Sender Label
-                      Text(
-                        notification.senderFullName?.toUpperCase() ?? 'HỆ THỐNG',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primaryOrange,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      
-                      // Title
-                      Text(
-                        notification.title,
-                        style: GoogleFonts.inter(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF111827), // gray-900
-                          height: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Timestamp
-                      Text(
-                        'Ngày gửi: ${notification.timestamp}',
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFF9CA3AF), // gray-400
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 32),
-                      
-                      // Content (Cleaned)
-                      Text(
-                        notification.cleanDescription,
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          height: 1.6, // leading-relaxed
-                          color: const Color(0xFF374151), // gray-700
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 48),
-                      
-                      // Attachments Section
-                      if (notification.attachmentUrls.isNotEmpty) ...[
-                        const Divider(color: Color(0xFFF3F4F6), thickness: 1), // gray-100
-                        const SizedBox(height: 24),
-                        Text(
-                          'TỆP ĐÍNH KÈM',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF9CA3AF), // gray-400
-                            letterSpacing: 1.5,
+                child: Scrollbar(
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        ...notification.attachmentUrls.map((url) => _buildAttachmentCard(url)),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              
-              // Bottom Footer
-              if (!notification.isRead)
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    border: Border(top: BorderSide(color: Color(0xFFF3F4F6))),
-                  ),
-                  child: SafeArea(
-                    top: false,
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          // Mark as read explicitly just in case, then back
-                          final controller = Get.find<NotificationController>();
-                          if (!notification.isRead) {
-                            controller.markAsRead(notification.id);
-                          }
-                          Get.back();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryOrange,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                        ],
+                        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Header Row (Sender & Timestamp)
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryOrange.withOpacity(0.08),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  notification.senderFullName?.toUpperCase() ?? 'HỆ THỐNG',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primaryOrange,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                              const Spacer(),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  _getExactTime(notification.timestamp),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: const Color(0xFF9CA3AF),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          elevation: 4,
-                          shadowColor: AppColors.primaryOrange.withOpacity(0.4),
-                        ),
-                        child: Text(
-                          'Xác nhận đã đọc',
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                          const SizedBox(height: 20),
+                          
+                          // Title
+                          Text(
+                            notification.title,
+                            style: GoogleFonts.inter(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF111827), // gray-900
+                              height: 1.3,
+                            ),
                           ),
-                        ),
+                          
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 20),
+                            child: Divider(color: Color(0xFFF3F4F6), thickness: 1),
+                          ),
+                          
+                          // Content (HTML)
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight: MediaQuery.of(context).size.height * 0.5, // Giới hạn chiều cao max 50% màn hình
+                            ),
+                            child: Scrollbar(
+                              thumbVisibility: true,
+                              child: SingleChildScrollView(
+                                child: Html(
+                                  data: notification.description,
+                                  style: {
+                                    "body": Style(
+                                      fontSize: FontSize(15.0),
+                                      color: const Color(0xFF374151),
+                                      lineHeight: LineHeight(1.0),
+                                      margin: Margins.zero,
+                                      padding: HtmlPaddings.zero,
+                                    ),
+                                    "p": Style(
+                                      margin: Margins.only(bottom: 8),
+                                    ),
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+                          
+                          // Attachments Section
+                          if (notification.attachmentUrls.isNotEmpty) ...[
+                            const SizedBox(height: 32),
+                            const Divider(color: Color(0xFFF3F4F6), thickness: 1),
+                            const SizedBox(height: 20),
+                            Text(
+                              'TỆP ĐÍNH KÈM',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF9CA3AF), // gray-400
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            ...notification.attachmentUrls.map((url) => _buildAttachmentCard(url)),
+                          ],
+                        ],
                       ),
                     ),
                   ),
                 ),
+              ),
             ],
           ),
         ),
@@ -247,4 +254,19 @@ class NotificationDetailScreen extends StatelessWidget {
       );
     }
   }
+
+  String _getExactTime(String timestamp) {
+    try {
+      // Assuming timestamp is in 'dd/MM/yyyy HH:mm'
+      // Parse it to format correctly.
+      final parts = timestamp.split(' ');
+      if (parts.length == 2) {
+        return '${parts[1]} - ${parts[0]}'; // HH:mm - dd/MM/yyyy
+      }
+      return timestamp;
+    } catch (e) {
+      return timestamp;
+    }
+  }
 }
+

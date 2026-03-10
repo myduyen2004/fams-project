@@ -6,9 +6,11 @@ import { Course } from '../../types/course';
 import { examGradeService, ExamGradeOverviewResponse } from '../../services/api/examGradeService';
 import {
     ChevronDown, Download, FileSpreadsheet, Users, TrendingUp, Award,
-    Loader2, Search, Check, RefreshCw
+    Loader2, Search, Check, RefreshCw, Save, Edit3, X, AlertTriangle, Send, ShieldCheck
 } from 'lucide-react';
 import { ImportExamGradeModal } from '../../components/academic-staff/ImportExamGradeModal';
+import { StudentInfoModal } from '../../components/common/StudentInfoModal';
+import { studentGradeService } from '../../services/api/studentGradeService';
 import toast from 'react-hot-toast';
 
 export const ResitGradeManagementPage: React.FC = () => {
@@ -20,16 +22,32 @@ export const ResitGradeManagementPage: React.FC = () => {
     const [loadingGrades, setLoadingGrades] = useState<boolean>(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [courseSearchTerm, setCourseSearchTerm] = useState('');
+    const [selectedClass, setSelectedClass] = useState<string>('');
 
     // Dropdown states
     const [isSemesterOpen, setIsSemesterOpen] = useState(false);
     const [isCourseOpen, setIsCourseOpen] = useState(false);
+    const [isClassOpen, setIsClassOpen] = useState(false);
     const semesterDropdownRef = useRef<HTMLDivElement>(null);
     const courseDropdownRef = useRef<HTMLDivElement>(null);
+    const classDropdownRef = useRef<HTMLDivElement>(null);
 
     // Import modal state
     const [showImportModal, setShowImportModal] = useState(false);
     const [exporting, setExporting] = useState(false);
+
+    // Edit mode state
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [editedGrades, setEditedGrades] = useState<{ [key: string]: string }>({});
+
+    // Student Info Modal State
+    const [selectedStudentCode, setSelectedStudentCode] = useState<string | null>(null);
+    const [isStudentInfoModalOpen, setIsStudentInfoModalOpen] = useState(false);
+
+    // Publish state
+    const [showPublishConfirm, setShowPublishConfirm] = useState(false);
+    const [publishing, setPublishing] = useState(false);
 
     // Close dropdowns when clicking outside
     useEffect(() => {
@@ -39,6 +57,9 @@ export const ResitGradeManagementPage: React.FC = () => {
             }
             if (courseDropdownRef.current && !courseDropdownRef.current.contains(event.target as Node)) {
                 setIsCourseOpen(false);
+            }
+            if (classDropdownRef.current && !classDropdownRef.current.contains(event.target as Node)) {
+                setIsClassOpen(false);
             }
         };
 
@@ -85,6 +106,11 @@ export const ResitGradeManagementPage: React.FC = () => {
         }
     }, [selectedSemester, selectedCourse]);
 
+    // Reset selected class when grades change
+    useEffect(() => {
+        setSelectedClass('');
+    }, [gradeOverview]);
+
     const fetchGrades = async () => {
         setLoadingGrades(true);
         try {
@@ -117,12 +143,127 @@ export const ResitGradeManagementPage: React.FC = () => {
         toast.success('Nhập điểm thi lại thành công!');
     };
 
-    // Filter students by search term
-    const filteredStudents = gradeOverview?.studentGrades.filter(student =>
-        student.studentCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.className.toLowerCase().includes(searchTerm.toLowerCase())
-    ) || [];
+    // Edit Mode Handlers
+    const handleStartEdit = () => {
+        setIsEditMode(true);
+        setEditedGrades({});
+    };
+
+    const handleCancelEdit = () => {
+        setIsEditMode(false);
+        setEditedGrades({});
+    };
+
+    const handleGradeChange = (enrollmentId: number, componentId: number, value: string) => {
+        const key = `${enrollmentId}_${componentId}`;
+        const cleanValue = value.replace(',', '.');
+
+        // Only allow valid number patterns: digits, optional decimal, optional more digits
+        if (cleanValue === '' || /^(\d{1,2})?(\.\d?)?$/.test(cleanValue)) {
+            const numValue = parseFloat(cleanValue);
+            // Allow empty, or valid numbers 0-10
+            if (cleanValue === '' || cleanValue === '.' || (numValue >= 0 && numValue <= 10)) {
+                setEditedGrades(prev => ({ ...prev, [key]: cleanValue }));
+            }
+        }
+    };
+
+    const handleConfirmPublish = async () => {
+        if (!selectedCourse || !selectedSemester) return;
+
+        setPublishing(true);
+        try {
+            await examGradeService.publishGrades(selectedCourse, selectedSemester, 'RESIT');
+            toast.success('Công bố điểm thi lại thành công!');
+            setShowPublishConfirm(false);
+            fetchGrades(); // Reload to get updated status
+        } catch (error) {
+            console.error(error);
+            toast.error('Lỗi khi công bố điểm thi lại');
+        } finally {
+            setPublishing(false);
+        }
+    };
+
+    const handleSaveGrades = async () => {
+        if (Object.keys(editedGrades).length === 0) {
+            setIsEditMode(false);
+            return;
+        }
+
+        setSaving(true);
+        try {
+            const updates: any[] = [];
+            for (const [key, valueStr] of Object.entries(editedGrades)) {
+                const [enrollmentId, componentId] = key.split('_').map(Number);
+
+                // Find original score to compare
+                const student = gradeOverview?.studentGrades.find(s => s.enrollmentId === enrollmentId);
+                const originalScore = student?.grades[componentId] ?? null;
+
+                // Parse string to number or null
+                const newScore = valueStr.trim() === '' ? null : parseFloat(valueStr.replace(',', '.'));
+                const finalScore = newScore !== null && !isNaN(newScore) ? Math.round(newScore * 10) / 10 : null;
+
+                // Only save if changed
+                if (finalScore !== originalScore) {
+                    updates.push({
+                        enrollmentId,
+                        gradeComponentId: componentId,
+                        score: finalScore
+                    });
+                }
+            }
+
+            if (updates.length > 0) {
+                await studentGradeService.updateGradesBatch(updates);
+                toast.success(`Đã lưu ${updates.length} thay đổi`);
+            } else {
+                toast.success('Không có thay đổi nào cần lưu');
+            }
+
+            setIsEditMode(false);
+            setEditedGrades({});
+            fetchGrades(); // Refresh data
+        } catch (error) {
+            console.error(error);
+            toast.error('Lỗi khi lưu điểm');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // Get available classes from student grades
+    const availableClasses = React.useMemo(() => {
+        if (!gradeOverview?.studentGrades) return [];
+        const classes = new Set(gradeOverview.studentGrades.map(s => s.className));
+        return Array.from(classes).sort();
+    }, [gradeOverview]);
+
+    // ==========================================
+    // RESIT ELIGIBILITY FILTER
+    // Chỉ hiển thị sinh viên có:
+    //   1. Điểm trung bình < 5  (FAILED / chưa đạt)
+    //   2. Thiếu điểm thi cuối kỳ (Final Exam = null)
+    //   3. Chưa có đủ điểm để tính TB (finalGrade = null)
+    // ==========================================
+    const resitEligibleStudents = React.useMemo(() => {
+        if (!gradeOverview) return [];
+        // Hiện tại Backend đã trả về danh sách đã lọc cho RESIT, 
+        // ở đây ta lấy trực tiếp từ gradeOverview.studentGrades
+        return gradeOverview.studentGrades;
+    }, [gradeOverview]);
+
+    // Filter by search term and selected class (on top of resit eligibility)
+    const filteredStudents = resitEligibleStudents.filter(student => {
+        const matchesSearch = student.studentCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            student.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            student.className.toLowerCase().includes(searchTerm.toLowerCase());
+
+        const matchesClass = selectedClass ? student.className === selectedClass : true;
+
+        return matchesSearch && matchesClass;
+    });
 
     // Get score colors
     const getScoreColor = (score: number | null): string => {
@@ -140,6 +281,93 @@ export const ResitGradeManagementPage: React.FC = () => {
         if (score === null || score === undefined) return '--';
         return score.toFixed(1);
     };
+
+    // Định nghĩa thứ tự ưu tiên cho các loại
+    const TYPE_PRIORITY: Record<string, number> = {
+        'PARTICIPATION': 1,
+        'QUIZ': 2,
+        'PROGRESS_TEST': 3,
+        'WORKSHOP': 4,
+        'PROJECT': 5,
+        'PRESENTATION': 6,
+        'ASSIGNMENT': 7,
+        'MID_TERM': 8,
+        'PRACTICAL_EXAM': 9,
+    };
+
+    const sortedGradeComponents = React.useMemo(() => {
+        if (!gradeOverview?.gradeComponents) return [];
+
+        const typeTotalWeight: Record<string, number> = {};
+        gradeOverview.gradeComponents.forEach(gc => {
+            const currentTotal = typeTotalWeight[gc.type] || 0;
+            typeTotalWeight[gc.type] = currentTotal + gc.weight;
+        });
+
+        return [...gradeOverview.gradeComponents].sort((a, b) => {
+            const BOTTOM_TYPES = ['FINAL_EXAM', 'RESIT'];
+            const isABottom = BOTTOM_TYPES.includes(a.type);
+            const isBBottom = BOTTOM_TYPES.includes(b.type);
+
+            if (isABottom && !isBBottom) return 1;
+            if (!isABottom && isBBottom) return -1;
+
+            if (isABottom && isBBottom) {
+                const pMap: Record<string, number> = { 'FINAL_EXAM': 1, 'RESIT': 2 };
+                return (pMap[a.type] || 99) - (pMap[b.type] || 99);
+            }
+
+            const totalWeightA = typeTotalWeight[a.type] || 0;
+            const totalWeightB = typeTotalWeight[b.type] || 0;
+
+            if (Math.abs(totalWeightA - totalWeightB) > 0.001) {
+                return totalWeightA - totalWeightB;
+            }
+
+            const typePriorityA = TYPE_PRIORITY[a.type] || 99;
+            const typePriorityB = TYPE_PRIORITY[b.type] || 99;
+
+            if (typePriorityA !== typePriorityB) {
+                return typePriorityA - typePriorityB;
+            }
+
+            return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+        });
+    }, [gradeOverview]);
+
+    // Get component abbreviation
+    const getComponentAbbr = (name: string, type: string): string => {
+        switch (type) {
+            case 'MID_TERM': return 'ME';
+            case 'FINAL_EXAM': return 'FE';
+            case 'PRACTICAL_EXAM': return 'PE';
+            case 'RESIT': return 'Resit';
+            case 'PARTICIPATION': return 'PT';
+            case 'QUIZ': return 'Q';
+            case 'PROGRESS_TEST': return 'PRT';
+            case 'WORKSHOP': return 'WS';
+            case 'PROJECT': return 'PJ';
+            case 'PRESENTATION': return 'PS';
+            case 'ASSIGNMENT': return 'AS';
+            default: {
+                const words = name.trim().split(/\s+/);
+                if (words.length === 1) {
+                    // If single word, take first 3-4 letters
+                    return words[0].substring(0, Math.min(words[0].length, 4)).toUpperCase();
+                }
+                // For multiple words, take first letter of each word
+                let abbr = '';
+                for (const word of words) {
+                    if (word.length > 0) {
+                        abbr += word.charAt(0).toUpperCase();
+                    }
+                }
+                return abbr;
+            }
+        }
+    };
+
+
 
     const getSelectedSemesterName = () => {
         const semester = semesters.find(s => s.code === selectedSemester);
@@ -272,6 +500,59 @@ export const ResitGradeManagementPage: React.FC = () => {
                             </div>
                         </div>
 
+                        {/* Class Selector */}
+                        <div className="flex-1 min-w-[150px]" ref={classDropdownRef}>
+                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Lớp
+                            </label>
+                            <div className="relative">
+                                <button
+                                    onClick={() => setIsClassOpen(!isClassOpen)}
+                                    className="flex items-center justify-between w-full rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 px-3 py-2 text-left focus:outline-none focus:ring-2 focus:ring-fpt-orange transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled={!gradeOverview || availableClasses.length === 0}
+                                >
+                                    <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                        {selectedClass || 'Tất cả các lớp'}
+                                    </span>
+                                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isClassOpen ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {isClassOpen && (
+                                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-lg max-h-60 overflow-y-auto">
+                                        <button
+                                            onClick={() => {
+                                                setSelectedClass('');
+                                                setIsClassOpen(false);
+                                            }}
+                                            className={`flex w-full items-center justify-between px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition-colors ${!selectedClass
+                                                ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange'
+                                                : 'text-gray-900 dark:text-white'
+                                                }`}
+                                        >
+                                            <span className="text-sm font-medium">Tất cả các lớp</span>
+                                            {!selectedClass && <Check size={16} />}
+                                        </button>
+                                        {availableClasses.map((className) => (
+                                            <button
+                                                key={className}
+                                                onClick={() => {
+                                                    setSelectedClass(className);
+                                                    setIsClassOpen(false);
+                                                }}
+                                                className={`flex w-full items-center justify-between px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition-colors ${selectedClass === className
+                                                    ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange'
+                                                    : 'text-gray-900 dark:text-white'
+                                                    }`}
+                                            >
+                                                <span className="text-sm font-medium">{className}</span>
+                                                {selectedClass === className && <Check size={16} />}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
                         {/* Action Buttons */}
                         <div className="flex items-end gap-2">
                             <button
@@ -284,8 +565,15 @@ export const ResitGradeManagementPage: React.FC = () => {
                             </button>
                             <button
                                 onClick={() => setShowImportModal(true)}
-                                className="flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-all disabled:opacity-50"
-                                disabled={!selectedCourse || !selectedSemester}
+                                className="flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={!selectedCourse || !selectedSemester || !gradeOverview?.examGradesPublished || gradeOverview?.resitGradesPublished}
+                                title={
+                                    !gradeOverview?.examGradesPublished
+                                        ? "Cần công bố điểm thi (FE) trước khi nhập điểm thi lại"
+                                        : gradeOverview?.resitGradesPublished
+                                            ? "Điểm thi lại đã được công bố, không thể chỉnh sửa"
+                                            : "Nhập điểm thi lại từ Excel"
+                                }
                             >
                                 <FileSpreadsheet size={16} />
                                 Nhập điểm
@@ -293,6 +581,21 @@ export const ResitGradeManagementPage: React.FC = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* Status Alert for Published Grades */}
+                {gradeOverview?.gradesPublished && (
+                    <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-xl p-4 flex items-start gap-3">
+                        <Check className="text-green-600 dark:text-green-400 mt-0.5" size={18} />
+                        <div>
+                            <p className="text-sm font-semibold text-green-800 dark:text-green-300">
+                                Điểm thi lại đã được công bố
+                            </p>
+                            <p className="text-xs text-green-700 dark:text-green-400 mt-0.5">
+                                Sinh viên hiện có thể xem điểm thi lại cho môn học này. {gradeOverview.gradesPublishedAt && `Công bố lúc ${new Date(gradeOverview.gradesPublishedAt).toLocaleString()}`} {gradeOverview.gradesPublishedBy && `bởi ${gradeOverview.gradesPublishedBy}`}
+                            </p>
+                        </div>
+                    </div>
+                )}
 
                 {/* Course Info Header */}
                 {gradeOverview && (
@@ -313,8 +616,15 @@ export const ResitGradeManagementPage: React.FC = () => {
                                 <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-xs font-medium">
                                     <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-zinc-800 px-2 py-1 rounded-md border border-gray-100 dark:border-zinc-700">
                                         <Users size={12} />
-                                        {gradeOverview.totalStudents} sinh viên thi lại
+                                        {resitEligibleStudents.length} sinh viên đủ điều kiện thi lại
                                     </span>
+                                    <span>•</span>
+                                    <span className="flex items-center gap-1.5 bg-yellow-50 dark:bg-yellow-900/10 px-2 py-1 rounded-md border border-yellow-100 dark:border-yellow-900/30 text-yellow-700 dark:text-yellow-400">
+                                        <AlertTriangle size={12} />
+                                        Lọc từ {gradeOverview.totalStudents} tổng sinh viên
+                                    </span>
+                                    <span>•</span>
+                                    <span>{gradeOverview.gradeComponents.length} cấu phần điểm</span>
                                 </div>
                             </div>
 
@@ -343,17 +653,72 @@ export const ResitGradeManagementPage: React.FC = () => {
                     </div>
                 )}
 
-                {/* Search Bar */}
+                {/* Toolbar: Search + Edit Buttons */}
                 {gradeOverview && (
-                    <div className="relative max-w-md">
-                        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="Tìm theo MSSV, tên hoặc lớp..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-fpt-orange focus:border-transparent"
-                        />
+                    <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
+                        {/* Search Input */}
+                        <div className="relative w-full sm:w-1/2">
+                            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Tìm sinh viên theo tên hoặc MSSV..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-fpt-orange focus:border-transparent"
+                            />
+                        </div>
+
+                        {/* Edit Buttons */}
+                        <div className="flex items-center gap-2">
+                            {isEditMode ? (
+                                <>
+                                    <button
+                                        onClick={handleCancelEdit}
+                                        className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-zinc-700 border border-gray-200 dark:border-zinc-600 rounded-lg text-sm text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-zinc-600 transition-all"
+                                        disabled={saving}
+                                    >
+                                        <X size={18} />
+                                        Hủy
+                                    </button>
+                                    <button
+                                        onClick={handleSaveGrades}
+                                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-all disabled:opacity-50"
+                                        disabled={saving}
+                                    >
+                                        {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                                        Lưu thay đổi
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <button
+                                        onClick={handleStartEdit}
+                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all disabled:opacity-50"
+                                        disabled={gradeOverview.gradesPublished}
+                                        title={gradeOverview.gradesPublished ? "Không thể chỉnh sửa sau khi đã công bố điểm" : "Chỉnh sửa điểm trực tiếp"}
+                                    >
+                                        <Edit3 size={18} />
+                                        Chỉnh sửa
+                                    </button>
+
+                                    {gradeOverview.gradesPublished ? (
+                                        <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-400">
+                                            <ShieldCheck size={18} />
+                                            <span>Đã công bố điểm</span>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => setShowPublishConfirm(true)}
+                                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-all disabled:opacity-50"
+                                            disabled={publishing || gradeOverview.totalStudents === 0}
+                                        >
+                                            {publishing ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                                            Công bố điểm
+                                        </button>
+                                    )}
+                                </>
+                            )}
+                        </div>
                     </div>
                 )}
 
@@ -375,16 +740,26 @@ export const ResitGradeManagementPage: React.FC = () => {
                                         <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider min-w-[200px]">
                                             Thông tin sinh viên
                                         </th>
+                                        <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider min-w-[120px]">
+                                            Mã SV
+                                        </th>
                                         <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider">
                                             Lớp
                                         </th>
-                                        {gradeOverview.gradeComponents.map((component) => (
+                                        {sortedGradeComponents.map((component) => (
                                             <th
                                                 key={component.id}
-                                                className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider min-w-[80px]"
+                                                className={`px-2 py-3 text-center text-xs font-semibold uppercase tracking-wider min-w-[60px] ${component.type === 'RESIT' ? 'bg-orange-600' : ''
+                                                    }`}
                                             >
-                                                <div title={component.name}>
-                                                    Resit
+                                                <div
+                                                    className="cursor-help flex items-center justify-center gap-1"
+                                                    title={`${component.name} (${component.weight}%)${component.type === 'RESIT' ? ' - Có thể nhập điểm' : ' - Chỉ xem'}`}
+                                                >
+                                                    {getComponentAbbr(component.name, component.type)}
+                                                    {component.type === 'RESIT' && (
+                                                        <span className="text-[8px] bg-white/20 px-1 rounded">✎</span>
+                                                    )}
                                                 </div>
                                                 <div className="text-orange-200 font-normal mt-0.5 text-[10px]">
                                                     {component.weight}%
@@ -392,9 +767,9 @@ export const ResitGradeManagementPage: React.FC = () => {
                                             </th>
                                         ))}
                                         <th className="px-4 py-4 text-center text-xs font-semibold uppercase tracking-wider min-w-[100px]">
-                                            <div>Kết quả</div>
+                                            <div>Điểm TB</div>
                                             <div className="text-orange-200 font-normal mt-1">
-                                                Sau thi lại
+                                                Tổng kết
                                             </div>
                                         </th>
                                     </tr>
@@ -406,23 +781,45 @@ export const ResitGradeManagementPage: React.FC = () => {
                                                 {(index + 1).toString().padStart(2, '0')}
                                             </td>
                                             <td className="px-4 py-2">
-                                                <div className="flex items-center gap-3">
-                                                    <div>
-                                                        <p className="font-medium text-gray-900 dark:text-white text-sm">{student.studentName}</p>
-                                                        <p className="text-xs text-gray-500 dark:text-zinc-400">{student.studentCode}</p>
-                                                    </div>
+                                                <div className="flex flex-col">
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedStudentCode(student.studentCode);
+                                                            setIsStudentInfoModalOpen(true);
+                                                        }}
+                                                        className="text-left font-bold text-gray-900 dark:text-white text-sm hover:text-fpt-orange transition-colors"
+                                                    >
+                                                        {student.studentName}
+                                                    </button>
                                                 </div>
+                                            </td>
+                                            <td className="px-4 py-2 text-sm font-medium text-gray-500 dark:text-zinc-400">
+                                                {student.studentCode}
                                             </td>
                                             <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">
                                                 {student.className}
                                             </td>
-                                            {gradeOverview.gradeComponents.map((component) => {
+                                            {sortedGradeComponents.map((component) => {
+                                                const gradeKey = `${student.enrollmentId}_${component.id}`;
                                                 const score = student.grades[component.id];
+                                                const editValue = editedGrades[gradeKey];
+
                                                 return (
-                                                    <td key={component.id} className="px-4 py-2 text-center">
-                                                        <span className={`inline-block min-w-[40px] px-2 py-1 rounded border text-sm font-medium ${getScoreColor(score)} border-gray-200 dark:border-zinc-600`}>
-                                                            {formatScore(score)}
-                                                        </span>
+                                                    <td key={component.id} className="px-2 py-2 text-center">
+                                                        {isEditMode && component.type === 'RESIT' ? (
+                                                            <input
+                                                                type="text"
+                                                                inputMode="decimal"
+                                                                value={editValue ?? (score !== null && score !== undefined ? score.toFixed(1) : '')}
+                                                                onChange={(e) => handleGradeChange(student.enrollmentId, component.id, e.target.value)}
+                                                                className="w-14 text-center px-1 py-1 rounded-lg border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-gray-900 dark:text-white font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                                placeholder="--"
+                                                            />
+                                                        ) : (
+                                                            <span className={`inline-block px-2 py-1 rounded-lg font-semibold text-sm border border-gray-200 dark:border-zinc-600 ${getScoreColor(score)}`}>
+                                                                {formatScore(score)}
+                                                            </span>
+                                                        )}
                                                     </td>
                                                 );
                                             })}
@@ -438,7 +835,7 @@ export const ResitGradeManagementPage: React.FC = () => {
                         </div>
                         {filteredStudents.length === 0 && (
                             <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                                {searchTerm ? 'Không tìm thấy sinh viên phù hợp' : 'Không có sinh viên thi lại'}
+                                {searchTerm || selectedClass ? 'Không tìm thấy sinh viên phù hợp' : 'Không có sinh viên đủ điều kiện thi lại'}
                             </div>
                         )}
                     </div>
@@ -451,16 +848,61 @@ export const ResitGradeManagementPage: React.FC = () => {
             </div>
 
             {/* Import Modal */}
-            {showImportModal && selectedCourse && selectedSemester && (
-                <ImportExamGradeModal
-                    isOpen={showImportModal}
-                    onClose={() => setShowImportModal(false)}
-                    onSuccess={handleImportSuccess}
-                    courseCode={selectedCourse}
-                    semesterCode={selectedSemester}
-                    type="RESIT"
-                />
-            )}
-        </AcademicStaffLayout>
+            {
+                showImportModal && selectedCourse && selectedSemester && (
+                    <ImportExamGradeModal
+                        isOpen={showImportModal}
+                        onClose={() => setShowImportModal(false)}
+                        onSuccess={handleImportSuccess}
+                        courseCode={selectedCourse}
+                        semesterCode={selectedSemester}
+                        type="RESIT"
+                    />
+                )
+            }
+
+            {/* Submit Confirmation Modal */}
+            {
+                showPublishConfirm && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                        <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl animate-in zoom-in-95 duration-200">
+                            <div className="text-center mb-6">
+                                <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Check size={32} className="text-green-600 dark:text-green-400" />
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                                    Xác nhận công bố điểm
+                                </h3>
+                                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                                    Bạn có chắc chắn muốn công bố điểm thi lại cho sinh viên không?
+                                </p>
+                            </div>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowPublishConfirm(false)}
+                                    className="flex-1 px-4 py-2 bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-zinc-700 transition-all font-semibold"
+                                    disabled={publishing}
+                                >
+                                    Hủy
+                                </button>
+                                <button
+                                    onClick={handleConfirmPublish}
+                                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-all font-semibold disabled:opacity-50"
+                                    disabled={publishing}
+                                >
+                                    {publishing ? <Loader2 size={18} className="animate-spin mx-auto" /> : "Xác nhận"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            <StudentInfoModal
+                isOpen={isStudentInfoModalOpen}
+                onClose={() => setIsStudentInfoModalOpen(false)}
+                studentCode={selectedStudentCode}
+            />
+        </AcademicStaffLayout >
     );
 };

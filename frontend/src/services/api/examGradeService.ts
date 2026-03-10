@@ -32,10 +32,13 @@ export interface ExamGradeOverviewResponse {
     lastUpdated: string;
     gradeComponents: ExamGradeComponentInfo[];
     studentGrades: ExamStudentGradeRow[];
-    // For publishing grades to students
+    // For publishing grades to students (context aware)
     gradesPublished?: boolean;
     gradesPublishedAt?: string;
     gradesPublishedBy?: string;
+    // Explicit statuses for both exam types
+    examGradesPublished?: boolean;
+    resitGradesPublished?: boolean;
 }
 
 export interface ExamGradePreviewRow {
@@ -146,10 +149,11 @@ export const examGradeService = {
      */
     publishGrades: async (
         courseCode: string,
-        semesterCode: string
+        semesterCode: string,
+        type: 'EXAM' | 'RESIT' = 'EXAM'
     ): Promise<{ message: string }> => {
         const response = await apiClient.post<{ message: string }>('/v1/exam-grades/publish', null, {
-            params: { courseCode, semesterCode }
+            params: { courseCode, semesterCode, type }
         });
         return response.data;
     }

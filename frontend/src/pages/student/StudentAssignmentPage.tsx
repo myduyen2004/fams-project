@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
-import { FileText, Upload, CheckCircle, AlertCircle, XCircle, ExternalLink, Search, Trash2, RotateCcw } from 'lucide-react';
+import { FileText, Upload, CheckCircle, AlertCircle, XCircle, ExternalLink, Search, Trash2, RotateCcw, Paperclip } from 'lucide-react';
 import { assignmentService, AssignmentSubmissionDTO, SubmitAssignmentRequest } from '../../services/api/assignmentService';
 import { uploadFile } from '../../services/utils/fileUploadService';
 import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
@@ -12,6 +13,7 @@ type StatusFilter = 'ALL' | 'NOT_SUBMITTED' | 'SUBMITTED' | 'OVERDUE';
 const PAGE_SIZE = 10;
 
 export const StudentAssignmentPage: React.FC = () => {
+    const navigate = useNavigate();
     const [assignments, setAssignments] = useState<AssignmentSubmissionDTO[]>([]);
     const [enrolledClasses, setEnrolledClasses] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
@@ -75,17 +77,6 @@ export const StudentAssignmentPage: React.FC = () => {
         return new Date(dueDate) > new Date();
     };
 
-    const renderNoteWithLinks = (text?: string) => {
-        if (!text) return '—';
-        const urlRegex = /(https?:\/\/[^\s]+)/;
-        const parts = text.split(urlRegex);
-        return parts.filter(Boolean).map((part, i) => {
-            if (urlRegex.test(part)) {
-                return <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-fpt-orange hover:underline break-all">{part}</a>;
-            }
-            return <span key={i}>{part}</span>;
-        });
-    };
 
     const openUploadDialog = (assignmentId: number) => {
         setSelectedAssignmentId(assignmentId);
@@ -280,34 +271,33 @@ export const StudentAssignmentPage: React.FC = () => {
                         </div>
                     ) : (
                         <>
-                            <div className="overflow-x-auto">
+                            <div className="w-full">
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="bg-orange-500 dark:bg-orange-600">
-                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Tên bài</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Môn</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Lớp</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Hạn nộp</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Trạng thái</th>
+                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider whitespace-nowrap">Tên bài</th>
+                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider whitespace-nowrap">Lớp</th>
+                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider whitespace-nowrap">Hạn nộp</th>
+                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider whitespace-nowrap">Trạng thái</th>
                                             <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">File bài tập</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Ghi chú</th>
-                                            <th className="text-center px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Hành động</th>
+                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">File nộp</th>
+                                            <th className="text-center px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider whitespace-nowrap">Hành động</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
                                         {paginatedAssignments.map((assignment) => (
                                             <tr
                                                 key={`${assignment.assignmentId}-${assignment.studentCode}`}
-                                                className="hover:bg-gray-50 dark:hover:bg-zinc-800/30 transition-colors"
+                                                className="hover:bg-gray-50 dark:hover:bg-zinc-800/30 transition-colors cursor-pointer"
+                                                onClick={() => navigate(`/student/assignments/${assignment.assignmentId}`)}
                                             >
-                                                <td className="px-4 py-3">
-                                                    <div className="font-medium text-gray-900 dark:text-white" title={assignment.assignmentTitle}>
+                                                <td className="px-4 py-3 whitespace-nowrap">
+                                                    <div
+                                                        className="font-medium text-gray-900 dark:text-white"
+                                                        title={assignment.assignmentTitle}
+                                                    >
                                                         {assignment.assignmentTitle}
                                                     </div>
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <div className="text-gray-700 dark:text-zinc-300">{assignment.courseName}</div>
-                                                    <div className="text-xs text-gray-400 dark:text-zinc-500">{assignment.courseCode}</div>
                                                 </td>
                                                 <td className="px-4 py-3 text-gray-700 dark:text-zinc-300 whitespace-nowrap">
                                                     {assignment.className}
@@ -315,10 +305,25 @@ export const StudentAssignmentPage: React.FC = () => {
                                                 <td className="px-4 py-3 text-gray-600 dark:text-zinc-400 whitespace-nowrap text-xs">
                                                     {assignment.assignmentDueDate ? formatDateTime(assignment.assignmentDueDate) : '—'}
                                                 </td>
-                                                <td className="px-4 py-3">
+                                                <td className="px-4 py-3 whitespace-nowrap">
                                                     {getStatusBadge(assignment.status)}
                                                 </td>
-                                                <td className="px-4 py-3">
+                                                <td className="px-4 py-3 max-w-[200px] break-words">
+                                                    {assignment.referenceUrl ? (
+                                                        <a
+                                                            href={getViewableFileUrl(assignment.referenceUrl)}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="inline-flex items-center gap-1 text-fpt-orange hover:text-orange-600 text-xs transition-colors break-all"
+                                                        >
+                                                            <Paperclip className="w-3.5 h-3.5 flex-shrink-0" />
+                                                            <span>{assignment.referenceName || 'Tài liệu'}</span>
+                                                        </a>
+                                                    ) : (
+                                                        <span className="text-gray-300 dark:text-zinc-600">—</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-3 max-w-[200px] break-words">
                                                     {assignment.fileUrls && assignment.fileUrls.length > 0 ? (
                                                         <div className="flex flex-col gap-1">
                                                             {assignment.fileUrls.map((url, idx) => (
@@ -327,10 +332,10 @@ export const StudentAssignmentPage: React.FC = () => {
                                                                     href={getViewableFileUrl(url)}
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
-                                                                    className="inline-flex items-center gap-1 text-fpt-orange hover:text-orange-600 text-xs transition-colors"
+                                                                    className="inline-flex items-center gap-1 text-fpt-orange hover:text-orange-600 text-xs transition-colors break-all"
                                                                 >
-                                                                    <ExternalLink className="w-3.5 h-3.5" />
-                                                                    {assignment.fileNames?.[idx] || `File ${idx + 1}`}
+                                                                    <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
+                                                                    <span>{assignment.fileNames?.[idx] || `File ${idx + 1}`}</span>
                                                                 </a>
                                                             ))}
                                                         </div>
@@ -338,10 +343,7 @@ export const StudentAssignmentPage: React.FC = () => {
                                                         <span className="text-gray-300 dark:text-zinc-600">—</span>
                                                     )}
                                                 </td>
-                                                <td className="px-4 py-3 text-gray-500 dark:text-zinc-400 text-xs max-w-[200px]">
-                                                    {renderNoteWithLinks(assignment.note)}
-                                                </td>
-                                                <td className="px-4 py-3 text-center">
+                                                <td className="px-4 py-3 text-center whitespace-nowrap">
                                                     <div className="flex items-center justify-center gap-1.5">
                                                         {assignment.status === 'NOT_SUBMITTED' ? (
                                                             <button

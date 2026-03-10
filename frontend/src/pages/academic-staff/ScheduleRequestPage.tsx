@@ -1,45 +1,51 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Clock, CheckCircle, FileText } from 'lucide-react';
+import { Loader2, Clock, CheckCircle, FileText, User } from 'lucide-react';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { academicStaffService, ScheduleRequestResponse } from '../../services/api/academicStaffService';
+import { academicRequestService, AcademicRequest } from '../../services/api/academicRequestService';
 import toast from 'react-hot-toast';
 import RequestFilters from '../../components/academic-staff/request/RequestFilters';
 import RequestTableRow from '../../components/academic-staff/request/RequestTableRow';
+import StudentRequestTableRow from '../../components/academic-staff/request/StudentRequestTableRow';
 import { usePagination } from '../../hooks/usePagination';
+
+type RequestTab = 'LECTURER' | 'STUDENT';
 
 export const ScheduleRequestPage = () => {
     const navigate = useNavigate();
-    const [requests, setRequests] = useState<ScheduleRequestResponse[]>([]);
+    const [activeTab, setActiveTab] = useState<RequestTab>('LECTURER');
+    const [lecturerRequests, setLecturerRequests] = useState<ScheduleRequestResponse[]>([]);
+    const [studentRequests, setStudentRequests] = useState<AcademicRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [totalElements, setTotalElements] = useState(0);
     const [size] = useState(10);
     const [filters, setFilters] = useState({
         search: '',
-        role: '',
         reason: '',
         status: '',
         startDate: '',
-        endDate: ''
+        endDate: '',
+        requestType: ''
     });
     const [isExporting, setIsExporting] = useState(false);
     const [stats, setStats] = useState({ pending: 0, processed: 0 });
+    const [studentStats, setStudentStats] = useState({ pending: 0, approved: 0, rejected: 0 });
 
-    // Use custom pagination hook - auto resets to page 0 when filters change
+    // Use custom pagination hook - auto resets to page 0 when filters or tab change
     const { page, setPage } = usePagination({
-        resetDependencies: [filters.search, filters.role, filters.reason, filters.status, filters.startDate, filters.endDate]
+        resetDependencies: [activeTab, filters.search, filters.reason, filters.status, filters.startDate, filters.endDate, filters.requestType]
     });
 
-    const fetchRequests = useCallback(async () => {
+    const fetchLecturerRequests = useCallback(async () => {
         try {
-            setLoading(true);
             const data = await academicStaffService.getScheduleRequests({
                 ...filters,
                 page,
                 size,
                 sort: 'createdAt,desc'
             });
-            setRequests(data.content || []);
+            setLecturerRequests(data.content || []);
             setTotalElements(data.totalElements || 0);
 
             const statsData = await academicStaffService.getScheduleRequestStats();
@@ -48,12 +54,47 @@ export const ScheduleRequestPage = () => {
                 processed: statsData.processed || 0
             });
         } catch (error) {
-            console.error('Error fetching requests:', error);
-            toast.error('Không thể tải danh sách yêu cầu');
-        } finally {
-            setLoading(false);
+            console.error('Error fetching lecturer requests:', error);
+            toast.error('Không thể tải danh sách yêu cầu giảng viên');
         }
     }, [page, size, filters]);
+
+    const fetchStudentRequests = useCallback(async () => {
+        try {
+            const data = await academicRequestService.getRequests(
+                page,
+                size,
+                'createdAt,desc',
+                {
+                    search: filters.search,
+                    status: filters.status,
+                    requestType: filters.requestType,
+                }
+            );
+            setStudentRequests(data.content || []);
+            setTotalElements(data.totalElements || 0);
+
+            const statsData = await academicRequestService.getStats();
+            setStudentStats({
+                pending: statsData.pending || 0,
+                approved: statsData.approved || 0,
+                rejected: statsData.rejected || 0
+            });
+        } catch (error) {
+            console.error('Error fetching student requests:', error);
+            toast.error('Không thể tải danh sách yêu cầu sinh viên');
+        }
+    }, [page, size, filters]);
+
+    const fetchRequests = useCallback(async () => {
+        setLoading(true);
+        if (activeTab === 'LECTURER') {
+            await fetchLecturerRequests();
+        } else {
+            await fetchStudentRequests();
+        }
+        setLoading(false);
+    }, [activeTab, fetchLecturerRequests, fetchStudentRequests]);
 
     useEffect(() => {
         fetchRequests();
@@ -61,69 +102,48 @@ export const ScheduleRequestPage = () => {
 
     const handleFilterChange = (newFilters: Partial<typeof filters>) => {
         setFilters(prev => ({ ...prev, ...newFilters }));
-        // Note: Page reset is now handled by usePagination hook
     };
 
     const handleViewRequest = (request: ScheduleRequestResponse) => {
         navigate(`/academic-staff/requests/${request.id}`);
     };
 
+    const handleViewStudentRequest = (request: AcademicRequest) => {
+        navigate(`/academic-staff/student-requests/${request.id}`);
+    };
+
     const handleExport = async () => {
         try {
             setIsExporting(true);
-            console.log('Exporting with filters:', filters);
-
-            const blob = await academicStaffService.exportScheduleRequests(filters);
-            console.log('Received blob:', blob);
-            console.log('Blob type:', blob?.type);
-            console.log('Blob size:', blob?.size);
-
-            if (!blob) {
-                throw new Error('No blob received from server');
+            if (activeTab === 'LECTURER') {
+                const blob = await academicStaffService.exportScheduleRequests(filters);
+                downloadBlob(blob, `danh-sach-yeu-cau-lich-day-${new Date().toISOString().split('T')[0]}.xlsx`);
+            } else {
+                // Implement student request export if needed, or show message
+                toast.error('Tính năng xuất Excel cho yêu cầu sinh viên đang phát triển');
             }
-
-            // Ensure blob has correct type for maximum compatibility
-            const properBlob = new Blob([blob], {
-                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            });
-
-            // Create download link
-            const url = window.URL.createObjectURL(properBlob);
-            console.log('Created blob URL:', url);
-
-            const dateStr = new Date().toISOString().split('T')[0];
-            const filename = `danh-sach-yeu-cau-${dateStr}.xlsx`;
-
-            const link = document.createElement('a');
-            link.style.display = 'none';
-            link.href = url;
-            link.download = filename;
-            // Set attribute explicitly for better compatibility
-            link.setAttribute('download', filename);
-            console.log('Setting filename:', filename);
-
-            document.body.appendChild(link);
-
-            // Small delay before click for Safari compatibility
-            setTimeout(() => {
-                link.click();
-                console.log('Download triggered');
-            }, 10);
-
-            // Cleanup after download starts
-            setTimeout(() => {
-                document.body.removeChild(link);
-                window.URL.revokeObjectURL(url);
-                console.log('Cleanup complete');
-            }, 100);
-
-            toast.success('Xuất Excel thành công');
         } catch (error) {
             console.error('Error exporting requests:', error);
             toast.error('Lỗi khi xuất file Excel');
         } finally {
             setIsExporting(false);
         }
+    };
+
+    const downloadBlob = (blob: Blob, filename: string) => {
+        if (!blob) return;
+        const properBlob = new Blob([blob], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        });
+        const url = window.URL.createObjectURL(properBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        toast.success('Xuất Excel thành công');
     };
 
     const totalPages = Math.ceil(totalElements / size);
@@ -139,7 +159,9 @@ export const ScheduleRequestPage = () => {
                         </div>
                         <div>
                             <p className="text-sm font-medium text-gray-500 dark:text-zinc-400">Yêu cầu chờ xử lý</p>
-                            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{stats.pending}</h3>
+                            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                                {activeTab === 'LECTURER' ? stats.pending : studentStats.pending}
+                            </h3>
                         </div>
                     </div>
                     <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 flex items-center gap-4">
@@ -148,7 +170,9 @@ export const ScheduleRequestPage = () => {
                         </div>
                         <div>
                             <p className="text-sm font-medium text-gray-500 dark:text-zinc-400">Yêu cầu đã xử lý</p>
-                            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{stats.processed}</h3>
+                            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                                {activeTab === 'LECTURER' ? stats.processed : (studentStats.approved + studentStats.rejected)}
+                            </h3>
                         </div>
                     </div>
                     <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 flex items-center gap-4">
@@ -162,11 +186,40 @@ export const ScheduleRequestPage = () => {
                     </div>
                 </div>
 
+                {/* Tabs */}
+                <div className="flex border-b border-gray-200 dark:border-zinc-800">
+                    <button
+                        onClick={() => setActiveTab('LECTURER')}
+                        className={`px-6 py-3 text-sm font-semibold transition-all border-b-2 ${activeTab === 'LECTURER'
+                            ? 'border-fpt-orange text-fpt-orange'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                            }`}
+                    >
+                        <div className="flex items-center gap-2">
+                            <User size={18} />
+                            Thay đổi lịch dạy (Giảng viên)
+                        </div>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('STUDENT')}
+                        className={`px-6 py-3 text-sm font-semibold transition-all border-b-2 ${activeTab === 'STUDENT'
+                            ? 'border-fpt-orange text-fpt-orange'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                            }`}
+                    >
+                        <div className="flex items-center gap-2">
+                            <FileText size={18} />
+                            Yêu cầu học thuật (Sinh viên)
+                        </div>
+                    </button>
+                </div>
+
                 <RequestFilters
-                    filters={filters}
+                    filters={filters as any}
                     onFilterChange={handleFilterChange}
-                    onExportClick={handleExport}
+                    onExportClick={activeTab === 'LECTURER' ? handleExport : undefined}
                     isExporting={isExporting}
+                    showRequestTypeFilter={activeTab === 'STUDENT'}
                 />
 
                 {/* Content Table Container */}
@@ -184,46 +237,53 @@ export const ScheduleRequestPage = () => {
                                             Vai trò
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">
-                                            Lớp / Nhóm
+                                            {activeTab === 'LECTURER' ? 'Lớp / Nhóm' : 'Tiêu đề'}
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">
-                                            Lý do
+                                            Loại yêu cầu
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">
                                             Ngày gửi
                                         </th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider rounded-tr-lg">
                                             Trạng thái
-                                        </th>
-                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-lg">
-                                            Hành động
                                         </th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
                                     {loading ? (
                                         <tr>
-                                            <td colSpan={7} className="py-20 text-center">
+                                            <td colSpan={6} className="py-20 text-center">
                                                 <div className="flex flex-col items-center gap-2">
                                                     <Loader2 className="w-8 h-8 animate-spin text-fpt-orange mx-auto" />
                                                     <span className="text-sm font-medium text-gray-500">Đang tải yêu cầu...</span>
                                                 </div>
                                             </td>
                                         </tr>
-                                    ) : (requests && requests.length === 0) ? (
+                                    ) : (totalElements === 0) ? (
                                         <tr>
-                                            <td colSpan={7} className="py-20 text-center text-gray-500 italic">
+                                            <td colSpan={6} className="py-20 text-center text-gray-500 italic">
                                                 Không tìm thấy yêu cầu nào
                                             </td>
                                         </tr>
                                     ) : (
-                                        requests.map((request) => (
-                                            <RequestTableRow
-                                                key={request.id}
-                                                request={request}
-                                                onView={() => handleViewRequest(request)}
-                                            />
-                                        ))
+                                        activeTab === 'LECTURER' ? (
+                                            lecturerRequests.map((request) => (
+                                                <RequestTableRow
+                                                    key={request.id}
+                                                    request={request}
+                                                    onView={() => handleViewRequest(request)}
+                                                />
+                                            ))
+                                        ) : (
+                                            studentRequests.map((request) => (
+                                                <StudentRequestTableRow
+                                                    key={request.id}
+                                                    request={request}
+                                                    onView={() => handleViewStudentRequest(request)}
+                                                />
+                                            ))
+                                        )
                                     )}
                                 </tbody>
                             </table>
@@ -283,3 +343,4 @@ export const ScheduleRequestPage = () => {
 };
 
 export default ScheduleRequestPage;
+
