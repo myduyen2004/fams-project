@@ -13,24 +13,26 @@ import java.util.Optional;
 @Repository
 public interface StudentAttendanceRepository extends JpaRepository<StudentAttendance, Long> {
 
-    @Query("SELECT sa FROM StudentAttendance sa " +
-            "JOIN FETCH sa.session s " +
-            "JOIN FETCH s.timetableSlot ts " +
-            "WHERE sa.student.id = :studentId " +
-            "AND ts.id IN :slotIds")
-    List<StudentAttendance> findByStudentIdAndSlotIds(
-            @Param("studentId") Long studentId,
-            @Param("slotIds") Collection<Long> slotIds);
+        @Query("SELECT sa FROM StudentAttendance sa " +
+                        "JOIN FETCH sa.session s " +
+                        "JOIN FETCH s.timetableSlot ts " +
+                        "WHERE sa.student.id = :studentId " +
+                        "AND ts.id IN :slotIds")
+        List<StudentAttendance> findByStudentIdAndSlotIds(
+                        @Param("studentId") Long studentId,
+                        @Param("slotIds") Collection<Long> slotIds);
 
-    List<StudentAttendance> findBySessionId(Long sessionId);
+        List<StudentAttendance> findBySessionId(Long sessionId);
 
-    Optional<StudentAttendance> findBySessionIdAndStudentId(Long sessionId, Long studentId);
+        List<StudentAttendance> findBySessionIdIn(Collection<Long> sessionIds);
 
-    @Query("SELECT sa FROM StudentAttendance sa " +
-            "JOIN sa.session s " +
-            "WHERE sa.requiresManualVerify = true " +
-            "AND s.lecturer.id = :lecturerId " +
-            "ORDER BY sa.updatedAt DESC")
-    List<StudentAttendance> findByRequiresManualVerifyTrueAndSessionLecturerId(
-            @Param("lecturerId") Long lecturerId);
+        Optional<StudentAttendance> findBySessionIdAndStudentId(Long sessionId, Long studentId);
+
+        @Query("SELECT sa FROM StudentAttendance sa " +
+                        "JOIN sa.session s " +
+                        "WHERE sa.requiresManualVerify = true " +
+                        "AND s.lecturer.id = :lecturerId " +
+                        "ORDER BY sa.updatedAt DESC")
+        List<StudentAttendance> findByRequiresManualVerifyTrueAndSessionLecturerId(
+                        @Param("lecturerId") Long lecturerId);
 }

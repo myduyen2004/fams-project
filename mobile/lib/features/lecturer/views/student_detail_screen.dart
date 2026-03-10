@@ -47,10 +47,7 @@ class StudentDetailScreen extends StatelessWidget {
                       color: Colors.black87,
                     ),
                   ),
-                  _buildCircleButton(
-                    icon: Icons.edit,
-                    onTap: () {}, // View only for now
-                  ),
+                  const SizedBox(width: 40), // Placeholder to keep title centered
                 ],
                 ),
               ),

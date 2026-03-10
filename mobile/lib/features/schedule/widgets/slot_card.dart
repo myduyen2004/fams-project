@@ -63,27 +63,27 @@ class SlotCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    slot.courseCode ?? 'COURSE',
-                    style: GoogleFonts.inter(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: const Color(0xFF2D3436),
-                      letterSpacing: -0.5,
+              IntrinsicHeight(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Text(
+                        slot.courseCode ?? 'COURSE',
+                        style: GoogleFonts.inter(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF2D3436),
+                          letterSpacing: -0.5,
+                          height: 1.0, // Remove line height internal padding
+                        ),
+                      ),
                     ),
-                  ),
-                  Row(
-                    children: [
-                      _buildCalendarButton(),
-                      const SizedBox(width: 8),
-                      if (Get.find<AuthController>().currentUser.value?.role != 'LECTURER') 
-                        _buildSmallBadge(slot.attendanceStatus ?? 'Chưa điểm danh'),
-                    ],
-                  )
-                ],
+                    if (Get.find<AuthController>().currentUser.value?.role != 'LECTURER') 
+                      _buildSmallBadge(_getAttendanceStatusText(slot, controller)),
+                  ],
+                ),
               ),
               
               // If active, show progress bar
@@ -160,17 +160,60 @@ class SlotCard extends StatelessWidget {
   }
 
   Widget _buildSmallBadge(String status) {
+    Color bgColor = const Color(0xFFE9EEF5);
+    Color textColor = const Color(0xFFB2BEC3);
+    
+    if (status == 'Có mặt') {
+      bgColor = const Color(0xFFE8F5E9);
+      textColor = const Color(0xFF27AE60);
+    } else if (status == 'Vắng') {
+      bgColor = const Color(0xFFFFEBEE);
+      textColor = const Color(0xFFE53935);
+    }
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: const Color(0xFFE9EEF5),
+        color: bgColor,
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         status,
-        style: const TextStyle(color: Color(0xFFB2BEC3), fontSize: 10, fontWeight: FontWeight.w900),
+        style: TextStyle(color: textColor, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.2),
       ),
     );
+  }
+
+  String _getAttendanceStatusText(TimetableSlot slot, ScheduleController controller) {
+    if (slot.attendanceStatus == 'PRESENT') return 'Có mặt';
+    if (slot.attendanceStatus == 'ABSENT') return 'Vắng';
+
+    if (slot.startTime == null || slot.endTime == null || slot.date == null) {
+      return 'Chưa điểm danh';
+    }
+
+    try {
+      final now = DateTime.now();
+      final endParts = slot.endTime!.split(':');
+      final endDate = DateTime(
+        slot.date.year,
+        slot.date.month,
+        slot.date.day,
+        int.parse(endParts[0]),
+        int.parse(endParts[1]),
+      );
+
+      final configMinutes = controller.attendanceConfig.value.absentThresholdMinutes;
+      final limitTime = endDate.add(Duration(minutes: configMinutes));
+
+      if (now.isAfter(limitTime)) {
+        return 'Vắng';
+      }
+      return 'Chưa điểm danh';
+    } catch (e) {
+      return 'Chưa điểm danh';
+    }
   }
 
   Widget _buildCalendarButton() {

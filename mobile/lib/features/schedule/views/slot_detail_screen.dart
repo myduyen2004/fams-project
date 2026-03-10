@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/app_background.dart';
 import '../models/schedule_model.dart';
+import '../models/assignment_submission_model.dart';
+import '../services/schedule_service.dart';
 import '../../lecturer/models/class_section_model.dart';
 import '../../lecturer/views/student_list_screen.dart';
 import '../../lecturer/controllers/class_list_controller.dart';
@@ -12,6 +18,9 @@ import '../../face_attendance/views/face_attendance_view.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../face_recognition/views/face_registration_view.dart';
 import '../controllers/schedule_controller.dart';
+import 'lecturer_info_screen.dart';
+import 'assignment_detail_screen.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class SlotDetailScreen extends StatefulWidget {
   final TimetableSlot slot;
@@ -24,11 +33,37 @@ class SlotDetailScreen extends StatefulWidget {
 
 class _SlotDetailScreenState extends State<SlotDetailScreen> {
   late bool _hasCheckedIn;
+  final ScheduleService _scheduleService = ScheduleService();
+  AssignmentSubmissionResponse? _submission;
+  bool _isLoadingSubmission = false;
 
   @override
   void initState() {
     super.initState();
     _hasCheckedIn = widget.slot.attendanceStatus == 'PRESENT';
+    _fetchSubmissionIfAvailable();
+  }
+
+  Future<void> _fetchSubmissionIfAvailable() async {
+    final authController = Get.find<AuthController>();
+    final isLecturer = authController.currentUser.value?.isLecturer ?? false;
+
+    // Only fetch submission for student and if assignment exists
+    if (!isLecturer && widget.slot.assignmentId != null) {
+      setState(() => _isLoadingSubmission = true);
+      try {
+        final data = await _scheduleService.getStudentSubmission(widget.slot.assignmentId!);
+        if (data != null) {
+          setState(() {
+            _submission = AssignmentSubmissionResponse.fromJson(data);
+          });
+        }
+      } catch (e) {
+        debugPrint('[SlotDetail] Error fetching submission: $e');
+      } finally {
+        setState(() => _isLoadingSubmission = false);
+      }
+    }
   }
 
   @override
@@ -41,22 +76,21 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              _buildAppBar(context),
+              _buildAppBar(context, isLecturer),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
                   child: Column(
                     children: [
                       _buildInfoCard(),
-                      const SizedBox(height: 16),
+                      16.verticalSpace,
                       _buildContentCard(),
-                      const SizedBox(height: 16),
+                      16.verticalSpace,
                       if (_hasCheckedIn) _buildSuccessCard(),
                     ],
                   ),
                 ),
               ),
-              _buildBottomButtons(isLecturer, _hasCheckedIn),
               const SizedBox(height: 10),
             ],
           ),
@@ -65,9 +99,9 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
     );
   }
 
-  Widget _buildAppBar(BuildContext context) {
+  Widget _buildAppBar(BuildContext context, bool isLecturer) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 10.h),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -76,19 +110,19 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
               // If we checked in, trigger a refresh in the parent when going back
               Get.back(result: _hasCheckedIn != (widget.slot.attendanceStatus == 'PRESENT'));
             },
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFFFF6B00)),
+            icon: Icon(Icons.arrow_back_ios_new_rounded, color: const Color(0xFFFF6B00), size: 24.r),
           ),
           Text(
-            'Chi tiết Slot dạy',
+            isLecturer ? 'Chi tiết Slot dạy' : 'Chi tiết Slot học',
             style: GoogleFonts.inter(
-              fontSize: 20,
+              fontSize: 20.sp,
               fontWeight: FontWeight.bold,
               color: const Color(0xFF2D3436),
             ),
           ),
           IconButton(
             onPressed: () {},
-            icon: const Icon(Icons.more_horiz_rounded, color: Color(0xFF636E72)),
+            icon: Icon(Icons.more_horiz_rounded, color: const Color(0xFF636E72), size: 24.r),
           ),
         ],
       ),
@@ -98,66 +132,93 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
   Widget _buildInfoCard() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(32.r),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
+            blurRadius: 20.r,
+            offset: Offset(0, 4.h),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF4E6),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              'SLOT ${widget.slot.slotNumber}',
-              style: GoogleFonts.inter(
-                color: const Color(0xFFFF922B),
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-                letterSpacing: 0.5,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF4E6),
+                  borderRadius: BorderRadius.circular(20.r),
+                ),
+                child: Text(
+                  'SLOT ${widget.slot.slotNumber}',
+                  style: GoogleFonts.inter(
+                    color: const Color(0xFFFF922B),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12.sp,
+                    letterSpacing: 0.5,
+                  ),
+                ),
               ),
-            ),
+              _buildSmallAttendanceButton(),
+            ],
           ),
-          const SizedBox(height: 16),
+          16.verticalSpace,
           Text(
             widget.slot.courseCode ?? 'N/A',
             style: GoogleFonts.inter(
-              fontSize: 32,
+              fontSize: 32.sp,
               fontWeight: FontWeight.w900,
               color: const Color(0xFF1E293B),
               height: 1.1,
             ),
           ),
-          const SizedBox(height: 4),
+          4.verticalSpace,
           Text(
             widget.slot.courseName ?? 'N/A',
             style: GoogleFonts.inter(
-              fontSize: 16,
+              fontSize: 16.sp,
               color: const Color(0xFF64748B),
               fontWeight: FontWeight.w400,
             ),
           ),
-          const SizedBox(height: 32),
+          24.verticalSpace,
           
           const Divider(height: 1, color: Color(0xFFF1F5F9)),
-          const SizedBox(height: 24),
+          20.verticalSpace,
 
           Row(
             children: [
               Expanded(child: _buildSimpleDetail('PHÒNG HỌC', widget.slot.roomCode ?? 'Online')),
               const SizedBox(width: 16),
-              Expanded(child: _buildSimpleDetail('LỚP HỌC', widget.slot.className ?? 'N/A')),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    final classSection = widget.slot.classSection;
+                    if (classSection != null) {
+                      if (!Get.isRegistered<ClassListController>()) {
+                        Get.put(ClassListController());
+                      }
+                      Get.find<ClassListController>().selectClass(classSection);
+                      Get.to(() => StudentListScreen(classSection: classSection));
+                    }
+                  },
+                  child: Container(
+                    color: Colors.transparent,
+                    child: _buildSimpleDetail(
+                      'LỚP HỌC', 
+                      _formatClassName(widget.slot.className),
+                      extra: Icon(Icons.arrow_forward_ios_rounded, size: 12.r, color: const Color(0xFF94A3B8)),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 24),
@@ -181,31 +242,82 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
           const SizedBox(height: 24),
           Row(
             children: [
-              Expanded(child: _buildSimpleDetail('GIẢNG VIÊN', widget.slot.lecturerName ?? 'N/A')),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    if (widget.slot.lecturerId != null) {
+                      Get.to(() => LecturerInfoScreen(lecturerId: widget.slot.lecturerId!));
+                    }
+                  },
+                  child: Container(
+                    color: Colors.transparent, // Ensure whole area is clickable
+                    child: _buildSimpleDetail(
+                      'GIẢNG VIÊN', 
+                      widget.slot.lecturerName ?? 'N/A',
+                      extra: const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFF94A3B8)),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
           
-          // User Registration Guidance (Students only)
+          // User Registration Guidance & Time Warning (Students only)
           Obx(() {
             final authController = Get.find<AuthController>();
             final user = authController.currentUser.value;
             final isLecturer = user?.isLecturer ?? false;
-            final hasFace = user?.hasFaceRegistered ?? false;
             
-            if (!isLecturer && !hasFace) {
-              return Padding(
-                padding: const EdgeInsets.only(top: 20),
-                child: Text(
-                  '* Cần đăng ký khuôn mặt mới có thể điểm danh bằng khuôn mặt',
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontStyle: FontStyle.italic,
-                    color: AppColors.orange600,
+            if (isLecturer) return const SizedBox.shrink();
+
+            final hasFace = user?.hasFaceRegistered ?? false;
+            final isDuringTime = _isDuringSlotTime();
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (!hasFace)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 20),
+                    child: Text(
+                      '* Cần đăng ký khuôn mặt mới có thể điểm danh bằng khuôn mặt',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontStyle: FontStyle.italic,
+                        color: AppColors.orange600,
+                      ),
+                    ),
                   ),
-                ),
-              );
-            }
-            return const SizedBox.shrink();
+                if (!_hasCheckedIn && !isDuringTime)
+                  Padding(
+                    padding: EdgeInsets.only(top: 16.h),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.red, size: 16.r),
+                          8.horizontalSpace,
+                          Expanded(
+                            child: Text(
+                              _getTimeStatusMessage(),
+                              style: GoogleFonts.inter(
+                                color: Colors.red,
+                                fontSize: 13.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            );
           }),
         ],
       ),
@@ -219,13 +331,13 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
         Text(
           label,
           style: GoogleFonts.inter(
-            fontSize: 11,
+            fontSize: 11.sp,
             color: const Color(0xFF94A3B8),
             fontWeight: FontWeight.bold,
             letterSpacing: 0.8,
           ),
         ),
-        const SizedBox(height: 8),
+        8.verticalSpace,
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -233,7 +345,7 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
               child: Text(
                 value,
                 style: GoogleFonts.inter(
-                  fontSize: 16,
+                  fontSize: 16.sp,
                   fontWeight: FontWeight.bold,
                   color: const Color(0xFF334155),
                 ),
@@ -241,7 +353,7 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
               ),
             ),
             if (extra != null) ...[
-              const SizedBox(width: 8),
+              8.horizontalSpace,
               extra,
             ],
           ],
@@ -251,44 +363,175 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
   }
 
   Widget _buildContentCard() {
+    final authController = Get.find<AuthController>();
+    final isLecturer = authController.currentUser.value?.isLecturer ?? false;
+    final hasAssignment = widget.slot.assignmentId != null || widget.slot.assignmentTitle != null;
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(32.r),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
+            blurRadius: 20.r,
+            offset: Offset(0, 4.h),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Nội dung bài học',
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-              color: const Color(0xFF1E293B),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  hasAssignment ? (isLecturer ? 'Bài tập đã giao' : 'Bài tập được giao') : 'Nội dung bài học',
+                  style: GoogleFonts.inter(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFF1E293B),
+                  ),
+                ),
+              ),
+              if (hasAssignment) ...[
+                12.horizontalSpace,
+                InkWell(
+                  onTap: () {
+                    Get.to(
+                      () => AssignmentDetailScreen(
+                        slot: widget.slot,
+                        submission: _submission,
+                        isLecturer: isLecturer,
+                      ),
+                      transition: Transition.rightToLeft,
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(8.r),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryOrange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8.r),
+                      border: Border.all(color: AppColors.primaryOrange),
+                    ),
+                    child: Text(
+                      'Chi tiết',
+                      style: GoogleFonts.inter(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primaryOrange,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            'Giới thiệu về các nguyên tắc kế toán cơ bản, cách lập bảng cân đối kế toán và báo cáo kết quả hoạt động kinh doanh. Sinh viên cần chuẩn bị trước chương 1 và chương 2 trong giáo trình.',
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: const Color(0xFF64748B),
-              height: 1.6,
+          16.verticalSpace,
+          if (hasAssignment) ...[
+            Text(
+              widget.slot.assignmentTitle ?? 'Bài tập tuần',
+              style: GoogleFonts.inter(
+                fontSize: 15.sp,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF334155),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-          ),
+            12.verticalSpace,
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'HẠN NỘP',
+                        style: GoogleFonts.inter(
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF94A3B8),
+                        ),
+                      ),
+                      4.verticalSpace,
+                      Text(
+                        DateFormat('dd/MM/yyyy').format(widget.slot.assignmentDueDate ?? widget.slot.date),
+                        style: GoogleFonts.inter(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF475569),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (!isLecturer)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'TRẠNG THÁI',
+                          style: GoogleFonts.inter(
+                            fontSize: 10.sp,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF94A3B8),
+                          ),
+                        ),
+                        4.verticalSpace,
+                        _isLoadingSubmission 
+                          ? SizedBox(height: 14.h, width: 14.w, child: const CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryOrange))
+                          : Text(
+                              _submission != null && _submission!.status != 'NOT_SUBMITTED' 
+                                ? _getTaskStatusText(_submission!.status) 
+                                : 'Chưa nộp',
+                              style: GoogleFonts.inter(
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w800,
+                                color: _submission != null && _submission!.status != 'NOT_SUBMITTED' 
+                                  ? const Color(0xFF10B981) 
+                                  : const Color(0xFFEF4444),
+                              ),
+                            ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ] else ...[
+            Text(
+              'Không có bài học hoặc bài tập cho buổi này.',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: const Color(0xFF64748B),
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
+
+
+  String _getTaskStatusText(String? status) {
+    if (status == null) return 'Không xác định';
+    switch (status) {
+      case 'SUBMITTED':
+        return 'Đã nộp';
+      case 'LATE_SUBMITTED':
+        return 'Nộp trễ';
+      case 'NOT_SUBMITTED':
+        return 'Chưa nộp';
+      default:
+        return 'Chưa nộp';
+    }
+  }
+
 
   Widget _buildSuccessCard() {
     String timeStr = 'N/A';
@@ -301,45 +544,45 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 32),
+      padding: EdgeInsets.symmetric(vertical: 32.h),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: const Color(0xFFE8F5E9), width: 2),
+        borderRadius: BorderRadius.circular(32.r),
+        border: Border.all(color: const Color(0xFFE8F5E9), width: 2.w),
       ),
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8F5E9),
+            padding: EdgeInsets.all(16.r),
+            decoration: const BoxDecoration(
+              color: Color(0xFFE8F5E9),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.check_circle_rounded,
-              color: Color(0xFF27AE60),
-              size: 40,
+              color: const Color(0xFF27AE60),
+              size: 40.r,
             ),
           ),
-          const SizedBox(height: 16),
+          16.verticalSpace,
           Text(
             'Điểm danh thành công',
             style: GoogleFonts.inter(
-              fontSize: 20,
+              fontSize: 20.sp,
               fontWeight: FontWeight.bold,
               color: const Color(0xFF27AE60),
             ),
           ),
-          const SizedBox(height: 8),
+          8.verticalSpace,
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.access_time_filled_rounded, size: 16, color: Color(0xFF94A3B8)),
-              const SizedBox(width: 6),
+              Icon(Icons.access_time_filled_rounded, size: 16.r, color: const Color(0xFF94A3B8)),
+              6.horizontalSpace,
               Text(
                 'HOÀN TẤT LÚC $timeStr',
                 style: GoogleFonts.inter(
-                  fontSize: 12,
+                  fontSize: 12.sp,
                   color: const Color(0xFF94A3B8),
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5,
@@ -352,202 +595,140 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
     );
   }
 
-  Widget _buildBottomButtons(bool isLecturer, bool hasCheckedIn) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        children: [
-          Obx(() {
-            final authController = Get.find<AuthController>();
-            final user = authController.currentUser.value;
-            final isLecturer = user?.isLecturer ?? false;
-            
-            // If it's a lecturer, don't show the face attendance button at all
-            if (isLecturer) return const SizedBox.shrink();
+  Widget _buildSmallAttendanceButton() {
+    return Obx(() {
+      final authController = Get.find<AuthController>();
+      final user = authController.currentUser.value;
+      if (user == null || (user.isLecturer ?? false)) return const SizedBox.shrink();
 
-            final hasFace = user?.hasFaceRegistered ?? false;
-            final scheduleController = Get.find<ScheduleController>();
-            final config = scheduleController.attendanceConfig.value;
-            final faceEnabled = config.faceRecognitionEnabled;
-            
-            Color buttonColor;
-            bool isDuringTime = _isDuringSlotTime();
-            
-            if (hasCheckedIn) {
-              buttonColor = const Color(0xFF27AE60);
-            } else if (!faceEnabled) {
-              buttonColor = const Color(0xFF64748B); // Slate/Grey for admin disabled
-            } else if (!isDuringTime) {
-              buttonColor = const Color(0xFF94A3B8); // Grey for out of time
-            } else {
-              buttonColor = hasFace ? AppColors.primaryOrange : const Color(0xFF334155);
-            }
+      final hasFace = user.hasFaceRegistered ?? false;
+      final scheduleController = Get.find<ScheduleController>();
+      final config = scheduleController.attendanceConfig.value;
+      final faceEnabled = config.faceRecognitionEnabled;
+      final threshold = config.absentThresholdMinutes;
+      
+      if (_hasCheckedIn) {
+        return _buildStatusChip('Đã điểm danh', const Color(0xFF27AE60), Icons.check_circle_rounded);
+      }
 
-            return Column(
-              children: [
-                if (!hasCheckedIn && !isDuringTime) ...[
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.info_outline, color: Colors.red, size: 16),
-                          const SizedBox(width: 8),
-                          Text(
-                            _getTimeStatusMessage(),
-                            style: GoogleFonts.inter(
-                              color: Colors.red,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-                Container(
-                  width: double.infinity,
-                  height: 58,
-                  decoration: BoxDecoration(
-                    color: buttonColor,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      if (hasCheckedIn || (isDuringTime))
-                      BoxShadow(
-                        color: buttonColor.withOpacity(0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: ElevatedButton(
-                  onPressed: hasCheckedIn ? null : () async {
-                      if (!faceEnabled) {
-                        Get.snackbar(
-                          'Thông báo',
-                          'Quản trị viên chưa cho phép điểm danh bằng khuôn mặt cho hệ thống này.',
-                          snackPosition: SnackPosition.BOTTOM,
-                          backgroundColor: Colors.red.withOpacity(0.9),
-                          colorText: Colors.white,
-                          icon: const Icon(Icons.lock_outline_rounded, color: Colors.white),
-                        );
-                        return;
-                      }
+      final now = DateTime.now();
+      final start = _getSlotDateTime(widget.slot.startTime);
+      
+      if (start == null) return const SizedBox.shrink();
 
-                      if (!isDuringTime) {
-                        // Keep current behavior for out of time if needed, 
-                        // but user specifically mentioned admin-disabled message.
-                        return;
-                      }
+      // If before start time
+      if (now.isBefore(start)) {
+        return _buildStatusChip('Chưa đến giờ', const Color(0xFF94A3B8), Icons.access_time_rounded);
+      }
 
-                      if (hasFace) {
-                        if (widget.slot.id != null) {
-                          final result = await Get.to(() => FaceAttendanceView(slotId: widget.slot.id!));
-                          if (result == true) {
-                            setState(() {
-                              _hasCheckedIn = true;
-                            });
-                            // Also trigger a schedule refresh in background
-                            if (Get.isRegistered<ScheduleController>()) {
-                              Get.find<ScheduleController>().fetchSchedule();
-                            }
-                          }
-                        }
-                      } else {
-                        Get.to(() => const FaceRegistrationView());
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      disabledBackgroundColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          hasCheckedIn 
-                            ? Icons.check_circle_rounded 
-                            : (hasFace ? Icons.sentiment_satisfied_alt_rounded : Icons.face_retouching_natural_rounded), 
-                          color: Colors.white, 
-                          size: 24
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          hasCheckedIn 
-                            ? 'Đã điểm danh' 
-                            : (hasFace ? 'Bắt đầu điểm danh' : 'Đăng ký khuôn mặt'),
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+      // Check if past the attendance threshold
+      final lateDeadline = start.add(Duration(minutes: threshold));
+      if (now.isAfter(lateDeadline)) {
+        return _buildStatusChip('Vắng', const Color(0xFFEF4444), Icons.cancel_rounded);
+      }
+
+      // Within attendance window - Show Button
+      return ElevatedButton(
+        onPressed: () async {
+          if (!faceEnabled) {
+            Get.snackbar(
+              'Thông báo',
+              'Quản trị viên chưa cho phép điểm danh bằng khuôn mặt cho hệ thống này.',
+              snackPosition: SnackPosition.BOTTOM,
+              backgroundColor: Colors.red.withOpacity(0.9),
+              colorText: Colors.white,
+              icon: const Icon(Icons.lock_outline_rounded, color: Colors.white),
             );
-          }),
-          const SizedBox(height: 12),
-          
-          Container(
-            width: double.infinity,
-            height: 58,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFF1F5F9)),
-            ),
-            child: ElevatedButton(
-              onPressed: () {
-                final classSection = widget.slot.classSection;
-                if (classSection != null) {
-                  if (!Get.isRegistered<ClassListController>()) {
-                    Get.put(ClassListController());
-                  }
-                  Get.find<ClassListController>().selectClass(classSection);
-                  Get.to(() => StudentListScreen(classSection: classSection));
+            return;
+          }
+
+          if (hasFace) {
+            if (widget.slot.id != null) {
+              final result = await Get.to(() => FaceAttendanceView(slotId: widget.slot.id!));
+              if (result == true) {
+                setState(() => _hasCheckedIn = true);
+                if (Get.isRegistered<ScheduleController>()) {
+                  Get.find<ScheduleController>().fetchSchedule();
                 }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                shadowColor: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+              }
+            }
+          } else {
+            Get.to(() => const FaceRegistrationView());
+          }
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: hasFace ? AppColors.primaryOrange : const Color(0xFF334155),
+          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 0),
+          minimumSize: Size(0, 32.h),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.r),
+          ),
+          elevation: 2,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              hasFace ? Icons.camera_alt_rounded : Icons.face_retouching_natural_rounded, 
+              color: Colors.white, 
+              size: 14.r,
+            ),
+            6.horizontalSpace,
+            Text(
+              hasFace ? 'Điểm danh' : 'Đăng ký khuôn mặt',
+              style: GoogleFonts.inter(
+                fontSize: 12.sp,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.people_alt_rounded, color: Color(0xFF1E293B), size: 24),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Danh sách sinh viên',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF1E293B),
-                    ),
-                  ),
-                ],
-              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _buildStatusChip(String text, Color color, IconData icon) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: color.withOpacity(0.5), width: 1.w),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 14.r),
+          6.horizontalSpace,
+          Text(
+            text,
+            style: GoogleFonts.inter(
+              fontSize: 12.sp,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
           ),
         ],
       ),
     );
+  }
+
+  DateTime? _getSlotDateTime(String? timeStr) {
+    if (timeStr == null) return null;
+    try {
+      final parts = timeStr.split(':');
+      if (parts.length < 2) return null;
+      return DateTime(
+        widget.slot.date.year,
+        widget.slot.date.month,
+        widget.slot.date.day,
+        int.parse(parts[0]),
+        int.parse(parts[1]),
+      );
+    } catch (e) {
+      return null;
+    }
   }
 
   String _formatTime(String? time) {
@@ -560,18 +741,13 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
   }
 
   bool _isDuringSlotTime() {
-    return true; // TEMPORARILY ENABLED FOR TESTING
-    /*
-    if (widget.slot.startTime == null || widget.slot.endTime == null) return false;
-    
     final now = DateTime.now();
-    // Check Date
-    if (!_isSameDay(now, widget.slot.date)) return false;
+    final start = _getSlotDateTime(widget.slot.startTime);
+    final end = _getSlotDateTime(widget.slot.endTime);
     
-    // Check Time
-    final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
-    return timeStr.compareTo(widget.slot.startTime!) >= 0 && timeStr.compareTo(widget.slot.endTime!) <= 0;
-    */
+    if (start == null || end == null) return false;
+    
+    return now.isAfter(start) && now.isBefore(end);
   }
 
   String _getTimeStatusMessage() {
@@ -590,6 +766,12 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
 
   bool _isSameDay(DateTime d1, DateTime d2) {
     return d1.year == d2.year && d1.month == d2.month && d1.day == d2.day;
+  }
+
+  String _formatClassName(String? className) {
+    if (className == null) return 'N/A';
+    final parts = className.split('-');
+    return parts.isNotEmpty ? parts[0] : className;
   }
 }
 

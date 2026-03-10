@@ -17,6 +17,7 @@ public class DataInitializer implements CommandLineRunner {
 
         private final UserRepository userRepository;
         private final PasswordEncoder passwordEncoder;
+        private final AttendanceConfigRepository attendanceConfigRepository;
 
         @Override
         public void run(String... args) throws Exception {
@@ -24,6 +25,7 @@ public class DataInitializer implements CommandLineRunner {
                 try {
                         seedAdminUser();
                         seedAcademicStaffUser();
+                        seedAttendanceConfig();
                         log.info("Data initialization process completed.");
                 } catch (Exception e) {
                         log.warn("Data initialization encountered issues: {}. Continuing startup...", e.getMessage());
@@ -80,6 +82,24 @@ public class DataInitializer implements CommandLineRunner {
                         log.info("Default academic staff user created: academic/staff123");
                 } else {
                         log.info("Academic staff user already exists, skipping seeding.");
+                }
+        }
+
+        private void seedAttendanceConfig() {
+                if (attendanceConfigRepository.findByConfigKey("SYSTEM_CONFIG").isEmpty()) {
+                        AttendanceConfig config = AttendanceConfig.builder()
+                                        .configKey("SYSTEM_CONFIG")
+                                        .manualEnabled(true)
+                                        .absentThresholdMinutes(30)
+                                        .minAttendancePercentage(80.0)
+                                        .faceRecognitionEnabled(true)
+                                        .maxAttempts(5)
+                                        .wifiLocationEnabled(true)
+                                        .build();
+                        attendanceConfigRepository.save(config);
+                        log.info("Default attendance configuration seeded.");
+                } else {
+                        log.info("Attendance configuration already exists, skipping seeding.");
                 }
         }
 }

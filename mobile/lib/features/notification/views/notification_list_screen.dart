@@ -46,7 +46,7 @@ class NotificationListScreen extends StatelessWidget {
                           _buildNotificationSection(
                             title: 'Hôm nay',
                             notifications: _getTodayNotifications(controller.notifications),
-                            showMarkRead: true,
+                            showMarkRead: _getTodayNotifications(controller.notifications).any((n) => !n.isRead),
                             onMarkRead: controller.markAllAsRead,
                           ),
                           
@@ -231,19 +231,6 @@ class NotificationListScreen extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Unread Dot
-            Padding(
-              padding: const EdgeInsets.only(top: 6, right: 12),
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: notification.isRead ? Colors.transparent : AppColors.primaryOrange,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            
             // Content
             Expanded(
               child: Column(
@@ -265,15 +252,42 @@ class NotificationListScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        _getRelativeTime(notification.timestamp),
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.normal,
-                          color: Colors.grey[500],
-                        ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            _getExactTime(notification.timestamp),
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          if (!notification.isRead) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: AppColors.primaryOrange,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 4),
+                  // Sender name
+                  Text(
+                    notification.senderFullName?.toUpperCase() ?? 'HỆ THỐNG',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primaryOrange,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -324,24 +338,12 @@ class NotificationListScreen extends StatelessWidget {
     }).toList();
   }
 
-  String _getRelativeTime(String timestamp) {
+  String _getExactTime(String timestamp) {
     try {
       final date = DateFormat('dd/MM/yyyy HH:mm').parse(timestamp);
-      final now = DateTime.now();
-      final diff = now.difference(date);
-
-      if (diff.inMinutes < 60) {
-        return '${diff.inMinutes} phút trước';
-      } else if (diff.inHours < 24) {
-        return '${diff.inHours} giờ trước';
-      } else if (diff.inDays < 7) {
-        if (diff.inDays == 1) return 'Hôm qua';
-        return '${diff.inDays} ngày trước';
-      } else {
-        return DateFormat('dd/MM').format(date);
-      }
+      return DateFormat('HH:mm - dd/MM/yyyy').format(date);
     } catch (e) {
-      return timestamp.split(' ').first; // Fallback to date part
+      return timestamp;
     }
   }
 }

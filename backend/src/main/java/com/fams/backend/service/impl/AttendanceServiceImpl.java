@@ -23,6 +23,7 @@ public class AttendanceServiceImpl implements AttendanceService {
         private final AttendanceConfigRepository configRepository;
         private final StudentAttendanceRepository studentAttendanceRepository;
         private final UserRepository userRepository;
+        private final EnrollmentRepository enrollmentRepository;
 
         @Override
         @Transactional
@@ -80,25 +81,163 @@ public class AttendanceServiceImpl implements AttendanceService {
         @Transactional(readOnly = true)
         public AttendanceDTO.SessionDetailResponse getSessionBySlot(Long slotId) {
                 AttendanceSession session = sessionRepository.findByTimetableSlotId(slotId)
-                                .orElseThrow(() -> new RuntimeException("Session not found for this slot"));
-                return mapToDetailResponse(session);
+                                .orElse(null);
+
+                if (session != null) {
+                        return mapToDetailResponse(session);
+                }
+
+                // No session was ever started for this slot — return empty response from slot
+                // data
+                TimetableSlot slot = timetableSlotRepository.findById(slotId)
+                                .orElseThrow(() -> new RuntimeException("Slot not found"));
+
+                // Determine status: past slots are CLOSED, future slots are NO_SESSION
+                LocalDateTime slotEndDateTime = LocalDateTime.of(slot.getDate(), slot.getSlotType().getEndTime());
+                String status = LocalDateTime.now().isAfter(slotEndDateTime) ? "CLOSED" : "NO_SESSION";
+
+                // Get all enrolled students even if no session exists using repository for
+                // reliability
+                List<Enrollment> enrollments = enrollmentRepository
+                                .findByClassSectionClassName(slot.getClassSection().getClassName());
+                List<AttendanceDTO.StudentAttendanceResponse> studentResponses = enrollments
+                                .stream()
+                                .map(enrollment -> {
+                                        User student = enrollment.getStudent();
+                                        return AttendanceDTO.StudentAttendanceResponse.builder()
+                                                        .studentId(student.getId())
+                                                        .studentCode(student.getCode())
+                                                        .fullName(student.getFullName())
+                                                        .avatarUrl(student.getAvatar())
+                                                        .status("ABSENT")
+                                                        .checkInTime(null)
+                                                        .capturedFaceUrl(null)
+                                                        .build();
+                                })
+                                .sorted(java.util.Comparator
+                                                .comparing(AttendanceDTO.StudentAttendanceResponse::getFullName))
+                                .collect(Collectors.toList());
+
+                return AttendanceDTO.SessionDetailResponse.builder()
+                                .sessionId(0L)
+                                .slotId(slot.getId())
+                                .courseCode(slot.getClassSection().getCourse().getCode())
+                                .courseName(slot.getClassSection().getCourse().getName())
+                                .className(slot.getClassSection().getClassName())
+                                .roomCode(slot.getRoom().getCode())
+                                .lecturerName(slot.getClassSection().getLecturer().getFullName())
+                                .status(status)
+                                .openedAt(null)
+                                .closedAt(null)
+                                .date(slot.getDate())
+                                .startTime(slot.getSlotType().getStartTime())
+                                .endTime(slot.getSlotType().getEndTime())
+                                .totalStudents(enrollments.size())
+                                .presentCount(0)
+                                .students(studentResponses)
+                                .build();
+        }
+
+        @Override
+        @Transactional
+        public AttendanceDTO.SessionDetailResponse updateManualAttendance(Long lecturerId,
+                        AttendanceDTO.ManualAttendanceRequest request) {
+                AttendanceSession session;
+                if (request.getSessionId() != null && request.getSessionId() > 0) {
+                        session = sessionRepository.findById(request.getSessionId())
+                                        .orElseThrow(() -> new RuntimeException("Session not found"));
+                } else if (request.getSlotId() != null) {
+                        TimetableSlot slot = timetableSlotRepository.findById(request.getSlotId())
+                                        .orElseThrow(() -> new RuntimeException("Slot not found"));
+                        session = sessionRepository.findByTimetableSlotId(slot.getId())
+                                        .orElseGet(() -> {
+                                                User lecturer = userRepository.findById(lecturerId)
+                                                                .orElseThrow(() -> new RuntimeException(
+                                                                                "User not found"));
+                                                AttendanceSession newSession = AttendanceSession.builder()
+                                                                .timetableSlot(slot)
+                                                                .lecturer(lecturer)
+                                                                .openedAt(LocalDateTime.now())
+                                                                .status(AttendanceSession.SessionStatus.OPEN)
+                                                                .build();
+                                                return sessionRepository.save(newSession);
+                                        });
+                } else {
+                        throw new RuntimeException("Either sessionId or slotId must be provided");
+                }
+
+                if (!session.getLecturer().getId().equals(lecturerId)) {
+                        throw new RuntimeException("Unauthorized: You are not the lecturer for this session");
+                }
+
+                User student = userRepository.findById(request.getStudentId())
+                                .orElseThrow(() -> new RuntimeException("Student not found"));
+
+                StudentAttendance attendance = studentAttendanceRepository
+                                .findBySessionIdAndStudentId(session.getId(), student.getId())
+                                .orElse(StudentAttendance.builder()
+                                                .session(session)
+                                                .student(student)
+                                                .build());
+
+                attendance.setStatus(StudentAttendance.AttendanceStatus.valueOf(request.getStatus()));
+                attendance.setMethod(StudentAttendance.CheckInMethod.MANUAL);
+                attendance.setNote(request.getNote());
+                attendance.setUpdatedBy(session.getLecturer());
+                if (attendance.getCheckInTime() == null) {
+                        attendance.setCheckInTime(LocalDateTime.now());
+                }
+
+                studentAttendanceRepository.save(attendance);
+
+                return mapToDetailResponse(sessionRepository.findById(session.getId()).get());
         }
 
         private AttendanceDTO.SessionDetailResponse mapToDetailResponse(AttendanceSession session) {
                 TimetableSlot slot = session.getTimetableSlot();
 
+                // Determine effective status: if DB says OPEN but time is past, treat as CLOSED
+                LocalDateTime slotEndDateTime = LocalDateTime.of(slot.getDate(), slot.getSlotType().getEndTime());
+                String effectiveStatus = session.getStatus().name();
+                if ("OPEN".equals(effectiveStatus) && LocalDateTime.now().isAfter(slotEndDateTime)) {
+                        effectiveStatus = "CLOSED";
+                }
+
                 List<StudentAttendance> attendances = studentAttendanceRepository.findBySessionId(session.getId());
 
-                List<AttendanceDTO.StudentAttendanceResponse> studentResponses = attendances.stream()
-                                .filter(a -> a.getStatus() == StudentAttendance.AttendanceStatus.PRESENT)
-                                .map(a -> AttendanceDTO.StudentAttendanceResponse.builder()
-                                                .studentId(a.getStudent().getId())
-                                                .studentCode(a.getStudent().getCode())
-                                                .fullName(a.getStudent().getFullName())
-                                                .status(a.getStatus().name())
-                                                .checkInTime(a.getCheckInTime())
-                                                .capturedFaceUrl(a.getCapturedFaceUrl())
-                                                .build())
+                // Map existing attendances to a map for easy lookup
+                java.util.Map<Long, StudentAttendance> attendanceMap = attendances.stream()
+                                .collect(Collectors.toMap(a -> a.getStudent().getId(), a -> a));
+
+                // Get all enrolled students using the repository for reliability
+                List<Enrollment> enrollments = enrollmentRepository
+                                .findByClassSectionClassName(slot.getClassSection().getClassName());
+                List<AttendanceDTO.StudentAttendanceResponse> studentResponses = enrollments
+                                .stream()
+                                .map(enrollment -> {
+                                        User student = enrollment.getStudent();
+                                        StudentAttendance attendance = attendanceMap.get(student.getId());
+
+                                        return AttendanceDTO.StudentAttendanceResponse.builder()
+                                                        .studentId(student.getId())
+                                                        .studentCode(student.getCode())
+                                                        .fullName(student.getFullName())
+                                                        .avatarUrl(student.getAvatar())
+                                                        .status(attendance != null ? attendance.getStatus().name()
+                                                                        : "ABSENT")
+                                                        .checkInMethod(attendance != null
+                                                                        && attendance.getMethod() != null
+                                                                                        ? attendance.getMethod().name()
+                                                                                        : null)
+                                                        .checkInTime(attendance != null ? attendance.getCheckInTime()
+                                                                        : null)
+                                                        .capturedFaceUrl(attendance != null
+                                                                        ? attendance.getCapturedFaceUrl()
+                                                                        : null)
+                                                        .build();
+                                })
+                                .sorted(java.util.Comparator
+                                                .comparing(AttendanceDTO.StudentAttendanceResponse::getFullName))
                                 .collect(Collectors.toList());
 
                 return AttendanceDTO.SessionDetailResponse.builder()
@@ -109,14 +248,144 @@ public class AttendanceServiceImpl implements AttendanceService {
                                 .className(slot.getClassSection().getClassName())
                                 .roomCode(slot.getRoom().getCode())
                                 .lecturerName(slot.getClassSection().getLecturer().getFullName())
-                                .status(session.getStatus().name())
+                                .status(effectiveStatus)
                                 .openedAt(session.getOpenedAt())
                                 .closedAt(session.getClosedAt())
-                                .totalStudents(slot.getClassSection().getEnrollments().size())
+                                .date(slot.getDate())
+                                .startTime(slot.getSlotType().getStartTime())
+                                .endTime(slot.getSlotType().getEndTime())
+                                .totalStudents(enrollments.size())
                                 .presentCount((int) attendances.stream()
                                                 .filter(a -> a.getStatus() == StudentAttendance.AttendanceStatus.PRESENT)
                                                 .count())
                                 .students(studentResponses)
+                                .build();
+        }
+
+        @Override
+        @Transactional(readOnly = true)
+        public AttendanceDTO.ClassAttendanceReportResponse getClassAttendanceReport(String className) {
+                // 1. Fetch slots ordered by date, slotNumber
+                List<TimetableSlot> slots = timetableSlotRepository.findByClassName(className);
+                if (slots.isEmpty()) {
+                        throw new RuntimeException("No timetable slots found for class " + className);
+                }
+
+                ClassSection classSection = slots.get(0).getClassSection();
+
+                // 2. Fetch Enrollments for students
+                List<Enrollment> enrollments = enrollmentRepository.findByClassSectionClassName(className);
+
+                // 3. Keep active enrollments or all? Usually all.
+                List<User> students = enrollments.stream()
+                                .map(Enrollment::getStudent)
+                                .sorted(java.util.Comparator.comparing(User::getFullName))
+                                .collect(Collectors.toList());
+
+                // 4. Fetch all attendance sessions for these slots
+                List<Long> slotIds = slots.stream().map(TimetableSlot::getId).collect(Collectors.toList());
+                List<AttendanceSession> sessions = sessionRepository.findByTimetableSlotIdIn(slotIds);
+                java.util.Map<Long, AttendanceSession> sessionMap = sessions.stream()
+                                .collect(Collectors.toMap(s -> s.getTimetableSlot().getId(), s -> s));
+
+                // 5. Fetch all student attendances for these sessions
+                List<Long> sessionIds = sessions.stream().map(AttendanceSession::getId).collect(Collectors.toList());
+                List<StudentAttendance> attendances = studentAttendanceRepository.findBySessionIdIn(sessionIds);
+
+                // Map: sessionId -> (studentId -> StudentAttendance)
+                java.util.Map<Long, java.util.Map<Long, StudentAttendance>> attendanceMap = new java.util.HashMap<>();
+                for (StudentAttendance sa : attendances) {
+                        attendanceMap
+                                        .computeIfAbsent(sa.getSession().getId(), k -> new java.util.HashMap<>())
+                                        .put(sa.getStudent().getId(), sa);
+                }
+
+                // 6. Build SlotInfos
+                List<AttendanceDTO.SlotInfo> slotInfos = new java.util.ArrayList<>();
+                for (int i = 0; i < slots.size(); i++) {
+                        TimetableSlot slot = slots.get(i);
+                        slotInfos.add(AttendanceDTO.SlotInfo.builder()
+                                        .slotId(slot.getId())
+                                        .slotIndex(i + 1)
+                                        .date(slot.getDate())
+                                        .build());
+                }
+
+                // 7. Calculate absent % and build student reports
+                int totalClassSlots = classSection.getNumberOfSlots() != null ? classSection.getNumberOfSlots()
+                                : slots.size();
+                if (totalClassSlots == 0)
+                        totalClassSlots = 1;
+
+                List<AttendanceDTO.StudentReport> studentReports = new java.util.ArrayList<>();
+                LocalDateTime now = LocalDateTime.now();
+
+                for (User student : students) {
+                        List<AttendanceDTO.AttendanceDetail> details = new java.util.ArrayList<>();
+                        int absentCount = 0;
+
+                        for (int i = 0; i < slots.size(); i++) {
+                                TimetableSlot slot = slots.get(i);
+                                AttendanceSession session = sessionMap.get(slot.getId());
+                                String status = null;
+
+                                if (session != null) {
+                                        StudentAttendance sa = attendanceMap
+                                                        .getOrDefault(session.getId(), java.util.Collections.emptyMap())
+                                                        .get(student.getId());
+                                        if (sa != null) {
+                                                status = sa.getStatus() == StudentAttendance.AttendanceStatus.PRESENT
+                                                                ? "P"
+                                                                : (sa.getStatus() == StudentAttendance.AttendanceStatus.EXCUSED
+                                                                                ? "E"
+                                                                                : "A");
+                                        } else {
+                                                status = "A"; // Session exists, but student wasn't marked, default is
+                                                              // absent
+                                        }
+                                } else {
+                                        LocalDateTime slotEndDateTime = LocalDateTime.of(slot.getDate(),
+                                                        slot.getSlotType().getEndTime());
+                                        if (now.isAfter(slotEndDateTime)) {
+                                                // Slot passed without any session started, consider it not conducted or
+                                                // default absent?
+                                                // Usually if lecturer forgot to take attendance, it should be
+                                                // null/empty, or absent?
+                                                // We'll leave it as null to indicate no session was made.
+                                                status = null;
+                                        }
+                                }
+
+                                if ("A".equals(status)) {
+                                        absentCount++;
+                                }
+
+                                details.add(AttendanceDTO.AttendanceDetail.builder()
+                                                .slotId(slot.getId())
+                                                .slotIndex(i + 1)
+                                                .status(status)
+                                                .build());
+                        }
+
+                        double absentPercentage = (double) absentCount / totalClassSlots * 100.0;
+
+                        studentReports.add(AttendanceDTO.StudentReport.builder()
+                                        .studentId(student.getId())
+                                        .studentCode(student.getCode())
+                                        .studentName(student.getFullName())
+                                        .avatarUrl(student.getAvatar())
+                                        .absentPercentage(Math.round(absentPercentage * 100.0) / 100.0) // round to 2
+                                                                                                        // decimals
+                                        .attendanceDetails(details)
+                                        .build());
+                }
+
+                return AttendanceDTO.ClassAttendanceReportResponse.builder()
+                                .className(classSection.getClassName())
+                                .courseCode(classSection.getCourse().getCode())
+                                .courseName(classSection.getCourse().getName())
+                                .slots(slotInfos)
+                                .studentReports(studentReports)
                                 .build();
         }
 }

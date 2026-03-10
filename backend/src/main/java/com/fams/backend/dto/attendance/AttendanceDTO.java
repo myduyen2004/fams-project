@@ -5,7 +5,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 public class AttendanceDTO {
@@ -35,6 +37,9 @@ public class AttendanceDTO {
         private String status; // OPEN, CLOSED
         private LocalDateTime openedAt;
         private LocalDateTime closedAt;
+        private LocalDate date;
+        private LocalTime startTime;
+        private LocalTime endTime;
         private Integer totalStudents;
         private Integer presentCount;
         private List<StudentAttendanceResponse> students;
@@ -50,7 +55,65 @@ public class AttendanceDTO {
         private String fullName;
         private String avatarUrl; // Optional
         private String status; // PRESENT, ABSENT, etc.
+        private String checkInMethod; // FACE, MANUAL, etc.
         private LocalDateTime checkInTime;
         private String capturedFaceUrl;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ManualAttendanceRequest {
+        private Long sessionId;
+        private Long slotId;
+        private Long studentId;
+        private String status; // PRESENT, ABSENT, EXCUSED
+        private String note;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ClassAttendanceReportResponse {
+        private String className;
+        private String courseCode;
+        private String courseName;
+        private List<SlotInfo> slots;
+        private List<StudentReport> studentReports;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SlotInfo {
+        private Long slotId;
+        private Integer slotIndex;
+        private LocalDate date;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class StudentReport {
+        private Long studentId;
+        private String studentCode;
+        private String studentName;
+        private String avatarUrl;
+        private Double absentPercentage;
+        private List<AttendanceDetail> attendanceDetails;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AttendanceDetail {
+        private Long slotId;
+        private Integer slotIndex;
+        private String status; // 'P', 'A', 'E' or null
     }
 }

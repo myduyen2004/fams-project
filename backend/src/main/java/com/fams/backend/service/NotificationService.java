@@ -67,6 +67,8 @@ public class NotificationService {
                 } else if (currentUser.getRole() == User.UserRole.ACADEMIC_STAFF) {
                     // Staff only sees notifications from Staff
                     predicates.add(cb.equal(root.get("sender").get("role"), User.UserRole.ACADEMIC_STAFF));
+                    // Exclude individual (USER) notifications from management page
+                    predicates.add(cb.notEqual(root.get("targetType"), Notification.TargetType.USER));
                 }
                 // Note: Other roles invoking this service directly might see everything if not
                 // handled,

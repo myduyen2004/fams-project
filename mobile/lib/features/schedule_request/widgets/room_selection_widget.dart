@@ -9,6 +9,8 @@ class RoomSelectionWidget extends StatelessWidget {
   final Function(RoomAvailability) onRoomSelect;
   final int activeFloor;
   final Function(int) onFloorChange;
+  final String activeBuilding;
+  final Function(String) onBuildingChange;
   final bool isLoading;
   final bool hasFilters;
   final String? selectedDate;
@@ -21,17 +23,41 @@ class RoomSelectionWidget extends StatelessWidget {
     required this.onRoomSelect,
     required this.activeFloor,
     required this.onFloorChange,
+    required this.activeBuilding,
+    required this.onBuildingChange,
     required this.isLoading,
     required this.hasFilters,
     this.selectedDate,
     this.selectedSlot,
   });
 
+  List<RoomAvailability> get buildingRooms =>
+      rooms.where((r) => r.building == activeBuilding).toList();
+
   List<RoomAvailability> get filteredRooms => 
-      rooms.where((r) => r.floor == activeFloor).toList();
+      buildingRooms.where((r) => r.floor == activeFloor).toList()
+        ..sort((a, b) => a.name.compareTo(b.name));
+
+  List<int> get availableFloors {
+    final floors = buildingRooms.map((r) => r.floor).toSet().toList();
+    floors.sort();
+    return floors;
+  }
+
+  List<String> get availableBuildings {
+    final buildings = rooms.map((r) => r.building).toSet().toList();
+    buildings.sort();
+    return buildings;
+  }
+
+  Map<String, int> getBuildingStats(String building) {
+    final bRooms = rooms.where((r) => r.building == building).toList();
+    final available = bRooms.where((r) => r.isAvailable).length;
+    return {'total': bRooms.length, 'available': available};
+  }
 
   Map<String, int> getFloorStats(int floor) {
-    final floorRooms = rooms.where((r) => r.floor == floor).toList();
+    final floorRooms = buildingRooms.where((r) => r.floor == floor).toList();
     final available = floorRooms.where((r) => r.isAvailable).length;
     return {'total': floorRooms.length, 'available': available};
   }
@@ -75,7 +101,7 @@ class RoomSelectionWidget extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         hasFilters
-                            ? 'Gamma Building • Ngày $selectedDate - Slot $selectedSlot'
+                            ? 'Tòa $activeBuilding • Ngày $selectedDate - Slot $selectedSlot'
                             : 'Chọn ngày và slot để xem phòng trống',
                         style: TextStyle(
                           fontSize: 11,
@@ -136,6 +162,64 @@ class RoomSelectionWidget extends StatelessWidget {
               ),
             ),
 
+          // Building tabs
+          if (hasFilters && availableBuildings.length > 1)
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: availableBuildings.map((building) {
+                  final isActive = activeBuilding == building;
+                  final stats = getBuildingStats(building);
+                  return Expanded(
+                    child: GestureDetector(
+                      onTap: () => onBuildingChange(building),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isActive ? Colors.white : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: isActive
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.06),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              'Tòa $building',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                                color: isActive ? AppColors.primaryOrange : Colors.grey[600],
+                              ),
+                            ),
+                            if (hasFilters)
+                              Text(
+                                '${stats['available']}/${stats['total']} trống',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  color: isActive ? Colors.green[600] : Colors.grey[400],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+
           const SizedBox(height: 16),
 
           // Floor tabs and room grid
@@ -153,7 +237,7 @@ class RoomSelectionWidget extends StatelessWidget {
                   ),
                 ),
                 child: Column(
-                  children: [2, 3, 4].map((floor) {
+                  children: availableFloors.map((floor) {
                     final isActive = activeFloor == floor;
                     final stats = getFloorStats(floor);
                     return GestureDetector(
@@ -216,7 +300,6 @@ class RoomSelectionWidget extends StatelessWidget {
               Expanded(
                 child: Container(
                   padding: const EdgeInsets.all(12),
-                  constraints: const BoxConstraints(maxHeight: 280),
                   child: isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : filteredRooms.isEmpty
@@ -239,7 +322,7 @@ class RoomSelectionWidget extends StatelessWidget {
                             )
                           : GridView.builder(
                               shrinkWrap: true,
-                              physics: const ClampingScrollPhysics(),
+                              physics: const NeverScrollableScrollPhysics(),
                               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 3,
                                 childAspectRatio: 1.0,  // Taller cards to fit content
@@ -297,6 +380,15 @@ class RoomSelectionWidget extends StatelessWidget {
                                                         : Colors.grey[400],
                                                   ),
                                                   overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              // Building name
+                                              Text(
+                                                room.building,
+                                                style: TextStyle(
+                                                  fontSize: 8,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.grey[400],
                                                 ),
                                               ),
                                               // Status badge

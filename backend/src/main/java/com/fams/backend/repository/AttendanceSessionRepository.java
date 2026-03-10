@@ -9,4 +9,6 @@ import java.util.Optional;
 @Repository
 public interface AttendanceSessionRepository extends JpaRepository<AttendanceSession, Long> {
     Optional<AttendanceSession> findByTimetableSlotId(Long timetableSlotId);
+
+    java.util.List<AttendanceSession> findByTimetableSlotIdIn(java.util.Collection<Long> slotIds);
 }

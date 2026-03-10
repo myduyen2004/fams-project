@@ -1,4 +1,5 @@
 import apiClient from './authService';
+import { StudentResponse } from './academicStaffService';
 
 export interface GradeComponentInfo {
     id: number;
@@ -138,5 +139,14 @@ export const studentGradeService = {
      */
     submitGrades: async (className: string): Promise<void> => {
         await apiClient.post(`/v1/class-sections/${className}/grades/submit`);
+    },
+
+    /**
+     * Get basic student information for profile popup
+     * Accessible by LECTURER, ACADEMIC_STAFF, and ADMIN
+     */
+    getStudentInfo: async (studentCode: string): Promise<StudentResponse> => {
+        const response = await apiClient.get<StudentResponse>(`/v1/students/${studentCode}/info`);
+        return response.data;
     }
 };

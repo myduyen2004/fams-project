@@ -151,7 +151,6 @@ class StagingImportServiceTest {
             // Mock staging table operations
             doNothing().when(jdbcTemplate).execute(anyString());
             when(jdbcTemplate.update(anyString())).thenReturn(0); // For validation updates without params
-            when(jdbcTemplate.update(anyString(), any(Object[].class))).thenReturn(0);
             when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class))).thenReturn(2, 0);
             when(jdbcTemplate.queryForList(anyString())).thenReturn(Collections.emptyList());
 
@@ -217,7 +216,6 @@ class StagingImportServiceTest {
             when(semesterRepository.findByCode("SP2024")).thenReturn(Optional.of(testSemester));
             doNothing().when(jdbcTemplate).execute(anyString());
             when(jdbcTemplate.update(anyString())).thenReturn(0); // For validation updates without params
-            when(jdbcTemplate.update(anyString(), any(Object[].class))).thenReturn(0);
             when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class))).thenReturn(0, 2); // 0 valid, 2 errors
 
             List<Map<String, Object>> errorList = new ArrayList<>();
@@ -321,7 +319,7 @@ class StagingImportServiceTest {
         void shouldImportClassSectionsFromStaging() {
             // Arrange
             String stagingTable = "staging_cs_test123";
-            when(jdbcTemplate.update(anyString(), eq(1L), eq(1L))).thenReturn(5);
+            when(jdbcTemplate.update(anyString(), eq(1L))).thenReturn(5);
             when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class))).thenReturn(0);
             testSemester.setStatus(com.fams.backend.entity.Semester.SemesterStatus.UPCOMING);
             when(semesterRepository.findById(1L)).thenReturn(Optional.of(testSemester));
@@ -406,7 +404,6 @@ class StagingImportServiceTest {
             when(semesterRepository.findByCode("SP2024")).thenReturn(Optional.of(testSemester));
             doNothing().when(jdbcTemplate).execute(anyString());
             when(jdbcTemplate.update(anyString())).thenReturn(0); // For validation updates without params
-            when(jdbcTemplate.update(anyString(), any(Object[].class))).thenReturn(0);
             when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class))).thenReturn(1, 1);
 
             List<Map<String, Object>> errorList = new ArrayList<>();
@@ -436,7 +433,6 @@ class StagingImportServiceTest {
             when(semesterRepository.findByCode("SP2024")).thenReturn(Optional.of(testSemester));
             doNothing().when(jdbcTemplate).execute(anyString());
             when(jdbcTemplate.update(anyString())).thenReturn(0); // For validation updates without params
-            when(jdbcTemplate.update(anyString(), any(Object[].class))).thenReturn(0);
             when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class))).thenReturn(1, 0);
             when(jdbcTemplate.queryForList(anyString())).thenReturn(Collections.emptyList());
 

@@ -25,8 +25,10 @@ class ApiConstants {
   // Timetable Endpoints
   static const String studentSchedule = '/api/v1/timetable/student';
   static const String lecturerSchedule = '/api/v1/timetable/lecturer';
-  static const String studentSemesterSchedule = '/api/v1/timetable/student'; // + /{id}/semester?semesterCode=X
-  static const String lecturerSemesterSchedule = '/api/v1/timetable/lecturer'; // + /{id}/semester?semesterCode=X
+  static const String studentSemesterSchedule =
+      '/api/v1/timetable/student'; // + /{id}/semester?semesterCode=X
+  static const String lecturerSemesterSchedule =
+      '/api/v1/timetable/lecturer'; // + /{id}/semester?semesterCode=X
   static const String attendanceConfig = '/api/v1/attendance-config';
   static const String checkIn = '/api/v1/attendance/check-in';
 
@@ -51,4 +53,9 @@ class ApiConstants {
   // Chat Endpoints
   static const String chatGroups = '/api/v1/chat-groups';
   static const String chatMessages = '/api/v1/chat-messages';
+
+  // Academic Request Endpoints (Student)
+  static const String academicRequests = '/api/v1/academic-requests';
+  static const String academicRequestTypes = '/api/v1/academic-requests/types';
+  static const String academicRequestMyRequests = '/api/v1/academic-requests/my-requests';
 }
