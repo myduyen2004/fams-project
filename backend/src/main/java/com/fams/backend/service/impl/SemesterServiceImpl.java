@@ -215,6 +215,9 @@ public class SemesterServiceImpl implements SemesterService {
             response.setSlotDuration(config.getSlotDuration());
         } else {
             response.setIsPublished(false);
+            response.setMaxSlotsPerDay(4); // Default
+            response.setSlotsPerSubjectPerWeek(2); // Default
+            response.setSlotDuration(90); // Default
         }
 
         // Map Weekdays

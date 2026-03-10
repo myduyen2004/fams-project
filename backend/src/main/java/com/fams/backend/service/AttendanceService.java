@@ -8,4 +8,9 @@ public interface AttendanceService {
     AttendanceDTO.SessionDetailResponse getSessionDetail(Long sessionId);
 
     AttendanceDTO.SessionDetailResponse getSessionBySlot(Long slotId);
+
+    AttendanceDTO.SessionDetailResponse updateManualAttendance(Long lecturerId,
+            AttendanceDTO.ManualAttendanceRequest request);
+
+    AttendanceDTO.ClassAttendanceReportResponse getClassAttendanceReport(String className);
 }

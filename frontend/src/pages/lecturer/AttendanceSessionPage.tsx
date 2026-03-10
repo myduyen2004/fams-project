@@ -117,7 +117,7 @@ export const AttendanceSessionPage: React.FC = () => {
                             {session.students && session.students.length > 0 ? (
                                 <div className="divide-y divide-gray-50">
                                     {session.students.map((student) => (
-                                        <div key={student.studentId} className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+                                        <div key={student.studentId} className="flex items-center justify-between p-4 transition-colors">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-sm font-bold overflow-hidden border border-gray-200">
                                                     {student.avatarUrl ? (

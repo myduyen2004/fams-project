@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../auth/models/user_model.dart';
 import '../../../core/constants/app_colors.dart'; // Assuming this exists or hardcode colors
@@ -105,7 +106,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       setState(() => _isLoading = false);
       
       if (success) {
-        Get.back(); // Go back to profile screen
+        Get.back(); // Go back to profile screen (Thông tin cá nhân)
+        Get.snackbar(
+          'Thành công',
+          'Thông tin cá nhân đã được cập nhật',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 2),
+        );
       }
     }
   }
@@ -128,7 +137,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         body: AppBackground(
           child: SingleChildScrollView(
           physics: const ClampingScrollPhysics(), // Better scrolling behavior
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(20.r),
         child: Form(
           key: _formKey,
           child: Column(
@@ -147,8 +156,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       ),
                       child: ClipOval(
                         child: SizedBox(
-                          width: 120,
-                          height: 120,
+                          width: 100.r,
+                          height: 100.r,
                           child: _avatarPath != null
                               ? Image.file(File(_avatarPath!), fit: BoxFit.cover)
                               : (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty)
@@ -168,31 +177,31 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         child: GestureDetector(
                           onTap: _pickImage,
                           child: Container(
-                            padding: const EdgeInsets.all(8),
+                            padding: EdgeInsets.all(8.r),
                             decoration: const BoxDecoration(
                               color: Color(0xFFFF6B00),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                            child: Icon(Icons.camera_alt, color: Colors.white, size: 20.r),
                           ),
                         ),
                       ),
                   ],
                 ),
               ),
-              const SizedBox(height: 30),
+              30.verticalSpace,
 
               // Full Name (Read Only)
               _buildReadOnlyField('Họ và tên', user?.fullName ?? ''),
-              const SizedBox(height: 15),
+              15.verticalSpace,
 
               // Student Code (Read Only)
               _buildReadOnlyField(isStudent ? 'MSSV' : 'Mã số', user?.username.toUpperCase() ?? ''),
-               const SizedBox(height: 15),
+               15.verticalSpace,
 
               // Email (Read Only)
               _buildReadOnlyField('Email', user?.email ?? ''),
-               const SizedBox(height: 15),
+               15.verticalSpace,
 
               // Phone Field
               TextFormField(
@@ -217,31 +226,31 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     _selectedDob != null
                         ? DateFormat('dd/MM/yyyy').format(_selectedDob!)
                         : 'Chọn ngày sinh',
-                    style: const TextStyle(fontSize: 16),
+                    style: TextStyle(fontSize: 16.sp),
                   ),
                 ),
               ),
 
-              const SizedBox(height: 40),
+              40.verticalSpace,
 
               // Save Button
               SizedBox(
                 width: double.infinity,
-                height: 50,
+                height: 50.h,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _saveProfile,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFF6B00),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
+                      borderRadius: BorderRadius.circular(15.r),
                     ),
                   ),
                   child: _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
+                      : Text(
                           'Lưu thay đổi',
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 18.sp,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
@@ -274,16 +283,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       labelText: label,
       labelStyle: const TextStyle(color: Colors.grey),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(15.r),
         borderSide: const BorderSide(color: Colors.grey),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(15.r),
         borderSide: const BorderSide(color: Color(0xFFFF6B00)),
       ),
       filled: true,
       fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      contentPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
     );
   }
 }

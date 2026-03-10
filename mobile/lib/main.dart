@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
@@ -82,83 +83,90 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp(
-      title: 'FAMS Mobile',
-      debugShowCheckedModeBanner: false,
-      // Localization for date picker
-      localizationsDelegates: [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [Locale('vi', 'VN'), Locale('en', 'US')],
-      locale: const Locale('vi', 'VN'),
-      theme: ThemeData(
-        primaryColor: AppColors.primaryOrange,
-        scaffoldBackgroundColor: Colors.white,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.primaryOrange,
-          primary: AppColors.primaryOrange,
-        ),
-        textTheme: GoogleFonts.interTextTheme(),
-        fontFamily: GoogleFonts.inter().fontFamily,
-        useMaterial3: true,
-      ),
-      initialRoute: AppRoutes.splash,
-      initialBinding: InitialBinding(),
-      getPages: [
-        GetPage(name: AppRoutes.splash, page: () => const SplashScreen()),
-        GetPage(name: AppRoutes.login, page: () => const LoginScreen()),
-        GetPage(
-          name: AppRoutes.forgotPassword,
-          page: () => const ForgotPasswordScreen(),
-        ),
-        GetPage(
-          name: AppRoutes.otpVerification,
-          page: () => const OtpVerificationScreen(),
-        ),
-        GetPage(
-          name: AppRoutes.resetPassword,
-          page: () => const ResetPasswordScreen(),
-        ),
-        GetPage(
-          name: AppRoutes.changePasswordRequired,
-          page: () => const ChangePasswordRequiredScreen(),
-        ),
-        GetPage(
-          name: AppRoutes.home,
-          page: () => const HomeScreen(),
-          binding: HomeBinding(),
-        ),
-        // Lecturer Routes
-        GetPage(
-          name: AppRoutes.lecturerRequests,
-          page: () => const ScheduleRequestListScreen(),
-          binding: ScheduleRequestBinding(),
-        ),
-        // IMPORTANT: Create route must come BEFORE :id route
-        GetPage(
-          name: AppRoutes.lecturerCreateRequest,
-          page: () => const CreateRequestScreen(),
-          binding: CreateRequestBinding(),
-        ),
-        GetPage(
-          name: AppRoutes.lecturerRequestDetail,
-          page: () => const ScheduleRequestDetailScreen(),
-          binding: ScheduleRequestBinding(),
-        ),
-        // Student Academic Request Routes
-        GetPage(
-          name: AppRoutes.studentAcademicRequests,
-          page: () => const AcademicRequestListScreen(),
-          binding: AcademicRequestBinding(),
-        ),
-        GetPage(
-          name: AppRoutes.studentAcademicRequestCreate,
-          page: () => const AcademicRequestCreateScreen(),
-          binding: AcademicRequestBinding(),
-        ),
-      ],
+    return ScreenUtilInit(
+      designSize: const Size(411, 891),
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (context, child) {
+        return GetMaterialApp(
+          title: 'FAMS Mobile',
+          debugShowCheckedModeBanner: false,
+          // Localization for date picker
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [Locale('vi', 'VN'), Locale('en', 'US')],
+          locale: const Locale('vi', 'VN'),
+          theme: ThemeData(
+            primaryColor: AppColors.primaryOrange,
+            scaffoldBackgroundColor: Colors.white,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: AppColors.primaryOrange,
+              primary: AppColors.primaryOrange,
+            ),
+            textTheme: GoogleFonts.interTextTheme(),
+            fontFamily: GoogleFonts.inter().fontFamily,
+            useMaterial3: true,
+          ),
+          initialRoute: AppRoutes.splash,
+          initialBinding: InitialBinding(),
+          getPages: [
+            GetPage(name: AppRoutes.splash, page: () => const SplashScreen()),
+            GetPage(name: AppRoutes.login, page: () => const LoginScreen()),
+            GetPage(
+              name: AppRoutes.forgotPassword,
+              page: () => const ForgotPasswordScreen(),
+            ),
+            GetPage(
+              name: AppRoutes.otpVerification,
+              page: () => const OtpVerificationScreen(),
+            ),
+            GetPage(
+              name: AppRoutes.resetPassword,
+              page: () => const ResetPasswordScreen(),
+            ),
+            GetPage(
+              name: AppRoutes.changePasswordRequired,
+              page: () => const ChangePasswordRequiredScreen(),
+            ),
+            GetPage(
+              name: AppRoutes.home,
+              page: () => const HomeScreen(),
+              binding: HomeBinding(),
+            ),
+            // Lecturer Routes
+            GetPage(
+              name: AppRoutes.lecturerRequests,
+              page: () => const ScheduleRequestListScreen(),
+              binding: ScheduleRequestBinding(),
+            ),
+            // IMPORTANT: Create route must come BEFORE :id route
+            GetPage(
+              name: AppRoutes.lecturerCreateRequest,
+              page: () => const CreateRequestScreen(),
+              binding: CreateRequestBinding(),
+            ),
+            GetPage(
+              name: AppRoutes.lecturerRequestDetail,
+              page: () => const ScheduleRequestDetailScreen(),
+              binding: ScheduleRequestBinding(),
+            ),
+            // Student Academic Request Routes
+            GetPage(
+              name: AppRoutes.studentAcademicRequests,
+              page: () => const AcademicRequestListScreen(),
+              binding: AcademicRequestBinding(),
+            ),
+            GetPage(
+              name: AppRoutes.studentAcademicRequestCreate,
+              page: () => const AcademicRequestCreateScreen(),
+              binding: AcademicRequestBinding(),
+            ),
+          ],
+        );
+      },
     );
   }
 }

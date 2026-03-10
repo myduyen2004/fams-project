@@ -110,6 +110,7 @@ public class TimetableDTO {
         private String className;
         private String courseCode;
         private String courseName;
+        private Long lecturerId;
         private String lecturerName;
         private String roomCode;
         private String roomName;
@@ -123,7 +124,11 @@ public class TimetableDTO {
         // Assignment info (populated for lecturer & student timetable)
         private Long assignmentId;
         private String assignmentTitle;
+        private String assignmentDescription;
         private String assignmentStatus;
+        private String assignmentReferenceUrl;
+        private String assignmentReferenceName;
+        private java.time.LocalDateTime assignmentDueDate;
         // Student submission status (SUBMITTED / NOT_SUBMITTED / null)
         private String submissionStatus;
     }
