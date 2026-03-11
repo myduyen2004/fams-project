@@ -4,7 +4,6 @@ import {
     Home,
     Calendar,
     ScanFace,
-    BookOpen,
     FileText,
     MessageCircle,
     Send,
@@ -60,12 +59,6 @@ export const StudentSidebar: React.FC = () => {
             label: 'Điểm danh',
             icon: <ScanFace size={20} />,
             path: '/student/attendance'
-        },
-        {
-            id: 'study',
-            label: 'Học tập',
-            icon: <BookOpen size={20} />,
-            path: '/student/study'
         },
         {
             id: 'assignments',
