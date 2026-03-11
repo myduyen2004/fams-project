@@ -63,6 +63,7 @@ public class CourseServiceImpl implements CourseService {
                 .description(request.getDescription())
                 .credits(request.getCredits())
                 .numberOfSlots(request.getNumberOfSlots())
+                .isCalculatedInGpa(request.getIsCalculatedInGpa() != null ? request.getIsCalculatedInGpa() : true)
                 .status(Course.CourseStatus.ACTIVE)
                 .build();
 
@@ -88,6 +89,7 @@ public class CourseServiceImpl implements CourseService {
         course.setDescription(request.getDescription());
         course.setCredits(request.getCredits());
         course.setNumberOfSlots(request.getNumberOfSlots());
+        course.setIsCalculatedInGpa(request.getIsCalculatedInGpa() != null ? request.getIsCalculatedInGpa() : true);
 
         return convertToResponse(courseRepository.save(course));
     }
@@ -98,6 +100,15 @@ public class CourseServiceImpl implements CourseService {
         Course course = courseRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy môn học"));
         course.setStatus(status);
+        return convertToResponse(courseRepository.save(course));
+    }
+
+    @Override
+    @Transactional
+    public CourseResponse updateGpaStatus(Long id, Boolean isCalculatedInGpa) {
+        Course course = courseRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy môn học"));
+        course.setIsCalculatedInGpa(isCalculatedInGpa);
         return convertToResponse(courseRepository.save(course));
     }
 
@@ -143,6 +154,13 @@ public class CourseServiceImpl implements CourseService {
 
     private CourseResponse convertToResponse(Course course) {
         boolean canDelete = !subSpecializationCourseRepository.existsByCourseId(course.getId());
+        List<CourseResponse.PrerequisiteDTO> prerequisites = course.getPrerequisites().stream()
+                .map(p -> CourseResponse.PrerequisiteDTO.builder()
+                        .id(p.getId())
+                        .code(p.getCode())
+                        .name(p.getName())
+                        .build())
+                .collect(Collectors.toList());
         return CourseResponse.builder()
                 .id(course.getId())
                 .code(course.getCode())
@@ -152,8 +170,65 @@ public class CourseServiceImpl implements CourseService {
                 .numberOfSlots(course.getNumberOfSlots())
                 .totalWeight(course.getTotalWeight())
                 .status(course.getStatus())
+                .isCalculatedInGpa(course.getIsCalculatedInGpa())
                 .canDelete(canDelete)
+                .prerequisites(prerequisites)
                 .build();
+    }
+
+    // ==================== PREREQUISITE METHODS ====================
+
+    @Override
+    public List<CourseResponse.PrerequisiteDTO> getPrerequisites(Long courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy môn học"));
+        return course.getPrerequisites().stream()
+                .map(p -> CourseResponse.PrerequisiteDTO.builder()
+                        .id(p.getId())
+                        .code(p.getCode())
+                        .name(p.getName())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public List<CourseResponse.PrerequisiteDTO> addPrerequisite(Long courseId, Long prereqId) {
+        if (courseId.equals(prereqId)) {
+            throw new IllegalArgumentException("Môn học không thể là tiên quyết của chính nó");
+        }
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy môn học"));
+        Course prereq = courseRepository.findById(prereqId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy môn tiên quyết"));
+
+        boolean alreadyExists = course.getPrerequisites().stream()
+                .anyMatch(p -> p.getId().equals(prereqId));
+        if (alreadyExists) {
+            throw new IllegalArgumentException("Môn học này đã là tiên quyết");
+        }
+
+        boolean prereqHasCourseAsPrereq = prereq.getPrerequisites().stream()
+                .anyMatch(p -> p.getId().equals(courseId));
+        if (prereqHasCourseAsPrereq) {
+            throw new IllegalArgumentException(
+                    "Không thể thêm: Môn này đang có môn hiện tại là tiên quyết (Tránh vòng lặp)");
+        }
+
+        course.getPrerequisites().add(prereq);
+        courseRepository.save(course);
+
+        return getPrerequisites(courseId);
+    }
+
+    @Override
+    @Transactional
+    public List<CourseResponse.PrerequisiteDTO> removePrerequisite(Long courseId, Long prereqId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy môn học"));
+        course.getPrerequisites().removeIf(p -> p.getId().equals(prereqId));
+        courseRepository.save(course);
+        return getPrerequisites(courseId);
     }
 
     // ==================== IMPORT/EXPORT METHODS ====================
@@ -181,13 +256,23 @@ public class CourseServiceImpl implements CourseService {
                     continue;
                 }
 
-                // Read cells: A=Code, B=Name, C=Credits, D=Slots, E=Description, F=Status
+                // Read cells: A=Code, B=Name, C=Credits, D=Slots, E=Description, F=Calculated
+                // in GPA, G=Status
                 String code = getCellValueAsString(currentRow.getCell(0));
                 String name = getCellValueAsString(currentRow.getCell(1));
                 Integer credits = getCellValueAsInteger(currentRow.getCell(2));
                 Integer slots = getCellValueAsInteger(currentRow.getCell(3));
                 String description = getCellValueAsString(currentRow.getCell(4));
-                String statusValue = getCellValueAsString(currentRow.getCell(5));
+                String isCalculatedStr = getCellValueAsString(currentRow.getCell(5));
+                String statusValue = getCellValueAsString(currentRow.getCell(6));
+
+                Boolean isCalculatedInGpa = true;
+                if (isCalculatedStr != null && !isCalculatedStr.trim().isEmpty()) {
+                    isCalculatedInGpa = "YES".equalsIgnoreCase(isCalculatedStr.trim())
+                            || "TRUE".equalsIgnoreCase(isCalculatedStr.trim())
+                            || "CÓ".equalsIgnoreCase(isCalculatedStr.trim())
+                            || "1".equals(isCalculatedStr.trim());
+                }
 
                 // Skip completely empty rows (all cells are empty)
                 boolean isEmptyRow = (code == null || code.trim().isEmpty())
@@ -206,6 +291,7 @@ public class CourseServiceImpl implements CourseService {
                         .credits(credits)
                         .numberOfSlots(slots)
                         .description(description)
+                        .isCalculatedInGpa(isCalculatedInGpa)
                         .statusValue(statusValue != null ? statusValue.trim().toUpperCase() : "ACTIVE")
                         .status("VALID")
                         .build();
@@ -320,6 +406,7 @@ public class CourseServiceImpl implements CourseService {
                         .credits(dto.getCredits())
                         .numberOfSlots(dto.getNumberOfSlots())
                         .description(dto.getDescription())
+                        .isCalculatedInGpa(dto.getIsCalculatedInGpa() != null ? dto.getIsCalculatedInGpa() : true)
                         .status(courseStatus)
                         .build();
                 courseRepository.save(course);
@@ -357,7 +444,7 @@ public class CourseServiceImpl implements CourseService {
             headerStyle.setBorderRight(BorderStyle.THIN);
 
             // Create header row
-            String[] headers = { "Code", "Name", "Credits", "Slots", "Description", "Status" };
+            String[] headers = { "Code", "Name", "Credits", "Slots", "Description", "Calculated in GPA", "Status" };
             Row headerRow = sheet.createRow(0);
             for (int i = 0; i < headers.length; i++) {
                 Cell cell = headerRow.createCell(i);
@@ -385,7 +472,8 @@ public class CourseServiceImpl implements CourseService {
                 row.createCell(2).setCellValue(course.getCredits() != null ? course.getCredits() : 0);
                 row.createCell(3).setCellValue(course.getNumberOfSlots() != null ? course.getNumberOfSlots() : 0);
                 row.createCell(4).setCellValue(course.getDescription() != null ? course.getDescription() : "");
-                row.createCell(5).setCellValue(course.getStatus() != null ? course.getStatus().name() : "ACTIVE");
+                row.createCell(5).setCellValue(Boolean.TRUE.equals(course.getIsCalculatedInGpa()) ? "Yes" : "No");
+                row.createCell(6).setCellValue(course.getStatus() != null ? course.getStatus().name() : "ACTIVE");
             }
 
             // Auto-size columns
@@ -474,7 +562,7 @@ public class CourseServiceImpl implements CourseService {
             headerStyle.setBorderRight(BorderStyle.THIN);
 
             // Create header row
-            String[] headers = { "Code", "Name", "Credits", "Slots", "Description", "Status" };
+            String[] headers = { "Code", "Name", "Credits", "Slots", "Description", "Calculated in GPA", "Status" };
             Row headerRow = sheet.createRow(0);
             for (int i = 0; i < headers.length; i++) {
                 Cell cell = headerRow.createCell(i);
@@ -485,11 +573,12 @@ public class CourseServiceImpl implements CourseService {
             // Add sample data rows
             String[][] sampleData = {
                     { "PRF192", "Programming Fundamentals with C", "3", "30", "Nhập môn lập trình với ngôn ngữ C.",
-                            "ACTIVE" },
+                            "Yes", "ACTIVE" },
                     { "MAE101", "Mathematics for Engineering", "3", "30", "Toán đại cương dành cho khối kỹ thuật.",
-                            "ACTIVE" },
+                            "Yes", "ACTIVE" },
                     { "PRO192", "Object-Oriented Programming", "3", "30", "Lập trình hướng đối tượng với Java.",
-                            "ACTIVE" }
+                            "Yes", "ACTIVE" },
+                    { "VNR202", "Giáo dục quốc phòng", "0", "0", "Giáo dục quốc phòng an ninh", "No", "ACTIVE" }
             };
 
             for (int i = 0; i < sampleData.length; i++) {
@@ -512,8 +601,9 @@ public class CourseServiceImpl implements CourseService {
                     "1. Sheet 'Template Import Môn học' chứa mẫu dữ liệu để import.",
                     "2. Các cột bắt buộc: Code, Name, Credits, Slots",
                     "3. Cột Status: ACTIVE (đang mở) hoặc INACTIVE (ngừng đào tạo). Nếu để trống hoặc không hợp lệ sẽ tự động đặt là ACTIVE.",
-                    "4. Cột Description: Mô tả môn học (không bắt buộc).",
-                    "5. Mã môn học (Code) phải là duy nhất, không được trùng với môn đã có trong hệ thống.",
+                    "4. Cột Calculated in GPA: Yes/Có/True hoặc No/Không/False. Xác định môn học có tính điểm GPA hay không.",
+                    "5. Cột Description: Mô tả môn học (không bắt buộc).",
+                    "6. Mã môn học (Code) phải là duy nhất, không được trùng với môn đã có trong hệ thống.",
                     "",
                     "Lưu ý: Xóa các dòng mẫu trước khi nhập dữ liệu thực tế."
             };

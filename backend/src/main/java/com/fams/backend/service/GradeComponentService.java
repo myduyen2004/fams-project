@@ -7,6 +7,7 @@ import com.fams.backend.entity.GradeComponent;
 import com.fams.backend.exception.NotFoundException;
 import com.fams.backend.repository.CourseRepository;
 import com.fams.backend.repository.GradeComponentRepository;
+import com.fams.backend.repository.StudentGradeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ public class GradeComponentService {
 
     private final GradeComponentRepository gradeComponentRepository;
     private final CourseRepository courseRepository;
+    private final StudentGradeRepository studentGradeRepository;
 
     /**
      * Get all grade components for a course
@@ -124,7 +126,6 @@ public class GradeComponentService {
                 .description(request.getDescription())
                 .type(request.getType())
                 .weight(request.getWeight())
-                .isRequired(request.getIsRequired() != null ? request.getIsRequired() : true)
                 .isResit(false)
                 .course(course)
                 .build();
@@ -139,7 +140,6 @@ public class GradeComponentService {
                     .description("Resit for " + saved.getName())
                     .type(GradeComponent.GradeType.RESIT)
                     .weight(request.getWeight()) // Same weight as FE
-                    .isRequired(true) // Resit is always required
                     .isResit(true)
                     .referenceComponent(saved) // Link to FE
                     .course(course)
@@ -171,7 +171,6 @@ public class GradeComponentService {
         component.setDescription(request.getDescription());
         component.setType(request.getType());
         component.setWeight(request.getWeight());
-        component.setIsRequired(request.getIsRequired() != null ? request.getIsRequired() : component.getIsRequired());
 
         GradeComponent saved = gradeComponentRepository.save(component);
         log.info("Updated grade component: {}", saved.getId());
@@ -205,9 +204,20 @@ public class GradeComponentService {
                     "Cannot delete RESIT directly. Please delete the FINAL_EXAM instead - RESIT will be deleted automatically.");
         }
 
-        // If this is FINAL_EXAM, also delete linked RESIT
+        // Block deletion if student grades already exist for this component
+        if (studentGradeRepository.existsByGradeComponentId(id)) {
+            throw new IllegalArgumentException(
+                    "Không thể xóa thành phần điểm này vì đã có điểm của sinh viên được ghi nhận.");
+        }
+
+        // If this is FINAL_EXAM, also check and delete linked RESIT
         if (component.getType() == GradeComponent.GradeType.FINAL_EXAM) {
             gradeComponentRepository.findByReferenceComponentId(id).ifPresent(resit -> {
+                // Also block if the linked RESIT has student grades
+                if (studentGradeRepository.existsByGradeComponentId(resit.getId())) {
+                    throw new IllegalArgumentException(
+                            "Không thể xóa Final Exam vì đã có điểm thi lại (Resit) của sinh viên được ghi nhận.");
+                }
                 gradeComponentRepository.delete(resit);
                 log.info("Auto-deleted RESIT for FINAL_EXAM: {}", id);
             });
@@ -230,7 +240,6 @@ public class GradeComponentService {
                 .description(original.getDescription())
                 .type(original.getType())
                 .weight(original.getWeight())
-                .isRequired(original.getIsRequired())
                 .isResit(original.getIsResit())
                 .referenceComponent(original.getReferenceComponent())
                 .course(original.getCourse())
@@ -242,17 +251,13 @@ public class GradeComponentService {
     }
 
     /**
-     * Toggle isRequired for a grade component
+     * @deprecated toggleRequired has been removed as isRequired field no longer
+     *             exists
      */
     @Transactional
+    @Deprecated
     public GradeComponentResponse toggleRequired(Long id) {
-        GradeComponent component = gradeComponentRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Grade component not found with id: " + id));
-
-        component.setIsRequired(!component.getIsRequired());
-        GradeComponent saved = gradeComponentRepository.save(component);
-        log.info("Toggled isRequired for grade component: {} to {}", id, saved.getIsRequired());
-        return GradeComponentResponse.fromEntity(saved);
+        throw new UnsupportedOperationException("isRequired field has been removed from GradeComponent");
     }
 
     private void validateCourseExists(Long courseId) {
@@ -322,9 +327,6 @@ public class GradeComponentService {
                     String desc = getString(row, "description");
                     if (desc != null)
                         component.setDescription(desc);
-                    Boolean isRequired = getBoolean(row, "isRequired");
-                    if (isRequired != null)
-                        component.setIsRequired(isRequired);
                     gradeComponentRepository.save(component);
 
                     // If FINAL_EXAM, also update linked RESIT
@@ -351,7 +353,6 @@ public class GradeComponentService {
                             .description(getString(row, "description"))
                             .type(type)
                             .weight(weight)
-                            .isRequired(getBoolean(row, "isRequired") != null ? getBoolean(row, "isRequired") : true)
                             .isResit(false)
                             .course(course)
                             .build();
@@ -364,7 +365,6 @@ public class GradeComponentService {
                                 .description("Resit for " + saved.getName())
                                 .type(GradeComponent.GradeType.RESIT)
                                 .weight(weight)
-                                .isRequired(true)
                                 .isResit(true)
                                 .referenceComponent(saved)
                                 .course(course)
@@ -405,13 +405,4 @@ public class GradeComponentService {
         }
     }
 
-    private Boolean getBoolean(Map<String, Object> row, String key) {
-        Object val = row.get(key);
-        if (val == null)
-            return null;
-        if (val instanceof Boolean)
-            return (Boolean) val;
-        String str = val.toString().toLowerCase();
-        return "true".equals(str) || "yes".equals(str) || "1".equals(str);
-    }
 }

@@ -13,7 +13,6 @@ import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { Major } from '../../types/major';
 import { Specialization, SpecializationImportDTO } from '../../types/specialization';
 import { usePagination } from '../../hooks/usePagination';
-import { Tooltip } from '../../components/common/Tooltip';
 // --- Types ---
 
 interface SpecializationCreateModalProps {
@@ -305,7 +304,8 @@ const ImportSpecializationModal: React.FC<ImportSpecializationModalProps> = ({ i
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             setFile(e.target.files[0]);
-            setPreviewData(null); // Reset preview when file changes
+            // Reset preview when file changes
+            setPreviewData(null);
         }
     };
 
@@ -774,33 +774,27 @@ export const MajorDetail: React.FC = () => {
                         </div>
 
                         <div className="flex gap-3">
-                            <Tooltip content="Tải file Excel mẫu để nhập dữ liệu chuyên ngành" position="bottom">
-                                <button
-                                    onClick={handleDownloadTemplate}
-                                    className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 transition-colors"
-                                >
-                                    <Download className="h-4 w-4" />
-                                    Tải file mẫu
-                                </button>
-                            </Tooltip>
-                            <Tooltip content="Tải lên file Excel để nhập danh sách chuyên ngành" position="bottom">
-                                <button
-                                    onClick={() => setIsImportModalOpen(true)}
-                                    className="flex items-center gap-2 rounded-lg border border-fpt-orange bg-orange-50 px-4 py-2 text-sm font-medium text-fpt-orange hover:bg-orange-100 transition-colors"
-                                >
-                                    <Upload className="h-4 w-4" />
-                                    Import danh sách chuyên ngành
-                                </button>
-                            </Tooltip>
-                            <Tooltip content="Thêm một chuyên ngành mới" position="bottom">
-                                <button
-                                    onClick={() => setIsCreateModalOpen(true)}
-                                    className="flex items-center gap-2 rounded-lg bg-fpt-orange px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 transition-colors"
-                                >
-                                    <Plus className="h-4 w-4" />
-                                    Tạo chuyên ngành
-                                </button>
-                            </Tooltip>
+                            <button
+                                onClick={handleDownloadTemplate}
+                                className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                            >
+                                <Download className="h-4 w-4" />
+                                Tải file mẫu
+                            </button>
+                            <button
+                                onClick={() => setIsImportModalOpen(true)}
+                                className="flex items-center gap-2 rounded-lg border border-fpt-orange bg-orange-50 px-3 py-2 text-sm font-medium text-fpt-orange hover:bg-orange-100"
+                            >
+                                <Upload className="h-4 w-4" />
+                                Import chuyên ngành
+                            </button>
+                            <button
+                                onClick={() => setIsCreateModalOpen(true)}
+                                className="flex items-center gap-2 rounded-lg bg-fpt-orange px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
+                            >
+                                <Plus className="h-4 w-4" />
+                                Tạo chuyên ngành
+                            </button>
                         </div>
                     </div>
 
@@ -829,6 +823,7 @@ export const MajorDetail: React.FC = () => {
                                     }}
                                     isOpen={isFilterOpen}
                                     onToggle={() => setIsFilterOpen(!isFilterOpen)}
+                                    inactiveLabel="Ngừng đào tạo"
                                 />
                             </div>
 
@@ -844,6 +839,8 @@ export const MajorDetail: React.FC = () => {
                                 })}
                                 isDeleting={isDeleting}
                                 itemLabel="chuyên ngành"
+                                activateLabel="Mở lại"
+                                deactivateLabel="Ngừng đào tạo"
                             />
                         </div>
 
