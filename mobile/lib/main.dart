@@ -18,6 +18,9 @@ import 'features/schedule_request/views/schedule_request_detail_screen.dart';
 import 'features/schedule_request/views/create_request_screen.dart';
 import 'features/schedule_request/bindings/schedule_request_bindings.dart';
 
+import 'features/ai_chatbot/views/ai_chat_screen.dart';
+import 'features/ai_chatbot/bindings/ai_chat_binding.dart';
+
 import 'features/chat/controllers/chat_controller.dart';
 import 'features/schedule/controllers/schedule_controller.dart';
 
@@ -83,6 +86,11 @@ class MyApp extends StatelessWidget {
         GetPage(
           name: AppRoutes.changePasswordRequired,
           page: () => const ChangePasswordRequiredScreen(),
+        ),
+        GetPage(
+          name: AppRoutes.aiChat,
+          page: () => const AiChatScreen(),
+          binding: AiChatBinding(),
         ),
         GetPage(
           name: AppRoutes.home,

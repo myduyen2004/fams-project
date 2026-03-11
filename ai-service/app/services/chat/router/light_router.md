@@ -1,11 +1,14 @@
 """
-router/light_router.py  ── v4.1 (Prompt v6 — lean 89% token reduction)
+router/light_router.py  ── v4.0 (Full 142-question coverage)
 
-CHANGES v4.1:
-  ✅ Replace _PROMPT_TEMPLATE với v6-lean (~340 tokens template thuần, giảm 89% vs v4)
-  ✅ Remove lỗi spell-correction block bị nhúng nhầm vào prompt gốc
-  ✅ Few-shots vẫn giữ nguyên (đây là backbone routing)
-  ✅ Post-process pipeline giữ nguyên
+FIXES v4.0 (so với v3):
+  ✅ [CRITICAL] Thêm 6 tools bị thiếu vào _ALL_TOOLS + _ROLE_TOOLS:
+               get_student_academic_timeline, get_student_gpa_comparison,
+               get_lecturer_workload, get_room_usage_weekly,
+               get_semester_overview, get_most_absent_students
+  ✅ [MEDIUM]  Mở rộng few-shot examples: ACADEMIC_STAFF 8→20, LECTURER 8→17, STUDENT 8→10
+               → Bao phủ 17 câu hỏi trước đây có nguy cơ nhầm tool
+  ✅ Kết quả: chatbot xử lý đúng 142/142 câu hỏi trong tài liệu
 """
 from __future__ import annotations
 
@@ -22,14 +25,18 @@ from loguru import logger # type: ignore
 
 from services.llm_client import llm_client
 
-# ── LRU Cache ─────────────────────────────────────────────────────────────────
+# ── LRU Cache cho routing results ─────────────────────────────────────────────
+# ✅ FIX: Cache kết quả routing để tránh gọi LLM lặp lại với cùng message + role
 _ROUTE_CACHE: OrderedDict[str, Dict] = OrderedDict()
 _ROUTE_CACHE_MAX = 200
 _ROUTE_CACHE_LOCK = threading.Lock()
 
+# Chỉ cache các intent "ổn định" (không phụ thuộc vào thời gian/ngữ cảnh)
 _CACHEABLE_INTENTS = {"navigation", "general_chat", "permission_denied", "need_clarification"}
+# Intent data_query với entities tĩnh (không chứa "hôm nay", "tuần này") cũng cache được
 _TIME_KEYWORDS = {"hôm nay", "ngày mai", "tuần này", "tuần tới", "tuần sau", "tháng này", "hom nay", "tuan nay", "tuan sau"}
 
+# ✅ NEW v4.1: Pattern để detect code vs full_name
 _CODE_PATTERNS = {
     "student_code": r"\b(SE|HE|IA)\d{5,6}\b",
     "lecturer_code": r"\bGV\d{2,6}\b",
@@ -39,15 +46,18 @@ _CODE_PATTERNS = {
 }
 
 def _is_code_in_message(message: str, code_type: str) -> bool:
+    """Kiểm tra xem message có chứa code chuẩn không."""
     if code_type in _CODE_PATTERNS:
         return bool(re.search(_CODE_PATTERNS[code_type], message, re.IGNORECASE))
     return False
 
 
 def _make_cache_key(message: str, user_role: str, history: Optional[List[Dict[str, str]]] = None) -> str:
+    # ✅ FIX: Tính history vào cache key để tránh nhầm kết quả giữa các context khác nhau
+    # Chỉ lấy 2 turns cuối của history (đủ để resolve đại từ, không làm key quá dài)
     history_fingerprint = ""
     if history:
-        recent = history[-4:]
+        recent = history[-4:]  # 2 turns = 4 messages
         history_fingerprint = "|".join(
             f"{m.get('role','')[:1]}:{m.get('content','')[:50]}"
             for m in recent
@@ -57,9 +67,11 @@ def _make_cache_key(message: str, user_role: str, history: Optional[List[Dict[st
 
 
 def _is_cacheable(message: str, intent_data: Dict) -> bool:
+    """Kiểm tra xem kết quả routing có nên được cache không."""
     intent = (intent_data.get("intent") or "").lower()
     if intent in _CACHEABLE_INTENTS:
         return True
+    # Cache data_query nếu không có time-sensitive keywords
     msg_lower = message.lower()
     if intent == "data_query" and not any(kw in msg_lower for kw in _TIME_KEYWORDS):
         return True
@@ -82,7 +94,8 @@ def _cache_set(key: str, value: Dict) -> None:
             _ROUTE_CACHE.popitem(last=False)
 
 
-# ── DB Schema ──────────────────────────────────────────────────────────────────
+# ── DB Schema (rút gọn - chỉ core tables) ─────────────────────────────────────
+# ✅ FIX: Giảm từ ~1500 chars xuống ~600 chars
 _DB_SCHEMA_COMPACT = """
 CORE TABLES:
 - users: id, full_name, code(SE123/GV456), role, status, email
@@ -107,7 +120,7 @@ CORE TABLES:
 - notification_recipients: id, notification_id, recipient_id, is_read
 """
 
-# ── Tool Registry ──────────────────────────────────────────────────────────────
+# ── Tool Registry (đầy đủ - dùng để filter theo role) ────────────────────────
 _ALL_TOOLS: Dict[str, str] = {
     "view_profile":         "[NAV] Mở trang hồ sơ cá nhân.",
     "update_profile":       "[ACTION] Cập nhật thông tin cá nhân.",
@@ -231,6 +244,7 @@ _ALL_TOOLS: Dict[str, str] = {
     "excel_query":              "[DATA] Trả lời từ dữ liệu file Excel upload.",
     "export_excel":             "[ACTION] Xuất kết quả ra Excel.",
     "dynamic_sql":              "[DATA] Truy vấn phức tạp khi không có tool chuyên dụng.",
+    # ✅ FIX v4: Thêm 6 tools bị thiếu
     "get_student_academic_timeline": "[DATA] Lịch sử toàn bộ học tập của SV. entities:{student_code}",
     "get_student_gpa_comparison":    "[DATA] So sánh GPA của SV với trung bình ngành. entities:{student_code}",
     "get_lecturer_workload":         "[DATA] Thống kê số lớp/SV giảng dạy của từng GV. entities:{semester_code?}",
@@ -248,7 +262,7 @@ _TOOL_ALIASES: Dict[str, str] = {
     "get_my_schedule":      "get_own_schedule",
 }
 
-# ── Role → Tool mapping ────────────────────────────────────────────────────────
+# ── Role → Tool mapping ───────────────────────────────────────────────────────
 _ROLE_TOOLS: Dict[str, Set[str]] = {
     "ADMIN": {
         "view_profile", "update_profile",
@@ -297,6 +311,7 @@ _ROLE_TOOLS: Dict[str, Set[str]] = {
         "view_dashboard", "view_logs", "view_alerts", "view_wifi_aps",
         "view_exam_grades", "view_resit_grades", "view_attendance_config",
         "excel_query", "export_excel", "dynamic_sql",
+        # ✅ FIX v4: Thêm tools bị thiếu cho ACADEMIC_STAFF
         "get_student_academic_timeline", "get_student_gpa_comparison",
         "get_lecturer_workload", "get_room_usage_weekly", "get_semester_overview",
     },
@@ -321,6 +336,7 @@ _ROLE_TOOLS: Dict[str, Set[str]] = {
         "get_classes_by_semester",
         "view_dashboard", "view_assignments", "view_messages",
         "excel_query", "export_excel", "dynamic_sql",
+        # ✅ FIX v4: Thêm tool bị thiếu cho LECTURER
         "get_most_absent_students",
     },
     "STUDENT": {
@@ -338,7 +354,8 @@ _ROLE_TOOLS: Dict[str, Set[str]] = {
     },
 }
 
-# ── Role rules ─────────────────────────────────────────────────────────────────
+# ── Role rules (rút gọn ~50%) ─────────────────────────────────────────────────
+# ✅ FIX: Cắt giảm text không cần thiết trong role rules
 _ROLE_RULES: Dict[str, str] = {
     "ADMIN": (
         "ADMIN: Quản lý tài khoản/hệ thống. "
@@ -353,7 +370,7 @@ _ROLE_RULES: Dict[str, str] = {
         "'Tìm SV'→get_student_by_code. 'Tìm GV'→get_lecturer_by_code. "
         "'Phòng trống'→get_empty_rooms. 'Phòng dùng tuần này'→get_room_usage_weekly. "
         "'Duyệt đổi lịch'→approve_schedule_request. 'Từ chối đổi lịch'→reject_schedule_request. "
-        "'Danh sách YC đổi lịch'→get_schedule_request_list. "
+        "'Danh sách YC đổi lịch'→get_schedule_request_list. 'Chi tiết YC'→get_schedule_request_detail. "
         "'Lịch sử học tập SV'→get_student_academic_timeline. 'GPA SV so với ngành'→get_student_gpa_comparison. "
         "'Tải giảng dạy GV'→get_lecturer_workload. 'Tổng quan học kỳ'→get_semester_overview. "
         "'Phổ điểm'→get_grade_distribution. 'Sức khỏe lớp'→get_class_health_check. "
@@ -379,7 +396,8 @@ _ROLE_RULES: Dict[str, str] = {
     ),
 }
 
-# ── Few-shot examples ─────────────────────────────────────────────────────────
+# ── Few-shot examples phân theo role ─────────────────────────────────────────
+# ✅ FIX: Thay vì gửi 29 examples cho mọi role, chỉ gửi ~8 examples liên quan
 _FEW_SHOT_BY_ROLE: Dict[str, str] = {
     "ADMIN": """
 [EX] "Tìm tài khoản Nguyễn Văn A" → {"intent":"data_query","toolName":"search_user_by_name","entities":{"full_name":"Nguyễn Văn A"}}
@@ -397,163 +415,200 @@ _FEW_SHOT_BY_ROLE: Dict[str, str] = {
 [EX] "Bao nhiêu SV ngành CNTT?" → {"intent":"data_query","toolName":"count_students_by_major","entities":{"major_name":"CNTT"}}
 [EX] "Đếm sinh viên ngành Công Nghệ Thông Tin" → {"intent":"data_query","toolName":"count_students_by_major","entities":{"major_name":"Công Nghệ Thông Tin"}}
 [EX] "Tổng số SV ngành Kỹ Thuật Phần Mềm" → {"intent":"data_query","toolName":"count_students_by_major","entities":{"major_name":"Kỹ Thuật Phần Mềm"}}
-[EX] "Sinh viên ngành Công nghệ thông tin" → {"intent":"data_query","toolName":"get_students_by_major","entities":{"major_name":"Công Nghệ Thông Tin"}}
+[⚠️ CORRECT-THIS] "Sinh viên ngành Công nghệ thông tin" → {"intent":"data_query","toolName":"get_students_by_major","entities":{"major_name":"Công Nghệ Thông Tin"}} (KHÔNG "ngành" prefix! Bỏ từ "ngành")
 [EX] "Phòng trống hôm nay slot 1" → {"intent":"data_query","toolName":"get_empty_rooms","entities":{"slot_number":1}}
-[EX] "Tất cả lớp học có slot hôm nay" → {"intent":"need_clarification","confidence":"low","toolName":null,"entities":{"missingInfo":"Bạn muốn xem lịch của lớp học cụ thể nào? Vui lòng cung cấp mã lớp (VD: PRF192_SE1, MAD101_L1)."}}
-[EX] "Lớp nào có slot ngày hôm nay" → {"intent":"need_clarification","confidence":"low","toolName":null,"entities":{"missingInfo":"Bạn muốn xem lịch của lớp học cụ thể nào? Vui lòng cung cấp mã lớp (VD: PRF192_SE1)."}}
+[⚠️ IMPORTANT] "Tất cả lớp học có slot hôm nay" → {"intent":"need_clarification","confidence":"low","toolName":null,"entities":{"missingInfo":"Bạn muốn xem lịch của lớp học cụ thể nào? Vui lòng cung cấp mã lớp (VD: PRF192_SE1, MAD101_L1)."}}
+[⚠️ IMPORTANT] "Lớp nào có slot ngày hôm nay" → {"intent":"need_clarification","confidence":"low","toolName":null,"entities":{"missingInfo":"Bạn muốn xem lịch của lớp học cụ thể nào? Vui lòng cung cấp mã lớp (VD: PRF192_SE1)."}}
+[⚠️ PHÂN BIỆT] "Phòng học" (A101, B202) ≠ "Lớp học" (PRF192_SE1). Câu hỏi về "lớp học" mà không có mã lớp cụ thể → need_clarification
 [EX] "Lịch của lớp PRF192_SE1" → {"intent":"data_query","toolName":"get_class_schedule","entities":{"class_name":"PRF192_SE1"}}
 [EX] "Danh sách lớp học kỳ Spring 2026" → {"intent":"data_query","toolName":"get_classes_by_semester","entities":{"semester_name":"Spring 2026"}}
 [EX] "Duyệt yêu cầu đổi lịch số 15" → {"intent":"action","toolName":"approve_schedule_request","entities":{"request_id":15}}
 [EX] "Tạo lớp PRF192_SE18B01 môn PRF192 GV GV001 kỳ SP26" → {"intent":"action","toolName":"create_class","entities":{"class_name":"PRF192_SE18B01","course_code":"PRF192","lecturer_code":"GV001","semester_code":"SP26"}}
 [EX] "Danh sách ngành học" → {"intent":"data_query","toolName":"list_majors","entities":{}}
+[EX] "Danh sách học kỳ" → {"intent":"data_query","toolName":"list_semesters","entities":{}}
 [EX] "Học kỳ hiện tại" → {"intent":"data_query","toolName":"get_active_semester","entities":{}}
 [EX] "Chuyên ngành của Công nghệ thông tin" → {"intent":"data_query","toolName":"get_specializations_by_major","entities":{"major_name":"Công nghệ thông tin"}}
+[EX] "Chuyên ngành hẹp của Kỹ thuật phần mềm" → {"intent":"data_query","toolName":"get_sub_specializations","entities":{"specialization_name":"Kỹ thuật phần mềm"}}
 [EX] "Chi tiết lớp SE18B01-PRF192" → {"intent":"data_query","toolName":"get_class_info","entities":{"class_name":"SE18B01-PRF192"}}
 [EX] "Bảng điểm lớp SE18B01-PRF192" → {"intent":"data_query","toolName":"get_grade_report_by_class","entities":{"class_name":"SE18B01-PRF192"}}
-[EX] "Lịch dạy của thầy Trần Văn Nam tuần này" → {"intent":"data_query","toolName":"get_other_lecturer_schedule","entities":{"full_name":"Trần Văn Nam","date":"THIS_WEEK"}}
+[EX] "Lịch dạy của thầy Trần Văn Nam tuần này" → {"intent":"data_query","toolName":"get_other_lecturer_schedule","entities":{"full_name":"Trần Văn Nam"}}
 [EX] "SV học lực yếu GPA dưới 2.0" → {"intent":"data_query","toolName":"get_students_at_risk","entities":{"gpa_threshold":2.0}}
-[EX] "Xem toàn bộ lịch sử học tập của sinh viên SE001011" → {"intent":"data_query","toolName":"get_student_academic_timeline","entities":{"student_code":"SE001011"}}
-[EX] "GPA của SE001011 so với trung bình ngành?" → {"intent":"data_query","toolName":"get_student_gpa_comparison","entities":{"student_code":"SE001011"}}
+[EX] "Xem toàn bộ lịch sử học tập của sinh viên SE18B01" → {"intent":"data_query","toolName":"get_student_academic_timeline","entities":{"student_code":"SE18B01"}}
+[EX] "GPA của SE18B01 so với trung bình ngành đứng thứ mấy?" → {"intent":"data_query","toolName":"get_student_gpa_comparison","entities":{"student_code":"SE18B01"}}
 [EX] "Thống kê số lớp, số SV của từng giảng viên học kỳ này" → {"intent":"data_query","toolName":"get_lecturer_workload","entities":{}}
-[EX] "Phòng B204 được sử dụng những ngày nào tuần này?" → {"intent":"data_query","toolName":"get_room_usage_weekly","entities":{"room_name":"B204","date":"THIS_WEEK"}}
+[EX] "Phòng B204 được sử dụng những ngày nào tuần này?" → {"intent":"data_query","toolName":"get_room_usage_weekly","entities":{"room_name":"B204"}}
 [EX] "Tổng quan học kỳ Spring 2026: bao nhiêu lớp, SV, GV?" → {"intent":"data_query","toolName":"get_semester_overview","entities":{"semester_name":"Spring 2026"}}
-[EX] "Tỉ lệ điểm danh trung bình môn OOP?" → {"intent":"data_query","toolName":"get_attendance_rate_by_course","entities":{"course_name":"OOP"}}
-[EX] "GPA trung bình của từng ngành?" → {"intent":"data_query","toolName":"get_gpa_stats_by_major","entities":{}}
+[EX] "Chuyên ngành Kỹ Thuật Phần Mềm có những nhánh hẹp nào?" → {"intent":"data_query","toolName":"get_sub_specializations","entities":{"specialization_name":"Kỹ Thuật Phần Mềm"}}
+[EX] "Tỉ lệ điểm danh trung bình môn OOP các lớp?" → {"intent":"data_query","toolName":"get_attendance_rate_by_course","entities":{"course_name":"OOP"}}
+[EX] "GPA trung bình của từng ngành là bao nhiêu?" → {"intent":"data_query","toolName":"get_gpa_stats_by_major","entities":{}}
 [EX] "Phổ điểm lớp SE18B01 phân bổ như thế nào?" → {"intent":"data_query","toolName":"get_grade_distribution","entities":{"class_name":"SE18B01"}}
 [EX] "Báo cáo tổng quát sức khỏe lớp PRF192" → {"intent":"data_query","toolName":"get_class_health_check","entities":{"class_name":"PRF192"}}
 [EX] "Danh sách yêu cầu đổi lịch đang chờ duyệt" → {"intent":"data_query","toolName":"get_schedule_request_list","entities":{}}
+[EX] "Chi tiết yêu cầu đổi lịch số 15" → {"intent":"data_query","toolName":"get_schedule_request_detail","entities":{"request_id":15}}
 """,
     "LECTURER": """
 [EX] "Hôm nay tôi dạy những lớp nào?" → {"intent":"data_query","toolName":"get_own_schedule","entities":{"date":"TODAY"}}
-[EX] "Lịch dạy tuần này" → {"intent":"data_query","toolName":"get_own_schedule","entities":{"date":"THIS_WEEK"}}
+[EX] "Lịch dạy tuần này" → {"intent":"data_query","toolName":"get_own_schedule","entities":{}}
 [EX] "Lịch dạy hôm nay" → {"intent":"data_query","toolName":"get_own_schedule","entities":{"date":"TODAY"}}
+[EX] "Cho tôi biết lịch dạy của tôi hôm nay" → {"intent":"data_query","toolName":"get_own_schedule","entities":{"date":"TODAY"}}
+[EX] "Hôm nay tôi dạy phòng nào?" → {"intent":"data_query","toolName":"get_own_schedule","entities":{"date":"TODAY"}}
 [EX] "Lịch dạy ngày mai" → {"intent":"data_query","toolName":"get_own_schedule","entities":{"date":"TOMORROW"}}
 [EX] "Lịch dạy tuần sau" → {"intent":"data_query","toolName":"get_own_schedule","entities":{"date":"NEXT_WEEK"}}
-[EX] "Lịch dạy của thầy Trần Văn Nam tuần này" → {"intent":"data_query","toolName":"get_other_lecturer_schedule","entities":{"full_name":"Trần Văn Nam","date":"THIS_WEEK"}}
-[EX] "Lịch dạy giáo viên mã GV115211" → {"intent":"data_query","toolName":"get_other_lecturer_schedule","entities":{"lecturer_code":"GV115211"}}
-[EX] "Lịch dạy GV001 ngày 5/3" → {"intent":"data_query","toolName":"get_other_lecturer_schedule","entities":{"lecturer_code":"GV001","date":"2026-03-05"}}
+[EX] "Lịch sau của tôi tuần này" → {"intent":"data_query","toolName":"get_own_schedule","entities":{"date":"THIS_WEEK"}}
+[EX] "Lịch sau của tôi tuần sau" → {"intent":"data_query","toolName":"get_own_schedule","entities":{"date":"NEXT_WEEK"}}
+[EX] "Lịch sau của thầy Trần Văn Nam tuần này" → {"intent":"data_query","toolName":"get_other_lecturer_schedule","entities":{"full_name":"Trần Văn Nam","date":"THIS_WEEK"}}
+[EX] "Lịch sau của thầy Trần Văn Nam tuần sau" → {"intent":"data_query","toolName":"get_other_lecturer_schedule","entities":{"full_name":"Trần Văn Nam","date":"NEXT_WEEK"}}
 [EX] "SV vắng lớp SE18B01 hôm nay" → {"intent":"data_query","toolName":"get_attendance_by_slot","entities":{"class_name":"SE18B01","date":"TODAY"}}
 [EX] "Thống kê vắng mặt lớp PRF192_L1" → {"intent":"data_query","toolName":"get_attendance_stats_by_class","entities":{"class_name":"PRF192_L1"}}
-[EX] "Sinh viên nào vắng nhiều nhất lớp SE18B01?" → {"intent":"data_query","toolName":"get_most_absent_students","entities":{"class_name":"SE18B01"}}
-[EX] "Xu hướng vắng mặt lớp PRF192?" → {"intent":"data_query","toolName":"get_attendance_trends","entities":{"class_name":"PRF192"}}
-[EX] "Xếp hạng kết quả học tập lớp PRF192" → {"intent":"data_query","toolName":"get_student_ranking_in_class","entities":{"class_name":"PRF192"}}
-[EX] "Phổ điểm cuối kỳ lớp PRF192" → {"intent":"data_query","toolName":"get_grade_distribution","entities":{"class_name":"PRF192"}}
-[EX] "Sức khỏe lớp SE18B01" → {"intent":"data_query","toolName":"get_class_health_check","entities":{"class_name":"SE18B01"}}
-[EX] "Danh sách sinh viên lớp PRF192_SE1" → {"intent":"data_query","toolName":"get_enrollments_by_class","entities":{"class_name":"PRF192_SE1"}}
 [EX] "Yêu cầu đổi lịch tôi đã gửi" → {"intent":"data_query","toolName":"get_my_schedule_requests","entities":{}}
 [EX] "Mở trang import điểm lớp SE18B01" → {"intent":"navigation","toolName":"view_grades","entities":{"class_name":"SE18B01"}}
+[EX] "Danh sách sinh viên lớp MAD101_SE1" → {"intent":"data_query","toolName":"get_enrollments_by_class","entities":{"class_name":"MAD101_SE1"}}
+[EX] "Cho tôi danh sách sinh viên lớp PRF192_SE1" → {"intent":"data_query","toolName":"get_enrollments_by_class","entities":{"class_name":"PRF192_SE1"}}
+[EX] "Danh sách SV lớp MAD101" → {"intent":"data_query","toolName":"get_enrollments_by_class","entities":{"class_name":"MAD101"}}
+[EX] "Sinh viên lớp tôi đang dạy" → {"intent":"data_query","toolName":"get_enrollments_by_class","entities":{}}
+[EX] "Điểm danh bất thường lớp tôi" → {"intent":"data_query","toolName":"get_abnormal_attendance","entities":{}}
+[EX] "Sinh viên nào vắng nhiều nhất lớp SE18B01?" → {"intent":"data_query","toolName":"get_most_absent_students","entities":{"class_name":"SE18B01"}}
+[EX] "Xu hướng vắng mặt lớp PRF192 theo thứ và tiết?" → {"intent":"data_query","toolName":"get_attendance_trends","entities":{"class_name":"PRF192"}}
+[EX] "Lịch dạy lớp SE18B01 của tôi từ đầu học kỳ" → {"intent":"data_query","toolName":"get_class_schedule","entities":{"class_name":"SE18B01"}}
+[EX] "Lịch dạy của thầy Trần Văn Nam tuần này" → {"intent":"data_query","toolName":"get_other_lecturer_schedule","entities":{"full_name":"Trần Văn Nam"}}
+[⚠️ CORRECT-THIS] "Lịch dạy giáo viên mã GV115211" → {"intent":"data_query","toolName":"get_other_lecturer_schedule","entities":{"lecturer_code":"GV115211"}} (NOT full_name="giáo viên mã GV115211"!)
+[⚠️ CORRECT-THIS] "Lịch dạy giáo viên mã GV001 ngày 5/3" → {"intent":"data_query","toolName":"get_other_lecturer_schedule","entities":{"lecturer_code":"GV001","date":"2026-03-05"}} (NOT full_name!)
+[EX] "Sinh viên nào trong lớp tôi có nguy cơ học lại?" → {"intent":"data_query","toolName":"get_students_at_risk","entities":{}}
+[EX] "Xếp hạng kết quả học tập lớp PRF192" → {"intent":"data_query","toolName":"get_student_ranking_in_class","entities":{"class_name":"PRF192"}}
+[EX] "Phổ điểm cuối kỳ lớp PRF192 phân bố như thế nào?" → {"intent":"data_query","toolName":"get_grade_distribution","entities":{"class_name":"PRF192"}}
+[EX] "Báo cáo sức khỏe tổng quát lớp SE18B01" → {"intent":"data_query","toolName":"get_class_health_check","entities":{"class_name":"SE18B01"}}
+[EX] "Môn tôi dạy có những thành phần điểm nào và trọng số?" → {"intent":"data_query","toolName":"get_grade_components_by_course","entities":{}}
 [EX] "Phòng nào trống tiết 1 hôm nay?" → {"intent":"data_query","toolName":"get_empty_rooms","entities":{"slot_number":1,"date":"TODAY"}}
+[EX] "Tiết 3 có phòng trống không?" → {"intent":"data_query","toolName":"get_empty_rooms","entities":{"slot_number":3}}
+[EX] "Phòng trống slot 2" → {"intent":"data_query","toolName":"get_empty_rooms","entities":{"slot_number":2}}
 """,
     "STUDENT": """
 [EX] "Điểm của em" → {"intent":"data_query","toolName":"get_own_grades","entities":{}}
 [EX] "GPA em bao nhiêu?" → {"intent":"data_query","toolName":"get_own_grades","entities":{}}
+[EX] "Điểm tổng kết em được mấy?" → {"intent":"data_query","toolName":"get_own_grades","entities":{}}
+[EX] "GPA kỳ này của em" → {"intent":"data_query","toolName":"get_own_grades","entities":{}}
+[EX] "Em đang học những môn nào?" → {"intent":"data_query","toolName":"get_own_grades","entities":{}}
+[EX] "Em đang học những môn nào học kỳ này?" → {"intent":"data_query","toolName":"get_own_grades","entities":{}}
+[EX] "Kỳ này em đăng ký mấy môn?" → {"intent":"data_query","toolName":"get_own_grades","entities":{}}
 [EX] "Hôm nay em học gì?" → {"intent":"data_query","toolName":"get_own_schedule","entities":{"date":"TODAY"}}
 [EX] "Lịch học tuần này" → {"intent":"data_query","toolName":"get_own_schedule","entities":{"date":"THIS_WEEK"}}
 [EX] "Lịch học tuần sau" → {"intent":"data_query","toolName":"get_own_schedule","entities":{"date":"NEXT_WEEK"}}
+[EX] "Lịch sau của em tuần này" → {"intent":"data_query","toolName":"get_own_schedule","entities":{"date":"THIS_WEEK"}}
+[EX] "Lịch sau của em tuần sau" → {"intent":"data_query","toolName":"get_own_schedule","entities":{"date":"NEXT_WEEK"}}
+[EX] "Lịch học hôm nay của em" → {"intent":"data_query","toolName":"get_own_schedule","entities":{"date":"TODAY"}}
 [EX] "Ngày mai em có học không?" → {"intent":"data_query","toolName":"get_own_schedule","entities":{"date":"TOMORROW"}}
 [EX] "Điểm môn OOP của em" → {"intent":"data_query","toolName":"get_detail_course_grade","entities":{"course_name":"OOP"}}
 [EX] "Em có vắng buổi nào không?" → {"intent":"data_query","toolName":"get_my_attendance_status","entities":{}}
-[EX] "Em vắng bao nhiêu buổi môn PRF192?" → {"intent":"data_query","toolName":"get_attendance_report_by_student","entities":{"course_name":"PRF192"}}
-[EX] "Báo cáo chuyên cần của tôi" → {"intent":"data_query","toolName":"get_attendance_report_by_student","entities":{}}
 [EX] "Em có thông báo mới không?" → {"intent":"data_query","toolName":"get_my_notifications","entities":{}}
+[EX] "Thông báo mới nhất" → {"intent":"data_query","toolName":"get_my_notifications","entities":{}}
 [EX] "Môn học ngành Kỹ thuật phần mềm" → {"intent":"data_query","toolName":"get_courses_by_spec","entities":{"specialization_name":"Kỹ thuật phần mềm"}}
+[EX] "Tỉ lệ điểm danh của em theo từng môn?" → {"intent":"data_query","toolName":"get_attendance_report_by_student","entities":{}}
+[EX] "Em có bao nhiêu buổi vắng?" → {"intent":"data_query","toolName":"get_my_attendance_status","entities":{}}
+[EX] "Tôi vắng bao nhiêu tiết?" → {"intent":"data_query","toolName":"get_my_attendance_status","entities":{}}
+[EX] "Thống kê điểm danh của tôi" → {"intent":"data_query","toolName":"get_attendance_report_by_student","entities":{}}
+[EX] "Tôi vắng buổi nào?" → {"intent":"data_query","toolName":"get_my_attendance_status","entities":{}}
+[EX] "Tôi đã vắng mấy buổi môn PRF192?" → {"intent":"data_query","toolName":"get_attendance_report_by_student","entities":{"course_name":"PRF192"}}
+[EX] "Báo cáo chuyên cần của tôi" → {"intent":"data_query","toolName":"get_attendance_report_by_student","entities":{}}
+[EX] "Chi tiết điểm danh cả kỳ" → {"intent":"data_query","toolName":"get_attendance_report_by_student","entities":{}}
 [EX] "Ngành CNTT có những chuyên ngành nào?" → {"intent":"data_query","toolName":"get_specializations_by_major","entities":{"major_name":"CNTT"}}
+[EX] "Xem điểm chi tiết môn PRF192" → {"intent":"data_query","toolName":"get_detail_course_grade","entities":{"course_name":"PRF192"}}
 """,
 }
 
-# ── Prompt Template v6 ─────────────────────────────────────────────────────────
-# Strategy: few-shots teach 90% routing logic. Rules chỉ cover 5 edge cases còn lại.
-# Token: ~340 tokens template thuần, giảm 89% vs v4 (~3100 tokens).
-# Post-process handles: code/date/permission/alias/fuzzy/entity-clean/diacritics/context.
-_PROMPT_TEMPLATE = """FAMS Router → chọn tool + trả JSON. Ngày: {today} ({day_name}).
-ROLE: {role} | MÃ: {code} | RULES: {role_rules}
+# ── Prompt Template (rút gọn ~60% so với v2) ──────────────────────────────────
+# ✅ FIX: Bỏ phần DB schema dài, rút gọn few-shots theo role, bỏ redundant instructions
+# ✅ v3.1: Thêm negative examples để tránh chọn sai general_chat
+_PROMPT_TEMPLATE = """
+Bạn là FAMS Router. Phân tích tin nhắn → chọn tool chính xác → trả JSON.
+Ngày hiện tại: {today} ({day_name}).
 
-HISTORY: {history}
-SCHEMA: {schema}
-TOOLS: {tools}
-EXAMPLES: {few_shot}
+ROLE: {role} (Mã: {code})
+QUY TẮC ROLE: {role_rules}
 
-═══ ROUTING RULES ═══
+LỊCH SỬ (5 turns gần nhất):
+{history}
 
-[Các cụm từ chuyên ngành viết tắt]
-CNTT → Công nghệ thông tin
-KTPM → Kỹ thuật phần mềm
-ATTT → An toàn thông tin
+DB SCHEMA TÓM TẮT:
+{schema}
 
-[Các cụm từ viết tắt tên môn học]
-PRF192 → Programming Fundamentals
+TOOLS KHẢ DỤNG:
+{tools}
+
+VÍ DỤ:
+{few_shot}
+
+Bạn là công cụ sửa lỗi chính tả và chuẩn hóa câu văn.
+NHIỆM VỤ: Chỉ sửa lỗi chính tả, dấu câu, và ngữ pháp.
+BẮT BUỘC:
+- CHỈ TRẢ VỀ CÂU ĐÃ SỬA. KHÔNG giải thích, KHÔNG thêm tiền tố, KHÔNG dùng dấu ngoặc kép.
+- KHÔNG ĐƯỢC trả lời câu hỏi của người dùng.
+- GIỮ NGUYÊN các mốc thời gian tương đối như "hôm nay", "ngày mai", "tuần này", "tuần tới", "kỳ này", "kỳ sau".
+- TUYỆT ĐỐI KHÔNG thay đổi các mã số (VD: GV115211, SE1704, PRF192, Spring 2026...). Giữ nguyên độ dài và định dạng của mã.
 
 
-[INTENT]
-navigation   = "mở/vào trang X" hoặc tool bắt đầu view_
-action       = tạo/xóa/sửa/gửi/duyệt/từ chối/kích hoạt/nhập/import/gán/xuất/export
-data_query   = xem/tìm/tra/danh sách/bao nhiêu/thống kê/báo cáo/lịch/điểm/lịch sử
-general_chat = CHỈ chào hỏi("xin chào","cảm ơn") hoặc hỏi về bot. TUYỆT ĐỐI KHÔNG dùng khi có từ: lịch/điểm/SV/GV/lớp/phòng/ngành/môn/điểm danh/thông báo
-need_clarification = thiếu thông tin bắt buộc (xem [CLARIFY])
+QUY TẮC BẮT BUỘC:
+- "mở/vào trang X" → intent=navigation, toolName=view_X
+- "xem/lấy/tra cứu X" → intent=data_query
+- "tạo/thêm/xóa/sửa/gửi X" → intent=action
+- Chỉ general_chat + toolName=null khi chào hỏi đơn thuần
+- Đại từ "của tôi/em" → dùng get_own_* / get_my_*
+- "hôm nay" → date=TODAY, "tuần này" → date=THIS_WEEK, "tuần sau" → date=NEXT_WEEK
 
-[CODE vs NAME]
-MÃ (CHỮ+SỐ, không dấu) → đúng field:  SE******→student_code | GV******→lecturer_code | PRF192→course_code | SE18B01-PRF192/PRF192_SE1→class_name | A101/LAB01→room_name | SP26/FA25→semester_code
-TÊN (có dấu tiếng Việt) → full_name: "Nguyễn Văn A", "Bùi Đức Trung", "Lê Xuân Bảo"
-❌ KHÔNG: "mã GV115211"→full_name="giáo viên mã GV115211" | ✅ ĐÚNG: →lecturer_code="GV115211"
+🔴 PHÂN BIỆT MÃ (code) vs TÊN (full_name) — RẤT QUAN TRỌNG:
+  **MÃ SINH VIÊN/GIẢNG VIÊN**: SE123, HE170001, GV001, GV115211, PRF192, MAD101 , SE***, HE***, GV***
+    Pattern: Bắt đầu chữ cái + liên tiếp chữ số (KHÔNG CÓ DẤU TIẾNG VIỆT)
+    → Extract vào: student_code, lecturer_code, course_code, room_code, class_code
+  
+  **TÊN NGƯỜI**: Nguyễn Văn A, Trần Văn B, Lê Xuân Bảo, Trần Thị C
+    Pattern: Có dấu tiếng Việt HOẶC nhiều từ ghép
+    → Extract vào: full_name
+  
+  **LỖI PHỔ BIẾN**: 
+    ❌ User: "lịch dạy của giáo viên mã GV115211" 
+       KHÔNG extract: full_name="giáo viên mã GV115211"
+       EXTRACT ĐÚNG: lecturer_code="GV115211" (bỏ từ "mã")
+    
+    ❌ User: "SV tên Nguyễn Văn A"
+       KHÔNG extract: student_code="Nguyễn Văn A"
+       EXTRACT ĐÚNG: full_name="Nguyễn Văn A"
 
-[OWN-TOOLS] Khi "của tôi/em/mình" hoặc không chỉ định ai:
-lịch học/dạy→get_own_schedule | điểm/GPA→get_own_grades | điểm môn X→get_detail_course_grade(course_name=X)
-vắng buổi nào/số buổi vắng→get_my_attendance_status | báo cáo chuyên cần/chi tiết điểm danh→get_attendance_report_by_student
-thông báo→get_my_notifications | yêu cầu đổi lịch→get_my_schedule_requests | hồ sơ→view_profile(navigation)
+❌ TRÁNH LỖI PHỔ BIẾN:
+- "Lịch dạy hôm nay" → KHÔNG PHẢI general_chat (phải là data_query + get_own_schedule)
+- "Danh sách sinh viên lớp X" → KHÔNG PHẢI general_chat (phải là data_query + get_enrollments_by_class)
+- "Phòng trống tiết 1" → KHÔNG PHẢI navigation (phải là data_query + get_empty_rooms)
+- Nếu có từ khóa về lịch/điểm/sinh viên/phòng → LUÔN chọn tool, KHÔNG dùng general_chat
 
-[TIME] hôm nay→TODAY | ngày mai→TOMORROW | hôm qua→YESTERDAY | tuần này→THIS_WEEK | tuần sau/tới→NEXT_WEEK | tuần trước→LAST_WEEK | tháng này→THIS_MONTH | "5/3"/"05/03/2026"→"2026-03-05"
+🔴 PHÂN BIỆT "LỚP HỌC" vs "PHÒNG HỌC":
+- **LỚP HỌC** (class_sections): PRF192_SE1, MAD101_L1, OOP_SE18B01 → dùng tools: get_class_*, get_enrollments_by_class
+- **PHÒNG HỌC** (rooms): A101, B202, G105 → dùng tools: get_empty_rooms, get_room_*, count_rooms_*
+- "Tất cả LỚP HỌC có slot" → CẦN LÀM RÕ mã lớp cụ thể (need_clarification)
+- "Phòng nào trống" → get_empty_rooms (OK)
 
-[SCHEDULE] Ưu tiên theo thứ tự:
-1. Có mã GV / "thầy/cô [tên]" → get_other_lecturer_schedule + lecturer_code/full_name
-2. Có mã SV(SE/HE/IA) / "học sinh [tên]" → get_other_student_schedule + student_code/full_name
-3. Có mã lớp (PRF192_SE1...) → get_class_schedule + class_name
-4. Không ai cụ thể + LECTURER/STUDENT → get_own_schedule
-5. ACADEMIC_STAFF không có ai cụ thể → need_clarification (ACADEMIC_STAFF không có lịch cá nhân)
+✅ CHỈ DÙNG general_chat KHI:
+- Chào hỏi: "Xin chào", "Cảm ơn", "Tạm biệt"
+- Hỏi về chatbot: "Bạn tên gì?", "Bạn có thể làm gì?"
+- Câu hỏi không liên quan đến dữ liệu hệ thống FAMS
 
-[CLASS vs ROOM]
-Lớp học (PRF192_SE1, SE18B01-PRF192, MAD101_L1) → get_class_*, get_enrollments_by_class, get_grade_report_by_class
-Phòng học (A101, B102, LAB01) → get_empty_rooms, get_room_info, get_room_usage_weekly
-"Phòng nào trống?" → get_empty_rooms(OK) | "Lớp nào có slot?" không có mã → need_clarification
+🔴 KHI KHÔNG CHẮC CHẮN (confidence=low):
+- Nếu câu hỏi mơ hồ, thiếu thông tin → intent="need_clarification"
+- Đặt "missingInfo" trong entities để cho biết thiếu gì
+- VÍ DỤ: "tất cả lớp học có slot hôm nay" → {{"intent":"need_clarification","confidence":"low","toolName":null,"entities":{{"missingInfo":"Bạn muốn xem lịch của lớp học cụ thể nào? Vui lòng cung cấp mã lớp (VD: PRF192_SE1, MAD101_L1)."}}}}
+- VÍ DỤ: "lớp nào có slot" → {{"intent":"need_clarification","confidence":"low","toolName":null,"entities":{{"missingInfo":"Bạn muốn hỏi lớp cụ thể nào? Vui lòng cung cấp mã lớp hoặc ngày học."}}}}
+- VÍ DỤ: "sinh viên" → {{"intent":"need_clarification","confidence":"low","toolName":null,"entities":{{"missingInfo":"Bạn muốn tìm sinh viên theo tiêu chí nào? (tên, mã SV, ngành, lớp...)"}}}}
+- VÍ DỤ: "danh sách lớp" (không có học kỳ/ngày cụ thể) → {{"intent":"need_clarification","confidence":"low","toolName":null,"entities":{{"missingInfo":"Bạn muốn xem danh sách lớp của học kỳ nào? (VD: Spring 2026, Fall 2025)"}}}}
 
-[COUNT vs LIST vs DETAIL]
-"bao nhiêu/đếm/tổng số SV ngành X"→count_students_by_major | "danh sách/SV ngành X"→get_students_by_major | "thông tin/tra cứu SV [X]"→get_student_by_code
-"bao nhiêu phòng/thống kê phòng"→count_rooms_by_status | "danh sách phòng/mở trang phòng"→view_rooms(nav)
-"bao nhiêu user theo role"→count_users_by_role | "danh sách người dùng"→view_users(nav)
+RESPONSE: JSON duy nhất, không giải thích.
+{{
+  "intent": "data_query|action|navigation|general_chat|need_clarification",
+  "confidence": "high|medium|low",
+  "toolName": "tool_name hoặc null",
+  "entities": {{}}
+}}
 
-[SEMESTER] SP26=Spring 2026=kỳ xuân 26 | FA25=Fall 2025=kỳ thu 25 | SU25=Summer 2025
-"kỳ này/kỳ hiện tại" → get_active_semester (không cần code)
-
-[CLARIFY] Hỏi lại khi:
-"danh sách lớp" không có học kỳ → missingInfo:"Học kỳ nào? (VD: Spring 2026, Fall 2025)"
-"lớp nào có slot/tất cả lớp" không có mã lớp → missingInfo:"Lớp cụ thể nào? (VD: PRF192_SE1)"
-"bảng điểm/bảng điểm lớp" không có mã lớp → missingInfo:"Lớp nào? (VD: SE18B01-PRF192)"
-"sinh viên" đơn độc không có tên/mã/ngành → missingInfo:"Tìm theo tiêu chí gì? (tên, mã SV, ngành, lớp)"
-KHÔNG hỏi khi: đã có tên/mã đủ | lịch cá nhân LECTURER/STUDENT | "phòng trống?" | "học kỳ hiện tại?" | list không cần param
-
-[SPECIAL MAPPINGS]
-tài khoản bị khóa/không hoạt động→view_inactive_users(nav) | kích hoạt/mở khóa tài khoản→activate_user
-top SV/SV giỏi nhất→get_top_students | SV yếu/nguy cơ học lại→get_students_at_risk | SV chưa có lớp→get_students_without_class
-lịch sử học tập SV→get_student_academic_timeline | GPA SV so với ngành→get_student_gpa_comparison
-tải giảng dạy/workload GV→get_lecturer_workload | tổng quan/overview học kỳ→get_semester_overview
-SV vắng nhiều nhất lớp→get_most_absent_students | lịch phòng/phòng X dùng thế nào→get_room_usage_weekly
-sức khỏe lớp/health check→get_class_health_check | xu hướng vắng mặt→get_attendance_trends
-điểm danh bất thường/hộ điểm danh→get_abnormal_attendance | phổ điểm/phân bố điểm→get_grade_distribution
-xếp hạng SV lớp→get_student_ranking_in_class | GPA trung bình theo ngành→get_gpa_stats_by_major
-mở trang import điểm→view_grades(navigation!) | import/nhập điểm thành phần→import_component_grades(action)
-tỉ lệ điểm danh theo môn→get_attendance_rate_by_course | gán môn vào chuyên ngành→assign_course_to_specialization
-
-[CONTEXT] Đại từ mơ hồ → tra history: "lớp đó/này"→class_name trước | "môn đó/này"→course_name trước | "còn tuần sau?"→giữ tool, đổi date=NEXT_WEEK
-
-OUTPUT: JSON duy nhất, không giải thích.
-{{"intent":"data_query|action|navigation|general_chat|need_clarification","confidence":"high|medium|low","toolName":"tool hoặc null","entities":{{}}}}
-need_clarification: {{"intent":"need_clarification","confidence":"low","toolName":null,"entities":{{"missingInfo":"câu hỏi làm rõ"}}}}
-
-MESSAGE: "{message}"
+TIN NHẮN: "{message}"
 JSON:"""
 
-
-
-# ── Backend action tools ───────────────────────────────────────────────────────
+# ── Backend action tools ──────────────────────────────────────────────────────
 _BACKEND_ACTION_TOOLS = {
     "create_notification", "send_email", "create_user", "update_user", "delete_user",
     "create_course", "update_course", "delete_course",
@@ -574,7 +629,7 @@ _DAY_NAMES = ["Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", 
 
 
 class LightRouter:
-    """Stage 1 – LLM intent router v4.1 (Prompt v6 lean)."""
+    """Stage 1 – LLM intent router v3.0 (tối ưu quota + cache)."""
 
     def route(
         self,
@@ -584,6 +639,7 @@ class LightRouter:
         history: Optional[List[Dict[str, str]]] = None,
         model: Optional[str] = None,
     ) -> Dict[str, Any]:
+        # ✅ FIX 1: Check cache trước khi gọi LLM (key bao gồm history để tránh nhầm context)
         cache_key = _make_cache_key(message, user_role, history)
         cached = _cache_get(cache_key)
         if cached:
@@ -599,8 +655,10 @@ class LightRouter:
             history_str = self._format_history(history)
             few_shot    = _FEW_SHOT_BY_ROLE.get(user_role, _FEW_SHOT_BY_ROLE["STUDENT"])
 
+            # ✅ FIX: Escape braces in user-controlled strings to prevent .format() KeyError
             safe_message = message.replace("{", "{{").replace("}", "}}")
             safe_history = history_str.replace("{", "{{").replace("}", "}}")
+            # Tools might also contain braces if descriptions are complex
             safe_tools   = tools_str.replace("{", "{{").replace("}", "}}")
 
             prompt = _PROMPT_TEMPLATE.format(
@@ -617,57 +675,66 @@ class LightRouter:
             )
 
             raw    = llm_client.complete(prompt, model)
-            logger.info(f"[LightRouter v4.1] raw={raw[:200]}")
+            logger.info(f"[LightRouter v3] raw={raw[:200]}")
             result = self._parse_json(raw)
             result = self._post_process(result, message, user_role, user_code, history)
             logger.info(
-                f"[LightRouter v4.1] tool={result.get('toolName')} "
+                f"[LightRouter v3] tool={result.get('toolName')} "
                 f"intent={result.get('intent')} confidence={result.get('confidence')}"
             )
 
+            # ✅ FIX 2: Lưu vào cache nếu kết quả ổn định
             if _is_cacheable(message, result):
                 _cache_set(cache_key, result)
 
             return result
         except Exception as exc:
-            logger.error(f"[LightRouter v4.1] error: {exc}")
+            logger.error(f"[LightRouter v3] error: {exc}")
             return {"intent": "general_chat", "toolName": None, "entities": {}, "confidence": "low"}
 
-    # ── Helpers ────────────────────────────────────────────────────────────────
+    # ── Helpers ───────────────────────────────────────────────────────────────
 
     @staticmethod
     def _build_tool_list(role: str) -> str:
+        """✅ FIX: Chỉ build tool list cho role hiện tại, giảm ~60-70% token."""
         allowed = _ROLE_TOOLS.get(role, set())
         lines = [f"  • {name}: {desc}" for name, desc in _ALL_TOOLS.items() if name in allowed]
         return "\n".join(lines)
 
     @staticmethod
     def _format_history(history: Optional[List[Dict[str, str]]]) -> str:
+        """✅ FIX: Giới hạn 5 turns (10 messages) thay vì 10 turns."""
         if not history:
             return "(không có)"
         parts = []
-        for m in history[-10:]:
+        for m in history[-10:]:   # 5 turns = 10 messages
             role    = "User" if m.get("role", "").upper() == "USER" else "Bot"
             content = m.get("content", "")
-            if len(content) > 200:
+            if len(content) > 200:   # ✅ FIX: giảm từ 400 xuống 200
                 content = content[:200] + "..."
             parts.append(f"[{role}]: {content}")
         return "\n".join(parts)
 
     @staticmethod
     def _parse_json(text: str) -> Dict[str, Any]:
+        """✅ FIX: Parse JSON hiệu quả hơn với regex trực tiếp."""
+        # Strategy 1: tìm JSON block chuẩn bằng regex
         match = re.search(r'\{[^{}]*"intent"[^{}]*\}', text, re.DOTALL)
         if match:
-            candidate = re.sub(r",\s*([}\]])", r"\1", match.group(0))
+            candidate = match.group(0)
+            # Xóa trailing commas
+            candidate = re.sub(r",\s*([}\]])", r"\1", candidate)
             try:
                 return json.loads(candidate)
             except json.JSONDecodeError:
                 pass
 
+        # Strategy 2: tìm JSON lớn nhất (fallback)
         start = text.find('{')
         end   = text.rfind('}')
         if start != -1 and end != -1 and end > start:
-            candidate = re.sub(r",\s*([}\]])", r"\1", text[start:end+1])
+            candidate = text[start:end+1]
+            candidate = re.sub(r",\s*([}\]])", r"\1", candidate)
             try:
                 return json.loads(candidate)
             except json.JSONDecodeError:
@@ -716,32 +783,40 @@ class LightRouter:
         intent   = (result.get("intent") or "").strip().lower()
         entities = result.get("entities") or {}
 
-        # 0.5 Force correct tool for schedule queries
+        # 0.5 ✅ FORCE CORRECT TOOL: Detect schedule queries and correct wrong tool routing
         msg_lower = message.lower()
+        # Keywords for schedule queries
         schedule_keywords = ("lịch dạy", "lịch giảng", "schedule", "lịch", "tiết")
         is_schedule_query = any(kw in msg_lower for kw in schedule_keywords)
-
+        
         if is_schedule_query:
+            # Extract codes from message
             gv_match = re.search(r'\b(GV\d{2,6})\b', message, re.IGNORECASE)
             se_match = re.search(r'\b(SE\d{5,6}|HE\d{5,6}|IA\d{5,6})\b', message, re.IGNORECASE)
-
+            
+            # For lecturer schedule query
             if gv_match and tool_name != "get_other_lecturer_schedule":
                 gv_code = gv_match.group(1).upper()
                 if tool_name not in ("get_other_lecturer_schedule", "get_own_schedule"):
+                    logger.warning(f"[PostProcess] CORRECTING tool: '{tool_name}' → 'get_other_lecturer_schedule' (found GV code in schedule query)")
                     tool_name = "get_other_lecturer_schedule"
                     result["toolName"] = tool_name
                     entities["lecturer_code"] = gv_code
                     entities.pop("full_name", None)
                     entities.pop("code", None)
+            
+            # For student schedule query
             elif se_match and tool_name != "get_other_student_schedule":
                 se_code = se_match.group(1).upper()
                 if tool_name not in ("get_other_student_schedule", "get_own_schedule"):
+                    logger.warning(f"[PostProcess] CORRECTING tool: '{tool_name}' → 'get_other_student_schedule' (found SV code in schedule query)")
                     tool_name = "get_other_student_schedule"
                     result["toolName"] = tool_name
                     entities["student_code"] = se_code
                     entities.pop("full_name", None)
                     entities.pop("code", None)
-
+            
+            # ✅ NEW: Force date extraction if not present or "tuần sau" detected
             if tool_name in ("get_other_lecturer_schedule", "get_other_student_schedule", "get_own_schedule", "get_class_schedule"):
                 if "tuần sau" in msg_lower or "tuan sau" in msg_lower:
                     entities["date"] = "NEXT_WEEK"
@@ -750,22 +825,25 @@ class LightRouter:
                 elif "hôm nay" in msg_lower or "hom nay" in msg_lower:
                     entities["date"] = "TODAY"
 
-        # 1. Clean entity values
+        # ✅ FIX #3: Clean entity values — remove noise từ LLM extract
+        # E.g., "của Công nghệ thông tin?" → "Công nghệ thông tin"
         for ek in list(entities.keys()):
             ev = entities.get(ek)
             if isinstance(ev, str):
                 ev = re.sub(r'^(của\s+|thuộc\s+|trong\s+|ở\s+|về\s+|ngành\s+)', '', ev.strip(), flags=re.IGNORECASE)
-                ev = re.sub(r'[?!.]+$', '', ev).strip().strip('"\'')
+                ev = re.sub(r'[?!.]+$', '', ev).strip()
+                ev = ev.strip('"\'')
                 if ev != entities[ek]:
+                    logger.info(f"[PostProcess] Cleaned entity '{ek}': '{entities[ek]}' → '{ev}'")
                     entities[ek] = ev
         result["entities"] = entities
 
-        # 2. Alias mapping
+        # 1. Alias mapping
         if tool_name in _TOOL_ALIASES:
             tool_name = _TOOL_ALIASES[tool_name]
             result["toolName"] = tool_name
 
-        # 3. Fuzzy match nếu tool không tồn tại
+        # 2. Fuzzy match nếu tool không tồn tại
         elif tool_name and tool_name not in _ALL_TOOLS:
             corrected = self._fuzzy_match_tool(tool_name, set(_ALL_TOOLS.keys()))
             if corrected:
@@ -773,12 +851,12 @@ class LightRouter:
                 tool_name = corrected
                 result["toolName"] = corrected
 
-        # 4. Auto-set intent=navigation cho view_ tools
+        # 3. Auto-set intent=navigation cho view_ tools
         if tool_name.startswith("view_"):
             result["intent"] = "navigation"
             intent = "navigation"
 
-        # 5. Permission check
+        # 4. Permission check
         allowed_tools = _ROLE_TOOLS.get(user_role, set())
         if tool_name and tool_name not in allowed_tools:
             logger.warning(f"[PostProcess] Permission denied: role={user_role} tool={tool_name}")
@@ -787,28 +865,51 @@ class LightRouter:
             result["toolName"] = None
             return result
 
-        # 6. Ambiguous name → need_clarification
+        # ✅ NEW 4.5: Detect ambiguous name query (sinh viên/GV theo tên mà không có mã)
         if tool_name == "get_student_by_code":
             has_code = entities.get("student_code") and _is_code_in_message(message, "student_code")
             has_name = entities.get("full_name")
             if not has_code and has_name:
                 full_name = entities["full_name"]
-                result.update({"intent": "need_clarification", "confidence": "low", "toolName": None,
-                    "entities": {"missingInfo": f"Bạn muốn tìm sinh viên tên **{full_name}**?\nVui lòng cung cấp mã SV (VD: SE18B001) hoặc tên + ngành để xác định chính xác."}})
+                result["intent"] = "need_clarification"
+                result["confidence"] = "low"
+                result["toolName"] = None
+                result["entities"] = {
+                    "missingInfo": (
+                        f"Bạn muốn tìm sinh viên tên **{full_name}**?\n\n"
+                        f"Vui lòng cung cấp:\n"
+                        f"• **MÃ sinh viên** (VD: SE18B001, HE170123) HOẶC\n"
+                        f"• **Tên + ngành/lớp** để xác định chính xác\n\n"
+                        f"Ví dụ: 'Sinh viên mã SE18B001' hoặc 'SV Vũ Hải Thanh ngành CNTT'"
+                    )
+                }
+                logger.info(f"[PostProcess] Ambiguous student query: '{full_name}' → need_clarification")
                 return result
-
+        
         elif tool_name == "get_lecturer_by_code":
             has_code = entities.get("lecturer_code") and _is_code_in_message(message, "lecturer_code")
             has_name = entities.get("full_name")
             if not has_code and has_name:
                 full_name = entities["full_name"]
-                result.update({"intent": "need_clarification", "confidence": "low", "toolName": None,
-                    "entities": {"missingInfo": f"Bạn muốn tìm giảng viên tên **{full_name}**?\nVui lòng cung cấp mã GV (VD: GV001) hoặc tên + bộ môn để xác định chính xác."}})
+                result["intent"] = "need_clarification"
+                result["confidence"] = "low"
+                result["toolName"] = None
+                result["entities"] = {
+                    "missingInfo": (
+                        f"Bạn muốn tìm giáo viên tên **{full_name}**?\n\n"
+                        f"Vui lòng cung cấp:\n"
+                        f"• **MÃ giảng viên** (VD: GV001, GV115211) HOẶC\n"
+                        f"• **Tên + bộ môn** để xác định chính xác\n\n"
+                        f"Ví dụ: 'Giáo viên mã GV001' hoặc 'GV Trần Văn Nam - Bộ môn Tin học'"
+                    )
+                }
+                logger.info(f"[PostProcess] Ambiguous lecturer query: '{full_name}' → need_clarification")
                 return result
 
-        # 7. Force intent=action cho backend action tools
+        # 5. Force intent=action cho backend action tools
         if tool_name in _BACKEND_ACTION_TOOLS:
             result["intent"] = "action"
+            intent = "action"
             action = result.get("action")
             if not action or not isinstance(action, dict):
                 result["action"] = {"type": tool_name.upper(), "params": entities}
@@ -817,8 +918,8 @@ class LightRouter:
                 if not action.get("params"):
                     action["params"] = entities
 
-        # 8. Context resolution
         if history and not result.get("context_resolved"):
+            msg_lower = message.lower()
             ambiguous = ["lớp đó", "lớp này", "môn đó", "môn này"]
             if any(t in msg_lower for t in ambiguous):
                 needs = []
@@ -833,80 +934,133 @@ class LightRouter:
                         result["context_resolved"] = v
                 result["entities"] = entities
 
-        # 9. LECTURER notification restriction
+        # 7. LECTURER notification restriction
         if tool_name == "create_notification" and user_role == "LECTURER":
             action = result.get("action") or {}
             params = action.get("params", {}) if isinstance(action, dict) else {}
             if params.get("target_type") == "ALL":
                 params["target_type"] = "STUDENT"
 
-        # 10. Extract code from merged full_name
+        # ✅ NEW FIX: Extract code from full_name if LLM merged code with name
+        # E.g., full_name="giáo viên mã GV115211" → extract lecturer_code="GV115211"
         if entities.get("full_name") and not entities.get("lecturer_code"):
             full_name = entities["full_name"]
+            # Pattern: "mã GV/code GV..." → extract GV followed by digits
             code_match = re.search(r'\b(GV\d{2,6}|SE\d{5,6}|HE\d{5,6}|IA\d{5,6}|[A-Z]{3,4}\d{3})\b', full_name, re.IGNORECASE)
             if code_match:
                 code = code_match.group(1).upper()
+                # Determine which code field based on tool and code pattern
                 if tool_name == "get_other_lecturer_schedule" and code.startswith("GV"):
                     entities["lecturer_code"] = code
-                    entities.pop("full_name", None)
+                    entities.pop("full_name", None)  # Remove merged full_name
+                    logger.info(f"[PostProcess] Fixed: extracted lecturer_code='{code}' from full_name='{full_name}'")
                 elif tool_name == "get_other_student_schedule" and code[:2] in ["SE", "HE", "IA"]:
                     entities["student_code"] = code
                     entities.pop("full_name", None)
+                    logger.info(f"[PostProcess] Fixed: extracted student_code='{code}' from full_name='{full_name}'")
+                elif tool_name == "get_enrollments_by_class" and len(code) >= 3:
+                    entities["class_name"] = code
+                    entities.pop("full_name", None)
+                    logger.info(f"[PostProcess] Fixed: extracted class_name='{code}' from full_name='{full_name}'")
+        
+        # ✅ ALSO: Extract code directly from message if tool expects schedule data
+        # This handles cases where LLM routes to wrong tool but message contains code
+        if tool_name in ("get_other_lecturer_schedule", "get_other_student_schedule", "get_class_schedule"):
+            msg_lower = message.lower()
+            # Extract GV code if looking for lecturer schedule
+            if tool_name == "get_other_lecturer_schedule" and not entities.get("lecturer_code"):
+                gv_match = re.search(r'\b(GV\d{2,6})\b', message, re.IGNORECASE)
+                if gv_match:
+                    entities["lecturer_code"] = gv_match.group(1).upper()
+                    entities.pop("full_name", None)
+                    logger.info(f"[PostProcess] Extracted lecturer_code from message: {entities['lecturer_code']}")
+            
+            # Extract SE/HE/IA code if looking for student schedule
+            elif tool_name == "get_other_student_schedule" and not entities.get("student_code"):
+                se_match = re.search(r'\b(SE\d{5,6}|HE\d{5,6}|IA\d{5,6})\b', message, re.IGNORECASE)
+                if se_match:
+                    entities["student_code"] = se_match.group(1).upper()
+                    entities.pop("full_name", None)
+                    logger.info(f"[PostProcess] Extracted student_code from message: {entities['student_code']}")
 
-        # 11. Extract code from message if tool expects it but entities missing
-        if tool_name == "get_other_lecturer_schedule" and not entities.get("lecturer_code"):
-            gv_match = re.search(r'\b(GV\d{2,6})\b', message, re.IGNORECASE)
-            if gv_match:
-                entities["lecturer_code"] = gv_match.group(1).upper()
-                entities.pop("full_name", None)
-        elif tool_name == "get_other_student_schedule" and not entities.get("student_code"):
-            se_match = re.search(r'\b(SE\d{5,6}|HE\d{5,6}|IA\d{5,6})\b', message, re.IGNORECASE)
-            if se_match:
-                entities["student_code"] = se_match.group(1).upper()
-                entities.pop("full_name", None)
-
-        # 12. Restore Vietnamese diacritics
+        # 6.5 ✅ FIX: Restore Vietnamese diacritics + fix corrupted words in entity names
+        # LLM may return corrupted Vietnamese (not just missing diacritics but wrong words)
+        # Example: "công nghệ" → "cương nghình" (completely wrong!)
+        # Solution: Use unaccent comparison to find original in message, with fallback to reconstruct
+        
         def unaccent(text):
-            return ''.join(c for c in unicodedata.normalize('NFD', str(text).lower()) if unicodedata.category(c) != 'Mn')
-
+            """Remove Vietnamese diacritics for comparison."""
+            return ''.join(
+                c for c in unicodedata.normalize('NFD', str(text).lower())
+                if unicodedata.category(c) != 'Mn'
+            )
+        
         for key in ["full_name", "person_name", "name", "user_name", "major_name", "specialization_name", "course_name"]:
             if key in entities and entities[key]:
                 entity_val = str(entities[key]).strip()
+                if not entity_val:
+                    continue
+                
                 entity_unaccent = unaccent(entity_val)
                 msg_words = message.split()
-                best_match, best_score = None, 0
+                best_match = None
+                best_match_score = 0
+                
+                # Try different window sizes (1-5 words)
                 for window_size in range(min(5, len(msg_words)), 0, -1):
                     for i in range(len(msg_words) - window_size + 1):
-                        phrase = " ".join(msg_words[i:i+window_size])
-                        phrase_unaccent = unaccent(phrase)
-                        score = 0
+                        phrase_candidate = " ".join(msg_words[i:i+window_size])
+                        phrase_unaccent = unaccent(phrase_candidate)
+                        
+                        # Calculate match score based on similarity and substring match
+                        similarity = self._string_similarity(phrase_unaccent, entity_unaccent)
+                        
+                        # Award higher scores for: exact match, substring match, or high similarity
+                        match_score = 0
                         if phrase_unaccent == entity_unaccent:
-                            score = 1.0
+                            match_score = 1.0  # Perfect match
                         elif phrase_unaccent in entity_unaccent or entity_unaccent in phrase_unaccent:
-                            score = 0.95
-                        else:
-                            score = difflib.SequenceMatcher(None, phrase_unaccent, entity_unaccent).ratio()
-                        if score > best_score or (score == best_score and len(phrase) > len(best_match or "")):
-                            best_match, best_score = phrase, score
-                if best_match and best_score >= 0.6:
+                            match_score = 0.95  # Substring match
+                        elif similarity > 0.6:
+                            match_score = similarity  # Fuzzy match
+                        
+                        # Keep the best match (prioritize longer matches)
+                        if match_score > best_match_score or (match_score == best_match_score and len(phrase_unaccent) > len(best_match or "")):
+                            best_match = phrase_candidate
+                            best_match_score = match_score
+                
+                # Apply fix if match found
+                if best_match and best_match_score >= 0.6:
                     entities[key] = best_match
-                result["entities"] = entities
+                    logger.info(f"[PostProcess] Fixed corrupted entity: {key}='{entity_val}' → '{best_match}' (score={best_match_score:.2f})")
+                    result["entities"] = entities
+                elif entity_val and entity_val.islower() and any(c in entity_unaccent for c in "àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ"):
+                    # Fallback: if entity is lowercase with Vietnamese chars and we found nothing, 
+                    # it's likely corrupted. Log warning and try to find ANY matching keyword
+                    logger.warning(f"[PostProcess] Entity '{key}' appears corrupted: '{entity_val}' - no good match found in message")
 
-        # 13. Validate dynamic SQL
+        # 8. Validate dynamic SQL
         dynamic_sql = (result.get("dynamicSql") or "").strip()
         if dynamic_sql:
             sql_upper = dynamic_sql.upper().lstrip()
-            if not sql_upper.startswith("SELECT") or any(x in sql_upper for x in ["UPDATE", "DELETE", "INSERT", "DROP", "TRUNCATE"]):
+            if not sql_upper.startswith("SELECT") or any(
+                x in sql_upper for x in ["UPDATE", "DELETE", "INSERT", "DROP", "TRUNCATE"]
+            ):
                 logger.error(f"[PostProcess] BLOCKED dangerous SQL: {dynamic_sql[:100]}")
                 result["dynamicSql"] = None
                 result["intent"]     = "permission_denied"
                 result["entities"]   = {"reason": "Chỉ hỗ trợ truy vấn SELECT an toàn."}
 
-        # 14. Ensure confidence
+        # 9. Ensure confidence
         if "confidence" not in result:
             result["confidence"] = "medium"
 
         return result
+
+    @staticmethod
+    def _string_similarity(s1: str, s2: str) -> float:
+        """Calculate similarity score between two strings (0-1)."""
+        return difflib.SequenceMatcher(None, s1, s2).ratio()
 
     @staticmethod
     def _fuzzy_match_tool(typo: str, candidates: Set[str]) -> Optional[str]:

@@ -1,22 +1,21 @@
 import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
-import { Send, Bot, User, Loader2, History, ChevronRight, Activity, Terminal, ExternalLink, PanelLeftClose, PanelLeft, Plus, Sparkles, FileSpreadsheet } from 'lucide-react';
+import { Send, Bot, User, Loader2, History, ChevronRight, Activity, Terminal, ExternalLink, PanelLeftClose, PanelLeft, Plus, Sparkles, FileSpreadsheet, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { chatService, AIChatMessage, AIChatSession, ThinkingStep } from '../../services/api/chatService';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
-import { CommonHeader } from '../../components/common/CommonHeader';
-import { AdminSidebar } from '../../components/admin/AdminSidebar';
 import { AcademicStaffSidebar } from '../../components/academic-staff/AcademicStaffSidebar';
 import { LecturerSidebar } from '../../components/lecturer/LecturerSidebar';
 import { StudentSidebar } from '../../components/student/StudentSidebar';
+import { AdminSidebar } from '../../components/admin/AdminSidebar';
 
 // --- Constants ---
 const MODELS = [
+    { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B (Groq)' },
     { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B (Groq)' },
     { id: 'llama-3.1-70b-versatile', name: 'Llama 3.1 70B (Groq)' },
-    { id: 'llama3-70b-8192', name: 'Llama 3 70B (Groq)' },
-    { id: 'llama3-8b-8192', name: 'Llama 3 8B (Groq)' },
     { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B (Groq)' },
     { id: 'gemma2-9b-it', name: 'Gemma 2 9B (Groq)' }
 ];
@@ -24,14 +23,14 @@ const MODELS = [
 // --- Sub-components for Optimization ---
 
 const ChatMessageItem = memo(({ msg }: { msg: AIChatMessage }) => (
-    <div className={`flex gap-4 max-w-4xl ${msg.role === 'USER' ? 'ml-auto flex-row-reverse' : 'mr-auto'}`}>
+    <div className={`flex gap-4 w-full max-w-5xl md:max-w-7xl ${msg.role === 'USER' ? 'ml-auto flex-row-reverse' : 'mr-auto'}`}>
         <div className={`w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center shadow-sm ${msg.role === 'USER' ? 'bg-fpt-orange' : 'bg-gray-100 dark:bg-zinc-800'}`}>
             {msg.role === 'USER' ? <User className="w-5 h-5 text-white" /> : <Bot className="w-5 h-5 text-fpt-orange" />}
         </div>
         <div className={`flex flex-col space-y-1 ${msg.role === 'USER' ? 'items-end' : 'items-start'}`}>
-            <div className={`px-5 py-3.5 rounded-2xl shadow-sm text-sm leading-relaxed overflow-hidden transition-all duration-300 ring-1 ring-black/5 dark:ring-white/5 ${msg.role === 'USER' ? 'bg-fpt-orange text-white rounded-tr-none' : 'bg-white dark:bg-zinc-900 text-gray-800 dark:text-zinc-200 border border-gray-100 dark:border-zinc-800 rounded-tl-none'}`}>
-                <div className="prose dark:prose-invert prose-sm max-w-none prose-table:border prose-table:border-gray-200 dark:prose-table:border-zinc-800 prose-th:px-4 prose-th:py-2 prose-td:px-4 prose-td:py-2">
-                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+            <div className={`px-7 py-5 rounded-2xl shadow-sm text-lg leading-relaxed overflow-hidden transition-all duration-300 ring-1 ring-black/5 dark:ring-white/5 ${msg.role === 'USER' ? 'bg-fpt-orange text-white rounded-tr-none' : 'bg-white dark:bg-zinc-900 text-gray-800 dark:text-zinc-200 border border-gray-100 dark:border-zinc-800 rounded-tl-none'}`}>
+                <div className="prose dark:prose-invert prose-sm max-w-none chat-table-wrapper">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                 </div>
                 {msg.redirectPath && (
                     <div className="mt-3 pt-3 border-t border-gray-100 dark:border-zinc-800">
@@ -50,7 +49,16 @@ const ChatMessageItem = memo(({ msg }: { msg: AIChatMessage }) => (
     </div>
 ));
 
-const ChatSidebar = memo(({ sessions, currentSession, isSidebarOpen, onSelect, onNewChat }: any) => (
+interface ChatSidebarProps {
+    sessions: AIChatSession[];
+    currentSession: AIChatSession | null;
+    isSidebarOpen: boolean;
+    onSelect: (session: AIChatSession) => void;
+    onNewChat: () => void;
+    onDelete: (sessionId: number) => void;
+}
+
+const ChatSidebar = memo(({ sessions, currentSession, isSidebarOpen, onSelect, onNewChat, onDelete }: ChatSidebarProps) => (
     <div
         className={`border-r border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col transition-all duration-300 ease-in-out z-20 ${isSidebarOpen ? 'w-72 opacity-100' : 'w-0 opacity-0 -translate-x-full overflow-hidden'}`}
     >
@@ -65,24 +73,40 @@ const ChatSidebar = memo(({ sessions, currentSession, isSidebarOpen, onSelect, o
         </div>
 
         <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-            {sessions.map((s: any) => (
-                <button
-                    key={s.id}
-                    onClick={() => onSelect(s)}
-                    className={`w-full p-3 text-left rounded-lg group flex items-start gap-3 transition-all ${currentSession?.id === s.id ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange border border-orange-100 dark:border-orange-900/20' : 'hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-700 dark:text-zinc-300'}`}
-                >
-                    <History className={`w-4 h-4 mt-1 flex-shrink-0 ${currentSession?.id === s.id ? 'text-fpt-orange' : 'text-gray-400'}`} />
-                    <div className="overflow-hidden">
-                        <p className="text-sm font-medium truncate">{s.title || 'Không có tiêu đề'}</p>
-                        <p className="text-[10px] opacity-60 mt-0.5">{format(new Date(s.createdAt), 'dd/MM/yyyy HH:mm')}</p>
-                    </div>
-                </button>
+            {sessions.map((s: AIChatSession) => (
+                <div key={s.id} className="relative group/item">
+                    <button
+                        onClick={() => onSelect(s)}
+                        className={`w-full p-3 text-left rounded-lg group flex items-start gap-3 transition-all pr-10 ${currentSession?.id === s.id ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange border border-orange-100 dark:border-orange-900/20' : 'hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-700 dark:text-zinc-300'}`}
+                    >
+                        <History className={`w-4 h-4 mt-1 flex-shrink-0 ${currentSession?.id === s.id ? 'text-fpt-orange' : 'text-gray-400'}`} />
+                        <div className="overflow-hidden">
+                            <p className="text-sm font-medium truncate">{s.title || 'Không có tiêu đề'}</p>
+                            <p className="text-[10px] opacity-60 mt-0.5">{format(new Date(s.createdAt), 'dd/MM/yyyy HH:mm')}</p>
+                        </div>
+                    </button>
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(s.id);
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg opacity-0 group-hover/item:opacity-100 transition-all"
+                        title="Xóa phiên chat"
+                    >
+                        <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                </div>
             ))}
         </div>
     </div>
 ));
 
-const CreditLog = memo(({ thinkingSteps, isLoading }: any) => (
+interface CreditLogProps {
+    thinkingSteps: ThinkingStep[];
+    isLoading: boolean;
+}
+
+const CreditLog = memo(({ thinkingSteps, isLoading }: CreditLogProps) => (
     <div className="w-80 border-l border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col p-6 hidden lg:flex">
         <div className="flex items-center gap-2 mb-6 text-fpt-orange">
             <Activity className="w-5 h-5" />
@@ -91,7 +115,7 @@ const CreditLog = memo(({ thinkingSteps, isLoading }: any) => (
 
         <div className="flex-1 space-y-6 overflow-y-auto custom-scrollbar pr-2">
             {thinkingSteps.length > 0 ? (
-                thinkingSteps.map((step: any) => (
+                thinkingSteps.map((step: ThinkingStep) => (
                     <div key={step.stage} className="relative pl-6 border-l-2 border-orange-100 dark:border-orange-900/20 py-1 transition-all hover:border-fpt-orange">
                         <div className="absolute -left-[9px] top-2 w-4 h-4 rounded-full bg-orange-50 dark:bg-orange-900/10 border-2 border-fpt-orange flex items-center justify-center">
                             <div className="w-1 h-1 rounded-full bg-fpt-orange"></div>
@@ -131,7 +155,14 @@ const CreditLog = memo(({ thinkingSteps, isLoading }: any) => (
     </div>
 ));
 
-const ChatInput = memo(({ onSendMessage, onUploadFile, isLoading, disabled }: any) => {
+interface ChatInputProps {
+    onSendMessage: (msg: string) => void;
+    onUploadFile: (file: File) => void;
+    isLoading: boolean;
+    disabled: boolean;
+}
+
+const ChatInput = memo(({ onSendMessage, onUploadFile, isLoading, disabled }: ChatInputProps) => {
     const [localValue, setLocalValue] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -196,53 +227,69 @@ export const ChatPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [thinkingSteps, setThinkingSteps] = useState<ThinkingStep[]>([]);
-    const [selectedRoutingModel, setSelectedRoutingModel] = useState('llama-3.3-70b-versatile');
-    const [selectedAnswerModel, setSelectedAnswerModel] = useState('llama-3.3-70b-versatile');
+    const [selectedRoutingModel, setSelectedRoutingModel] = useState('llama-3.1-8b-instant');
+    const [selectedAnswerModel, setSelectedAnswerModel] = useState('llama-3.1-8b-instant');
     const [userRole, setUserRole] = useState('');
+    const [userId, setUserId] = useState<string | null>(null);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const lastUserIdRef = useRef<string | null>(null);
 
     useEffect(() => {
-        loadSessions();
-        // Read user role from localStorage
-        try {
-            const userStr = localStorage.getItem('user');
-            if (userStr) {
-                const userData = JSON.parse(userStr);
-                setUserRole(userData.role || '');
-            }
-        } catch {
-            // ignore
-        }
-    }, []);
-
-    useEffect(() => {
-        scrollToBottom();
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
-
-    const loadSessions = async () => {
+    const loadSessions = useCallback(async () => {
         try {
             const data = await chatService.getSessions();
             setSessions(data);
             if (data.length > 0 && !currentSession) {
                 handleSelectSession(data[0]);
             }
-        } catch (error) {
+        } catch {
             toast.error('Không thể tải danh sách phiên chat');
         }
-    };
+    }, [currentSession]);
+
+    useEffect(() => {
+        loadSessions();
+    }, [loadSessions]);
+
+    // Read user role & ID from localStorage when location.pathname changes
+    useEffect(() => {
+        try {
+            const userStr = localStorage.getItem('user');
+            if (userStr) {
+                const userData = JSON.parse(userStr);
+                setUserRole(userData.role || '');
+                setUserId(userData.id?.toString() || null);
+            } else {
+                setUserRole('');
+                setUserId(null);
+            }
+        } catch {
+            setUserRole('');
+            setUserId(null);
+        }
+    }, [location.pathname]);
+
+    // Reset session only if user ID actually changes (to prevent infinite loop)
+    useEffect(() => {
+        if (userId && userId !== lastUserIdRef.current) {
+            setCurrentSession(null);
+            setMessages([]);
+            loadSessions();
+            lastUserIdRef.current = userId;
+        }
+    }, [userId, loadSessions]);
 
     const handleSelectSession = async (session: AIChatSession) => {
         setCurrentSession(session);
         try {
             const msgs = await chatService.getMessages(session.id);
             setMessages(msgs);
-            setThinkingSteps([]); // Reset credit log when switching session
-        } catch (error) {
+            setThinkingSteps([]);
+        } catch {
             toast.error('Không thể tải tin nhắn');
         }
     };
@@ -254,10 +301,27 @@ export const ChatPage: React.FC = () => {
             setCurrentSession(newSession);
             setMessages([]);
             setThinkingSteps([]);
-        } catch (error) {
+        } catch {
             toast.error('Không thể tạo phiên chat mới');
         }
     }, []);
+
+    const handleDeleteSession = useCallback(async (sessionId: number) => {
+        if (!window.confirm('Bạn có chắc chắn muốn xóa phiên chat này?')) return;
+
+        try {
+            await chatService.deleteSession(sessionId);
+            setSessions(prev => prev.filter(s => s.id !== sessionId));
+            if (currentSession?.id === sessionId) {
+                setCurrentSession(null);
+                setMessages([]);
+                setThinkingSteps([]);
+            }
+            toast.success('Đã xóa phiên chat');
+        } catch {
+            toast.error('Không thể xóa phiên chat');
+        }
+    }, [currentSession]);
 
     const handleSendMessage = useCallback(async (content: string) => {
         if (!content.trim() || !currentSession || isLoading) return;
@@ -294,12 +358,12 @@ export const ChatPage: React.FC = () => {
             if (messages.length === 0) {
                 loadSessions();
             }
-        } catch (error) {
+        } catch {
             toast.error('Lỗi khi gửi tin nhắn');
         } finally {
             setIsLoading(false);
         }
-    }, [currentSession, isLoading, selectedRoutingModel, selectedAnswerModel, messages.length]);
+    }, [currentSession, isLoading, selectedRoutingModel, selectedAnswerModel, messages.length, loadSessions]);
 
     const handleUploadFile = useCallback(async (file: File) => {
         if (!file || !currentSession) return;
@@ -344,12 +408,12 @@ export const ChatPage: React.FC = () => {
             }
 
             toast.success('Phân tích file hoàn tất');
-        } catch (error) {
+        } catch {
             toast.error('Lỗi khi tải lên file');
         } finally {
             setIsLoading(false);
         }
-    }, [currentSession, selectedRoutingModel, selectedAnswerModel, messages.length]);
+    }, [currentSession, selectedRoutingModel, selectedAnswerModel, messages.length, loadSessions]);
 
 
     // Render correct sidebar by role
@@ -369,11 +433,8 @@ export const ChatPage: React.FC = () => {
             {renderSidebar()}
 
             {/* Main content — offset by fixed w-16 sidebar */}
-            <div className="ml-16 flex flex-col" style={{ height: '100vh' }}>
-                {/* App common header */}
-                <CommonHeader title="FAMS AI Assistant" />
-
-                {/* Chat area fills remaining height below the header */}
+            <div className="ml-16 flex flex-col h-screen overflow-hidden">
+                {/* Chat area fills the entire height */}
                 <div className="flex flex-1 overflow-hidden">
                     {/* Chat sessions sidebar */}
                     <ChatSidebar
@@ -382,6 +443,7 @@ export const ChatPage: React.FC = () => {
                         isSidebarOpen={isSidebarOpen}
                         onSelect={handleSelectSession}
                         onNewChat={handleNewChat}
+                        onDelete={handleDeleteSession}
                     />
 
 
@@ -400,7 +462,9 @@ export const ChatPage: React.FC = () => {
                                         <Bot className="w-6 h-6 text-white" />
                                     </div>
                                     <div>
-                                        <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">FAMS AI Assistant</h1>
+                                        <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
+                                            {userRole ? `FAMS AI ${userRole.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}` : 'FAMS AI Assistant'}
+                                        </h1>
                                         <div className="flex items-center gap-1.5">
                                             <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
                                             <span className="text-[10px] text-gray-500 dark:text-zinc-400 uppercase tracking-wider font-semibold">Cơ chế 4 giai đoạn</span>
@@ -433,7 +497,7 @@ export const ChatPage: React.FC = () => {
                             </div>
                         </header>
 
-                        <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-8 custom-scrollbar relative">
+                        <div className="flex-1 overflow-y-auto px-3 md:px-0 py-6 md:py-8 space-y-6 custom-scrollbar relative flex flex-col items-center w-full">
                             {messages.length === 0 && !isLoading && (
                                 <div className="h-full flex flex-col items-center justify-center text-center max-w-2xl mx-auto space-y-8 animate-in fade-in zoom-in duration-700">
                                     <div className="relative">
@@ -499,12 +563,29 @@ export const ChatPage: React.FC = () => {
                 .custom-scrollbar::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
                 dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #27272a; }
                 
-                .prose table { border-collapse: collapse; width: 100%; margin: 1em 0; background: white; }
-                .dark .prose table { background: transparent; }
-                .prose th { background: #f9fafb; font-weight: 600; text-align: left; }
-                .dark .prose th { background: #18181b; }
-                .prose td, .prose th { border: 1px solid #e5e7eb; }
-                .dark .prose td, .dark .prose th { border: 1px solid #27272a; }
+                /* ── Chat Table Professional Styling ── */
+                .chat-table-wrapper { overflow-x: auto; }
+                .chat-table-wrapper table {
+                    border-collapse: collapse; width: 100%; margin: 0.75em 0;
+                    background: white; border-radius: 8px; overflow: hidden;
+                    font-size: 13px; border: 1px solid #e5e7eb;
+                }
+                .dark .chat-table-wrapper table { background: #18181b; border-color: #27272a; }
+                .chat-table-wrapper th {
+                    background: #f1f5f9; font-weight: 600; text-align: left;
+                    padding: 8px 12px; white-space: nowrap; color: #334155;
+                    border-bottom: 2px solid #e2e8f0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em;
+                }
+                .dark .chat-table-wrapper th { background: #1e1e22; color: #a1a1aa; border-bottom-color: #27272a; }
+                .chat-table-wrapper td {
+                    padding: 6px 12px; border-bottom: 1px solid #f1f5f9; color: #475569;
+                }
+                .dark .chat-table-wrapper td { border-bottom-color: #27272a; color: #d4d4d8; }
+                .chat-table-wrapper tr:nth-child(even) td { background: #f8fafc; }
+                .dark .chat-table-wrapper tr:nth-child(even) td { background: #1a1a1e; }
+                .chat-table-wrapper tr:hover td { background: #fff7ed; }
+                .dark .chat-table-wrapper tr:hover td { background: #1c1917; }
+                .chat-table-wrapper tr:last-child td { border-bottom: none; }
             `}</style>
                 </div>
             </div>

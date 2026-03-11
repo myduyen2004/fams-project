@@ -34,6 +34,7 @@
     "react-quill": "^2.0.0",
     "react-router-dom": "^7.11.0",
     "recharts": "^3.7.0",
+    "remark-gfm": "^4.0.1",
     "sockjs-client": "^1.6.1",
     "three": "^0.182.0",
     "toast": "^0.5.4",

@@ -3,15 +3,17 @@ tools/executor.py
 Stage 2 – SQL executor.
 Xử lý tất cả tool_name → SQL → kết quả.
 Không chứa SQL — tất cả đều từ db/queries.py.
+
+v2.1: Tích hợp normalize_entities() để chuẩn hóa date expressions
 """
 from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-from loguru import logger
+from loguru import logger # type: ignore
 
 from db.pool import db_pool
-from db.queries import TEMPLATES, build_params
+from db.queries import TEMPLATES, build_params, normalize_entities
 
 # Tools được backend dispatch (không cần SQL ở đây)
 _BACKEND_ACTIONS = {
@@ -41,6 +43,8 @@ _NAVIGATE_ONLY = {
     "view_dashboard", "view_logs", "view_alerts", "view_wifi_aps",
     "view_exam_grades", "view_resit_grades",
     "view_assignments", "view_messages",
+    "view_specializations", "view_sub_specializations",  # ✅ FIX: added
+    "view_inactive_users",  # ✅ FIX: added
 }
 
 _MUTATION_PREFIXES = ("create_", "update_", "delete_", "approve_", "reject_",
@@ -58,6 +62,7 @@ class ToolExecutor:
         intent_data: Dict[str, Any],
         user_id: int,
         user_role: str,
+        user_code: str = None,  # Thêm param user_code
     ) -> Any:
         tool_name:   str  = intent_data.get("toolName") or ""
         entities:    dict = intent_data.get("entities") or {}
@@ -70,8 +75,56 @@ class ToolExecutor:
             for key, val in action_params.items():
                 if val and key not in entities:
                     entities[key] = val
-            # Cập nhật lại intent_data để build_params nhận đúng
-            intent_data["entities"] = entities
+        
+        # ══════════════════════════════════════════════════════════════════
+        # ✅ NEW: Normalize entities (TODAY→date thực, inject user_code...)
+        # ══════════════════════════════════════════════════════════════════
+        entities = normalize_entities(entities, user_code=user_code, tool_name=tool_name)
+        intent_data["entities"] = entities  # Cập nhật lại intent_data
+        logger.info(f"[Executor] execute called: tool={tool_name} entities={entities} user_code={user_code}")
+        
+        # ══════════════════════════════════════════════════════════════════
+        # ✅ NEW: Auto-convert full_name → code khi tool yêu cầu code
+        # ══════════════════════════════════════════════════════════════════
+        if tool_name == "get_other_lecturer_schedule":
+            # Tool này cần lecturer_code hoặc lecturer_name
+            if "lecturer_code" not in entities and "full_name" in entities:
+                # User nhập tên thay vì mã → search trước để lấy mã
+                name = entities["full_name"]
+                logger.info(f"[Executor] Auto-convert: lecturer full_name='{name}' → searching for code...")
+                
+                # Search lecturer by name first
+                search_result = self._search_user_by_name_helper(name)
+                if search_result and len(search_result) > 0:
+                    lecturer_code = search_result[0].get("code")
+                    if lecturer_code:
+                        entities["lecturer_code"] = lecturer_code
+                        logger.info(f"[Executor] Found lecturer code: {lecturer_code}")
+                else:
+                    logger.warning(f"[Executor] Lecturer '{name}' not found")
+                    return []  # Not found
+        
+        elif tool_name == "get_other_student_schedule":
+            if "student_code" not in entities and "full_name" in entities:
+                name = entities["full_name"]
+                logger.info(f"[Executor] Auto-convert: student full_name='{name}' → searching for code...")
+                
+                search_result = self._search_user_by_name_helper(name)
+                if search_result and len(search_result) > 0:
+                    student_code = search_result[0].get("code")
+                    if student_code:
+                        entities["student_code"] = student_code
+                        logger.info(f"[Executor] Found student code: {student_code}")
+                else:
+                    logger.warning(f"[Executor] Student '{name}' not found")
+                    return []
+        
+        elif tool_name == "get_enrollments_by_class":
+            # Nếu nhận full_name thay vì class_name/class_code
+            if "class_name" not in entities and "full_name" in entities:
+                # Assume full_name is actually a class_name search
+                entities["class_name"] = entities.pop("full_name")
+                logger.info(f"[Executor] Moved full_name → class_name for get_enrollments_by_class")
 
         # ── Backend dispatch → skip SQL ──────────────────────────────────
         if tool_name in _BACKEND_ACTIONS:
@@ -98,9 +151,11 @@ class ToolExecutor:
         # ── Template SQL ──────────────────────────────────────────────────
         try:
             resolved_key, params = build_params(tool_name, entities, user_id, user_role)
+            logger.info(f"[Executor] resolved_key={resolved_key} params={params}")
         except ValueError as exc:
             logger.warning(f"[Executor] param error '{tool_name}': {exc}")
-            return str(exc)
+            # Return dict đặc biệt để chatbot_service hỏi lại user
+            return {"__missing_field__": True, "error": str(exc), "tool": tool_name}
 
         sql = TEMPLATES.get(resolved_key)
         if not sql:
@@ -140,6 +195,21 @@ class ToolExecutor:
         return self._run(clean, (), mutation=False, tool="dynamic_sql")
 
     # ── Navigation DB lookups ─────────────────────────────────────────────────
+    def _search_user_by_name_helper(self, full_name: str) -> list:
+        """Search user by name and return basic info (code, role)."""
+        try:
+            sql = TEMPLATES.get("search_user_by_name")
+            if not sql:
+                return []
+            
+            with db_pool.get_cursor() as cur:
+                cur.execute(sql, (f"%{full_name}%",))
+                rows = cur.fetchall()
+                return [dict(r) for r in rows]
+        except Exception as exc:
+            logger.error(f"[Executor] search_user_by_name error: {exc}")
+            return []
+
     def _resolve_major_redirect(self, intent_data: dict, entities: dict) -> Dict[str, Any]:
         val = (entities.get("major_name") or entities.get("major_code")
                or entities.get("keyword"))
