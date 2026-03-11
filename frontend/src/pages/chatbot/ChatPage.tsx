@@ -11,6 +11,8 @@ import { LecturerSidebar } from '../../components/lecturer/LecturerSidebar';
 import { StudentSidebar } from '../../components/student/StudentSidebar';
 import { AdminSidebar } from '../../components/admin/AdminSidebar';
 
+import { CommonHeader } from '../../components/common/CommonHeader';
+
 // --- Constants ---
 const MODELS = [
     { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B (Groq)' },
@@ -434,6 +436,7 @@ export const ChatPage: React.FC = () => {
 
             {/* Main content — offset by fixed w-16 sidebar */}
             <div className="ml-16 flex flex-col h-screen overflow-hidden">
+                <CommonHeader title="Hỏi đáp AI" />
                 {/* Chat area fills the entire height */}
                 <div className="flex flex-1 overflow-hidden">
                     {/* Chat sessions sidebar */}
