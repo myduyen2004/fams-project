@@ -68,6 +68,10 @@ public class Notification {
     @Builder.Default
     private TargetType targetType = TargetType.ALL;
 
+    // ✅ NEW: Tên lớp cụ thể (khi targetType=CLASS)
+    @Column(length = 100)
+    private String targetClassName;
+
     // === Scheduling ===
     // Thời gian lên lịch gửi
     private LocalDateTime scheduledAt;
@@ -122,6 +126,7 @@ public class Notification {
         ALL, // Tất cả
         STUDENT, // Tất cả sinh viên
         LECTURER, // Tất cả giảng viên
+        CLASS, // Lớp cụ thể
         USER, // Cá nhân người dùng
     }
 

@@ -101,6 +101,6 @@ public class Room {
     public enum RoomStatus {
         ACTIVE,
         MAINTENANCE,
-        INACTIVE
+        INACTIVE, AVAILABLE
     }
 }
