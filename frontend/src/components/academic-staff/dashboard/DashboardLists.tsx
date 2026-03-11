@@ -153,8 +153,6 @@ export const SystemActivityLog: React.FC = () => {
   const navigate = useNavigate();
   const [logs, setLogs] = useState<SystemLogItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
 
   const fetchLogs = async (pageNum: number, append = false) => {
@@ -165,8 +163,6 @@ export const SystemActivityLog: React.FC = () => {
         size: 8
       });
       setLogs(prev => append ? [...prev, ...data.content] : data.content);
-      setTotalPages(data.totalPages);
-      setPage(pageNum);
     } catch (error) {
       console.error('Failed to fetch system logs:', error);
     } finally {
