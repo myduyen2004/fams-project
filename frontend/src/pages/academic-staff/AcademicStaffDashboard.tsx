@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
-import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { academicStaffService } from '../../services/api/academicStaffService';
 import { AcademicStaffDashboardResponse } from '../../types/dashboard';
 import toast from 'react-hot-toast';

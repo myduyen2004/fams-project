@@ -20,9 +20,7 @@ import {
 } from 'lucide-react';
 import attendanceService, { 
     StudentAttendanceSummaryResponse, 
-    ClassAttendanceSummary,
     IndividualAttendanceDetail,
-    IndividualSlotAttendance
 } from '../../services/api/attendanceService';
 import { lecturerClassService } from '../../services/api/LecturerClass';
 
