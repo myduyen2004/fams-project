@@ -12,7 +12,7 @@ import java.util.Map;
 
 public interface StudentService {
 
-    Page<StudentResponse> getAllStudents(String search, String status, String major, String specialization,
+    Page<StudentResponse> getAllStudents1(String search, String status, String major, String specialization,
             String subSpecialization, Pageable pageable);
 
     StudentResponse getStudentById(Long id);
@@ -38,4 +38,10 @@ public interface StudentService {
     List<String> getSpecializationsByMajor(String majorName);
 
     List<String> getSubSpecializationsBySpecialization(String specializationName);
+
+    Page<StudentResponse> getAllStudents(String search, String status, String majorStr, String specializationStr,
+            String subSpecializationStr, Pageable pageable);
+
+    Page<StudentResponse> getAllStudents(String search, String status, String major, String specialization,
+            Pageable pageable);
 }
