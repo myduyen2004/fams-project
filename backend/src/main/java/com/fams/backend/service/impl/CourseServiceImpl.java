@@ -35,6 +35,7 @@ public class CourseServiceImpl implements CourseService {
     private final SpecializationCourseRepository specializationCourseRepository;
     private final SubSpecializationCourseRepository subSpecializationCourseRepository;
     private final SubSpecializationRepository subSpecializationRepository;
+    private final SystemLogService systemLogService;
 
     @Override
     public Page<CourseResponse> getCourses(String keyword, Course.CourseStatus status, Pageable pageable) {
@@ -67,7 +68,9 @@ public class CourseServiceImpl implements CourseService {
                 .status(Course.CourseStatus.ACTIVE)
                 .build();
 
-        return convertToResponse(courseRepository.save(course));
+        Course saved = courseRepository.save(course);
+        systemLogService.logCourseCreated(saved.getCode(), saved.getName());
+        return convertToResponse(saved);
     }
 
     @Override
@@ -91,7 +94,9 @@ public class CourseServiceImpl implements CourseService {
         course.setNumberOfSlots(request.getNumberOfSlots());
         course.setIsCalculatedInGpa(request.getIsCalculatedInGpa() != null ? request.getIsCalculatedInGpa() : true);
 
-        return convertToResponse(courseRepository.save(course));
+        Course saved = courseRepository.save(course);
+        systemLogService.logCourseUpdated(saved.getCode(), saved.getName());
+        return convertToResponse(saved);
     }
 
     @Override
@@ -100,7 +105,9 @@ public class CourseServiceImpl implements CourseService {
         Course course = courseRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy môn học"));
         course.setStatus(status);
-        return convertToResponse(courseRepository.save(course));
+        Course saved = courseRepository.save(course);
+        systemLogService.logCourseStatusChanged(saved.getCode(), status.name());
+        return convertToResponse(saved);
     }
 
     @Override
@@ -115,13 +122,17 @@ public class CourseServiceImpl implements CourseService {
     @Override
     @Transactional
     public void deleteCourse(Long id) {
+        Course course = courseRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy môn học"));
         if (subSpecializationCourseRepository.existsByCourseId(id)) {
             throw new IllegalArgumentException("Không thể xóa môn học đang được sử dụng trong chương trình đào tạo");
         }
         if (specializationCourseRepository.existsByCourseId(id)) {
             throw new IllegalArgumentException("Không thể xóa môn học đang được sử dụng trong chương trình đào tạo");
         }
+        String courseCode = course.getCode();
         courseRepository.deleteById(id);
+        systemLogService.logCourseDeleted(courseCode);
     }
 
     @Override
@@ -422,6 +433,7 @@ public class CourseServiceImpl implements CourseService {
         result.put("created", createdCount);
         result.put("failed", failedCount);
         result.put("errors", errors);
+        systemLogService.logCourseImportCompleted(createdCount, failedCount);
         return result;
     }
 
@@ -484,6 +496,7 @@ public class CourseServiceImpl implements CourseService {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             workbook.write(out);
             workbook.close();
+            systemLogService.logCourseExported();
             return out.toByteArray();
         } catch (Exception e) {
             log.error("Error exporting courses", e);

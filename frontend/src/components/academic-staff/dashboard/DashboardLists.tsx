@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, Clock, MapPin, Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { academicStaffService, ScheduleRequestResponse } from '../../../services/api/academicStaffService';
+import { 
+  ChevronRight, Clock, MapPin, Loader2, 
+  Info, CheckCircle2, AlertCircle, XCircle, 
+  ExternalLink 
+} from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { academicStaffService, ScheduleRequestResponse, SystemLogItem } from '../../../services/api/academicStaffService';
 
 interface RequestItemProps {
   name: string;
@@ -143,8 +147,11 @@ export const PendingRequests: React.FC = () => {
   );
 };
 
+import { useWebSocket } from '../../../hooks/useWebSocket';
+
 export const SystemActivityLog: React.FC = () => {
-  const [logs, setLogs] = useState<import('../../../services/api/academicStaffService').SystemLogItem[]>([]);
+  const navigate = useNavigate();
+  const [logs, setLogs] = useState<SystemLogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -153,7 +160,10 @@ export const SystemActivityLog: React.FC = () => {
   const fetchLogs = async (pageNum: number, append = false) => {
     try {
       append ? setLoadingMore(true) : setLoading(true);
-      const data = await academicStaffService.getSystemLogs(pageNum, 8);
+      const data = await academicStaffService.getSystemLogs({
+        page: pageNum,
+        size: 8
+      });
       setLogs(prev => append ? [...prev, ...data.content] : data.content);
       setTotalPages(data.totalPages);
       setPage(pageNum);
@@ -169,11 +179,34 @@ export const SystemActivityLog: React.FC = () => {
     fetchLogs(0);
   }, []);
 
-  const typeConfig: Record<string, { color: string; bg: string; border: string; icon: string }> = {
-    info: { color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-500/10', border: 'border-blue-100 dark:border-blue-500/20', icon: 'ℹ️' },
-    success: { color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-500/10', border: 'border-emerald-100 dark:border-emerald-500/20', icon: '✅' },
-    warning: { color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-500/10', border: 'border-amber-100 dark:border-amber-500/20', icon: '⚠️' },
-    error: { color: 'text-red-600', bg: 'bg-red-50 dark:bg-red-500/10', border: 'border-red-100 dark:border-red-500/20', icon: '❌' },
+  // Real-time updates via WebSocket
+  useWebSocket('/topic/system-logs', (newLogs: SystemLogItem[]) => {
+    if (Array.isArray(newLogs)) {
+      setLogs(newLogs);
+    }
+  });
+
+  const typeConfig: Record<string, { btnClass: string; icon: React.ReactNode; label: string }> = {
+    info: {
+      btnClass: 'text-orange-600 bg-orange-50 dark:bg-orange-500/10 border-orange-100 dark:border-orange-500/20',
+      icon: <Info className="w-5 h-5 text-orange-500" />,
+      label: 'THÔNG TIN'
+    },
+    success: {
+      btnClass: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20',
+      icon: <CheckCircle2 className="w-5 h-5 text-emerald-500" />,
+      label: 'THÀNH CÔNG'
+    },
+    warning: {
+      btnClass: 'text-amber-600 bg-amber-50 dark:bg-amber-500/10 border-amber-100 dark:border-amber-500/20',
+      icon: <AlertCircle className="w-5 h-5 text-amber-500" />,
+      label: 'CẢNH BÁO'
+    },
+    error: {
+      btnClass: 'text-red-600 bg-red-50 dark:bg-red-500/10 border-red-100 dark:border-red-500/20',
+      icon: <XCircle className="w-5 h-5 text-red-500" />,
+      label: 'THẤT BẠI'
+    },
   };
 
   return (
@@ -183,58 +216,94 @@ export const SystemActivityLog: React.FC = () => {
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Nhật ký hệ thống
           </h3>
-          <div className="flex items-center gap-1.5 text-[8px] font-black text-emerald-500 bg-emerald-50/60 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full uppercase tracking-[0.1em] border border-emerald-100 dark:border-emerald-500/20">
+          <div className="flex items-center gap-1.5 text-[9px] font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full uppercase tracking-widest border border-emerald-100 dark:border-emerald-500/20">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
             LIVE
           </div>
         </div>
+        <Link 
+          to="/academic-staff/logs"
+          className="text-fpt-orange hover:text-orange-600 transition-colors"
+        >
+          <ExternalLink className="w-4 h-4" />
+        </Link>
       </div>
 
-      <div className="flex-1 overflow-auto space-y-2 pr-1" style={{ maxHeight: '320px' }}>
-        {loading ? (
-          <div className="flex items-center justify-center py-10">
+      <div className="flex-1 overflow-auto">
+        {loading && !loadingMore && logs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10">
             <Loader2 className="w-6 h-6 text-gray-300 animate-spin" />
           </div>
         ) : logs.length > 0 ? (
-          <>
+          <div className="space-y-1">
             {logs.map((log) => {
               const config = typeConfig[log.type] || typeConfig.info;
+              const isSystem = log.performerName === 'Hệ thống' || !log.performerName;
+              
+              const timeAgo = (() => {
+                try {
+                  const date = new Date(log.timestamp.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1'));
+                  const now = new Date();
+                  const diffMs = now.getTime() - date.getTime();
+                  const diffMins = Math.floor(diffMs / 60000);
+                  if (diffMins < 1) return 'Vừa xong';
+                  if (diffMins < 60) return `${diffMins} phút trước`;
+                  if (diffMins < 1440) return `${Math.floor(diffMins / 60)} giờ trước`;
+                  return log.timestamp;
+                } catch { return log.timestamp; }
+              })();
+
               return (
                 <div
                   key={log.id}
-                  className={`flex items-start gap-3 p-3 rounded-xl border ${config.border} ${config.bg} transition-all hover:shadow-sm`}
+                  className="group flex items-center gap-4 p-4 rounded-xl hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-all cursor-pointer border border-transparent hover:border-gray-200 dark:hover:border-zinc-800"
+                  onClick={() => navigate('/academic-staff/logs')}
                 >
-                  <span className="text-sm mt-0.5 flex-shrink-0">{config.icon}</span>
+                  <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold overflow-hidden flex-shrink-0">
+                    {isSystem ? (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-zinc-800/50 text-orange-500">
+                        {config.icon}
+                      </div>
+                    ) : log.performerAvatar ? (
+                      <img src={log.performerAvatar} alt={log.performerName} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-base">{log.performerName?.charAt(0).toUpperCase()}</span>
+                    )}
+                  </div>
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h4 className={`text-sm font-semibold ${config.color} truncate`}>{log.title}</h4>
-                      <span className={`text-[9px] font-bold ${config.color} ${config.bg} px-1.5 py-0.5 rounded border ${config.border} flex-shrink-0 uppercase`}>
-                        {log.type}
-                      </span>
+                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight truncate">
+                        {log.title}
+                      </h4>
+                      {!isSystem && (
+                        <span className="text-[9px] font-bold text-gray-400 bg-gray-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded flex-shrink-0 uppercase">
+                          {log.performerRole || 'Hệ thống'}
+                        </span>
+                      )}
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">{log.description}</p>
-                    <p className="text-[10px] text-gray-400 mt-1">{log.timestamp}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
+                      {log.description}
+                    </p>
+                    <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-2">
+                      <span>{timeAgo}</span>
+                      {log.ipAddress && <span>· {log.ipAddress}</span>}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded-lg border uppercase tracking-wide ${config.btnClass}`}>
+                      {config.label}
+                    </span>
+                    <ChevronRight size={16} className="text-gray-400 group-hover:text-orange-500 transition-colors" />
                   </div>
                 </div>
               );
             })}
-            {page < totalPages - 1 && (
-              <button 
-                onClick={() => fetchLogs(page + 1, true)}
-                disabled={loadingMore}
-                className="w-full py-2 text-xs font-semibold text-gray-500 hover:text-orange-600 transition-colors flex items-center justify-center gap-2"
-              >
-                {loadingMore ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  'Xem thêm'
-                )}
-              </button>
-            )}
-          </>
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-10 text-gray-400">
-            <p className="text-sm font-medium">Chưa có nhật ký nào</p>
+             <p className="text-sm font-medium">Chưa có hoạt động nào được ghi lại</p>
           </div>
         )}
       </div>
@@ -278,7 +347,7 @@ export const AttendanceLog: React.FC = () => {
                       {log.time}
                    </div>
                 </div>
-             </div>
+              </div>
              <span className="text-xs font-medium text-emerald-600 bg-emerald-50 dark:bg-zinc-800 px-2.5 py-1 rounded-lg">
                 {log.status}
              </span>
@@ -354,9 +423,12 @@ export const RunningRooms: React.FC<{ rooms?: any[], total?: number }> = ({ room
       </div>
 
       <div className="mt-5 border-t border-gray-100 dark:border-zinc-800 pt-4 text-center">
-        <button className="text-xs font-medium text-gray-500 hover:text-orange-600 transition-colors">
+        <Link 
+          to="/academic-staff/rooms"
+          className="text-xs font-medium text-gray-500 hover:text-orange-600 transition-colors"
+        >
           Xem tất cả phòng
-        </button>
+        </Link>
       </div>
     </div>
   );

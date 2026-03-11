@@ -66,13 +66,29 @@ public class AcademicStaffDashboardController {
 
     @GetMapping("/dashboard/system-logs")
     @Operation(summary = "Lấy nhật ký hệ thống (phân trang)")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<org.springframework.data.domain.Page<com.fams.backend.dto.response.SystemLogResponse>> getSystemLogs(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) com.fams.backend.entity.SystemLog.LogType type,
+            @RequestParam(required = false) com.fams.backend.entity.User.UserRole role,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime startDate,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime endDate,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        log.info("GET /api/academic-staff/dashboard/system-logs | page={}, size={}", page, size);
-        org.springframework.data.domain.Page<com.fams.backend.entity.SystemLog> logs = 
-            systemLogRepository.findAllByOrderByCreatedAtDesc(
-                org.springframework.data.domain.PageRequest.of(page, size));
+            @RequestParam(defaultValue = "15") int size) {
+        log.info("GET /api/academic-staff/dashboard/system-logs | search={}, type={}, role={}, page={}, size={}", search, type, role, page, size);
+        
+        String searchParam = (search != null && !search.trim().isEmpty()) 
+            ? "%" + search.trim().toLowerCase() + "%" 
+            : null;
+
+        org.springframework.data.domain.Page<com.fams.backend.entity.SystemLog> logs = systemLogRepository.findAllByFilters(
+                searchParam, 
+                type, 
+                role, 
+                startDate, 
+                endDate,
+                org.springframework.data.domain.PageRequest.of(page, size, org.springframework.data.domain.Sort.by("createdAt").descending())
+        );
         
         org.springframework.data.domain.Page<com.fams.backend.dto.response.SystemLogResponse> response = 
             logs.map(logEntry -> com.fams.backend.dto.response.SystemLogResponse.builder()
@@ -81,6 +97,12 @@ public class AcademicStaffDashboardController {
                 .description(logEntry.getDescription())
                 .timestamp(logEntry.getCreatedAt().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")))
                 .type(logEntry.getType().name().toLowerCase())
+                .performerName(logEntry.getPerformer() != null ? logEntry.getPerformer().getFullName() : "Hệ thống")
+                .performerAvatar(logEntry.getPerformer() != null ? logEntry.getPerformer().getAvatar() : null)
+                .ipAddress(logEntry.getIpAddress())
+                .userAgent(logEntry.getUserAgent())
+                .oldValue(logEntry.getOldValue())
+                .newValue(logEntry.getNewValue())
                 .build());
         
         return ResponseEntity.ok(response);

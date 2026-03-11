@@ -50,6 +50,7 @@ public class AuthService implements UserDetailsService {
     private final EmailService emailService;
     private final StringRedisTemplate redisTemplate;
     private final UserActivityService userActivityService;
+    private final SystemLogService systemLogService;
 
     private static final String OTP_PREFIX = "otp:";
     private static final long OTP_EXPIRY_MINUTES = 10;
@@ -131,8 +132,14 @@ public class AuthService implements UserDetailsService {
         if (!matches) {
             log.warn("Login failed | username={} | reason=INVALID_PASSWORD | userId={}",
                     username, user.getId());
+            // Track failures in Redis for brute force detection
+            trackLoginFailure(username);
             throw new UnauthorizedException("Tài khoản hoặc mật khẩu không đúng");
         }
+
+        // 4.5. Success - Reset failures
+        resetLoginFailures(username);
+        systemLogService.logLoginSuccess(username);
 
         // 5. Generate JWT token
         String token = jwtUtil.generateToken(user.getUsername());
@@ -340,5 +347,22 @@ public class AuthService implements UserDetailsService {
         // Delete OTP after use
         redisTemplate.delete(OTP_PREFIX + request.getEmail());
         log.info("Password reset successful for email: {}", request.getEmail());
+        systemLogService.logPasswordChanged(user.getUsername());
+    }
+
+    private void trackLoginFailure(String username) {
+        String key = "login_failures:" + username;
+        Long failures = redisTemplate.opsForValue().increment(key);
+        redisTemplate.expire(key, 30, java.util.concurrent.TimeUnit.MINUTES);
+        
+        if (failures != null && failures >= 5) {
+            systemLogService.logBruteForceWarning(username, failures.intValue());
+        } else {
+            systemLogService.logLoginFailed(username);
+        }
+    }
+
+    private void resetLoginFailures(String username) {
+        redisTemplate.delete("login_failures:" + username);
     }
 }
