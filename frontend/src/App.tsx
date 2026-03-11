@@ -80,6 +80,7 @@ const LecturerRoomDetail = lazy(() => import('./pages/lecturer/RoomDetail').then
 const LecturerSemestersPage = lazy(() => import('./pages/lecturer/SemestersPage').then(m => ({ default: m.SemestersPage })));
 const AcademicStaffSystemLogsPage = lazy(() => import('./pages/academic-staff/SystemLogsPage').then(m => ({ default: m.SystemLogsPage })));
 const ChatPage = lazy(() => import('./pages/chatbot/ChatPage').then(m => ({ default: m.ChatPage })));
+const StudentClassMembersPage = lazy(() => import('./pages/student/StudentClassMembersPage').then(m => ({ default: m.StudentClassMembersPage })));
 
 const PageLoader = () => (
   <div className="flex h-screen w-full items-center justify-center bg-gray-50 dark:bg-zinc-950">
@@ -386,6 +387,7 @@ function App() {
           <Route path="/student/rooms" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentRoomList /></ProtectedRoute>} />
           <Route path="/student/rooms/:id" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentRoomDetail /></ProtectedRoute>} />
           <Route path="/student/semesters" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentSemestersPage /></ProtectedRoute>} />
+          <Route path="/student/classes/:className/members" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentClassMembersPage /></ProtectedRoute>} />
           <Route
             path="/academic-staff/dashboard"
             element={
