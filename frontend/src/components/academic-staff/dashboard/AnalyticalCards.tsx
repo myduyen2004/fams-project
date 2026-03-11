@@ -80,7 +80,7 @@ const StatCard: React.FC<Omit<StatCardProps, 'icon'>> = ({ title, value, trend, 
 };
 
 export const AnalyticalCards: React.FC<{ stats?: any }> = ({ stats }) => {
-  const studentData = [
+  const studentData = stats?.studentStats || [
     { name: 'CNTT', value: 8432 },
     { name: 'Kinh tế', value: 5210 },
     { name: 'Ngôn ngữ', value: 5400 },
@@ -89,7 +89,7 @@ export const AnalyticalCards: React.FC<{ stats?: any }> = ({ stats }) => {
     { name: 'Marketing', value: 4200 }
   ];
   
-  const lecturerData = [
+  const lecturerData = stats?.lecturerStats || [
     { name: 'Toán-Tin', value: 180 },
     { name: 'Kỹ thuật', value: 214 },
     { name: 'Ngoại ngữ', value: 130 },

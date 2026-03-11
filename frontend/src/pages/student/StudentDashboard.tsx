@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { StudentLayout } from '../../layouts/StudentLayout';
 import { Card } from '../../components/common/Card';
 import {
-    CheckCircle2,
-    XCircle,
     ArrowUpRight,
     Bookmark,
     Clock,
@@ -11,20 +9,80 @@ import {
     Lock
 } from 'lucide-react';
 
-import { StudentNotificationsWidget } from './StudentNotificationsWidget';
 import { MiniCalendar } from '../../components/common/MiniCalendar';
 import { timetableService } from '../../services/api/timetableService';
+import { useNavigate } from 'react-router-dom';
+import attendanceService, { StudentAttendanceSummaryResponse } from '../../services/api/attendanceService';
+import { lecturerClassService } from '../../services/api/LecturerClass';
+import { authService, UserInfo } from '../../services/api/authService';
 
 export const StudentDashboard: React.FC = () => {
+    const navigate = useNavigate();
     const [slotCounts, setSlotCounts] = useState<Record<string, number>>({});
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
     const [selectedDaySchedule, setSelectedDaySchedule] = useState<any>(null);
     const [isScheduleHidden, setIsScheduleHidden] = useState(false);
+    const [currentTime, setCurrentTime] = useState(new Date());
+    const [attendanceSummaries, setAttendanceSummaries] = useState<StudentAttendanceSummaryResponse | null>(null);
+    const [userProfile, setUserProfile] = useState<UserInfo | null>(null);
 
     useEffect(() => {
         fetchMonthlySlotCounts();
         fetchDaySchedule(new Date());
+        fetchAttendanceData();
+        fetchUserProfile();
+
+        const timer = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 60000);
+        return () => clearInterval(timer);
     }, []);
+
+    const fetchAttendanceData = async () => {
+        try {
+            const semesters = await lecturerClassService.getSemesters();
+            let semesterCode: string | undefined = undefined;
+            
+            if (semesters && semesters.length > 0) {
+                const ongoing = semesters.find(s => s.status === 'ONGOING');
+                semesterCode = ongoing ? ongoing.code : semesters[0].code;
+            }
+            
+            const data = await attendanceService.getStudentReport(semesterCode);
+            setAttendanceSummaries(data);
+        } catch (error) {
+            console.error('Failed to fetch attendance data:', error);
+            // Set empty summaries to clear loading state
+            setAttendanceSummaries({
+                studentName: '',
+                studentCode: '',
+                semesterName: 'N/A',
+                classSummaries: []
+            });
+        }
+    };
+
+    const fetchUserProfile = async () => {
+        try {
+            const profile = await authService.getCurrentUser();
+            setUserProfile(profile);
+        } catch (error) {
+            console.error('Failed to fetch user profile:', error);
+        }
+    };
+
+    const isToday = selectedDate.toDateString() === new Date().toDateString();
+
+    // Calculate indicator position
+    const getIndicatorPosition = () => {
+        if (!isToday) return null;
+        const hours = currentTime.getHours();
+        const minutes = currentTime.getMinutes();
+        if (hours < 7 || hours >= 19) return null;
+        return ((hours - 7) + minutes / 60) * (100 / 12);
+    };
+
+    const indicatorPos = getIndicatorPosition();
 
     const handleDateSelect = (date: Date) => {
         setSelectedDate(date);
@@ -131,10 +189,10 @@ export const StudentDashboard: React.FC = () => {
         <StudentLayout pageTitle="Tổng quan">
             <div className="space-y-6">
 
-                {/* Top Section: GPA & AI Suggestions */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Top Section: GPA, Absence Rate & Calendar (Optimized Proportions) */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     {/* GPA Card */}
-                    <Card className="p-6 bg-[#F37B24] text-white border-none relative overflow-hidden flex flex-col justify-between min-h-[200px] shadow-lg shadow-orange-500/20">
+                    <Card className="p-6 lg:col-span-4 bg-[#F37B24] text-white border-none relative overflow-hidden flex flex-col justify-between min-h-[200px] shadow-lg shadow-orange-500/20">
                         {/* Decorative circles */}
                         <div className="absolute -bottom-10 -left-6 w-32 h-32 bg-white/20 rounded-full"></div>
                         <div className="absolute -top-16 -right-16 w-56 h-56 bg-white/10 rounded-full"></div>
@@ -152,20 +210,85 @@ export const StudentDashboard: React.FC = () => {
 
                             <div className="mt-4">
                                 <div className="flex items-baseline gap-3 mb-4">
-                                    <span className="text-6xl font-black tracking-tight">3.45</span>
+                                    <span className="text-6xl font-black tracking-tight">
+                                        {typeof userProfile?.gpa === 'number' ? userProfile.gpa.toFixed(2) : '0.00'}
+                                    </span>
                                     <span className="text-2xl text-white/90 font-medium">/ 4.0</span>
                                 </div>
 
                                 <div className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-sm font-medium w-fit border border-white/10">
                                     <ArrowUpRight size={16} strokeWidth={3} />
-                                    <span>+0.15 so với kỳ trước</span>
+                                    <span>Danh hiệu: {
+                                        typeof userProfile?.gpa === 'number' 
+                                            ? userProfile.gpa >= 3.6 ? 'Xuất sắc' 
+                                            : userProfile.gpa >= 3.2 ? 'Giỏi' 
+                                            : userProfile.gpa >= 2.5 ? 'Khá' 
+                                            : 'Trung bình'
+                                            : 'Khá'
+                                    }</span>
                                 </div>
                             </div>
                         </div>
                     </Card>
 
+                    {/* Participation Rate Card (Expanded) */}
+                    <Card className="p-5 lg:col-span-5 flex flex-col">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-base font-bold text-gray-900 dark:text-white">Tỉ lệ chuyên cần</h3>
+                            <button className="text-[11px] text-fpt-orange hover:underline" onClick={() => navigate('/student/attendance')}>Chi tiết</button>
+                        </div>
+                        <div className="space-y-4 pr-1">
+                            {attendanceSummaries?.classSummaries && attendanceSummaries.classSummaries.length > 0 ? (
+                                attendanceSummaries.classSummaries.map((item, idx) => {
+                                    const isWarning = (item.absentPercentage ?? 0) >= 10;
+                                    const isDanger = (item.absentPercentage ?? 0) >= 20;
+                                    const progressColor = isDanger ? 'bg-red-500' : isWarning ? 'bg-yellow-500' : 'bg-emerald-500';
+                                    const textColor = isDanger ? 'text-red-500' : isWarning ? 'text-yellow-500' : 'text-emerald-500';
+                                    const statusText = isDanger ? 'Cảnh báo cấm thi' : isWarning ? 'Cảnh báo' : 'An toàn';
+                                    
+                                    const absPercent = typeof item.absentPercentage === 'number' ? item.absentPercentage : 0;
+                                    const participationRate = (100 - absPercent).toFixed(1);
+
+                                    return (
+                                        <div key={idx} className="group">
+                                            <div className="flex justify-between items-baseline text-xs mb-1.5">
+                                                <button 
+                                                    onClick={() => navigate('/student/attendance', { state: { selectedClassName: item.className } })}
+                                                    className="font-bold text-gray-800 dark:text-gray-200 hover:text-fpt-orange transition-colors"
+                                                >
+                                                    {item.className.split('-')[0]}
+                                                </button>
+                                                <span className={`font-black ${textColor} text-xs`}>
+                                                    {participationRate}%
+                                                </span>
+                                            </div>
+                                            <div className="h-2 w-full bg-gray-100 dark:bg-zinc-800/50 rounded-full overflow-hidden shadow-inner cursor-pointer"
+                                                onClick={() => navigate('/student/attendance', { state: { selectedClassName: item.className } })}
+                                            >
+                                                <div 
+                                                    className={`h-full ${progressColor} rounded-full transition-all duration-700 ease-out`} 
+                                                    style={{ width: `${participationRate}%` }}
+                                                />
+                                            </div>
+                                            <div className="flex justify-between mt-1">
+                                                <span className="text-[9px] font-medium text-gray-400 truncate max-w-[120px]" title={item.courseName}>{item.courseName}</span>
+                                                <span className={`${textColor} text-[9px] font-bold tracking-tight uppercase`}>
+                                                    {statusText} • Vắng {item.unexcusedAbsentCount}/{item.totalSlots}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                <div className="text-center py-4 text-gray-400 text-xs">
+                                    {attendanceSummaries ? 'Không có dữ liệu khóa học' : 'Đang tải...'}
+                                </div>
+                            )}
+                        </div>
+                    </Card>
+
                     {/* Calendar */}
-                    <div className="lg:col-span-2">
+                    <div className="lg:col-span-3">
                         <MiniCalendar
                             slotCounts={slotCounts}
                             onDateSelect={handleDateSelect}
@@ -225,12 +348,21 @@ export const StudentDashboard: React.FC = () => {
                                                 ))}
                                             </div>
 
+                                            {/* Real-time indicator line */}
+                                            {indicatorPos !== null && (
+                                                <div 
+                                                    className="absolute top-0 bottom-0 w-[2px] bg-red-500 z-20 pointer-events-none shadow-[0_0_8px_rgba(239,68,68,0.5)]"
+                                                    style={{ left: `${indicatorPos}%` }}
+                                                >
+                                                    <div className="absolute -top-1 -left-[5px] w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-zinc-900 shadow-sm" />
+                                                </div>
+                                            )}
+
                                             {selectedDaySchedule && selectedDaySchedule.slots && selectedDaySchedule.slots.length > 0 ? (
                                                 selectedDaySchedule.slots.map((slot: any, index: number) => {
                                                     const isCurrentlyActive = () => {
-                                                        if (!slot.startTime || !slot.endTime) return false;
-                                                        const now = new Date();
-                                                        const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+                                                        if (!slot.startTime || !slot.endTime || !isToday) return false;
+                                                        const timeStr = currentTime.getHours().toString().padStart(2, '0') + ':' + currentTime.getMinutes().toString().padStart(2, '0');
                                                         return timeStr >= slot.startTime.substring(0, 5) && timeStr <= slot.endTime.substring(0, 5);
                                                     };
                                                     const isActive = isCurrentlyActive();
@@ -250,9 +382,10 @@ export const StudentDashboard: React.FC = () => {
                                                     return (
                                                         <div
                                                             key={slot.id || index}
+                                                            onClick={() => navigate('/student/schedule')}
                                                             style={{ left: `${leftPercent}%`, width: `calc(${widthPercent}% - 8px)` }}
                                                             className={`absolute top-2 bottom-2 rounded-2xl shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-lg hover:z-10 cursor-pointer ${isActive
-                                                                ? 'bg-[#fff7ed] border border-orange-200'
+                                                                ? 'bg-amber-50/90 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800/50 ring-2 ring-amber-500/20'
                                                                 : 'bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800'
                                                                 }`}
                                                         >
@@ -300,81 +433,7 @@ export const StudentDashboard: React.FC = () => {
                     </div>
                 </Card>
 
-                {/* Bottom Section: Absence Rate & Notifications */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <Card className="p-6">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Tỷ lệ vắng mặt</h3>
-                            <button className="text-xs text-fpt-orange hover:underline">Chi tiết</button>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-8">
-                            {/* Item 1 */}
-                            <div>
-                                <div className="flex justify-between text-base mb-1.5">
-                                    <span className="font-medium text-gray-900 dark:text-white">Lập trình C++</span>
-                                    <span className="font-bold text-green-500 text-sm">95%</span>
-                                </div>
-                                <p className="text-sm text-gray-400 mb-2 uppercase tracking-wide">PRO192</p>
-                                <div className="h-1.5 w-full bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                                    <div className="h-full bg-green-500 rounded-full" style={{ width: '95%' }}></div>
-                                </div>
-                                <div className="flex items-center gap-1 mt-2 text-xs text-green-600 font-medium">
-                                    <CheckCircle2 size={12} /> An toàn
-                                </div>
-                            </div>
-
-                            {/* Item 2 */}
-                            <div>
-                                <div className="flex justify-between text-base mb-1.5">
-                                    <span className="font-medium text-gray-900 dark:text-white">Toán cao cấp</span>
-                                    <span className="font-bold text-yellow-500 text-sm">80%</span>
-                                </div>
-                                <p className="text-sm text-gray-400 mb-2 uppercase tracking-wide">MAT101</p>
-                                <div className="h-1.5 w-full bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                                    <div className="h-full bg-yellow-500 rounded-full" style={{ width: '80%' }}></div>
-                                </div>
-                                <div className="flex items-center gap-1 mt-2 text-xs text-green-600 font-medium">
-                                    <CheckCircle2 size={12} /> An toàn
-                                </div>
-                            </div>
-
-                            {/* Item 3 */}
-                            <div>
-                                <div className="flex justify-between text-base mb-1.5">
-                                    <span className="font-medium text-gray-900 dark:text-white">Kỹ năng mềm</span>
-                                    <span className="font-bold text-green-500 text-sm">90%</span>
-                                </div>
-                                <p className="text-sm text-gray-400 mb-2 uppercase tracking-wide">SSG104</p>
-                                <div className="h-1.5 w-full bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                                    <div className="h-full bg-green-500 rounded-full" style={{ width: '90%' }}></div>
-                                </div>
-                                <div className="flex items-center gap-1 mt-2 text-xs text-green-600 font-medium">
-                                    <CheckCircle2 size={12} /> An toàn
-                                </div>
-                            </div>
-
-                            {/* Item 4 */}
-                            <div>
-                                <div className="flex justify-between text-base mb-1.5">
-                                    <span className="font-medium text-gray-900 dark:text-white">Triết học</span>
-                                    <span className="font-bold text-red-500 text-sm">75%</span>
-                                </div>
-                                <p className="text-sm text-gray-400 mb-2 uppercase tracking-wide">PHI102</p>
-                                <div className="h-1.5 w-full bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                                    <div className="h-full bg-red-500 rounded-full" style={{ width: '75%' }}></div>
-                                </div>
-                                <div className="flex items-center gap-1 mt-2 text-xs text-red-600 font-medium">
-                                    <XCircle size={12} /> Cảnh báo cấm thi
-                                </div>
-                            </div>
-                        </div>
-                    </Card>
-
-                    <div className="h-full">
-                        <StudentNotificationsWidget />
-                    </div>
-                </div >
+                {/* Schedule details or other widgets can go here */}
             </div >
         </StudentLayout >
     );

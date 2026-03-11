@@ -117,4 +117,59 @@ public class AttendanceDTO {
         private Integer slotIndex;
         private String status; // 'P', 'A', 'E' or null
     }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class StudentAttendanceSummaryResponse {
+        private String studentName;
+        private String studentCode;
+        private String semesterName;
+        private List<ClassAttendanceSummary> classSummaries;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ClassAttendanceSummary {
+        private String className;
+        private String courseCode;
+        private String courseName;
+        private String lecturerName;
+        private Integer totalSlots;
+        private Integer totalSessionsHeld; // Sessions already occurred
+        private Integer presentCount;
+        private Integer unexcusedAbsentCount; // Unexcused
+        private Integer excusedAbsentCount; // Excused
+        private Double attendancePercentage; // (Present + Excused) / TotalHeld
+        private Double absentPercentage; // Unexcused / TotalSlots (Threshold check)
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class IndividualAttendanceDetail {
+        private String className;
+        private String courseCode;
+        private String courseName;
+        private List<IndividualSlotAttendance> slots;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class IndividualSlotAttendance {
+        private Long slotId;
+        private Integer slotIndex;
+        private LocalDate date;
+        private LocalTime startTime;
+        private LocalTime endTime;
+        private String roomCode;
+        private String status; // 'PRESENT', 'ABSENT', 'EXCUSED', 'FUTURE'
+        private String lecturerName;
+    }
 }

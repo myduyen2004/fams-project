@@ -68,6 +68,7 @@ const StudentAssignmentDetailPage = lazy(() => import('./pages/student/StudentAs
 const StudentMessagesPage = lazy(() => import('./pages/student/StudentMessagesPage').then(m => ({ default: m.StudentMessagesPage })));
 const AcademicStaffClassDetailPage = lazy(() => import('./pages/academic-staff/AcademicStaffClassDetailPage').then(m => ({ default: m.AcademicStaffClassDetailPage })));
 const StudentAcademicRequestPage = lazy(() => import('./pages/student/StudentAcademicRequestPage').then(m => ({ default: m.StudentAcademicRequestPage })));
+const StudentAttendancePage = lazy(() => import('./pages/student/StudentAttendancePage').then(m => ({ default: m.StudentAttendancePage })));
 const StudentRequestDetailPage = lazy(() => import('./pages/academic-staff/StudentRequestDetailPage').then(m => ({ default: m.StudentRequestDetailPage })));
 const ClassSectionRedirect = lazy(() => import('./pages/academic-staff/ClassSectionRedirect').then(m => ({ default: m.ClassSectionRedirect })));
 const StudentRoomList = lazy(() => import('./pages/student/RoomList').then(m => ({ default: m.RoomList })));
@@ -363,7 +364,7 @@ function App() {
           />
           <Route path="/student/assignments" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentAssignmentPage /></ProtectedRoute>} />
           <Route path="/student/assignments/:id" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentAssignmentDetailPage /></ProtectedRoute>} />
-          <Route path="/student/attendance" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Điểm danh" /></ProtectedRoute>} />
+          <Route path="/student/attendance" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentAttendancePage /></ProtectedRoute>} />
           <Route path="/student/study" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Học tập" /></ProtectedRoute>} />
           <Route path="/student/messages" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentMessagesPage /></ProtectedRoute>} />
           <Route path="/student/requests" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentAcademicRequestPage /></ProtectedRoute>} />

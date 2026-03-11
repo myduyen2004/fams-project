@@ -13,4 +13,8 @@ public interface AttendanceService {
             AttendanceDTO.ManualAttendanceRequest request);
 
     AttendanceDTO.ClassAttendanceReportResponse getClassAttendanceReport(String className);
+
+    AttendanceDTO.StudentAttendanceSummaryResponse getStudentAttendanceSummary(Long studentId, String semesterCode);
+
+    AttendanceDTO.IndividualAttendanceDetail getStudentAttendanceDetail(Long studentId, String className);
 }

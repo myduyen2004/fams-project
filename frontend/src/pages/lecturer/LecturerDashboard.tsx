@@ -195,6 +195,31 @@ interface TeachingScheduleProps {
 }
 
 const TeachingSchedule: React.FC<TeachingScheduleProps> = ({ selectedDate, daySchedule, isScheduleHidden }) => {
+    const navigate = useNavigate();
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 60000); // Update every minute
+        return () => clearInterval(timer);
+    }, []);
+
+    const isToday = selectedDate.toDateString() === new Date().toDateString();
+
+    // Calculate indicator position
+    const getIndicatorPosition = () => {
+        if (!isToday) return null;
+        const hours = currentTime.getHours();
+        const minutes = currentTime.getMinutes();
+        
+        if (hours < 7 || hours >= 19) return null; // Outside display range
+        
+        return ((hours - 7) + minutes / 60) * (100 / 12);
+    };
+
+    const indicatorPos = getIndicatorPosition();
+
     return (
         <Card className="p-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -244,15 +269,21 @@ const TeachingSchedule: React.FC<TeachingScheduleProps> = ({ selectedDate, daySc
                                         ))}
                                     </div>
 
+                                    {/* Real-time indicator line */}
+                                    {indicatorPos !== null && (
+                                        <div 
+                                            className="absolute top-0 bottom-0 w-[2px] bg-red-500 z-20 pointer-events-none shadow-[0_0_8px_rgba(239,68,68,0.5)]"
+                                            style={{ left: `${indicatorPos}%` }}
+                                        >
+                                            <div className="absolute -top-1 -left-[5px] w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-zinc-900 shadow-sm" />
+                                        </div>
+                                    )}
+
                                     {daySchedule && daySchedule.slots && daySchedule.slots.length > 0 ? (
                                         daySchedule.slots.filter((slot: any) => slot.status === 'SCHEDULED').map((slot: any, index: number) => {
                                             const isCurrentlyActive = () => {
-                                                if (!slot.startTime || !slot.endTime) return false;
-                                                // Only highlight if selectedDate is today
-                                                const today = new Date();
-                                                if (selectedDate.toDateString() !== today.toDateString()) return false;
-                                                const now = new Date();
-                                                const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+                                                if (!slot.startTime || !slot.endTime || !isToday) return false;
+                                                const timeStr = currentTime.getHours().toString().padStart(2, '0') + ':' + currentTime.getMinutes().toString().padStart(2, '0');
                                                 return timeStr >= slot.startTime.substring(0, 5) && timeStr <= slot.endTime.substring(0, 5);
                                             };
                                             const isActive = isCurrentlyActive();
@@ -270,9 +301,10 @@ const TeachingSchedule: React.FC<TeachingScheduleProps> = ({ selectedDate, daySc
                                             return (
                                                 <div
                                                     key={slot.id || index}
+                                                    onClick={() => navigate('/lecturer/schedule')}
                                                     style={{ left: `${leftPercent}%`, width: `calc(${widthPercent}% - 8px)` }}
                                                     className={`absolute top-2 bottom-2 rounded-2xl shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-lg hover:z-10 cursor-pointer ${isActive
-                                                        ? 'bg-[#fff7ed] border border-orange-200'
+                                                        ? 'bg-amber-50/90 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800/50 ring-2 ring-amber-500/20'
                                                         : 'bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800'
                                                         }`}
                                                 >
