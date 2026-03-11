@@ -58,4 +58,10 @@ class ApiConstants {
   static const String academicRequests = '/api/v1/academic-requests';
   static const String academicRequestTypes = '/api/v1/academic-requests/types';
   static const String academicRequestMyRequests = '/api/v1/academic-requests/my-requests';
+
+  // AI Chat Endpoints
+  static const String aiChatSessions = '/api/chat/sessions';
+  static const String aiChatMessages = '/api/chat/sessions/{id}/messages';
+  static const String aiChatSend = '/api/chat/sessions/{id}/send';
+  static const String aiChatUpload = '/api/chat/sessions/{id}/upload';
 }
