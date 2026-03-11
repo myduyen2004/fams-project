@@ -4,6 +4,7 @@ import com.fams.backend.dto.response.SemesterResponse;
 import com.fams.backend.entity.Semester;
 import com.fams.backend.repository.SemesterRepository;
 import com.fams.backend.service.impl.SemesterServiceImpl;
+import com.fams.backend.service.impl.SystemLogService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,6 +28,9 @@ class SemesterServiceTest {
 
     @Mock
     private SemesterRepository semesterRepository;
+
+    @Mock
+    private SystemLogService systemLogService;
 
     @InjectMocks
     private SemesterServiceImpl semesterService;

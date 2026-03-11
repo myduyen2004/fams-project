@@ -41,6 +41,9 @@ class CourseServiceImplTest {
     @Mock
     private SubSpecializationRepository subSpecializationRepository;
 
+    @Mock
+    private SystemLogService systemLogService;
+
     @InjectMocks
     private CourseServiceImpl courseService;
 
@@ -127,6 +130,7 @@ class CourseServiceImplTest {
     @DisplayName("Delete Course: Success when not in use")
     void deleteCourse_Success() {
         // Arrange
+        when(courseRepository.findById(1L)).thenReturn(Optional.of(activeCourse));
         when(subSpecializationCourseRepository.existsByCourseId(1L)).thenReturn(false);
         when(specializationCourseRepository.existsByCourseId(1L)).thenReturn(false);
 

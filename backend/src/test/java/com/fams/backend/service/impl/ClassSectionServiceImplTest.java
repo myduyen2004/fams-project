@@ -60,6 +60,9 @@ public class ClassSectionServiceImplTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private SystemLogService systemLogService;
+
     @InjectMocks
     private ClassSectionServiceImpl classSectionService;
 
