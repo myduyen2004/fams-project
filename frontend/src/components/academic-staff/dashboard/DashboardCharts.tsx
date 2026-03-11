@@ -27,7 +27,14 @@ export const AttendanceFrequencyChart: React.FC<{
     const start = new Date(weekStart);
     const end = new Date(start);
     end.setDate(end.getDate() + 6);
-    return `${start.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })} - ${end.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}`;
+    
+    const formatDate = (date: Date) => {
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      return `${day}/${month}`;
+    };
+    
+    return `${formatDate(start)} - ${formatDate(end)}`;
   })();
 
   return (
