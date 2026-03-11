@@ -48,6 +48,9 @@ class ImportCoursesTest {
     @Mock
     private SubSpecializationRepository subSpecializationRepository;
 
+    @Mock
+    private SystemLogService systemLogService;
+
     @InjectMocks
     private CourseServiceImpl courseService;
 

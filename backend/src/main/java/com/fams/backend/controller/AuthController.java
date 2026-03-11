@@ -21,6 +21,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final com.fams.backend.service.UserService userService;
+    private final com.fams.backend.service.impl.SystemLogService systemLogService;
 
     /**
      * POST /auth/login
@@ -32,8 +33,14 @@ public class AuthController {
             @Valid @RequestBody LoginRequest request,
             jakarta.servlet.http.HttpServletRequest httpRequest) {
         log.info("POST /auth/login - username: {}", request.getUsername());
-        LoginResponse response = authService.login(request, httpRequest);
-        return ResponseEntity.ok(response);
+        try {
+            LoginResponse response = authService.login(request, httpRequest);
+            systemLogService.logLoginSuccess(request.getUsername());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            systemLogService.logLoginFailed(request.getUsername());
+            throw e;
+        }
     }
 
     /**

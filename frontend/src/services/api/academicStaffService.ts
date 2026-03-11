@@ -54,6 +54,14 @@ export interface SystemLogItem {
     description: string;
     timestamp: string;
     type: 'info' | 'success' | 'warning' | 'error';
+    source?: string;
+    performerName?: string;
+    performerAvatar?: string;
+    performerRole?: string;
+    ipAddress?: string;
+    userAgent?: string;
+    oldValue?: string;
+    newValue?: string;
 }
 
 export const academicStaffService = {
@@ -78,9 +86,17 @@ export const academicStaffService = {
         return response.data;
     },
 
-    getSystemLogs: async (page: number = 0, size: number = 10): Promise<{ content: SystemLogItem[]; totalPages: number; totalElements: number }> => {
+    getSystemLogs: async (params: {
+        page?: number;
+        size?: number;
+        search?: string;
+        type?: string;
+        role?: string;
+        startDate?: string;
+        endDate?: string;
+    }): Promise<{ content: SystemLogItem[]; totalPages: number; totalElements: number }> => {
         const response = await apiClient.get<{ content: SystemLogItem[]; totalPages: number; totalElements: number }>('/academic-staff/dashboard/system-logs', {
-            params: { page, size }
+            params
         });
         return response.data;
     },

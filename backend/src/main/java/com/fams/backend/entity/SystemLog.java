@@ -35,6 +35,22 @@ public class SystemLog {
     @Column(length = 100)
     private String source;
 
+    @Column(length = 50)
+    private String ipAddress;
+
+    @Column(columnDefinition = "TEXT")
+    private String userAgent;
+
+    @Column(columnDefinition = "TEXT")
+    private String oldValue;
+
+    @Column(columnDefinition = "TEXT")
+    private String newValue;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "performer_id")
+    private User performer;
+
     public enum LogType {
         INFO,
         SUCCESS,
