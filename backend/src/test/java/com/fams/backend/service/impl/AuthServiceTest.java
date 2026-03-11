@@ -12,7 +12,9 @@ import com.fams.backend.security.jwt.JwtUtil;
 import com.fams.backend.service.EmailService;
 import com.fams.backend.service.GeoLocationService;
 import jakarta.servlet.http.HttpServletRequest;
+import com.fams.backend.service.UserActivityService;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -50,15 +52,37 @@ class AuthServiceTest {
     @Mock
     private StringRedisTemplate redisTemplate;
     @Mock
+    private ValueOperations<String, String> valueOperations;
+    @Mock
     private HttpServletRequest httpRequest;
+    @Mock
+    private SystemLogService systemLogService;
+    @Mock
+    private UserActivityService userActivityService;
 
-    @InjectMocks
     private AuthService authService;
 
     private User activeUser;
 
     @BeforeEach
     void setUp() {
+        lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        lenient().when(valueOperations.increment(anyString())).thenReturn(1L);
+        
+        authService = new AuthService(
+            userRepository,
+            passwordEncoder,
+            jwtUtil,
+            userSessionRepository,
+            accessLogRepository,
+            geoLocationService,
+            dashboardBroadcastService,
+            emailService,
+            redisTemplate,
+            userActivityService,
+            systemLogService
+        );
+
         activeUser = User.builder()
                 .id(1L)
                 .username("testuser")
