@@ -40,7 +40,7 @@ public class NotificationServiceImpl {
                                 .type(type)
                                 .status(Notification.NotificationStatus.SENT)
                                 .sentAt(LocalDateTime.now())
-                                .targetType(Notification.TargetType.ALL)
+                                .targetType(Notification.TargetType.USER)
                                 .sender(sender)
                                 .build();
 

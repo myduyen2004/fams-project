@@ -17,6 +17,10 @@ import java.util.List;
 @Repository
 public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Long> {
 
+        List<TimetableSlot> findByDate(LocalDate date);
+
+        List<TimetableSlot> findByDateAndSlotType_Id(LocalDate date, Long slotTypeId);
+
         // Derived queries for conflict checking
         boolean existsByRoomIdAndDateAndSlotNumberAndStatusNot(Long roomId, LocalDate date, Integer slotNumber,
                         TimetableSlot.TimetableSlotStatus status);

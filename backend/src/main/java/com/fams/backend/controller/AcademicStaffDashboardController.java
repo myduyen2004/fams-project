@@ -38,12 +38,52 @@ public class AcademicStaffDashboardController {
     private final UserService userService;
     private final LecturerService lecturerService;
     private final com.fams.backend.service.StudentService studentService;
+    private final com.fams.backend.repository.SystemLogRepository systemLogRepository;
 
     @GetMapping("/dashboard")
     @Operation(summary = "Lấy dữ liệu dashboard")
-    public ResponseEntity<AcademicStaffDashboardResponse> getDashboardData() {
-        log.info("GET /api/academic-staff/dashboard");
-        return ResponseEntity.ok(dashboardService.getDashboardData());
+    public ResponseEntity<AcademicStaffDashboardResponse> getDashboardData(
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate startDate) {
+        log.info("GET /api/academic-staff/dashboard | startDate={}", startDate);
+        return ResponseEntity.ok(dashboardService.getDashboardData(startDate));
+    }
+
+    @GetMapping("/dashboard/weekly-attendance")
+    @Operation(summary = "Lấy dữ liệu tỷ lệ nghỉ học theo tuần (lightweight)")
+    public ResponseEntity<java.util.List<AcademicStaffDashboardResponse.WeeklyAttendanceDTO>> getWeeklyAttendance(
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate startDate) {
+        log.info("GET /api/academic-staff/dashboard/weekly-attendance | startDate={}", startDate);
+        return ResponseEntity.ok(dashboardService.getWeeklyAttendanceData(startDate));
+    }
+
+    @GetMapping("/dashboard/daily-attendance")
+    @Operation(summary = "Lấy dữ liệu chuyên cần theo ngày (lightweight)")
+    public ResponseEntity<AcademicStaffDashboardResponse.AttendanceStatsDTO> getDailyAttendance(
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate date) {
+        log.info("GET /api/academic-staff/dashboard/daily-attendance | date={}", date);
+        return ResponseEntity.ok(dashboardService.getAttendanceStatsForDate(date));
+    }
+
+    @GetMapping("/dashboard/system-logs")
+    @Operation(summary = "Lấy nhật ký hệ thống (phân trang)")
+    public ResponseEntity<org.springframework.data.domain.Page<com.fams.backend.dto.response.SystemLogResponse>> getSystemLogs(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        log.info("GET /api/academic-staff/dashboard/system-logs | page={}, size={}", page, size);
+        org.springframework.data.domain.Page<com.fams.backend.entity.SystemLog> logs = 
+            systemLogRepository.findAllByOrderByCreatedAtDesc(
+                org.springframework.data.domain.PageRequest.of(page, size));
+        
+        org.springframework.data.domain.Page<com.fams.backend.dto.response.SystemLogResponse> response = 
+            logs.map(logEntry -> com.fams.backend.dto.response.SystemLogResponse.builder()
+                .id(logEntry.getId())
+                .title(logEntry.getTitle())
+                .description(logEntry.getDescription())
+                .timestamp(logEntry.getCreatedAt().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")))
+                .type(logEntry.getType().name().toLowerCase())
+                .build());
+        
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping(value = "/lecturers", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)

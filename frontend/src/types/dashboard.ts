@@ -57,6 +57,8 @@ export interface AcademicStaffDashboardResponse {
         totalStudents: number;
         totalLecturers: number;
         totalRequests: number;
+        studentStats: { name: string; value: number }[];
+        lecturerStats: { name: string; value: number }[];
     };
     topStudents: {
         rank: number;
@@ -74,14 +76,26 @@ export interface AcademicStaffDashboardResponse {
         date: string;
         status: string;
     }[];
-    notifications: NotificationResponse[];
+    notifications: AppNotification[];
     attendanceStats: {
         present: number;
         absent: number;
         date: string;
     };
+    runningRooms: {
+        roomName: string;
+        lecturerName: string;
+        attendancePercentage: number;
+    }[];
+    totalRunningRooms: number;
     roomRequests: {
         room: string;
         date: string;
+    }[];
+    unreadNotificationsCount?: number;
+    weeklyAttendance?: {
+        day: string;
+        date: string;
+        absencePercentage: number;
     }[];
 }

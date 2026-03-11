@@ -1,7 +1,9 @@
 package com.fams.backend.service;
 
+import com.fams.backend.entity.ClassSection;
 import com.fams.backend.entity.Semester;
 import com.fams.backend.entity.Semester.SemesterStatus;
+import com.fams.backend.repository.ClassSectionRepository;
 import com.fams.backend.repository.SemesterRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +25,7 @@ import java.time.LocalDate;
 public class SemesterStatusScheduler {
 
     private final SemesterRepository semesterRepository;
+    private final ClassSectionRepository classSectionRepository;
 
     /**
      * Job 1: Chạy lúc 00:05 hàng ngày
@@ -40,7 +43,13 @@ public class SemesterStatusScheduler {
             if (today.equals(semester.getStartDate()) || today.isAfter(semester.getStartDate())) {
                 semester.setStatus(SemesterStatus.ONGOING);
                 semesterRepository.save(semester);
-                log.info("Semester {} updated: UPCOMING -> ONGOING", semester.getCode());
+
+                // Cập nhật tất cả lớp học phần trong kỳ sang ONGOING
+                int classesUpdated = classSectionRepository.updateStatusBySemesterId(semester.getId(),
+                        ClassSection.ClassStatus.ONGOING);
+
+                log.info("Semester {} updated: UPCOMING -> ONGOING. {} classes updated.", semester.getCode(),
+                        classesUpdated);
                 updated++;
             }
         }
@@ -64,7 +73,13 @@ public class SemesterStatusScheduler {
             if (today.equals(semester.getEndDate()) || today.isAfter(semester.getEndDate())) {
                 semester.setStatus(SemesterStatus.COMPLETED);
                 semesterRepository.save(semester);
-                log.info("Semester {} updated: ONGOING -> COMPLETED", semester.getCode());
+
+                // Cập nhật tất cả lớp học phần trong kỳ sang FINISHED
+                int classesUpdated = classSectionRepository.updateStatusBySemesterId(semester.getId(),
+                        ClassSection.ClassStatus.FINISHED);
+
+                log.info("Semester {} updated: ONGOING -> COMPLETED. {} classes updated.", semester.getCode(),
+                        classesUpdated);
                 updated++;
             }
         }

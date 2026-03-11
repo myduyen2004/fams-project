@@ -1,60 +1,93 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { Loader2 } from 'lucide-react';
 import { academicStaffService } from '../../services/api/academicStaffService';
-import { dashboardService } from '../../services/api/dashboardService';
 import { AcademicStaffDashboardResponse } from '../../types/dashboard';
 import toast from 'react-hot-toast';
 
 // New Components
 import { AnalyticalCards } from '../../components/academic-staff/dashboard/AnalyticalCards';
 import { AttendanceFrequencyChart, DailyAttendanceDonut } from '../../components/academic-staff/dashboard/DashboardCharts';
-import { PendingRequests, RunningRooms } from '../../components/academic-staff/dashboard/DashboardLists';
+import { PendingRequests, RunningRooms, SystemActivityLog } from '../../components/academic-staff/dashboard/DashboardLists';
 
 export const AcademicStaffDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [data, setData] = useState<AcademicStaffDashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [weeklyLoading, setWeeklyLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      // Safety timeout
-      const timeoutId = setTimeout(() => {
-        if (loading) {
-          console.warn('Dashboard data fetch timed out');
-          setLoading(false);
-          toast.error('Kết nối máy chủ chậm, đang hiển thị dữ liệu tạm thời');
-        }
-      }, 5000);
+  const [selectedWeekStart, setSelectedWeekStart] = useState<string>(() => {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust for Monday start
+    const monday = new Date(d.setDate(diff));
+    return monday.toISOString().split('T')[0];
+  });
 
-      try {
-        setLoading(true);
-        console.log('Fetching dashboard data...');
-        const [dashboardData, notifications] = await Promise.all([
-          academicStaffService.getDashboardData(),
-          dashboardService.getNotifications().catch(e => {
-            console.error('Failed to fetch notifications:', e);
-            return [];
-          })
-        ]);
-        console.log('Dashboard data received:', dashboardData);
-        // Ensure notifications from both sources are considered, prioritizing the specific notifications fetch if dashboardData doesn't have them
-        setData({
-          ...dashboardData,
-          notifications: dashboardData.notifications?.length ? dashboardData.notifications : notifications
-        });
-      } catch (error) {
-        console.error('Failed to fetch dashboard data:', error);
-        toast.error('Không thể tải dữ liệu dashboard');
-      } finally {
-        clearTimeout(timeoutId);
+  // Initial dashboard load (all data)
+  const fetchDashboardData = useCallback(async (startDate: string) => {
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        console.warn('Dashboard data fetch timed out');
         setLoading(false);
+        toast.error('Kết nối máy chủ chậm, đang hiển thị dữ liệu tạm thời');
       }
-    };
+    }, 15000);
 
-    fetchDashboardData();
+    try {
+      setLoading(true);
+      const dashboardData = await academicStaffService.getDashboardData(startDate);
+      setData(dashboardData);
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+      toast.error('Không thể tải dữ liệu dashboard');
+    } finally {
+      clearTimeout(timeoutId);
+      setLoading(false);
+    }
   }, []);
+
+  // Weekly-only data reload (lightweight endpoint, only updates the chart)
+  const fetchWeeklyData = useCallback(async (startDate: string) => {
+    try {
+      setWeeklyLoading(true);
+      const weeklyData = await academicStaffService.getWeeklyAttendance(startDate);
+      setData(prev => prev ? { ...prev, weeklyAttendance: weeklyData } : prev);
+    } catch (error) {
+      console.error('Failed to fetch weekly data:', error);
+      toast.error('Không thể tải dữ liệu tuần');
+    } finally {
+      setWeeklyLoading(false);
+    }
+  }, []);
+
+  // Initial load only once
+  useEffect(() => {
+    fetchDashboardData(selectedWeekStart);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When week changes (after initial load), only reload weekly chart
+  const isInitialMount = React.useRef(true);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    fetchWeeklyData(selectedWeekStart);
+  }, [selectedWeekStart, fetchWeeklyData]);
+
+  const handlePrevWeek = () => {
+    const d = new Date(selectedWeekStart);
+    d.setDate(d.getDate() - 7);
+    setSelectedWeekStart(d.toISOString().split('T')[0]);
+  };
+
+  const handleNextWeek = () => {
+    const d = new Date(selectedWeekStart);
+    d.setDate(d.getDate() + 7);
+    setSelectedWeekStart(d.toISOString().split('T')[0]);
+  };
 
   if (loading) {
     return (
@@ -89,9 +122,9 @@ export const AcademicStaffDashboard: React.FC = () => {
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                   Thông báo mới
                 </h3>
-                {data?.notifications && data.notifications.length > 0 && (
+                {data?.unreadNotificationsCount !== undefined && data.unreadNotificationsCount > 0 && (
                   <span className="w-5 h-5 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full font-bold">
-                    {data.notifications.length}
+                    {data.unreadNotificationsCount}
                   </span>
                 )}
               </div>
@@ -147,80 +180,33 @@ export const AcademicStaffDashboard: React.FC = () => {
 
           {/* Running Rooms (4/12) */}
           <div className="lg:col-span-4 h-full">
-            <RunningRooms />
+            <RunningRooms rooms={data?.runningRooms} total={data?.totalRunningRooms} />
           </div>
         </div>
 
         {/* Row 2: Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
           <div className="lg:col-span-8 h-full">
-            <AttendanceFrequencyChart />
+            <AttendanceFrequencyChart
+              data={data?.weeklyAttendance}
+              loading={weeklyLoading}
+              weekStart={selectedWeekStart}
+              onPrevWeek={handlePrevWeek}
+              onNextWeek={handleNextWeek}
+            />
           </div>
           <div className="lg:col-span-4 h-full">
             <DailyAttendanceDonut stats={data?.attendanceStats} />
           </div>
         </div>
 
-        {/* Row 3: Lists & Analysis Card */}
+        {/* Row 3: Pending Requests & System Log */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-          <div className="lg:col-span-8">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
-              <div className="lg:col-span-7 h-full">
-                <PendingRequests />
-              </div>
-            </div>
-
-            <div className="lg:col-span-4">
-              <div className="bg-gradient-to-br from-orange-50/80 to-amber-50/80 dark:from-orange-900/5 dark:to-amber-900/5 rounded-2xl p-6 h-full border border-orange-100/50 dark:border-orange-800/20 shadow-sm">
-                <h4 className="text-lg font-semibold text-orange-800 dark:text-orange-400 mb-4">Phân tích chuyên cần</h4>
-                <div className="space-y-6">
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Lớp vắng nhiều nhất</p>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">IT001, BA202</p>
-                      <span className="text-xs font-medium text-red-600 bg-red-100 px-2 py-0.5 rounded">Báo động</span>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Sinh viên có nguy cơ</p>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">12 Sinh viên</p>
-                      <span className="text-xs font-medium text-orange-600">+5.2%</span>
-                    </div>
-                  </div>
-
-                  <button className="w-full bg-white dark:bg-zinc-800 py-2.5 rounded-lg text-xs font-semibold text-gray-700 dark:text-white shadow-sm hover:shadow-md transition-all mt-4 border border-orange-200 dark:border-zinc-700 hover:text-orange-600">
-                    Xem báo cáo chi tiết
-                  </button>
-                </div>
-              </div>
-            </div>
+          <div className="lg:col-span-5">
+            <PendingRequests />
           </div>
-
-          <div className="lg:col-span-4">
-            <div className="bg-[#FDF2EC] dark:bg-orange-950/20 rounded-[32px] p-8 h-full border border-orange-100/50 dark:border-orange-500/10 shadow-[0_12px_40px_rgba(0,0,0,0.12)]">
-              <h4 className="text-[10px] font-bold text-orange-400 uppercase tracking-[0.2em] mb-4">PHÂN TÍCH CHUYÊN CẦN</h4>
-              <div className="space-y-6">
-                <div>
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase mb-1">LỚP VẮNG NHIỀU NHẤT</p>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-bold text-zinc-800 dark:text-white">IT001, BA202</p>
-                    <span className="text-[9px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded uppercase">Báo động</span>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase mb-1">SINH VIÊN CÓ NGUY CƠ</p>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-bold text-zinc-800 dark:text-white">12 Sinh viên</p>
-                    <span className="text-[9px] font-bold text-orange-500">+5.2%</span>
-                  </div>
-                </div>
-
-                <button className="w-full bg-white dark:bg-zinc-800 py-3 rounded-2xl text-[11px] font-bold text-zinc-900 dark:text-white shadow-[0_4px_15px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_25px_rgba(0,0,0,0.08)] transition-all mt-4 border border-gray-100 dark:border-zinc-700">
-                  Xem báo cáo chi tiết
-                </button>
-              </div>
-            </div>
+          <div className="lg:col-span-7">
+            <SystemActivityLog />
           </div>
         </div>
       </div>

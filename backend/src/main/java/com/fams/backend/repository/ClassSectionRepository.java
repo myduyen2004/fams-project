@@ -14,6 +14,11 @@ public interface ClassSectionRepository extends JpaRepository<ClassSection, Stri
         // Find by className (primary business key)
         java.util.Optional<ClassSection> findByClassName(String className);
 
+        @org.springframework.data.jpa.repository.Modifying
+        @Query("UPDATE ClassSection cs SET cs.status = :status WHERE cs.semester.id = :semesterId AND cs.status != :status")
+        int updateStatusBySemesterId(@Param("semesterId") Long semesterId,
+                        @Param("status") ClassSection.ClassStatus status);
+
         // Check if className exists (case-insensitive)
         @Query("SELECT CASE WHEN COUNT(cs) > 0 THEN true ELSE false END FROM ClassSection cs WHERE LOWER(cs.className) = LOWER(:className)")
         boolean existsByClassNameIgnoreCase(@Param("className") String className);
