@@ -30,6 +30,7 @@ redis==5.0.1                   # Redis driver (cache)
 # Basic Data Processing
 numpy==1.26.3                  # Thư viện số học cơ bản
 pandas==2.1.4                  # Xử lý data dạng bảng
+openpyxl==3.1.2                # Hỗ trợ đọc/ghi file Excel (.xlsx)
 scikit-learn==1.4.0            # Machine Learning cơ bản
 scipy==1.11.4                  # Scientific computing
 
