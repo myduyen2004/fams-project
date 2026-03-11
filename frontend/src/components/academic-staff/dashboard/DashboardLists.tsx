@@ -1,5 +1,7 @@
-import React from 'react';
-import { ChevronRight, Clock, MapPin } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronRight, Clock, MapPin, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { academicStaffService, ScheduleRequestResponse } from '../../../services/api/academicStaffService';
 
 interface RequestItemProps {
   name: string;
@@ -7,21 +9,55 @@ interface RequestItemProps {
   avatar: string;
   description: string;
   status: string;
+  statusLabel: string;
+  createdAt: string;
+  onClick?: () => void;
 }
 
-const RequestItem: React.FC<RequestItemProps> = ({ name, role, avatar, description, status }) => {
+const RequestItem: React.FC<RequestItemProps> = ({ name, role, avatar, description, statusLabel, createdAt, onClick }) => {
+  // Format relative time
+  const timeAgo = (() => {
+    try {
+      const date = new Date(createdAt);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMins / 60);
+      const diffDays = Math.floor(diffHours / 24);
+      if (diffMins < 1) return 'Vừa xong';
+      if (diffMins < 60) return `${diffMins} phút trước`;
+      if (diffHours < 24) return `${diffHours} giờ trước`;
+      return `${diffDays} ngày trước`;
+    } catch {
+      return '';
+    }
+  })();
+
+  const roleLabel = role === 'LECTURER' ? 'GV' : role === 'STUDENT' ? 'SV' : role;
+
   return (
-    <div className="group flex items-center gap-4 p-4 rounded-xl hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-all cursor-pointer border border-transparent hover:border-gray-200 dark:hover:border-zinc-800">
-      <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center text-zinc-400 font-bold overflow-hidden">
-        {avatar ? <img src={avatar} alt={name} className="w-full h-full object-cover" /> : name.charAt(0)}
+    <div
+      className="group flex items-center gap-4 p-4 rounded-xl hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-all cursor-pointer border border-transparent hover:border-gray-200 dark:hover:border-zinc-800"
+      onClick={onClick}
+    >
+      <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold overflow-hidden flex-shrink-0">
+        {avatar ? (
+          <img src={avatar} alt={name} className="w-full h-full object-cover" />
+        ) : (
+          <span className="text-base">{name.charAt(0).toUpperCase()}</span>
+        )}
       </div>
-      <div className="flex-1">
-        <h4 className="text-sm font-medium text-gray-900 dark:text-white leading-tight">{role}. {name}</h4>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <h4 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight truncate">{name}</h4>
+          <span className="text-[9px] font-bold text-gray-400 bg-gray-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded flex-shrink-0">{roleLabel}</span>
+        </div>
         <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{description}</p>
+        <p className="text-[10px] text-gray-400 mt-1">{timeAgo}</p>
       </div>
-      <div className="flex items-center gap-3">
-        <span className="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded">
-          {status}
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <span className="text-[10px] font-bold text-orange-600 bg-orange-50 dark:bg-orange-500/10 px-2 py-1 rounded-lg border border-orange-100 dark:border-orange-500/20 uppercase tracking-wide">
+          {statusLabel}
         </span>
         <ChevronRight size={16} className="text-gray-400 group-hover:text-orange-500 transition-colors" />
       </div>
@@ -30,29 +66,177 @@ const RequestItem: React.FC<RequestItemProps> = ({ name, role, avatar, descripti
 };
 
 export const PendingRequests: React.FC = () => {
+  const navigate = useNavigate();
+  const [requests, setRequests] = useState<ScheduleRequestResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPendingRequests = async () => {
+      try {
+        setLoading(true);
+        const data = await academicStaffService.getScheduleRequests({
+          status: 'PENDING',
+          page: 0,
+          size: 5,
+          sort: 'createdAt,desc',
+        });
+        setRequests(data.content || []);
+      } catch (error) {
+        console.error('Failed to fetch pending requests:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPendingRequests();
+  }, []);
+
   return (
-    <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-zinc-800 h-full">
-      <div className="flex justify-between items-center mb-6 pb-2 border-b border-gray-100 dark:border-zinc-800">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Yêu cầu chờ xử lý
-        </h3>
-        <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest bg-gray-50 dark:bg-zinc-800 px-2 py-0.5 rounded">QUẢN LÝ KHO</span>
+    <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-zinc-800 h-full flex flex-col">
+      <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100 dark:border-zinc-800">
+        <div className="flex items-center gap-3">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Yêu cầu chờ xử lý
+          </h3>
+          {requests.length > 0 && (
+            <span className="w-5 h-5 bg-orange-500 text-white text-[10px] flex items-center justify-center rounded-full font-bold">
+              {requests.length}
+            </span>
+          )}
+        </div>
+        <button
+          onClick={() => navigate('/academic-staff/requests')}
+          className="text-[11px] font-semibold text-orange-500 hover:text-orange-600 transition-colors uppercase tracking-wider"
+        >
+          Chi tiết
+        </button>
       </div>
-      <div className="space-y-2">
-        <RequestItem 
-          name="Nguyễn Văn A" 
-          role="GS"
-          avatar=""
-          description="Đơn xin nghỉ phép dài hạn cho sinh viên Đoàn Quốc B"
-          status="CHỜ DUYỆT"
-        />
-        <RequestItem 
-          name="Emily Stone" 
-          role="TS"
-          avatar=""
-          description="Thay đổi phòng học cho môn Kỹ thuật số (P201 sang P304)"
-          status="CHỜ DUYỆT"
-        />
+
+      <div className="flex-1 overflow-auto">
+        {loading ? (
+          <div className="flex items-center justify-center py-10">
+            <Loader2 className="w-6 h-6 text-gray-300 animate-spin" />
+          </div>
+        ) : requests.length > 0 ? (
+          <div className="space-y-1">
+            {requests.map((req) => (
+              <RequestItem
+                key={req.id}
+                name={req.requesterName}
+                role={req.requesterRole}
+                avatar={req.requesterAvatar}
+                description={req.reason || req.typeLabel || 'Yêu cầu mới'}
+                status={req.status}
+                statusLabel={req.statusLabel || 'Chờ duyệt'}
+                createdAt={req.createdAt}
+                onClick={() => navigate('/academic-staff/requests')}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+            <p className="text-sm font-medium">Không có yêu cầu nào đang chờ xử lý</p>
+            <p className="text-xs mt-1">Tất cả đã được xử lý</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export const SystemActivityLog: React.FC = () => {
+  const [logs, setLogs] = useState<import('../../../services/api/academicStaffService').SystemLogItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const fetchLogs = async (pageNum: number, append = false) => {
+    try {
+      append ? setLoadingMore(true) : setLoading(true);
+      const data = await academicStaffService.getSystemLogs(pageNum, 8);
+      setLogs(prev => append ? [...prev, ...data.content] : data.content);
+      setTotalPages(data.totalPages);
+      setPage(pageNum);
+    } catch (error) {
+      console.error('Failed to fetch system logs:', error);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLogs(0);
+  }, []);
+
+  const typeConfig: Record<string, { color: string; bg: string; border: string; icon: string }> = {
+    info: { color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-500/10', border: 'border-blue-100 dark:border-blue-500/20', icon: 'ℹ️' },
+    success: { color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-500/10', border: 'border-emerald-100 dark:border-emerald-500/20', icon: '✅' },
+    warning: { color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-500/10', border: 'border-amber-100 dark:border-amber-500/20', icon: '⚠️' },
+    error: { color: 'text-red-600', bg: 'bg-red-50 dark:bg-red-500/10', border: 'border-red-100 dark:border-red-500/20', icon: '❌' },
+  };
+
+  return (
+    <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-zinc-800 h-full flex flex-col">
+      <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100 dark:border-zinc-800">
+        <div className="flex items-center gap-3">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Nhật ký hệ thống
+          </h3>
+          <div className="flex items-center gap-1.5 text-[8px] font-black text-emerald-500 bg-emerald-50/60 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full uppercase tracking-[0.1em] border border-emerald-100 dark:border-emerald-500/20">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+            LIVE
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-auto space-y-2 pr-1" style={{ maxHeight: '320px' }}>
+        {loading ? (
+          <div className="flex items-center justify-center py-10">
+            <Loader2 className="w-6 h-6 text-gray-300 animate-spin" />
+          </div>
+        ) : logs.length > 0 ? (
+          <>
+            {logs.map((log) => {
+              const config = typeConfig[log.type] || typeConfig.info;
+              return (
+                <div
+                  key={log.id}
+                  className={`flex items-start gap-3 p-3 rounded-xl border ${config.border} ${config.bg} transition-all hover:shadow-sm`}
+                >
+                  <span className="text-sm mt-0.5 flex-shrink-0">{config.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className={`text-sm font-semibold ${config.color} truncate`}>{log.title}</h4>
+                      <span className={`text-[9px] font-bold ${config.color} ${config.bg} px-1.5 py-0.5 rounded border ${config.border} flex-shrink-0 uppercase`}>
+                        {log.type}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">{log.description}</p>
+                    <p className="text-[10px] text-gray-400 mt-1">{log.timestamp}</p>
+                  </div>
+                </div>
+              );
+            })}
+            {page < totalPages - 1 && (
+              <button 
+                onClick={() => fetchLogs(page + 1, true)}
+                disabled={loadingMore}
+                className="w-full py-2 text-xs font-semibold text-gray-500 hover:text-orange-600 transition-colors flex items-center justify-center gap-2"
+              >
+                {loadingMore ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  'Xem thêm'
+                )}
+              </button>
+            )}
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+            <p className="text-sm font-medium">Chưa có nhật ký nào</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -105,68 +289,68 @@ export const AttendanceLog: React.FC = () => {
   );
 };
 
-export const RunningRooms: React.FC = () => {
-  const rooms = [
-    { id: 1, name: 'P201', lecturer: 'Nguyễn Văn A', percent: 65, campus: 'CA 2' },
-    { id: 2, name: 'P202', lecturer: 'Dr. Sarah J.', percent: 40, campus: 'CA 2' },
-    { id: 3, name: 'P305', lecturer: 'Lê Văn Tám', percent: 90, campus: 'CA 2' },
-    { id: 4, name: 'P104', lecturer: 'Trần Thị B', percent: 20, campus: 'CA 2' },
-  ];
+export const RunningRooms: React.FC<{ rooms?: any[], total?: number }> = ({ rooms = [], total = 0 }) => {
   return (
     <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-zinc-800 h-full flex flex-col">
       <div className="flex justify-between items-center mb-5 pb-2 border-b border-gray-100 dark:border-zinc-800">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Phòng học đang sử dụng</h3>
-        <span className="text-[10px] font-bold text-orange-500 bg-orange-50 px-2 py-1 rounded tracking-widest uppercase border border-orange-100">24 PHÒNG</span>
+        <span className="text-[10px] font-bold text-orange-500 bg-orange-50 px-2 py-1 rounded tracking-widest uppercase border border-orange-100">{total} PHÒNG</span>
       </div>
       
       <div className="grid grid-cols-2 gap-4 flex-1">
-        {rooms.map(room => (
-          <div key={room.id} className="p-4 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm hover:shadow-md transition-all relative group/room">
-            <div className="flex justify-between items-start">
-               <div>
-                  <h4 className="text-base font-semibold text-gray-900 dark:text-white mt-1">{room.name}</h4>
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                    <span className="text-xs font-medium text-emerald-600">Active</span>
-                  </div>
-               </div>
-               
-               <div className="relative w-10 h-10 flex items-center justify-center">
-                  <svg className="w-full h-full -rotate-90">
-                    <circle
-                      cx="20"
-                      cy="20"
-                      r="16"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      className="text-gray-100 dark:text-zinc-800"
-                    />
-                    <circle
-                      cx="20"
-                      cy="20"
-                      r="16"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeDasharray={100}
-                      strokeDashoffset={100 - room.percent}
-                      strokeLinecap="round"
-                      className="text-orange-500"
-                    />
-                  </svg>
-                  <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-gray-400">
-                    {room.percent}%
-                  </span>
-               </div>
-            </div>
+        {rooms.length > 0 ? (
+          rooms.map((room, idx) => (
+            <div key={idx} className="p-4 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm hover:shadow-md transition-all relative group/room">
+              <div className="flex justify-between items-start">
+                <div>
+                    <h4 className="text-base font-semibold text-gray-900 dark:text-white mt-1">{room.roomName}</h4>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                      <span className="text-xs font-medium text-emerald-600">Active</span>
+                    </div>
+                </div>
+                
+                <div className="relative w-10 h-10 flex items-center justify-center">
+                    <svg className="w-full h-full -rotate-90">
+                      <circle
+                        cx="20"
+                        cy="20"
+                        r="16"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        className="text-gray-100 dark:text-zinc-800"
+                      />
+                      <circle
+                        cx="20"
+                        cy="20"
+                        r="16"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeDasharray={100}
+                        strokeDashoffset={100 - (room.attendancePercentage || 0)}
+                        strokeLinecap="round"
+                        className="text-orange-500"
+                      />
+                    </svg>
+                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-gray-400">
+                      {Math.round(room.attendancePercentage || 0)}%
+                    </span>
+                </div>
+              </div>
 
-            <div className="mt-4">
-               <p className="text-xs text-gray-500">Giảng viên</p>
-               <p className="text-sm font-medium text-gray-900 dark:text-white mt-0.5">{room.lecturer}</p>
+              <div className="mt-4">
+                <p className="text-xs text-gray-500">Giảng viên</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white mt-0.5 truncate">{room.lecturerName}</p>
+              </div>
             </div>
+          ))
+        ) : (
+          <div className="col-span-2 flex flex-col items-center justify-center py-10 text-gray-400 border border-dashed border-gray-100 rounded-xl">
+             <p className="text-sm">Hiện không có phòng học nào đang hoạt động</p>
           </div>
-        ))}
+        )}
       </div>
 
       <div className="mt-5 border-t border-gray-100 dark:border-zinc-800 pt-4 text-center">

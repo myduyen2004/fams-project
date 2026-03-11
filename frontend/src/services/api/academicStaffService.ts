@@ -48,9 +48,40 @@ export interface LecturerRequest extends Omit<UserRequest, 'role'> {
     bio?: string;
 }
 
+export interface SystemLogItem {
+    id: number;
+    title: string;
+    description: string;
+    timestamp: string;
+    type: 'info' | 'success' | 'warning' | 'error';
+}
+
 export const academicStaffService = {
-    getDashboardData: async (): Promise<AcademicStaffDashboardResponse> => {
-        const response = await apiClient.get<AcademicStaffDashboardResponse>('/academic-staff/dashboard');
+    getDashboardData: async (startDate?: string): Promise<AcademicStaffDashboardResponse> => {
+        const response = await apiClient.get<AcademicStaffDashboardResponse>('/academic-staff/dashboard', {
+            params: { startDate }
+        });
+        return response.data;
+    },
+
+    getWeeklyAttendance: async (startDate?: string): Promise<AcademicStaffDashboardResponse['weeklyAttendance']> => {
+        const response = await apiClient.get<AcademicStaffDashboardResponse['weeklyAttendance']>('/academic-staff/dashboard/weekly-attendance', {
+            params: { startDate }
+        });
+        return response.data;
+    },
+
+    getDailyAttendance: async (date?: string): Promise<AcademicStaffDashboardResponse['attendanceStats']> => {
+        const response = await apiClient.get<AcademicStaffDashboardResponse['attendanceStats']>('/academic-staff/dashboard/daily-attendance', {
+            params: { date }
+        });
+        return response.data;
+    },
+
+    getSystemLogs: async (page: number = 0, size: number = 10): Promise<{ content: SystemLogItem[]; totalPages: number; totalElements: number }> => {
+        const response = await apiClient.get<{ content: SystemLogItem[]; totalPages: number; totalElements: number }>('/academic-staff/dashboard/system-logs', {
+            params: { page, size }
+        });
         return response.data;
     },
 

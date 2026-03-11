@@ -35,4 +35,20 @@ public interface StudentAttendanceRepository extends JpaRepository<StudentAttend
                         "ORDER BY sa.updatedAt DESC")
         List<StudentAttendance> findByRequiresManualVerifyTrueAndSessionLecturerId(
                         @Param("lecturerId") Long lecturerId);
+
+        @Query("SELECT sa FROM StudentAttendance sa " +
+                        "JOIN FETCH sa.session s " +
+                        "JOIN FETCH s.timetableSlot ts " +
+                        "JOIN FETCH ts.classSection cs " +
+                        "WHERE sa.student.id = :studentId " +
+                        "AND cs.className = :className")
+        List<StudentAttendance> findByStudentIdAndClassName(
+                        @Param("studentId") Long studentId,
+                        @Param("className") String className);
+
+        @Query("SELECT sa.session.id, COUNT(sa) FROM StudentAttendance sa WHERE sa.session.id IN :sessionIds AND sa.status = com.fams.backend.entity.StudentAttendance$AttendanceStatus.PRESENT GROUP BY sa.session.id")
+        List<Object[]> countPresentBySessionIdIn(@Param("sessionIds") Collection<Long> sessionIds);
+
+        @Query("SELECT COUNT(sa) FROM StudentAttendance sa WHERE sa.session.id = :sessionId AND sa.status = com.fams.backend.entity.StudentAttendance$AttendanceStatus.PRESENT")
+        long countPresentBySessionId(@Param("sessionId") Long sessionId);
 }

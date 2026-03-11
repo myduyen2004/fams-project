@@ -27,6 +27,7 @@ export interface UserResponse {
     createdAt: string;
     updatedAt: string;
     lastLogin: string;
+    gpa?: number;
 }
 
 export interface PageResponse<T> {
