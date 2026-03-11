@@ -64,4 +64,9 @@ COPY --chown=appuser:appuser . .
 
 USER appuser
 EXPOSE 5000
+
+# Environment (merged)
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH="/app"
 CMD ["python", "-m", "app.main"]
