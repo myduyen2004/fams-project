@@ -556,4 +556,60 @@ public class NotificationService {
         log.info("Sent notification to student {} for academic request {} status change to {}",
                 academicRequest.getStudent().getId(), academicRequest.getId(), academicRequest.getStatus());
     }
+
+    /**
+     * Notify students when their grades are published (Component, FE, or Resit)
+     */
+    @Transactional
+    public void notifyStudentsGradesPublished(List<User> students, com.fams.backend.entity.Course course, String type,
+            User publisher) {
+        if (students == null || students.isEmpty())
+            return;
+
+        String gradeTypeName;
+        if ("RESIT".equalsIgnoreCase(type)) {
+            gradeTypeName = "điểm thi lại";
+        } else if ("FINAL_EXAM".equalsIgnoreCase(type)) {
+            gradeTypeName = "điểm thi cuối kỳ";
+        } else {
+            gradeTypeName = "điểm thành phần";
+        }
+
+        String title = "Đã có " + gradeTypeName + " môn " + course.getCode();
+        String content = String.format(
+                "Đã có %s cho môn học %s - %s. Vui lòng truy cập hệ thống để xem chi tiết.",
+                gradeTypeName, course.getCode(), course.getName());
+
+        // Create generic notification first
+        Notification notification = Notification.builder()
+                .title(title)
+                .content(content)
+                .type(Notification.NotificationType.SYSTEM)
+                .targetType(Notification.TargetType.USER)
+                .sender(publisher) // the one who published the grades
+                .priority(Notification.NotificationPriority.MEDIUM)
+                .status(Notification.NotificationStatus.SENT)
+                .sentAt(LocalDateTime.now())
+                .build();
+
+        notification = notificationRepository.save(notification);
+
+        // Send to all students in the list
+        List<NotificationRecipient> recipients = new ArrayList<>();
+        for (User student : students) {
+            if (student.getStatus() == User.UserStatus.ACTIVE) {
+                recipients.add(NotificationRecipient.builder()
+                        .notification(notification)
+                        .recipient(student)
+                        .isRead(false)
+                        .build());
+            }
+        }
+
+        if (!recipients.isEmpty()) {
+            notificationRecipientRepository.saveAll(recipients);
+            log.info("Sent notifications to {} students for published {} of course {}",
+                    recipients.size(), gradeTypeName, course.getCode());
+        }
+    }
 }

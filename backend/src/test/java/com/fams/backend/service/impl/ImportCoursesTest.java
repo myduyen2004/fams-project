@@ -74,7 +74,7 @@ class ImportCoursesTest {
 
             // Header row
             Row headerRow = sheet.createRow(0);
-            String[] headers = { "Code", "Name", "Credits", "Slots", "Description", "Status" };
+            String[] headers = { "Code", "Name", "Credits", "Slots", "Description", "Calculated in GPA", "Status" };
             for (int i = 0; i < headers.length; i++) {
                 headerRow.createCell(i).setCellValue(headers[i]);
             }
@@ -98,7 +98,6 @@ class ImportCoursesTest {
                     }
                 }
             }
-
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             workbook.write(out);
             return new MockMultipartFile("file", "courses.xlsx",
@@ -117,7 +116,7 @@ class ImportCoursesTest {
         @DisplayName("UTCID01: Mã môn học trống - Trả về ERROR")
         void UTCID01_EmptyCode_ReturnsError() throws IOException {
             // Arrange
-            String[][] data = { { "", "Test Course", "3", "30", "Description", "ACTIVE" } };
+            String[][] data = { { "", "Test Course", "3", "30", "Description", "Yes", "ACTIVE" } };
             MultipartFile file = createExcelFile(data);
 
             // Act
@@ -133,7 +132,7 @@ class ImportCoursesTest {
         @DisplayName("UTCID02: Tên môn học trống - Trả về ERROR")
         void UTCID02_EmptyName_ReturnsError() throws IOException {
             // Arrange
-            String[][] data = { { "MAE101", "", "3", "30", "Description", "ACTIVE" } };
+            String[][] data = { { "MAE101", "", "3", "30", "Description", "Yes", "ACTIVE" } };
             MultipartFile file = createExcelFile(data);
             when(courseRepository.findByCode("MAE101")).thenReturn(Optional.empty());
 
@@ -151,8 +150,8 @@ class ImportCoursesTest {
         void UTCID03_DuplicateCodeInFile_ReturnsError() throws IOException {
             // Arrange
             String[][] data = {
-                    { "MAE101", "Course 1", "3", "30", "Desc 1", "ACTIVE" },
-                    { "MAE101", "Course 2", "3", "30", "Desc 2", "ACTIVE" }
+                    { "MAE101", "Course 1", "3", "30", "Desc 1", "Yes", "ACTIVE" },
+                    { "MAE101", "Course 2", "3", "30", "Desc 2", "Yes", "ACTIVE" }
             };
             MultipartFile file = createExcelFile(data);
             when(courseRepository.findByCode("MAE101")).thenReturn(Optional.empty());
@@ -171,7 +170,7 @@ class ImportCoursesTest {
         @DisplayName("UTCID04: Mã môn học đã tồn tại trong hệ thống - Trả về ERROR")
         void UTCID04_CodeExistsInDatabase_ReturnsError() throws IOException {
             // Arrange
-            String[][] data = { { "PRF192", "New Course", "3", "30", "Description", "ACTIVE" } };
+            String[][] data = { { "PRF192", "New Course", "3", "30", "Description", "Yes", "ACTIVE" } };
             MultipartFile file = createExcelFile(data);
             when(courseRepository.findByCode("PRF192")).thenReturn(Optional.of(existingCourse));
 
@@ -188,7 +187,7 @@ class ImportCoursesTest {
         @DisplayName("UTCID05: Trạng thái không hợp lệ - Trả về WARNING và tự động đặt ACTIVE")
         void UTCID05_InvalidStatus_ReturnsWarningAndDefaultsToActive() throws IOException {
             // Arrange
-            String[][] data = { { "MAE101", "Test Course", "3", "30", "Description", "XYZ" } };
+            String[][] data = { { "MAE101", "Test Course", "3", "30", "Description", "Yes", "XYZ" } };
             MultipartFile file = createExcelFile(data);
             when(courseRepository.findByCode("MAE101")).thenReturn(Optional.empty());
 
@@ -206,7 +205,7 @@ class ImportCoursesTest {
         @DisplayName("UTCID06: Dữ liệu hợp lệ với ACTIVE - Trả về VALID")
         void UTCID06_ValidDataWithActive_ReturnsValid() throws IOException {
             // Arrange
-            String[][] data = { { "MAE101", "Mathematics", "3", "30", "Math description", "ACTIVE" } };
+            String[][] data = { { "MAE101", "Mathematics", "3", "30", "Math description", "Yes", "ACTIVE" } };
             MultipartFile file = createExcelFile(data);
             when(courseRepository.findByCode("MAE101")).thenReturn(Optional.empty());
 
@@ -230,7 +229,7 @@ class ImportCoursesTest {
         @DisplayName("UTCID06b: Dữ liệu hợp lệ với INACTIVE - Trả về VALID")
         void UTCID06b_ValidDataWithInactive_ReturnsValid() throws IOException {
             // Arrange
-            String[][] data = { { "MAE101", "Mathematics", "3", "30", "Description", "INACTIVE" } };
+            String[][] data = { { "MAE101", "Mathematics", "3", "30", "Description", "Yes", "INACTIVE" } };
             MultipartFile file = createExcelFile(data);
             when(courseRepository.findByCode("MAE101")).thenReturn(Optional.empty());
 
@@ -247,7 +246,7 @@ class ImportCoursesTest {
         @DisplayName("Số tín chỉ không hợp lệ - Trả về ERROR")
         void InvalidCredits_ReturnsError() throws IOException {
             // Arrange
-            String[][] data = { { "MAE101", "Course", "0", "30", "Desc", "ACTIVE" } };
+            String[][] data = { { "MAE101", "Course", "0", "30", "Desc", "Yes", "ACTIVE" } };
             MultipartFile file = createExcelFile(data);
             when(courseRepository.findByCode("MAE101")).thenReturn(Optional.empty());
 
@@ -263,7 +262,7 @@ class ImportCoursesTest {
         @DisplayName("Số slot không hợp lệ - Trả về ERROR")
         void InvalidSlots_ReturnsError() throws IOException {
             // Arrange
-            String[][] data = { { "MAE101", "Course", "3", "0", "Desc", "ACTIVE" } };
+            String[][] data = { { "MAE101", "Course", "3", "0", "Desc", "Yes", "ACTIVE" } };
             MultipartFile file = createExcelFile(data);
             when(courseRepository.findByCode("MAE101")).thenReturn(Optional.empty());
 
@@ -279,7 +278,7 @@ class ImportCoursesTest {
         @DisplayName("Nhiều lỗi trong một dòng - Gộp tất cả thông báo lỗi")
         void MultipleErrors_CombinesMessages() throws IOException {
             // Arrange
-            String[][] data = { { "", "", "0", "0", "Desc", "ACTIVE" } };
+            String[][] data = { { "", "", "0", "0", "Desc", "Yes", "ACTIVE" } };
             MultipartFile file = createExcelFile(data);
 
             // Act
@@ -313,9 +312,9 @@ class ImportCoursesTest {
         void SkipsEmptyRows() throws IOException {
             // Arrange
             String[][] data = {
-                    { "MAE101", "Course 1", "3", "30", "Desc", "ACTIVE" },
-                    { "", "", "", "", "", "" },
-                    { "MAE102", "Course 2", "3", "30", "Desc", "ACTIVE" }
+                    { "MAE101", "Course 1", "3", "30", "Desc", "Yes", "ACTIVE" },
+                    { "", "", "", "", "", "", "" },
+                    { "MAE102", "Course 2", "3", "30", "Desc", "Yes", "ACTIVE" }
             };
             MultipartFile file = createExcelFile(data);
             when(courseRepository.findByCode(anyString())).thenReturn(Optional.empty());
@@ -334,8 +333,8 @@ class ImportCoursesTest {
         void CaseInsensitiveDuplicateCheck() throws IOException {
             // Arrange
             String[][] data = {
-                    { "MAE101", "Course 1", "3", "30", "Desc", "ACTIVE" },
-                    { "mae101", "Course 2", "3", "30", "Desc", "ACTIVE" }
+                    { "MAE101", "Course 1", "3", "30", "Desc", "Yes", "ACTIVE" },
+                    { "mae101", "Course 2", "3", "30", "Desc", "Yes", "ACTIVE" }
             };
             MultipartFile file = createExcelFile(data);
             when(courseRepository.findByCode(anyString())).thenReturn(Optional.empty());
@@ -543,7 +542,8 @@ class ImportCoursesTest {
                 assertEquals("Credits", headerRow.getCell(2).getStringCellValue());
                 assertEquals("Slots", headerRow.getCell(3).getStringCellValue());
                 assertEquals("Description", headerRow.getCell(4).getStringCellValue());
-                assertEquals("Status", headerRow.getCell(5).getStringCellValue());
+                assertEquals("Calculated in GPA", headerRow.getCell(5).getStringCellValue());
+                assertEquals("Status", headerRow.getCell(6).getStringCellValue());
 
                 // Check sample data
                 Row sampleRow = dataSheet.getRow(1);

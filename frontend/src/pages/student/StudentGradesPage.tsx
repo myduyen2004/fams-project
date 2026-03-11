@@ -394,11 +394,11 @@ export const StudentGradesPage: React.FC = () => {
                 ) : gradeData ? (
                     <Card className="min-w-full overflow-hidden border-none shadow-sm dark:shadow-none bg-white dark:bg-zinc-900 p-0">
                         {/* Course Info Header - WHITE background */}
-                        <div className="bg-white dark:bg-zinc-900 px-6 py-4 flex items-center justify-between border-b border-gray-200 dark:border-zinc-700">
-                            <div>
-                                <h2 className="text-xl font-bold text-gray-900 dark:text-white">{gradeData.courseName}</h2>
-                                <div className="flex items-center gap-3 mt-1">
-                                    <span className="bg-fpt-orange/10 text-fpt-orange px-3 py-0.5 rounded-full text-xs font-bold">
+                        <div className="bg-white dark:bg-zinc-900 px-6 py-4 flex items-center justify-between border-b border-gray-200 dark:border-zinc-700 flex-wrap gap-4">
+                            <div className="flex-1 min-w-[200px]">
+                                <h2 className="text-xl font-bold text-gray-900 dark:text-white break-words">{gradeData.courseName}</h2>
+                                <div className="flex items-center gap-3 mt-1 flex-wrap">
+                                    <span className="bg-fpt-orange/10 text-fpt-orange px-3 py-0.5 rounded-full text-xs font-bold whitespace-nowrap">
                                         {gradeData.courseCode}
                                     </span>
                                     <span className="text-gray-500 dark:text-gray-400 text-sm">{gradeData.className}</span>

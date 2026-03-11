@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Upload, Loader2 } from 'lucide-react';
+import { X, Upload, Loader2, FileSpreadsheet } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { courseService } from '../../services/api/courseService';
 import { CourseImportDTO } from '../../types/course';
@@ -94,8 +94,8 @@ export const ImportCourseModal: React.FC<ImportCourseModalProps> = ({ isOpen, on
     const canImport = errorCount === 0 && validCount > 0;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className={`bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full ${previewData ? 'max-w-6xl' : 'max-w-md'} border border-gray-100 dark:border-zinc-800 overflow-hidden transition-all duration-300 flex flex-col max-h-[90vh]`}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className={`relative bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl flex flex-col transition-all duration-300 ${previewData ? 'w-full max-w-5xl max-h-[92vh]' : 'w-full max-w-lg'}`}>
 
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800 shrink-0">
@@ -121,12 +121,37 @@ export const ImportCourseModal: React.FC<ImportCourseModalProps> = ({ isOpen, on
                                 <p className="font-semibold mb-1">Hướng dẫn:</p>
                                 <ul className="list-disc pl-4 space-y-1">
                                     <li>Tải lên file <strong>.xlsx</strong> chứa dữ liệu môn học.</li>
-                                    <li>Cột theo thứ tự: Code, Name, Credits, Slots, Semester, Description, Status</li>
+                                    <li>Cột theo thứ tự: Code, Name, Credits, Slots, Description, Calculated in GPA, Status</li>
                                     <li>Status: <strong>ACTIVE</strong> (đang mở) hoặc <strong>INACTIVE</strong> (ngừng đào tạo)</li>
+                                    <li>Calculated in GPA: <strong>Yes/Có/True</strong> (tính GPA) hoặc <strong>No/Không/False</strong> (không tính)</li>
                                     <li>Mã môn học <strong>không được trùng</strong> với môn đã có trong hệ thống.</li>
                                     <li>Nhấn "Xem trước" để kiểm tra dữ liệu trước khi lưu.</li>
                                 </ul>
                             </div>
+
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    try {
+                                        const blob = await courseService.downloadImportTemplate();
+                                        const url = window.URL.createObjectURL(blob);
+                                        const link = document.createElement('a');
+                                        link.href = url;
+                                        link.download = 'template-import-mon-hoc.xlsx';
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        document.body.removeChild(link);
+                                        window.URL.revokeObjectURL(url);
+                                    } catch (error) {
+                                        toast.error('Lỗi khi tải template');
+                                    }
+                                }}
+                                disabled={loading}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-xl hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors font-semibold"
+                            >
+                                <FileSpreadsheet size={18} />
+                                Tải file mẫu Excel
+                            </button>
 
                             <div className="border-2 border-dashed border-gray-300 dark:border-zinc-700 rounded-lg p-6 flex flex-col items-center text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors relative">
                                 <input required type="file" accept=".xlsx, .xls" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileChange} />
@@ -167,6 +192,7 @@ export const ImportCourseModal: React.FC<ImportCourseModalProps> = ({ isOpen, on
                                             <th className="px-4 py-3">Tên môn học</th>
                                             <th className="px-4 py-3 text-center w-24">Tín chỉ</th>
                                             <th className="px-4 py-3 text-center">Slots</th>
+                                            <th className="px-4 py-3 text-center">Tính GPA</th>
                                             <th className="px-4 py-3 text-center">Trạng thái</th>
                                             <th className="px-4 py-3 text-center">Kiểm tra</th>
                                             <th className="px-4 py-3">Ghi chú</th>
@@ -180,6 +206,13 @@ export const ImportCourseModal: React.FC<ImportCourseModalProps> = ({ isOpen, on
                                                 <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{row.name || '---'}</td>
                                                 <td className="px-4 py-3 text-center text-gray-600 dark:text-gray-400">{row.credits || '---'}</td>
                                                 <td className="px-4 py-3 text-center text-gray-600 dark:text-gray-400">{row.numberOfSlots || '---'}</td>
+                                                <td className="px-4 py-3 text-center">
+                                                    {row.isCalculatedInGpa ? (
+                                                        <span className="text-green-600 font-medium">Có</span>
+                                                    ) : (
+                                                        <span className="text-red-500">Không</span>
+                                                    )}
+                                                </td>
                                                 <td className="px-4 py-3 text-center">
                                                     {row.statusValue === 'ACTIVE' ? (
                                                         <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
