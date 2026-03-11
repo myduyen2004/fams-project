@@ -20,6 +20,20 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
         List<TimetableSlot> findByDate(LocalDate date);
 
         List<TimetableSlot> findByDateAndSlotType_Id(LocalDate date, Long slotTypeId);
+    
+        @Query("SELECT ts FROM TimetableSlot ts " +
+                "JOIN FETCH ts.room r " +
+                "JOIN FETCH ts.classSection cs " +
+                "LEFT JOIN FETCH cs.lecturer l " +
+                "JOIN FETCH ts.slotType st " +
+                "WHERE ts.date = :date AND ts.slotType.id = :slotTypeId")
+        List<TimetableSlot> findByDateAndSlotType_IdEager(@Param("date") LocalDate date, @Param("slotTypeId") Long slotTypeId);
+    
+        @Query("SELECT ts FROM TimetableSlot ts " +
+                "JOIN FETCH ts.classSection cs " +
+                "JOIN FETCH ts.slotType st " +
+                "WHERE ts.date = :date")
+        List<TimetableSlot> findByDateEager(@Param("date") LocalDate date);
 
         // Derived queries for conflict checking
         boolean existsByRoomIdAndDateAndSlotNumberAndStatusNot(Long roomId, LocalDate date, Integer slotNumber,

@@ -36,6 +36,7 @@ public class StudentServiceImpl implements StudentService {
     private final MajorRepository majorRepository;
     private final SpecializationRepository specializationRepository;
     private final SubSpecializationRepository subSpecializationRepository;
+    private final SystemLogService systemLogService;
 
     @Override
     @Transactional(readOnly = true)
@@ -155,8 +156,10 @@ public class StudentServiceImpl implements StudentService {
         }
 
         studentProfileRepository.findById(id).ifPresent(studentProfileRepository::delete);
+        String code = user.getCode();
         userRepository.deleteById(id);
         log.info("Deleted student with ID: {}", id);
+        systemLogService.logStudentDeleted(code);
     }
 
     @Override
@@ -169,6 +172,7 @@ public class StudentServiceImpl implements StudentService {
                 log.error("Failed to delete student with ID: {}", id, e);
             }
         }
+        systemLogService.logStudentsDeleted(ids.size());
     }
 
     @Override
@@ -282,6 +286,7 @@ public class StudentServiceImpl implements StudentService {
             profile.setCourse(request.getCourse().trim());
             profileChanged = true;
         }
+        Double oldGpa = profile == null ? null : profile.getGpa();
         if (request.getGpa() != null && !request.getGpa().equals(profile.getGpa())) {
             profile.setGpa(request.getGpa());
             profileChanged = true;
@@ -290,6 +295,14 @@ public class StudentServiceImpl implements StudentService {
         if (userChanged || profileChanged) {
             userRepository.save(user); // Cascade saves profile
             log.info("Updated student with ID: {} and its profile", id);
+            // Detailed logging for sensitive changes
+            if (profileChanged && !java.util.Objects.equals(oldGpa, profile.getGpa())) {
+                String adminUsername = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+                systemLogService.logSensitiveDataChange(adminUsername, user.getUsername(), "GPA",
+                        String.valueOf(oldGpa), String.valueOf(profile.getGpa()));
+            } else {
+                systemLogService.logStudentUpdated(user.getCode(), user.getFullName());
+            }
         } else {
             log.info("No changes detected for student with ID: {}, skipping save", id);
         }
@@ -390,6 +403,7 @@ public class StudentServiceImpl implements StudentService {
             java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
             workbook.write(out);
             workbook.close();
+            systemLogService.logStudentExported();
             return out.toByteArray();
         } catch (Exception e) {
             log.error("Error exporting students", e);
@@ -826,6 +840,7 @@ public class StudentServiceImpl implements StudentService {
         result.put("updated", updatedCount);
         result.put("failed", failedCount);
         result.put("errors", errors);
+        systemLogService.logStudentImportCompleted(createdCount, updatedCount, failedCount);
         return result;
     }
 

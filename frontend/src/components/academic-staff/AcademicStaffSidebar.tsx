@@ -252,13 +252,19 @@ export const AcademicStaffSidebar: React.FC = () => {
 
           <button
             onClick={() => navigate('/academic-staff/logs')}
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-fpt-orange hover:bg-fpt-orange hover:text-white transition-all duration-200 group"
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group ${location.pathname.startsWith('/academic-staff/logs') 
+              ? 'bg-fpt-orange text-white' 
+              : 'text-fpt-orange hover:bg-fpt-orange hover:text-white'}`}
             title={!isExpanded ? 'Nhật ký hệ thống' : ''}
           >
             <div className={`flex-shrink-0 transition-colors duration-200 ${location.pathname.startsWith('/academic-staff/logs') ? 'text-white' : 'text-fpt-orange group-hover:text-white'}`}>
               <Clock size={20} />
             </div>
-            {isExpanded && <span className="text-sm font-medium whitespace-nowrap">Nhật ký hệ thống</span>}
+            {isExpanded && (
+              <span className={`text-sm whitespace-nowrap transition-colors duration-200 ${location.pathname.startsWith('/academic-staff/logs') ? 'text-white font-bold' : 'font-medium group-hover:text-white'}`}>
+                Nhật ký hệ thống
+              </span>
+            )}
           </button>
 
           <button

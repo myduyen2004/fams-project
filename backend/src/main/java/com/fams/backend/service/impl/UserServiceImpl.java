@@ -320,6 +320,7 @@ public class UserServiceImpl implements UserService {
             user.setFaceDataStatus(User.FaceDataStatus.REGISTERED);
         }
 
+        User.UserRole oldRole = user.getRole();
         user.setFullName(request.getFullName());
         user.setEmail(request.getEmail());
         user.setPhone(request.getPhone());
@@ -333,8 +334,16 @@ public class UserServiceImpl implements UserService {
             }
         }
 
+        User savedUser = userRepository.save(user);
+
+        // Audit log for role change
+        if (oldRole != savedUser.getRole()) {
+            String adminUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+            systemLogService.logRoleChanged(adminUsername, savedUser.getUsername(), oldRole.name(), savedUser.getRole().name());
+        }
+
         log.info("User updated successfully: id={}, code={}", id, user.getCode());
-        return UserResponse.fromUser(userRepository.save(user));
+        return UserResponse.fromUser(savedUser);
     }
 
     @Override

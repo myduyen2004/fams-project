@@ -78,6 +78,7 @@ const StudentSemestersPage = lazy(() => import('./pages/student/SemestersPage').
 const LecturerRoomList = lazy(() => import('./pages/lecturer/RoomList').then(m => ({ default: m.RoomList })));
 const LecturerRoomDetail = lazy(() => import('./pages/lecturer/RoomDetail').then(m => ({ default: m.RoomDetail })));
 const LecturerSemestersPage = lazy(() => import('./pages/lecturer/SemestersPage').then(m => ({ default: m.SemestersPage })));
+const AcademicStaffSystemLogsPage = lazy(() => import('./pages/academic-staff/SystemLogsPage').then(m => ({ default: m.SystemLogsPage })));
 const ChatPage = lazy(() => import('./pages/chatbot/ChatPage').then(m => ({ default: m.ChatPage })));
 
 const PageLoader = () => (
@@ -549,7 +550,7 @@ function App() {
             }
           />
           <Route path="/academic-staff/alerts" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Cảnh báo hệ thống" /></ProtectedRoute>} />
-          <Route path="/academic-staff/logs" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Nhật ký hệ thống" /></ProtectedRoute>} />
+          <Route path="/academic-staff/logs" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><AcademicStaffSystemLogsPage /></ProtectedRoute>} />
         </Routes>
 
         {/* Floating AI Chat Widget — visible on all authenticated pages */}

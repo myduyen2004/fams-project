@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 public class RoomServiceImpl implements RoomService {
 
     private final RoomRepository roomRepository;
+    private final SystemLogService systemLogService;
     private final TimetableSlotRepository timetableSlotRepository;
     private final ScheduleRequestRepository scheduleRequestRepository;
 
@@ -65,7 +66,9 @@ public class RoomServiceImpl implements RoomService {
                 .gridColSpan(request.getGridColSpan() != null ? request.getGridColSpan() : 1)
                 .build();
 
-        return convertToResponse(roomRepository.save(room));
+        Room saved = roomRepository.save(room);
+        systemLogService.logRoomCreated(saved.getCode(), saved.getName());
+        return convertToResponse(saved);
     }
 
     @Override
@@ -91,7 +94,9 @@ public class RoomServiceImpl implements RoomService {
         room.setGridRowSpan(request.getGridRowSpan() != null ? request.getGridRowSpan() : 1);
         room.setGridColSpan(request.getGridColSpan() != null ? request.getGridColSpan() : 1);
 
-        return convertToResponse(roomRepository.save(room));
+        Room saved = roomRepository.save(room);
+        systemLogService.logRoomUpdated(saved.getCode(), saved.getName());
+        return convertToResponse(saved);
     }
 
     @Override
@@ -101,6 +106,7 @@ public class RoomServiceImpl implements RoomService {
             throw new IllegalArgumentException("Không tìm thấy phòng học");
         }
         roomRepository.deleteById(id);
+        systemLogService.logRoomDeleted(id);
     }
 
     @Override

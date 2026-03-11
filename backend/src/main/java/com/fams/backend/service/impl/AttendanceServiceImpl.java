@@ -26,6 +26,7 @@ public class AttendanceServiceImpl implements AttendanceService {
         private final EnrollmentRepository enrollmentRepository;
         private final SemesterRepository semesterRepository;
         private final ClassSectionRepository classSectionRepository;
+        private final SystemLogService systemLogService;
 
         @Override
         @Transactional
@@ -195,6 +196,10 @@ public class AttendanceServiceImpl implements AttendanceService {
                 }
 
                 studentAttendanceRepository.save(attendance);
+
+                String performerName = session.getLecturer().getFullName();
+                systemLogService.logSensitiveDataChange(performerName, student.getUsername(),
+                        "Điểm danh (Manual)", "N/A", request.getStatus());
 
                 return mapToDetailResponse(sessionRepository.findById(session.getId()).get());
         }

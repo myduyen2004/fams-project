@@ -37,6 +37,7 @@ public class LecturerServiceImpl implements LecturerService {
 
     private final UserRepository userRepository;
     private final LecturerProfileRepository lecturerProfileRepository;
+    private final SystemLogService systemLogService;
 
     private static final Set<String> VALID_DEPARTMENTS = Set.of(
             "Khoa Công nghệ Thông tin",
@@ -182,9 +183,11 @@ public class LecturerServiceImpl implements LecturerService {
 
         // Delete profile first if exists
         lecturerProfileRepository.findByUser(user).ifPresent(lecturerProfileRepository::delete);
+        String code = user.getCode();
         // Delete user
         userRepository.deleteById(id);
         log.info("Deleted lecturer with ID: {}", id);
+        systemLogService.logLecturerDeleted(code);
     }
 
     @Override
@@ -197,6 +200,7 @@ public class LecturerServiceImpl implements LecturerService {
                 log.error("Failed to delete lecturer with ID: {}", id, e);
             }
         }
+        systemLogService.logLecturersDeleted(ids.size());
     }
 
     @Override
@@ -269,6 +273,7 @@ public class LecturerServiceImpl implements LecturerService {
         }
         LecturerProfile savedProfile = lecturerProfileRepository.save(profile);
         log.info("Saved profile: id={}, dept={}", savedProfile.getUserId(), savedProfile.getDepartment());
+        systemLogService.logLecturerUpdated(user.getCode(), user.getFullName());
 
         // Note: Avatar is NOT updated here because it belongs to User. If needed, we
         // can update it separately,
@@ -354,6 +359,7 @@ public class LecturerServiceImpl implements LecturerService {
             java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
             workbook.write(out);
             workbook.close();
+            systemLogService.logLecturerExported();
             return out.toByteArray();
         } catch (Exception e) {
             log.error("Error exporting lecturers", e);
@@ -482,6 +488,7 @@ public class LecturerServiceImpl implements LecturerService {
         result.put("updated", updatedCount);
         result.put("failed", failedCount);
         result.put("errors", errors);
+        systemLogService.logLecturerImportCompleted(createdCount, updatedCount, failedCount);
         return result;
     }
 
@@ -735,6 +742,7 @@ public class LecturerServiceImpl implements LecturerService {
         result.put("updated", updatedCount);
         result.put("failed", failedCount);
         result.put("errors", errors);
+        systemLogService.logLecturerImportCompleted(createdCount, updatedCount, failedCount);
         return result;
     }
 }

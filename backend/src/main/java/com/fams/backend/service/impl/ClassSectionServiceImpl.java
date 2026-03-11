@@ -39,6 +39,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
     private final SpecializationCourseRepository specializationCourseRepository;
     private final SubSpecializationCourseRepository subSpecializationCourseRepository;
     private final TimetableSlotRepository timetableSlotRepository;
+    private final SystemLogService systemLogService;
 
     @Override
     @Transactional(readOnly = true)
@@ -148,6 +149,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
 
         classSection = classSectionRepository.save(classSection);
         log.info("Created class section: {}", classSection.getClassName());
+        systemLogService.logClassCreated(classSection.getClassName());
 
         return convertToResponse(classSection);
     }
@@ -193,6 +195,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
 
         classSection = classSectionRepository.save(classSection);
         log.info("Updated class section: {}", classSection.getClassName());
+        systemLogService.logClassUpdated(classSection.getClassName());
 
         return convertToResponse(classSection);
     }
@@ -211,6 +214,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
 
         classSectionRepository.delete(classSection);
         log.info("Deleted class section: {}", className);
+        systemLogService.logClassDeleted(className);
     }
 
     @Override
@@ -220,6 +224,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         for (String className : classNames) {
             deleteClassSection(className);
         }
+        systemLogService.logClassesDeleted(classNames.size());
     }
 
     @Override
@@ -323,6 +328,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         classSectionRepository.save(classSection);
 
         log.info("Created enrollment for student {} in class {}", request.getStudentCode(), request.getClassName());
+        systemLogService.logEnrollmentCreated(request.getStudentCode(), request.getClassName());
 
         return convertToEnrollmentResponse(enrollment);
     }
@@ -394,6 +400,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
 
         enrollmentRepository.delete(enrollment);
         log.info("Deleted enrollment: {}", enrollmentId);
+        systemLogService.logEnrollmentDeleted(enrollment.getStudentCode(), classSection.getClassName());
     }
 
     @Override
@@ -574,6 +581,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         classSectionRepository.save(targetClassSection);
 
         log.info("Successfully transferred {} enrollments to {}", enrollmentIds.size(), targetClassName);
+        systemLogService.logEnrollmentsTransferred(enrollmentIds.size(), targetClassName);
     }
 
     // ==================== TEMPLATE METHODS ====================

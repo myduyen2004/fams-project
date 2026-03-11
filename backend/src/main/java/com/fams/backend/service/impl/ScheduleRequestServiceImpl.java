@@ -47,6 +47,7 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
     private final com.fams.backend.repository.NotificationRepository notificationRepository;
     private final com.fams.backend.repository.NotificationRecipientRepository notificationRecipientRepository;
     private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
+    private final SystemLogService systemLogService;
 
     @Override
     public ScheduleRequestResponse createRequest(CreateScheduleRequest request, Long requesterId) {
@@ -280,6 +281,14 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
         }
 
         ScheduleRequest savedRequest = scheduleRequestRepository.saveAndFlush(request);
+
+        // Log system activity
+        String className = savedRequest.getClassSection() != null ? savedRequest.getClassSection().getClassName() : "N/A";
+        if (status == ScheduleRequest.RequestStatus.APPROVED) {
+            systemLogService.logScheduleRequestApproved(savedRequest.getId(), approver.getFullName(), className);
+        } else if (status == ScheduleRequest.RequestStatus.REJECTED) {
+            systemLogService.logScheduleRequestRejected(savedRequest.getId(), approver.getFullName(), className);
+        }
 
         // Gửi thông báo đến người yêu cầu sau khi cập nhật trạng thái
         sendNotificationAsync(savedRequest, status, note);
