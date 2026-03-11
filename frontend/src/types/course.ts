@@ -10,6 +10,14 @@ export interface Course {
     orderIndex?: number;
     canDelete?: boolean;
     totalWeight?: number;
+    isCalculatedInGpa?: boolean;
+    prerequisites?: CoursePrerequisite[];
+}
+
+export interface CoursePrerequisite {
+    id: number;
+    code: string;
+    name: string;
 }
 
 export interface CourseSearchParams {
@@ -25,6 +33,7 @@ export interface CourseCreateRequest {
     description?: string;
     credits: number;
     numberOfSlots: number;
+    isCalculatedInGpa?: boolean;
 }
 
 export interface CourseImportDTO {
@@ -34,6 +43,7 @@ export interface CourseImportDTO {
     credits: number;
     numberOfSlots: number;
     description?: string;
+    isCalculatedInGpa?: boolean;
     statusValue: string; // ACTIVE, INACTIVE from Excel
     status: string; // VALID, WARNING, ERROR - validation status
     errorMessage?: string;

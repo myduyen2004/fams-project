@@ -2,13 +2,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     Plus, Download, Edit2, Copy, Trash2, ChevronLeft,
-    Info, CheckCircle2, AlertCircle, Loader2
+    Info, CheckCircle2, AlertCircle, Loader2, Upload, BookOpen
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { gradeComponentService, GradeComponent, GradeType, GradeComponentRequest } from '../../services/api/gradeComponentService';
 import { courseService } from '../../services/api/courseService';
-import { Course } from '../../types/course';
+import { Course, CoursePrerequisite } from '../../types/course';
+import { ImportGradeComponentModal } from '../../components/academic-staff/ImportGradeComponentModal';
+import { PrerequisiteSelectionModal } from '../../components/academic-staff/PrerequisiteSelectionModal';
 
 // Type colors mapping
 const typeColors: Record<string, { bg: string; text: string; label: string; bar: string }> = {
@@ -54,6 +56,13 @@ export const GradeConfigurationPage: React.FC = () => {
     const [allComponents, setAllComponents] = useState<GradeComponent[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [showImportModal, setShowImportModal] = useState(false);
+
+    // Prerequisite state
+    const [prerequisites, setPrerequisites] = useState<CoursePrerequisite[]>([]);
+    const [isPrereqModalOpen, setIsPrereqModalOpen] = useState(false);
+    const [prereqAdding, setPrereqAdding] = useState(false);
+    const [prereqRemoving, setPrereqRemoving] = useState<number | null>(null);
 
     // Modal state
     const [showModal, setShowModal] = useState(false);
@@ -64,7 +73,6 @@ export const GradeConfigurationPage: React.FC = () => {
         description: '',
         type: 'ASSIGNMENT',
         weight: '',
-        isRequired: true,
         isResit: false,
     });
 
@@ -80,6 +88,7 @@ export const GradeConfigurationPage: React.FC = () => {
             ]);
             setCourse(courseData);
             setAllComponents(componentsData);
+            setPrerequisites(courseData.prerequisites || []);
         } catch (error) {
             console.error('Failed to load data:', error);
             toast.error('Không thể tải dữ liệu');
@@ -150,7 +159,6 @@ export const GradeConfigurationPage: React.FC = () => {
             description: '',
             type: 'ASSIGNMENT',
             weight: '',
-            isRequired: true,
             isResit: false,
         });
         setShowModal(true);
@@ -163,7 +171,6 @@ export const GradeConfigurationPage: React.FC = () => {
             description: component.description || '',
             type: component.type,
             weight: component.weight,
-            isRequired: component.isRequired,
             isResit: component.isResit,
             referenceComponentId: component.referenceComponentId,
         });
@@ -269,18 +276,42 @@ export const GradeConfigurationPage: React.FC = () => {
         }
     };
 
-    const handleToggleRequired = async (component: GradeComponent) => {
-        try {
-            await gradeComponentService.toggleRequired(component.id);
-            loadData();
-        } catch (error) {
-            console.error('Failed to toggle:', error);
-            toast.error('Không thể thay đổi trạng thái');
-        }
-    };
 
     const handleExport = () => {
         toast.success('Xuất cấu hình điểm (Tính năng đang phát triển)');
+    };
+
+    // Handlers for prerequisites
+    const handleAddPrerequisites = async (selectedIds: number[]) => {
+        if (!course) return;
+        setPrereqAdding(true);
+        try {
+            let updated: CoursePrerequisite[] = prerequisites;
+            for (const prereqId of selectedIds) {
+                updated = await courseService.addPrerequisite(course.id, prereqId);
+            }
+            setPrerequisites(updated);
+            setIsPrereqModalOpen(false);
+            toast.success(`Đã thêm ${selectedIds.length} môn tiên quyết`);
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Không thể thêm môn tiên quyết');
+        } finally {
+            setPrereqAdding(false);
+        }
+    };
+
+    const handleRemovePrerequisite = async (prereqId: number) => {
+        if (!course) return;
+        setPrereqRemoving(prereqId);
+        try {
+            const updated = await courseService.removePrerequisite(course.id, prereqId);
+            setPrerequisites(updated);
+            toast.success('Đã xóa môn tiên quyết');
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Không thể xóa môn tiên quyết');
+        } finally {
+            setPrereqRemoving(null);
+        }
     };
 
     if (loading) {
@@ -310,45 +341,82 @@ export const GradeConfigurationPage: React.FC = () => {
         <AcademicStaffLayout pageTitle="Cấu hình điểm">
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                    <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <button
-                                onClick={() => navigate('/academic-staff/courses')}
-                                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
-                            >
-                                <ChevronLeft className="w-5 h-5 text-gray-500" />
-                            </button>
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${course.status === 'ACTIVE'
-                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
-                                }`}>
-                                {course.status}
-                            </span>
-                        </div>
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                            {course.name} ({course.code})
-                        </h1>
-                        <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
-                            Cấu hình các thành phần điểm, trọng số và yêu cầu đánh giá cho môn học này.
-                        </p>
-                    </div>
+                <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-3">
                         <button
-                            onClick={handleExport}
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-zinc-700 transition-all duration-200 shadow-sm"
+                            onClick={() => navigate('/academic-staff/courses')}
+                            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
                         >
-                            <Download className="w-4 h-4" />
-                            Xuất file
+                            <ChevronLeft className="w-5 h-5 text-gray-500" />
                         </button>
-                        <button
-                            onClick={openAddModal}
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-fpt-orange to-orange-500 text-white text-sm font-medium hover:from-orange-600 hover:to-orange-600 transition-all duration-200 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40"
-                        >
-                            <Plus className="w-4 h-4" />
-                            Thêm thành phần điểm
-                        </button>
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${course.status === 'ACTIVE'
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                            : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                            }`}>
+                            {course.status}
+                        </span>
                     </div>
+
+                    <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-4">
+                        <div className="flex items-center gap-4 flex-wrap flex-1 min-w-0">
+                            <h1 className="text-2xl font-bold text-gray-900 dark:text-white line-clamp-2 break-words">
+                                {course.name} ({course.code})
+                            </h1>
+
+                            {/* GPA Toggle */}
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 dark:bg-orange-900/10 rounded-xl border border-orange-100 dark:border-orange-900/30 transition-all hover:border-orange-200 shrink-0">
+                                <span className="text-[11px] uppercase tracking-wider font-bold text-orange-600 dark:text-orange-400 whitespace-nowrap">Tính GPA:</span>
+                                <button
+                                    onClick={async () => {
+                                        if (!course) return;
+                                        try {
+                                            const updated = await courseService.updateGpaStatus(course.id, !course.isCalculatedInGpa);
+                                            setCourse({ ...course, isCalculatedInGpa: updated.isCalculatedInGpa });
+                                            toast.success(`Đã ${updated.isCalculatedInGpa ? 'bật' : 'tắt'} tính GPA cho môn ${course.code}`);
+                                        } catch (error) {
+                                            toast.error('Không thể cập nhật trạng thái GPA');
+                                        }
+                                    }}
+                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none shrink-0 ${course.isCalculatedInGpa ? 'bg-fpt-orange' : 'bg-gray-300 dark:bg-zinc-600'}`}
+                                >
+                                    <span
+                                        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${course.isCalculatedInGpa ? 'translate-x-[18px]' : 'translate-x-[2px]'}`}
+                                    />
+                                </button>
+                                <span className={`text-[11px] font-bold min-w-[24px] ${course.isCalculatedInGpa ? 'text-fpt-orange' : 'text-gray-400 dark:text-zinc-500'}`}>
+                                    {course.isCalculatedInGpa ? 'BẬT' : 'TẮT'}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-3 shrink-0">
+                            <button
+                                onClick={handleExport}
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-zinc-700 transition-all duration-200 shadow-sm whitespace-nowrap"
+                            >
+                                <Download className="w-4 h-4" />
+                                Xuất file
+                            </button>
+                            <button
+                                onClick={() => setShowImportModal(true)}
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-fpt-orange bg-orange-50 dark:bg-orange-900/20 text-fpt-orange text-sm font-medium hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-all duration-200 shadow-sm whitespace-nowrap"
+                            >
+                                <Upload className="w-4 h-4" />
+                                Import thành phần điểm
+                            </button>
+                            <button
+                                onClick={openAddModal}
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-fpt-orange to-orange-500 text-white text-sm font-medium hover:from-orange-600 hover:to-orange-600 transition-all duration-200 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 whitespace-nowrap"
+                            >
+                                <Plus className="w-4 h-4" />
+                                Thêm thành phần điểm
+                            </button>
+                        </div>
+                    </div>
+
+                    <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
+                        Cấu hình các thành phần điểm, trọng số và yêu cầu đánh giá cho môn học này.
+                    </p>
                 </div>
 
                 {/* Automation Info Alert */}
@@ -445,7 +513,6 @@ export const GradeConfigurationPage: React.FC = () => {
                                     <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider rounded-tl-lg">Loại</th>
                                     <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider">Tên</th>
                                     <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider">Trọng số (%)</th>
-                                    <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider">Bắt buộc</th>
                                     <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider rounded-tr-lg">Hành động</th>
                                 </tr>
                             </thead>
@@ -487,18 +554,6 @@ export const GradeConfigurationPage: React.FC = () => {
                                                     <span className={`text-sm font-semibold ${component.isResit ? 'text-gray-400' : 'text-gray-900 dark:text-white'}`}>
                                                         {component.weight}%
                                                     </span>
-                                                </td>
-                                                <td className="px-5 py-4 text-center">
-                                                    <button
-                                                        onClick={() => handleToggleRequired(component)}
-                                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-fpt-orange focus:ring-offset-2 ${component.isRequired ? 'bg-fpt-orange' : 'bg-gray-200 dark:bg-zinc-700'
-                                                            }`}
-                                                    >
-                                                        <span
-                                                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform duration-200 ${component.isRequired ? 'translate-x-6' : 'translate-x-1'
-                                                                }`}
-                                                        />
-                                                    </button>
                                                 </td>
                                                 <td className="px-5 py-4">
                                                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -633,18 +688,6 @@ export const GradeConfigurationPage: React.FC = () => {
                                             />
                                         </div>
 
-                                        <div className="flex items-center gap-2">
-                                            <input
-                                                type="checkbox"
-                                                id="isRequired"
-                                                checked={formData.isRequired}
-                                                onChange={(e) => setFormData({ ...formData, isRequired: e.target.checked })}
-                                                className="h-4 w-4 text-fpt-orange focus:ring-fpt-orange border-gray-300 rounded"
-                                            />
-                                            <label htmlFor="isRequired" className="text-sm text-gray-700 dark:text-zinc-300">
-                                                Bắt buộc
-                                            </label>
-                                        </div>
                                     </div>
 
                                     <div className="flex justify-end gap-3 mt-6">
@@ -668,7 +711,111 @@ export const GradeConfigurationPage: React.FC = () => {
                         </div>
                     )
                 }
+                {/* Prerequisites Section */}
+                <div className="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                    {/* Section header */}
+                    <div className="flex items-center justify-between border-b border-gray-100 p-4 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-900/50">
+                        <div className="flex items-center gap-2">
+                            <BookOpen className="h-5 w-5 text-fpt-orange" />
+                            <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+                                Môn tiên quyết
+                            </h2>
+                            <span className="text-sm text-gray-500 dark:text-zinc-400">
+                                ({prerequisites.length} môn)
+                            </span>
+                        </div>
+                        <button
+                            onClick={() => setIsPrereqModalOpen(true)}
+                            className="flex items-center gap-2 rounded-lg bg-fpt-orange px-3 py-2 text-sm font-medium text-white hover:bg-orange-600 transition-colors"
+                        >
+                            <Plus className="h-4 w-4" />
+                            Thêm từ kho
+                        </button>
+                    </div>
+
+                    {/* Info banner */}
+                    <div className="px-4 pt-3">
+                        <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2 text-xs text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300">
+                            Sinh viên phải hoàn thành (pass) các môn dưới đây trước khi được đăng ký môn <strong>{course.code}</strong>.
+                        </div>
+                    </div>
+
+                    <div className="overflow-x-auto p-4">
+                        {prerequisites.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-10 text-center">
+                                <BookOpen className="h-10 w-10 text-gray-300 dark:text-zinc-600 mb-3" />
+                                <p className="text-sm text-gray-500 dark:text-zinc-400">
+                                    Chưa có môn tiên quyết nào.
+                                </p>
+                                <button
+                                    onClick={() => setIsPrereqModalOpen(true)}
+                                    className="mt-3 flex items-center gap-1.5 text-sm text-fpt-orange hover:text-orange-600 font-medium"
+                                >
+                                    <Plus className="h-4 w-4" />
+                                    Thêm môn tiên quyết
+                                </button>
+                            </div>
+                        ) : (
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="bg-fpt-orange text-white">
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider rounded-tl-lg">Mã môn</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Tên môn học</th>
+                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-lg w-24">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
+                                    {prerequisites.map((prereq) => (
+                                        <tr key={prereq.id} className="group hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
+                                            <td className="px-4 py-3">
+                                                <span className="inline-flex items-center rounded-md bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+                                                    {prereq.code}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-zinc-300">
+                                                {prereq.name}
+                                            </td>
+                                            <td className="px-4 py-3 text-center">
+                                                <button
+                                                    onClick={() => handleRemovePrerequisite(prereq.id)}
+                                                    disabled={prereqRemoving === prereq.id}
+                                                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg bg-white hover:bg-red-50 text-gray-400 hover:text-red-600 shadow-sm border border-gray-100 hover:border-red-100 transition-all duration-200 disabled:opacity-50"
+                                                    title="Xóa khỏi môn tiên quyết"
+                                                >
+                                                    {prereqRemoving === prereq.id ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <Trash2 className="h-4 w-4" />
+                                                    )}
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+                </div>
+
             </div>
+
+            <ImportGradeComponentModal
+                isOpen={showImportModal}
+                onClose={() => setShowImportModal(false)}
+                onSuccess={() => { loadData(); setShowImportModal(false); }}
+                existingComponents={allComponents}
+            />
+
+            {course && (
+                <PrerequisiteSelectionModal
+                    isOpen={isPrereqModalOpen}
+                    onClose={() => setIsPrereqModalOpen(false)}
+                    onConfirm={handleAddPrerequisites}
+                    excludeCourseId={course.id}
+                    existingPrerequisiteIds={prerequisites.map(p => p.id)}
+                    loading={prereqAdding}
+                />
+            )}
         </AcademicStaffLayout >
     );
 };
