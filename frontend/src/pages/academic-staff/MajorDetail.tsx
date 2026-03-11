@@ -823,6 +823,7 @@ export const MajorDetail: React.FC = () => {
                                     }}
                                     isOpen={isFilterOpen}
                                     onToggle={() => setIsFilterOpen(!isFilterOpen)}
+                                    inactiveLabel="Ngừng đào tạo"
                                 />
                             </div>
 
@@ -838,6 +839,8 @@ export const MajorDetail: React.FC = () => {
                                 })}
                                 isDeleting={isDeleting}
                                 itemLabel="chuyên ngành"
+                                activateLabel="Mở lại"
+                                deactivateLabel="Ngừng đào tạo"
                             />
                         </div>
 
