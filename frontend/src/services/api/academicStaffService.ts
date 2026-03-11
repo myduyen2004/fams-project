@@ -57,6 +57,7 @@ export interface SystemLogItem {
     source?: string;
     performerName?: string;
     performerAvatar?: string;
+    performerRole?: string;
     ipAddress?: string;
     userAgent?: string;
     oldValue?: string;
