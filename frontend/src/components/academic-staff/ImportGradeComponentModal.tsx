@@ -174,8 +174,8 @@ export const ImportGradeComponentModal: React.FC<ImportGradeComponentModalProps>
                     const accumulated = accumulatedWeight[courseCode] || 0;
                     const projected = existing + accumulated + weight;
                     if (projected > 100) {
-                        warnings.push(
-                            `Thêm dòng này sẽ làm tổng trọng số vượt 100% (${projected.toFixed(1)}%). Dòng này sẽ bị bỏ qua khi import.`
+                        errors.push(
+                            `Thêm dòng này sẽ làm tổng trọng số vượt 100% (${projected.toFixed(1)}%).`
                         );
                     } else {
                         // Only accumulate for valid rows that won't exceed

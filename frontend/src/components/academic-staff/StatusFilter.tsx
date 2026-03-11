@@ -6,14 +6,23 @@ interface StatusFilterProps {
     onChange: (status: 'ACTIVE' | 'INACTIVE') => void;
     isOpen: boolean;
     onToggle: () => void;
+    activeLabel?: string;
+    inactiveLabel?: string;
 }
 
 /**
  * StatusFilter - Dropdown filter for ACTIVE/INACTIVE status
  */
-export const StatusFilter: React.FC<StatusFilterProps> = ({ value, onChange, isOpen, onToggle }) => {
+export const StatusFilter: React.FC<StatusFilterProps> = ({
+    value,
+    onChange,
+    isOpen,
+    onToggle,
+    activeLabel = 'Đang mở',
+    inactiveLabel = 'Ngừng hoạt động'
+}) => {
     const getLabel = (status: 'ACTIVE' | 'INACTIVE') => {
-        return status === 'ACTIVE' ? 'Đang mở' : 'Ngừng hoạt động';
+        return status === 'ACTIVE' ? activeLabel : inactiveLabel;
     };
 
     return (
@@ -34,26 +43,26 @@ export const StatusFilter: React.FC<StatusFilterProps> = ({ value, onChange, isO
                             className="fixed inset-0 z-10"
                             onClick={onToggle}
                         ></div>
-                        <div className="absolute right-0 top-full mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg py-1 z-20 dark:border-zinc-700 dark:bg-zinc-800">
+                        <div className="absolute right-0 top-full mt-1 min-w-[180px] sm:w-max rounded-lg border border-gray-200 bg-white shadow-lg py-1 z-20 dark:border-zinc-700 dark:bg-zinc-800">
                             <button
                                 onClick={() => {
                                     onChange('ACTIVE');
                                     onToggle();
                                 }}
-                                className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center justify-between ${value === 'ACTIVE' ? 'text-fpt-orange bg-orange-50 dark:bg-orange-900/10' : 'text-gray-700 dark:text-gray-200'}`}
+                                className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center justify-between whitespace-nowrap ${value === 'ACTIVE' ? 'text-fpt-orange bg-orange-50 dark:bg-orange-900/10' : 'text-gray-700 dark:text-gray-200'}`}
                             >
-                                <span>Đang mở</span>
-                                {value === 'ACTIVE' && <Check className="h-4 w-4" />}
+                                <span>{activeLabel}</span>
+                                {value === 'ACTIVE' && <Check className="h-4 w-4 ml-2" />}
                             </button>
                             <button
                                 onClick={() => {
                                     onChange('INACTIVE');
                                     onToggle();
                                 }}
-                                className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center justify-between ${value === 'INACTIVE' ? 'text-fpt-orange bg-orange-50 dark:bg-orange-900/10' : 'text-gray-700 dark:text-gray-200'}`}
+                                className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center justify-between whitespace-nowrap ${value === 'INACTIVE' ? 'text-fpt-orange bg-orange-50 dark:bg-orange-900/10' : 'text-gray-700 dark:text-gray-200'}`}
                             >
-                                <span>Ngừng hoạt động</span>
-                                {value === 'INACTIVE' && <Check className="h-4 w-4" />}
+                                <span>{inactiveLabel}</span>
+                                {value === 'INACTIVE' && <Check className="h-4 w-4 ml-2" />}
                             </button>
                         </div>
                     </>
