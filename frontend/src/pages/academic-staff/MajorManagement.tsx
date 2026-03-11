@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Upload, Search, X, Loader2, Download } from 'lucide-react';
+import { Plus, Upload, Search, X, Loader2, FileSpreadsheet } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -129,8 +129,8 @@ const ImportMajorModal: React.FC<ImportMajorModalProps> = ({ isOpen, onClose, on
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className={`bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full ${previewData ? 'max-w-6xl' : 'max-w-md'} border border-gray-100 dark:border-zinc-800 overflow-hidden transition-all duration-300 flex flex-col max-h-[90vh]`}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className={`relative bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl flex flex-col transition-all duration-300 ${previewData ? 'w-full max-w-5xl max-h-[92vh]' : 'w-full max-w-lg'}`}>
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800 shrink-0">
                     <div>
@@ -161,6 +161,30 @@ const ImportMajorModal: React.FC<ImportMajorModalProps> = ({ isOpen, onClose, on
                                     <li>Nhấn "Xem trước" để kiểm tra dữ liệu trước khi lưu.</li>
                                 </ul>
                             </div>
+
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    try {
+                                        const blob = await majorService.downloadImportTemplate();
+                                        const url = window.URL.createObjectURL(blob);
+                                        const a = document.createElement('a');
+                                        a.href = url;
+                                        a.download = 'major_import_template.xlsx';
+                                        document.body.appendChild(a);
+                                        a.click();
+                                        window.URL.revokeObjectURL(url);
+                                        document.body.removeChild(a);
+                                    } catch (error) {
+                                        toast.error('Lỗi khi tải template');
+                                    }
+                                }}
+                                disabled={loading}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-xl hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors font-semibold"
+                            >
+                                <FileSpreadsheet size={18} />
+                                Tải file mẫu Excel
+                            </button>
 
                             <div className="border-2 border-dashed border-gray-300 dark:border-zinc-700 rounded-lg p-6 flex flex-col items-center text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors relative">
                                 <input
@@ -384,8 +408,8 @@ const ImportSpecializationModal: React.FC<ImportSpecializationModalProps> = ({ i
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className={`bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full ${previewData ? 'max-w-6xl' : 'max-w-md'} border border-gray-100 dark:border-zinc-800 overflow-hidden transition-all duration-300 flex flex-col max-h-[90vh]`}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className={`relative bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl flex flex-col transition-all duration-300 ${previewData ? 'w-full max-w-5xl max-h-[92vh]' : 'w-full max-w-lg'}`}>
                 <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800 shrink-0">
                     <div>
                         <h3 className="text-xl font-bold text-gray-900 dark:text-white">
@@ -415,6 +439,22 @@ const ImportSpecializationModal: React.FC<ImportSpecializationModalProps> = ({ i
                                     <li>Nhấn "Xem trước" để kiểm tra dữ liệu trước khi lưu.</li>
                                 </ul>
                             </div>
+
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    try {
+                                        await specializationService.downloadImportTemplate();
+                                    } catch (error) {
+                                        toast.error('Lỗi khi tải template');
+                                    }
+                                }}
+                                disabled={loading}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-xl hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors font-semibold"
+                            >
+                                <FileSpreadsheet size={18} />
+                                Tải file mẫu Excel
+                            </button>
 
                             <div className="border-2 border-dashed border-gray-300 dark:border-zinc-700 rounded-lg p-6 flex flex-col items-center text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors relative">
                                 <input
@@ -1011,29 +1051,6 @@ export const MajorManagement: React.FC = () => {
                     <div className="flex gap-3">
                         <Tooltip content="Tải file Excel mẫu để nhập dữ liệu" position="bottom">
                             <button
-                                onClick={async () => {
-                                    try {
-                                        const blob = await majorService.downloadImportTemplate();
-                                        const url = window.URL.createObjectURL(blob);
-                                        const a = document.createElement('a');
-                                        a.href = url;
-                                        a.download = 'major_import_template.xlsx';
-                                        document.body.appendChild(a);
-                                        a.click();
-                                        window.URL.revokeObjectURL(url);
-                                        document.body.removeChild(a);
-                                    } catch (error) {
-                                        toast.error('Lỗi khi tải template');
-                                    }
-                                }}
-                                className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 transition-colors"
-                            >
-                                <Download className="h-4 w-4" />
-                                Tải template
-                            </button>
-                        </Tooltip>
-                        <Tooltip content="Tải lên file Excel để nhập danh sách ngành. Import ngành trước khi import chuyên ngành" position="bottom">
-                            <button
                                 onClick={() => setIsImportModalOpen(true)}
                                 className="flex items-center gap-2 rounded-lg border border-fpt-orange bg-orange-50 px-4 py-2 text-sm font-medium text-fpt-orange hover:bg-orange-100 transition-colors"
                             >
@@ -1043,13 +1060,21 @@ export const MajorManagement: React.FC = () => {
                         </Tooltip>
                         <Tooltip content="Thêm một ngành học mới" position="bottom">
                             <button
-                                onClick={() => setIsCreateModalOpen(true)}
-                                className="flex items-center gap-2 rounded-lg bg-fpt-orange px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 transition-colors"
+                                onClick={() => setIsImportSpecModalOpen(true)}
+                                className="flex items-center gap-2 rounded-lg border border-fpt-orange bg-orange-50 px-3 py-2 text-sm font-medium text-fpt-orange hover:bg-orange-100"
                             >
-                                <Plus className="h-4 w-4" />
-                                Tạo ngành
+                                <Upload className="h-4 w-4" />
+                                Import chuyên ngành
                             </button>
                         </Tooltip>
+
+                        <button
+                            onClick={() => setIsCreateModalOpen(true)}
+                            className="flex items-center gap-2 rounded-lg bg-fpt-orange px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
+                        >
+                            <Plus className="h-4 w-4" />
+                            Tạo ngành
+                        </button>
                     </div>
                 </div>
 
@@ -1074,6 +1099,7 @@ export const MajorManagement: React.FC = () => {
                                 }}
                                 isOpen={isFilterOpen}
                                 onToggle={() => setIsFilterOpen(!isFilterOpen)}
+                                inactiveLabel="Ngừng đào tạo"
                             />
                         </div>
 
@@ -1088,6 +1114,8 @@ export const MajorManagement: React.FC = () => {
                                 return item?.status === 'INACTIVE' && item?.canDelete;
                             })}
                             itemLabel="ngành"
+                            activateLabel="Mở lại"
+                            deactivateLabel="Ngừng đào tạo"
                         />
                     </div>
 

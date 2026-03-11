@@ -26,9 +26,6 @@ public class GradeComponentRequest {
     private Double weight;
 
     @Builder.Default
-    private Boolean isRequired = true;
-
-    @Builder.Default
     private Boolean isResit = false;
 
     private Long referenceComponentId;

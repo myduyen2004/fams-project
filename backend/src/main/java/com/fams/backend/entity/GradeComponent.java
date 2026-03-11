@@ -43,11 +43,6 @@ public class GradeComponent {
     @Column(nullable = false)
     private Double weight;
 
-    // Bắt buộc hay không
-    @Column(nullable = false)
-    @Builder.Default
-    private Boolean isRequired = true;
-
     // Là điểm thi lại hay không
     @Column(nullable = false)
     @Builder.Default

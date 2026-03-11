@@ -10,6 +10,8 @@ import {
     Settings,
     LogOut,
     GraduationCap,
+    TrendingUp,
+    List,
     ChevronDown
 } from 'lucide-react';
 import { authService } from '../../services/api/authService';
@@ -50,9 +52,15 @@ export const StudentSidebar: React.FC = () => {
         },
         {
             id: 'grades',
-            label: 'Bảng điểm',
+            label: 'Bảng điểm chi tiết',
             icon: <GraduationCap size={20} />,
             path: '/student/grades'
+        },
+        {
+            id: 'all-grades',
+            label: 'Kết quả học tập',
+            icon: <TrendingUp size={20} />,
+            path: '/student/all-grades'
         },
         {
             id: 'attendance',

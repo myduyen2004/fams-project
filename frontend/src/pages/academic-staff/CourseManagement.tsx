@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Upload, Download, Layers } from 'lucide-react';
+import { Plus, Search, Upload, Layers } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { courseService } from '../../services/api/courseService';
@@ -11,7 +11,6 @@ import { ImportGradeComponentModal } from '../../components/academic-staff/Impor
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { Course } from '../../types/course';
 import { usePagination } from '../../hooks/usePagination';
-import { Tooltip } from '../../components/common/Tooltip';
 
 export const CourseManagement: React.FC = () => {
     const navigate = useNavigate();
@@ -123,20 +122,20 @@ export const CourseManagement: React.FC = () => {
     const handleBulkStatusChange = (newStatus: 'ACTIVE' | 'INACTIVE') => {
         if (selectedIds.length === 0) return;
 
-        const confirmTitle = newStatus === 'ACTIVE' ? 'Kích hoạt môn học' : 'Vô hiệu hóa môn học';
+        const confirmTitle = newStatus === 'ACTIVE' ? 'Kích hoạt môn học' : 'Ngừng đào tạo môn học';
         const type = newStatus === 'ACTIVE' ? 'success' : 'danger';
-        const confirmLabel = newStatus === 'ACTIVE' ? 'Kích hoạt' : 'Vô hiệu hóa';
+        const confirmLabel = newStatus === 'ACTIVE' ? 'Kích hoạt' : 'Ngừng đào tạo';
 
         let confirmMsg = '';
         if (selectedIds.length === 1) {
             const selectedItem = courses.find(c => c.id === selectedIds[0]);
             confirmMsg = newStatus === 'ACTIVE'
                 ? `Bạn có chắc chắn muốn kích hoạt môn "${selectedItem?.name}"?`
-                : `Bạn có chắc chắn muốn vô hiệu hóa môn "${selectedItem?.name}"?`;
+                : `Bạn có chắc chắn muốn ngừng đào tạo môn "${selectedItem?.name}"?`;
         } else {
             confirmMsg = newStatus === 'ACTIVE'
                 ? `Bạn có chắc chắn muốn kích hoạt ${selectedIds.length} môn đã chọn?`
-                : `Bạn có chắc chắn muốn vô hiệu hóa ${selectedIds.length} môn đã chọn?`;
+                : `Bạn có chắc chắn muốn ngừng đào tạo ${selectedIds.length} môn đã chọn?`;
         }
 
         setConfirmModal({
@@ -216,56 +215,27 @@ export const CourseManagement: React.FC = () => {
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Tooltip content="Tải file Excel mẫu để nhập dữ liệu môn học" position="bottom">
-                            <button
-                                onClick={async () => {
-                                    try {
-                                        const blob = await courseService.downloadImportTemplate();
-                                        const url = window.URL.createObjectURL(blob);
-                                        const link = document.createElement('a');
-                                        link.href = url;
-                                        link.download = 'template-import-mon-hoc.xlsx';
-                                        document.body.appendChild(link);
-                                        link.click();
-                                        document.body.removeChild(link);
-                                        window.URL.revokeObjectURL(url);
-                                    } catch (error) {
-                                        toast.error('Lỗi khi tải template');
-                                    }
-                                }}
-                                className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 transition-colors"
-                            >
-                                <Download className="h-4 w-4" />
-                                Tải template
-                            </button>
-                        </Tooltip>
-                        <Tooltip content="Tải lên file Excel để nhập danh sách môn học" position="bottom">
-                            <button
-                                onClick={() => setIsImportOpen(true)}
-                                className="flex items-center gap-2 rounded-lg border border-fpt-orange bg-orange-50 px-4 py-2 text-sm font-medium text-fpt-orange hover:bg-orange-100 transition-colors"
-                            >
-                                <Upload className="h-4 w-4" />
-                                Import môn học
-                            </button>
-                        </Tooltip>
-                        <Tooltip content="Tải lên file Excel để nhập các thành phần điểm cho môn học" position="bottom">
-                            <button
-                                onClick={() => setIsImportGradeComponentOpen(true)}
-                                className="flex items-center gap-2 rounded-lg border border-blue-500 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-100 transition-colors"
-                            >
-                                <Layers className="h-4 w-4" />
-                                Import thành phần điểm
-                            </button>
-                        </Tooltip>
-                        <Tooltip content="Tạo một môn học mới" position="bottom">
-                            <button
-                                onClick={() => { setEditingCourse(null); setIsFormOpen(true); }}
-                                className="flex items-center gap-2 rounded-lg bg-fpt-orange px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 transition-colors"
-                            >
-                                <Plus className="h-4 w-4" />
-                                Tạo môn học
-                            </button>
-                        </Tooltip>
+                        <button
+                            onClick={() => setIsImportOpen(true)}
+                            className="flex items-center gap-2 rounded-lg border border-fpt-orange bg-orange-50 px-4 py-2 text-sm font-medium text-fpt-orange hover:bg-orange-100"
+                        >
+                            <Upload className="h-4 w-4" />
+                            Import môn học
+                        </button>
+                        <button
+                            onClick={() => setIsImportGradeComponentOpen(true)}
+                            className="flex items-center gap-2 rounded-lg border border-blue-500 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-100"
+                        >
+                            <Layers className="h-4 w-4" />
+                            Import thành phần điểm
+                        </button>
+                        <button
+                            onClick={() => { setEditingCourse(null); setIsFormOpen(true); }}
+                            className="flex items-center gap-2 rounded-lg bg-fpt-orange px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
+                        >
+                            <Plus className="h-4 w-4" />
+                            Tạo môn học
+                        </button>
                     </div>
                 </div>
 
@@ -282,7 +252,13 @@ export const CourseManagement: React.FC = () => {
                                     className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-fpt-orange focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                                 />
                             </div>
-                            <StatusFilter value={status} onChange={(v) => { setStatus(v); setPage(0); }} isOpen={isFilterOpen} onToggle={() => setIsFilterOpen(prev => !prev)} />
+                            <StatusFilter
+                                value={status}
+                                onChange={(v) => { setStatus(v); setPage(0); }}
+                                isOpen={isFilterOpen}
+                                onToggle={() => setIsFilterOpen(prev => !prev)}
+                                inactiveLabel="Ngừng đào tạo"
+                            />
                         </div>
 
                         <SelectionActionBar
@@ -296,14 +272,16 @@ export const CourseManagement: React.FC = () => {
                                 return item?.canDelete !== false;
                             })}
                             itemLabel="môn học"
+                            activateLabel="Kích hoạt"
+                            deactivateLabel="Ngừng đào tạo"
                         />
                     </div>
 
                     <div className="overflow-x-auto">
-                        <table className="w-full">
+                        <table className="w-full table-fixed">
                             <thead>
                                 <tr className="bg-fpt-orange text-white">
-                                    <th className="px-4 py-3 text-left rounded-tl-lg">
+                                    <th className="w-12 px-4 py-3 text-left rounded-tl-lg">
                                         <input
                                             type="checkbox"
                                             className="w-4 h-4 rounded border-white/20 text-white focus:ring-0 focus:ring-offset-0 bg-transparent cursor-pointer"
@@ -311,11 +289,12 @@ export const CourseManagement: React.FC = () => {
                                             checked={courses.length > 0 && selectedIds.length === courses.length}
                                         />
                                     </th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Mã môn</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Tên môn học</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Số tín chỉ</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Tổng trọng số</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-lg">Trạng thái</th>
+                                    <th className="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Mã môn</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Tên môn học</th>
+                                    <th className="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Số tín chỉ</th>
+                                    <th className="w-36 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Tổng trọng số</th>
+                                    <th className="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Tính GPA</th>
+                                    <th className="w-40 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-lg whitespace-nowrap">Trạng thái</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
@@ -353,8 +332,8 @@ export const CourseManagement: React.FC = () => {
                                                     onChange={() => { }} // controlled by onClick
                                                 />
                                             </td>
-                                            <td className="px-4 py-3 text-center font-medium font-semibold text-gray-900 dark:text-white">{course.code}</td>
-                                            <td className="px-4 py-3 text-left text-gray-600 dark:text-zinc-400">{course.name}</td>
+                                            <td className="px-4 py-3 text-center font-medium font-semibold text-gray-900 dark:text-white truncate" title={course.code}>{course.code}</td>
+                                            <td className="px-4 py-3 text-left text-gray-600 dark:text-zinc-400 truncate" title={course.name}>{course.name}</td>
                                             <td className="px-4 py-3 text-center">
                                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
                                                     {course.credits} TC
@@ -366,6 +345,31 @@ export const CourseManagement: React.FC = () => {
                                                         {course.totalWeight}%
                                                     </span>
                                                 )}
+                                            </td>
+                                            <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <button
+                                                        onClick={async () => {
+                                                            try {
+                                                                const newStatus = !course.isCalculatedInGpa;
+                                                                await courseService.updateGpaStatus(course.id, newStatus);
+                                                                toast.success(`Đã ${newStatus ? 'bật' : 'tắt'} tính GPA cho môn ${course.code}`);
+                                                                fetchData();
+                                                            } catch (error) {
+                                                                toast.error('Không thể cập nhật trạng thái GPA');
+                                                            }
+                                                        }}
+                                                        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-fpt-orange focus-visible:ring-offset-2 ${course.isCalculatedInGpa ? 'bg-fpt-orange shadow-[0_0_10px_rgba(242,113,37,0.3)]' : 'bg-gray-200 dark:bg-zinc-700'}`}
+                                                        title={course.isCalculatedInGpa ? 'Đang tính GPA' : 'Không tính GPA'}
+                                                    >
+                                                        <span
+                                                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${course.isCalculatedInGpa ? 'translate-x-4' : 'translate-x-0'}`}
+                                                        />
+                                                    </button>
+                                                    <span className={`text-[10px] font-bold w-6 text-left ${course.isCalculatedInGpa ? 'text-fpt-orange' : 'text-gray-400 dark:text-zinc-500'}`}>
+                                                        {course.isCalculatedInGpa ? 'ON' : 'OFF'}
+                                                    </span>
+                                                </div>
                                             </td>
                                             <td className="px-4 py-3 text-center">
                                                 {course.status === 'ACTIVE' ? (

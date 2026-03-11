@@ -59,6 +59,11 @@ public interface StudentGradeRepository extends JpaRepository<StudentGrade, Long
         boolean existsByEnrollmentIdAndGradeComponentId(Long enrollmentId, Long gradeComponentId);
 
         /**
+         * Check if any grade exists for a given grade component
+         */
+        boolean existsByGradeComponentId(Long gradeComponentId);
+
+        /**
          * Delete all grades for an enrollment
          */
         void deleteByEnrollmentId(Long enrollmentId);
