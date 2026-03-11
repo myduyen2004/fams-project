@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import apiClient from './authService';
 
 export interface AIChatSession {
@@ -66,5 +67,9 @@ export const chatService = {
             }
         });
         return response.data;
+    },
+
+    deleteSession: async (sessionId: number) => {
+        await apiClient.delete(`/chat/sessions/${sessionId}`);
     }
 };

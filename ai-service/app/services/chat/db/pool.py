@@ -12,7 +12,7 @@ from typing import Generator
 import psycopg2
 import psycopg2.pool
 from psycopg2.extras import RealDictCursor
-from loguru import logger
+from loguru import logger # type: ignore
 
 from config.settings import DB_CONFIG
 
@@ -44,8 +44,33 @@ class DatabasePool:
             self._pool = psycopg2.pool.ThreadedConnectionPool(
                 minconn=DB_CONFIG.min_connections,
                 maxconn=DB_CONFIG.max_connections,
-                dsn=DB_CONFIG.dsn,
+                dsn=DB_CONFIG.dsn(),
             )
+            # ── Fix: PostgreSQL không có ROUND(double precision, int)
+            # Tạo overloaded function để ROUND(float, N) hoạt động đúng
+            self._create_round_overload()
+
+    def _create_round_overload(self) -> None:
+        """Create ROUND(double precision, integer) if not exists."""
+        try:
+            conn = self._pool.getconn()
+            try:
+                conn.autocommit = True
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        CREATE OR REPLACE FUNCTION round(double precision, integer)
+                        RETURNS numeric AS $$
+                            SELECT round($1::numeric, $2);
+                        $$ LANGUAGE sql IMMUTABLE STRICT;
+                    """)
+                logger.info("DB: ROUND(double precision, integer) overload created ✓")
+            except Exception as e:
+                logger.warning(f"DB: Could not create ROUND overload (may already exist): {e}")
+            finally:
+                conn.autocommit = False
+                self._pool.putconn(conn)
+        except Exception as e:
+            logger.warning(f"DB: Pool init helper failed: {e}")
 
     @contextmanager
     def get_connection(self) -> Generator:

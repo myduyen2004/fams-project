@@ -76,7 +76,11 @@ _ACADEMIC_STAFF_DENY: Set[str] = {
     "get_my_schedule_requests", "create_schedule_request",
     "view_teaching_classes",
     "update_attendance_manually",
-    "get_grade_report_by_class", "import_component_grades",
+    # ✅ FIX #10: REMOVED get_grade_report_by_class from deny list
+    # ACADEMIC_STAFF CAN xem bảng điểm tất cả lớp
+    "import_component_grades",
+    # ✅ REMOVED: get_other_lecturer_schedule, get_other_student_schedule
+    # → ACADEMIC_STAFF CAN view other lecturer/student schedules
 }
 
 # ── LECTURER whitelist ────────────────────────────────────────────────────────
@@ -87,8 +91,8 @@ _LECTURER_ALLOW: Set[str] = {
     "get_own_schedule", "view_schedule",
     "view_teaching_classes", "get_class_info",
     "get_class_schedule",
-    "get_other_lecturer_schedule",   # Xem lịch GV khác
-    "get_other_student_schedule",    # Xem lịch SV
+    # ✅ REMOVED: get_other_lecturer_schedule, get_other_student_schedule
+    # → Chỉ ADMIN + ACADEMIC_STAFF mới xem được lịch của người khác
     # Schedule requests (UC-55~57)
     "view_schedule_requests",
     "get_my_schedule_requests",
@@ -107,6 +111,7 @@ _LECTURER_ALLOW: Set[str] = {
     "import_component_grades",
     # Student info - read only (UC-20~21)
     "get_students_by_class",
+    "get_enrollments_by_class",  # ✅ FIX: Allow lecturers to see student roster
     "get_student_by_code",
     "search_user_by_name",
     "get_students_at_risk",

@@ -388,6 +388,14 @@ class HomeScreen extends StatelessWidget {
                               onTap: () {},
                             ),
 
+                            const SizedBox(height: 16),
+
+                            _buildBigCard(
+                              icon: Icons.smart_toy_rounded,
+                              title: 'Hỏi đáp AI Chatbot',
+                              onTap: () => Get.toNamed(AppRoutes.aiChat),
+                            ),
+
                             // "Gửi đơn yêu cầu" card - only for lecturers
                             Obx(() {
                               final user = authController.currentUser.value;

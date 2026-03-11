@@ -49,7 +49,7 @@ services:
       - DB_USER=postgres
       - DB_PASSWORD=postgres123
       - DB_PORT=5432
-      - GROQ_API_KEY=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
+      - GROQ_API_KEY=${GROQ_API_KEY}
     networks:
       - fams-network
     healthcheck:

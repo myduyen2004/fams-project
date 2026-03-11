@@ -877,16 +877,17 @@ public class StudentServiceImpl implements StudentService {
                 .orElse(new ArrayList<>());
     }
 
-    public Page<StudentResponse> getAllStudents(String search, String status, String major, String specialization,
-            Pageable pageable) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getAllStudents'");
-    }
-
     @Override
     public Page<StudentResponse> getAllStudents1(String search, String status, String major, String specialization,
             String subSpecialization, Pageable pageable) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getAllStudents1'");
+    }
+
+    @Override
+    public Page<StudentResponse> getAllStudents(String search, String status, String major, String specialization,
+            Pageable pageable) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getAllStudents'");
     }
 }

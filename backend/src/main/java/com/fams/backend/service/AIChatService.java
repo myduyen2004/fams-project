@@ -23,4 +23,6 @@ public interface AIChatService {
     List<AIChatMessage> getSessionMessages(Long sessionId);
 
     Map<String, Object> uploadFile(Long sessionId, MultipartFile file, String routingModel, String answerModel);
+
+    void deleteSession(Long sessionId);
 }

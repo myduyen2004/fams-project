@@ -76,4 +76,12 @@ public class AIChatController {
                 sessionId, file.getOriginalFilename(), routingModel, answerModel);
         return ResponseEntity.ok(aiChatService.uploadFile(sessionId, file, routingModel, answerModel));
     }
+
+    @DeleteMapping("/sessions/{sessionId}")
+    @Operation(summary = "Xóa một phiên chat")
+    public ResponseEntity<Void> deleteSession(@PathVariable Long sessionId) {
+        log.info("Deleting session {}", sessionId);
+        aiChatService.deleteSession(sessionId);
+        return ResponseEntity.ok().build();
+    }
 }

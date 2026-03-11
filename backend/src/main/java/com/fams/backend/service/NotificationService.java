@@ -171,6 +171,7 @@ public class NotificationService {
                 .priority(request.getPriority() != null ? request.getPriority()
                         : Notification.NotificationPriority.MEDIUM)
                 .targetType(request.getTargetType() != null ? request.getTargetType() : Notification.TargetType.ALL)
+                .targetClassName(request.getTargetClassName())  // ✅ NEW: Map targetClassName from request
                 .status(request.getStatus() != null ? request.getStatus() : Notification.NotificationStatus.DRAFT)
                 .scheduledAt(request.getScheduledAt())
                 .sender(sender)
@@ -432,6 +433,21 @@ public class NotificationService {
                         .filter(u -> u.getStatus() == User.UserStatus.ACTIVE)
                         .filter(u -> !u.equals(notification.getSender()))
                         .collect(java.util.stream.Collectors.toList());
+                break;
+            case CLASS:
+                // ✅ NEW: Gửi cho sinh viên trong lớp cụ thể
+                if (notification.getTargetClassName() != null && !notification.getTargetClassName().isEmpty()) {
+                    // TODO: Query để lấy danh sách sinh viên trong lớp từ enrollment table
+                    // Tạm thời fallback sang STUDENT (cần implement)
+                    recipients = userRepository.findByRole(User.UserRole.STUDENT)
+                            .orElse(new ArrayList<>()).stream()
+                            .filter(u -> u.getStatus() == User.UserStatus.ACTIVE)
+                            .filter(u -> !u.equals(notification.getSender()))
+                            .collect(java.util.stream.Collectors.toList());
+                    log.warn("CLASS target type requires proper enrollment lookup - currently using all STUDENT");
+                } else {
+                    log.warn("CLASS target type but targetClassName is null or empty");
+                }
                 break;
             case USER:
                 // USER case is handled via recipientId in createNotification method

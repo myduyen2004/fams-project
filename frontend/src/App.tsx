@@ -90,6 +90,7 @@ function App() {
   // Global listener for ChunkLoadError (caused by new deployments)
   useEffect(() => {
     const handleError = (e: ErrorEvent | PromiseRejectionEvent) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const errorMsg = 'message' in e ? e.message : (e as any).reason?.message;
       if (typeof errorMsg === 'string' && (
         errorMsg.includes('Failed to fetch dynamically imported module') ||

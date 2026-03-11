@@ -24,7 +24,6 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +45,15 @@ public class AIChatServiceImpl implements AIChatService {
     @Override
     @Transactional
     public AIChatSession createSession(User user) {
+        // Enforce 10 session limit
+        List<AIChatSession> existingSessions = sessionRepository.findByUserOrderByCreatedAtDesc(user);
+        if (existingSessions.size() >= 10) {
+            // Delete sessions beyond the 9th to make room for the new one (10 sessions
+            // total)
+            List<AIChatSession> sessionsToDelete = existingSessions.subList(9, existingSessions.size());
+            sessionRepository.deleteAll(sessionsToDelete);
+        }
+
         AIChatSession session = AIChatSession.builder()
                 .user(user)
                 .title("New Chat Session")
@@ -60,7 +68,8 @@ public class AIChatServiceImpl implements AIChatService {
 
     @Override
     public List<AIChatSession> getUserSessions(User user) {
-        return sessionRepository.findByUserOrderByCreatedAtDesc(user);
+        List<AIChatSession> sessions = sessionRepository.findByUserOrderByCreatedAtDesc(user);
+        return sessions.size() > 10 ? sessions.subList(0, 10) : sessions;
     }
 
     @Override
@@ -351,5 +360,16 @@ public class AIChatServiceImpl implements AIChatService {
         }
 
         throw new RuntimeException("AI Service returned no response for Excel analysis");
+    }
+
+    @Override
+    @Transactional
+    public void deleteSession(Long sessionId) {
+        if (sessionId == null)
+            return;
+        AIChatSession session = getSession(sessionId);
+        if (session != null) {
+            sessionRepository.delete(session);
+        }
     }
 }

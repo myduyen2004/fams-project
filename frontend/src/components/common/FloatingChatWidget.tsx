@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Bot, X, Maximize2, Send, Loader2, User, ExternalLink,
     Plus
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Link } from 'react-router-dom';
 import { chatService, AIChatMessage, AIChatSession } from '../../services/api/chatService';
 import { toast } from 'react-hot-toast';
@@ -28,8 +29,8 @@ const MiniMsg: React.FC<{ msg: AIChatMessage }> = ({ msg }) => (
                     : 'bg-gray-100 text-gray-800 rounded-tl-none'
                     }`}
             >
-                <div className="prose prose-xs max-w-none">
-                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                <div className="prose prose-xs max-w-none chat-table-wrapper">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                 </div>
                 {msg.redirectPath && (
                     <Link
@@ -51,16 +52,48 @@ const MiniMsg: React.FC<{ msg: AIChatMessage }> = ({ msg }) => (
 // ─── Main Widget ──────────────────────────────────────────────────────────────
 export const FloatingChatWidget: React.FC = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [isOpen, setIsOpen] = useState(false);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [_sessions, setSessions] = useState<AIChatSession[]>([]);
     const [currentSession, setCurrentSession] = useState<AIChatSession | null>(null);
     const [messages, setMessages] = useState<AIChatMessage[]>([]);
     const [inputValue, setInputValue] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [hasNewMsg, setHasNewMsg] = useState(false);
+    const [userRole, setUserRole] = useState('');
+    const [userId, setUserId] = useState<string | null>(null);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+    const lastUserIdRef = useRef<string | null>(null);
+
+    // Load user role & ID - re-sync on route change
+    useEffect(() => {
+        try {
+            const userStr = localStorage.getItem('user');
+            if (userStr) {
+                const userData = JSON.parse(userStr);
+                setUserRole(userData.role || '');
+                setUserId(userData.id?.toString() || null);
+            } else {
+                setUserRole('');
+                setUserId(null);
+            }
+        } catch {
+            setUserRole('');
+            setUserId(null);
+        }
+    }, [location.pathname]);
+
+    // Reset session if user changes (account switch)
+    useEffect(() => {
+        if (userId && userId !== lastUserIdRef.current) {
+            setCurrentSession(null);
+            setMessages([]);
+            lastUserIdRef.current = userId;
+        }
+    }, [userId]);
 
     // Load or create session on first open
     useEffect(() => {
@@ -162,6 +195,15 @@ export const FloatingChatWidget: React.FC = () => {
         setIsOpen(false);
     };
 
+    // Hide chatbot on login page or if not logged in
+    const isAuthPage = ['/login', '/forgot-password', '/change-password'].includes(location.pathname);
+    const userJson = localStorage.getItem('user');
+    const isAuthenticated = !!userJson;
+
+    if (isAuthPage || !isAuthenticated) {
+        return null;
+    }
+
     return (
         <>
             {/* ── Popup Widget ─────────────────────────────────────────────────── */}
@@ -180,7 +222,9 @@ export const FloatingChatWidget: React.FC = () => {
                             <Bot className="w-5 h-5 text-white" />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-white font-bold text-sm leading-tight">FAMS AI Assistant</p>
+                            <p className="text-white font-bold text-sm leading-tight">
+                                {userRole ? `FAMS AI ${userRole.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}` : 'FAMS AI Assistant'}
+                            </p>
                             <div className="flex items-center gap-1.5 mt-0.5">
                                 <div className="w-1.5 h-1.5 rounded-full bg-green-300 animate-pulse" />
                                 <span className="text-orange-100 text-[10px] font-medium">Online</span>
@@ -211,7 +255,8 @@ export const FloatingChatWidget: React.FC = () => {
                     </div>
 
                     {/* Messages */}
-                    <div className="h-80 overflow-y-auto p-3 space-y-3 bg-gray-50">
+                    {/* Messages */}
+                    <div className="h-[550px] overflow-y-auto p-3 space-y-3 bg-gray-50">
                         {messages.length === 0 && !isLoading && (
                             <div className="h-full flex flex-col items-center justify-center text-center space-y-3 py-6">
                                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-fpt-orange to-orange-600 flex items-center justify-center shadow-lg">
@@ -222,11 +267,14 @@ export const FloatingChatWidget: React.FC = () => {
                                     <p className="text-xs text-gray-500 mt-1">Tôi có thể giúp gì cho bạn hôm nay?</p>
                                 </div>
                                 <div className="grid grid-cols-1 gap-1.5 w-full px-2">
-                                    {[
-                                        'Lịch học của tôi hôm nay',
-                                        'Số sinh viên ngành CNTT',
-                                        'Thông tin học kỳ hiện tại',
-                                    ].map(s => (
+                                    {(userRole === 'LECTURER'
+                                        ? ['Lịch dạy của tôi hôm nay', 'Danh sách lớp tôi dạy', 'Thông tin học kỳ']
+                                        : userRole === 'STUDENT'
+                                            ? ['Lịch học của tôi hôm nay', 'Điểm số học kỳ này', 'Thông tin học kỳ']
+                                            : userRole === 'ACADEMIC_STAFF'
+                                                ? ['Số sinh viên ngành CNTT', 'Thống kê điểm số', 'Thông tin học kỳ']
+                                                : ['Lịch học của tôi hôm nay', 'Số sinh viên ngành CNTT', 'Thông tin học kỳ']
+                                    ).map(s => (
                                         <button
                                             key={s}
                                             onClick={() => { setInputValue(s); inputRef.current?.focus(); }}
