@@ -4,7 +4,7 @@ import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import axios from 'axios';
 import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
 import { toast } from 'react-hot-toast';
-import { Calendar, BookOpen, ChevronLeft, ChevronRight, X, Clock, MapPin, User, GraduationCap, AlertTriangle, Check, ChevronsUpDown, Eye, EyeOff, Loader2, Play, Users, School, Download, MoreVertical, Home, RefreshCw, Save, List } from 'lucide-react';
+import { Calendar, BookOpen, ChevronLeft, ChevronRight, X, MapPin, AlertTriangle, Check, ChevronsUpDown, Eye, EyeOff, Loader2, Play, Users, School, Download, MoreVertical, Home, RefreshCw, Save } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Combobox, Transition, Listbox } from '@headlessui/react';
 
