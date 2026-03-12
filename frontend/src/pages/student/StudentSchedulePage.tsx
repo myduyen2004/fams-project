@@ -40,6 +40,7 @@ export const StudentSchedulePage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedSlot, setSelectedSlot] = useState<TimetableSlotDTO | null>(null);
+    const [showLecturerPopup, setShowLecturerPopup] = useState(false);
     const [isScheduleHidden, setIsScheduleHidden] = useState(false);
     const [exporting, setExporting] = useState(false);
 
@@ -240,7 +241,6 @@ export const StudentSchedulePage: React.FC = () => {
             if (label === 'Đã hủy') return 'bg-red-50 text-red-600 border-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800';
             if (label === 'VẮNG MẶT') return 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800';
             if (label === 'CÓ MẶT') return 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800';
-            if (label === 'ĐANG DIỄN RA') return 'bg-fpt-orange/10 text-fpt-orange border-fpt-orange/30 dark:bg-orange-900/20 dark:text-fpt-orange dark:border-fpt-orange/40';
         }
         return 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700';
     };
@@ -257,12 +257,27 @@ export const StudentSchedulePage: React.FC = () => {
 
             if (times) {
                 const startTime = new Date(`${slotDateStr}T${times.start}`);
-                const endTime = new Date(`${slotDateStr}T${times.end}`);
-                if (now > endTime) return 'VẮNG MẶT';
-                if (now >= startTime && now <= endTime) return 'ĐANG DIỄN RA';
+                const threshold = slot.absentThresholdMinutes ?? 15;
+                const attendanceDeadline = new Date(startTime.getTime() + threshold * 60000);
+
+                if (now > attendanceDeadline) return 'VẮNG MẶT';
             }
         }
         return 'Chưa điểm danh';
+    };
+
+    const isOngoingSlot = (slot: TimetableSlotDTO) => {
+        if (slot.date && slot.slotNumber) {
+            const now = new Date();
+            const slotDateStr = slot.date.split('T')[0];
+            const times = dynamicSlotTimes[slot.slotNumber];
+            if (times) {
+                const startTime = new Date(`${slotDateStr}T${times.start}`);
+                const endTime = new Date(`${slotDateStr}T${times.end}`);
+                return now >= startTime && now <= endTime;
+            }
+        }
+        return false;
     };
 
     const getSlotForCell = (daySlots: TimetableSlotDTO[], slotNumber: number) => {
@@ -402,8 +417,8 @@ export const StudentSchedulePage: React.FC = () => {
                                         <tr key={day.date} className={`${idx % 2 === 0 ? 'bg-white dark:bg-zinc-900' : 'bg-gray-50/30 dark:bg-zinc-800/20'} group`}>
                                             <td className="px-4 py-3 border-b border-gray-100 dark:border-zinc-800 align-middle">
                                                 <div className="flex flex-col">
-                                                    <div className="font-bold text-lg text-gray-900 dark:text-white leading-tight">{getDayLabel(day.date)}</div>
-                                                    <div className="text-sm text-gray-500 dark:text-gray-400 font-medium mt-0.5">{formatDateLabel(day.date)}</div>
+                                                    <div className="font-bold text-sm text-gray-900 dark:text-white leading-tight">{getDayLabel(day.date)}</div>
+                                                    <div className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">{formatDateLabel(day.date)}</div>
                                                     {day.date === new Date().toISOString().split('T')[0] && (
                                                         <span className="inline-block mt-1.5 px-2 py-0.5 bg-fpt-orange/10 text-fpt-orange text-[10px] font-black rounded-full w-fit uppercase tracking-wider">Hôm nay</span>
                                                     )}
@@ -415,7 +430,7 @@ export const StudentSchedulePage: React.FC = () => {
                                                     <td key={`${day.date}-${slot.id}`} className="px-2.5 py-2.5 border-b border-l border-gray-100 dark:border-zinc-800 align-top min-w-[160px]">
                                                         {slotData ? (() => {
                                                             const status = getStatusLabel(slotData);
-                                                            const isOngoing = status === 'ĐANG DIỄN RA';
+                                                            const isOngoing = isOngoingSlot(slotData);
                                                             const isAbsent = status === 'VẮNG MẶT';
                                                             const isPresent = status === 'CÓ MẶT';
                                                             const isCancelled = status === 'Đã hủy';
@@ -433,12 +448,11 @@ export const StudentSchedulePage: React.FC = () => {
                                                                         <div className="flex items-center justify-between mb-1.5">
                                                                             <span className="font-extrabold text-[#001D4A] dark:text-white text-sm leading-tight truncate pr-1" title={slotData.courseName}>{slotData.courseCode}</span>
                                                                             <span className={`shrink-0 px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${
-                                                                                isOngoing ? 'bg-fpt-orange text-white' : 
                                                                                 isAbsent ? 'bg-red-50/20 text-red-500/80 border border-red-100/20' :
                                                                                 isPresent ? 'bg-green-50/20 text-green-500/80 border border-green-100/20' :
                                                                                 'bg-slate-50/20 text-slate-400 border border-slate-100/20'
                                                                             }`}>
-                                                                                {isOngoing ? 'TIẾP' : isAbsent ? 'Vắng mặt' : isPresent ? 'Có mặt' : 'Chưa điểm danh'}
+                                                                                {status}
                                                                             </span>
                                                                         </div>
                                                                         <div className="text-[11px] font-bold text-gray-700 dark:text-gray-300 truncate mb-1">Lớp: {slotData.className}</div>
@@ -475,43 +489,200 @@ export const StudentSchedulePage: React.FC = () => {
             </div>
 
             {selectedSlot && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedSlot(null)}>
-                    <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
-                        <div className="bg-fpt-orange px-6 py-4 flex items-center justify-between">
-                            <h3 className="text-white font-bold text-lg">Chi tiết buổi học</h3>
-                            <button onClick={() => setSelectedSlot(null)} className="text-white/80 hover:text-white transition-colors rounded-full p-1 hover:bg-white/10"><X size={20} /></button>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => { setSelectedSlot(null); setShowLecturerPopup(false); }}>
+                    <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
+                        
+                        {/* Header */}
+                        <div className="bg-fpt-orange px-8 py-6 relative">
+                            <h3 className="text-white font-bold text-xl mb-1">Chi tiết buổi học</h3>
+                            <p className="text-white/80 text-sm">Thông tin chi tiết lịch trình học tập</p>
+                            <button
+                                onClick={() => { setSelectedSlot(null); setShowLecturerPopup(false); }}
+                                className="absolute top-6 right-6 text-white/80 hover:text-white transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
                         </div>
-                        <div className="p-6 space-y-4">
-                            <div className="flex items-start gap-4"><div className="w-8 flex justify-center pt-1"><CalendarIcon className="text-gray-400" size={20} /></div><div><p className="text-sm text-gray-500 dark:text-gray-400">Ngày</p><p className="font-medium text-gray-900 dark:text-white">{selectedSlot.date ? (() => { const d = new Date(selectedSlot.date); return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()} (${getDayLabel(selectedSlot.date)})`; })() : 'N/A'}</p></div></div>
-                            <div className="flex items-start gap-4"><div className="w-8 flex justify-center pt-1"><Clock className="text-gray-400" size={20} /></div><div><p className="text-sm text-gray-500 dark:text-gray-400">Thời gian</p><p className="font-medium text-gray-900 dark:text-white">Slot {selectedSlot.slotNumber} <span className="text-gray-400 text-sm font-normal">({selectedSlot.startTime} - {selectedSlot.endTime})</span></p></div></div>
-                            <div className="flex items-start gap-4">
-                                <div className="w-8 flex justify-center pt-1">
-                                    <BookOpen className="text-gray-400" size={20} />
+
+                        {/* Content */}
+                        <div className="p-8 space-y-6">
+                            
+                            {/* Date & Time Row */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-fpt-orange shrink-0">
+                                        <CalendarIcon size={20} />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider mb-0.5">NGÀY</p>
+                                        <p className="font-bold text-gray-900 dark:text-white text-sm">
+                                            {selectedSlot.date ? (() => {
+                                                const d = new Date(selectedSlot.date);
+                                                return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()} (${getDayLabel(selectedSlot.date)})`;
+                                            })() : 'N/A'}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="flex-1">
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">Môn học / Lớp</p>
-                                    <p className="font-medium text-gray-900 dark:text-white">{selectedSlot.courseName}</p>
-                                    <p 
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-fpt-orange shrink-0">
+                                        <Clock size={20} />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider mb-0.5">THỜI GIAN</p>
+                                        <p className="font-bold text-gray-900 dark:text-white text-sm">
+                                            Slot {selectedSlot.slotNumber} <span className="text-gray-400 font-normal">({selectedSlot.startTime} - {selectedSlot.endTime})</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Course / Class */}
+                            <div className="flex items-start gap-4">
+                                <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-fpt-orange mt-1 shrink-0">
+                                    <BookOpen size={20} />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider mb-0.5">MÔN HỌC / LỚP</p>
+                                    <p className="font-bold text-gray-900 dark:text-white text-base leading-tight mb-2">
+                                        {selectedSlot.courseName}
+                                    </p>
+                                    <button
                                         onClick={() => {
                                             if (selectedSlot.className) {
                                                 setSelectedSlot(null);
                                                 navigate(`/student/classes/${selectedSlot.className}/members`);
                                             }
                                         }}
-                                        className="text-sm text-fpt-orange font-bold mt-1 hover:underline cursor-pointer inline-flex items-center gap-1.5 group transition-all"
+                                        className="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-50 text-fpt-orange font-bold text-[11px] rounded-full hover:bg-orange-100 transition-colors border border-orange-100 group"
                                         title="Xem danh sách sinh viên"
                                     >
-                                        {selectedSlot.className}
-                                        <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity translate-x-[-4px] group-hover:translate-x-0" />
-                                    </p>
+                                        Lớp: {selectedSlot.className}
+                                        <ChevronRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity translate-x-[-4px] group-hover:translate-x-0" />
+                                    </button>
                                 </div>
                             </div>
-                            <div className="flex items-start gap-4"><div className="w-8 flex justify-center pt-1"><MapPin className="text-gray-400" size={20} /></div><div><p className="text-sm text-gray-500 dark:text-gray-400">Phòng học</p><p className="font-medium text-gray-900 dark:text-white">{selectedSlot.roomCode || selectedSlot.roomName}</p></div></div>
-                            <div className="flex items-start gap-4"><div className="w-8 flex justify-center pt-1"><User className="text-gray-400" size={20} /></div><div><p className="text-sm text-gray-500 dark:text-gray-400">Giáo viên</p><p className="font-medium text-gray-900 dark:text-white">{selectedSlot.lecturerName || 'Chưa phân công'}</p></div></div>
-                            <div className="flex items-start gap-4 pt-2 border-t border-gray-100 dark:border-zinc-800 mt-2"><div className="w-8 flex justify-center pt-1"><FileText className="text-gray-400" size={20} /></div><div><p className="text-sm text-gray-500 dark:text-gray-400">Bài tập</p><p className="font-medium text-gray-900 dark:text-white mt-1">{selectedSlot.assignmentId ? selectedSlot.assignmentTitle : 'Chưa có bài tập'}</p>
-                            {selectedSlot.assignmentId && (<><p className="text-sm mt-1">Trạng thái: {selectedSlot.submissionStatus === 'SUBMITTED' ? <span className="text-green-600 dark:text-green-400 font-semibold">Đã nộp</span> : selectedSlot.assignmentStatus === 'CLOSED' ? <span className="text-red-500 dark:text-red-400 font-semibold">Đã đóng</span> : <span className="text-amber-500 dark:text-amber-400 font-semibold">Chưa nộp</span>}</p><button onClick={() => { setSelectedSlot(null); navigate(`/student/assignments/${selectedSlot.assignmentId}`); }} className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-fpt-orange/10 hover:bg-fpt-orange/20 text-fpt-orange rounded-lg text-xs font-semibold transition-colors"><FileText className="w-3.5 h-3.5" />Xem bài tập</button></>)}</div></div>
-                            <div className="flex items-start gap-4 pt-2 border-t border-gray-100 dark:border-zinc-800 mt-2"><div className="w-8 flex justify-center pt-1"></div><div className="flex items-center gap-2 w-full justify-between"><p className="text-sm text-gray-500 dark:text-gray-400">Trạng thái điểm danh:</p><span className={`font-bold uppercase px-3 py-1 rounded-full text-xs border ${getStatusStyle(selectedSlot)}`}>{getStatusLabel(selectedSlot)}</span></div></div>
+
+                            {/* Room & Lecturer Row */}
+                            <div className="grid grid-cols-2 gap-4">
+                                {/* Room */}
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-fpt-orange shrink-0">
+                                        <MapPin size={20} />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider mb-0.5">PHÒNG HỌC</p>
+                                        <p className="font-bold text-gray-900 dark:text-white text-sm">
+                                            {selectedSlot.roomCode || selectedSlot.roomName}
+                                        </p>
+                                    </div>
+                                </div>
+                                {/* Lecturer */}
+                                <div className="flex items-center gap-4 relative">
+                                    <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-fpt-orange shrink-0">
+                                        <User size={20} />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider mb-0.5">GIẢNG VIÊN</p>
+                                        <p 
+                                            className={`font-bold text-sm text-gray-900 dark:text-white ${selectedSlot.lecturerName ? 'cursor-pointer hover:text-fpt-orange transition-colors' : ''}`}
+                                            onClick={() => {
+                                                if (selectedSlot.lecturerName) {
+                                                    setShowLecturerPopup(!showLecturerPopup);
+                                                }
+                                            }}
+                                        >
+                                            {selectedSlot.lecturerName ? (
+                                                <span className="flex items-center gap-1">
+                                                    {selectedSlot.lecturerName}
+                                                    <ChevronRight size={14} className="text-gray-400" />
+                                                </span>
+                                            ) : 'Chưa phân công'}
+                                        </p>
+                                        
+                                        {/* Lecturer Info Popup */}
+                                        {showLecturerPopup && selectedSlot.lecturerName && (
+                                            <div className="absolute top-full left-0 mt-2 z-50 bg-white dark:bg-zinc-800 rounded-xl shadow-xl border border-gray-100 dark:border-zinc-700 p-4 w-64 animate-in fade-in slide-in-from-top-2">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 dark:bg-zinc-700 shrink-0 border border-gray-200 dark:border-zinc-600">
+                                                        {selectedSlot.lecturerAvatar ? (
+                                                            <img src={selectedSlot.lecturerAvatar} alt={selectedSlot.lecturerName} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center text-gray-400 font-bold text-lg">
+                                                                {selectedSlot.lecturerName.charAt(0)}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-bold text-gray-900 dark:text-white truncate" title={selectedSlot.lecturerName}>{selectedSlot.lecturerName}</p>
+                                                        {selectedSlot.lecturerEmail ? (
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate" title={selectedSlot.lecturerEmail}>{selectedSlot.lecturerEmail}</p>
+                                                        ) : (
+                                                            <p className="text-xs text-gray-400 italic">Chưa có email</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Assignment info section */}
+                            {selectedSlot.assignmentId ? (
+                                <div
+                                    className="mt-6 flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 bg-gray-50/80 dark:bg-zinc-800/50 rounded-2xl border border-gray-100 dark:border-zinc-800"
+                                >
+                                    <div className="w-12 h-12 rounded-xl bg-orange-100/50 dark:bg-orange-900/30 flex items-center justify-center shrink-0 text-fpt-orange">
+                                        <FileText size={20} />
+                                    </div>
+                                    <div className="flex-1 w-full">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                            <div>
+                                                <p className="text-sm text-fpt-orange font-bold">Bài tập</p>
+                                                <p className="font-medium text-gray-800 dark:text-gray-200 text-sm mt-0.5 line-clamp-1">
+                                                    {selectedSlot.assignmentTitle}
+                                                </p>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2 shrink-0">
+                                                {selectedSlot.submissionStatus === 'SUBMITTED' ? (
+                                                    <span className="inline-flex items-center px-2 py-1 rounded bg-green-100/80 text-green-700 text-[10px] font-extrabold uppercase tracking-wider">
+                                                        Đã nộp
+                                                    </span>
+                                                ) : selectedSlot.assignmentStatus === 'CLOSED' ? (
+                                                    <span className="inline-flex items-center px-2 py-1 rounded bg-gray-200 text-gray-600 text-[10px] font-extrabold uppercase tracking-wider">
+                                                        Đã đóng
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center px-2 py-1 rounded bg-amber-100 text-amber-600 text-[10px] font-extrabold uppercase tracking-wider">
+                                                        Chưa nộp
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="mt-3">
+                                            <button 
+                                                onClick={() => { setSelectedSlot(null); navigate(`/student/assignments/${selectedSlot.assignmentId}`); }} 
+                                                className="inline-flex w-full sm:w-auto justify-center items-center gap-1.5 px-4 py-1.5 bg-white text-fpt-orange border border-fpt-orange rounded-lg hover:bg-orange-50 transition-colors text-xs font-bold"
+                                            >
+                                                <FileText className="w-3.5 h-3.5" /> Xem bài tập
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : null}
+
                         </div>
+
+                        {/* Footer Action area */}
+                        <div className="bg-gray-50/50 dark:bg-zinc-800/30 px-6 sm:px-8 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-gray-100 dark:border-zinc-800">
+                            <div className="flex items-center gap-3 shrink-0">
+                                <span className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">Điểm danh:</span>
+                                <span className={`font-bold uppercase px-3 py-1 rounded text-[11px] border whitespace-nowrap ${getStatusStyle(selectedSlot)}`}>
+                                    {getStatusLabel(selectedSlot)}
+                                </span>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             )}

@@ -3,40 +3,97 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { lecturerClassService, ClassDetailResponse, StudentEnrollmentDTO } from '../../services/api/LecturerClass';
 import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
+import { studentGradeService } from '../../services/api/studentGradeService';
+import { StudentResponse } from '../../services/api/academicStaffService';
+import { ViewStudentModal } from '../../components/academic-staff/students/StudentModals';
+import attendanceService, { ClassAttendanceReportResponse } from '../../services/api/attendanceService';
 
-import { Users, ArrowLeft, Clock } from 'lucide-react';
+import { Users, ArrowLeft, Mail, Phone, BarChart3 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const AcademicStaffClassDetailPage: React.FC = () => {
     const { className } = useParams<{ className: string }>();
     const navigate = useNavigate();
     const [detail, setDetail] = useState<ClassDetailResponse | null>(null);
+    const [attendanceReport, setAttendanceReport] = useState<ClassAttendanceReportResponse | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [pagination, setPagination] = useState({
         page: 0,
-        size: 10,
+        size: 30,
     });
     const [searchQuery, setSearchQuery] = useState<string>('');
+    const [headerAvatars, setHeaderAvatars] = useState<{ code: string; url: string | null; name: string }[]>([]);
+
+    // View Student Modal State
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+    const [viewingStudent, setViewingStudent] = useState<StudentResponse | null>(null);
 
     useEffect(() => {
         if (className) {
             fetchDetail();
+            fetchAttendanceReport();
         }
     }, [className]);
 
+    useEffect(() => {
+        const fetchHeaderAvatars = async () => {
+            if (detail?.enrollments && detail.enrollments.length > 0) {
+                const limit = Math.min(detail.enrollments.length, 2);
+                const avatars: { code: string; url: string | null; name: string }[] = [];
+                for (let i = 0; i < limit; i++) {
+                    const student = detail.enrollments[i];
+                    try {
+                        const info = await studentGradeService.getStudentInfo(student.studentCode);
+                        avatars.push({
+                            code: student.studentCode,
+                            url: info.avatar || null,
+                            name: student.studentName
+                        });
+                    } catch (error) {
+                        avatars.push({
+                            code: student.studentCode,
+                            url: null,
+                            name: student.studentName
+                        });
+                    }
+                }
+                setHeaderAvatars(avatars);
+            }
+        };
+        fetchHeaderAvatars();
+    }, [detail?.enrollments]);
+
     const fetchDetail = async () => {
-        setLoading(true);
         try {
             const data = await lecturerClassService.getClassDetail(className!);
             setDetail(data);
         } catch (error) {
             console.error("Failed to fetch class detail", error);
             toast.error("Không thể tải thông tin lớp học");
+        }
+    };
+
+    const fetchAttendanceReport = async () => {
+        setLoading(true);
+        try {
+            const data = await attendanceService.getClassAttendanceReport(className!);
+            setAttendanceReport(data);
+        } catch (error) {
+            console.error("Failed to fetch attendance report", error);
         } finally {
             setLoading(false);
         }
     };
 
+    const handleViewStudentDetail = async (studentCode: string) => {
+        try {
+            const student = await studentGradeService.getStudentInfo(studentCode);
+            setViewingStudent(student);
+            setIsViewModalOpen(true);
+        } catch (error) {
+            toast.error('Lỗi khi tải thông tin sinh viên');
+        }
+    };
 
     const maskValue = (value: string | undefined, visibleChars: number = 2) => {
         if (!value) return '';
@@ -58,6 +115,12 @@ export const AcademicStaffClassDetailPage: React.FC = () => {
 
     const totalPages = Math.ceil(filteredEnrollments.length / pagination.size);
 
+    // Map attendance data for easy lookup
+    const attendanceMap = new Map<string, number>();
+    attendanceReport?.studentReports.forEach(report => {
+        attendanceMap.set(report.studentCode, report.absentPercentage);
+    });
+
     return (
         <AcademicStaffLayout pageTitle="Chi tiết lớp học">
             <div className="max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500">
@@ -68,34 +131,76 @@ export const AcademicStaffClassDetailPage: React.FC = () => {
                         className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-fpt-orange transition-colors w-fit group"
                     >
                         <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-                        Quay lại
+                        Quay lại trang trước
                     </button>
 
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                        <div>
-                            <div className="flex items-center gap-3 mb-2">
-                                <span className="px-3 py-1 bg-orange-100 text-fpt-orange text-xs font-bold rounded-full uppercase tracking-wider">
-                                    {detail?.status || '...'}
-                                </span>
-                                <span className="text-gray-400">/</span>
-                                <span className="text-gray-600 dark:text-gray-400 font-medium">{detail?.semesterName}</span>
+                        <div className="flex items-center gap-6">
+                            <div className="flex -space-x-8 -space-y-4">
+                                {headerAvatars.length > 0 ? (
+                                    headerAvatars.map((st, idx) => (
+                                        <div
+                                            key={st.code}
+                                            className={`w-14 h-14 rounded-full border-4 border-white dark:border-zinc-950 overflow-hidden shadow-lg transition-transform hover:scale-110 relative ${idx === 0 ? 'z-20' : 'z-10 bg-orange-200'}`}
+                                        >
+                                            {st.url ? (
+                                                <img
+                                                    src={getViewableFileUrl(st.url)}
+                                                    alt={st.name}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full bg-orange-100 flex items-center justify-center text-fpt-orange font-bold text-xl uppercase">
+                                                    {st.name.split(' ').pop()?.charAt(0)}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="w-14 h-14 rounded-full border-4 border-white dark:border-zinc-900 bg-gray-50 flex items-center justify-center text-gray-300 shadow-inner">
+                                        <Users size={24} />
+                                    </div>
+                                )}
                             </div>
-                            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">
-                                {detail?.className || className}
-                            </h1>
+                            <div className="flex flex-col">
+                                <div className="flex items-center gap-2 mb-1.5">
+                                    <span className={`px-3 py-0.5 rounded-full text-[9px] font-bold tracking-widest uppercase shadow-sm border ${detail?.status === 'UPCOMING'
+                                            ? 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-900/40'
+                                            : detail?.status === 'OPEN' || detail?.status === 'ONGOING'
+                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-900/40'
+                                                : 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700'
+                                        }`}>
+                                        {detail?.status === 'UPCOMING' ? 'SẮP DIỄN RA' : detail?.status === 'ONGOING' ? 'ĐANG DIỄN RA' : detail?.status === 'FINISHED' ? 'ĐÃ KẾT THÚC' : detail?.status || 'ĐANG TẢI...'}
+                                    </span>
+                                    <span className="w-1 h-1 rounded-full bg-gray-200 dark:bg-zinc-800"></span>
+                                    <span className="text-gray-400 dark:text-gray-500 text-[10px] font-bold tracking-widest uppercase">{detail?.semesterName}</span>
+                                </div>
+                                <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight leading-none">
+                                    {detail?.className || className}
+                                </h1>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => navigate(`/academic-staff/classes/${className}/attendance-report`)}
+                                className="flex items-center gap-2 px-6 py-2.5 bg-fpt-orange text-white rounded-xl text-sm font-bold shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all hover:-translate-y-0.5"
+                            >
+                                <BarChart3 size={18} />
+                                Báo cáo điểm danh
+                            </button>
                         </div>
                     </div>
                 </div>
 
-
                 {/* Student Table Section */}
-                <div className="space-y-6">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end px-2 gap-4">
+                <div className="space-y-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end px-1 gap-4">
                         <div>
-                            <h2 className="text-xl font-extrabold text-gray-900 dark:text-white">Danh sách sinh viên</h2>
-                            <p className="text-gray-500 font-medium mt-1">Tổng số {detail?.enrollments.length || 0} sinh viên chính thức</p>
+                            <h4 className="text-xl font-bold text-gray-900 dark:text-white">Danh sách sinh viên</h4>
+                            <p className="text-xs text-gray-500 font-medium mt-1">Tổng số {detail?.enrollments.length || 0} sinh viên chính thức</p>
                         </div>
-                        <div className="relative w-full sm:w-80">
+                        <div className="relative w-full sm:w-72">
                             <input
                                 type="text"
                                 value={searchQuery}
@@ -103,96 +208,109 @@ export const AcademicStaffClassDetailPage: React.FC = () => {
                                     setSearchQuery(e.target.value);
                                     setPagination(p => ({ ...p, page: 0 }));
                                 }}
-                                placeholder="Tìm kiếm sinh viên..."
-                                className="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm font-medium transition-all shadow-sm outline-none focus:border-fpt-orange/50"
+                                placeholder="Tìm sinh viên..."
+                                className="w-full pl-10 pr-4 py-2 bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-xl text-xs font-medium transition-all shadow-sm outline-none focus:border-fpt-orange/50"
                             />
-                            <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                            <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                         </div>
                     </div>
 
-                    <div className="bg-white dark:bg-zinc-900 rounded-[40px] border border-gray-100 dark:border-zinc-800 shadow-xl shadow-gray-200/10 dark:shadow-none overflow-hidden">
+                    <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead>
                                     <tr className="bg-fpt-orange text-white">
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider rounded-tl-lg w-24 text-center">No.</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Sinh viên</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Liên hệ</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Chuyên ngành</th>
-                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-lg w-20"></th>
+                                        <th className="px-4 py-3 text-center text-[11px] font-bold uppercase tracking-widest w-16">STT</th>
+                                        <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-widest">Sinh viên</th>
+                                        <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-widest">Liên hệ</th>
+                                        <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-widest">Chuyên ngành</th>
+                                        <th className="px-4 py-3 text-center text-[11px] font-bold uppercase tracking-widest w-24">Vắng (%)</th>
+                                        <th className="px-4 py-3 text-center text-[11px] font-bold uppercase tracking-widest w-32">Trạng thái</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-50 dark:divide-zinc-800">
+                                <tbody className="divide-y divide-gray-50 dark:divide-zinc-800/50">
                                     {loading ? (
                                         [...Array(5)].map((_, i) => (
                                             <tr key={i} className="animate-pulse">
-                                                <td colSpan={5} className="px-8 py-8 bg-gray-50/50 dark:bg-zinc-800/30"></td>
+                                                <td colSpan={6} className="px-4 py-6 bg-gray-50/50 dark:bg-zinc-800/30"></td>
                                             </tr>
                                         ))
                                     ) : currentEnrollments.length > 0 ? (
-                                        currentEnrollments.map((student: StudentEnrollmentDTO, index: number) => (
-                                            <tr key={student.studentCode} className="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
-                                                <td className="px-4 py-4 text-center text-sm text-gray-500 dark:text-zinc-400">
-                                                    {(pagination.page * pagination.size + index + 1).toString().padStart(2, '0')}
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="relative">
-                                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-100 to-orange-50 dark:from-zinc-800 dark:to-zinc-900 flex items-center justify-center text-fpt-orange text-lg font-bold overflow-hidden">
+                                        currentEnrollments.map((student: StudentEnrollmentDTO, index: number) => {
+                                            const absentPercentage = attendanceMap.get(student.studentCode) || 0;
+                                            return (
+                                                <tr key={student.studentCode}
+                                                    onClick={() => handleViewStudentDetail(student.studentCode)}
+                                                    className="hover:bg-gray-50/80 dark:hover:bg-zinc-800/40 transition-colors cursor-pointer group">
+                                                    <td className="px-4 py-3 text-center text-sm text-gray-500 dark:text-zinc-400 font-medium font-mono">
+                                                        {(pagination.page * pagination.size + index + 1).toString().padStart(2, '0')}
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex items-center gap-2.5">
+                                                            <div className="w-8 h-8 rounded-full border border-orange-100 dark:border-orange-900/30 bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-fpt-orange font-bold text-xs uppercase shadow-sm">
                                                                 {student.avatar ? (
                                                                     <img
                                                                         src={getViewableFileUrl(student.avatar)}
                                                                         alt={student.studentName}
-                                                                        className="w-full h-full object-cover"
-                                                                        onError={(e) => {
-                                                                            (e.target as HTMLImageElement).style.display = 'none';
-                                                                            (e.target as HTMLImageElement).parentElement!.innerText = student.studentName.charAt(0);
-                                                                        }}
+                                                                        className="w-full h-full object-cover rounded-full"
                                                                     />
                                                                 ) : (
-                                                                    student.studentName.charAt(0)
+                                                                    student.studentName.split(' ').pop()?.charAt(0)
                                                                 )}
                                                             </div>
-                                                            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white dark:border-zinc-900 rounded-full shadow-sm"></div>
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-base font-semibold text-gray-900 dark:text-white">{student.studentName}</div>
-                                                            <div className="text-sm text-gray-500 dark:text-zinc-500 font-mono ">{student.studentCode}</div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    <div className="flex flex-col text-sm space-y-1.5">
-                                                        <div className="text-gray-600 dark:text-gray-300 flex items-center gap-2">
-                                                            <div className="w-5 h-5 rounded bg-gray-50 dark:bg-zinc-800 flex items-center justify-center text-gray-400 font-bold">@</div>
-                                                            {student.email}
-                                                        </div>
-                                                        <div className="text-gray-600 dark:text-gray-300 flex items-center gap-2">
-                                                            <div className="w-5 h-5 rounded bg-gray-50 dark:bg-zinc-800 flex items-center justify-center text-gray-400">
-                                                                <Clock size={14} />
+                                                            <div>
+                                                                <div className="font-bold text-gray-900 dark:text-gray-100 text-sm">{student.studentName}</div>
+                                                                <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{student.studentCode}</div>
                                                             </div>
-                                                            {maskValue(student.phone, 3)}
                                                         </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    <div className="flex flex-col gap-1.5">
-                                                        <span className="text-base font-semibold text-gray-500 dark:text-zinc-400">
-                                                            {student.majorName}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-[13px] text-gray-600 dark:text-gray-400">
+                                                        <div className="flex flex-col gap-0.5">
+                                                            <div className="flex items-center gap-1.5 font-medium">
+                                                                <Mail size={12} className="text-gray-400" />
+                                                                <span>{maskValue(student.email, 4)}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Phone size={12} className="text-gray-400" />
+                                                                <span>{maskValue(student.phone, 3)}</span>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-[13px] text-gray-600 dark:text-gray-400">
+                                                        <div className="flex flex-col">
+                                                            <div className="font-bold text-gray-800 dark:text-zinc-300">{student.majorName}</div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        <span className={`text-sm font-bold font-mono ${
+                                                            absentPercentage >= 20 
+                                                                ? 'text-red-500' 
+                                                                : absentPercentage >= 10 
+                                                                    ? 'text-amber-500' 
+                                                                    : 'text-gray-600 dark:text-zinc-400'
+                                                        }`}>
+                                                            {absentPercentage.toFixed(1)}%
                                                         </span>
-                                                    </div>
-                                                </td>
-                                                <td></td>
-                                            </tr>
-                                        ))
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black tracking-widest uppercase whitespace-nowrap ${student.status === 'ENROLLED'
+                                                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30'
+                                                                : 'bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-400 border border-gray-200 dark:border-zinc-700'
+                                                            }`}>
+                                                            {student.status === 'ENROLLED' ? 'ĐANG HỌC' : student.status}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
                                     ) : (
                                         <tr>
-                                            <td colSpan={5} className="px-6 py-24 text-center">
-                                                <div className="flex flex-col items-center gap-6">
-                                                    <div className="w-24 h-24 rounded-[32px] bg-gray-50 dark:bg-zinc-800/50 flex items-center justify-center">
-                                                        <Users size={48} className="text-gray-200 dark:text-zinc-700" />
+                                            <td colSpan={6} className="px-6 py-20 text-center">
+                                                <div className="flex flex-col items-center gap-4">
+                                                    <div className="w-16 h-16 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 flex items-center justify-center">
+                                                        <Users size={32} className="text-gray-200 dark:text-zinc-700" />
                                                     </div>
-                                                    <p className="text-2xl font-bold text-gray-400 dark:text-zinc-600">Không có dữ liệu sinh viên.</p>
+                                                    <p className="text-lg font-bold text-gray-400 dark:text-zinc-600 tracking-tight">Không tìm thấy sinh viên</p>
                                                 </div>
                                             </td>
                                         </tr>
@@ -226,8 +344,8 @@ export const AcademicStaffClassDetailPage: React.FC = () => {
                                             key={i}
                                             onClick={() => setPagination(p => ({ ...p, page: i }))}
                                             className={`w-8 h-8 flex items-center justify-center rounded-lg font-medium transition-colors ${pagination.page === i
-                                                ? 'bg-fpt-orange text-white'
-                                                : 'hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-600 dark:text-zinc-400'
+                                                    ? 'bg-fpt-orange text-white'
+                                                    : 'hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-600 dark:text-zinc-400'
                                                 }`}
                                         >
                                             {i + 1}
@@ -246,6 +364,13 @@ export const AcademicStaffClassDetailPage: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {isViewModalOpen && viewingStudent && (
+                <ViewStudentModal
+                    student={viewingStudent}
+                    onClose={() => setIsViewModalOpen(false)}
+                />
+            )}
         </AcademicStaffLayout>
     );
 };

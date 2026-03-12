@@ -4,7 +4,7 @@ import { StudentLayout } from '../../layouts/StudentLayout';
 import { lecturerClassService, ClassDetailResponse } from '../../services/api/LecturerClass';
 import { chatGroupService } from '../../services/api/chatGroupService';
 import { studentGradeService } from '../../services/api/studentGradeService';
-import { Users, ArrowLeft, MessageCircle, Loader2, Search } from 'lucide-react';
+import { Users, ArrowLeft, MessageCircle, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const StudentClassMembersPage: React.FC = () => {
@@ -14,7 +14,7 @@ export const StudentClassMembersPage: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(true);
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [chatGroupId, setChatGroupId] = useState<number | null>(null);
-    const [chatGroupLoading, setChatGroupLoading] = useState(false);
+    const [chatGroupLoading] = useState(false);
     const [headerAvatars, setHeaderAvatars] = useState<{ code: string; url: string | null; name: string }[]>([]);
 
     useEffect(() => {
@@ -194,14 +194,16 @@ export const StudentClassMembersPage: React.FC = () => {
                                     <tr className="bg-fpt-orange text-white">
                                         <th className="px-6 py-4 text-center text-[11px] font-bold uppercase tracking-widest w-20">STT</th>
                                         <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-widest">Sinh viên</th>
-                                        <th className="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-widest w-48">Mã sinh viên</th>
+                                        <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-widest w-40">Mã sinh viên</th>
+                                        <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-widest">Chuyên ngành</th>
+                                        <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-widest">Chuyên ngành hẹp</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50 dark:divide-zinc-800/50">
                                     {loading ? (
                                         [...Array(8)].map((_, i) => (
                                             <tr key={i} className="animate-pulse">
-                                                <td colSpan={3} className="px-6 py-6 bg-gray-50/50 dark:bg-zinc-800/30">
+                                                <td colSpan={5} className="px-6 py-6 bg-gray-50/50 dark:bg-zinc-800/30">
                                                     <div className="h-4 bg-gray-100 dark:bg-zinc-800 rounded w-1/4 mx-auto"></div>
                                                 </td>
                                             </tr>
@@ -225,21 +227,25 @@ export const StudentClassMembersPage: React.FC = () => {
                                                         </div>
                                                         <div>
                                                             <div className="font-bold text-gray-900 dark:text-gray-100 text-sm">{student.studentName}</div>
-                                                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider md:hidden">{student.studentCode}</div>
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <span className="hidden md:inline-block px-3 py-1 bg-gray-50 dark:bg-zinc-800 text-gray-500 dark:text-zinc-400 rounded-lg text-[11px] font-black uppercase tracking-widest border border-gray-100 dark:border-zinc-700">
+                                                <td className="px-6 py-4 text-left">
+                                                    <span className="inline-block px-3 py-1 bg-gray-50 dark:bg-zinc-800 text-gray-500 dark:text-zinc-400 rounded-lg text-[11px] font-black uppercase tracking-widest border border-gray-100 dark:border-zinc-700">
                                                         {student.studentCode}
                                                     </span>
-                                                    <span className="md:hidden text-xs text-gray-400 font-bold font-mono">—</span>
+                                                </td>
+                                                <td className="px-6 py-4 text-[13px] text-gray-600 dark:text-gray-400">
+                                                    <div className="font-bold text-gray-800 dark:text-zinc-300">{student.majorName || '—'}</div>
+                                                </td>
+                                                <td className="px-6 py-4 text-[13px] text-gray-600 dark:text-gray-400">
+                                                    <div className="font-medium text-gray-600 dark:text-zinc-400">{student.specializationName || '—'}</div>
                                                 </td>
                                             </tr>
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={3} className="px-6 py-20 text-center">
+                                            <td colSpan={5} className="px-6 py-20 text-center">
                                                 <div className="flex flex-col items-center gap-4">
                                                     <div className="w-16 h-16 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 flex items-center justify-center">
                                                         <Users size={32} className="text-gray-200 dark:text-zinc-700" />

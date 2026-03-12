@@ -33,11 +33,14 @@ export const ClassRowTable: React.FC<ClassRowTableProps> = ({ index, classSectio
                 {classSection.courseName}
             </td>
             <td className="px-6 py-4 text-center">
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold tracking-widest ${classSection.status === 'OPEN'
-                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                    : 'bg-gray-100 text-gray-500 dark:bg-zinc-800 dark:text-zinc-400'
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold tracking-widest ${
+                    classSection.status === 'UPCOMING'
+                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                        : classSection.status === 'OPEN' || classSection.status === 'ONGOING'
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                            : 'bg-gray-100 text-gray-500 dark:bg-zinc-800 dark:text-zinc-400'
                     }`}>
-                    {classSection.status === 'OPEN' ? 'ĐANG MỞ' : classSection.status}
+                    {classSection.status === 'UPCOMING' ? 'SẮP DIỄN RA' : classSection.status === 'ONGOING' ? 'ĐANG DIỄN RA' : classSection.status === 'FINISHED' ? 'ĐÃ KẾT THÚC' : classSection.status === 'OPEN' ? 'ĐANG MỞ' : classSection.status || '---'}
                 </span>
             </td>
         </tr>
