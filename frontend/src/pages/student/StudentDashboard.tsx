@@ -262,7 +262,7 @@ export const StudentDashboard: React.FC = () => {
                                                     {participationRate}%
                                                 </span>
                                             </div>
-                                            <div className="h-2 w-full bg-gray-100 dark:bg-zinc-800/50 rounded-full overflow-hidden shadow-inner cursor-pointer"
+                                            <div className="h-1 w-full bg-gray-100 dark:bg-zinc-800/50 rounded-full overflow-hidden shadow-inner cursor-pointer"
                                                 onClick={() => navigate('/student/attendance', { state: { selectedClassName: item.className } })}
                                             >
                                                 <div 
@@ -270,11 +270,17 @@ export const StudentDashboard: React.FC = () => {
                                                     style={{ width: `${participationRate}%` }}
                                                 />
                                             </div>
-                                            <div className="flex justify-between mt-1">
-                                                <span className="text-[9px] font-medium text-gray-400 truncate max-w-[120px]" title={item.courseName}>{item.courseName}</span>
-                                                <span className={`${textColor} text-[9px] font-bold tracking-tight uppercase`}>
-                                                    {statusText} • Vắng {item.unexcusedAbsentCount}/{item.totalSlots}
-                                                </span>
+                                            <div className="flex justify-between mt-1.5 items-center">
+                                                <span className="text-[10px] font-medium text-gray-400 truncate max-w-[120px]" title={item.courseName}>{item.courseName}</span>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className={`${textColor} text-[9px] font-bold tracking-tight uppercase`}>
+                                                        {statusText}
+                                                    </span>
+                                                    <span className="text-gray-300 dark:text-zinc-600 text-[8px]">•</span>
+                                                    <span className="text-gray-400 dark:text-zinc-500 text-[10px] font-medium">
+                                                        Vắng {item.unexcusedAbsentCount}/{item.totalSlots}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                     );

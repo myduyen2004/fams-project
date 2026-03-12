@@ -6,8 +6,8 @@ import { assignmentService, AssignmentSubmissionDTO, SubmitAssignmentRequest } f
 import { uploadFile } from '../../services/utils/fileUploadService';
 import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
 import {
-    ArrowLeft, Clock, BookOpen, FileText, Upload, CheckCircle, AlertCircle,
-    XCircle, ExternalLink, Loader2, Trash2, Paperclip, RotateCcw, Calendar, MapPin
+    ArrowLeft, BookOpen, FileText, Upload,
+    Loader2, Trash2, Paperclip, RotateCcw, Calendar, MessageSquare, Download
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
@@ -84,30 +84,7 @@ export const StudentAssignmentDetailPage: React.FC = () => {
         });
     };
 
-    const getStatusBadge = (status: string) => {
-        switch (status) {
-            case 'SUBMITTED':
-                return (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                        <CheckCircle className="w-4 h-4" /> Đã nộp
-                    </span>
-                );
-            case 'NOT_SUBMITTED':
-                return (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                        <AlertCircle className="w-4 h-4" /> Chưa nộp
-                    </span>
-                );
-            case 'OVERDUE':
-                return (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                        <XCircle className="w-4 h-4" /> Quá hạn nộp
-                    </span>
-                );
-            default:
-                return null;
-        }
-    };
+
 
     const openUploadDialog = () => {
         setSelectedFiles([]);
@@ -231,23 +208,22 @@ export const StudentAssignmentDetailPage: React.FC = () => {
                     Quay lại danh sách bài tập
                 </button>
 
-                {/* Assignment Header Card */}
-                <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden">
-                    {/* Title bar */}
-                    <div className="bg-orange-500 dark:bg-orange-600 px-5 py-3">
-                        <h2 className="text-lg font-bold text-white">{submission.assignmentTitle}</h2>
-                    </div>
-
-                    {/* Info row */}
-                    <div className="px-5 py-3 grid grid-cols-2 md:grid-cols-5 gap-4 divide-x divide-gray-200 dark:divide-zinc-700 text-sm">
-                        <div className="flex flex-col items-center gap-1 px-2">
-                            <span className="text-[11px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider">Lớp</span>
-                            <span className="font-semibold text-gray-900 dark:text-white text-sm">{submission.className}</span>
+                {/* Top Header Card */}
+                <div className="bg-white dark:bg-zinc-900 rounded-3xl overflow-hidden p-6 sm:px-8 sm:py-6 shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-gray-200 dark:border-zinc-700">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-center text-sm">
+                        
+                        {/* Class & Subject */}
+                        <div className="md:col-span-1">
+                            <p className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5">MÃ LỚP & MÔN HỌC</p>
+                            <h2 className="font-extrabold text-[#001D4A] dark:text-white leading-tight">
+                                {submission.className} - {submission.assignmentTitle.split('-')[0]?.trim() || submission.courseCode || 'N/A'}
+                            </h2>
                         </div>
-                        <div className="flex flex-col items-center gap-1 px-2">
-                            <span className="text-[11px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider">Ngày học / Slot</span>
-                            <span className="font-semibold text-gray-900 dark:text-white text-sm inline-flex items-center gap-1">
-                                <Calendar className="w-3.5 h-3.5 text-gray-400" />
+
+                        {/* Time */}
+                        <div className="md:col-span-1">
+                            <p className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5">THỜI GIAN</p>
+                            <p className="font-medium text-[#001D4A] dark:text-gray-300">
                                 {slotInfo ? (
                                     <>
                                         {formatDateTime(slotInfo.date).split(' ')[1]} - {slotInfo.slotNumber && `Slot ${slotInfo.slotNumber}`}
@@ -255,124 +231,183 @@ export const StudentAssignmentDetailPage: React.FC = () => {
                                 ) : (
                                     <span className="text-gray-400">Chưa xếp lịch</span>
                                 )}
-                            </span>
+                            </p>
                         </div>
-                        <div className="flex flex-col items-center gap-1 px-2">
-                            <span className="text-[11px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider">Phòng</span>
-                            <span className="font-semibold text-gray-900 dark:text-white text-sm inline-flex items-center gap-1">
-                                <MapPin className="w-3.5 h-3.5 text-gray-400" />
+
+                        {/* Room */}
+                        <div className="md:col-span-1">
+                            <p className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5">PHÒNG HỌC</p>
+                            <p className="font-medium text-[#001D4A] dark:text-gray-300">
                                 {slotInfo?.roomName || slotInfo?.roomCode || <span className="text-gray-400">Chưa xếp phòng</span>}
-                            </span>
+                            </p>
                         </div>
-                        <div className="flex flex-col items-center gap-1 px-2">
-                            <span className="text-[11px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider">Hạn nộp</span>
-                            <span className="font-semibold text-gray-900 dark:text-white text-sm inline-flex items-center gap-1">
-                                <Clock className="w-3.5 h-3.5 text-gray-400" />
-                                {formatDateTime(submission.assignmentDueDate)}
-                            </span>
-                        </div>
-                        <div className="flex flex-col items-center gap-1 px-2">
-                            <span className="text-[11px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider">Trạng thái</span>
-                            {getStatusBadge(submission.status)}
+
+                        {/* Right Deadline Box */}
+                        <div className="md:col-span-1 md:justify-self-end">
+                            <div className="bg-orange-50/50 dark:bg-orange-900/10 rounded-2xl border border-orange-100 dark:border-orange-900/30 px-3.5 py-2.5 inline-block w-full md:w-auto">
+                                <p className="text-[10px] font-bold text-fpt-orange uppercase tracking-widest mb-1.5">HẠN NỘP CUỐI CÙNG</p>
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-xl bg-orange-500 text-white flex items-center justify-center shrink-0 shadow-sm shadow-orange-500/20">
+                                        <Calendar className="w-4 h-4" />
+                                    </div>
+                                    <div className="flex flex-col justify-center">
+                                        <p className="text-base font-bold text-[#001D4A] dark:text-white leading-none mb-0.5">
+                                            {formatDateTime(submission.assignmentDueDate).split(' ')[1]}
+                                        </p>
+                                        <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400 leading-none">
+                                            {formatDateTime(submission.assignmentDueDate).split(' ')[0]}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Reference Material Card */}
-                {submission.referenceUrl && (
-                    <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm p-4">
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                            <BookOpen className="w-4 h-4 text-fpt-orange" />
-                            Tài liệu tham khảo
-                        </h3>
-                        <a
-                            href={getViewableFileUrl(submission.referenceUrl)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-sm text-fpt-orange hover:text-orange-600 transition-colors"
-                        >
-                            <Paperclip className="w-4 h-4" />
-                            {submission.referenceName || 'Tài liệu tham khảo'}
-                        </a>
-                    </div>
-                )}
+                {/* Main Content Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                {/* Submission Detail Card */}
-                <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden">
-                    <div className="px-5 py-3 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between">
-                        <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                            <FileText className="w-5 h-5 text-fpt-orange" />
-                            Thông tin bài nộp
-                        </h3>
-                        {(canSubmit || canResubmit) && (
-                            <button
-                                onClick={openUploadDialog}
-                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
-                            >
-                                {canResubmit ? <RotateCcw className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
-                                {canResubmit ? 'Nộp lại' : 'Nộp bài'}
-                            </button>
-                        )}
-                    </div>
-
-                    <div className="p-5 space-y-4">
-                        {/* Submitted time */}
-                        {submission.submittedAt && (
-                            <div>
-                                <p className="text-xs text-gray-400 dark:text-zinc-500 uppercase tracking-wider">Thời gian nộp</p>
-                                <p className="text-sm font-medium text-gray-900 dark:text-white mt-0.5">
-                                    {formatDateTime(submission.submittedAt)}
-                                </p>
+                    {/* Left Column - Materials */}
+                    <div className="lg:col-span-1 space-y-6">
+                        <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-200 dark:border-zinc-700 shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-6">
+                            <h3 className="text-base font-bold text-[#001D4A] dark:text-white mb-6 flex items-center gap-3">
+                                <div className="text-fpt-orange">
+                                    <BookOpen className="fill-current w-5 h-5" />
+                                </div>
+                                Tài liệu
+                            </h3>
+                            
+                            <div className="space-y-4">
+                                {submission.referenceUrl ? (
+                                    <a
+                                        href={getViewableFileUrl(submission.referenceUrl)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-4 p-3 rounded-2xl hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors group"
+                                    >
+                                        <div className="w-12 h-12 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center shrink-0 text-fpt-orange">
+                                            <Paperclip size={20} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-medium text-sm text-[#001D4A] dark:text-white truncate group-hover:text-fpt-orange transition-colors">
+                                                {submission.referenceName || 'Tài liệu tham khảo'}
+                                            </p>
+                                            <p className="text-[11px] text-gray-400 mt-0.5">Tài liệu đính kèm</p>
+                                        </div>
+                                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-gray-300 group-hover:text-fpt-orange transition-colors shrink-0">
+                                            <Download size={16} />
+                                        </div>
+                                    </a>
+                                ) : (
+                                    <p className="text-sm text-gray-400 px-2">Không có tài liệu đính kèm.</p>
+                                )}
                             </div>
-                        )}
+                        </div>
+                    </div>
 
-                        {/* Submitted files */}
-                        <div>
-                            <p className="text-xs text-gray-400 dark:text-zinc-500 uppercase tracking-wider">File đã nộp</p>
-                            {submission.fileUrls && submission.fileUrls.length > 0 ? (
-                                <div className="mt-1.5 space-y-1.5">
-                                    {submission.fileUrls.map((url, idx) => (
-                                        <a
-                                            key={idx}
-                                            href={getViewableFileUrl(url)}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center gap-2 p-2.5 bg-gray-50 dark:bg-zinc-800 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/10 transition-colors group"
-                                        >
-                                            <div className="w-8 h-8 rounded bg-white dark:bg-zinc-700 flex items-center justify-center flex-shrink-0">
-                                                <FileText className="w-4 h-4 text-fpt-orange" />
+                    {/* Right Column - Submission & Feedback */}
+                    <div className="lg:col-span-2 space-y-6">
+                        
+                        {/* Submission Info Card */}
+                        <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-200 dark:border-zinc-700 shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-6 sm:p-8">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                                <h3 className="text-base font-bold text-[#001D4A] dark:text-white flex items-center gap-3">
+                                    <div className="w-6 h-6 rounded bg-fpt-orange flex items-center justify-center text-white">
+                                        <Upload size={14} />
+                                    </div>
+                                    Thông tin bài nộp
+                                </h3>
+                                
+                                {(canSubmit || canResubmit) && (
+                                    <button
+                                        onClick={openUploadDialog}
+                                        className="inline-flex items-center justify-center px-6 py-2.5 bg-fpt-orange hover:bg-orange-600 text-white rounded-xl text-sm font-bold transition-colors shadow-md shadow-orange-500/20"
+                                    >
+                                        {canResubmit ? 'Nộp lại' : 'Nộp bài'}
+                                    </button>
+                                )}
+                            </div>
+
+                            {submission.status === 'SUBMITTED' ? (
+                                <div className="space-y-4">
+                                    {submission.fileUrls && submission.fileUrls.length > 0 ? (
+                                        submission.fileUrls.map((url, idx) => (
+                                            <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-gray-50/80 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800">
+                                                <div className="flex items-center gap-4 min-w-0">
+                                                    <div className="w-12 h-12 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
+                                                        <FileText className="w-5 h-5 text-fpt-orange" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="font-medium text-sm text-[#001D4A] dark:text-white truncate" title={submission.fileNames?.[idx]}>
+                                                            {submission.fileNames?.[idx] || `File ${idx + 1}`}
+                                                        </p>
+                                                        <p className="text-[11px] text-gray-400 mt-0.5">Đã tải lên</p>
+                                                    </div>
+                                                </div>
+                                                {submission.submittedAt && (
+                                                    <div className="text-right shrink-0 pr-2">
+                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">THỜI GIAN NỘP</p>
+                                                        <p className="text-sm font-medium text-[#001D4A] dark:text-gray-300">
+                                                            {formatDateTime(submission.submittedAt).split(' ')[1]} {formatDateTime(submission.submittedAt).split(' ')[0]}
+                                                        </p>
+                                                    </div>
+                                                )}
                                             </div>
-                                            <span className="text-sm text-gray-700 dark:text-zinc-300 group-hover:text-fpt-orange transition-colors truncate">
-                                                {submission.fileNames?.[idx] || `File ${idx + 1}`}
-                                            </span>
-                                            <ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-fpt-orange ml-auto flex-shrink-0" />
-                                        </a>
-                                    ))}
+                                        ))
+                                    ) : (
+                                        <p className="text-sm text-gray-500 italic p-4 bg-gray-50 dark:bg-zinc-800/50 rounded-2xl">Không có file đính kèm, chỉ có ghi chú.</p>
+                                    )}
+                                    
+                                    {submission.note && (
+                                        <div className="mt-4 p-4 rounded-2xl bg-gray-50/50 dark:bg-zinc-800/30 border border-gray-100 dark:border-zinc-800">
+                                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">GHI CHÚ</p>
+                                             <div className="text-sm text-gray-700 dark:text-zinc-300">
+                                                 {renderNoteWithLinks(submission.note)}
+                                             </div>
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
-                                <p className="text-sm text-gray-400 dark:text-zinc-500 mt-0.5">Chưa có file nào được nộp</p>
+                                <div className="flex flex-col items-center justify-center py-10 px-4 border-2 border-dashed border-gray-200 dark:border-zinc-700 rounded-2xl">
+                                    <div className="w-16 h-16 rounded-full bg-gray-50 dark:bg-zinc-800 flex items-center justify-center text-gray-400 mb-3">
+                                        <Upload size={24} />
+                                    </div>
+                                    <p className="text-gray-500 dark:text-gray-400 font-medium text-center">Bạn chưa nộp bài tập này.</p>
+                                    <p className="text-xs text-gray-400 text-center mt-1">Hạn nộp: {formatDateTime(submission.assignmentDueDate)}</p>
+                                </div>
                             )}
                         </div>
 
-                        {/* Note */}
-                        <div>
-                            <p className="text-xs text-gray-400 dark:text-zinc-500 uppercase tracking-wider">Ghi chú</p>
-                            <div className="text-sm text-gray-700 dark:text-zinc-300 mt-0.5">
-                                {renderNoteWithLinks(submission.note)}
-                            </div>
-                        </div>
+                        {/* Feedback Card */}
+                        <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-200 dark:border-zinc-700 shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-6 sm:p-8">
+                            <h3 className="text-base font-bold text-[#001D4A] dark:text-white flex items-center gap-3 mb-6">
+                                <div className="text-fpt-orange">
+                                    <MessageSquare className="fill-current w-5 h-5" />
+                                </div>
+                                Nhận xét giảng viên
+                            </h3>
 
-                        {/* Lecturer Comment */}
-                        <div>
-                            <p className="text-xs text-gray-400 dark:text-zinc-500 uppercase tracking-wider">Nhận xét giảng viên</p>
                             {submission.lecturerComment ? (
-                                <p className="text-sm text-gray-700 dark:text-zinc-300 mt-0.5">
-                                    {submission.lecturerComment}
-                                </p>
+                                <div className="p-5 rounded-2xl bg-orange-50/50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/30 flex gap-4">
+                                    <div className="w-10 h-10 rounded-full bg-orange-200 dark:bg-orange-800 flex items-center justify-center text-orange-600 dark:text-orange-200 font-bold shrink-0">
+                                        GV
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed font-medium">
+                                            {submission.lecturerComment}
+                                        </p>
+                                    </div>
+                                </div>
                             ) : (
-                                <p className="text-sm text-gray-400 dark:text-zinc-500 mt-0.5 italic">Chưa có nhận xét</p>
+                                <div className="py-12 px-6 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-zinc-700 rounded-2xl bg-gray-50/30 dark:bg-zinc-800/20">
+                                    <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-zinc-800 flex items-center justify-center text-gray-400 mb-3">
+                                        <MessageSquare size={20} className="fill-current opacity-50" />
+                                    </div>
+                                    <p className="text-gray-400 dark:text-zinc-500 italic text-sm font-medium">Chưa có nhận xét từ giảng viên</p>
+                                </div>
                             )}
                         </div>
+
                     </div>
                 </div>
             </div>

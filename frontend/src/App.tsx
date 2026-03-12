@@ -81,6 +81,8 @@ const LecturerSemestersPage = lazy(() => import('./pages/lecturer/SemestersPage'
 const AcademicStaffSystemLogsPage = lazy(() => import('./pages/academic-staff/SystemLogsPage').then(m => ({ default: m.SystemLogsPage })));
 const ChatPage = lazy(() => import('./pages/chatbot/ChatPage').then(m => ({ default: m.ChatPage })));
 const StudentClassMembersPage = lazy(() => import('./pages/student/StudentClassMembersPage').then(m => ({ default: m.StudentClassMembersPage })));
+const StudentProfilePage = lazy(() => import('./pages/student/StudentProfilePage').then(m => ({ default: m.StudentProfilePage })));
+const LecturerProfilePage = lazy(() => import('./pages/lecturer/LecturerProfilePage').then(m => ({ default: m.LecturerProfilePage })));
 
 const PageLoader = () => (
   <div className="flex h-screen w-full items-center justify-center bg-gray-50 dark:bg-zinc-950">
@@ -342,6 +344,7 @@ function App() {
           <Route path="/lecturer/rooms" element={<ProtectedRoute allowedRoles={['LECTURER']}><LecturerRoomList /></ProtectedRoute>} />
           <Route path="/lecturer/rooms/:id" element={<ProtectedRoute allowedRoles={['LECTURER']}><LecturerRoomDetail /></ProtectedRoute>} />
           <Route path="/lecturer/semesters" element={<ProtectedRoute allowedRoles={['LECTURER']}><LecturerSemestersPage /></ProtectedRoute>} />
+          <Route path="/lecturer/profile" element={<ProtectedRoute allowedRoles={['LECTURER']}><LecturerProfilePage /></ProtectedRoute>} />
 
           {/* Student Routes */}
           <Route
@@ -383,7 +386,7 @@ function App() {
           <Route path="/student/messages" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentMessagesPage /></ProtectedRoute>} />
           <Route path="/student/requests" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentAcademicRequestPage /></ProtectedRoute>} />
           <Route path="/student/settings" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Cài đặt" /></ProtectedRoute>} />
-          <Route path="/student/profile" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Hồ sơ cá nhân" /></ProtectedRoute>} />
+          <Route path="/student/profile" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentProfilePage /></ProtectedRoute>} />
           <Route path="/student/rooms" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentRoomList /></ProtectedRoute>} />
           <Route path="/student/rooms/:id" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentRoomDetail /></ProtectedRoute>} />
           <Route path="/student/semesters" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentSemestersPage /></ProtectedRoute>} />
@@ -457,6 +460,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
                 <AcademicStaffClassDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/academic-staff/classes/:className/attendance-report"
+            element={
+              <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
+                <ClassAttendanceReportPage />
               </ProtectedRoute>
             }
           />

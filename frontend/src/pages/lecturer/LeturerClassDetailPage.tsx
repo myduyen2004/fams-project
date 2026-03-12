@@ -311,9 +311,7 @@ export const LeturerClassDetailPage: React.FC = () => {
                                                 ? 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-900/40'
                                                 : 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700'
                                     }`}>
-                                        {detail?.status === 'UPCOMING' ? 'SẮP DIỄN RA' : 
-                                         detail?.status === 'OPEN' || detail?.status === 'ONGOING' ? 'ĐANG DIỄN RA' : 
-                                         detail?.status === 'FINISHED' || detail?.status === 'COMPLETED' ? 'ĐÃ KẾT THÚC' : (detail?.status || 'ĐANG TẢI...')}
+                                        {detail?.status === 'UPCOMING' ? 'SẮP DIỄN RA' : detail?.status === 'ONGOING' ? 'ĐANG DIỄN RA' : detail?.status === 'FINISHED' ? 'ĐÃ KẾT THÚC' : detail?.status || 'ĐANG TẢI...'}
                                     </span>
                                     <span className="w-1 h-1 rounded-full bg-gray-200 dark:bg-zinc-800"></span>
                                     <span className="text-gray-400 dark:text-gray-500 text-[10px] font-bold tracking-widest uppercase">{detail?.semesterName}</span>

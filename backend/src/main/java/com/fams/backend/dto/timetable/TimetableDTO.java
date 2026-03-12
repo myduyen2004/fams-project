@@ -112,6 +112,8 @@ public class TimetableDTO {
         private String courseName;
         private Long lecturerId;
         private String lecturerName;
+        private String lecturerEmail;
+        private String lecturerAvatar;
         private String roomCode;
         private String roomName;
         private LocalDate date;
