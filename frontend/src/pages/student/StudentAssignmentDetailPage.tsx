@@ -7,7 +7,7 @@ import { uploadFile } from '../../services/utils/fileUploadService';
 import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
 import {
     ArrowLeft, BookOpen, FileText, Upload,
-    Loader2, Trash2, Paperclip, RotateCcw, Calendar, MessageSquare, Download
+    Loader2, Trash2, Paperclip, Calendar, MessageSquare, Download
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
@@ -331,7 +331,7 @@ export const StudentAssignmentDetailPage: React.FC = () => {
                             {submission.status === 'SUBMITTED' ? (
                                 <div className="space-y-4">
                                     {submission.fileUrls && submission.fileUrls.length > 0 ? (
-                                        submission.fileUrls.map((url, idx) => (
+                                        submission.fileUrls.map((_url, idx) => (
                                             <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-gray-50/80 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800">
                                                 <div className="flex items-center gap-4 min-w-0">
                                                     <div className="w-12 h-12 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
