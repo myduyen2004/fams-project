@@ -81,7 +81,7 @@ export const PendingRequests: React.FC = () => {
         const data = await academicStaffService.getScheduleRequests({
           status: 'PENDING',
           page: 0,
-          size: 5,
+          size: 20,
           sort: 'createdAt,desc',
         });
         setRequests(data.content || []);
@@ -115,7 +115,7 @@ export const PendingRequests: React.FC = () => {
         </button>
       </div>
 
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 max-h-[315px] overflow-y-auto pr-1 custom-scrollbar">
         {loading ? (
           <div className="flex items-center justify-center py-10">
             <Loader2 className="w-6 h-6 text-gray-300 animate-spin" />
@@ -160,7 +160,7 @@ export const SystemActivityLog: React.FC = () => {
       append ? setLoadingMore(true) : setLoading(true);
       const data = await academicStaffService.getSystemLogs({
         page: pageNum,
-        size: 8
+        size: 20
       });
       setLogs(prev => append ? [...prev, ...data.content] : data.content);
     } catch (error) {
@@ -178,7 +178,7 @@ export const SystemActivityLog: React.FC = () => {
   // Real-time updates via WebSocket
   useWebSocket('/topic/system-logs', (newLogs: SystemLogItem[]) => {
     if (Array.isArray(newLogs)) {
-      setLogs(newLogs);
+      setLogs(newLogs.slice(0, 20));
     }
   });
 
@@ -225,7 +225,7 @@ export const SystemActivityLog: React.FC = () => {
         </Link>
       </div>
 
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 max-h-[315px] overflow-y-auto pr-1 custom-scrollbar">
         {loading && !loadingMore && logs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10">
             <Loader2 className="w-6 h-6 text-gray-300 animate-spin" />

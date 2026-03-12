@@ -308,13 +308,13 @@ export const StudentAttendancePage: React.FC = () => {
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm text-left">
                                     <thead>
-                                        <tr className="bg-gray-50 dark:bg-zinc-800/50 border-b border-gray-100 dark:border-zinc-700">
-                                            <th className="px-6 py-4 font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider text-[11px]">Thông tin Lớp/Môn</th>
-                                            <th className="px-4 py-4 font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider text-[11px] text-center">Tổng buổi</th>
-                                            <th className="px-4 py-4 font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider text-[11px] text-center">Đã học</th>
-                                            <th className="px-4 py-4 font-bold text-emerald-600 dark:text-emerald-500 uppercase tracking-wider text-[11px] text-center">Có mặt</th>
-                                            <th className="px-4 py-4 font-bold text-red-600 dark:text-red-500 uppercase tracking-wider text-[11px] text-center">Vắng</th>
-                                            <th className="px-4 py-4 font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider text-[11px] text-center">Chuyên cần</th>
+                                        <tr className="bg-fpt-orange">
+                                            <th className="px-6 py-4 font-bold text-white uppercase tracking-wider text-[11px]">Thông tin Lớp/Môn</th>
+                                            <th className="px-4 py-4 font-bold text-white uppercase tracking-wider text-[11px] text-center">Tổng buổi</th>
+                                            <th className="px-4 py-4 font-bold text-white uppercase tracking-wider text-[11px] text-center">Đã học</th>
+                                            <th className="px-4 py-4 font-bold text-white uppercase tracking-wider text-[11px] text-center">Có mặt</th>
+                                            <th className="px-4 py-4 font-bold text-white uppercase tracking-wider text-[11px] text-center">Vắng</th>
+                                            <th className="px-4 py-4 font-bold text-white uppercase tracking-wider text-[11px] text-center">Chuyên cần</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-50 dark:divide-zinc-800">
@@ -452,7 +452,7 @@ export const StudentAttendancePage: React.FC = () => {
                                         <div className="overflow-x-auto">
                                             <table className="w-full text-sm text-left">
                                                 <thead>
-                                                    <tr className="bg-gradient-to-r from-fpt-orange to-orange-500">
+                                                    <tr className="bg-fpt-orange">
                                                         <th className="px-6 py-4 font-bold text-white uppercase tracking-wider text-[11px] w-16">Slot</th>
                                                         <th className="px-4 py-4 font-bold text-white uppercase tracking-wider text-[11px]">Ngày</th>
                                                         <th className="px-4 py-4 font-bold text-white uppercase tracking-wider text-[11px]">Giờ học</th>
