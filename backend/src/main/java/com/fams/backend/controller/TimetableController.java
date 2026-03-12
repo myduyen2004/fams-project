@@ -917,6 +917,8 @@ public class TimetableController {
                                 .courseName(course != null ? course.getName() : null)
                                 .lecturerId(lecturer != null ? lecturer.getId() : null)
                                 .lecturerName(lecturer != null ? lecturer.getFullName() : null)
+                                .lecturerEmail(lecturer != null ? lecturer.getEmail() : null)
+                                .lecturerAvatar(lecturer != null ? lecturer.getAvatar() : null)
                                 .roomCode(room != null ? room.getCode() : null)
                                 .roomName(room != null ? room.getName() : null)
                                 .date(slot.getDate())

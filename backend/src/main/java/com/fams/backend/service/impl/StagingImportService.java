@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@SuppressWarnings("null")
 public class StagingImportService {
 
     private final JdbcTemplate jdbcTemplate;
@@ -49,7 +50,7 @@ public class StagingImportService {
     /**
      * Fast preview class sections using staging table
      */
-    public Map<String, Object> fastPreviewClassSections(String semesterCode, MultipartFile file) {
+    public Map<String, Object> fastPreviewClassSections(@org.springframework.lang.NonNull String semesterCode, @org.springframework.lang.NonNull MultipartFile file) {
         long startTime = System.currentTimeMillis();
         String stagingTable = "staging_cs_" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
 
@@ -100,7 +101,7 @@ public class StagingImportService {
     /**
      * Import class sections from staging table
      */
-    public Map<String, Object> importClassSectionsFromStaging(String stagingTable, Long semesterId) {
+    public Map<String, Object> importClassSectionsFromStaging(@org.springframework.lang.NonNull String stagingTable, @org.springframework.lang.NonNull Long semesterId) {
         long startTime = System.currentTimeMillis();
 
         try {
@@ -110,7 +111,6 @@ public class StagingImportService {
             if (semester.getStatus() != com.fams.backend.entity.Semester.SemesterStatus.UPCOMING) {
                 throw new RuntimeException("Chỉ có thể nhập lớp học phần khi học kỳ chưa bắt đầu");
             }
-
             String insertSql = """
                     INSERT INTO class_sections (class_name, semester_id, course_id, lecturer_id, number_of_slots, max_students, current_enrollment, status, created_at, updated_at)
                     SELECT
@@ -167,7 +167,7 @@ public class StagingImportService {
     /**
      * Full import flow: preview + import in one step
      */
-    public Map<String, Object> bulkImportClassSections(String semesterCode, MultipartFile file) {
+    public Map<String, Object> bulkImportClassSections(@org.springframework.lang.NonNull String semesterCode, @org.springframework.lang.NonNull MultipartFile file) {
         long startTime = System.currentTimeMillis();
         String stagingTable = "staging_cs_" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
 
@@ -213,7 +213,7 @@ public class StagingImportService {
     /**
      * Fast preview enrollments using staging table
      */
-    public Map<String, Object> fastPreviewEnrollments(String semesterCode, MultipartFile file) {
+    public Map<String, Object> fastPreviewEnrollments(@org.springframework.lang.NonNull String semesterCode, @org.springframework.lang.NonNull MultipartFile file) {
         long startTime = System.currentTimeMillis();
         String stagingTable = "staging_enr_" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
 
@@ -260,7 +260,7 @@ public class StagingImportService {
     /**
      * Import enrollments from staging table
      */
-    public Map<String, Object> importEnrollmentsFromStaging(String stagingTable, Long semesterId) {
+    public Map<String, Object> importEnrollmentsFromStaging(@org.springframework.lang.NonNull String stagingTable, @org.springframework.lang.NonNull Long semesterId) {
         long startTime = System.currentTimeMillis();
 
         try {
@@ -334,7 +334,7 @@ public class StagingImportService {
     /**
      * Full import flow for enrollments
      */
-    public Map<String, Object> bulkImportEnrollments(String semesterCode, MultipartFile file) {
+    public Map<String, Object> bulkImportEnrollments(@org.springframework.lang.NonNull String semesterCode, @org.springframework.lang.NonNull MultipartFile file) {
         long startTime = System.currentTimeMillis();
         String stagingTable = "staging_enr_" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
 
@@ -377,7 +377,7 @@ public class StagingImportService {
 
     // ==================== STAGING TABLE OPERATIONS ====================
 
-    private void createClassSectionStagingTable(String tableName) {
+    private void createClassSectionStagingTable(@org.springframework.lang.NonNull String tableName) {
         jdbcTemplate.execute("""
                 CREATE TEMP TABLE %s (
                     row_num SERIAL PRIMARY KEY,
@@ -390,7 +390,7 @@ public class StagingImportService {
                 """.formatted(tableName));
     }
 
-    private void createEnrollmentStagingTable(String tableName) {
+    private void createEnrollmentStagingTable(@org.springframework.lang.NonNull String tableName) {
         jdbcTemplate.execute("""
                 CREATE TEMP TABLE %s (
                     row_num SERIAL PRIMARY KEY,
@@ -401,7 +401,7 @@ public class StagingImportService {
                 """.formatted(tableName));
     }
 
-    private void dropStagingTable(String tableName) {
+    private void dropStagingTable(@org.springframework.lang.NonNull String tableName) {
         try {
             jdbcTemplate.execute("DROP TABLE IF EXISTS " + tableName);
         } catch (Exception e) {
@@ -415,7 +415,7 @@ public class StagingImportService {
      * Stream Excel to staging table for class sections
      * Uses SAX parser - only processes one row at a time
      */
-    private long streamExcelToStagingClassSection(MultipartFile file, String stagingTable) throws Exception {
+    private long streamExcelToStagingClassSection(@org.springframework.lang.NonNull MultipartFile file, @org.springframework.lang.NonNull String stagingTable) throws Exception {
         AtomicInteger rowCount = new AtomicInteger(0);
         List<String[]> batch = Collections.synchronizedList(new ArrayList<>());
 
@@ -449,7 +449,7 @@ public class StagingImportService {
     /**
      * Stream Excel to staging table for enrollments
      */
-    private long streamExcelToStagingEnrollment(MultipartFile file, String stagingTable) throws Exception {
+    private long streamExcelToStagingEnrollment(@org.springframework.lang.NonNull MultipartFile file, @org.springframework.lang.NonNull String stagingTable) throws Exception {
         AtomicInteger rowCount = new AtomicInteger(0);
         List<String[]> batch = Collections.synchronizedList(new ArrayList<>());
 
@@ -481,7 +481,7 @@ public class StagingImportService {
 
     // ==================== VALIDATION USING SQL ====================
 
-    private Map<String, Object> validateClassSectionsInStaging(String stagingTable, Long semesterId) {
+    private Map<String, Object> validateClassSectionsInStaging(@org.springframework.lang.NonNull String stagingTable, @org.springframework.lang.NonNull Long semesterId) {
         // Mark rows with missing class_name
         jdbcTemplate.update("""
                 UPDATE %s SET error_message = 'Mã lớp không được để trống'
@@ -539,7 +539,7 @@ public class StagingImportService {
         return getValidationResult(stagingTable, "class_name", "course_code");
     }
 
-    private Map<String, Object> validateEnrollmentsInStaging(String stagingTable, Long semesterId) {
+    private Map<String, Object> validateEnrollmentsInStaging(@org.springframework.lang.NonNull String stagingTable, @org.springframework.lang.NonNull Long semesterId) {
         // Mark rows with missing student_code
         jdbcTemplate.update("""
                 UPDATE %s SET error_message = 'MSSV không được để trống'
@@ -659,7 +659,7 @@ public class StagingImportService {
         return getValidationResult(stagingTable, "student_code", "class_name");
     }
 
-    private Map<String, Object> getValidationResult(String stagingTable, String field1, String field2) {
+    private Map<String, Object> getValidationResult(@org.springframework.lang.NonNull String stagingTable, @org.springframework.lang.NonNull String field1, @org.springframework.lang.NonNull String field2) {
         Integer validCountResult = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM " + stagingTable + " WHERE error_message IS NULL",
                 Integer.class);
