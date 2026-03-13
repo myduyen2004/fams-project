@@ -1009,9 +1009,9 @@ export const MajorManagement: React.FC = () => {
         let confirmMsg = '';
         if (selectedIds.length === 1) {
             const selectedItem = data.find(m => m.id === selectedIds[0]);
-            confirmMsg = `Bạn có chắc chắn muốn xóa ngành "${selectedItem?.name}"? Hành động này không thể hoàn tác.`;
+            confirmMsg = `Bạn có chắc chắn muốn xóa ngành "${selectedItem?.name}"?\nHành động này không thể hoàn tác.`;
         } else {
-            confirmMsg = `Bạn có chắc chắn muốn xóa ${selectedIds.length} ngành đã chọn? Hành động này không thể hoàn tác.`;
+            confirmMsg = `Bạn có chắc chắn muốn xóa ${selectedIds.length} ngành đã chọn?\nHành động này không thể hoàn tác.`;
         }
 
         setConfirmModal({

@@ -639,7 +639,7 @@ export const ClassSectionManagement: React.FC = () => {
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={confirmDelete}
         title="Xóa lớp học phần"
-        message={`Bạn có chắc chắn muốn xóa ${selectedRows.size} lớp học phần? Hành động này không thể hoàn tác.`}
+        message={`Bạn có chắc chắn muốn xóa ${selectedRows.size} lớp học phần?\nHành động này không thể hoàn tác.`}
         confirmLabel="Xóa"
         cancelLabel="Hủy"
         type="danger"

@@ -216,7 +216,7 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
                                                     onClick={() => { setSelectedRoomType('ALL'); setIsRoomTypeFilterOpen(false); }}
                                                     className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center justify-between ${selectedRoomType === 'ALL' ? 'text-fpt-orange bg-orange-50 dark:bg-orange-900/10' : 'text-gray-700 dark:text-gray-200'}`}
                                                 >
-                                                    <span>Tất cả loại phòng</span>
+                                                    <span>Tất cả</span>
                                                     {selectedRoomType === 'ALL' && <Check className="h-4 w-4" />}
                                                 </button>
                                                 {ROOM_TYPE_OPTIONS.map(type => (
