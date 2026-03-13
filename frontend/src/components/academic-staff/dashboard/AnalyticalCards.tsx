@@ -80,37 +80,22 @@ const StatCard: React.FC<Omit<StatCardProps, 'icon'>> = ({ title, value, trend, 
 };
 
 export const AnalyticalCards: React.FC<{ stats?: any }> = ({ stats }) => {
-  const studentData = stats?.studentStats || [
-    { name: 'CNTT', value: 8432 },
-    { name: 'Kinh tế', value: 5210 },
-    { name: 'Ngôn ngữ', value: 5400 },
-    { name: 'Thiết kế', value: 3100 },
-    { name: 'Du lịch', value: 2800 },
-    { name: 'Marketing', value: 4200 }
-  ];
-  
-  const lecturerData = stats?.lecturerStats || [
-    { name: 'Toán-Tin', value: 180 },
-    { name: 'Kỹ thuật', value: 214 },
-    { name: 'Ngoại ngữ', value: 130 },
-    { name: 'Kỹ năng', value: 95 },
-    { name: 'Lý luận', value: 64 },
-    { name: 'Thể chất', value: 45 }
-  ];
+  const studentData = stats?.studentStats || [];
+  const lecturerData = stats?.lecturerStats || [];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
       <StatCard
         title="SINH VIÊN"
-        value={stats?.totalStudents?.toLocaleString() || '19,042'}
-        trend="+12%"
-        chartData={studentData}
+        value={stats?.totalStudents !== undefined ? stats.totalStudents.toLocaleString() : '---'}
+        trend={stats?.totalStudents > 0 ? "+100%" : undefined}
+        chartData={studentData.length > 0 ? studentData : [{ name: 'N/A', value: 0 }]}
       />
       <StatCard
         title="GIẢNG VIÊN"
-        value={stats?.totalLecturers?.toLocaleString() || '524'}
+        value={stats?.totalLecturers !== undefined ? stats.totalLecturers.toLocaleString() : '---'}
         variant="blue"
-        chartData={lecturerData}
+        chartData={lecturerData.length > 0 ? lecturerData : [{ name: 'N/A', value: 0 }]}
       />
     </div>
   );

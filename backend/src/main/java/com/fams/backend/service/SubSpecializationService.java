@@ -1,5 +1,6 @@
 package com.fams.backend.service;
 
+import com.fams.backend.dto.request.BulkCourseAssignmentRequest;
 import com.fams.backend.dto.request.ReorderCoursesRequest;
 import com.fams.backend.dto.request.SubSpecializationRequest;
 import com.fams.backend.dto.response.CourseResponse;
@@ -30,6 +31,8 @@ public interface SubSpecializationService {
     List<CourseResponse> getCourses(Long subSpecId);
 
     CourseResponse addCourse(Long subSpecId, Long courseId, Integer semester);
+
+    List<CourseResponse> addCoursesBulk(Long subSpecId, BulkCourseAssignmentRequest request);
 
     void removeCourse(Long subSpecId, Long courseId);
 

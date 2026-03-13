@@ -2,12 +2,10 @@ package com.fams.backend.service.impl;
 
 import com.fams.backend.entity.SystemLog;
 import com.fams.backend.entity.User;
-import com.fams.backend.repository.SystemLogRepository;
 import com.fams.backend.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -17,8 +15,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 @Slf4j
 public class SystemLogService {
 
-    private final SystemLogRepository systemLogRepository;
-    private final UserRepository userRepository;
+    private final SystemLogPersistenceService persistenceService;
 
     public void logInfo(String title, String description, String source) {
         log(title, description, SystemLog.LogType.INFO, source, null, null, null);
@@ -54,33 +51,7 @@ public class SystemLogService {
 
     public void log(String title, String description, SystemLog.LogType type, String source, String performerUsername, String oldValue, String newValue) {
         RequestMetadata meta = getRequestMetadata();
-        saveLogEntry(title, description, type, source, performerUsername, meta.ip(), meta.ua(), oldValue, newValue);
-    }
-
-    @Async
-    protected void saveLogEntry(String title, String description, SystemLog.LogType type, String source, String performerUsername, String ip, String ua, String oldValue, String newValue) {
-        try {
-            User performer = null;
-            if (performerUsername != null) {
-                performer = userRepository.findByUsername(performerUsername).orElse(null);
-            }
-
-            SystemLog logEntry = SystemLog.builder()
-                    .title(title)
-                    .description(description)
-                    .type(type)
-                    .source(source)
-                    .performer(performer)
-                    .ipAddress(ip)
-                    .userAgent(ua)
-                    .oldValue(oldValue)
-                    .newValue(newValue)
-                    .build();
-            systemLogRepository.save(logEntry);
-            log.debug("System log saved: {} - {} | Performer: {}", title, type, performerUsername);
-        } catch (Exception e) {
-            log.error("Failed to save system log: {}", e.getMessage(), e);
-        }
+        persistenceService.saveLogEntry(title, description, type, source, performerUsername, meta.ip(), meta.ua(), oldValue, newValue);
     }
 
     private RequestMetadata getRequestMetadata() {

@@ -18,6 +18,8 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -145,6 +147,7 @@ public class StudentServiceImpl implements StudentService {
 
     @Override
     @Transactional
+    @CacheEvict(value = { "dashboardStats", "topStudents" }, allEntries = true)
     public void deleteStudent(Long id) {
         if (id == null)
             throw new IllegalArgumentException("ID cannot be null");
@@ -177,6 +180,7 @@ public class StudentServiceImpl implements StudentService {
 
     @Override
     @Transactional
+    @CacheEvict(value = { "dashboardStats", "topStudents" }, allEntries = true)
     public StudentResponse updateStudent(Long id, StudentUpdateRequest request, MultipartFile avatar) {
         if (id == null) {
             throw new BadRequestException("ID không được để trống");
@@ -343,8 +347,7 @@ public class StudentServiceImpl implements StudentService {
                 cell.setCellStyle(headerStyle);
             }
 
-            Optional<List<User>> usersOpt = userRepository.findByRole(User.UserRole.STUDENT);
-            List<User> users = usersOpt.orElse(new ArrayList<>());
+            List<User> users = userRepository.findAllStudentsWithProfiles();
 
             // Simple filtering in memory if strict filtering isn't required via query,
             // but for export implementing similar filtering to getAllStudents logic is
@@ -357,7 +360,7 @@ public class StudentServiceImpl implements StudentService {
                     continue;
                 }
 
-                StudentProfile profile = studentProfileRepository.findById(user.getId()).orElse(null);
+                StudentProfile profile = user.getStudentProfile();
 
                 // Filter by major/spec
                 if (majorStr != null && !majorStr.isEmpty()) {
@@ -671,6 +674,7 @@ public class StudentServiceImpl implements StudentService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "dashboardStats", allEntries = true)
     public Map<String, Object> saveImportedStudents(List<StudentImportDTO> dtos) {
         Map<String, Object> result = new HashMap<>();
         List<String> errors = new ArrayList<>();

@@ -1,5 +1,6 @@
 package com.fams.backend.service.impl;
 
+import com.fams.backend.dto.request.BulkCourseAssignmentRequest;
 import com.fams.backend.dto.request.ReorderCoursesRequest;
 import com.fams.backend.dto.request.SubSpecializationRequest;
 import com.fams.backend.dto.response.CourseResponse;
@@ -172,6 +173,21 @@ public class SubSpecializationServiceImpl implements SubSpecializationService {
             log.error("Error adding course to sub-specialization: ", e);
             throw e;
         }
+    }
+
+    @Override
+    @Transactional
+    public List<CourseResponse> addCoursesBulk(Long subSpecId, BulkCourseAssignmentRequest request) {
+        log.info("Request to add {} courses to sub-specialization {}", request.getCourseIds().size(), subSpecId);
+        java.util.List<CourseResponse> responses = new java.util.ArrayList<>();
+        for (Long courseId : request.getCourseIds()) {
+            try {
+                responses.add(addCourse(subSpecId, courseId, request.getSemester()));
+            } catch (Exception e) {
+                log.warn("Failed to add course {} to sub-specialization {}: {}", courseId, subSpecId, e.getMessage());
+            }
+        }
+        return responses;
     }
 
     @Override
