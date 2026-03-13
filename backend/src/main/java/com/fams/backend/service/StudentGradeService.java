@@ -30,6 +30,8 @@ public class StudentGradeService {
     private final EnrollmentRepository enrollmentRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final SpecializationCourseRepository specializationCourseRepository;
+    private final SubSpecializationCourseRepository subSpecializationCourseRepository;
 
     /**
      * Get grade overview for a class section
@@ -1292,62 +1294,174 @@ public class StudentGradeService {
     }
 
     /**
-     * Get a comprehensive summary of all grades for a student across all semesters
+     * Get a comprehensive summary of all grades for a student across all semesters.
+     * Shows ALL courses in the student's specialization curriculum (not just
+     * enrolled ones).
+     * Courses not yet enrolled show PENDING status with no grade.
      */
     @Transactional(readOnly = true)
     public StudentAllGradesSummaryResponse getAllGradesSummary(Long studentId) {
+        // Load student profile to get specialization
+        User student = userRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Student not found: " + studentId));
+        StudentProfile profile = student.getStudentProfile();
+        Specialization specialization = profile != null ? profile.getSpecialization() : null;
+        SubSpecialization subSpecialization = profile != null ? profile.getSubSpecialization() : null;
+
+        String specializationName = specialization != null ? specialization.getName() : null;
+        String majorName = (specialization != null && specialization.getMajor() != null)
+                ? specialization.getMajor().getName()
+                : null;
+
+        // Load all enrollments of the student (for looking up grades)
         List<Enrollment> enrollments = enrollmentRepository.findByStudentId(studentId);
-
-        // Sort enrollments by semester order (from earliest semester to latest)
-        enrollments.sort(Comparator.comparing(
-                e -> e.getClassSection().getSemester().getStartDate() != null
-                        ? e.getClassSection().getSemester().getStartDate()
-                        : java.time.LocalDate.now()));
-
-        // Assign term number per semester (Sem 1st, Sem 2nd...)
-        java.util.Map<Long, Integer> semesterToTermMap = new java.util.LinkedHashMap<>();
-        int termCounter = 0;
+        // Map from courseId -> enrollment (latest enrollment if multiple, keyed by
+        // courseId)
+        Map<Long, Enrollment> enrollmentByCourseId = new LinkedHashMap<>();
         for (Enrollment e : enrollments) {
-            Long semId = e.getClassSection().getSemester().getId();
-            if (!semesterToTermMap.containsKey(semId)) {
-                semesterToTermMap.put(semId, termCounter);
-                termCounter++;
+            Long cid = e.getClassSection().getCourse().getId();
+            // If student retook the course, keep the enrollment with the later semester
+            Enrollment existing = enrollmentByCourseId.get(cid);
+            if (existing == null) {
+                enrollmentByCourseId.put(cid, e);
+            } else {
+                // Keep the one with the newer semester start date
+                java.time.LocalDate newDate = e.getClassSection().getSemester().getStartDate() != null
+                        ? e.getClassSection().getSemester().getStartDate()
+                        : java.time.LocalDate.MIN;
+                java.time.LocalDate oldDate = existing.getClassSection().getSemester().getStartDate() != null
+                        ? existing.getClassSection().getSemester().getStartDate()
+                        : java.time.LocalDate.MIN;
+                if (newDate.isAfter(oldDate)) {
+                    enrollmentByCourseId.put(cid, e);
+                }
             }
         }
 
+        // --- Build curriculum course list ---
+        // Structure: each entry has (term=semester in specialization, orderIndex,
+        // course)
+        // Use a helper class to hold the structured list
+        record CurriculumEntry(int term, int orderIndex, Course course) {
+        }
+        List<CurriculumEntry> curriculum = new ArrayList<>();
+
+        if (specialization != null) {
+            // Get all courses in the student's specialization, ordered by semester then
+            // orderIndex
+            List<SpecializationCourse> specCourses = specializationCourseRepository
+                    .findBySpecializationIdOrderByOrderIndexAsc(specialization.getId());
+            // Sort by semester (term) first, then by orderIndex
+            specCourses.sort(Comparator
+                    .comparingInt((SpecializationCourse sc) -> sc.getSemester() != null ? sc.getSemester() : 0)
+                    .thenComparingInt(sc -> sc.getOrderIndex() != null ? sc.getOrderIndex() : 0));
+
+            // Track which courses are already added (to avoid duplicates)
+            Set<Long> addedCourseIds = new LinkedHashSet<>();
+            for (SpecializationCourse sc : specCourses) {
+                if (!addedCourseIds.contains(sc.getCourse().getId())) {
+                    curriculum.add(new CurriculumEntry(
+                            sc.getSemester() != null ? sc.getSemester() : 0,
+                            sc.getOrderIndex() != null ? sc.getOrderIndex() : 0,
+                            sc.getCourse()));
+                    addedCourseIds.add(sc.getCourse().getId());
+                }
+            }
+
+            // If student has a sub-specialization, append its courses (that aren't already
+            // in spec)
+            if (subSpecialization != null) {
+                List<SubSpecializationCourse> subSpecCourses = subSpecializationCourseRepository
+                        .findBySubSpecializationIdOrderByOrderIndexAsc(subSpecialization.getId());
+                subSpecCourses.sort(Comparator
+                        .comparingInt(
+                                (SubSpecializationCourse ssc) -> ssc.getSemester() != null ? ssc.getSemester() : 0)
+                        .thenComparingInt(ssc -> ssc.getOrderIndex() != null ? ssc.getOrderIndex() : 0));
+                for (SubSpecializationCourse ssc : subSpecCourses) {
+                    if (!addedCourseIds.contains(ssc.getCourse().getId())) {
+                        curriculum.add(new CurriculumEntry(
+                                ssc.getSemester() != null ? ssc.getSemester() : 0,
+                                ssc.getOrderIndex() != null ? ssc.getOrderIndex() : 0,
+                                ssc.getCourse()));
+                        addedCourseIds.add(ssc.getCourse().getId());
+                    }
+                }
+            }
+        } else {
+            // Fallback: student has no specialization assigned → use enrolled courses only
+            // (old behavior)
+            enrollments.sort(Comparator.comparing(
+                    e -> e.getClassSection().getSemester().getStartDate() != null
+                            ? e.getClassSection().getSemester().getStartDate()
+                            : java.time.LocalDate.now()));
+            int termFallback = 1;
+            Map<Long, Integer> semesterToTermFallback = new LinkedHashMap<>();
+            for (Enrollment e : enrollments) {
+                Long semId = e.getClassSection().getSemester().getId();
+                if (!semesterToTermFallback.containsKey(semId)) {
+                    semesterToTermFallback.put(semId, termFallback++);
+                }
+            }
+            for (Enrollment e : enrollments) {
+                Long semId = e.getClassSection().getSemester().getId();
+                int term = semesterToTermFallback.getOrDefault(semId, 1);
+                curriculum.add(new CurriculumEntry(term, 0, e.getClassSection().getCourse()));
+            }
+        }
+
+        // --- Build grade summary for each curriculum course ---
         List<StudentAllGradesSummaryResponse.CourseGradeSummary> courses = new ArrayList<>();
         int no = 1;
         int passed = 0, failed = 0, pending = 0;
         double totalWeightedScore = 0;
         int totalCreditsForGPA = 0;
 
-        for (Enrollment enrollment : enrollments) {
-            ClassSection cs = enrollment.getClassSection();
-            Course course = cs.getCourse();
-            Semester semester = cs.getSemester();
-
-            int term = semesterToTermMap.getOrDefault(semester.getId(), 0);
+        for (CurriculumEntry entry : curriculum) {
+            Course course = entry.course();
+            int term = entry.term();
 
             // Prerequisite codes
             String prerequisiteCodes = course.getPrerequisites() != null && !course.getPrerequisites().isEmpty()
                     ? course.getPrerequisites().stream()
                             .map(Course::getCode)
-                            .collect(java.util.stream.Collectors.joining(", "))
+                            .collect(Collectors.joining(", "))
                     : "";
 
-            // Load all student grades for this enrollment
-            List<StudentGrade> grades = studentGradeRepository.findByEnrollmentIdIn(
-                    java.util.Collections.singletonList(enrollment.getId()));
+            Enrollment enrollment = enrollmentByCourseId.get(course.getId());
 
+            if (enrollment == null) {
+                // Student hasn't enrolled in this course yet
+                courses.add(StudentAllGradesSummaryResponse.CourseGradeSummary.builder()
+                        .no(no++)
+                        .term(term)
+                        .semesterCode(null)
+                        .semesterName(null)
+                        .courseCode(course.getCode())
+                        .courseName(course.getName())
+                        .credits(course.getCredits())
+                        .prerequisiteCodes(prerequisiteCodes)
+                        .className(null)
+                        .grade(null)
+                        .status("PENDING")
+                        .gradesPublished(false)
+                        .isCalculatedInGpa(course.getIsCalculatedInGpa())
+                        .build());
+                pending++;
+                continue;
+            }
+
+            // Student enrolled → calculate grade
+            ClassSection cs = enrollment.getClassSection();
+            Semester semester = cs.getSemester();
+
+            List<StudentGrade> grades = studentGradeRepository.findByEnrollmentIdIn(
+                    Collections.singletonList(enrollment.getId()));
             List<GradeComponent> allComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId());
 
-            // Build scores and weights maps like in getStudentGrades
             Map<Long, Double> scoresMap = grades.stream()
                     .collect(Collectors.toMap(g -> g.getGradeComponent().getId(), StudentGrade::getScore, (a, b) -> a));
 
             boolean resitPublished = Boolean.TRUE.equals(cs.getResitGradesPublished());
-
-            // Find components replaced by resit
             Set<Long> replacedByResitIds = new HashSet<>();
             if (resitPublished) {
                 for (GradeComponent gc : allComponents) {
@@ -1360,48 +1474,42 @@ public class StudentGradeService {
 
             Map<Long, Double> weightsMap = new HashMap<>();
             boolean hasFailedExam = false;
-
             for (GradeComponent gc : allComponents) {
                 if (replacedByResitIds.contains(gc.getId()))
                     continue;
-
                 boolean isResitGc = Boolean.TRUE.equals(gc.getIsResit())
                         || gc.getType() == GradeComponent.GradeType.RESIT;
                 if (isResitGc && !resitPublished)
                     continue;
-
                 weightsMap.put(gc.getId(), gc.getWeight());
-
                 Double score = scoresMap.get(gc.getId());
                 if (score != null) {
                     boolean isExamType = gc.getType() == GradeComponent.GradeType.FINAL_EXAM
                             || gc.getType() == GradeComponent.GradeType.RESIT;
-                    if (isExamType && score < 4.0) {
+                    if (isExamType && score < 4.0)
                         hasFailedExam = true;
-                    }
                 }
             }
 
             Double courseAverage = GradeCalculator.calculateAverage(scoresMap, weightsMap);
-
-            // Determine status
-            String status = "PENDING";
+            String status = "STUDYING"; // Changed from PENDING to STUDYING for enrolled courses
             boolean isPublished = Boolean.TRUE.equals(cs.getGradesPublished());
 
             if (isPublished) {
                 boolean hasMissingOrZero = false;
-                for (Map.Entry<Long, Double> entry : weightsMap.entrySet()) {
-                    Double score = scoresMap.get(entry.getKey());
+                for (Map.Entry<Long, Double> e : weightsMap.entrySet()) {
+                    Double score = scoresMap.get(e.getKey());
                     if (score == null || score <= 0.0) {
                         hasMissingOrZero = true;
                         break;
                     }
                 }
-
                 if (hasMissingOrZero || hasFailedExam || (courseAverage != null && courseAverage < 5.0)) {
                     status = "FAILED";
                 } else if (courseAverage != null && courseAverage >= 5.0) {
                     status = "PASSED";
+                } else {
+                    status = "FAILED"; // Default when published but calculation fails
                 }
             }
 
@@ -1445,6 +1553,8 @@ public class StudentGradeService {
                 .failedCourses(failed)
                 .pendingCourses(pending)
                 .gpa(gpa)
+                .specializationName(specializationName)
+                .majorName(majorName)
                 .build();
     }
 }

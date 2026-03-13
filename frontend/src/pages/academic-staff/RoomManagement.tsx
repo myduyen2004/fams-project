@@ -5,6 +5,7 @@ import { Plus, Loader2, Edit2, Trash2, GripVertical, Maximize2, Users, Check, Ch
 import { roomService } from '../../services/api/roomService';
 import { Room } from '../../types/room';
 import { AddRoomModal, EditRoomModal } from '../../components/academic-staff/rooms/RoomModals';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 import toast from 'react-hot-toast';
 import { ROOM_TYPE_OPTIONS, getRoomTypeDisplayLabel } from '../../utils/roomUtils';
 
@@ -190,6 +191,7 @@ export const RoomManagement: React.FC = () => {
     // Modal states
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingRoom, setEditingRoom] = useState<Room | null>(null);
+    const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
 
     // Navigation
     const navigate = useNavigate();
@@ -301,15 +303,17 @@ export const RoomManagement: React.FC = () => {
         });
     }, [filteredRooms]);
 
-    const handleDelete = async (id: number) => {
-        if (!window.confirm('Bạn có chắc chắn muốn xóa phòng này?')) return;
+    const handleDelete = async () => {
+        if (!roomToDelete) return;
         try {
-            await roomService.deleteRoom(id);
+            await roomService.deleteRoom(roomToDelete.id);
             toast.success('Đã xóa phòng học');
             fetchRooms();
-            if (selectedRoom?.id === id) setSelectedRoom(null);
+            if (selectedRoom?.id === roomToDelete.id) setSelectedRoom(null);
         } catch (error) {
             toast.error('Không thể xóa phòng học');
+        } finally {
+            setRoomToDelete(null);
         }
     };
 
@@ -543,7 +547,7 @@ export const RoomManagement: React.FC = () => {
                                                     onClick={() => { setSelectedRoomType('ALL'); setIsRoomTypeFilterOpen(false); }}
                                                     className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center justify-between ${selectedRoomType === 'ALL' ? 'text-fpt-orange bg-orange-50 dark:bg-orange-900/10' : 'text-gray-700 dark:text-gray-200'}`}
                                                 >
-                                                    <span>Tất cả loại phòng</span>
+                                                    <span>Tất cả</span>
                                                     {selectedRoomType === 'ALL' && <Check className="h-4 w-4" />}
                                                 </button>
                                                 {ROOM_TYPE_OPTIONS.map(type => (
@@ -647,7 +651,7 @@ export const RoomManagement: React.FC = () => {
                                                 </span>
                                                 <div className="flex gap-2">
                                                     <button onClick={() => setEditingRoom(room)} className="text-gray-400 hover:text-fpt-orange"><Edit2 size={16} /></button>
-                                                    <button onClick={() => handleDelete(room.id)} className="text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
+                                                    <button onClick={() => setRoomToDelete(room)} className="text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
                                                 </div>
                                             </div>
                                             <div className="space-y-1 text-sm text-gray-600 dark:text-zinc-400">
@@ -825,7 +829,7 @@ export const RoomManagement: React.FC = () => {
                                             <div className="flex gap-1">
                                                 {/* Show edit/delete buttons */}
                                                 <button onClick={(e) => { e.stopPropagation(); setEditingRoom(room); }} className="p-1 text-gray-400 hover:text-fpt-orange"><Edit2 size={14} /></button>
-                                                <button onClick={(e) => { e.stopPropagation(); handleDelete(room.id); }} className="p-1 text-gray-400 hover:text-red-500"><Trash2 size={14} /></button>
+                                                <button onClick={(e) => { e.stopPropagation(); setRoomToDelete(room); }} className="p-1 text-gray-400 hover:text-red-500"><Trash2 size={14} /></button>
                                             </div>
                                         </div>
                                         <div className="flex flex-col gap-1 mt-2 text-[10px] text-gray-500 dark:text-zinc-400">
@@ -872,6 +876,17 @@ export const RoomManagement: React.FC = () => {
                     onSuccess={() => { setEditingRoom(null); fetchRooms(); }}
                 />
             )}
+
+            <ConfirmModal
+                isOpen={!!roomToDelete}
+                onClose={() => setRoomToDelete(null)}
+                onConfirm={handleDelete}
+                title="Xóa phòng học"
+                message={`Bạn có chắc chắn muốn xóa phòng "${roomToDelete?.name}" không?\nHành động này không thể hoàn tác.`}
+                confirmLabel="Xóa"
+                cancelLabel="Hủy"
+                type="danger"
+            />
 
             {/* Saving indicator */}
             {saving && (
