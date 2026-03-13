@@ -160,7 +160,7 @@ export const ROOM_TYPE_OPTIONS = [
 ] as const;
 
 export const getRoomTypeDisplayLabel = (selectedType: string): string => {
-    if (selectedType === 'ALL') return 'Tất cả loại phòng';
+    if (selectedType === 'ALL') return 'Tất cả';
     return ROOM_TYPE_OPTIONS.find(opt => opt.value === selectedType)?.label || 'Phòng giả';
 };
 
