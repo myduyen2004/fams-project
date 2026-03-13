@@ -17,7 +17,6 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class UserRequest {
 
-    @NotBlank(message = "Mã số không được để trống")
     private String code;
 
     private String username;

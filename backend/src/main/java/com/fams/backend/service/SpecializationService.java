@@ -1,6 +1,7 @@
 package com.fams.backend.service;
 
 import com.fams.backend.dto.SpecializationImportDTO;
+import com.fams.backend.dto.request.BulkCourseAssignmentRequest;
 import com.fams.backend.dto.request.ReorderCoursesRequest;
 import com.fams.backend.dto.request.SpecializationRequest;
 import com.fams.backend.dto.response.CourseResponse;
@@ -170,6 +171,23 @@ public class SpecializationService {
             log.error("Error adding course to specialization: ", e);
             throw e;
         }
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public List<CourseResponse> addCoursesBulk(Long specId, BulkCourseAssignmentRequest request) {
+        log.info("Request to add {} courses to specialization {}", request.getCourseIds().size(), specId);
+        List<CourseResponse> responses = new ArrayList<>();
+        for (Long courseId : request.getCourseIds()) {
+            try {
+                responses.add(addCourse(specId, courseId, request.getSemester()));
+            } catch (Exception e) {
+                log.warn("Failed to add course {} to specialization {}: {}", courseId, specId, e.getMessage());
+                // Continue with other courses or throw if strictly needed. 
+                // For bulk, usually we want to proceed and let user know which failed or just fail fast.
+                // Given the requirement is "speed up", we'll proceed for now.
+            }
+        }
+        return responses;
     }
 
     @org.springframework.transaction.annotation.Transactional
