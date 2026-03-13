@@ -305,16 +305,28 @@ public class ExamGradeService {
         }
 
         // Calculate statistics based on the final (potentially filtered) list
-        double averageGrade = finalStudentRows.stream()
+        // Update: Only calculate stats for students in classes that have submitted grades
+        Map<String, Boolean> classSubmissionStatus = classSections.stream()
+                .collect(Collectors.toMap(
+                        com.fams.backend.entity.ClassSection::getClassName,
+                        cs -> cs.getGradesSubmitted() != null ? cs.getGradesSubmitted() : false,
+                        (existing, replacement) -> existing
+                ));
+
+        List<ExamStudentGradeRow> submittedStudents = finalStudentRows.stream()
+                .filter(row -> classSubmissionStatus.getOrDefault(row.getClassName(), false))
+                .collect(Collectors.toList());
+
+        double averageGrade = submittedStudents.stream()
                 .map(ExamStudentGradeRow::getFinalGrade)
                 .filter(Objects::nonNull)
                 .mapToDouble(Double::doubleValue)
                 .average().orElse(0.0);
 
-        long passedCount = finalStudentRows.stream()
+        long passedCount = submittedStudents.stream()
                 .filter(row -> "PASSED".equals(row.getStatus()))
                 .count();
-        double passRate = finalStudentRows.isEmpty() ? 0 : (double) passedCount / finalStudentRows.size() * 100;
+        double passRate = submittedStudents.isEmpty() ? 0 : (double) passedCount / submittedStudents.size() * 100;
 
         // Re-evaluate isPublished based on loaded class sections (now we have them from
         // above)
@@ -354,6 +366,14 @@ public class ExamGradeService {
         boolean resitPublishedFlag = classSections.stream()
                 .anyMatch(cs -> Boolean.TRUE.equals(cs.getResitGradesPublished()));
 
+        boolean gradesSubmittedFlag = classSections.stream()
+                .anyMatch(cs -> Boolean.TRUE.equals(cs.getGradesSubmitted()));
+
+        List<String> submittedClassesList = classSections.stream()
+                .filter(cs -> Boolean.TRUE.equals(cs.getGradesSubmitted()))
+                .map(com.fams.backend.entity.ClassSection::getClassName)
+                .collect(Collectors.toList());
+
         return ExamGradeOverviewResponse.builder()
                 .courseCode(courseCode)
                 .courseName(course.getName())
@@ -370,6 +390,8 @@ public class ExamGradeService {
                 .gradesPublishedBy(publishedBy)
                 .examGradesPublished(examPublishedFlag)
                 .resitGradesPublished(resitPublishedFlag)
+                .anyGradesSubmitted(gradesSubmittedFlag)
+                .submittedClasses(submittedClassesList)
                 .build();
     }
 
@@ -509,7 +531,6 @@ public class ExamGradeService {
             }
 
             List<Map<String, Object>> rows = new ArrayList<>();
-            List<String> errors = new ArrayList<>();
             int validCount = 0;
             int errorCount = 0;
 
@@ -569,6 +590,12 @@ public class ExamGradeService {
                     }
                 }
                 rowData.put("grades", grades);
+
+                // Only check submission status if there are grades to import
+                if (!hasError && !grades.isEmpty() && !Boolean.TRUE.equals(enrollment.getClassSection().getGradesSubmitted())) {
+                    errorMsg = "Lớp học chưa nộp điểm thành phần";
+                    hasError = true;
+                }
 
                 if (errorMsg != null) {
                     rowData.put("error", errorMsg);
@@ -679,6 +706,25 @@ public class ExamGradeService {
                 }
 
                 // ---- Check visibility/editability guards ----
+                // Check if any grades are actually being provided first
+                boolean hasProvidedGrades = false;
+                for (int colIdx : colToComponent.keySet()) {
+                    if (getCellDoubleValue(row.getCell(colIdx)) != null) {
+                        hasProvidedGrades = true;
+                        break;
+                    }
+                }
+
+                if (!hasProvidedGrades) {
+                    continue; // Skip rows with no data provided
+                }
+
+                // Guard 0: General - Class must have submitted component grades first
+                if (!Boolean.TRUE.equals(enrollment.getClassSection().getGradesSubmitted())) {
+                    skipped++;
+                    continue;
+                }
+
                 if ("RESIT".equalsIgnoreCase(type)) {
                     // Guard 1: Exam grades (EXAM type) must be published before allowing Resit
                     // entry
@@ -697,7 +743,7 @@ public class ExamGradeService {
                             .findByEnrollmentIdIn(java.util.Collections.singletonList(enrollment.getId()));
                     List<GradeComponent> allGradeComponents = gradeComponentRepository
                             .findByCourseIdOrderById(courseRepository.findByCode(courseCode)
-                                    .orElseThrow(() -> new RuntimeException("Course not found")).getId());
+                                     .orElseThrow(() -> new RuntimeException("Course not found")).getId());
                     Map<Long, Double> currentScoresMap = studentAllGrades.stream()
                             .collect(Collectors.toMap(sg -> sg.getGradeComponent().getId(), StudentGrade::getScore,
                                     (a, b) -> a));
@@ -869,10 +915,10 @@ public class ExamGradeService {
         boolean isResit = "RESIT".equalsIgnoreCase(type);
 
         // Fetch components relevant to this publish type
-        List<GradeComponent> gradeComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId())
-                .stream()
+        List<GradeComponent> allCourseComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId());
+        List<GradeComponent> gradeComponents = allCourseComponents.stream()
                 .filter(gc -> isResit ? gc.getType() == GradeComponent.GradeType.RESIT
-                        : gc.getType() == GradeComponent.GradeType.FINAL_EXAM)
+                        : !Boolean.TRUE.equals(gc.getIsResit()))
                 .collect(Collectors.toList());
 
         List<Long> enrollmentIds = enrollments.stream().map(Enrollment::getId).collect(Collectors.toList());
@@ -901,6 +947,15 @@ public class ExamGradeService {
                     classSection.setGradesPublished(true);
                     classSection.setGradesPublishedAt(LocalDateTime.now());
                     classSection.setGradesPublishedBy(publisher);
+                    
+                    // Force submit if not already submitted
+                    if (!Boolean.TRUE.equals(classSection.getGradesSubmitted())) {
+                        classSection.setGradesSubmitted(true);
+                        classSection.setGradesSubmittedAt(LocalDateTime.now());
+                        classSection.setGradesSubmittedBy(publisher);
+                        log.info("Class {} auto-submitted by publisher {}", classSection.getClassName(), publisher.getUsername());
+                    }
+                    
                     shouldPublish = true;
                 }
             }
@@ -911,9 +966,7 @@ public class ExamGradeService {
                         .filter(e -> e.getClassSection().getClassName().equals(classSection.getClassName()))
                         .collect(Collectors.toList());
 
-                // Get all grade components for eligibility check
-                List<GradeComponent> allCourseComponents = gradeComponentRepository
-                        .findByCourseIdOrderById(course.getId());
+                // Components already fetched earlier as allCourseComponents
 
                 // Create missing grades (0.0)
                 for (Enrollment en : classEnrollments) {

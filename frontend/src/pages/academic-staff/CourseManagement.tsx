@@ -177,9 +177,9 @@ export const CourseManagement: React.FC = () => {
         let confirmMsg = '';
         if (selectedIds.length === 1) {
             const selectedItem = courses.find(c => c.id === selectedIds[0]);
-            confirmMsg = `Bạn có chắc chắn muốn xóa môn "${selectedItem?.name}"? Hành động này không thể hoàn tác.`;
+            confirmMsg = `Bạn có chắc chắn muốn xóa môn "${selectedItem?.name}"?\nHành động này không thể hoàn tác.`;
         } else {
-            confirmMsg = `Bạn có chắc chắn muốn xóa ${selectedIds.length} môn đã chọn? Hành động này không thể hoàn tác.`;
+            confirmMsg = `Bạn có chắc chắn muốn xóa ${selectedIds.length} môn đã chọn?\nHành động này không thể hoàn tác.`;
         }
 
         setConfirmModal({
