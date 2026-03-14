@@ -121,6 +121,22 @@ public class ChatMessageController {
                 return ResponseEntity.ok(message);
         }
 
+        @PostMapping("/{groupId}/{messageId}/toggle-reaction")
+        @Operation(summary = "Toggle reaction", description = "Add or remove an emoji reaction to a message")
+        public ResponseEntity<ChatMessageResponse> toggleReaction(
+                        @PathVariable Long groupId,
+                        @PathVariable Long messageId,
+                        @RequestParam String emoji) {
+                log.info("POST /api/v1/chat-messages/{}/{}/toggle-reaction | emoji={}", groupId, messageId, emoji);
+
+                ChatMessageResponse message = chatGroupService.toggleReaction(messageId, emoji);
+
+                // Broadcast update to WebSocket subscribers
+                messagingTemplate.convertAndSend("/topic/chat/" + groupId + "/reaction", message);
+
+                return ResponseEntity.ok(message);
+        }
+
         // ==================== WEBSOCKET HANDLERS ====================
 
         @MessageMapping("/chat.send/{groupId}")
