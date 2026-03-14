@@ -32,4 +32,5 @@ public class ChatMessageResponse {
     private Boolean isDeleted;
     private Boolean isRead;
     private List<ReadReceiptDTO> readers;
+    private List<MessageReactionDTO> reactions;
 }

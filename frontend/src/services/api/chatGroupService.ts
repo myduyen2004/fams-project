@@ -35,6 +35,12 @@ export interface ReadReceiptDTO {
     avatar: string;
 }
 
+export interface MessageReactionDTO {
+    emoji: string;
+    count: number;
+    reactedByMe: boolean;
+}
+
 export interface ChatMessageResponse {
     id: number;
     senderId: number;
@@ -55,6 +61,7 @@ export interface ChatMessageResponse {
     isDeleted?: boolean;
     isRead?: boolean;
     readers?: ReadReceiptDTO[];
+    reactions?: MessageReactionDTO[];
     isSending?: boolean; // For Optimistic UI
 }
 
@@ -143,5 +150,12 @@ export const chatGroupService = {
 
     markAsRead: async (groupId: number): Promise<void> => {
         await apiClient.post(`/v1/chat-messages/groups/${groupId}/read`);
+    },
+
+    toggleReaction: async (groupId: number, messageId: number, emoji: string): Promise<ChatMessageResponse> => {
+        const response = await apiClient.post<ChatMessageResponse>(`/v1/chat-messages/${groupId}/${messageId}/toggle-reaction`, null, {
+            params: { emoji }
+        });
+        return response.data;
     },
 };
