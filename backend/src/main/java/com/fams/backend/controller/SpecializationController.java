@@ -1,6 +1,7 @@
 package com.fams.backend.controller;
 
 import com.fams.backend.dto.SpecializationImportDTO;
+import com.fams.backend.dto.request.BulkCourseAssignmentRequest;
 import com.fams.backend.dto.request.ReorderCoursesRequest;
 import com.fams.backend.dto.request.SpecializationRequest;
 import com.fams.backend.dto.response.CourseResponse;
@@ -120,6 +121,9 @@ public class SpecializationController {
     @GetMapping("/import/template")
     public ResponseEntity<Resource> downloadImportTemplate() throws IOException {
         byte[] data = specializationService.exportSpecializationTemplate();
+        if (data == null) {
+            return ResponseEntity.noContent().build();
+        }
         ByteArrayResource resource = new ByteArrayResource(data);
 
         return ResponseEntity.ok()
@@ -141,6 +145,12 @@ public class SpecializationController {
     public ResponseEntity<CourseResponse> addCourse(@PathVariable Long id, @PathVariable Long courseId,
             @RequestParam(required = false, defaultValue = "1") Integer semester) {
         return ResponseEntity.ok(specializationService.addCourse(id, courseId, semester));
+    }
+
+    @PostMapping("/{id}/courses/bulk")
+    public ResponseEntity<List<CourseResponse>> addCoursesBulk(@PathVariable Long id,
+            @RequestBody BulkCourseAssignmentRequest request) {
+        return ResponseEntity.ok(specializationService.addCoursesBulk(id, request));
     }
 
     @DeleteMapping("/{id}/courses/{courseId}")

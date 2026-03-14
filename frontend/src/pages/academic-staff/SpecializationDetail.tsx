@@ -251,16 +251,16 @@ export const SpecializationDetail: React.FC = () => {
 
     // Handle add course selection
     const handleConfirmSelection = async (selection: { courseId: number; semester: number }[]) => {
-        if (!courseModalTarget) return;
+        if (!courseModalTarget || selection.length === 0) return;
         try {
-            const promises = selection.map(item =>
-                courseModalTarget.type === 'specialization'
-                    ? specializationService.addCourse(courseModalTarget.id, item.courseId, item.semester)
-                    : subSpecializationService.addCourse(courseModalTarget.id, item.courseId, item.semester)
-            );
+            const courseIds = selection.map(item => item.courseId);
+            const semester = selection[0].semester;
 
-            // Wait for all additions
-            await Promise.all(promises);
+            if (courseModalTarget.type === 'specialization') {
+                await specializationService.addCoursesBulk(courseModalTarget.id, courseIds, semester);
+            } else {
+                await subSpecializationService.addCoursesBulk(courseModalTarget.id, courseIds, semester);
+            }
 
             // Fetch data again to ensure correctness and order
             if (courseModalTarget.type === 'specialization') {

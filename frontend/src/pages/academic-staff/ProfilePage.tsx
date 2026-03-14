@@ -309,17 +309,8 @@ export const ProfilePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Code and Phone Row */}
+              {/* Phone Row */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                    Mã số
-                  </label>
-                  <p className="text-gray-900 dark:text-white font-medium">
-                    {displayProfile.code}
-                  </p>
-                </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
                     Số điện thoại

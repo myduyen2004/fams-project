@@ -32,8 +32,9 @@ public class AcademicStaffDashboardResponse {
     @Data
     @Builder
     public static class DashboardStats {
-        private Integer totalStudents;
-        private Integer totalLecturers;
+        private Long totalStudents;
+        private Long totalLecturers;
+        private Long totalRequests;
         private List<GroupedStatDTO> studentStats;
         private List<GroupedStatDTO> lecturerStats;
     }

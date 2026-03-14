@@ -3,10 +3,10 @@ package com.fams.backend.service.impl;
 import com.fams.backend.dto.response.AcademicStaffDashboardResponse;
 import com.fams.backend.dto.response.DashboardNotificationResponse;
 import com.fams.backend.entity.Notification;
+import com.fams.backend.entity.ScheduleRequest;
 import com.fams.backend.entity.User;
 import com.fams.backend.repository.*;
 import com.fams.backend.service.AcademicStaffDashboardService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -31,6 +31,7 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
         private final SlotTypeRepository slotTypeRepository;
         private final SemesterRepository semesterRepository;
         private final LecturerProfileRepository lecturerProfileRepository;
+        private final ScheduleRequestRepository scheduleRequestRepository;
         private final java.util.concurrent.Executor dashboardExecutor;
 
         @org.springframework.beans.factory.annotation.Autowired
@@ -48,6 +49,7 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
                         SlotTypeRepository slotTypeRepository,
                         SemesterRepository semesterRepository,
                         LecturerProfileRepository lecturerProfileRepository,
+                        ScheduleRequestRepository scheduleRequestRepository,
                         @org.springframework.beans.factory.annotation.Qualifier("dashboardExecutor") java.util.concurrent.Executor dashboardExecutor) {
                 this.userRepository = userRepository;
                 this.recipientRepository = recipientRepository;
@@ -59,6 +61,7 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
                 this.slotTypeRepository = slotTypeRepository;
                 this.semesterRepository = semesterRepository;
                 this.lecturerProfileRepository = lecturerProfileRepository;
+                this.scheduleRequestRepository = scheduleRequestRepository;
                 this.dashboardExecutor = dashboardExecutor;
         }
 
@@ -240,10 +243,11 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
 
         @org.springframework.cache.annotation.Cacheable(value = "dashboardStats")
         public AcademicStaffDashboardResponse.DashboardStats getStats() {
-                log.debug("Retrieving dashboard stats: students and lecturers counts");
+                log.debug("Retrieving dashboard stats: students, lecturers, and requests counts");
                 return AcademicStaffDashboardResponse.DashboardStats.builder()
-                                .totalStudents((int) userRepository.countByRole(User.UserRole.STUDENT))
-                                .totalLecturers((int) userRepository.countByRole(User.UserRole.LECTURER))
+                                .totalStudents(userRepository.countByRole(User.UserRole.STUDENT))
+                                .totalLecturers(userRepository.countByRole(User.UserRole.LECTURER))
+                                .totalRequests(scheduleRequestRepository.countByStatus(ScheduleRequest.RequestStatus.PENDING))
                                 .studentStats(studentProfileRepository.countByMajor())
                                 .lecturerStats(lecturerProfileRepository.countByDepartment())
                                 .build();
