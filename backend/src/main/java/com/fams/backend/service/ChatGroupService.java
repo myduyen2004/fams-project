@@ -47,4 +47,6 @@ public interface ChatGroupService {
     ChatMessageResponse deleteMessage(Long groupId, Long messageId);
 
     List<Long> markAsRead(Long groupId, String username);
+
+    ChatMessageResponse toggleReaction(Long messageId, String emoji);
 }
