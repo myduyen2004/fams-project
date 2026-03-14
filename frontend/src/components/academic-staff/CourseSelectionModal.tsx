@@ -82,6 +82,14 @@ export const CourseSelectionModal: React.FC<CourseSelectionModalProps> = ({
         }
     };
 
+    const toggleSelectAll = () => {
+        if (selectedIds.length === courses.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(courses.map(c => c.id));
+        }
+    };
+
     const handleConfirm = () => {
         if (selectedIds.length === 0) return;
 
@@ -130,6 +138,23 @@ export const CourseSelectionModal: React.FC<CourseSelectionModalProps> = ({
                             />
                         </div>
                     </div>
+                    {courses.length > 0 && (
+                        <div className="flex items-center justify-between pt-2">
+                            <button
+                                onClick={toggleSelectAll}
+                                className="flex items-center gap-2 text-sm font-medium text-fpt-orange hover:text-orange-600 transition-colors"
+                            >
+                                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${selectedIds.length === courses.length
+                                    ? 'bg-fpt-orange border-fpt-orange text-white'
+                                    : 'border-gray-300 dark:border-zinc-600'
+                                    }`}>
+                                    {selectedIds.length === courses.length && <Check className="h-2.5 w-2.5" />}
+                                </div>
+                                {selectedIds.length === courses.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả môn học'}
+                            </button>
+                            <span className="text-xs text-gray-500">{selectedIds.length} / {courses.length} đã chọn</span>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4">

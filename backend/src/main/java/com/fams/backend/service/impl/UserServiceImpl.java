@@ -8,6 +8,8 @@ import com.fams.backend.exception.BadRequestException;
 import com.fams.backend.exception.NotFoundException;
 import com.fams.backend.repository.UserRepository;
 import com.fams.backend.service.UserService;
+import jakarta.persistence.criteria.Fetch;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -72,10 +74,23 @@ public class UserServiceImpl implements UserService {
     private final Map<String, String> passwordHashCache = new ConcurrentHashMap<>();
 
     @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = CACHE_USERS, key = "#search + '-' + #role + '-' + #status + '-' + #pageable.pageNumber + '-' + #pageable.pageSize")
     public Page<UserResponse> getAllUsers(String search, String role, String status, Pageable pageable) {
         Specification<User> spec = (root, query, cb) -> {
+            // Eager loading for UserResponse mapping - ONLY on data query, not count query
+            if (query.getResultType() != Long.class && query.getResultType() != long.class) {
+                Fetch<User, com.fams.backend.entity.StudentProfile> studentProfileFetch = 
+                    root.fetch("studentProfile", JoinType.LEFT);
+                studentProfileFetch.fetch("major", JoinType.LEFT);
+                studentProfileFetch.fetch("specialization", JoinType.LEFT);
+                studentProfileFetch.fetch("subSpecialization", JoinType.LEFT);
+                
+                root.fetch("lecturerProfile", JoinType.LEFT);
+            }
+
             List<Predicate> predicates = new ArrayList<>();
+            // ... predicates logic ...
 
             if (status != null && !status.isEmpty() && !status.equalsIgnoreCase("all")) {
                 try {
@@ -104,11 +119,6 @@ public class UserServiceImpl implements UserService {
                         cb.like(cb.lower(root.get("username")), searchLower)));
             }
 
-            // Special rule for academic staff to potentially see only non-admin active
-            // users
-            if ("ACTIVE".equalsIgnoreCase(status)) {
-                predicates.add(cb.notEqual(root.get("role"), User.UserRole.ADMIN));
-            }
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };

@@ -1,5 +1,6 @@
 package com.fams.backend.controller;
 
+import com.fams.backend.dto.request.BulkCourseAssignmentRequest;
 import com.fams.backend.dto.request.ReorderCoursesRequest;
 import com.fams.backend.dto.request.SubSpecializationRequest;
 import com.fams.backend.dto.response.CourseResponse;
@@ -75,6 +76,12 @@ public class SubSpecializationController {
     public ResponseEntity<CourseResponse> addCourse(@PathVariable Long id, @PathVariable Long courseId,
             @RequestParam(required = false, defaultValue = "1") Integer semester) {
         return ResponseEntity.ok(subSpecializationService.addCourse(id, courseId, semester));
+    }
+
+    @PostMapping("/{id}/courses/bulk")
+    public ResponseEntity<List<CourseResponse>> addCoursesBulk(@PathVariable Long id,
+            @RequestBody BulkCourseAssignmentRequest request) {
+        return ResponseEntity.ok(subSpecializationService.addCoursesBulk(id, request));
     }
 
     @DeleteMapping("/{id}/courses/{courseId}")

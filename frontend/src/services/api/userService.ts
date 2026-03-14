@@ -1,7 +1,7 @@
 import apiClient from './authService';
 
 export interface UserRequest {
-    code: string;
+    code?: string;
     fullName: string;
     email: string;
     dob: string; // YYYY-MM-DD

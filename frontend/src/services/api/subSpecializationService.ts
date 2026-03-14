@@ -61,5 +61,13 @@ export const subSpecializationService = {
 
     reorderCourses: async (subSpecId: number, courseIds: number[]): Promise<void> => {
         await apiClient.put(`/sub-specializations/${subSpecId}/courses/reorder`, { courseIds });
+    },
+
+    addCoursesBulk: async (subSpecId: number, courseIds: number[], semester: number = 1): Promise<Course[]> => {
+        const response = await apiClient.post(`/sub-specializations/${subSpecId}/courses/bulk`, {
+            courseIds,
+            semester
+        });
+        return response.data;
     }
 };

@@ -388,12 +388,6 @@ class HomeScreen extends StatelessWidget {
                               onTap: () {},
                             ),
 
-                                  ],
-                                );
-                              }
-                              return const SizedBox.shrink();
-                            }),
-
                             const SizedBox(height: 16),
 
                             _buildBigCard(
@@ -403,24 +397,6 @@ class HomeScreen extends StatelessWidget {
                             ),
 
                             // "Gửi đơn yêu cầu" card - only for lecturers
-                            Obx(() {
-                              final user = authController.currentUser.value;
-                              if (user?.role == 'LECTURER') {
-                                return Column(
-                                  children: [
-                                    const SizedBox(height: 16),
-                                    _buildBigCard(
-                                      icon: Icons.send_rounded,
-                                      title: 'Gửi đơn yêu cầu',
-                                      onTap: () => Get.toNamed(
-                                        AppRoutes.lecturerCreateRequest,
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }
-                              return const SizedBox.shrink();
-                            }),
                             Obx(() {
                               final user = authController.currentUser.value;
                               if (user?.role == 'LECTURER') {

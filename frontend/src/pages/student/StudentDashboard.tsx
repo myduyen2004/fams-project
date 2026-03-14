@@ -44,8 +44,21 @@ export const StudentDashboard: React.FC = () => {
             let semesterCode: string | undefined = undefined;
             
             if (semesters && semesters.length > 0) {
+                const now = new Date();
+                
+                // Find semester containing current date
+                const currentSemester = semesters.find(s => {
+                    if (!s.startDate || !s.endDate) return false;
+                    const start = new Date(s.startDate);
+                    const end = new Date(s.endDate);
+                    // Set time to start of day for accurate comparison
+                    start.setHours(0, 0, 0, 0);
+                    end.setHours(23, 59, 59, 999);
+                    return now >= start && now <= end;
+                });
+
                 const ongoing = semesters.find(s => s.status === 'ONGOING');
-                semesterCode = ongoing ? ongoing.code : semesters[0].code;
+                semesterCode = currentSemester ? currentSemester.code : (ongoing ? ongoing.code : semesters[0].code);
             }
             
             const data = await attendanceService.getStudentReport(semesterCode);

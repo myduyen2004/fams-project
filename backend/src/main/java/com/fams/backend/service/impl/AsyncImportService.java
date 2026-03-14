@@ -398,30 +398,35 @@ public class AsyncImportService {
 
         // PHASE 1: Extreme Parallel Hashing (Preparation - 10% of bar)
         Map<String, List<User>> usersByPassword = inactiveUsers.parallelStream().collect(Collectors.groupingBy(user -> {
-            String fullName = user.getFullName();
+            String fullName = user.getFullName() != null ? user.getFullName().trim() : "";
             int lastSpace = fullName.lastIndexOf(' ');
             String lastWord = (lastSpace >= 0) ? fullName.substring(lastSpace + 1) : fullName;
             String unaccentedName = unaccent(lastWord).toLowerCase();
-            return unaccentedName + "@" + user.getDob().format(PASSWORD_FORMATTER);
+            String dobPart = user.getDob() != null ? user.getDob().format(PASSWORD_FORMATTER) : "01012000";
+            return unaccentedName + "@" + dobPart;
         }));
 
         AtomicInteger uniqueHashed = new AtomicInteger(0);
         int totalUnique = usersByPassword.size();
 
         usersByPassword.entrySet().parallelStream().forEach(entry -> {
-            String hashedPassword = getHashedPassword(entry.getKey());
-            for (User user : entry.getValue()) {
-                user.setUsername(user.getCode());
-                user.setPassword(hashedPassword);
-                user.setStatus(User.UserStatus.ACTIVE);
-                user.setIsPasswordChanged(false);
-            }
-            int currentGroup = uniqueHashed.incrementAndGet();
-            if (currentGroup % 20 == 0 || currentGroup == totalUnique) {
-                int percentage = (int) ((double) currentGroup / totalUnique * 10);
-                // Keep 'current' at 0 during hashing phase as no users are committed yet
-                sendActivationProgressWithPercentage(topic, "HASHING", 0, total,
-                        String.format("Đang chuẩn bị bảo mật cho %d nhóm tài khoản...", totalUnique), null, percentage);
+            try {
+                String hashedPassword = getHashedPassword(entry.getKey());
+                for (User user : entry.getValue()) {
+                    user.setUsername(user.getCode());
+                    user.setPassword(hashedPassword);
+                    user.setStatus(User.UserStatus.ACTIVE);
+                    user.setIsPasswordChanged(false);
+                }
+                int currentGroup = uniqueHashed.incrementAndGet();
+                if (currentGroup % 20 == 0 || currentGroup == totalUnique) {
+                    int percentage = (int) ((double) currentGroup / totalUnique * 10);
+                    // Keep 'current' at 0 during hashing phase as no users are committed yet
+                    sendActivationProgressWithPercentage(topic, "HASHING", 0, total,
+                            String.format("Đang chuẩn bị bảo mật cho %d nhóm tài khoản...", totalUnique), null, percentage);
+                }
+            } catch (Exception e) {
+                log.error("Error during hashing for group {}: {}", entry.getKey(), e.getMessage());
             }
         });
 
@@ -438,36 +443,49 @@ public class AsyncImportService {
             for (int i = 0; i < inactiveUsers.size(); i += BATCH_SIZE) {
                 final int start = i;
                 final int end = Math.min(i + BATCH_SIZE, inactiveUsers.size());
-                final List<User> batch = inactiveUsers.subList(start, end);
+                final List<User> batch = new ArrayList<>(inactiveUsers.subList(start, end));
 
                 futures.add(CompletableFuture.runAsync(() -> {
-                    // Update Database
-                    bulkActivateUsers(batch);
+                    try {
+                        // Update Database
+                        int updated = bulkActivateUsers(batch);
+                        log.info("Activated batch of {} users (actually updated: {})", batch.size(), updated);
 
-                    // Create and Push Email Tasks immediately
-                    List<EmailQueueService.EmailTask> emailTasks = batch.stream().map(user -> {
-                        String fullName = user.getFullName();
-                        int lastSpace = fullName.lastIndexOf(' ');
-                        String lastWord = (lastSpace >= 0) ? fullName.substring(lastSpace + 1) : fullName;
-                        String unaccentedName = unaccent(lastWord).toLowerCase();
-                        String rawPassword = unaccentedName + "@" + user.getDob().format(PASSWORD_FORMATTER);
-                        return new EmailQueueService.EmailTask(activationJobId, user.getEmail(), user.getFullName(),
-                                user.getUsername(), rawPassword);
-                    }).collect(Collectors.toList());
-                    emailQueueService.pushEmailTasks(emailTasks);
+                        // Create and Push Email Tasks immediately
+                        List<EmailQueueService.EmailTask> emailTasks = batch.stream().map(user -> {
+                            String fullName = user.getFullName() != null ? user.getFullName().trim() : "";
+                            int lastSpace = fullName.lastIndexOf(' ');
+                            String lastWord = (lastSpace >= 0) ? fullName.substring(lastSpace + 1) : fullName;
+                            String unaccentedName = unaccent(lastWord).toLowerCase();
+                            String dobPart = user.getDob() != null ? user.getDob().format(PASSWORD_FORMATTER) : "01012000";
+                            String rawPassword = unaccentedName + "@" + dobPart;
+                            return new EmailQueueService.EmailTask(activationJobId, user.getEmail(), user.getFullName(),
+                                    user.getUsername(), rawPassword);
+                        }).collect(Collectors.toList());
+                        emailQueueService.pushEmailTasks(emailTasks);
 
-                    // Update Progress
-                    int currentProcessed = processedCount.addAndGet(batch.size());
-                    int percentage = 10 + (int) ((double) currentProcessed / total * 90);
-                    List<Long> activatedIds = batch.stream().map(User::getId).collect(Collectors.toList());
+                        // Update Progress
+                        int currentProcessed = processedCount.addAndGet(batch.size());
+                        int percentage = 10 + (int) ((double) currentProcessed / total * 90);
+                        List<Long> activatedIds = batch.stream().map(User::getId).collect(Collectors.toList());
 
-                    sendActivationProgressWithPercentage(topic, "PROCESSING", currentProcessed, total,
-                            String.format("Đang kích hoạt tài khoản: %d/%d", currentProcessed, total), activatedIds,
-                            percentage);
+                        sendActivationProgressWithPercentage(topic, "PROCESSING", currentProcessed, total,
+                                String.format("Đang kích hoạt tài khoản: %d/%d", currentProcessed, total), activatedIds,
+                                percentage);
+                    } catch (Exception e) {
+                        log.error("Error processing activation batch: {}", e.getMessage(), e);
+                        sendActivationProgressWithPercentage(topic, "ERROR", processedCount.get(), total,
+                                "Lỗi khi xử lý một số tài khoản: " + e.getMessage(), null, 0);
+                    }
                 }, virtualExecutor));
             }
 
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+        } catch (Exception e) {
+            log.error("Critical error in activation job: {}", e.getMessage(), e);
+            sendActivationProgressWithPercentage(topic, "ERROR", processedCount.get(), total,
+                    "Lỗi hệ thống khi kích hoạt tài khoản: " + e.getMessage(), null, 0);
+            return;
         }
 
         // PHASE 3: Final Flush
