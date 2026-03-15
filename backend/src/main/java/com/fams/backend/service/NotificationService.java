@@ -34,6 +34,7 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final NotificationRecipientRepository notificationRecipientRepository;
     private final UserRepository userRepository;
+    private final FcmService fcmService;
 
     /**
      * Lấy danh sách thông báo có phân trang
@@ -217,6 +218,17 @@ public class NotificationService {
                 .build();
         notificationRecipientRepository.save(recipientRecord);
         log.info("Created recipient record for user: {} on notification: {}", recipient.getId(), notification.getId());
+
+        // Send FCM push notification
+        fcmService.sendPushNotification(
+                recipient.getId(),
+                notification.getTitle(),
+                notification.getContent(),
+                java.util.Map.of(
+                        "notificationId", String.valueOf(notification.getId()),
+                        "type", notification.getType() != null ? notification.getType().name() : "SYSTEM"
+                )
+        );
     }
 
     /**
@@ -457,6 +469,19 @@ public class NotificationService {
                 log.info("Successfully created {} notification recipients for notification {}",
                         notificationRecipients.size(),
                         notification.getId());
+
+                // Use batch FCM push notification
+                java.util.Map<String, String> fcmData = java.util.Map.of(
+                        "notificationId", String.valueOf(notification.getId()),
+                        "type", notification.getType() != null ? notification.getType().name() : "SYSTEM"
+                );
+                List<Long> recipientIds = recipients.stream().map(User::getId).collect(java.util.stream.Collectors.toList());
+                fcmService.sendPushNotificationsForUsers(
+                        recipientIds,
+                        notification.getTitle(),
+                        notification.getContent(),
+                        fcmData
+                );
             } catch (Exception e) {
                 log.error("Error saving notification recipients: ", e);
                 throw e; // Re-throw to ensure transaction rollback if needed
@@ -506,6 +531,23 @@ public class NotificationService {
             }
         }
 
+        List<Long> staffIds = academicStaff.stream()
+                .filter(s -> s.getStatus() == User.UserStatus.ACTIVE)
+                .map(User::getId)
+                .collect(java.util.stream.Collectors.toList());
+
+        if (!staffIds.isEmpty()) {
+            fcmService.sendPushNotificationsForUsers(
+                    staffIds,
+                    notification.getTitle(),
+                    notification.getContent(),
+                    java.util.Map.of(
+                            "notificationId", String.valueOf(notification.getId()),
+                            "type", "ACADEMIC"
+                    )
+            );
+        }
+
         log.info("Sent notification to {} academic staff for new academic request {}",
                 academicStaff.size(), academicRequest.getId());
     }
@@ -552,6 +594,17 @@ public class NotificationService {
                 .isRead(false)
                 .build();
         notificationRecipientRepository.save(recipient);
+
+        // Send FCM push notification to student
+        fcmService.sendPushNotification(
+                academicRequest.getStudent().getId(),
+                notification.getTitle(),
+                notification.getContent(),
+                java.util.Map.of(
+                        "notificationId", String.valueOf(notification.getId()),
+                        "type", "ACADEMIC"
+                )
+        );
 
         log.info("Sent notification to student {} for academic request {} status change to {}",
                 academicRequest.getStudent().getId(), academicRequest.getId(), academicRequest.getStatus());
@@ -610,6 +663,24 @@ public class NotificationService {
             notificationRecipientRepository.saveAll(recipients);
             log.info("Sent notifications to {} students for published {} of course {}",
                     recipients.size(), gradeTypeName, course.getCode());
+
+            // Send FCM push notification to all active students
+            java.util.Map<String, String> fcmData = java.util.Map.of(
+                    "notificationId", String.valueOf(notification.getId()),
+                    "type", "SYSTEM"
+            );
+            List<Long> activeStudentIds = students.stream()
+                    .filter(s -> s.getStatus() == User.UserStatus.ACTIVE)
+                    .map(User::getId)
+                    .collect(java.util.stream.Collectors.toList());
+            if (!activeStudentIds.isEmpty()) {
+                fcmService.sendPushNotificationsForUsers(
+                        activeStudentIds,
+                        notification.getTitle(),
+                        notification.getContent(),
+                        fcmData
+                );
+            }
         }
     }
 }

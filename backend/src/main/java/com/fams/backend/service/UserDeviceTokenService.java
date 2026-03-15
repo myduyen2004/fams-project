@@ -40,6 +40,7 @@ public class UserDeviceTokenService {
             t.setPlatform(platform);
             t.setDeviceId(deviceId);
             tokenRepository.save(t);
+            log.info("Saved FCM token for user {}", t.getUser().getUsername());
         } else {
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("User not found: " + userId));
@@ -51,6 +52,7 @@ public class UserDeviceTokenService {
                     .deviceId(deviceId)
                     .build();
             tokenRepository.save(newToken);
+            log.info("Saved FCM token for user {}", user.getUsername());
         }
     }
 
