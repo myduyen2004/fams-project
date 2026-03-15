@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
+import 'firebase_options.dart';
 import 'core/constants/app_colors.dart';
 import 'core/constants/app_routes.dart';
 import 'features/auth/controllers/auth_controller.dart';
@@ -33,7 +34,7 @@ import 'core/services/websocket_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   print("Handling a background message: ${message.messageId}");
 }
 
@@ -43,7 +44,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
     isFirebaseInitialized = true;
     print('Firebase initialized successfully');

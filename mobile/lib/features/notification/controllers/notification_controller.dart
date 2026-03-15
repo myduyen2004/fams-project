@@ -1,12 +1,11 @@
 import 'package:get/get.dart';
 import '../models/notification_model.dart';
 import '../services/notification_service.dart';
-import '../services/notification_polling_service.dart';
 import '../../auth/controllers/auth_controller.dart';
+import '../services/fcm_service.dart';
 
 class NotificationController extends GetxController {
   final NotificationService _notificationService = NotificationService();
-  final NotificationPollingService _pollingService = NotificationPollingService();
   
   final RxList<NotificationModel> notifications = <NotificationModel>[].obs;
   final RxInt unreadCount = 0.obs;
@@ -15,35 +14,12 @@ class NotificationController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Listen to polling stream
-    _pollingService.unreadCountStream.listen((count) {
-      unreadCount.value = count;
-    });
-    
-    _pollingService.newNotificationStream.listen((_) {
-      // Fetch latest list when new notifications arrive
-      fetchNotifications();
-    });
-    
-    // Start polling when controller is initialized
-    // Usually called after login
-    startPolling();
     fetchNotifications(); // Load initial list
+    fetchUnreadCount();
   }
-  
-  @override
-  void onClose() {
-    stopPolling();
-    super.onClose();
-  }
-  
-  void startPolling() {
-    _pollingService.startPolling();
-    fetchUnreadCount(); // Fetch immediately
-  }
-  
-  void stopPolling() {
-    _pollingService.stopPolling();
+
+  Future<void> onNewPushNotification() async {
+    await Future.wait([fetchNotifications(), fetchUnreadCount()]);
   }
 
   Future<void> fetchNotifications() async {
@@ -88,11 +64,10 @@ class NotificationController extends GetxController {
         }
       }
       
-      // Refresh badge (System Badge)
-      _pollingService.refresh();
-      
-      // Cancel system notification if exists
-      _pollingService.cancelNotification(id);
+      if (Get.isRegistered<FcmService>()) {
+        await FcmService.to.updateUnreadBadge(unreadCount.value);
+        await FcmService.to.cancelNotification(id);
+      }
       
     } catch (e) {
       print('Error marking as read: $e');
@@ -109,8 +84,10 @@ class NotificationController extends GetxController {
       }).toList();
       unreadCount.value = 0;
       
-      // Refresh badge (System Badge)
-      _pollingService.refresh();
+      if (Get.isRegistered<FcmService>()) {
+        await FcmService.to.updateUnreadBadge(0);
+        await FcmService.to.cancelAllNotifications();
+      }
       
     } catch (e) {
       print('Error marking all as read: $e');

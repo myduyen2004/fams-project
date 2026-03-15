@@ -6,6 +6,7 @@ import { Card } from '../../components/common/Card';
 import { scheduleRequestService, ScheduleRequest } from '../../services/api/scheduleRequestService';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 
 export const LecturerRequestPage: React.FC = () => {
     const [requests, setRequests] = useState<ScheduleRequest[]>([]);
@@ -13,6 +14,19 @@ export const LecturerRequestPage: React.FC = () => {
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
+    const [revokingRequestId, setRevokingRequestId] = useState<number | null>(null);
+
+    const handleRevokeConfirm = () => {
+        if (revokingRequestId) {
+            scheduleRequestService.revokeRequest(revokingRequestId)
+                .then(() => {
+                    toast.success('Đã thu hồi đơn yêu cầu thành công');
+                    fetchRequests();
+                })
+                .catch(() => toast.error('Lỗi khi thu hồi đơn yêu cầu'))
+                .finally(() => setRevokingRequestId(null));
+        }
+    };
 
     const fetchRequests = async () => {
         setLoading(true);
@@ -141,16 +155,7 @@ export const LecturerRequestPage: React.FC = () => {
                                                 </Link>
                                                 {req.status === 'PENDING' && (
                                                     <button
-                                                        onClick={() => {
-                                                            if (window.confirm('Bạn có chắc chắn muốn thu hồi đơn yêu cầu này?')) {
-                                                                scheduleRequestService.revokeRequest(req.id)
-                                                                    .then(() => {
-                                                                        toast.success('Đã thu hồi đơn yêu cầu thành công');
-                                                                        fetchRequests();
-                                                                    })
-                                                                    .catch(() => toast.error('Lỗi khi thu hồi đơn yêu cầu'));
-                                                            }
-                                                        }}
+                                                        onClick={() => setRevokingRequestId(req.id)}
                                                         className="text-gray-400 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20"
                                                         title="Thu hồi đơn"
                                                     >
@@ -204,6 +209,17 @@ export const LecturerRequestPage: React.FC = () => {
                     )}
                 </Card>
             </div>
+
+            <ConfirmModal
+                isOpen={revokingRequestId !== null}
+                onClose={() => setRevokingRequestId(null)}
+                onConfirm={handleRevokeConfirm}
+                title="Xác nhận thu hồi"
+                message="Bạn có chắc chắn muốn thu hồi đơn yêu cầu thay đổi lịch dạy này không?"
+                confirmLabel="Thu hồi"
+                cancelLabel="Hủy"
+                type="danger"
+            />
         </LecturerLayout>
     );
 };

@@ -7,6 +7,7 @@ import com.fams.backend.entity.User;
 import com.fams.backend.repository.NotificationRecipientRepository;
 import com.fams.backend.repository.NotificationRepository;
 import com.fams.backend.repository.UserRepository;
+import com.fams.backend.service.FcmService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -16,7 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,6 +31,7 @@ public class NotificationServiceImpl {
         private final NotificationRecipientRepository recipientRepository;
         private final UserRepository userRepository;
         private final SimpMessagingTemplate messagingTemplate;
+        private final FcmService fcmService;
 
         @Transactional
         public void createNotification(User recipient, String title, String content, Notification.NotificationType type,
@@ -53,6 +57,19 @@ public class NotificationServiceImpl {
                                 .build();
 
                 recipientRepository.save(nr);
+
+                try {
+                        Map<String, String> data = new HashMap<>();
+                        data.put("type", type.name());
+                        data.put("notificationId", savedNotification.getId().toString());
+                        if (targetUrl != null && !targetUrl.isBlank()) {
+                                data.put("targetUrl", targetUrl);
+                        }
+
+                        fcmService.sendPushNotification(recipient.getId(), title, content, data);
+                } catch (Exception e) {
+                        log.warn("Failed to send FCM push notification: {}", e.getMessage());
+                }
 
                 // Broadcast to user-specific topic
                 NotificationResponse response = NotificationResponse.builder()

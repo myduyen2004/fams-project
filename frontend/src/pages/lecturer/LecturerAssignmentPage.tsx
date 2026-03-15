@@ -86,6 +86,10 @@ export const LecturerAssignmentPage: React.FC = () => {
     const [downloadingZip, setDownloadingZip] = useState(false);
     const [loadingDlAssignments, setLoadingDlAssignments] = useState(false);
 
+    // Delete dialog
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+
     // Close dropdowns when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -164,17 +168,22 @@ export const LecturerAssignmentPage: React.FC = () => {
         if (!selectedSemester || !user?.id) return;
         setLoadingAssignments(true);
         try {
-            // Fetch all slots for lecturer in this semester
+            const classNames = classes.map(c => c.className);
+
             let slotsData: TimetableSlotDTO[] = [];
             try {
-                slotsData = await timetableService.getLecturerSemesterSlots(user.id, selectedSemester);
+                // Fetch ALL slots for these classes to guarantee we can map assignment.timetableSlotId correctly
+                const classPromises = classNames.map(cn =>
+                    timetableService.getTimetableByClass(cn).catch(() => [] as TimetableSlotDTO[])
+                );
+                const classSlotsResults = await Promise.all(classPromises);
+                slotsData = classSlotsResults.flat();
             } catch (err: any) {
-                console.error('Failed to fetch semester slots:', err?.response?.status, err?.response?.data || err.message);
+                console.error('Failed to fetch class slots:', err);
             }
 
             // Fetch assignments for all classes
             let allAssignments: AssignmentDTO[] = [];
-            const classNames = classes.map(c => c.className);
             const assignmentPromises = classNames.map(cn =>
                 assignmentService.getAssignmentsByClass(cn).catch(() => [] as AssignmentDTO[])
             );
@@ -472,27 +481,31 @@ export const LecturerAssignmentPage: React.FC = () => {
         }
     };
 
-    const handleBatchDelete = async () => {
+    const handleBatchDeleteClick = () => {
         if (selectedIds.size === 0) { toast.error('Vui lòng chọn ít nhất một bài tập'); return; }
         const hasClosedAssignment = assignments.some(a => selectedIds.has(a.id) && a.status === 'CLOSED');
         if (hasClosedAssignment) {
             setBatchWarning('Không thể xóa bài tập đã đóng. Vui lòng chỉ chọn bài tập đang mở để xóa.');
             return;
         }
-        if (!window.confirm(`Bạn có chắc muốn xóa ${selectedIds.size} bài tập? Hành động này không thể hoàn tác.`)) return;
+        setShowDeleteDialog(true);
+    };
+
+    const confirmBatchDelete = async () => {
         try {
-            setBatchEditing(true);
+            setDeleting(true);
             const promises = Array.from(selectedIds).map(id =>
                 assignmentService.deleteAssignment(id)
             );
             await Promise.all(promises);
             toast.success(`Đã xóa ${selectedIds.size} bài tập`);
             setSelectedIds(new Set());
+            setShowDeleteDialog(false);
             fetchAllData();
         } catch (err: any) {
             toast.error(err?.response?.data?.message || 'Không thể xóa bài tập');
         } finally {
-            setBatchEditing(false);
+            setDeleting(false);
         }
     };
 
@@ -732,7 +745,7 @@ export const LecturerAssignmentPage: React.FC = () => {
                                                 <Lock className="w-3.5 h-3.5" /> Đóng
                                             </button>
                                         )}
-                                    <button onClick={handleBatchDelete}
+                                    <button onClick={handleBatchDeleteClick}
                                         className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-medium transition-colors">
                                         <Trash2 className="w-3.5 h-3.5" /> Xóa
                                     </button>
@@ -770,15 +783,17 @@ export const LecturerAssignmentPage: React.FC = () => {
                                                             className="w-4 h-4 rounded border-gray-300 dark:border-zinc-600 text-orange-500 focus:ring-orange-500 accent-orange-500" />
                                                     </td>
                                                     <td className="px-4 py-3 text-gray-700 dark:text-zinc-300 whitespace-nowrap">
-                                                        {slot?.className || '—'}
+                                                        {slot?.className || assignment.className || '—'}
                                                     </td>
                                                     <td className="px-4 py-3 text-gray-900 dark:text-white whitespace-nowrap">
-                                                        {formatSlotDate(slot?.date)}
+                                                        {(slot?.date && formatSlotDate(slot.date)) || '—'}
                                                     </td>
                                                     <td className="px-4 py-3 text-gray-700 dark:text-zinc-300 whitespace-nowrap">
-                                                        {slot ? `Slot ${slot.slotNumber}` : '—'}
+                                                        {slot?.slotNumber ? `Slot ${slot.slotNumber}` : '—'}
                                                     </td>
-                                                    <td className="px-4 py-3 text-gray-700 dark:text-zinc-300">{slot?.roomCode || '—'}</td>
+                                                    <td className="px-4 py-3 text-gray-700 dark:text-zinc-300">
+                                                        {slot?.roomCode || '—'}
+                                                    </td>
                                                     <td className="px-4 py-3">
                                                         <div>
                                                             <div className="font-medium text-gray-900 dark:text-white">{assignment.title}</div>
@@ -1110,7 +1125,36 @@ export const LecturerAssignmentPage: React.FC = () => {
                     </div>
                 </div>
             )}
-        </LecturerLayout >
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteDialog && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="bg-white dark:bg-zinc-800 rounded-2xl p-6 w-full max-w-sm shadow-xl relative animate-in fade-in zoom-in duration-200">
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Xác nhận xóa</h3>
+                        <p className="text-gray-600 dark:text-gray-300 text-sm mb-6">
+                            Bạn có chắc muốn xóa <span className="font-bold text-red-500">{selectedIds.size}</span> bài tập? Hành động này không thể hoàn tác.
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowDeleteDialog(false)}
+                                disabled={deleting}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-zinc-700 rounded-lg hover:bg-gray-200 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={confirmBatchDelete}
+                                disabled={deleting}
+                                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
+                            >
+                                {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                {deleting ? 'Đang xóa...' : 'Xóa'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </LecturerLayout>
     );
 };
 

@@ -66,6 +66,11 @@ services:
       - REDIS_HOST=redis
       - AI_SERVICE_URL=http://ai-service:5000
       - TZ=Asia/Ho_Chi_Minh
+      # Firebase secret mounted at runtime - never committed to git
+      - FIREBASE_CONFIG_PATH=/app/secrets/firebase-adminsdk.json
+    volumes:
+      # Each developer/server must place firebase-adminsdk.json in backend/src/main/resources/
+      - ./backend/src/main/resources/firebase-adminsdk.json:/app/secrets/firebase-adminsdk.json:ro
     depends_on:
       postgres:
         condition: service_healthy

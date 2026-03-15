@@ -40,8 +40,8 @@ class WebSocketService extends GetxService {
     _connectionCompleter = Completer<void>();
 
     _stompClient = StompClient(
-      config: StompConfig.sockJS(
-        url: '${ApiConstants.baseUrl}/ws',
+      config: StompConfig(
+        url: '${ApiConstants.baseUrl.replaceFirst('http', 'ws')}/ws-native',
         stompConnectHeaders: {'Authorization': 'Bearer $token'},
         webSocketConnectHeaders: {'Authorization': 'Bearer $token'},
         onConnect: (StompFrame frame) {
