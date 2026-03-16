@@ -82,6 +82,20 @@ export const userService = {
         return response.data;
     },
 
+    updateProfile: async (data: { phone?: string; dob?: string }, avatar?: File) => {
+        const formData = new FormData();
+        formData.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }));
+        if (avatar) {
+            formData.append('avatar', avatar);
+        }
+        const response = await apiClient.put<UserResponse>('/auth/profile', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+        return response.data;
+    },
+
     deleteUser: async (id: number) => {
         await apiClient.delete(`/users/${id}`);
     },
