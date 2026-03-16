@@ -254,14 +254,27 @@ export const StudentAllGradesPage: React.FC = () => {
                                                 {course.semesterCode ?? <span className="text-gray-400 dark:text-gray-500">—</span>}
                                             </td>
                                             <td className="px-3 py-3">
-                                                <span className="text-sm font-mono font-bold text-blue-700 dark:text-blue-400">
+                                                <span className="text-sm font-mono font-bold text-gray-800 dark:text-gray-200">
                                                     {course.courseCode}
                                                 </span>
                                             </td>
-                                            <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400">
-                                                {course.prerequisiteCodes || ''}
+                                            <td className="px-3 py-3">
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {(course.prerequisiteCodes || '').split(',').map((code, pIdx) => {
+                                                        const trimmedCode = code.trim();
+                                                        if (!trimmedCode) return null;
+                                                        return (
+                                                            <span
+                                                                key={pIdx}
+                                                                className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-fpt-orange/10 dark:bg-fpt-orange/20 text-fpt-orange border border-fpt-orange/20 dark:border-fpt-orange/30 text-[10px] font-bold tracking-wider"
+                                                            >
+                                                                {trimmedCode}
+                                                            </span>
+                                                        );
+                                                    })}
+                                                </div>
                                             </td>
-                                            <td className="px-3 py-3 text-sm text-gray-800 dark:text-gray-200 font-medium">
+                                            <td className="px-3 py-3 text-sm text-gray-900 dark:text-gray-200 font-medium">
                                                 {course.courseName}
                                             </td>
                                             <td className="px-3 py-3 text-center text-sm text-gray-600 dark:text-gray-300">
