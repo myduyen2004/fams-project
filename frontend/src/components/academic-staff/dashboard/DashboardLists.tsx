@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ChevronRight, Clock, MapPin, Loader2, 
-  Info, CheckCircle2, AlertCircle, XCircle, 
-  ExternalLink 
+import {
+  ChevronRight, Clock, MapPin, Loader2,
+  Info, CheckCircle2, AlertCircle, XCircle,
+  ExternalLink
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { academicStaffService, ScheduleRequestResponse, SystemLogItem } from '../../../services/api/academicStaffService';
@@ -217,7 +217,7 @@ export const SystemActivityLog: React.FC = () => {
             LIVE
           </div>
         </div>
-        <Link 
+        <Link
           to="/academic-staff/logs"
           className="text-fpt-orange hover:text-orange-600 transition-colors"
         >
@@ -235,7 +235,7 @@ export const SystemActivityLog: React.FC = () => {
             {logs.map((log) => {
               const config = typeConfig[log.type] || typeConfig.info;
               const isSystem = log.performerName === 'Hệ thống' || !log.performerName;
-              
+
               const timeAgo = (() => {
                 try {
                   const date = new Date(log.timestamp.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1'));
@@ -299,7 +299,7 @@ export const SystemActivityLog: React.FC = () => {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-10 text-gray-400">
-             <p className="text-sm font-medium">Chưa có hoạt động nào được ghi lại</p>
+            <p className="text-sm font-medium">Chưa có hoạt động nào được ghi lại</p>
           </div>
         )}
       </div>
@@ -327,26 +327,26 @@ export const AttendanceLog: React.FC = () => {
       <div className="space-y-4">
         {logs.map(log => (
           <div key={log.id} className="flex items-center gap-4">
-             <div className="w-2 h-2 rounded-full border-2 border-gray-200"></div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                   <p className="text-sm font-medium text-gray-900 dark:text-white leading-none">{log.user}</p>
-                   <p className="text-xs text-gray-500">({log.name})</p>
+            <div className="w-2 h-2 rounded-full border-2 border-gray-200"></div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-gray-900 dark:text-white leading-none">{log.user}</p>
+                <p className="text-xs text-gray-500">({log.name})</p>
+              </div>
+              <div className="flex items-center gap-4 mt-1">
+                <div className="flex items-center gap-1 text-xs text-gray-500">
+                  <MapPin size={12} className="text-gray-400" />
+                  Tòa {log.room}
                 </div>
-                <div className="flex items-center gap-4 mt-1">
-                   <div className="flex items-center gap-1 text-xs text-gray-500">
-                      <MapPin size={12} className="text-gray-400" />
-                      Tòa {log.room}
-                   </div>
-                   <div className="flex items-center gap-1 text-xs text-orange-600 font-medium font-mono">
-                      <Clock size={12} className="text-orange-500" />
-                      {log.time}
-                   </div>
+                <div className="flex items-center gap-1 text-xs text-orange-600 font-medium font-mono">
+                  <Clock size={12} className="text-orange-500" />
+                  {log.time}
                 </div>
               </div>
-             <span className="text-xs font-medium text-emerald-600 bg-emerald-50 dark:bg-zinc-800 px-2.5 py-1 rounded-lg">
-                {log.status}
-             </span>
+            </div>
+            <span className="text-xs font-medium text-emerald-600 bg-emerald-50 dark:bg-zinc-800 px-2.5 py-1 rounded-lg">
+              {log.status}
+            </span>
           </div>
         ))}
       </div>
@@ -356,76 +356,131 @@ export const AttendanceLog: React.FC = () => {
 
 export const RunningRooms: React.FC<{ rooms?: any[], total?: number }> = ({ rooms = [], total = 0 }) => {
   return (
-    <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-zinc-800 h-full flex flex-col">
+    <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-zinc-800 h-full flex flex-col overflow-hidden">
       <div className="flex justify-between items-center mb-5 pb-2 border-b border-gray-100 dark:border-zinc-800">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Phòng học đang sử dụng</h3>
-        <span className="text-[10px] font-bold text-orange-500 bg-orange-50 px-2 py-1 rounded tracking-widest uppercase border border-orange-100">{total} PHÒNG</span>
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Phòng học đang sử dụng</h3>
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20">
+            <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></div>
+            <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-tight">Live</span>
+          </div>
+        </div>
+        <span className="text-[10px] font-bold text-orange-500 bg-orange-50 dark:bg-orange-500/10 px-2 py-1 rounded tracking-widest uppercase border border-orange-100 dark:border-orange-500/20">
+          {total} PHÒNG
+        </span>
       </div>
-      
-      <div className="grid grid-cols-2 gap-4 flex-1">
-        {rooms.length > 0 ? (
-          rooms.map((room, idx) => (
-            <div key={idx} className="p-4 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm hover:shadow-md transition-all relative group/room">
-              <div className="flex justify-between items-start">
-                <div>
-                    <h4 className="text-base font-semibold text-gray-900 dark:text-white mt-1">{room.roomName}</h4>
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                      <span className="text-xs font-medium text-emerald-600">Active</span>
-                    </div>
-                </div>
-                
-                <div className="relative w-10 h-10 flex items-center justify-center">
-                    <svg className="w-full h-full -rotate-90">
-                      <circle
-                        cx="20"
-                        cy="20"
-                        r="16"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                        className="text-gray-100 dark:text-zinc-800"
-                      />
-                      <circle
-                        cx="20"
-                        cy="20"
-                        r="16"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                        strokeDasharray={100}
-                        strokeDashoffset={100 - (room.attendancePercentage || 0)}
-                        strokeLinecap="round"
-                        className="text-orange-500"
-                      />
-                    </svg>
-                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-gray-400">
-                      {Math.round(room.attendancePercentage || 0)}%
-                    </span>
-                </div>
-              </div>
 
-              <div className="mt-4">
-                <p className="text-xs text-gray-500">Giảng viên</p>
-                <p className="text-sm font-medium text-gray-900 dark:text-white mt-0.5 truncate">{room.lecturerName}</p>
+      <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar">
+        {rooms.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {rooms.map((room, idx) => (
+              <div
+                key={idx}
+                className="group/room relative overflow-hidden rounded-xl border border-rose-200 dark:border-rose-800/40 bg-rose-50/40 dark:bg-rose-900/10 p-3.5 transition-all duration-300 hover:-translate-y-0.5 cursor-default"
+                style={{
+                  boxShadow: '0 0 0 1px rgba(244,63,94,0.15), 0 2px 12px rgba(244,63,94,0.1), 0 1px 3px rgba(0,0,0,0.05)'
+                }}
+              >
+                {/* Radial glow overlay */}
+                <div
+                  className="absolute inset-0 pointer-events-none rounded-xl opacity-0 group-hover/room:opacity-100 transition-opacity duration-300"
+                  style={{ background: 'radial-gradient(ellipse at top right, rgba(244,63,94,0.07) 0%, transparent 70%)' }}
+                />
+
+                <div className="flex justify-between items-start relative z-10 gap-3">
+                  <div className="flex-1 min-w-0">
+                    {/* Room name row: name is covered by badge on hover */}
+                    <div className="flex items-center gap-1.5 mb-2 h-5">
+                      <MapPin
+                        size={14}
+                        className="text-rose-500 flex-shrink-0 transition-transform duration-300 group-hover/room:scale-110"
+                      />
+                      <div className="relative flex-1 h-5 overflow-hidden">
+                        {/* Room Name */}
+                        <h4 className="absolute inset-0 text-sm font-bold text-gray-900 dark:text-white truncate transition-all duration-300 group-hover/room:opacity-0 group-hover/room:-translate-y-full">
+                          {room.roomName}
+                        </h4>
+                        
+                        {/* Slide-in "đang dùng" badge that covers the name */}
+                        <span className="absolute inset-0 flex items-center gap-1.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-500/20 whitespace-nowrap
+                          opacity-0 translate-y-full transition-all duration-300 group-hover/room:opacity-100 group-hover/room:translate-y-0 shadow-sm shadow-rose-200/20">
+                          <span className="relative flex h-1.5 w-1.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-600"></span>
+                          </span>
+                          Đang dùng
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Giảng viên</p>
+                      <p className="text-xs font-semibold text-gray-700 dark:text-zinc-300 mt-0.5 truncate group-hover/room:text-rose-600 dark:group-hover/room:text-rose-400 transition-colors">
+                        {room.lecturerName}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="ml-1 flex flex-col items-center flex-shrink-0">
+                    <div className="relative w-11 h-11 flex items-center justify-center">
+                      <svg className="w-full h-full -rotate-90">
+                        <circle
+                          cx="22"
+                          cy="22"
+                          r="18"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3.5"
+                          className="text-rose-100 dark:text-rose-900/30"
+                        />
+                        <circle
+                          cx="22"
+                          cy="22"
+                          r="18"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3.5"
+                          strokeDasharray={113}
+                          strokeDashoffset={113 - (113 * (room.attendancePercentage || 0)) / 100}
+                          strokeLinecap="round"
+                          className={`${(room.attendancePercentage || 0) < 50 ? 'text-orange-400' : 'text-emerald-500'} transition-all duration-500`}
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
+                        <span className="text-[10px] font-black text-gray-900 dark:text-white">
+                          {Math.round(room.attendancePercentage || 0)}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom accent bar */}
+                <div className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-rose-500 to-rose-400 w-0 group-hover/room:w-full transition-all duration-300"></div>
               </div>
-            </div>
-          ))
+            ))}
+          </div>
         ) : (
-          <div className="col-span-2 flex flex-col items-center justify-center py-10 text-gray-400 border border-dashed border-gray-100 rounded-xl">
-             <p className="text-sm">Hiện không có phòng học nào đang hoạt động</p>
+          <div className="flex flex-col items-center justify-center py-12 text-gray-400 border border-dashed border-gray-200 dark:border-zinc-800 rounded-2xl h-full bg-zinc-50/50 dark:bg-zinc-800/10">
+            <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center mb-3">
+              <Clock size={20} className="text-gray-300" />
+            </div>
+            <p className="text-sm font-medium">Không có phòng hoạt động</p>
+            <p className="text-xs mt-1 text-gray-400">Dữ liệu cập nhật theo thời gian thực</p>
           </div>
         )}
       </div>
 
-      <div className="mt-5 border-t border-gray-100 dark:border-zinc-800 pt-4 text-center">
-        <Link 
-          to="/academic-staff/rooms"
-          className="text-xs font-medium text-gray-500 hover:text-orange-600 transition-colors"
+      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-zinc-800">
+        <Link
+          to="/academic-staff/rooms?building=ALL&status=IN_USE"
+          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-white hover:bg-orange-500 border border-gray-200 dark:border-zinc-800 hover:border-orange-500 transition-all"
         >
-          Xem tất cả phòng
+          Xem tất cả phòng học
+          <ChevronRight size={14} />
         </Link>
       </div>
     </div>
   );
 };
+

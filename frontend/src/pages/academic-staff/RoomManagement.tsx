@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { Plus, Loader2, Edit2, Trash2, GripVertical, Maximize2, Users, Check, ChevronDown } from 'lucide-react';
 import { roomService } from '../../services/api/roomService';
@@ -8,6 +8,7 @@ import { AddRoomModal, EditRoomModal } from '../../components/academic-staff/roo
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import toast from 'react-hot-toast';
 import { ROOM_TYPE_OPTIONS, getRoomTypeDisplayLabel } from '../../utils/roomUtils';
+import { RoomCard } from '../../components/shared/RoomCard';
 
 // Building configuration
 interface FloorConfig {
@@ -181,12 +182,18 @@ export const RoomManagement: React.FC = () => {
     const [isEditMode, setIsEditMode] = useState(false);
     const [draggedRoom, setDraggedRoom] = useState<Room | null>(null);
     const [saving, setSaving] = useState(false);
+    const [inUseRoomIds, setInUseRoomIds] = useState<Set<number>>(new Set());
 
     // Dropdown states
     const [isBuildingFilterOpen, setIsBuildingFilterOpen] = useState(false);
     const [isFloorFilterOpen, setIsFloorFilterOpen] = useState(false);
     const [isRoomTypeFilterOpen, setIsRoomTypeFilterOpen] = useState(false);
     const [selectedRoomType, setSelectedRoomType] = useState<string>('ALL');
+    const [isStatusFilterOpen, setIsStatusFilterOpen] = useState(false);
+    const [selectedStatus, setSelectedStatus] = useState<'ALL' | 'IN_USE' | 'EMPTY'>('ALL');
+
+    // Search params
+    const [searchParams, setSearchParams] = useSearchParams();
 
     // Modal states
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -244,6 +251,14 @@ export const RoomManagement: React.FC = () => {
             setLoading(true);
             const data = await roomService.getAllRooms();
             setRooms(data);
+
+            // Fetch real-time occupancy based on actual slot times from database
+            try {
+                const occupiedIds = await roomService.getCurrentlyInUseRoomIds();
+                setInUseRoomIds(occupiedIds);
+            } catch (availabilityErr) {
+                console.error('Failed to fetch room availability:', availabilityErr);
+            }
         } catch (error) {
             toast.error('Không thể tải danh sách phòng học');
         } finally {
@@ -254,6 +269,38 @@ export const RoomManagement: React.FC = () => {
     useEffect(() => {
         fetchRooms();
     }, []);
+
+    // Sync state with URL params on initial load
+    useEffect(() => {
+        const buildingParam = searchParams.get('building');
+        const statusParam = searchParams.get('status');
+
+        if (buildingParam === 'ALL') {
+            setSelectedBuilding('ALL');
+        } else if (buildingParam && BUILDINGS.includes(buildingParam)) {
+            setSelectedBuilding(buildingParam);
+        }
+
+        if (statusParam === 'IN_USE') {
+            setSelectedStatus('IN_USE');
+        } else if (statusParam === 'EMPTY') {
+            setSelectedStatus('EMPTY');
+        }
+    }, []);
+
+    // Update URL when filters change
+    useEffect(() => {
+        const params: Record<string, string> = {};
+        if (selectedBuilding === 'ALL') params.building = 'ALL';
+        if (selectedStatus !== 'ALL') params.status = selectedStatus;
+
+        // Only set params if we have something to set
+        if (Object.keys(params).length > 0) {
+            setSearchParams(params, { replace: true });
+        } else if (searchParams.toString() !== '') {
+            setSearchParams({}, { replace: true });
+        }
+    }, [selectedBuilding, selectedStatus]);
 
     // Available floors based on selected building
     const availableFloors = useMemo(() => {
@@ -283,8 +330,16 @@ export const RoomManagement: React.FC = () => {
             result = result.filter(r => r.type === selectedRoomType);
         }
 
+        if (selectedBuilding === 'ALL') {
+            if (selectedStatus === 'IN_USE') {
+                result = result.filter(r => inUseRoomIds.has(r.id));
+            } else if (selectedStatus === 'EMPTY') {
+                result = result.filter(r => !inUseRoomIds.has(r.id));
+            }
+        }
+
         return result;
-    }, [rooms, selectedBuilding, selectedFloor, selectedRoomType]);
+    }, [rooms, selectedBuilding, selectedFloor, selectedRoomType, selectedStatus, inUseRoomIds]);
 
     // Rooms positioned on grid (only relevant for map view of specific building/floor)
     const positionedRooms = useMemo(() => {
@@ -566,6 +621,46 @@ export const RoomManagement: React.FC = () => {
                                 </div>
                             </div>
 
+                            {/* Status Filter - Only functional in ALL mode */}
+                            {selectedBuilding === 'ALL' && (
+                                <div className="flex items-center gap-2 relative">
+                                    <span className="text-xs font-medium text-gray-500 dark:text-zinc-500">Trạng thái:</span>
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => setIsStatusFilterOpen(!isStatusFilterOpen)}
+                                            className="flex items-center gap-2 rounded-lg border border-gray-300 py-2 pl-3 pr-2 text-sm bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 min-w-[130px]"
+                                        >
+                                            <span className="flex-1 text-left">
+                                                {selectedStatus === 'ALL' ? 'Tất cả' : selectedStatus === 'IN_USE' ? 'Đang học' : 'Trống'}
+                                            </span>
+                                            <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isStatusFilterOpen ? 'rotate-180' : ''}`} />
+                                        </button>
+
+                                        {isStatusFilterOpen && (
+                                            <>
+                                                <div className="fixed inset-0 z-10" onClick={() => setIsStatusFilterOpen(false)}></div>
+                                                <div className="absolute left-0 top-full mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg py-1 z-20 dark:border-zinc-700 dark:bg-zinc-800 transition-all duration-200">
+                                                    {[
+                                                        { value: 'ALL', label: 'Tất cả' },
+                                                        { value: 'IN_USE', label: 'Đang học' },
+                                                        { value: 'EMPTY', label: 'Trống' }
+                                                    ].map(option => (
+                                                        <button
+                                                            key={option.value}
+                                                            onClick={() => { setSelectedStatus(option.value as any); setIsStatusFilterOpen(false); }}
+                                                            className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center justify-between ${selectedStatus === option.value ? 'text-fpt-orange bg-orange-50 dark:bg-orange-900/10' : 'text-gray-700 dark:text-gray-200'}`}
+                                                        >
+                                                            <span>{option.label}</span>
+                                                            {selectedStatus === option.value && <Check className="h-4 w-4" />}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Floor Filters - Only show if not ALL */}
                             {selectedBuilding !== 'ALL' && (
                                 <div className="flex items-center gap-2 relative">
@@ -632,57 +727,23 @@ export const RoomManagement: React.FC = () => {
                         // Full Screen Grid View for ALL
                         <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-6 overflow-auto min-h-[500px]">
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Tất cả danh sách phòng ({sidebarRooms.length} phòng)</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                                {sidebarRooms.map(room => {
-                                    const isPositioned = room.gridRow != null && room.gridCol != null;
-                                    return (
-                                        <div
-                                            key={room.id}
-                                            className={`p-4 rounded-xl border transition-all hover:shadow-md
-                                                ${room.type === 'COMPUTER_LAB' ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-100 dark:border-blue-800' :
-                                                    room.type === 'CLASSROOM' ? 'bg-orange-50 dark:bg-orange-950/20 border-orange-100 dark:border-orange-900/40' :
-                                                        'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-100 dark:border-emerald-800'}
-                                                ${!isPositioned ? 'ring-2 ring-fpt-orange ring-offset-2' : ''}
-                                            `}
-                                        >
-                                            <div className="flex items-center justify-between mb-2">
-                                                <span className="font-bold text-gray-900 dark:text-white">
-                                                    {room.name}
-                                                </span>
-                                                <div className="flex gap-2">
-                                                    <button onClick={() => setEditingRoom(room)} className="text-gray-400 hover:text-fpt-orange"><Edit2 size={16} /></button>
-                                                    <button onClick={() => setRoomToDelete(room)} className="text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1 text-sm text-gray-600 dark:text-zinc-400">
-                                                <div className="flex justify-between">
-                                                    <span>Loại:</span>
-                                                    <span className="font-medium text-gray-900 dark:text-gray-200">{getRoomTypeLabel(room.type)}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span>Tòa nhà:</span>
-                                                    <span className="font-medium text-gray-900 dark:text-gray-200">{room.building} - Tầng {room.floor}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span>Sức chứa:</span>
-                                                    <span className="font-medium text-gray-900 dark:text-gray-200">{room.capacity} người</span>
-                                                </div>
-                                                {room.description && (
-                                                    <div className="flex flex-col gap-1 mt-1 border-t border-gray-100 dark:border-zinc-700/30 pt-1">
-                                                        <span className="text-[10px] text-gray-400">Mô tả:</span>
-                                                        <span className="font-medium text-gray-900 dark:text-gray-200 line-clamp-2 italic">{room.description}</span>
-                                                    </div>
-                                                )}
-                                                <div className="flex justify-between">
-                                                    <span>Trạng thái:</span>
-                                                    <span className={`font-medium ${!isPositioned ? 'text-red-500' : 'text-green-500'}`}>
-                                                        {!isPositioned ? 'Chưa xếp vị trí' : 'Đã xếp vị trí'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                {sidebarRooms.map(room => (
+                                    <RoomCard
+                                        key={room.id}
+                                        room={room}
+                                        inUse={inUseRoomIds.has(room.id)}
+                                        onEdit={(e) => {
+                                            e.stopPropagation();
+                                            setEditingRoom(room);
+                                        }}
+                                        onDelete={(e) => {
+                                            e.stopPropagation();
+                                            setRoomToDelete(room);
+                                        }}
+                                        onClick={() => setSelectedRoom(room)}
+                                    />
+                                ))}
                             </div>
                         </div>
                     ) : (
@@ -733,6 +794,10 @@ export const RoomManagement: React.FC = () => {
                                     if (room) {
                                         const rowSpan = room.gridRowSpan || 1;
                                         const colSpan = room.gridColSpan || 1;
+                                        const isInUse = inUseRoomIds.has(room.id);
+                                        const isComputerLab = room.type === 'COMPUTER_LAB';
+                                        const isClassroom = room.type === 'CLASSROOM';
+
                                         return (
                                             <div
                                                 key={`room-${room.id}`}
@@ -740,25 +805,37 @@ export const RoomManagement: React.FC = () => {
                                                 onDragStart={isEditMode ? (e) => handleDragStart(e, room) : undefined}
                                                 onClick={() => setSelectedRoom(room)}
                                                 onDoubleClick={() => handleRoomDoubleClick(room)}
-                                                className={`rounded-lg flex flex-col items-center justify-center cursor-pointer transition-all border
+                                                className={`rounded-lg flex flex-col items-center justify-center cursor-pointer transition-all border relative group
                                                     ${isEditMode ? 'cursor-move' : ''}
                                                     ${selectedRoom?.id === room.id ? 'ring-2 ring-fpt-orange z-10' : ''}
-                                                    ${room.type === 'COMPUTER_LAB' ? 'bg-blue-100/90 dark:bg-blue-900/40 border-blue-200 dark:border-blue-700 text-blue-900 dark:text-blue-100 shadow-[0_2px_4px_rgba(59,130,246,0.1)]' :
-                                                        room.type === 'CLASSROOM' ? 'bg-orange-100/90 dark:bg-orange-900/40 border-orange-200 dark:border-orange-700 text-orange-900 dark:text-orange-100 shadow-[0_2px_4px_rgba(249,115,22,0.1)]' :
-                                                            'bg-emerald-100/90 dark:bg-emerald-900/40 border-emerald-200 dark:border-emerald-700 text-emerald-900 dark:text-emerald-100 shadow-[0_2px_4px_rgba(16,185,129,0.1)]'}`}
+                                                    ${isComputerLab ? 'bg-blue-100/90 dark:bg-blue-900/40 border-blue-200 dark:border-blue-700 text-blue-900 dark:text-blue-100 shadow-[0_2px_4px_rgba(59,130,246,0.1)]' :
+                                                        isClassroom ? 'bg-orange-100/90 dark:bg-orange-900/40 border-orange-200 dark:border-orange-700 text-orange-900 dark:text-orange-100 shadow-[0_2px_4px_rgba(249,115,22,0.1)]' :
+                                                            'bg-emerald-100/90 dark:bg-emerald-900/40 border-emerald-200 dark:border-emerald-700 text-emerald-900 dark:text-emerald-100 shadow-[0_2px_4px_rgba(16,185,129,0.1)]'}
+                                                    ${isInUse ? 'ring-2 ring-rose-500/50 dark:ring-rose-500/30' : ''}`}
                                                 style={{
                                                     gridRow: `${row + 1} / span ${rowSpan}`,
                                                     gridColumn: `${col + 1} / span ${colSpan}`
                                                 }}
                                             >
-                                                <span className="text-xs font-bold text-gray-800 dark:text-white">{room.name}</span>
+                                                {isInUse && (
+                                                    <div className="absolute top-1 right-1 flex h-2 w-2">
+                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                                                    </div>
+                                                )}
+                                                <span className={`text-[11px] font-bold text-center px-1 leading-tight text-gray-800 dark:text-white`}>
+                                                    {room.name}
+                                                </span>
                                                 {isEditMode && (
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); handleRemoveFromGrid(room); }}
-                                                        className="mt-1 text-xs text-red-500 hover:underline"
+                                                        className="mt-0.5 text-[9px] text-red-500 hover:underline"
                                                     >
                                                         Gỡ
                                                     </button>
+                                                )}
+                                                {isInUse && !isEditMode && (
+                                                    <span className="text-[8px] font-bold text-rose-600 dark:text-rose-400 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity uppercase">Đang học</span>
                                                 )}
                                             </div>
                                         );
@@ -821,9 +898,17 @@ export const RoomManagement: React.FC = () => {
                                     >
                                         <div className="flex items-center justify-between">
                                             <div className="flex flex-col">
-                                                <span className={`text-sm font-bold ${room.type === 'COMPUTER_LAB' ? 'text-blue-700 dark:text-blue-400' : room.type === 'CLASSROOM' ? 'text-orange-700 dark:text-orange-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
-                                                    {room.name}
-                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`text-sm font-bold ${room.type === 'COMPUTER_LAB' ? 'text-blue-700 dark:text-blue-400' : room.type === 'CLASSROOM' ? 'text-orange-700 dark:text-orange-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                                                        {room.name}
+                                                    </span>
+                                                    {inUseRoomIds.has(room.id) && (
+                                                        <span className="relative flex h-2 w-2" title="Đang sử dụng">
+                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75"></span>
+                                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-600"></span>
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <span className="text-[10px] opacity-70 italic">{getRoomTypeLabel(room.type)}</span>
                                             </div>
                                             <div className="flex gap-1">

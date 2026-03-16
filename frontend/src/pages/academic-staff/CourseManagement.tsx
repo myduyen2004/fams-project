@@ -4,7 +4,7 @@ import { Plus, Search, Upload, Layers } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { courseService } from '../../services/api/courseService';
-import { StatusFilter, Pagination, SelectionActionBar } from '../../components/academic-staff';
+import { StatusFilter, Pagination, SelectionActionBar, StatusBadge } from '../../components/academic-staff';
 import { CourseFormModal } from '../../components/academic-staff/CourseFormModal';
 import { ImportCourseModal } from '../../components/academic-staff/ImportCourseModal';
 import { ImportGradeComponentModal } from '../../components/academic-staff/ImportGradeComponentModal';
@@ -372,17 +372,7 @@ export const CourseManagement: React.FC = () => {
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3 text-center">
-                                                {course.status === 'ACTIVE' ? (
-                                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400 border border-green-100 dark:border-green-900/30">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                                                        Đang mở
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-100 dark:border-red-900/30">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-                                                        Ngừng đào tạo
-                                                    </span>
-                                                )}
+                                                <StatusBadge status={course.status} variant="table" />
                                             </td>
                                         </tr>
                                     ))
