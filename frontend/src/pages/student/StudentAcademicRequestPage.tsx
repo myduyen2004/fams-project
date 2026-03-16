@@ -141,7 +141,10 @@ export const StudentAcademicRequestPage: React.FC = () => {
     const fetchSemesters = useCallback(async () => {
         try {
             const response = await apiClient.get('/v1/semesters/active');
-            setSemesters(response.data);
+            // Filter only UPCOMING semesters on frontend
+            const semesterData = Array.isArray(response.data) ? response.data : [];
+            const upcomingOnly = semesterData.filter((s: any) => s.status === 'upcoming');
+            setSemesters(upcomingOnly);
         } catch (err) {
             console.error('Failed to fetch semesters', err);
         }
