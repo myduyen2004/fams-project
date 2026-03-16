@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, Fragment } from 'react';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { Card } from '../../components/common/Card';
 import {
@@ -13,8 +13,11 @@ import {
     BookOpen,
     Plus,
     Lock,
-    FileText
+    FileText,
+    Check,
+    ChevronDown
 } from 'lucide-react';
+import { Listbox, Transition } from '@headlessui/react';
 import { toast } from 'react-hot-toast';
 import timetableService, { WeeklyTimetableDTO, TimetableSlotDTO } from '../../services/api/timetableService';
 import { assignmentService, AssignmentDTO } from '../../services/api/assignmentService';
@@ -492,20 +495,52 @@ export const LecturerSchedulePage: React.FC = () => {
 
                     <div className="flex items-center justify-between gap-4 p-2 rounded-xl">
                         <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 px-3 py-2 rounded-lg border border-orange-100 dark:border-orange-800">
-                                <span className="text-gray-500 dark:text-gray-400 text-sm font-medium flex items-center gap-1 whitespace-nowrap">
-                                    <span className="text-xs">▼</span> Lọc:
-                                </span>
-                                <select
-                                    value={selectedYear}
-                                    onChange={handleYearChange}
-                                    className="bg-transparent border-none text-fpt-orange font-bold focus:ring-0 cursor-pointer text-sm p-0 pr-6"
-                                    style={{ backgroundImage: 'none' }}
-                                >
-                                    {YEARS.map(y => (
-                                        <option key={y} value={y}>{y}</option>
-                                    ))}
-                                </select>
+                            {/* Year Selector */}
+                            <div className="relative">
+                                <Listbox value={selectedYear} onChange={(val) => handleYearChange({ target: { value: val } } as any)}>
+                                    <div className="relative">
+                                        <Listbox.Button className="flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 px-3 py-2 rounded-lg border border-orange-100 dark:border-orange-800 text-fpt-orange font-bold text-sm transition-all hover:bg-orange-100 dark:hover:bg-orange-900/30">
+                                            <span className="text-gray-500 dark:text-gray-400 font-medium flex items-center gap-1 whitespace-nowrap">
+                                                Lọc:
+                                            </span>
+                                            <span>{selectedYear}</span>
+                                            <ChevronDown size={14} className="text-fpt-orange" />
+                                        </Listbox.Button>
+                                        <Transition
+                                            as={Fragment}
+                                            leave="transition ease-in duration-100"
+                                            leaveFrom="opacity-100"
+                                            leaveTo="opacity-0"
+                                        >
+                                            <Listbox.Options className="absolute z-30 mt-1 max-h-60 w-full overflow-auto rounded-xl bg-white dark:bg-zinc-800 py-1 text-sm shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm border border-gray-100 dark:border-zinc-700">
+                                                {YEARS.map((year) => (
+                                                    <Listbox.Option
+                                                        key={year}
+                                                        className={({ active }) =>
+                                                            `relative cursor-default select-none py-2 pl-10 pr-4 ${
+                                                                active ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange' : 'text-gray-900 dark:text-gray-200'
+                                                            }`
+                                                        }
+                                                        value={year}
+                                                    >
+                                                        {({ selected }) => (
+                                                            <>
+                                                                <span className={`block truncate ${selected ? 'font-bold' : 'font-normal'}`}>
+                                                                    {year}
+                                                                </span>
+                                                                {selected ? (
+                                                                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-fpt-orange">
+                                                                        <Check className="h-4 w-4" aria-hidden="true" />
+                                                                    </span>
+                                                                ) : null}
+                                                            </>
+                                                        )}
+                                                    </Listbox.Option>
+                                                ))}
+                                            </Listbox.Options>
+                                        </Transition>
+                                    </div>
+                                </Listbox>
                             </div>
 
                             <div className="flex items-center gap-1">
@@ -517,20 +552,49 @@ export const LecturerSchedulePage: React.FC = () => {
                                     <ChevronLeft size={20} />
                                 </button>
 
-                                <div className="relative">
-                                    <div className="flex items-center gap-2 bg-white dark:bg-zinc-800 px-3 py-2 rounded-lg border border-fpt-orange/50 shadow-sm focus-within:ring-2 ring-fpt-orange/20">
-                                        <select
-                                            value={getCurrentWeekValue()}
-                                            onChange={handleWeekChange}
-                                            className="bg-transparent border-none text-gray-700 dark:text-gray-200 font-medium focus:ring-0 cursor-pointer text-sm p-0 w-64"
-                                        >
-                                            {weeks.map((week) => (
-                                                <option key={week.value} value={week.value}>
-                                                    {week.label}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
+                                {/* Week Selector */}
+                                <div className="relative min-w-[260px]">
+                                    <Listbox value={getCurrentWeekValue()} onChange={(val) => handleWeekChange({ target: { value: val } } as any)}>
+                                        <div className="relative">
+                                            <Listbox.Button className="flex items-center justify-between w-full gap-2 bg-white dark:bg-zinc-800 px-3 py-2 rounded-lg border border-fpt-orange/50 shadow-sm text-gray-700 dark:text-gray-200 font-medium text-sm transition-all hover:border-fpt-orange focus:ring-2 ring-fpt-orange/20">
+                                                <span className="truncate">{weeks.find(w => w.value === getCurrentWeekValue())?.label || 'Chọn tuần'}</span>
+                                                <ChevronDown size={14} className="text-gray-400" />
+                                            </Listbox.Button>
+                                            <Transition
+                                                as={Fragment}
+                                                leave="transition ease-in duration-100"
+                                                leaveFrom="opacity-100"
+                                                leaveTo="opacity-0"
+                                            >
+                                                <Listbox.Options className="absolute z-30 mt-1 max-h-60 w-full overflow-auto rounded-xl bg-white dark:bg-zinc-800 py-1 text-sm shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm border border-gray-100 dark:border-zinc-700">
+                                                    {weeks.map((week) => (
+                                                        <Listbox.Option
+                                                            key={week.value}
+                                                            className={({ active }) =>
+                                                                `relative cursor-default select-none py-2 pl-10 pr-4 ${
+                                                                    active ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange' : 'text-gray-900 dark:text-gray-200'
+                                                                }`
+                                                            }
+                                                            value={week.value}
+                                                        >
+                                                            {({ selected }) => (
+                                                                <>
+                                                                    <span className={`block truncate ${selected ? 'font-bold' : 'font-normal'}`}>
+                                                                        {week.label}
+                                                                    </span>
+                                                                    {selected ? (
+                                                                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-fpt-orange">
+                                                                            <Check className="h-4 w-4" aria-hidden="true" />
+                                                                        </span>
+                                                                    ) : null}
+                                                                </>
+                                                            )}
+                                                        </Listbox.Option>
+                                                    ))}
+                                                </Listbox.Options>
+                                            </Transition>
+                                        </div>
+                                    </Listbox>
                                 </div>
 
                                 <button
