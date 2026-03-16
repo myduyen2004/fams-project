@@ -64,16 +64,12 @@ export const StudentProfilePage: React.FC = () => {
     if (editedProfile) {
       try {
         setIsSaving(true);
-        const updateData: any = {
-          fullName: profile?.fullName, // Keep existing
-          code: profile?.code, // Keep existing
-          email: profile?.email, // Keep existing
+        const updateData = {
           dob: editedProfile.dob,
-          phone: editedProfile.phone,
-          role: profile?.role // Keep existing
+          phone: editedProfile.phone
         };
 
-        const updatedUser = await userService.updateUser(editedProfile.id, updateData);
+        const updatedUser = await userService.updateProfile(updateData);
         
         const fullUpdatedUser = { ...profile, ...updatedUser };
         setProfile(fullUpdatedUser as any);
