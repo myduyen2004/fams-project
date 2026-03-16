@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Home,
     Calendar,
-    ScanFace,
     FolderOpen,
     MessageCircle,
     Send,
@@ -53,12 +52,6 @@ export const LecturerSidebar: React.FC = () => {
             label: 'Lịch giảng dạy',
             icon: <Calendar size={20} />,
             path: '/lecturer/schedule'
-        },
-        {
-            id: 'attendance',
-            label: 'Điểm danh',
-            icon: <ScanFace size={20} />,
-            path: '/lecturer/attendance'
         },
         {
             id: 'management',
