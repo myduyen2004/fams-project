@@ -323,7 +323,10 @@ export const LeturerClassDetailPage: React.FC = () => {
                         </div>
 
                         <div className="flex flex-wrap gap-2">
-                            <button className="flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-zinc-900 text-gray-700 dark:text-gray-200 rounded-xl text-sm font-bold border border-gray-100 transition-all shadow-sm hover:border-fpt-orange/50 hover:text-fpt-orange">
+                            <button 
+                                onClick={() => navigate('/lecturer/grades', { state: { className, semesterCode: detail?.semesterCode } })}
+                                className="flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-zinc-900 text-gray-700 dark:text-gray-200 rounded-xl text-sm font-bold border border-gray-100 transition-all shadow-sm hover:border-fpt-orange/50 hover:text-fpt-orange"
+                            >
                                 Quản lý điểm số
                             </button>
                             <button 

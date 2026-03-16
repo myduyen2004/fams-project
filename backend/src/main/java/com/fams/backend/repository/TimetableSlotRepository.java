@@ -370,4 +370,30 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
                         "AND NOT EXISTS (SELECT asess FROM AttendanceSession asess WHERE asess.timetableSlot.id = ts.id)")
         List<TimetableSlot> findSlotsNeedingSession(@Param("date") LocalDate date, @Param("time") LocalTime time);
 
+        /**
+         * Find room IDs that are currently occupied at a specific date and time
+         * Cross-references timetable slots with SlotType start/end times
+         */
+        @Query("SELECT DISTINCT ts.room.id FROM TimetableSlot ts " +
+                        "JOIN ts.slotType st " +
+                        "WHERE ts.date = :date " +
+                        "AND ts.status = com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.SCHEDULED " +
+                        "AND st.startTime <= :time " +
+                        "AND st.endTime > :time")
+        List<Long> findCurrentlyOccupiedRoomIds(@Param("date") LocalDate date, @Param("time") LocalTime time);
+        /**
+         * Find full TimetableSlot entities that are currently occupied at a specific date and time
+         * Cross-references timetable slots with SlotType start/end times
+         */
+        @Query("SELECT ts FROM TimetableSlot ts " +
+                        "JOIN FETCH ts.room " +
+                        "JOIN FETCH ts.classSection cs " +
+                        "LEFT JOIN FETCH cs.lecturer " +
+                        "JOIN ts.slotType st " +
+                        "WHERE ts.date = :date " +
+                        "AND ts.status = com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.SCHEDULED " +
+                        "AND st.startTime <= :time " +
+                        "AND st.endTime > :time")
+        List<TimetableSlot> findCurrentlyOccupiedSlots(@Param("date") LocalDate date, @Param("time") LocalTime time);
+
 }

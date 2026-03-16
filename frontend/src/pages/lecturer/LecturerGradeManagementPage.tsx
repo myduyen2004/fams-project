@@ -10,12 +10,16 @@ import { StudentInfoModal } from '../../components/common/StudentInfoModal';
 import { OtpSetupModal } from '../../components/lecturer/OtpSetupModal';
 import { OtpVerificationModal } from '../../components/lecturer/OtpVerificationModal';
 import toast from 'react-hot-toast';
+import { useLocation } from 'react-router-dom';
 
 export const LecturerGradeManagementPage: React.FC = () => {
+    const location = useLocation();
+    const state = location.state as { className?: string; semesterCode?: string } | null;
+
     const [semesters, setSemesters] = useState<SemesterResponse[]>([]);
     const [classes, setClasses] = useState<ClassSectionResponse[]>([]);
-    const [selectedSemester, setSelectedSemester] = useState<string>('');
-    const [selectedClass, setSelectedClass] = useState<string>('');
+    const [selectedSemester, setSelectedSemester] = useState<string>(state?.semesterCode || '');
+    const [selectedClass, setSelectedClass] = useState<string>(state?.className || '');
     const [gradeOverview, setGradeOverview] = useState<GradeOverviewResponse | null>(null);
     const [loadingGrades, setLoadingGrades] = useState<boolean>(false);
 
@@ -95,7 +99,7 @@ export const LecturerGradeManagementPage: React.FC = () => {
             try {
                 const data = await lecturerClassService.getSemesters();
                 setSemesters(data);
-                if (data.length > 0) {
+                if (data.length > 0 && !selectedSemester) {
                     setSelectedSemester(data[0].code);
                 }
             } catch (error) {
@@ -128,8 +132,15 @@ export const LecturerGradeManagementPage: React.FC = () => {
                 size: 100
             });
             setClasses(data.content);
-            // Reset selected class when semester changes
-            setSelectedClass('');
+            // Reset selected class when semester changes, if not matching state
+            if (!state?.className || state.className !== selectedClass) {
+                // Keep the current selectedClass if it was already set (e.g. via state)
+                // but if we are here because of a manual semester change, we might want to reset
+                // For now, let's only reset if the current selectedClass is NOT in the new classes list
+                if (!data.content.find(c => c.className === selectedClass)) {
+                    setSelectedClass('');
+                }
+            }
         } catch (error) {
             console.error("Failed to fetch classes", error);
         }
@@ -460,6 +471,26 @@ export const LecturerGradeManagementPage: React.FC = () => {
             return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
         });
     }, [gradeOverview]);
+    const dynamicPassRate = React.useMemo(() => {
+        if (!gradeOverview || !gradeOverview.studentGrades || gradeOverview.studentGrades.length === 0) return null;
+
+        // Tìm component thi cuối kỳ (FE)
+        const feComponent = gradeOverview.gradeComponents.find(c => c.type === 'FINAL_EXAM');
+        if (!feComponent) return null;
+
+        // Kiểm tra xem đã có bất kỳ sinh viên nào có điểm FE chưa
+        const hasAnyFEGrade = gradeOverview.studentGrades.some(s => s.grades[feComponent.id] !== null);
+        
+        // Nếu chưa có điểm FE, chưa xét tỷ lệ đạt
+        if (!hasAnyFEGrade) return null;
+
+        // Nếu đã có điểm FE, tính tỷ lệ dựa trên số lượng sinh viên đạt (isPassing)
+        // isPassing sẽ tự động được backend cập nhật khi có điểm FE hoặc Resit
+        const passingStudents = gradeOverview.studentGrades.filter(s => s.isPassing).length;
+        const totalStudents = gradeOverview.studentGrades.length;
+        
+        return Math.round((passingStudents / totalStudents) * 100);
+    }, [gradeOverview]);
 
     return (
         <LecturerLayout pageTitle="Quản lý điểm số">
@@ -643,7 +674,7 @@ export const LecturerGradeManagementPage: React.FC = () => {
                                         Tỷ lệ đạt
                                     </div>
                                     <div className="text-xl font-bold text-gray-900 dark:text-white">
-                                        {gradeOverview.passRate ? `${gradeOverview.passRate}%` : '--'}
+                                        {dynamicPassRate !== null ? `${dynamicPassRate}%` : '--'}
                                     </div>
                                 </div>
                             </div>
@@ -838,7 +869,7 @@ export const LecturerGradeManagementPage: React.FC = () => {
                             <div className="text-sm text-gray-500">
                                 Điểm trung bình: <span className="font-bold text-fpt-orange">{gradeOverview.averageGrade ?? '--'}</span>
                                 <span className="mx-4">•</span>
-                                Tỷ lệ đạt: <span className="font-bold text-green-600">{gradeOverview.passRate ? `${gradeOverview.passRate}%` : '--'}</span>
+                                Tỷ lệ đạt: <span className="font-bold text-green-600">{dynamicPassRate !== null ? `${dynamicPassRate}%` : '--'}</span>
                             </div>
                             <div className="text-sm text-gray-400">
                                 Cập nhật lần cuối: {formatDate(gradeOverview.lastUpdated)}
