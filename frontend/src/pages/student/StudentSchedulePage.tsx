@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { StudentLayout } from '../../layouts/StudentLayout';
 import { Card } from '../../components/common/Card';
@@ -14,9 +14,12 @@ import {
     ChevronLeft,
     ChevronRight,
     Lock,
-    FileText
+    FileText,
+    Check,
+    ChevronDown
 } from 'lucide-react';
 import axios from 'axios';
+import { Listbox, Transition } from '@headlessui/react';
 import { toast } from 'react-hot-toast';
 import timetableService, { WeeklyTimetableDTO, TimetableSlotDTO } from '../../services/api/timetableService';
 
@@ -43,6 +46,7 @@ export const StudentSchedulePage: React.FC = () => {
     const [showLecturerPopup, setShowLecturerPopup] = useState(false);
     const [isScheduleHidden, setIsScheduleHidden] = useState(false);
     const [exporting, setExporting] = useState(false);
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
     // Semester State
     const [semesters, setSemesters] = useState<Semester[]>([]);
@@ -68,32 +72,29 @@ export const StudentSchedulePage: React.FC = () => {
         return `${year}-${month}-${day}`;
     };
 
-    // Generate weeks based on semester start/end dates
+    const YEARS = [2024, 2025, 2026];
+
+    // Generate weeks based on selected year
     const generateWeeks = () => {
-        if (!semesterStartDate || !semesterEndDate) return [];
-
         const weeks = [];
-        const startSem = new Date(semesterStartDate);
-        const endSem = new Date(semesterEndDate);
+        const d = new Date(selectedYear, 0, 1);
+        const startOfFirstWeek = getStartOfWeek(d);
 
-        const startOfFirstWeek = getStartOfWeek(startSem);
-        let currentStart = new Date(startOfFirstWeek);
+        for (let i = 0; i < 53; i++) {
+            const startOfWeek = new Date(startOfFirstWeek);
+            startOfWeek.setDate(startOfFirstWeek.getDate() + (i * 7));
 
-        while (currentStart <= endSem) {
-            const currentEnd = new Date(currentStart);
-            currentEnd.setDate(currentStart.getDate() + 6);
+            if (startOfWeek.getFullYear() > selectedYear && startOfWeek.getMonth() > 0) break;
+
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 6);
 
             weeks.push({
-                value: formatDateToLocal(currentStart),
-                label: `${currentStart.getDate()}/${currentStart.getMonth() + 1} - ${currentEnd.getDate()}/${currentEnd.getMonth() + 1}`,
+                value: formatDateToLocal(startOfWeek),
+                label: `${startOfWeek.getDate()}/${startOfWeek.getMonth() + 1}/${startOfWeek.getFullYear()} - ${endOfWeek.getDate()}/${endOfWeek.getMonth() + 1}/${endOfWeek.getFullYear()}`,
                 isCurrent: false
             });
-
-            const nextWeek = new Date(currentStart);
-            nextWeek.setDate(currentStart.getDate() + 7);
-            currentStart = nextWeek;
         }
-
         return weeks;
     };
 
@@ -111,24 +112,30 @@ export const StudentSchedulePage: React.FC = () => {
         }
     };
 
+    const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const year = Number(e.target.value);
+        setSelectedYear(year);
+        const newDate = new Date(currentDate);
+        newDate.setFullYear(year);
+        setCurrentDate(newDate);
+    };
+
     const handlePrevWeek = () => {
         const newDate = new Date(currentDate);
         newDate.setDate(newDate.getDate() - 7);
-        if (semesterStartDate) {
-            const startOfWeekLimit = getStartOfWeek(new Date(semesterStartDate));
-            if (newDate < startOfWeekLimit) return;
-        }
         setCurrentDate(newDate);
+        if (newDate.getFullYear() !== selectedYear) {
+            setSelectedYear(newDate.getFullYear());
+        }
     };
 
     const handleNextWeek = () => {
         const newDate = new Date(currentDate);
         newDate.setDate(newDate.getDate() + 7);
-        if (semesterEndDate) {
-            const endLimit = new Date(semesterEndDate);
-            if (newDate > endLimit) return;
-        }
         setCurrentDate(newDate);
+        if (newDate.getFullYear() !== selectedYear) {
+            setSelectedYear(newDate.getFullYear());
+        }
     };
 
     const fetchSemesters = async () => {
@@ -138,19 +145,21 @@ export const StudentSchedulePage: React.FC = () => {
             setSemesters(data);
 
             if (data.length > 0) {
-                const defaultSem = data[0];
-                setSelectedSemester(defaultSem.code);
-                setSemesterStartDate(defaultSem.startDate);
-                setSemesterEndDate(defaultSem.endDate);
-
                 const today = new Date();
-                const start = new Date(defaultSem.startDate);
-                const end = new Date(defaultSem.endDate);
+                // Find a semester that contains today
+                const currentSem = data.find(s => {
+                    const start = new Date(s.startDate);
+                    const end = new Date(s.endDate);
+                    return today >= start && today <= end;
+                });
 
-                if (today >= start && today <= end) {
-                    setCurrentDate(today);
+                if (currentSem) {
+                    setSelectedSemester(currentSem.code);
+                    setSemesterStartDate(currentSem.startDate);
+                    setSemesterEndDate(currentSem.endDate);
                 } else {
-                    setCurrentDate(start);
+                    // Default to first semester but don't change currentDate
+                    setSelectedSemester(data[0].code);
                 }
             }
         } catch (err) {
@@ -218,6 +227,7 @@ export const StudentSchedulePage: React.FC = () => {
         4: { start: '15:30', end: '17:45' },
     };
 
+
     const dynamicSlotTimes = useMemo(() => {
         const times: Record<number, { start: string; end: string }> = { ...SLOT_TIMES };
         if (timetable?.days) {
@@ -236,20 +246,25 @@ export const StudentSchedulePage: React.FC = () => {
     }, [timetable]);
 
     const getStatusStyle = (slot?: TimetableSlotDTO) => {
-        if (slot) {
-            const label = getStatusLabel(slot);
-            if (label === 'Đã hủy') return 'bg-red-50 text-red-600 border-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800';
-            if (label === 'VẮNG MẶT') return 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800';
-            if (label === 'CÓ MẶT') return 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800';
-        }
+        if (!slot) return 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700';
+        
+        const label = getStatusLabel(slot);
+        if (label === 'Đã hủy') return 'bg-red-50 text-red-600 border-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800';
+        if (label === 'Vắng mặt') return 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800';
+        if (label === 'Có mặt') return 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800';
+        if (label === 'Có phép') return 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800';
+        
         return 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700';
     };
 
     const getStatusLabel = (slot: TimetableSlotDTO) => {
         if (slot.status === 'CANCELLED') return 'Đã hủy';
-        if (slot.attendanceStatus === 'PRESENT') return 'CÓ MẶT';
-        if (slot.attendanceStatus === 'ABSENT') return 'VẮNG MẶT';
+        
+        if (slot.attendanceStatus === 'PRESENT') return 'Có mặt';
+        if (slot.attendanceStatus === 'ABSENT') return 'Vắng mặt';
+        if (slot.attendanceStatus === 'EXCUSED') return 'Có phép';
 
+        // Auto-calculate for unmarked slots
         if (slot.date && slot.slotNumber) {
             const now = new Date();
             const slotDateStr = slot.date.split('T')[0];
@@ -260,9 +275,11 @@ export const StudentSchedulePage: React.FC = () => {
                 const threshold = slot.absentThresholdMinutes ?? 15;
                 const attendanceDeadline = new Date(startTime.getTime() + threshold * 60000);
 
-                if (now > attendanceDeadline) return 'VẮNG MẶT';
+                if (now < attendanceDeadline) return 'Chưa điểm danh';
+                return 'Vắng mặt';
             }
         }
+
         return 'Chưa điểm danh';
     };
 
@@ -323,46 +340,111 @@ export const StudentSchedulePage: React.FC = () => {
                 <div className="flex flex-col gap-4">
                     <div>
                         <div className="flex items-center gap-2 text-fpt-orange font-bold text-sm mb-1">
-                            <CalendarIcon size={16} /> {semesters.find(s => s.code === selectedSemester)?.name || 'Học kỳ'}
+                            <CalendarIcon size={16} /> Năm học {selectedYear}-{selectedYear + 1}
                         </div>
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">Lịch học theo tuần</h1>
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Lịch học theo tuần</h1>
                     </div>
 
                     <div className="flex items-center justify-between gap-4 p-2 rounded-xl">
                         <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 px-3 py-2 rounded-lg border border-orange-100 dark:border-orange-800">
-                                <span className="text-gray-500 dark:text-gray-400 text-sm font-medium flex items-center gap-1 whitespace-nowrap">
-                                    <span className="text-xs">▼</span> Học kỳ:
-                                </span>
-                                <select
-                                    value={selectedSemester}
-                                    onChange={handleSemesterChange}
-                                    className="bg-transparent border-none text-fpt-orange font-bold focus:ring-0 cursor-pointer text-sm p-0 pr-6"
-                                    style={{ backgroundImage: 'none' }}
-                                >
-                                    {semesters.map(s => (
-                                        <option key={s.code} value={s.code}>{s.name || s.code}</option>
-                                    ))}
-                                </select>
+                            {/* Year Selector */}
+                            <div className="relative">
+                                <Listbox value={selectedYear} onChange={(val) => handleYearChange({ target: { value: val } } as any)}>
+                                    <div className="relative">
+                                        <Listbox.Button className="flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 px-3 py-2 rounded-lg border border-orange-100 dark:border-orange-800 text-fpt-orange font-bold text-sm transition-all hover:bg-orange-100 dark:hover:bg-orange-900/30">
+                                            <span className="text-gray-500 dark:text-gray-400 font-medium flex items-center gap-1 whitespace-nowrap">
+                                                Lọc:
+                                            </span>
+                                            <span>{selectedYear}</span>
+                                            <ChevronDown size={14} className="text-fpt-orange" />
+                                        </Listbox.Button>
+                                        <Transition
+                                            as={Fragment}
+                                            leave="transition ease-in duration-100"
+                                            leaveFrom="opacity-100"
+                                            leaveTo="opacity-0"
+                                        >
+                                            <Listbox.Options className="absolute z-30 mt-1 max-h-60 w-full overflow-auto rounded-xl bg-white dark:bg-zinc-800 py-1 text-sm shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm border border-gray-100 dark:border-zinc-700">
+                                                {YEARS.map((year) => (
+                                                    <Listbox.Option
+                                                        key={year}
+                                                        className={({ active }) =>
+                                                            `relative cursor-default select-none py-2 pl-10 pr-4 ${
+                                                                active ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange' : 'text-gray-900 dark:text-gray-200'
+                                                            }`
+                                                        }
+                                                        value={year}
+                                                    >
+                                                        {({ selected }) => (
+                                                            <>
+                                                                <span className={`block truncate ${selected ? 'font-bold' : 'font-normal'}`}>
+                                                                    {year}
+                                                                </span>
+                                                                {selected ? (
+                                                                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-fpt-orange">
+                                                                        <Check className="h-4 w-4" aria-hidden="true" />
+                                                                    </span>
+                                                                ) : null}
+                                                            </>
+                                                        )}
+                                                    </Listbox.Option>
+                                                ))}
+                                            </Listbox.Options>
+                                        </Transition>
+                                    </div>
+                                </Listbox>
                             </div>
 
                             <div className="flex items-center gap-1">
                                 <button onClick={handlePrevWeek} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg text-fpt-orange transition-colors">
                                     <ChevronLeft size={20} />
                                 </button>
-                                <div className="relative">
-                                    <div className="flex items-center gap-2 bg-white dark:bg-zinc-800 px-3 py-2 rounded-lg border border-fpt-orange/50 shadow-sm">
-                                        <select
-                                            value={getCurrentWeekValue()}
-                                            onChange={handleWeekChange}
-                                            className="bg-transparent border-none text-gray-700 dark:text-gray-200 font-medium focus:ring-0 cursor-pointer text-sm p-0 w-64"
-                                        >
-                                            {weeks.map((week) => (
-                                                <option key={week.value} value={week.value}>{week.label}</option>
-                                            ))}
-                                        </select>
-                                    </div>
+                                
+                                {/* Week Selector */}
+                                <div className="relative min-w-[260px]">
+                                    <Listbox value={getCurrentWeekValue()} onChange={(val) => handleWeekChange({ target: { value: val } } as any)}>
+                                        <div className="relative">
+                                            <Listbox.Button className="flex items-center justify-between w-full gap-2 bg-white dark:bg-zinc-800 px-3 py-2 rounded-lg border border-fpt-orange/50 shadow-sm text-gray-700 dark:text-gray-200 font-medium text-sm transition-all hover:border-fpt-orange focus:ring-2 ring-fpt-orange/20">
+                                                <span className="truncate">{weeks.find(w => w.value === getCurrentWeekValue())?.label || 'Chọn tuần'}</span>
+                                                <ChevronDown size={14} className="text-gray-400" />
+                                            </Listbox.Button>
+                                            <Transition
+                                                as={Fragment}
+                                                leave="transition ease-in duration-100"
+                                                leaveFrom="opacity-100"
+                                                leaveTo="opacity-0"
+                                            >
+                                                <Listbox.Options className="absolute z-30 mt-1 max-h-60 w-full overflow-auto rounded-xl bg-white dark:bg-zinc-800 py-1 text-sm shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm border border-gray-100 dark:border-zinc-700">
+                                                    {weeks.map((week) => (
+                                                        <Listbox.Option
+                                                            key={week.value}
+                                                            className={({ active }) =>
+                                                                `relative cursor-default select-none py-2 pl-10 pr-4 ${
+                                                                    active ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange' : 'text-gray-900 dark:text-gray-200'
+                                                                }`
+                                                            }
+                                                            value={week.value}
+                                                        >
+                                                            {({ selected }) => (
+                                                                <>
+                                                                    <span className={`block truncate ${selected ? 'font-bold' : 'font-normal'}`}>
+                                                                        {week.label}
+                                                                    </span>
+                                                                    {selected ? (
+                                                                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-fpt-orange">
+                                                                            <Check className="h-4 w-4" aria-hidden="true" />
+                                                                        </span>
+                                                                    ) : null}
+                                                                </>
+                                                            )}
+                                                        </Listbox.Option>
+                                                    ))}
+                                                </Listbox.Options>
+                                            </Transition>
+                                        </div>
+                                    </Listbox>
                                 </div>
+
                                 <button onClick={handleNextWeek} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg text-fpt-orange transition-colors">
                                     <ChevronRight size={20} />
                                 </button>
@@ -431,12 +513,13 @@ export const StudentSchedulePage: React.FC = () => {
                                                         {slotData ? (() => {
                                                             const status = getStatusLabel(slotData);
                                                             const isOngoing = isOngoingSlot(slotData);
-                                                            const isAbsent = status === 'VẮNG MẶT';
-                                                            const isPresent = status === 'CÓ MẶT';
+                                                            const isAbsent = status === 'Vắng mặt';
+                                                            const isPresent = status === 'Có mặt';
+                                                            const isExcused = status === 'Có phép';
                                                             const isCancelled = status === 'Đã hủy';
 
                                                             const borderClass = isOngoing ? 'border-l-[6px] border-fpt-orange' : 'border-l-4 border-fpt-orange';
-                                                            const bgClass = isOngoing ? 'bg-orange-50/50' : isAbsent || isCancelled ? 'bg-red-50/10' : isPresent ? 'bg-green-50/10' : 'bg-white dark:bg-zinc-900';
+                                                            const bgClass = isOngoing ? 'bg-orange-50/50' : (isAbsent || isCancelled) ? 'bg-red-50/10' : isPresent ? 'bg-emerald-50/10' : isExcused ? 'bg-amber-50/10' : 'bg-white dark:bg-zinc-900';
 
                                                             return (
                                                                 <div
@@ -447,10 +530,13 @@ export const StudentSchedulePage: React.FC = () => {
                                                                     <div>
                                                                         <div className="flex items-center justify-between mb-1.5">
                                                                             <span className="font-extrabold text-[#001D4A] dark:text-white text-sm leading-tight truncate pr-1" title={slotData.courseName}>{slotData.courseCode}</span>
-                                                                            <span className={`shrink-0 px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${
-                                                                                isAbsent ? 'bg-red-50/20 text-red-500/80 border border-red-100/20' :
-                                                                                isPresent ? 'bg-green-50/20 text-green-500/80 border border-green-100/20' :
-                                                                                'bg-slate-50/20 text-slate-400 border border-slate-100/20'
+                                                                            <span className={`shrink-0 px-1.5 py-0.5 rounded text-[9px] font-black uppercase border ${
+                                                                                isAbsent ? 'bg-red-50/20 text-red-500/80 border-red-100/20' :
+                                                                                isPresent ? 'bg-emerald-50/20 text-emerald-500/80 border-emerald-100/20' :
+                                                                                isExcused ? 'bg-amber-50/20 text-amber-500/80 border-amber-100/20' :
+                                                                                isCancelled ? 'bg-red-50/20 text-red-500/80 border-red-100/20' :
+                                                                                isOngoing ? 'bg-fpt-orange/20 text-fpt-orange border-fpt-orange/30' :
+                                                                                'bg-slate-50/20 text-slate-400 border-slate-100/20'
                                                                             }`}>
                                                                                 {status}
                                                                             </span>
