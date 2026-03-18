@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { useRoleAwareNavigate } from '../../hooks/useRoleAwareNavigate';
 import { Upload, Plus, Search, Loader2, ArrowLeft, X } from 'lucide-react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -276,7 +277,7 @@ const SpecializationUpdateModal: React.FC<SpecializationUpdateModalProps> = ({ i
 
 export const MajorDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
-    const navigate = useNavigate();
+    const navigate = useRoleAwareNavigate();
     const [major, setMajor] = useState<Major | null>(null);
     const [specializations, setSpecializations] = useState<Specialization[]>([]);
     const [loading, setLoading] = useState(true);

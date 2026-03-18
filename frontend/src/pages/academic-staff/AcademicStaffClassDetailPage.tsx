@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { useRoleAwareNavigate } from '../../hooks/useRoleAwareNavigate';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { lecturerClassService, ClassDetailResponse, StudentEnrollmentDTO } from '../../services/api/LecturerClass';
 import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
@@ -13,7 +14,7 @@ import toast from 'react-hot-toast';
 
 export const AcademicStaffClassDetailPage: React.FC = () => {
     const { className } = useParams<{ className: string }>();
-    const navigate = useNavigate();
+    const navigate = useRoleAwareNavigate();
     const [detail, setDetail] = useState<ClassDetailResponse | null>(null);
     const [attendanceReport, setAttendanceReport] = useState<ClassAttendanceReportResponse | null>(null);
     const [loading, setLoading] = useState<boolean>(true);

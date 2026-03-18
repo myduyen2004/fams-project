@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Upload, Search, X, Loader2, FileSpreadsheet } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useRoleAwareNavigate } from '../../hooks/useRoleAwareNavigate';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import toast from 'react-hot-toast';
@@ -594,7 +594,7 @@ const MajorUpdateModal: React.FC<MajorUpdateModalProps> = ({ isOpen, onClose, on
 // --- Main Page Component ---
 
 export const MajorManagement: React.FC = () => {
-    const navigate = useNavigate();
+    const navigate = useRoleAwareNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRoleAwareNavigate } from '../../hooks/useRoleAwareNavigate';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { academicStaffService, SystemLogItem } from '../../services/api/academicStaffService';
 import { 
@@ -12,7 +12,7 @@ import {
 import toast from 'react-hot-toast';
 
 export const SystemLogsPage: React.FC = () => {
-    const navigate = useNavigate();
+    const navigate = useRoleAwareNavigate();
     const [logs, setLogs] = useState<SystemLogItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(0);
