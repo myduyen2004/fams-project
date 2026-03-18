@@ -1,14 +1,15 @@
 package com.fams.backend.service;
 
 import com.fams.backend.dto.request.NotificationRequest;
+import com.fams.backend.document.NotificationReadStatus;
 import com.fams.backend.dto.response.NotificationResponse;
 import com.fams.backend.entity.Notification;
-import com.fams.backend.entity.NotificationRecipient;
 import com.fams.backend.entity.User;
+import com.fams.backend.repository.NotificationReadStatusRepository;
 import com.fams.backend.exception.NotFoundException;
-import com.fams.backend.repository.NotificationRecipientRepository;
 import com.fams.backend.repository.NotificationRepository;
 import com.fams.backend.repository.UserRepository;
+import com.fams.backend.service.FcmService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -44,10 +45,13 @@ public class NotificationServiceTest {
     private NotificationRepository notificationRepository;
 
     @Mock
-    private NotificationRecipientRepository notificationRecipientRepository;
+    private NotificationReadStatusRepository notificationReadStatusRepository;
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private FcmService fcmService;
 
     @InjectMocks
     private NotificationService notificationService;
@@ -319,7 +323,7 @@ public class NotificationServiceTest {
         assertEquals("Draft Title", result.getTitle());
         assertEquals("DRAFT", result.getStatus());
         verify(notificationRepository).save(any(Notification.class));
-        verify(notificationRecipientRepository, never()).saveAll(anyList());
+        verify(notificationReadStatusRepository, never()).save(any(NotificationReadStatus.class));
     }
 
     @Test
@@ -346,7 +350,7 @@ public class NotificationServiceTest {
         assertNotNull(result);
         assertEquals("SENT", result.getStatus());
         verify(notificationRepository).save(any(Notification.class));
-        verify(notificationRecipientRepository).saveAll(anyList());
+        verify(notificationReadStatusRepository).save(any(NotificationReadStatus.class));
     }
 
     @Test

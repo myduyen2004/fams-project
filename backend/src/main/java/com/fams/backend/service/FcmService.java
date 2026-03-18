@@ -123,7 +123,7 @@ public class FcmService {
         MulticastMessage message = MulticastMessage.builder()
                 .setNotification(Notification.builder()
                         .setTitle(title)
-                        .setBody(body)
+                        .setBody(stripHtml(body))
                         .build())
                 .putAllData(data)
                 .addAllTokens(tokenValues)
@@ -206,7 +206,7 @@ public class FcmService {
             MulticastMessage message = MulticastMessage.builder()
                     .setNotification(Notification.builder()
                             .setTitle(title)
-                            .setBody(body)
+                            .setBody(stripHtml(body))
                             .build())
                     .putAllData(data)
                     .addAllTokens(chunk)
@@ -243,5 +243,27 @@ public class FcmService {
                 log.error("Error sending FCM batch message: {}", e.getMessage(), e);
             }
         }
+    }
+
+    /**
+     * Strip HTML tags from a string so push notification body displays as plain text.
+     */
+    private String stripHtml(String html) {
+        if (html == null || html.isBlank()) return html;
+        // Remove hidden spans
+        String text = html.replaceAll("(?is)<span[^>]*display:\\s*none[^>]*>.*?</span>", "");
+        // Convert <br> and </p> to newlines
+        text = text.replaceAll("(?i)<br\\s*/?>", "\n");
+        text = text.replaceAll("(?i)</p>", "\n");
+        // Strip all remaining HTML tags
+        text = text.replaceAll("<[^>]*>", "");
+        // Decode common HTML entities
+        text = text.replace("&nbsp;", " ")
+                   .replace("&amp;", "&")
+                   .replace("&lt;", "<")
+                   .replace("&gt;", ">")
+                   .replace("&quot;", "\"")
+                   .replace("&apos;", "'");
+        return text.trim();
     }
 }
