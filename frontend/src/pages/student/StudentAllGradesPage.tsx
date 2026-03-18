@@ -8,15 +8,15 @@ import apiClient from '../../services/api/authService';
 export interface CourseGradeSummary {
     no: number;
     term: number;
-    semesterCode: string;
-    semesterName: string;
+    semesterCode: string | null;
+    semesterName: string | null;
     courseCode: string;
     courseName: string;
     credits: number;
     prerequisiteCodes: string;
-    className: string;
+    className: string | null;
     grade: number | null;
-    status: 'PASSED' | 'FAILED' | 'PENDING';
+    status: 'PASSED' | 'FAILED' | 'PENDING' | 'STUDYING';
     gradesPublished: boolean;
     isCalculatedInGpa?: boolean;
 }
@@ -28,6 +28,8 @@ export interface AllGradesSummaryResponse {
     failedCourses: number;
     pendingCourses: number;
     gpa: number | null;
+    specializationName?: string | null;
+    majorName?: string | null;
 }
 
 const getUserId = (): number => {
@@ -51,7 +53,6 @@ export const StudentAllGradesPage: React.FC = () => {
     const [data, setData] = useState<AllGradesSummaryResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [filterSemester, setFilterSemester] = useState<string>('ALL');
 
     useEffect(() => {
         fetchAllGrades();
@@ -111,27 +112,13 @@ export const StudentAllGradesPage: React.FC = () => {
 
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Ket_Qua_Hoc_Tap');
-        XLSX.writeFile(wb, `KetQuaHocTap_${filterSemester}.xlsx`);
+        XLSX.writeFile(wb, `KetQuaHocTap.xlsx`);
     };
-
-    const semesterOptions = useMemo(() => {
-        if (!data) return [];
-        const seen = new Set<string>();
-        const sems: { code: string; name: string }[] = [];
-        for (const c of data.courses) {
-            if (!seen.has(c.semesterCode)) {
-                seen.add(c.semesterCode);
-                sems.push({ code: c.semesterCode, name: c.semesterName });
-            }
-        }
-        return sems;
-    }, [data]);
 
     const filteredCourses = useMemo(() => {
         if (!data) return [];
-        if (filterSemester === 'ALL') return data.courses;
-        return data.courses.filter(c => c.semesterCode === filterSemester);
-    }, [data, filterSemester]);
+        return data.courses;
+    }, [data]);
 
     if (loading) {
         return (
@@ -166,6 +153,13 @@ export const StudentAllGradesPage: React.FC = () => {
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                         Kết Quả Học Tập
                     </h1>
+                    {(data.specializationName || data.majorName) && (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            {data.majorName && <span>{data.majorName}</span>}
+                            {data.majorName && data.specializationName && <span className="mx-2 text-gray-300 dark:text-gray-600">•</span>}
+                            {data.specializationName && <span className="font-medium text-fpt-orange">{data.specializationName}</span>}
+                        </p>
+                    )}
                 </div>
 
                 {/* Stats Row */}
@@ -221,42 +215,6 @@ export const StudentAllGradesPage: React.FC = () => {
                     </Card>
                 </div>
 
-                {/* Filter bar */}
-                <Card className="p-4 shadow-sm flex flex-wrap gap-2 items-center justify-between">
-                    <div className="flex flex-wrap gap-2 items-center">
-                        <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 mr-2">Lọc theo kỳ:</span>
-                        <button
-                            onClick={() => setFilterSemester('ALL')}
-                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filterSemester === 'ALL'
-                                ? 'bg-gradient-to-r from-fpt-orange to-orange-500 text-white shadow-sm'
-                                : 'bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-zinc-700'
-                                }`}
-                        >
-                            Tất cả
-                        </button>
-                        {semesterOptions.map(sem => (
-                            <button
-                                key={sem.code}
-                                onClick={() => setFilterSemester(sem.code)}
-                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filterSemester === sem.code
-                                    ? 'bg-gradient-to-r from-fpt-orange to-orange-500 text-white shadow-sm'
-                                    : 'bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-zinc-700'
-                                    }`}
-                            >
-                                {sem.name}
-                            </button>
-                        ))}
-                    </div>
-                    <button
-                        onClick={handleExport}
-                        disabled={filteredCourses.length === 0}
-                        className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 shadow-sm"
-                    >
-                        <Download size={16} />
-                        Xuất Excel
-                    </button>
-                </Card>
-
                 {/* Table */}
                 <Card className="p-0 shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
@@ -292,16 +250,31 @@ export const StudentAllGradesPage: React.FC = () => {
                                         >
                                             <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400">{course.no}</td>
                                             <td className="px-3 py-3 text-sm text-gray-600 dark:text-gray-300 font-medium">{course.term}</td>
-                                            <td className="px-3 py-3 text-sm text-gray-700 dark:text-gray-300">{course.semesterCode}</td>
+                                            <td className="px-3 py-3 text-sm text-gray-700 dark:text-gray-300">
+                                                {course.semesterCode ?? <span className="text-gray-400 dark:text-gray-500">—</span>}
+                                            </td>
                                             <td className="px-3 py-3">
-                                                <span className="text-sm font-mono font-bold text-blue-700 dark:text-blue-400">
+                                                <span className="text-sm font-mono font-bold text-gray-800 dark:text-gray-200">
                                                     {course.courseCode}
                                                 </span>
                                             </td>
-                                            <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400">
-                                                {course.prerequisiteCodes || ''}
+                                            <td className="px-3 py-3">
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {(course.prerequisiteCodes || '').split(',').map((code, pIdx) => {
+                                                        const trimmedCode = code.trim();
+                                                        if (!trimmedCode) return null;
+                                                        return (
+                                                            <span
+                                                                key={pIdx}
+                                                                className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-fpt-orange/10 dark:bg-fpt-orange/20 text-fpt-orange border border-fpt-orange/20 dark:border-fpt-orange/30 text-[10px] font-bold tracking-wider"
+                                                            >
+                                                                {trimmedCode}
+                                                            </span>
+                                                        );
+                                                    })}
+                                                </div>
                                             </td>
-                                            <td className="px-3 py-3 text-sm text-gray-800 dark:text-gray-200 font-medium">
+                                            <td className="px-3 py-3 text-sm text-gray-900 dark:text-gray-200 font-medium">
                                                 {course.courseName}
                                             </td>
                                             <td className="px-3 py-3 text-center text-sm text-gray-600 dark:text-gray-300">
@@ -326,6 +299,11 @@ export const StudentAllGradesPage: React.FC = () => {
                                                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 text-xs font-bold border border-red-200 dark:border-red-800/50">
                                                         <XCircle size={12} />
                                                         Failed
+                                                    </span>
+                                                ) : course.status === 'STUDYING' ? (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 text-xs font-bold border border-blue-200 dark:border-blue-800/50">
+                                                        <BookOpen size={12} />
+                                                        Studying
                                                     </span>
                                                 ) : (
                                                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 text-xs font-bold border border-amber-200 dark:border-amber-800/50">
@@ -353,10 +331,20 @@ export const StudentAllGradesPage: React.FC = () => {
                     </div>
                 </Card>
 
-                {/* Summary footer */}
+                {/* Summary footer & Export */}
                 {filteredCourses.length > 0 && (
-                    <div className="text-sm text-gray-500 dark:text-gray-400 text-right">
-                        Hiển thị {filteredCourses.length} môn học
+                    <div className="flex flex-wrap items-center justify-between gap-4 mt-6">
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                            Hiển thị {filteredCourses.length} môn học
+                        </div>
+                        <button
+                            onClick={handleExport}
+                            disabled={filteredCourses.length === 0}
+                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg text-sm font-medium hover:from-green-600 hover:to-green-700 transition-colors disabled:opacity-50 shadow-sm"
+                        >
+                            <Download size={16} />
+                            Xuất Excel
+                        </button>
                     </div>
                 )}
             </div>

@@ -10,6 +10,7 @@ import com.fams.backend.entity.User;
 import com.fams.backend.repository.*;
 import com.fams.backend.service.UserNotificationService;
 import com.fams.backend.service.impl.DashboardServiceImpl;
+import com.fams.backend.service.impl.SystemLogService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -38,6 +39,8 @@ class DashboardServiceImplTest {
     private UserNotificationService notificationService;
     @Mock
     private SystemLogRepository systemLogRepository;
+    @Mock
+    private SystemLogService systemLogService;
 
     @InjectMocks
     private DashboardServiceImpl dashboardService;
@@ -124,7 +127,7 @@ class DashboardServiceImplTest {
         log.setCreatedAt(LocalDateTime.now());
         log.setType(SystemLog.LogType.INFO);
 
-        when(systemLogRepository.findTop5ByOrderByCreatedAtDesc()).thenReturn(Collections.singletonList(log));
+        when(systemLogRepository.findTop10ByOrderByCreatedAtDesc()).thenReturn(Collections.singletonList(log));
 
         List<SystemLogResponse> results = dashboardService.getSystemLogs();
 

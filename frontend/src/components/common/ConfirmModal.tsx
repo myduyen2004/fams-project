@@ -1,5 +1,4 @@
-import React from 'react';
-import { AlertTriangle, CheckCircle, Info, X, AlertCircle } from 'lucide-react';
+import { X } from 'lucide-react';
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -24,39 +23,22 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const getIcon = () => {
-    switch (type) {
-      case 'danger':
-        return <AlertCircle size={24} />;
-      case 'warning':
-        return <AlertTriangle size={24} />;
-      case 'success':
-        return <CheckCircle size={24} />;
-      default:
-        return <Info size={24} />;
-    }
-  };
-
   const getStyles = () => {
     switch (type) {
       case 'danger':
         return {
-          iconBg: 'bg-red-50 text-red-600 dark:bg-red-900/20',
           buttonBg: 'bg-red-600 hover:bg-red-700 shadow-red-500/20'
         };
       case 'warning':
         return {
-          iconBg: 'bg-orange-50 text-orange-600 dark:bg-orange-900/20',
           buttonBg: 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/20'
         };
       case 'success':
         return {
-          iconBg: 'bg-green-50 text-green-600 dark:bg-green-900/20',
           buttonBg: 'bg-green-600 hover:bg-green-700 shadow-green-500/20'
         };
       default:
         return {
-          iconBg: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20',
           buttonBg: 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20'
         };
     }
@@ -77,9 +59,6 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800">
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${styles.iconBg}`}>
-              {getIcon()}
-            </div>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white">
               {title}
             </h3>
@@ -94,7 +73,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
         {/* Body */}
         <div className="p-6">
-          <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+          <p className="text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
             {message}
           </p>
         </div>

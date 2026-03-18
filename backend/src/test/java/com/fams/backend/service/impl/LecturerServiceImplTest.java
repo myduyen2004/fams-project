@@ -27,6 +27,9 @@ class LecturerServiceImplTest {
     @Mock
     private LecturerProfileRepository lecturerProfileRepository;
 
+    @Mock
+    private SystemLogService systemLogService;
+
     @InjectMocks
     private LecturerServiceImpl lecturerService;
 

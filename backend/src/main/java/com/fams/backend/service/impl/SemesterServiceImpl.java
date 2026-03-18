@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@SuppressWarnings("null")
 public class SemesterServiceImpl implements SemesterService {
 
     private final SemesterRepository semesterRepository;
@@ -26,10 +27,19 @@ public class SemesterServiceImpl implements SemesterService {
     private final HolidayRepository holidayRepository;
     private final SemesterWeekdayRepository semesterWeekdayRepository;
     private final TimetableSlotRepository timetableSlotRepository;
+    private final SystemLogService systemLogService;
 
     @Override
     public List<SemesterResponse> getAllSemesters() {
         return semesterRepository.findAllOrderByStartDateDesc()
+                .stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<SemesterResponse> getUpcomingSemesters() {
+        return semesterRepository.findUpcomingSemesters()
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -98,6 +108,7 @@ public class SemesterServiceImpl implements SemesterService {
             log.info("Saving semester to database...");
             Semester savedSemester = semesterRepository.save(semester);
             log.info("Semester saved successfully with ID: {}", savedSemester.getId());
+            systemLogService.logSemesterCreated(savedSemester.getCode(), savedSemester.getName());
 
             SemesterResponse response = convertToDTO(savedSemester);
             log.info("Returning semester response: {}", response);
@@ -140,8 +151,8 @@ public class SemesterServiceImpl implements SemesterService {
             semester.setStatus(Semester.SemesterStatus.ONGOING);
         }
 
-        // Save and return
         Semester updatedSemester = semesterRepository.save(semester);
+        systemLogService.logSemesterUpdated(updatedSemester.getCode(), updatedSemester.getName());
         return convertToDTO(updatedSemester);
     }
 
@@ -157,7 +168,9 @@ public class SemesterServiceImpl implements SemesterService {
         }
 
         // Delete the semester
+        String semesterCode = semester.getCode();
         semesterRepository.delete(semester);
+        systemLogService.logSemesterDeleted(semesterCode);
     }
 
     private SemesterResponse convertToDTO(Semester semester) {
@@ -378,6 +391,7 @@ public class SemesterServiceImpl implements SemesterService {
         }
 
         semesterRepository.save(semester);
+        systemLogService.logSemesterConfigUpdated(semester.getCode());
     }
 
     private Integer mapDayToInteger(String day) {

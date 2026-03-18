@@ -4,7 +4,7 @@ import { Plus, Search, Upload, Layers } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { courseService } from '../../services/api/courseService';
-import { StatusFilter, Pagination, SelectionActionBar } from '../../components/academic-staff';
+import { StatusFilter, Pagination, SelectionActionBar, StatusBadge } from '../../components/academic-staff';
 import { CourseFormModal } from '../../components/academic-staff/CourseFormModal';
 import { ImportCourseModal } from '../../components/academic-staff/ImportCourseModal';
 import { ImportGradeComponentModal } from '../../components/academic-staff/ImportGradeComponentModal';
@@ -122,20 +122,20 @@ export const CourseManagement: React.FC = () => {
     const handleBulkStatusChange = (newStatus: 'ACTIVE' | 'INACTIVE') => {
         if (selectedIds.length === 0) return;
 
-        const confirmTitle = newStatus === 'ACTIVE' ? 'Kích hoạt môn học' : 'Vô hiệu hóa môn học';
+        const confirmTitle = newStatus === 'ACTIVE' ? 'Kích hoạt môn học' : 'Ngừng đào tạo môn học';
         const type = newStatus === 'ACTIVE' ? 'success' : 'danger';
-        const confirmLabel = newStatus === 'ACTIVE' ? 'Kích hoạt' : 'Vô hiệu hóa';
+        const confirmLabel = newStatus === 'ACTIVE' ? 'Kích hoạt' : 'Ngừng đào tạo';
 
         let confirmMsg = '';
         if (selectedIds.length === 1) {
             const selectedItem = courses.find(c => c.id === selectedIds[0]);
             confirmMsg = newStatus === 'ACTIVE'
                 ? `Bạn có chắc chắn muốn kích hoạt môn "${selectedItem?.name}"?`
-                : `Bạn có chắc chắn muốn vô hiệu hóa môn "${selectedItem?.name}"?`;
+                : `Bạn có chắc chắn muốn ngừng đào tạo môn "${selectedItem?.name}"?`;
         } else {
             confirmMsg = newStatus === 'ACTIVE'
                 ? `Bạn có chắc chắn muốn kích hoạt ${selectedIds.length} môn đã chọn?`
-                : `Bạn có chắc chắn muốn vô hiệu hóa ${selectedIds.length} môn đã chọn?`;
+                : `Bạn có chắc chắn muốn ngừng đào tạo ${selectedIds.length} môn đã chọn?`;
         }
 
         setConfirmModal({
@@ -177,9 +177,9 @@ export const CourseManagement: React.FC = () => {
         let confirmMsg = '';
         if (selectedIds.length === 1) {
             const selectedItem = courses.find(c => c.id === selectedIds[0]);
-            confirmMsg = `Bạn có chắc chắn muốn xóa môn "${selectedItem?.name}"? Hành động này không thể hoàn tác.`;
+            confirmMsg = `Bạn có chắc chắn muốn xóa môn "${selectedItem?.name}"?\nHành động này không thể hoàn tác.`;
         } else {
-            confirmMsg = `Bạn có chắc chắn muốn xóa ${selectedIds.length} môn đã chọn? Hành động này không thể hoàn tác.`;
+            confirmMsg = `Bạn có chắc chắn muốn xóa ${selectedIds.length} môn đã chọn?\nHành động này không thể hoàn tác.`;
         }
 
         setConfirmModal({
@@ -252,7 +252,13 @@ export const CourseManagement: React.FC = () => {
                                     className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-fpt-orange focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                                 />
                             </div>
-                            <StatusFilter value={status} onChange={(v) => { setStatus(v); setPage(0); }} isOpen={isFilterOpen} onToggle={() => setIsFilterOpen(prev => !prev)} />
+                            <StatusFilter
+                                value={status}
+                                onChange={(v) => { setStatus(v); setPage(0); }}
+                                isOpen={isFilterOpen}
+                                onToggle={() => setIsFilterOpen(prev => !prev)}
+                                inactiveLabel="Ngừng đào tạo"
+                            />
                         </div>
 
                         <SelectionActionBar
@@ -266,14 +272,16 @@ export const CourseManagement: React.FC = () => {
                                 return item?.canDelete !== false;
                             })}
                             itemLabel="môn học"
+                            activateLabel="Kích hoạt"
+                            deactivateLabel="Ngừng đào tạo"
                         />
                     </div>
 
                     <div className="overflow-x-auto">
-                        <table className="w-full">
+                        <table className="w-full table-fixed">
                             <thead>
                                 <tr className="bg-fpt-orange text-white">
-                                    <th className="px-4 py-3 text-left rounded-tl-lg">
+                                    <th className="w-12 px-4 py-3 text-left rounded-tl-lg">
                                         <input
                                             type="checkbox"
                                             className="w-4 h-4 rounded border-white/20 text-white focus:ring-0 focus:ring-offset-0 bg-transparent cursor-pointer"
@@ -281,12 +289,12 @@ export const CourseManagement: React.FC = () => {
                                             checked={courses.length > 0 && selectedIds.length === courses.length}
                                         />
                                     </th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Mã môn</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Tên môn học</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Số tín chỉ</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Tổng trọng số</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider">Tính GPA</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-lg">Trạng thái</th>
+                                    <th className="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Mã môn</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Tên môn học</th>
+                                    <th className="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Số tín chỉ</th>
+                                    <th className="w-36 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Tổng trọng số</th>
+                                    <th className="w-28 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider whitespace-nowrap">Tính GPA</th>
+                                    <th className="w-40 px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-lg whitespace-nowrap">Trạng thái</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
@@ -324,8 +332,8 @@ export const CourseManagement: React.FC = () => {
                                                     onChange={() => { }} // controlled by onClick
                                                 />
                                             </td>
-                                            <td className="px-4 py-3 text-center font-medium font-semibold text-gray-900 dark:text-white">{course.code}</td>
-                                            <td className="px-4 py-3 text-left text-gray-600 dark:text-zinc-400">{course.name}</td>
+                                            <td className="px-4 py-3 text-center font-medium font-semibold text-gray-900 dark:text-white truncate" title={course.code}>{course.code}</td>
+                                            <td className="px-4 py-3 text-left text-gray-600 dark:text-zinc-400 truncate" title={course.name}>{course.name}</td>
                                             <td className="px-4 py-3 text-center">
                                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
                                                     {course.credits} TC
@@ -364,17 +372,7 @@ export const CourseManagement: React.FC = () => {
                                                 </div>
                                             </td>
                                             <td className="px-4 py-3 text-center">
-                                                {course.status === 'ACTIVE' ? (
-                                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400 border border-green-100 dark:border-green-900/30">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                                                        Đang mở
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-100 dark:border-red-900/30">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-                                                        Ngừng đào tạo
-                                                    </span>
-                                                )}
+                                                <StatusBadge status={course.status} variant="table" />
                                             </td>
                                         </tr>
                                     ))

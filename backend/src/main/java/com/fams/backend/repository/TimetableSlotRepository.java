@@ -17,6 +17,24 @@ import java.util.List;
 @Repository
 public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Long> {
 
+        List<TimetableSlot> findByDate(LocalDate date);
+
+        List<TimetableSlot> findByDateAndSlotType_Id(LocalDate date, Long slotTypeId);
+    
+        @Query("SELECT ts FROM TimetableSlot ts " +
+                "JOIN FETCH ts.room r " +
+                "JOIN FETCH ts.classSection cs " +
+                "LEFT JOIN FETCH cs.lecturer l " +
+                "JOIN FETCH ts.slotType st " +
+                "WHERE ts.date = :date AND ts.slotType.id = :slotTypeId")
+        List<TimetableSlot> findByDateAndSlotType_IdEager(@Param("date") LocalDate date, @Param("slotTypeId") Long slotTypeId);
+    
+        @Query("SELECT ts FROM TimetableSlot ts " +
+                "JOIN FETCH ts.classSection cs " +
+                "JOIN FETCH ts.slotType st " +
+                "WHERE ts.date = :date")
+        List<TimetableSlot> findByDateEager(@Param("date") LocalDate date);
+
         // Derived queries for conflict checking
         boolean existsByRoomIdAndDateAndSlotNumberAndStatusNot(Long roomId, LocalDate date, Integer slotNumber,
                         TimetableSlot.TimetableSlotStatus status);
@@ -351,5 +369,31 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
                         "AND st.endTime > :time " +
                         "AND NOT EXISTS (SELECT asess FROM AttendanceSession asess WHERE asess.timetableSlot.id = ts.id)")
         List<TimetableSlot> findSlotsNeedingSession(@Param("date") LocalDate date, @Param("time") LocalTime time);
+
+        /**
+         * Find room IDs that are currently occupied at a specific date and time
+         * Cross-references timetable slots with SlotType start/end times
+         */
+        @Query("SELECT DISTINCT ts.room.id FROM TimetableSlot ts " +
+                        "JOIN ts.slotType st " +
+                        "WHERE ts.date = :date " +
+                        "AND ts.status = com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.SCHEDULED " +
+                        "AND st.startTime <= :time " +
+                        "AND st.endTime > :time")
+        List<Long> findCurrentlyOccupiedRoomIds(@Param("date") LocalDate date, @Param("time") LocalTime time);
+        /**
+         * Find full TimetableSlot entities that are currently occupied at a specific date and time
+         * Cross-references timetable slots with SlotType start/end times
+         */
+        @Query("SELECT ts FROM TimetableSlot ts " +
+                        "JOIN FETCH ts.room " +
+                        "JOIN FETCH ts.classSection cs " +
+                        "LEFT JOIN FETCH cs.lecturer " +
+                        "JOIN ts.slotType st " +
+                        "WHERE ts.date = :date " +
+                        "AND ts.status = com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.SCHEDULED " +
+                        "AND st.startTime <= :time " +
+                        "AND st.endTime > :time")
+        List<TimetableSlot> findCurrentlyOccupiedSlots(@Param("date") LocalDate date, @Param("time") LocalTime time);
 
 }

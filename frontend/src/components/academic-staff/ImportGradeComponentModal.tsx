@@ -174,8 +174,8 @@ export const ImportGradeComponentModal: React.FC<ImportGradeComponentModalProps>
                     const accumulated = accumulatedWeight[courseCode] || 0;
                     const projected = existing + accumulated + weight;
                     if (projected > 100) {
-                        warnings.push(
-                            `Thêm dòng này sẽ làm tổng trọng số vượt 100% (${projected.toFixed(1)}%). Dòng này sẽ bị bỏ qua khi import.`
+                        errors.push(
+                            `Thêm dòng này sẽ làm tổng trọng số vượt 100% (${projected.toFixed(1)}%).`
                         );
                     } else {
                         // Only accumulate for valid rows that won't exceed
@@ -336,15 +336,16 @@ export const ImportGradeComponentModal: React.FC<ImportGradeComponentModalProps>
                     {!hasPreview && !hasResult && (
                         <>
                             {/* Format guide */}
-                            <div className="p-4 bg-blue-50 dark:bg-blue-900/10 text-blue-800 dark:text-blue-300 rounded-lg text-sm">
-                                <p className="font-semibold mb-1">Hướng dẫn:</p>
-                                <ul className="list-disc pl-4 space-y-1">
-                                    <li>Tải lên file <strong>.xlsx</strong> hoặc <strong>.xls</strong> chứa dữ liệu thành phần điểm.</li>
-                                    <li>Cột bắt buộc theo thứ tự: <strong>courseCode, name, type, weight</strong>.</li>
-                                    <li>Cột tuỳ chọn: <strong>description</strong>.</li>
-                                    <li>Type hợp lệ: <strong>{VALID_TYPES.join(', ')}</strong>.</li>
-                                    <li>Mỗi môn chỉ được có <strong>1 Final Exam</strong>.</li>
-                                    <li>Tổng trọng số (%) của mỗi môn không được <strong>vượt quá 100%</strong>.</li>
+                            <div className="p-4 bg-blue-50 dark:bg-blue-900/10 text-blue-800 dark:text-blue-300 rounded-xl text-sm mb-4">
+                                <div className="flex items-center gap-2 font-bold mb-2">
+                                    <AlertCircle size={16} className="text-blue-600 dark:text-blue-400" />
+                                    <span>Hướng dẫn quan trọng:</span>
+                                </div>
+                                <ul className="list-disc pl-5 space-y-1 text-xs opacity-90">
+                                    <li>Sử dụng <span className="font-bold underline cursor-pointer" onClick={handleDownloadTemplate}>file mẫu Excel</span> để đảm bảo đúng cấu trúc (Mã môn, Tên, Loại, Trọng số).</li>
+                                    <li>Các loại thành phần hợp lệ (Type): <span className="font-mono text-[10px] break-all">{VALID_TYPES.join(', ')}</span>.</li>
+                                    <li>Mỗi môn học chỉ được phép có <span className="font-bold italic text-blue-700 dark:text-blue-400">duy nhất một</span> thành phần loại <span className="font-bold">FINAL_EXAM</span>.</li>
+                                    <li>Tổng <span className="font-bold text-red-600 dark:text-red-400 underline">trọng số (%)</span> của tất cả đầu điểm trong cùng một môn không được vượt quá <span className="font-bold underline">100%</span>.</li>
                                 </ul>
                             </div>
 

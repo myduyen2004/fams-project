@@ -67,4 +67,26 @@ public class AttendanceController {
             @PathVariable String className) {
         return ResponseEntity.ok(attendanceService.getClassAttendanceReport(className));
     }
+
+    @GetMapping("/student/report")
+    @PreAuthorize("hasRole('STUDENT')")
+    @Operation(summary = "Get current student attendance summary")
+    public ResponseEntity<AttendanceDTO.StudentAttendanceSummaryResponse> getStudentAttendanceSummary(
+            @RequestParam(required = false) String semesterCode,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User student = userRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+        return ResponseEntity.ok(attendanceService.getStudentAttendanceSummary(student.getId(), semesterCode));
+    }
+
+    @GetMapping("/student/class/{className}/detail")
+    @PreAuthorize("hasRole('STUDENT')")
+    @Operation(summary = "Get student detailed attendance for a class")
+    public ResponseEntity<AttendanceDTO.IndividualAttendanceDetail> getStudentAttendanceDetail(
+            @PathVariable String className,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User student = userRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+        return ResponseEntity.ok(attendanceService.getStudentAttendanceDetail(student.getId(), className));
+    }
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    Plus, Download, Edit2, Copy, Trash2, ChevronLeft,
+    Plus, Download, Edit2, Trash2, ChevronLeft,
     Info, CheckCircle2, AlertCircle, Loader2, Upload, BookOpen
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -47,6 +47,7 @@ const gradeTypeOptions: { value: GradeType; label: string }[] = [
 ];
 
 import { GradeTypeSelector } from '../../components/academic-staff/GradeTypeSelector';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 
 export const GradeConfigurationPage: React.FC = () => {
     const { courseId } = useParams<{ courseId: string }>();
@@ -75,6 +76,18 @@ export const GradeConfigurationPage: React.FC = () => {
         weight: '',
         isResit: false,
     });
+
+    // Confirm Modal
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'danger' as 'danger' | 'warning' | 'info' | 'success',
+        onConfirm: () => { },
+        confirmLabel: 'Xác nhận'
+    });
+
+    const closeConfirmModal = () => setConfirmModal(prev => ({ ...prev, isOpen: false }));
 
     // Load data
     const loadData = useCallback(async () => {
@@ -252,28 +265,26 @@ export const GradeConfigurationPage: React.FC = () => {
         }
     };
 
-    const handleDuplicateComponent = async (component: GradeComponent) => {
-        try {
-            await gradeComponentService.duplicateGradeComponent(component.id);
-            toast.success('Đã nhân đôi thành phần điểm');
-            loadData();
-        } catch (error) {
-            console.error('Failed to duplicate:', error);
-            toast.error('Không thể nhân đôi thành phần điểm');
-        }
-    };
-
-    const handleDeleteComponent = async (component: GradeComponent) => {
-        if (!confirm(`Bạn có chắc muốn xóa "${component.name}"?`)) return;
-
-        try {
-            await gradeComponentService.deleteGradeComponent(component.id);
-            toast.success('Đã xóa thành phần điểm');
-            loadData();
-        } catch (error) {
-            console.error('Failed to delete:', error);
-            toast.error('Không thể xóa thành phần điểm');
-        }
+    const handleDeleteComponent = (component: GradeComponent) => {
+        setConfirmModal({
+            isOpen: true,
+            title: 'Xóa thành phần điểm',
+            message: `Bạn có chắc chắn muốn xóa "${component.name}"?\nHành động này không thể hoàn tác.`,
+            type: 'danger',
+            confirmLabel: 'Xóa',
+            onConfirm: async () => {
+                try {
+                    await gradeComponentService.deleteGradeComponent(component.id);
+                    toast.success('Đã xóa thành phần điểm');
+                    loadData();
+                    closeConfirmModal();
+                } catch (error) {
+                    console.error('Failed to delete:', error);
+                    toast.error('Không thể xóa thành phần điểm');
+                    closeConfirmModal();
+                }
+            }
+        });
     };
 
 
@@ -341,31 +352,30 @@ export const GradeConfigurationPage: React.FC = () => {
         <AcademicStaffLayout pageTitle="Cấu hình điểm">
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                    <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <button
-                                onClick={() => navigate('/academic-staff/courses')}
-                                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
-                            >
-                                <ChevronLeft className="w-5 h-5 text-gray-500" />
-                            </button>
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${course.status === 'ACTIVE'
-                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
-                                }`}>
-                                {course.status}
-                            </span>
+                <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => navigate('/academic-staff/courses')}
+                            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
+                        >
+                            <ChevronLeft className="w-5 h-5 text-gray-500" />
+                        </button>
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${course.status === 'ACTIVE'
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                            : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                            }`}>
+                            {course.status}
+                        </span>
+                    </div>
 
-
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-4">
+                        <div className="flex items-center gap-4 flex-wrap flex-1 min-w-0">
+                            <h1 className="text-2xl font-bold text-gray-900 dark:text-white line-clamp-2 break-words">
                                 {course.name} ({course.code})
                             </h1>
 
                             {/* GPA Toggle */}
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 dark:bg-orange-900/10 rounded-xl border border-orange-100 dark:border-orange-900/30 transition-all hover:border-orange-200">
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 dark:bg-orange-900/10 rounded-xl border border-orange-100 dark:border-orange-900/30 transition-all hover:border-orange-200 shrink-0">
                                 <span className="text-[11px] uppercase tracking-wider font-bold text-orange-600 dark:text-orange-400 whitespace-nowrap">Tính GPA:</span>
                                 <button
                                     onClick={async () => {
@@ -378,7 +388,7 @@ export const GradeConfigurationPage: React.FC = () => {
                                             toast.error('Không thể cập nhật trạng thái GPA');
                                         }
                                     }}
-                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${course.isCalculatedInGpa ? 'bg-fpt-orange' : 'bg-gray-300 dark:bg-zinc-600'}`}
+                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none shrink-0 ${course.isCalculatedInGpa ? 'bg-fpt-orange' : 'bg-gray-300 dark:bg-zinc-600'}`}
                                 >
                                     <span
                                         className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${course.isCalculatedInGpa ? 'translate-x-[18px]' : 'translate-x-[2px]'}`}
@@ -389,33 +399,35 @@ export const GradeConfigurationPage: React.FC = () => {
                                 </span>
                             </div>
                         </div>
-                        <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
-                            Cấu hình các thành phần điểm, trọng số và yêu cầu đánh giá cho môn học này.
-                        </p>
+
+                        <div className="flex flex-wrap items-center gap-3 shrink-0">
+                            <button
+                                onClick={handleExport}
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-zinc-700 transition-all duration-200 shadow-sm whitespace-nowrap"
+                            >
+                                <Download className="w-4 h-4" />
+                                Xuất file
+                            </button>
+                            <button
+                                onClick={() => setShowImportModal(true)}
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-fpt-orange bg-orange-50 dark:bg-orange-900/20 text-fpt-orange text-sm font-medium hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-all duration-200 shadow-sm whitespace-nowrap"
+                            >
+                                <Upload className="w-4 h-4" />
+                                Import thành phần điểm
+                            </button>
+                            <button
+                                onClick={openAddModal}
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-fpt-orange to-orange-500 text-white text-sm font-medium hover:from-orange-600 hover:to-orange-600 transition-all duration-200 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 whitespace-nowrap"
+                            >
+                                <Plus className="w-4 h-4" />
+                                Thêm thành phần điểm
+                            </button>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={handleExport}
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-zinc-700 transition-all duration-200 shadow-sm"
-                        >
-                            <Download className="w-4 h-4" />
-                            Xuất file
-                        </button>
-                        <button
-                            onClick={() => setShowImportModal(true)}
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-fpt-orange bg-orange-50 dark:bg-orange-900/20 text-fpt-orange text-sm font-medium hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-all duration-200 shadow-sm"
-                        >
-                            <Upload className="w-4 h-4" />
-                            Import thành phần điểm
-                        </button>
-                        <button
-                            onClick={openAddModal}
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-fpt-orange to-orange-500 text-white text-sm font-medium hover:from-orange-600 hover:to-orange-600 transition-all duration-200 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40"
-                        >
-                            <Plus className="w-4 h-4" />
-                            Thêm thành phần điểm
-                        </button>
-                    </div>
+
+                    <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
+                        Cấu hình các thành phần điểm, trọng số và yêu cầu đánh giá cho môn học này.
+                    </p>
                 </div>
 
                 {/* Automation Info Alert */}
@@ -564,13 +576,6 @@ export const GradeConfigurationPage: React.FC = () => {
                                                                     title="Sửa"
                                                                 >
                                                                     <Edit2 className="w-4 h-4" />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleDuplicateComponent(component)}
-                                                                    className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                                                                    title="Nhân bản"
-                                                                >
-                                                                    <Copy className="w-4 h-4" />
                                                                 </button>
                                                                 <button
                                                                     onClick={() => handleDeleteComponent(component)}
@@ -815,6 +820,16 @@ export const GradeConfigurationPage: React.FC = () => {
                     loading={prereqAdding}
                 />
             )}
+
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                onClose={closeConfirmModal}
+                onConfirm={confirmModal.onConfirm}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                type={confirmModal.type}
+                confirmLabel={confirmModal.confirmLabel}
+            />
         </AcademicStaffLayout >
     );
 };

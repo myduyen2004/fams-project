@@ -37,7 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (success) {
         final user = _authController.currentUser.value;
-        if (user?.isPasswordChanged == false) {
+        if (user?.isPasswordChanged == false && !user!.isAdmin) {
           Get.offAllNamed(AppRoutes.changePasswordRequired);
         } else {
           Get.offAllNamed(AppRoutes.home);
@@ -148,7 +148,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                     child: _authController.isLoading.value
                                         ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                        : const Text('Tiếp tục', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                        : const Text('Đăng nhập', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                                   )),
 
                                   const SizedBox(height: 16),

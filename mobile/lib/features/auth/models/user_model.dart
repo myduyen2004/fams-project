@@ -30,7 +30,7 @@ class User {
     required this.email,
     required this.role,
     this.avatarUrl,
-    this.isPasswordChanged = true,
+    this.isPasswordChanged = false,
     this.phone,
     this.dob,
     this.major,
@@ -52,7 +52,7 @@ class User {
       email: json['email'] ?? '',
       role: json['role'] ?? '',
       avatarUrl: json['avatar'] ?? json['avatarUrl'],
-      isPasswordChanged: json['isPasswordChanged'] ?? true,
+      isPasswordChanged: json['isPasswordChanged'] ?? false,
       phone: json['phone'],
       dob: json['dob'] != null ? DateTime.tryParse(json['dob'].toString()) : null,
       major: json['major'],
@@ -93,5 +93,6 @@ class User {
 
   bool get isLecturer => role.toUpperCase() == 'LECTURER';
   bool get isStudent => role.toUpperCase() == 'STUDENT';
+  bool get isAdmin => role.toUpperCase() == 'ADMIN';
   bool get hasFaceRegistered => faceDataStatus?.toUpperCase() == 'REGISTERED';
 }

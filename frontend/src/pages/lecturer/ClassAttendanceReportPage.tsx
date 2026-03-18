@@ -33,7 +33,7 @@ export const ClassAttendanceReportPage: React.FC = () => {
         
         let matchesStatus = true;
         if (statusFilter === 'danger') matchesStatus = student.absentPercentage >= 20;
-        else if (statusFilter === 'warning') matchesStatus = student.absentPercentage >= 10 && student.absentPercentage <= 15;
+        else if (statusFilter === 'warning') matchesStatus = student.absentPercentage >= 10 && student.absentPercentage < 20;
         else if (statusFilter === 'safe') matchesStatus = student.absentPercentage < 10;
         
         return matchesSearch && matchesStatus;
@@ -139,21 +139,21 @@ export const ClassAttendanceReportPage: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 no-scrollbar">
+                    <div className="flex items-center gap-1.5 w-full md:w-auto overflow-x-auto pb-1.5 md:pb-0 no-scrollbar">
                         {(['all', 'danger', 'warning', 'safe'] as const).map((filter) => (
                             <button
                                 key={filter}
                                 onClick={() => setStatusFilter(filter)}
-                                className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border ${
+                                className={`px-3 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-all border uppercase tracking-wider ${
                                     statusFilter === filter
-                                        ? 'bg-fpt-orange text-white border-fpt-orange shadow-md shadow-orange-200'
-                                        : 'bg-white dark:bg-zinc-900 text-gray-500 border-gray-100 dark:border-zinc-800 hover:border-fpt-orange/30'
+                                        ? 'bg-fpt-orange text-white border-fpt-orange shadow-md shadow-orange-200/50'
+                                        : 'bg-white dark:bg-zinc-900 text-gray-400 border-gray-100 dark:border-zinc-800 hover:border-fpt-orange/30 hover:text-fpt-orange'
                                 }`}
                             >
                                 {filter === 'all' && 'Tất cả'}
-                                {filter === 'danger' && 'Nguy cơ cao (≥ 20%)'}
-                                {filter === 'warning' && 'Cảnh báo (10-15%)'}
-                                {filter === 'safe' && 'An toàn (< 10%)'}
+                                {filter === 'danger' && 'Nguy cơ cao'}
+                                {filter === 'warning' && 'Cảnh báo'}
+                                {filter === 'safe' && 'An toàn'}
                             </button>
                         ))}
                     </div>
@@ -163,25 +163,25 @@ export const ClassAttendanceReportPage: React.FC = () => {
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-separate border-spacing-0 table-fixed">
                             <thead>
-                                <tr className="bg-[#f97316] text-white">
-                                    <th className="px-4 py-4 text-xs font-bold uppercase tracking-widest bg-[#f97316] sticky left-0 z-20 w-[100px] min-w-[100px] border-none">
+                                <tr className="bg-fpt-orange text-white">
+                                    <th className="px-4 py-3 text-[11px] font-bold uppercase tracking-widest bg-fpt-orange sticky left-0 z-20 w-[100px] min-w-[100px] border-none">
                                         Mã SV
                                     </th>
-                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest bg-[#f97316] sticky left-[100px] z-20 w-[220px] min-w-[220px] border-none shadow-[1px_0_0_0_rgba(255,255,255,0.1)]">
+                                    <th className="px-6 py-3 text-[11px] font-bold uppercase tracking-widest bg-fpt-orange sticky left-[100px] z-20 w-[200px] min-w-[200px] border-none shadow-[1px_0_0_0_rgba(255,255,255,0.1)]">
                                         Họ và tên
                                     </th>
                                     {loading ? (
                                         [...Array(10)].map((_, i) => (
-                                            <th key={i} className="px-3 py-4 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap w-[80px] min-w-[80px]">
+                                            <th key={i} className="px-3 py-3 text-center text-[11px] font-bold uppercase tracking-widest whitespace-nowrap w-[75px] min-w-[75px]">
                                                 Slot {i + 1}
                                             </th>
                                         ))
                                     ) : report?.slots?.map((slot) => (
-                                        <th key={slot.slotId} className="px-3 py-4 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap w-[80px] min-w-[80px]">
+                                        <th key={slot.slotId} className="px-3 py-3 text-center text-[11px] font-bold uppercase tracking-widest whitespace-nowrap w-[75px] min-w-[75px]">
                                             Slot {slot.slotIndex}
                                         </th>
                                     ))}
-                                    <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap sticky right-0 z-20 bg-[#f97316] w-[100px] min-w-[100px]">
+                                    <th className="px-4 py-3 text-center text-[11px] font-bold uppercase tracking-widest whitespace-nowrap sticky right-0 z-20 bg-fpt-orange w-[90px] min-w-[90px]">
                                         % Absent
                                     </th>
                                 </tr>
@@ -213,13 +213,13 @@ export const ClassAttendanceReportPage: React.FC = () => {
                                 ) : filteredStudents?.map((student) => (
                                     <tr key={student.studentId} className="border-b border-gray-50 dark:border-zinc-800/50 hover:bg-gray-50/50 dark:hover:bg-zinc-800/30 group">
                                         <td 
-                                            className="px-4 py-4 text-sm font-bold text-fpt-orange whitespace-nowrap bg-white dark:bg-zinc-900 group-hover:bg-gray-50 dark:group-hover:bg-zinc-800/50 sticky left-0 z-10 w-[100px] min-w-[100px] border-none cursor-pointer hover:underline"
+                                            className="px-4 py-3 text-[13px] font-bold text-fpt-orange whitespace-nowrap bg-white dark:bg-zinc-900 group-hover:bg-gray-50 dark:group-hover:bg-zinc-800/50 sticky left-0 z-10 w-[100px] min-w-[100px] border-none cursor-pointer hover:underline font-mono"
                                             onClick={() => handleViewStudentDetail(student.studentCode)}
                                         >
                                             {student.studentCode}
                                         </td>
                                         <td 
-                                            className="px-6 py-4 text-sm font-semibold text-gray-700 dark:text-zinc-200 whitespace-nowrap bg-white dark:bg-zinc-900 group-hover:bg-gray-50 dark:group-hover:bg-zinc-800/50 sticky left-[100px] z-10 w-[220px] min-w-[220px] border-none shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] cursor-pointer hover:underline"
+                                            className="px-6 py-3 text-[13px] font-bold text-gray-700 dark:text-zinc-200 whitespace-nowrap bg-white dark:bg-zinc-900 group-hover:bg-gray-50 dark:group-hover:bg-zinc-800/50 sticky left-[100px] z-10 w-[200px] min-w-[200px] border-none shadow-[1px_0_0_0_rgba(0,0,0,0.05)] dark:shadow-[1px_0_0_0_rgba(255,255,255,0.05)] cursor-pointer hover:underline"
                                             onClick={() => handleViewStudentDetail(student.studentCode)}
                                         >
                                             {student.studentName}
@@ -246,21 +246,21 @@ export const ClassAttendanceReportPage: React.FC = () => {
                                             }
 
                                             return (
-                                                <td key={slot.slotId} className={`px-3 py-4 text-center text-sm w-[80px] min-w-[80px] ${cellBg} ${displayClass}`}>
+                                                <td key={slot.slotId} className={`px-2 py-3 text-center text-[13px] w-[75px] min-w-[75px] ${cellBg} ${displayClass}`}>
                                                     {displayText}
                                                 </td>
                                             );
                                         })}
                                         
-                                        <td className="px-6 py-4 text-center sticky right-0 z-10 bg-white dark:bg-zinc-900 group-hover:bg-gray-50 dark:group-hover:bg-zinc-800/50 border-l border-gray-100 dark:border-zinc-800 w-[100px] min-w-[100px]">
-                                            <span className={`text-sm font-bold ${
+                                        <td className="px-4 py-3 text-center sticky right-0 z-10 bg-white dark:bg-zinc-900 group-hover:bg-gray-50 dark:group-hover:bg-zinc-800/50 border-l border-gray-100 dark:border-zinc-800 w-[90px] min-w-[90px]">
+                                            <span className={`text-[13px] font-bold ${
                                                 student.absentPercentage >= 20 
                                                     ? 'text-red-600' 
-                                                    : (student.absentPercentage >= 10 && student.absentPercentage <= 15)
-                                                        ? 'text-yellow-600'
-                                                        : 'text-[#04162e]'
+                                                    : student.absentPercentage >= 10
+                                                        ? 'text-amber-500 dark:text-amber-400'
+                                                        : 'text-[#04162e] dark:text-gray-300'
                                             }`}>
-                                                {student.absentPercentage}
+                                                {student.absentPercentage.toFixed(1)}%
                                             </span>
                                         </td>
                                     </tr>

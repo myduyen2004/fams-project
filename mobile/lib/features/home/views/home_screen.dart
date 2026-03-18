@@ -388,27 +388,15 @@ class HomeScreen extends StatelessWidget {
                               onTap: () {},
                             ),
 
-                            // "Gửi đơn yêu cầu" card - for Students
-                            Obx(() {
-                              final user = authController.currentUser.value;
-                              if (user?.role != 'LECTURER') {
-                                return Column(
-                                  children: [
-                                    const SizedBox(height: 16),
-                                    _buildBigCard(
-                                      icon: Icons.article_outlined,
-                                      title: 'Gửi đơn yêu cầu',
-                                      onTap: () => Get.toNamed(
-                                        AppRoutes.studentAcademicRequests,
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }
-                              return const SizedBox.shrink();
-                            }),
+                            const SizedBox(height: 16),
 
-                            // "Gửi đơn yêu cầu" card - for Lecturers
+                            _buildBigCard(
+                              icon: Icons.smart_toy_rounded,
+                              title: 'Hỏi đáp AI Chatbot',
+                              onTap: () => Get.toNamed(AppRoutes.aiChat),
+                            ),
+
+                            // "Gửi đơn yêu cầu" card - only for lecturers
                             Obx(() {
                               final user = authController.currentUser.value;
                               if (user?.role == 'LECTURER') {

@@ -4,7 +4,6 @@ import {
     Home,
     Calendar,
     ScanFace,
-    BookOpen,
     FileText,
     MessageCircle,
     Send,
@@ -12,7 +11,8 @@ import {
     LogOut,
     GraduationCap,
     TrendingUp,
-    ChevronDown
+    ChevronDown,
+    List
 } from 'lucide-react';
 import { authService } from '../../services/api/authService';
 import { ConfirmModal } from '../common/ConfirmModal';
@@ -69,16 +69,19 @@ export const StudentSidebar: React.FC = () => {
             path: '/student/attendance'
         },
         {
-            id: 'study',
-            label: 'Học tập',
-            icon: <BookOpen size={20} />,
-            path: '/student/study'
-        },
-        {
             id: 'assignments',
             label: 'Bài tập',
             icon: <FileText size={20} />,
             path: '/student/assignments'
+        },
+        {
+            id: 'lists',
+            label: 'Danh sách',
+            icon: <List size={20} />,
+            submenu: [
+                { label: 'Phòng học', path: '/student/rooms' },
+                { label: 'Học kỳ', path: '/student/semesters' }
+            ]
         },
         {
             id: 'messages',

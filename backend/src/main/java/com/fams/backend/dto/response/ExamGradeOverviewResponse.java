@@ -40,6 +40,12 @@ public class ExamGradeOverviewResponse {
     private Boolean examGradesPublished;
     private Boolean resitGradesPublished;
 
+    // Whether any class section in this course/semester has had lecturer grades submitted
+    private Boolean anyGradesSubmitted;
+
+    // List of class names that have submitted their grades
+    private List<String> submittedClasses;
+
     @Data
     @Builder
     @NoArgsConstructor

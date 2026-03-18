@@ -26,6 +26,9 @@ import 'features/academic_request/views/academic_request_list_screen.dart';
 import 'features/academic_request/views/academic_request_create_screen.dart';
 import 'features/academic_request/bindings/academic_request_bindings.dart';
 
+import 'features/ai_chatbot/views/ai_chat_screen.dart';
+import 'features/ai_chatbot/bindings/ai_chat_binding.dart';
+
 import 'features/chat/controllers/chat_controller.dart';
 import 'features/schedule/controllers/schedule_controller.dart';
 import 'features/notification/services/fcm_service.dart';
@@ -133,6 +136,11 @@ class MyApp extends StatelessWidget {
             GetPage(
               name: AppRoutes.changePasswordRequired,
               page: () => const ChangePasswordRequiredScreen(),
+            ),
+            GetPage(
+              name: AppRoutes.aiChat,
+              page: () => const AiChatScreen(),
+              binding: AiChatBinding(),
             ),
             GetPage(
               name: AppRoutes.home,

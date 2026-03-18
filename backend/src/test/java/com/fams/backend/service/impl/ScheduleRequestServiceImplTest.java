@@ -41,6 +41,9 @@ class ScheduleRequestServiceImplTest {
     @Mock
     private NotificationService notificationService;
 
+    @Mock
+    private SystemLogService systemLogService;
+
     @InjectMocks
     private ScheduleRequestServiceImpl scheduleRequestService;
 

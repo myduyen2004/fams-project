@@ -52,6 +52,7 @@ dependencies:
   google_fonts: ^6.1.0
   flutter_svg: ^2.0.9
   flutter_screenutil: any
+  flutter_markdown: ^0.7.5
 
   # Utils
   intl: ^0.20.2

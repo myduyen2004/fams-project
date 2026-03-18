@@ -20,6 +20,11 @@ public class SemesterController {
         return ResponseEntity.ok(semesterService.getAllSemesters());
     }
 
+    @GetMapping("/upcoming")
+    public ResponseEntity<List<SemesterResponse>> getUpcomingSemesters() {
+        return ResponseEntity.ok(semesterService.getUpcomingSemesters());
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<SemesterResponse> getSemesterById(@PathVariable Long id) {
         return ResponseEntity.ok(semesterService.getSemesterById(id));
