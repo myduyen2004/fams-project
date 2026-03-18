@@ -106,6 +106,8 @@ const FilterCombobox: React.FC<FilterComboboxProps> = ({ value, onChange, option
 interface Semester {
   code: string;
   name: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 interface SlotTime {
@@ -274,7 +276,21 @@ export const SchedulePage: React.FC = () => {
       const resp = await apiClient.get('/v1/semesters/active');
       const data = Array.isArray(resp.data) ? resp.data : [];
       setSemesters(data);
-      if (data.length > 0 && !selected) setSelected(data[0].code);
+
+      if (data.length > 0 && !selected) {
+        // Try to find the current active semester based on today's date
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        const currentSem = data.find(s =>
+          s.startDate && s.endDate && todayStr >= s.startDate && todayStr <= s.endDate
+        );
+
+        if (currentSem) {
+          setSelected(currentSem.code);
+        } else {
+          // If no semester covers today, default to the first one (most recent)
+          setSelected(data[0].code);
+        }
+      }
     } catch (err) {
       console.error('Failed to load semesters', err);
       toast.error('Không thể tải danh sách học kỳ');
@@ -290,10 +306,22 @@ export const SchedulePage: React.FC = () => {
       // Extract start and end dates from semester
       if (semesterData.startDate) {
         setSemesterStartDate(semesterData.startDate);
-        setSelectedDate(semesterData.startDate); // Auto-select first day of semester
       }
       if (semesterData.endDate) {
         setSemesterEndDate(semesterData.endDate);
+      }
+
+      // Auto-select today if it falls within the semester, otherwise default to start date
+      if (semesterData.startDate) {
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        const isPastStart = todayStr >= semesterData.startDate;
+        const isBeforeEnd = !semesterData.endDate || todayStr <= semesterData.endDate;
+
+        if (isPastStart && isBeforeEnd) {
+          setSelectedDate(todayStr);
+        } else {
+          setSelectedDate(semesterData.startDate);
+        }
       }
 
       // Set published status from semester config
