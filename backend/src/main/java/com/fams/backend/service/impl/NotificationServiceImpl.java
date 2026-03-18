@@ -134,7 +134,8 @@ public class NotificationServiceImpl implements UserNotificationService {
                                         return status == null || !status.getDeletedBy().contains(userIdStr);
                                 })
                                 .limit(DEFAULT_NOTIFICATION_LIMIT)
-                                .map(notification -> toNotificationResponse(notification, statusMap.get(notification.getId()), userIdStr))
+                                .map(notification -> toNotificationResponse(notification,
+                                                statusMap.get(notification.getId()), userIdStr))
                                 .collect(Collectors.toList());
         }
 
@@ -197,8 +198,8 @@ public class NotificationServiceImpl implements UserNotificationService {
                         List<NotificationReadStatus> statusesToSave = new ArrayList<>();
 
                         for (Notification notification : visibleNotifications) {
-                                NotificationReadStatus status = statusMap.computeIfAbsent(notification.getId(), key ->
-                                                NotificationReadStatus.builder()
+                                NotificationReadStatus status = statusMap.computeIfAbsent(notification.getId(),
+                                                key -> NotificationReadStatus.builder()
                                                                 .notificationId(notification.getId())
                                                                 .targetType(notification.getTargetType().name())
                                                                 .createdAt(now)
@@ -321,9 +322,8 @@ public class NotificationServiceImpl implements UserNotificationService {
                 }
 
                 // Filter out notifications created by the user themselves
-                notifications.removeIf(notification -> 
-                        notification.getSender() != null && 
-                        notification.getSender().getId().equals(user.getId()));
+                notifications.removeIf(notification -> notification.getSender() != null &&
+                                notification.getSender().getId().equals(user.getId()));
 
                 Map<Long, Notification> uniqueNotifications = new HashMap<>();
                 for (Notification notification : notifications) {
@@ -390,7 +390,8 @@ public class NotificationServiceImpl implements UserNotificationService {
                                 .content(notification.getContent())
                                 .type(notification.getType() != null ? notification.getType().name() : null)
                                 .priority(notification.getPriority() != null ? notification.getPriority().name() : null)
-                                .targetType(notification.getTargetType() != null ? notification.getTargetType().name() : null)
+                                .targetType(notification.getTargetType() != null ? notification.getTargetType().name()
+                                                : null)
                                 .status(notification.getStatus() != null ? notification.getStatus().name() : null)
                                 .createdAt(notification.getCreatedAt())
                                 .sentAt(notification.getSentAt())
@@ -411,4 +412,3 @@ public class NotificationServiceImpl implements UserNotificationService {
                                 .build();
         }
 }
-

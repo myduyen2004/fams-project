@@ -24,7 +24,6 @@ const validationSchema = Yup.object({
     name: Yup.string()
         .trim()
         .matches(/[a-zA-ZÀ-ỹ]/, 'Tên phải chứa ít nhất một chữ cái')
-        .min(5, 'Tên phải có ít nhất 5 ký tự')
         .max(200, 'Tên không được quá 200 ký tự')
         .required('Tên chuyên ngành hẹp là bắt buộc'),
     description: Yup.string().max(500, 'Mô tả không được quá 500 ký tự')

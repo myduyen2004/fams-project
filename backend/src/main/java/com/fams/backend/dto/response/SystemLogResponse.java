@@ -15,4 +15,10 @@ public class SystemLogResponse {
     private String description;
     private String timestamp;
     private String type; // info, success, warning, error
+    private String performerName;
+    private String performerAvatar;
+    private String ipAddress;
+    private String userAgent;
+    private String oldValue;
+    private String newValue;
 }

@@ -278,6 +278,15 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
 
         ScheduleRequest savedRequest = scheduleRequestRepository.saveAndFlush(request);
 
+        // Log system activity
+        String className = savedRequest.getClassSection() != null ? savedRequest.getClassSection().getClassName()
+                : "N/A";
+        if (status == ScheduleRequest.RequestStatus.APPROVED) {
+            systemLogService.logScheduleRequestApproved(savedRequest.getId(), approver.getFullName(), className);
+        } else if (status == ScheduleRequest.RequestStatus.REJECTED) {
+            systemLogService.logScheduleRequestRejected(savedRequest.getId(), approver.getFullName(), className);
+        }
+
         // Gửi thông báo đến người yêu cầu sau khi cập nhật trạng thái
         sendNotificationAsync(savedRequest, status, note);
 
@@ -469,22 +478,22 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
                     "Hệ thống ghi nhận Giảng viên %s đã thu hồi đơn yêu cầu %s cho lớp %s.",
                     requesterName, getTypeLabel(request.getType()), className);
 
-                int count = 0;
-                for (User staff : academicStaffs) {
+            int count = 0;
+            for (User staff : academicStaffs) {
                 com.fams.backend.dto.request.NotificationRequest notifRequest = com.fams.backend.dto.request.NotificationRequest
-                    .builder()
-                    .title(title)
-                    .content(content)
-                    .type(com.fams.backend.entity.Notification.NotificationType.SYSTEM)
-                    .targetType(com.fams.backend.entity.Notification.TargetType.USER)
-                    .status(com.fams.backend.entity.Notification.NotificationStatus.SENT)
-                    .recipientId(staff.getId())
-                    .build();
+                        .builder()
+                        .title(title)
+                        .content(content)
+                        .type(com.fams.backend.entity.Notification.NotificationType.SYSTEM)
+                        .targetType(com.fams.backend.entity.Notification.TargetType.USER)
+                        .status(com.fams.backend.entity.Notification.NotificationStatus.SENT)
+                        .recipientId(staff.getId())
+                        .build();
                 notificationService.createNotification(notifRequest);
                 count++;
-                }
+            }
 
-                log.info("Sent revocation notification to {} Academic Staff members", count);
+            log.info("Sent revocation notification to {} Academic Staff members", count);
         } catch (Exception e) {
             log.error("Error sending revocation notification to Academic Staff: {}", e.getMessage(), e);
         }

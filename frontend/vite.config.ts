@@ -7,6 +7,9 @@ export default defineConfig({
   define: {
     global: 'window',
   },
+  optimizeDeps: {
+    include: ['@react-three/fiber', '@react-three/drei', 'three'],
+  },
   server: {
     proxy: {
       '/api': {

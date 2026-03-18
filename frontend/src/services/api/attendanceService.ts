@@ -66,6 +66,45 @@ export interface ClassAttendanceReportResponse {
     }[];
 }
 
+export interface ClassAttendanceSummary {
+    className: string;
+    courseCode: string;
+    courseName: string;
+    lecturerName: string;
+    totalSlots: number;
+    totalSessionsHeld: number;
+    presentCount: number;
+    unexcusedAbsentCount: number;
+    excusedAbsentCount: number;
+    attendancePercentage: number;
+    absentPercentage: number;
+}
+
+export interface StudentAttendanceSummaryResponse {
+    studentName: string;
+    studentCode: string;
+    semesterName: string;
+    classSummaries: ClassAttendanceSummary[];
+}
+
+export interface IndividualSlotAttendance {
+    slotId: number;
+    slotIndex: number;
+    date: string;
+    startTime: string;
+    endTime: string;
+    roomCode: string;
+    status: string; // 'PRESENT', 'ABSENT', 'EXCUSED', 'FUTURE'
+    lecturerName: string;
+}
+
+export interface IndividualAttendanceDetail {
+    className: string;
+    courseCode: string;
+    courseName: string;
+    slots: IndividualSlotAttendance[];
+}
+
 const attendanceService = {
     startSession: async (request: StartSessionRequest): Promise<SessionDetailResponse> => {
         const response = await axios.post(`${API_URL}/v1/attendance/session/start`, request, {
@@ -103,6 +142,21 @@ const attendanceService = {
 
     getClassAttendanceReport: async (className: string): Promise<ClassAttendanceReportResponse> => {
         const response = await axios.get(`${API_URL}/v1/attendance/class/${className}/report`, {
+            headers: getAuthHeader()
+        });
+        return response.data;
+    },
+
+    getStudentReport: async (semesterCode?: string): Promise<StudentAttendanceSummaryResponse> => {
+        const response = await axios.get(`${API_URL}/v1/attendance/student/report`, {
+            params: { semesterCode },
+            headers: getAuthHeader()
+        });
+        return response.data;
+    },
+
+    getStudentClassAttendanceDetail: async (className: string): Promise<IndividualAttendanceDetail> => {
+        const response = await axios.get(`${API_URL}/v1/attendance/student/class/${className}/detail`, {
             headers: getAuthHeader()
         });
         return response.data;

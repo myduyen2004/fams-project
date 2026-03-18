@@ -29,6 +29,7 @@ debug_logs.txt
 test_backend_proxy.py
 
 # --- Backend (Spring Boot / Maven) ---
+backend/service-account.json
 backend/target/
 backend/target_old/
 backend/.mvn/wrapper/maven-wrapper.jar

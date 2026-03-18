@@ -81,6 +81,7 @@ public class ExamGradeServiceTest {
                 classSection.setClassName("SE1801");
                 classSection.setGradesPublished(false);
                 classSection.setResitGradesPublished(false);
+                classSection.setGradesSubmitted(true);
 
                 student = new User();
                 student.setId(1L);

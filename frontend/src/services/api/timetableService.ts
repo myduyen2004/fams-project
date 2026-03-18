@@ -11,7 +11,10 @@ export interface TimetableSlotDTO {
   className?: string;
   courseCode?: string;
   courseName?: string;
-  lecturerName?: string | null;
+  lecturerId?: number;
+  lecturerName?: string;
+  lecturerEmail?: string;
+  lecturerAvatar?: string;
   roomCode?: string;
   roomName?: string;
   date?: string; // ISO date
@@ -27,6 +30,8 @@ export interface TimetableSlotDTO {
   assignmentStatus?: string | null;
   // Student submission status (SUBMITTED / NOT_SUBMITTED)
   submissionStatus?: string | null;
+  // Configured absent threshold from backend
+  absentThresholdMinutes?: number;
 }
 
 export interface DailyTimetableDTO {

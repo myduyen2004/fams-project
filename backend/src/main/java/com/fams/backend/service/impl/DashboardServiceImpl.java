@@ -154,15 +154,21 @@ public class DashboardServiceImpl implements DashboardService {
 
         @Override
         public List<SystemLogResponse> getSystemLogs() {
-                List<SystemLog> logs = systemLogRepository.findTop5ByOrderByCreatedAtDesc();
+                List<SystemLog> logs = systemLogRepository.findTop10ByOrderByCreatedAtDesc();
 
                 return logs.stream()
-                                .map(log -> SystemLogResponse.builder()
-                                                .id(log.getId())
-                                                .title(log.getTitle())
-                                                .description(log.getDescription())
-                                                .timestamp(log.getCreatedAt().format(DATE_TIME_FORMATTER))
-                                                .type(log.getType().name().toLowerCase())
+                                .map(logEntry -> SystemLogResponse.builder()
+                                                .id(logEntry.getId())
+                                                .title(logEntry.getTitle())
+                                                .description(logEntry.getDescription())
+                                                .timestamp(logEntry.getCreatedAt().format(DATE_TIME_FORMATTER))
+                                                .type(logEntry.getType().name().toLowerCase())
+                                                .performerName(logEntry.getPerformer() != null ? logEntry.getPerformer().getFullName() : "Hệ thống")
+                                                .performerAvatar(logEntry.getPerformer() != null ? logEntry.getPerformer().getAvatar() : null)
+                                                .ipAddress(logEntry.getIpAddress())
+                                                .userAgent(logEntry.getUserAgent())
+                                                .oldValue(logEntry.getOldValue())
+                                                .newValue(logEntry.getNewValue())
                                                 .build())
                                 .collect(Collectors.toList());
         }

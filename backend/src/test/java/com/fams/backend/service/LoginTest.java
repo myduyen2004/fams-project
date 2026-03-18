@@ -9,8 +9,11 @@ import com.fams.backend.repository.AccessLogRepository;
 import com.fams.backend.repository.UserRepository;
 import com.fams.backend.repository.UserSessionRepository;
 import com.fams.backend.security.jwt.JwtUtil;
+import com.fams.backend.service.UserActivityService;
 import com.fams.backend.service.impl.AuthService;
 import com.fams.backend.service.impl.DashboardBroadcastService;
+import com.fams.backend.service.impl.SystemLogService;
+import org.springframework.data.redis.core.ValueOperations;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,9 +63,17 @@ class LoginTest {
     private StringRedisTemplate redisTemplate;
 
     @Mock
+    private ValueOperations<String, String> valueOperations;
+
+    @Mock
     private HttpServletRequest httpServletRequest;
 
-    @InjectMocks
+    @Mock
+    private SystemLogService systemLogService;
+
+    @Mock
+    private UserActivityService userActivityService;
+
     private AuthService authService;
 
     private LoginRequest loginRequest;
@@ -70,6 +81,23 @@ class LoginTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        lenient().when(valueOperations.increment(anyString())).thenReturn(1L);
+        
+        authService = new AuthService(
+            userRepository,
+            passwordEncoder,
+            jwtUtil,
+            userSessionRepository,
+            accessLogRepository,
+            geoLocationService,
+            dashboardBroadcastService,
+            emailService,
+            redisTemplate,
+            userActivityService,
+            systemLogService
+        );
+
         loginRequest = new LoginRequest();
         testUser = new User();
         testUser.setId(1L);

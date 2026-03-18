@@ -3,8 +3,9 @@ import { Loader2, Check, ChevronDown, Users, DoorOpen } from 'lucide-react';
 import { roomService } from '../../services/api/roomService';
 import { Room } from '../../types/room';
 import toast from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
-import { BUILDING_CONFIG, getFloorElements, getRoomTypeLabel, filterPositionedRooms, FloorElement, ROOM_TYPE_OPTIONS, getRoomTypeDisplayLabel } from '../../utils/roomUtils';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { BUILDING_CONFIG, getFloorElements, getRoomTypeLabel, FloorElement, ROOM_TYPE_OPTIONS, getRoomTypeDisplayLabel } from '../../utils/roomUtils';
+import { RoomCard } from './RoomCard';
 
 const BUILDINGS = Object.keys(BUILDING_CONFIG);
 
@@ -19,12 +20,16 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
     const [loading, setLoading] = useState(true);
     const [selectedBuilding, setSelectedBuilding] = useState<string>('Gamma');
     const [selectedFloor, setSelectedFloor] = useState<number>(1);
+    const [inUseRoomIds, setInUseRoomIds] = useState<Set<number>>(new Set());
 
     // Dropdown states
     const [isBuildingFilterOpen, setIsBuildingFilterOpen] = useState(false);
     const [isFloorFilterOpen, setIsFloorFilterOpen] = useState(false);
     const [isRoomTypeFilterOpen, setIsRoomTypeFilterOpen] = useState(false);
+    const [isStatusFilterOpen, setIsStatusFilterOpen] = useState(false);
     const [selectedRoomType, setSelectedRoomType] = useState<string>('ALL');
+    const [selectedStatus, setSelectedStatus] = useState<'ALL' | 'IN_USE' | 'EMPTY'>('ALL');
+    const [searchParams, setSearchParams] = useSearchParams();
 
     const currentBuildingConfig = useMemo(() => {
         if (selectedBuilding === 'ALL') return null;
@@ -48,6 +53,14 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
             setLoading(true);
             const data = await roomService.getAllRooms();
             setRooms(data);
+            
+            // Fetch real-time occupancy based on actual slot times from database
+            try {
+                const occupiedIds = await roomService.getCurrentlyInUseRoomIds();
+                setInUseRoomIds(occupiedIds);
+            } catch (availabilityErr) {
+                console.error('Failed to fetch room availability:', availabilityErr);
+            }
         } catch {
             toast.error('Không thể tải danh sách phòng học');
         } finally {
@@ -58,6 +71,38 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
     useEffect(() => {
         fetchRooms();
     }, []);
+
+    // Sync state with URL params on initial load
+    useEffect(() => {
+        const buildingParam = searchParams.get('building');
+        const statusParam = searchParams.get('status');
+
+        if (buildingParam === 'ALL') {
+            setSelectedBuilding('ALL');
+        } else if (buildingParam && BUILDINGS.includes(buildingParam)) {
+            setSelectedBuilding(buildingParam);
+        }
+
+        if (statusParam === 'IN_USE') {
+            setSelectedStatus('IN_USE');
+        } else if (statusParam === 'EMPTY') {
+            setSelectedStatus('EMPTY');
+        }
+    }, []);
+
+    // Update URL when filters change
+    useEffect(() => {
+        const params: Record<string, string> = {};
+        if (selectedBuilding === 'ALL') params.building = 'ALL';
+        if (selectedStatus !== 'ALL') params.status = selectedStatus;
+        
+        // Only set params if we have something to set
+        if (Object.keys(params).length > 0) {
+            setSearchParams(params, { replace: true });
+        } else if (searchParams.toString() !== '') {
+            setSearchParams({}, { replace: true });
+        }
+    }, [selectedBuilding, selectedStatus]);
 
     const availableFloors = useMemo(() => {
         if (selectedBuilding === 'ALL') return [];
@@ -72,9 +117,9 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
         }
     }, [selectedBuilding, availableFloors, selectedFloor]);
 
-    // Only show positioned rooms for student/lecturer
+    // Show all rooms (positioned and unpositioned)
     const filteredRooms = useMemo(() => {
-        let result = filterPositionedRooms(rooms);
+        let result = rooms;
 
         if (selectedBuilding !== 'ALL') {
             result = result.filter(r => r.building === selectedBuilding && r.floor === selectedFloor);
@@ -86,8 +131,16 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
             result = result.filter(r => r.type === selectedRoomType);
         }
 
+        if (selectedBuilding === 'ALL') {
+            if (selectedStatus === 'IN_USE') {
+                result = result.filter(r => inUseRoomIds.has(r.id));
+            } else if (selectedStatus === 'EMPTY') {
+                result = result.filter(r => !inUseRoomIds.has(r.id));
+            }
+        }
+
         return result;
-    }, [rooms, selectedBuilding, selectedFloor, selectedRoomType]);
+    }, [rooms, selectedBuilding, selectedFloor, selectedRoomType, selectedStatus, inUseRoomIds]);
 
     // Rooms positioned on grid
     const positionedRooms = useMemo(() => {
@@ -95,9 +148,15 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
         return filteredRooms.filter(r => r.gridRow != null && r.gridCol != null);
     }, [filteredRooms, selectedBuilding]);
 
-    // Sidebar rooms sorted by name
+    // Sidebar rooms sorted by name, unpositioned first
     const sidebarRooms = useMemo(() => {
-        return [...filteredRooms].sort((a, b) => a.name.localeCompare(b.name));
+        return [...filteredRooms].sort((a, b) => {
+            const aUnpositioned = a.gridRow == null || a.gridCol == null;
+            const bUnpositioned = b.gridRow == null || b.gridCol == null;
+            if (aUnpositioned && !bUnpositioned) return -1;
+            if (!aUnpositioned && bUnpositioned) return 1;
+            return a.name.localeCompare(b.name);
+        });
     }, [filteredRooms]);
 
     // Get floor elements for current building/floor
@@ -210,7 +269,7 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
                                                     onClick={() => { setSelectedRoomType('ALL'); setIsRoomTypeFilterOpen(false); }}
                                                     className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center justify-between ${selectedRoomType === 'ALL' ? 'text-fpt-orange bg-orange-50 dark:bg-orange-900/10' : 'text-gray-700 dark:text-gray-200'}`}
                                                 >
-                                                    <span>Tất cả loại phòng</span>
+                                                    <span>Tất cả</span>
                                                     {selectedRoomType === 'ALL' && <Check className="h-4 w-4" />}
                                                 </button>
                                                 {ROOM_TYPE_OPTIONS.map(type => (
@@ -228,6 +287,46 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
                                     )}
                                 </div>
                             </div>
+
+                            {/* Status Filter - Only functional in ALL mode */}
+                            {selectedBuilding === 'ALL' && (
+                                <div className="flex items-center gap-2 relative">
+                                    <span className="text-xs font-medium text-gray-500 dark:text-zinc-500">Trạng thái:</span>
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => setIsStatusFilterOpen(!isStatusFilterOpen)}
+                                            className="flex items-center gap-2 rounded-lg border border-gray-300 py-2 pl-3 pr-2 text-sm bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 min-w-[130px]"
+                                        >
+                                            <span className="flex-1 text-left">
+                                                {selectedStatus === 'ALL' ? 'Tất cả' : selectedStatus === 'IN_USE' ? 'Đang học' : 'Trống'}
+                                            </span>
+                                            <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isStatusFilterOpen ? 'rotate-180' : ''}`} />
+                                        </button>
+
+                                        {isStatusFilterOpen && (
+                                            <>
+                                                <div className="fixed inset-0 z-10" onClick={() => setIsStatusFilterOpen(false)}></div>
+                                                <div className="absolute left-0 top-full mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg py-1 z-20 dark:border-zinc-700 dark:bg-zinc-800 transition-all duration-200">
+                                                    {[
+                                                        { value: 'ALL', label: 'Tất cả' },
+                                                        { value: 'IN_USE', label: 'Đang học' },
+                                                        { value: 'EMPTY', label: 'Trống' }
+                                                    ].map(option => (
+                                                        <button
+                                                            key={option.value}
+                                                            onClick={() => { setSelectedStatus(option.value as any); setIsStatusFilterOpen(false); }}
+                                                            className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center justify-between ${selectedStatus === option.value ? 'text-fpt-orange bg-orange-50 dark:bg-orange-900/10' : 'text-gray-700 dark:text-gray-200'}`}
+                                                        >
+                                                            <span>{option.label}</span>
+                                                            {selectedStatus === option.value && <Check className="h-4 w-4" />}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Floor Filters */}
                             {selectedBuilding !== 'ALL' && (
@@ -278,49 +377,15 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
                         /* Card list view for ALL buildings */
                         <div className="bg-white dark:bg-zinc-900 rounded-2xl overflow-auto min-h-[500px]">
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Tất cả phòng học ({filteredRooms.length} phòng)</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                                {filteredRooms.map(room => {
-                                    const isComputerLab = room.type === 'COMPUTER_LAB';
-                                    const isClassroom = room.type === 'CLASSROOM';
-
-                                    return (
-                                        <div
-                                            key={room.id}
-                                            onClick={() => handleRoomClick(room)}
-                                            className={`p-4 rounded-xl border transition-all hover:shadow-md cursor-pointer group
-                                                ${isComputerLab ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-100 dark:border-blue-800' :
-                                                    isClassroom ? 'bg-orange-50 dark:bg-orange-950/20 border-orange-100 dark:border-orange-900/40' :
-                                                        'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-100 dark:border-emerald-800'}
-                                            `}
-                                        >
-                                            <div className="flex items-center justify-between mb-3">
-                                                <div className={`p-2 rounded-lg ${isComputerLab ? 'bg-blue-100 dark:bg-blue-800 text-blue-600 dark:text-blue-300' : isClassroom ? 'bg-orange-100 dark:bg-orange-900 text-orange-600 dark:text-orange-300' : 'bg-emerald-100 dark:bg-emerald-800 text-emerald-600 dark:text-emerald-300'}`}>
-                                                    <DoorOpen className="w-5 h-5" />
-                                                </div>
-                                                <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider ${isComputerLab ? 'bg-blue-100 text-blue-700' : isClassroom ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                                                    {getRoomTypeLabel(room.type)}
-                                                </span>
-                                            </div>
-                                            <h4 className="font-bold text-gray-900 dark:text-white group-hover:text-fpt-orange transition-colors">{room.name}</h4>
-                                            <div className="mt-3 pt-3 border-t border-gray-100 dark:border-zinc-700/50 space-y-1 text-xs text-gray-500 dark:text-zinc-400">
-                                                <div className="flex justify-between">
-                                                    <span>Vị trí:</span>
-                                                    <span className="font-medium text-gray-700 dark:text-gray-200">{room.building} - Tầng {room.floor}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span>Sức chứa:</span>
-                                                    <span className="font-medium text-gray-700 dark:text-gray-200">{room.capacity} người</span>
-                                                </div>
-                                                {room.description && (
-                                                    <div className="flex flex-col gap-1 mt-1 border-t border-gray-100 dark:border-zinc-700/30 pt-1">
-                                                        <span className="text-[10px] text-gray-400">Mô tả:</span>
-                                                        <span className="font-medium text-gray-700 dark:text-gray-200 line-clamp-2 italic">{room.description}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                {filteredRooms.map(room => (
+                                    <RoomCard
+                                        key={room.id}
+                                        room={room}
+                                        inUse={inUseRoomIds.has(room.id)}
+                                        onClick={() => handleRoomClick(room)}
+                                    />
+                                ))}
                             </div>
                         </div>
                     ) : (
@@ -372,22 +437,35 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
                                         const colSpan = room.gridColSpan || 1;
                                         const isComputerLab = room.type === 'COMPUTER_LAB';
                                         const isClassroom = room.type === 'CLASSROOM';
+                                        const isInUse = inUseRoomIds.has(room.id);
 
                                         return (
                                             <div
                                                 key={`room-${room.id}`}
                                                 onClick={() => handleRoomClick(room)}
-                                                className={`rounded-lg flex flex-col items-center justify-center cursor-pointer transition-all border
+                                                className={`rounded-lg flex flex-col items-center justify-center cursor-pointer transition-all border relative group
                                                     ${isComputerLab ? 'bg-blue-100/90 dark:bg-blue-900/40 border-blue-200 dark:border-blue-700 text-blue-900 dark:text-blue-100 shadow-[0_2px_4px_rgba(59,130,246,0.1)]' :
                                                         isClassroom ? 'bg-orange-100/90 dark:bg-orange-900/40 border-orange-200 dark:border-orange-700 text-orange-900 dark:text-orange-100 shadow-[0_2px_4px_rgba(249,115,22,0.1)]' :
                                                             'bg-emerald-100/90 dark:bg-emerald-900/40 border-emerald-200 dark:border-emerald-700 text-emerald-900 dark:text-emerald-100 shadow-[0_2px_4px_rgba(16,185,129,0.1)]'}
-                                                    hover:ring-2 hover:ring-fpt-orange hover:z-10 shadow-sm`}
+                                                    ${isInUse ? 'ring-2 ring-rose-500/50 dark:ring-rose-500/30' : 'hover:ring-2 hover:ring-fpt-orange'} 
+                                                    hover:z-10 shadow-sm`}
                                                 style={{
                                                     gridRow: `${row + 1} / span ${rowSpan}`,
                                                     gridColumn: `${col + 1} / span ${colSpan}`
                                                 }}
                                             >
-                                                <span className="text-[11px] font-bold text-center px-1 leading-tight">{room.name}</span>
+                                                {isInUse && (
+                                                    <div className="absolute top-1 right-1 flex h-2 w-2">
+                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                                                    </div>
+                                                )}
+                                                <span className="text-[11px] font-bold text-center px-1 leading-tight">
+                                                    {room.name}
+                                                </span>
+                                                {isInUse && (
+                                                    <span className="text-[8px] font-bold text-rose-600 dark:text-rose-400 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity uppercase">Đang học</span>
+                                                )}
                                             </div>
                                         );
                                     }
@@ -419,6 +497,7 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
 
                         <div className="space-y-2">
                             {sidebarRooms.map(room => {
+                                const isPositioned = room.gridRow != null && room.gridCol != null;
 
                                 return (
                                     <div
@@ -427,14 +506,23 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
                                                 ${room.type === 'COMPUTER_LAB' ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30' :
                                                 room.type === 'CLASSROOM' ? 'bg-orange-50/50 dark:bg-orange-950/10 border-orange-100 dark:border-orange-900/30' :
                                                     'bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30'}
+                                                ${!isPositioned ? 'border-dashed border-2 border-fpt-orange/50' : ''}
                                         `}
                                         onClick={() => handleRoomClick(room)}
                                     >
                                         <div className="flex items-center justify-between">
                                             <div className="flex flex-col">
-                                                <span className={`text-sm font-bold ${room.type === 'COMPUTER_LAB' ? 'text-blue-700 dark:text-blue-400' : room.type === 'CLASSROOM' ? 'text-orange-700 dark:text-orange-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
-                                                    {room.name}
-                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`text-sm font-bold ${room.type === 'COMPUTER_LAB' ? 'text-blue-700 dark:text-blue-400' : room.type === 'CLASSROOM' ? 'text-orange-700 dark:text-orange-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                                                        {room.name}
+                                                    </span>
+                                                    {inUseRoomIds.has(room.id) && (
+                                                        <span className="relative flex h-2 w-2" title="Đang sử dụng">
+                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75"></span>
+                                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-600"></span>
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <span className="text-[10px] opacity-70 italic">{getRoomTypeLabel(room.type)}</span>
                                             </div>
                                             <div className={`p-1.5 rounded-lg transition-colors shadow-sm ${room.type === 'COMPUTER_LAB' ? 'bg-blue-100 dark:bg-blue-800 text-blue-600 dark:text-blue-300' : room.type === 'CLASSROOM' ? 'bg-orange-100 dark:bg-orange-900 text-orange-600 dark:text-orange-300' : 'bg-emerald-100 dark:bg-emerald-800 text-emerald-600 dark:text-emerald-300'} group-hover:bg-fpt-orange group-hover:text-white`}>
@@ -442,6 +530,9 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
                                             </div>
                                         </div>
                                         <div className="flex flex-col gap-1 mt-2 text-[10px] opacity-60">
+                                            {!isPositioned && (
+                                                <span className="text-red-500 font-medium">Chưa xếp vị trí trên sơ đồ</span>
+                                            )}
                                             <span className="flex items-center gap-1">
                                                 <Users size={12} /> {room.capacity} người
                                             </span>

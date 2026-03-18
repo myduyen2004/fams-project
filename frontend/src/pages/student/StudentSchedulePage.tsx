@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { StudentLayout } from '../../layouts/StudentLayout';
 import { Card } from '../../components/common/Card';
@@ -14,9 +14,12 @@ import {
     ChevronLeft,
     ChevronRight,
     Lock,
-    FileText
+    FileText,
+    Check,
+    ChevronDown
 } from 'lucide-react';
 import axios from 'axios';
+import { Listbox, Transition } from '@headlessui/react';
 import { toast } from 'react-hot-toast';
 import timetableService, { WeeklyTimetableDTO, TimetableSlotDTO } from '../../services/api/timetableService';
 
@@ -40,8 +43,10 @@ export const StudentSchedulePage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedSlot, setSelectedSlot] = useState<TimetableSlotDTO | null>(null);
+    const [showLecturerPopup, setShowLecturerPopup] = useState(false);
     const [isScheduleHidden, setIsScheduleHidden] = useState(false);
     const [exporting, setExporting] = useState(false);
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
     // Semester State
     const [semesters, setSemesters] = useState<Semester[]>([]);
@@ -67,45 +72,33 @@ export const StudentSchedulePage: React.FC = () => {
         return `${year}-${month}-${day}`;
     };
 
-    // Generate weeks based on semester start/end dates
+    const YEARS = [2024, 2025, 2026];
+
+    // Generate weeks based on selected year
     const generateWeeks = () => {
-        if (!semesterStartDate || !semesterEndDate) return [];
-
         const weeks = [];
-        const startSem = new Date(semesterStartDate);
-        const endSem = new Date(semesterEndDate);
+        const d = new Date(selectedYear, 0, 1);
+        const startOfFirstWeek = getStartOfWeek(d);
 
-        // Start from the Monday of the week containing the semester start date
-        // or just the semester start date if we want strict cutoff?
-        // Usually weeks are full weeks. Let's align to Monday.
-        const startOfFirstWeek = getStartOfWeek(startSem);
+        for (let i = 0; i < 53; i++) {
+            const startOfWeek = new Date(startOfFirstWeek);
+            startOfWeek.setDate(startOfFirstWeek.getDate() + (i * 7));
 
-        // Loop until we pass the end date
-        let currentStart = new Date(startOfFirstWeek);
+            if (startOfWeek.getFullYear() > selectedYear && startOfWeek.getMonth() > 0) break;
 
-        while (currentStart <= endSem) {
-            const currentEnd = new Date(currentStart);
-            currentEnd.setDate(currentStart.getDate() + 6);
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 6);
 
             weeks.push({
-                value: formatDateToLocal(currentStart),
-                label: `${currentStart.getDate()}/${currentStart.getMonth() + 1} - ${currentEnd.getDate()}/${currentEnd.getMonth() + 1}`,
+                value: formatDateToLocal(startOfWeek),
+                label: `${startOfWeek.getDate()}/${startOfWeek.getMonth() + 1}/${startOfWeek.getFullYear()} - ${endOfWeek.getDate()}/${endOfWeek.getMonth() + 1}/${endOfWeek.getFullYear()}`,
                 isCurrent: false
             });
-
-            // Move to next week
-            const nextWeek = new Date(currentStart);
-            nextWeek.setDate(currentStart.getDate() + 7);
-            currentStart = nextWeek;
         }
-
         return weeks;
     };
 
     const weeks = generateWeeks();
-
-    // Find current week value for initial selection if needed, but we rely on currentDate state
-    // We update currentDate when selection changes
 
     const handleSemesterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const semesterCode = e.target.value;
@@ -114,43 +107,35 @@ export const StudentSchedulePage: React.FC = () => {
         if (sem) {
             setSemesterStartDate(sem.startDate);
             setSemesterEndDate(sem.endDate);
-
-            // Auto select start date of semester
             const newDate = new Date(sem.startDate);
             setCurrentDate(newDate);
         }
     };
 
+    const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const year = Number(e.target.value);
+        setSelectedYear(year);
+        const newDate = new Date(currentDate);
+        newDate.setFullYear(year);
+        setCurrentDate(newDate);
+    };
+
     const handlePrevWeek = () => {
         const newDate = new Date(currentDate);
         newDate.setDate(newDate.getDate() - 7);
-
-        // Prevent going before semester start
-        if (semesterStartDate) {
-            const startLimit = new Date(semesterStartDate);
-            // Adjust to start of week for fair comparison
-            const startOfWeekLimit = getStartOfWeek(startLimit);
-            if (newDate < startOfWeekLimit) {
-                return; // Or toast user
-            }
-        }
-
         setCurrentDate(newDate);
+        if (newDate.getFullYear() !== selectedYear) {
+            setSelectedYear(newDate.getFullYear());
+        }
     };
 
     const handleNextWeek = () => {
         const newDate = new Date(currentDate);
         newDate.setDate(newDate.getDate() + 7);
-
-        // Prevent going after semester end
-        if (semesterEndDate) {
-            const endLimit = new Date(semesterEndDate);
-            if (newDate > endLimit) {
-                return;
-            }
-        }
-
         setCurrentDate(newDate);
+        if (newDate.getFullYear() !== selectedYear) {
+            setSelectedYear(newDate.getFullYear());
+        }
     };
 
     const fetchSemesters = async () => {
@@ -160,21 +145,21 @@ export const StudentSchedulePage: React.FC = () => {
             setSemesters(data);
 
             if (data.length > 0) {
-                // Default to first semester
-                const defaultSem = data[0];
-                setSelectedSemester(defaultSem.code);
-                setSemesterStartDate(defaultSem.startDate);
-                setSemesterEndDate(defaultSem.endDate);
-
-                // If today is within this semester, use today. Else use start date
                 const today = new Date();
-                const start = new Date(defaultSem.startDate);
-                const end = new Date(defaultSem.endDate);
+                // Find a semester that contains today
+                const currentSem = data.find(s => {
+                    const start = new Date(s.startDate);
+                    const end = new Date(s.endDate);
+                    return today >= start && today <= end;
+                });
 
-                if (today >= start && today <= end) {
-                    setCurrentDate(today);
+                if (currentSem) {
+                    setSelectedSemester(currentSem.code);
+                    setSemesterStartDate(currentSem.startDate);
+                    setSemesterEndDate(currentSem.endDate);
                 } else {
-                    setCurrentDate(start);
+                    // Default to first semester but don't change currentDate
+                    setSelectedSemester(data[0].code);
                 }
             }
         } catch (err) {
@@ -199,24 +184,15 @@ export const StudentSchedulePage: React.FC = () => {
             if (!userStr) return;
 
             const user = JSON.parse(userStr);
-            console.log('Fetching schedule for User ID:', user.id, 'Date:', currentDate.toISOString());
-
             const dateStr = currentDate.toISOString().split('T')[0];
             const data = await timetableService.getStudentTimetable(user.id, dateStr);
-            console.log('Schedule Data:', data);
             setTimetable(data);
         } catch (error: any) {
             console.error('Failed to fetch timetable:', error);
-            // Check for 403 in response
-            if (error.response && error.response.status === 403) {
-                setIsScheduleHidden(true);
-                setTimetable(null);
-            } else if (axios.isAxiosError(error) && error.response?.status === 403) {
-                // Double check axios error format
+            if (error.response?.status === 403 || (axios.isAxiosError(error) && error.response?.status === 403)) {
                 setIsScheduleHidden(true);
                 setTimetable(null);
             } else {
-                console.warn('Timetable fetch error:', error.response?.data?.message || error.message);
                 setTimetable(null);
             }
         } finally {
@@ -225,9 +201,8 @@ export const StudentSchedulePage: React.FC = () => {
     };
 
     const handleWeekChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        // e.target.value is YYYY-MM-DD
         const parts = e.target.value.split('-').map(Number);
-        const selectedDate = new Date(parts[0], parts[1] - 1, parts[2]); // Year, Month (0-idx), Day
+        const selectedDate = new Date(parts[0], parts[1] - 1, parts[2]);
         setCurrentDate(selectedDate);
     };
 
@@ -240,69 +215,92 @@ export const StudentSchedulePage: React.FC = () => {
     const getDayLabel = (dateStr: string) => {
         if (!dateStr) return '';
         const date = new Date(dateStr);
-        const day = date.getDay(); // 0 = Sun, 1 = Mon
+        const day = date.getDay();
         if (day === 0) return 'Chủ nhật';
         return `Thứ ${day + 1}`;
     };
 
-    const getStatusStyle = (slot?: TimetableSlotDTO) => {
-        if (slot) {
-            const label = getStatusLabel(slot);
-            if (label === 'Đã hủy') return 'bg-red-50 text-red-600 border-red-100';
-            if (label === 'Đã kết thúc') return 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700';
-            if (label === 'Đang diễn ra') return 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800';
-        }
-        // Uniform Orange Theme for all statuses per user request
-        return 'bg-fpt-orange/10 text-fpt-orange border-fpt-orange/30';
-    };
-
     const SLOT_TIMES: Record<number, { start: string; end: string }> = {
-        1: { start: '07:30', end: '09:45' },
-        2: { start: '10:00', end: '12:15' },
+        1: { start: '07:15', end: '09:30' },
+        2: { start: '09:45', end: '12:00' },
         3: { start: '13:00', end: '15:15' },
         4: { start: '15:30', end: '17:45' },
     };
 
+
+    const dynamicSlotTimes = useMemo(() => {
+        const times: Record<number, { start: string; end: string }> = { ...SLOT_TIMES };
+        if (timetable?.days) {
+            timetable.days.forEach(day => {
+                day.slots?.forEach(slot => {
+                    if (slot.slotNumber && slot.startTime && slot.endTime) {
+                        times[slot.slotNumber] = {
+                            start: slot.startTime.substring(0, 8),
+                            end: slot.endTime.substring(0, 8)
+                        };
+                    }
+                });
+            });
+        }
+        return times;
+    }, [timetable]);
+
+    const getStatusStyle = (slot?: TimetableSlotDTO) => {
+        if (!slot) return 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700';
+        
+        const label = getStatusLabel(slot);
+        if (label === 'Đã hủy') return 'bg-red-50 text-red-600 border-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800';
+        if (label === 'Vắng mặt') return 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800';
+        if (label === 'Có mặt') return 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800';
+        if (label === 'Có phép') return 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800';
+        
+        return 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700';
+    };
+
     const getStatusLabel = (slot: TimetableSlotDTO) => {
+        if (slot.status === 'CANCELLED') return 'Đã hủy';
+        
         if (slot.attendanceStatus === 'PRESENT') return 'Có mặt';
         if (slot.attendanceStatus === 'ABSENT') return 'Vắng mặt';
-        if (slot.status === 'CANCELLED') return 'Đã hủy';
+        if (slot.attendanceStatus === 'EXCUSED') return 'Có phép';
 
-        // Time-based status check
+        // Auto-calculate for unmarked slots
         if (slot.date && slot.slotNumber) {
             const now = new Date();
-            const slotDate = new Date(slot.date);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            slotDate.setHours(0, 0, 0, 0);
+            const slotDateStr = slot.date.split('T')[0];
+            const times = dynamicSlotTimes[slot.slotNumber];
 
-            if (slotDate < today) {
-                return 'Đã kết thúc';
-            }
+            if (times) {
+                const startTime = new Date(`${slotDateStr}T${times.start}`);
+                const threshold = slot.absentThresholdMinutes ?? 15;
+                const attendanceDeadline = new Date(startTime.getTime() + threshold * 60000);
 
-            if (slotDate.getTime() === today.getTime()) {
-                const times = SLOT_TIMES[slot.slotNumber];
-                if (times) {
-                    const [endH, endM] = times.end.split(':').map(Number);
-                    const [startH, startM] = times.start.split(':').map(Number);
-                    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-                    const endMinutes = endH * 60 + endM;
-                    const startMinutes = startH * 60 + startM;
-
-                    if (currentMinutes >= endMinutes) return 'Đã kết thúc';
-                    if (currentMinutes >= startMinutes) return 'Đang diễn ra';
-                }
+                if (now < attendanceDeadline) return 'Chưa điểm danh';
+                return 'Vắng mặt';
             }
         }
 
-        return 'Chưa diễn ra';
+        return 'Chưa điểm danh';
+    };
+
+    const isOngoingSlot = (slot: TimetableSlotDTO) => {
+        if (slot.date && slot.slotNumber) {
+            const now = new Date();
+            const slotDateStr = slot.date.split('T')[0];
+            const times = dynamicSlotTimes[slot.slotNumber];
+            if (times) {
+                const startTime = new Date(`${slotDateStr}T${times.start}`);
+                const endTime = new Date(`${slotDateStr}T${times.end}`);
+                return now >= startTime && now <= endTime;
+            }
+        }
+        return false;
     };
 
     const getSlotForCell = (daySlots: TimetableSlotDTO[], slotNumber: number) => {
         return daySlots ? daySlots.find(s => s.slotNumber === slotNumber) : undefined;
     };
 
-    // Helper to get start of current week date string for select value
     const getCurrentWeekValue = () => {
         const monday = getStartOfWeek(currentDate);
         return formatDateToLocal(monday);
@@ -314,28 +312,16 @@ export const StudentSchedulePage: React.FC = () => {
             const userStr = localStorage.getItem('user');
             if (!userStr) return;
             const user = JSON.parse(userStr);
-
-            // Determine semester based on selectedSemester
-            const semesterCode = selectedSemester;
-
-            console.log('Exporting for semester:', semesterCode);
-
-            const response = await timetableService.exportStudentTimetable(user.id, semesterCode);
-
-            // Create download link
+            const response = await timetableService.exportStudentTimetable(user.id, selectedSemester);
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-
-            // Extract filename from header if possible, or default
             const contentDisposition = response.headers['content-disposition'];
-            let fileName = `Schedule_${user.code}_${semesterCode}.xlsx`;
+            let fileName = `Schedule_${user.code}_${selectedSemester}.xlsx`;
             if (contentDisposition) {
                 const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
-                if (fileNameMatch && fileNameMatch.length === 2)
-                    fileName = fileNameMatch[1];
+                if (fileNameMatch && fileNameMatch.length === 2) fileName = fileNameMatch[1];
             }
-
             link.setAttribute('download', fileName);
             document.body.appendChild(link);
             link.click();
@@ -351,74 +337,120 @@ export const StudentSchedulePage: React.FC = () => {
     return (
         <StudentLayout pageTitle="Thời khóa biểu">
             <div className="space-y-6">
-                {/* Header Controls */}
                 <div className="flex flex-col gap-4">
                     <div>
                         <div className="flex items-center gap-2 text-fpt-orange font-bold text-sm mb-1">
-                            <CalendarIcon size={16} /> {semesters.find(s => s.code === selectedSemester)?.name || 'Học kỳ'}
+                            <CalendarIcon size={16} /> Năm học {selectedYear}-{selectedYear + 1}
                         </div>
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                            Lịch học theo tuần
-                        </h1>
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Lịch học theo tuần</h1>
                     </div>
 
-                    {/* Toolbar: Filters (Left) and Export Button (Far Right) */}
                     <div className="flex items-center justify-between gap-4 p-2 rounded-xl">
                         <div className="flex items-center gap-3">
-                            {/* Semester Filter */}
-                            <div className="flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 px-3 py-2 rounded-lg border border-orange-100 dark:border-orange-800">
-                                <span className="text-gray-500 dark:text-gray-400 text-sm font-medium flex items-center gap-1 whitespace-nowrap">
-                                    <span className="text-xs">▼</span> Học kỳ:
-                                </span>
-                                <select
-                                    value={selectedSemester}
-                                    onChange={handleSemesterChange}
-                                    className="bg-transparent border-none text-fpt-orange font-bold focus:ring-0 cursor-pointer text-sm p-0 pr-6"
-                                    style={{ backgroundImage: 'none' }}
-                                >
-                                    {semesters.map(s => (
-                                        <option key={s.code} value={s.code}>{s.name || s.code}</option>
-                                    ))}
-                                </select>
+                            {/* Year Selector */}
+                            <div className="relative">
+                                <Listbox value={selectedYear} onChange={(val) => handleYearChange({ target: { value: val } } as any)}>
+                                    <div className="relative">
+                                        <Listbox.Button className="flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 px-3 py-2 rounded-lg border border-orange-100 dark:border-orange-800 text-fpt-orange font-bold text-sm transition-all hover:bg-orange-100 dark:hover:bg-orange-900/30">
+                                            <span className="text-gray-500 dark:text-gray-400 font-medium flex items-center gap-1 whitespace-nowrap">
+                                                Lọc:
+                                            </span>
+                                            <span>{selectedYear}</span>
+                                            <ChevronDown size={14} className="text-fpt-orange" />
+                                        </Listbox.Button>
+                                        <Transition
+                                            as={Fragment}
+                                            leave="transition ease-in duration-100"
+                                            leaveFrom="opacity-100"
+                                            leaveTo="opacity-0"
+                                        >
+                                            <Listbox.Options className="absolute z-30 mt-1 max-h-60 w-full overflow-auto rounded-xl bg-white dark:bg-zinc-800 py-1 text-sm shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm border border-gray-100 dark:border-zinc-700">
+                                                {YEARS.map((year) => (
+                                                    <Listbox.Option
+                                                        key={year}
+                                                        className={({ active }) =>
+                                                            `relative cursor-default select-none py-2 pl-10 pr-4 ${
+                                                                active ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange' : 'text-gray-900 dark:text-gray-200'
+                                                            }`
+                                                        }
+                                                        value={year}
+                                                    >
+                                                        {({ selected }) => (
+                                                            <>
+                                                                <span className={`block truncate ${selected ? 'font-bold' : 'font-normal'}`}>
+                                                                    {year}
+                                                                </span>
+                                                                {selected ? (
+                                                                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-fpt-orange">
+                                                                        <Check className="h-4 w-4" aria-hidden="true" />
+                                                                    </span>
+                                                                ) : null}
+                                                            </>
+                                                        )}
+                                                    </Listbox.Option>
+                                                ))}
+                                            </Listbox.Options>
+                                        </Transition>
+                                    </div>
+                                </Listbox>
                             </div>
 
-                            {/* Week Selector with Navigation */}
                             <div className="flex items-center gap-1">
-                                <button
-                                    onClick={handlePrevWeek}
-                                    className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg text-fpt-orange transition-colors"
-                                    title="Tuần trước"
-                                >
+                                <button onClick={handlePrevWeek} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg text-fpt-orange transition-colors">
                                     <ChevronLeft size={20} />
                                 </button>
-
-                                <div className="relative">
-                                    <div className="flex items-center gap-2 bg-white dark:bg-zinc-800 px-3 py-2 rounded-lg border border-fpt-orange/50 shadow-sm focus-within:ring-2 ring-fpt-orange/20">
-                                        <select
-                                            value={getCurrentWeekValue()}
-                                            onChange={handleWeekChange}
-                                            className="bg-transparent border-none text-gray-700 dark:text-gray-200 font-medium focus:ring-0 cursor-pointer text-sm p-0 w-64"
-                                        >
-                                            {weeks.map((week) => (
-                                                <option key={week.value} value={week.value}>
-                                                    {week.label}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
+                                
+                                {/* Week Selector */}
+                                <div className="relative min-w-[260px]">
+                                    <Listbox value={getCurrentWeekValue()} onChange={(val) => handleWeekChange({ target: { value: val } } as any)}>
+                                        <div className="relative">
+                                            <Listbox.Button className="flex items-center justify-between w-full gap-2 bg-white dark:bg-zinc-800 px-3 py-2 rounded-lg border border-fpt-orange/50 shadow-sm text-gray-700 dark:text-gray-200 font-medium text-sm transition-all hover:border-fpt-orange focus:ring-2 ring-fpt-orange/20">
+                                                <span className="truncate">{weeks.find(w => w.value === getCurrentWeekValue())?.label || 'Chọn tuần'}</span>
+                                                <ChevronDown size={14} className="text-gray-400" />
+                                            </Listbox.Button>
+                                            <Transition
+                                                as={Fragment}
+                                                leave="transition ease-in duration-100"
+                                                leaveFrom="opacity-100"
+                                                leaveTo="opacity-0"
+                                            >
+                                                <Listbox.Options className="absolute z-30 mt-1 max-h-60 w-full overflow-auto rounded-xl bg-white dark:bg-zinc-800 py-1 text-sm shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm border border-gray-100 dark:border-zinc-700">
+                                                    {weeks.map((week) => (
+                                                        <Listbox.Option
+                                                            key={week.value}
+                                                            className={({ active }) =>
+                                                                `relative cursor-default select-none py-2 pl-10 pr-4 ${
+                                                                    active ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange' : 'text-gray-900 dark:text-gray-200'
+                                                                }`
+                                                            }
+                                                            value={week.value}
+                                                        >
+                                                            {({ selected }) => (
+                                                                <>
+                                                                    <span className={`block truncate ${selected ? 'font-bold' : 'font-normal'}`}>
+                                                                        {week.label}
+                                                                    </span>
+                                                                    {selected ? (
+                                                                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-fpt-orange">
+                                                                            <Check className="h-4 w-4" aria-hidden="true" />
+                                                                        </span>
+                                                                    ) : null}
+                                                                </>
+                                                            )}
+                                                        </Listbox.Option>
+                                                    ))}
+                                                </Listbox.Options>
+                                            </Transition>
+                                        </div>
+                                    </Listbox>
                                 </div>
 
-                                <button
-                                    onClick={handleNextWeek}
-                                    className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg text-fpt-orange transition-colors"
-                                    title="Tuần sau"
-                                >
+                                <button onClick={handleNextWeek} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg text-fpt-orange transition-colors">
                                     <ChevronRight size={20} />
                                 </button>
                             </div>
                         </div>
 
-                        {/* Export Button - Far Right */}
                         <button
                             onClick={handleExport}
                             disabled={exporting}
@@ -430,7 +462,6 @@ export const StudentSchedulePage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Calendar Grid Container */}
                 <Card className="min-w-full overflow-hidden border-none shadow-sm dark:shadow-none bg-white dark:bg-zinc-900">
                     <div className="overflow-x-auto">
                         {loading ? (
@@ -443,112 +474,86 @@ export const StudentSchedulePage: React.FC = () => {
                                     <Lock size={32} className="text-fpt-orange" />
                                 </div>
                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Thời khóa biểu chưa được công bố</h3>
-                                <p className="text-gray-500 dark:text-gray-400">
-                                    Vui lòng quay lại sau khi nhà trường công bố lịch học chính thức.
-                                </p>
+                                <p className="text-gray-500 dark:text-gray-400">Vui lòng quay lại sau khi nhà trường công bố lịch học chính thức.</p>
                             </div>
                         ) : timetable && timetable.days ? (
-                            <table className="w-full border-collapse min-w-[1000px]">
+                            <table className="w-full border-collapse min-w-[1000px] table-fixed">
                                 <thead>
                                     <tr className="bg-gray-50 dark:bg-zinc-800/50">
-                                        <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-zinc-800 w-[150px]">
-                                            Thứ / Ngày
-                                        </th>
-                                        {SLOTS.map((slot) => (
-                                            <th
-                                                key={slot.id}
-                                                className="text-center px-4 py-4 border-b border-l border-gray-200 dark:border-zinc-800"
-                                            >
-                                                <div className="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider">
-                                                    {slot.label}
-                                                </div>
-                                                <div className="text-[11px] text-gray-400 mt-1 font-medium">
-                                                    {slot.time}
-                                                </div>
-                                            </th>
-                                        ))}
+                                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-zinc-800 w-[14%]">Thứ / Ngày</th>
+                                        {SLOTS.map((slot) => {
+                                            const times = dynamicSlotTimes[slot.id];
+                                            const formatTime = (timeStr: string) => timeStr?.slice(0, 5) || '';
+                                            const timeRange = times ? `${formatTime(times.start)} - ${formatTime(times.end)}` : slot.time;
+                                            return (
+                                                <th key={slot.id} className="text-center px-4 py-3 border-b border-l border-gray-100 dark:border-zinc-800 w-[21.5%]">
+                                                    <div className="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider">{slot.label}</div>
+                                                    <div className="text-[11px] text-gray-400 mt-1 font-medium">{timeRange}</div>
+                                                </th>
+                                            );
+                                        })}
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {timetable.days.map((day, idx) => (
-                                        <tr
-                                            key={day.date}
-                                            className={`${idx % 2 === 0 ? 'bg-white dark:bg-zinc-900' : 'bg-gray-50/30 dark:bg-zinc-800/20'} group`}
-                                        >
-                                            {/* Day Label Cell */}
-                                            <td className="px-6 py-4 border-b border-gray-100 dark:border-zinc-800 align-middle">
+                                        <tr key={day.date} className={`${idx % 2 === 0 ? 'bg-white dark:bg-zinc-900' : 'bg-gray-50/30 dark:bg-zinc-800/20'} group`}>
+                                            <td className="px-4 py-3 border-b border-gray-100 dark:border-zinc-800 align-middle">
                                                 <div className="flex flex-col">
-                                                    <div className="font-bold text-xl text-gray-900 dark:text-white leading-tight">
-                                                        {getDayLabel(day.date)}
-                                                    </div>
-                                                    <div className="text-sm text-gray-500 dark:text-gray-400 font-medium mt-1">
-                                                        {formatDateLabel(day.date)}
-                                                    </div>
+                                                    <div className="font-bold text-sm text-gray-900 dark:text-white leading-tight">{getDayLabel(day.date)}</div>
+                                                    <div className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">{formatDateLabel(day.date)}</div>
                                                     {day.date === new Date().toISOString().split('T')[0] && (
-                                                        <span className="inline-block mt-2 px-2 py-0.5 bg-fpt-orange/10 text-fpt-orange text-[10px] font-black rounded-full w-fit uppercase tracking-wider">
-                                                            Hôm nay
-                                                        </span>
+                                                        <span className="inline-block mt-1.5 px-2 py-0.5 bg-fpt-orange/10 text-fpt-orange text-[10px] font-black rounded-full w-fit uppercase tracking-wider">Hôm nay</span>
                                                     )}
                                                 </div>
                                             </td>
-
-                                            {/* Slot Cells */}
                                             {SLOTS.map((slot) => {
                                                 const slotData = getSlotForCell(day.slots, slot.id);
                                                 return (
-                                                    <td
-                                                        key={`${day.date}-${slot.id}`}
-                                                        className="px-3 py-3 border-b border-l border-gray-100 dark:border-zinc-800 align-middle min-h-[140px]"
-                                                    >
-                                                        {slotData ? (
-                                                            <div
-                                                                onClick={() => setSelectedSlot(slotData)}
-                                                                className="relative group bg-white dark:bg-zinc-800 rounded-xl p-3 pl-5 shadow-sm hover:shadow-md transition-all cursor-pointer border border-gray-100 dark:border-zinc-700 overflow-hidden h-[150px] max-w-[220px]"
+                                                    <td key={`${day.date}-${slot.id}`} className="px-2.5 py-2.5 border-b border-l border-gray-100 dark:border-zinc-800 align-top min-w-[160px]">
+                                                        {slotData ? (() => {
+                                                            const status = getStatusLabel(slotData);
+                                                            const isOngoing = isOngoingSlot(slotData);
+                                                            const isAbsent = status === 'Vắng mặt';
+                                                            const isPresent = status === 'Có mặt';
+                                                            const isExcused = status === 'Có phép';
+                                                            const isCancelled = status === 'Đã hủy';
+
+                                                            const borderClass = isOngoing ? 'border-l-[6px] border-fpt-orange' : 'border-l-4 border-fpt-orange';
+                                                            const bgClass = isOngoing ? 'bg-orange-50/50' : (isAbsent || isCancelled) ? 'bg-red-50/10' : isPresent ? 'bg-emerald-50/10' : isExcused ? 'bg-amber-50/10' : 'bg-white dark:bg-zinc-900';
+
+                                                            return (
+                                                                <div
+                                                                    onClick={() => setSelectedSlot(slotData)}
+                                                                    className={`relative group rounded-md p-2.5 shadow-sm transition-all cursor-pointer h-[110px] w-full flex flex-col justify-between ${borderClass} ${bgClass} ${isOngoing ? 'ring-1 ring-fpt-orange/30 shadow-[0_0_15px_rgba(255,102,0,0.2)] animate-[pulse-glow_2s_infinite_ease-in-out]' : 'hover:shadow-md'}`}
+                                                                >
+                                                                    {isOngoing && <style dangerouslySetInnerHTML={{ __html: `@keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 5px rgba(255,102,0,0.2); border-color: rgba(255,102,0,0.8); } 50% { box-shadow: 0 0 18px rgba(255,102,0,0.4); border-color: rgba(255,102,0,1); } }` }} />}
+                                                                    <div>
+                                                                        <div className="flex items-center justify-between mb-1.5">
+                                                                            <span className="font-extrabold text-[#001D4A] dark:text-white text-sm leading-tight truncate pr-1" title={slotData.courseName}>{slotData.courseCode}</span>
+                                                                            <span className={`shrink-0 px-1.5 py-0.5 rounded text-[9px] font-black uppercase border ${
+                                                                                isAbsent ? 'bg-red-50/20 text-red-500/80 border-red-100/20' :
+                                                                                isPresent ? 'bg-emerald-50/20 text-emerald-500/80 border-emerald-100/20' :
+                                                                                isExcused ? 'bg-amber-50/20 text-amber-500/80 border-amber-100/20' :
+                                                                                isCancelled ? 'bg-red-50/20 text-red-500/80 border-red-100/20' :
+                                                                                isOngoing ? 'bg-fpt-orange/20 text-fpt-orange border-fpt-orange/30' :
+                                                                                'bg-slate-50/20 text-slate-400 border-slate-100/20'
+                                                                            }`}>
+                                                                                {status}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div className="text-[11px] font-bold text-gray-700 dark:text-gray-300 truncate mb-1">Lớp: {slotData.className}</div>
+                                                                        <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate opacity-80">Phòng: {slotData.roomCode || slotData.roomName}</div>
+                                                                    </div>
+                                                                    <div className="flex items-center justify-between mt-auto pt-1 border-t border-gray-100 dark:border-zinc-800 text-[9px] font-medium text-gray-400 truncate">
+                                                                        {slotData.assignmentId ? (slotData.submissionStatus === 'SUBMITTED' ? <span className="text-green-600">Bài tập: Đã nộp</span> : <span className="text-fpt-orange">Bài tập: Chưa nộp</span>) : <span className="italic">Không có bài tập</span>}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })() : (
+                                                            <div 
+                                                                className="h-[110px] w-full flex items-center justify-center rounded-md border border-gray-200 dark:border-zinc-700 bg-gray-50/5 shadow-[inset_0_0_10px_rgba(0,0,0,0.01)]"
                                                             >
-                                                                {/* Left Orange Accent Bar - Absolute positioned for perfect rounding */}
-                                                                <div className="absolute left-0 top-0 bottom-0 w-[6px] bg-fpt-orange" />
-
-                                                                {/* Status Badge */}
-                                                                {(slotData.status || slotData.attendanceStatus) && (
-                                                                    <div className={`
-                                                                        inline-block px-1.5 py-0.5 rounded text-[8px] font-black border mb-1 uppercase tracking-tighter
-                                                                        ${getStatusStyle(slotData)}
-                                                                    `}>
-                                                                        {getStatusLabel(slotData)}
-                                                                    </div>
-                                                                )}
-
-                                                                {/* Course Code */}
-                                                                <div className="font-bold text-fpt-orange text-sm mb-1 truncate" title={slotData.courseName}>
-                                                                    {slotData.courseCode}
-                                                                </div>
-
-                                                                {/* Details */}
-                                                                <div className="space-y-0.5 text-[11px] font-medium">
-                                                                    <div className="text-gray-500 dark:text-gray-400 leading-tight truncate">
-                                                                        Lớp: {slotData.className}
-                                                                    </div>
-                                                                    <div className="text-gray-500 dark:text-gray-400 truncate">
-                                                                        GV: {slotData.lecturerName || 'Chưa phân công'}
-                                                                    </div>
-                                                                    <div className="text-gray-500 dark:text-gray-400 truncate">
-                                                                        Phòng: {slotData.roomCode || slotData.roomName}
-                                                                    </div>
-                                                                    <div className="text-gray-500 dark:text-gray-400 truncate">
-                                                                        Bài tập: {!slotData.assignmentId
-                                                                            ? 'Chưa có'
-                                                                            : slotData.submissionStatus === 'SUBMITTED'
-                                                                                ? <span className="text-green-600 dark:text-green-400 font-semibold">Đã nộp</span>
-                                                                                : slotData.assignmentStatus === 'CLOSED'
-                                                                                    ? <span className="text-red-500 dark:text-red-400 font-semibold">Đã đóng</span>
-                                                                                    : <span className="text-amber-500 dark:text-amber-400 font-semibold">Chưa nộp</span>
-                                                                        }
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="h-full min-h-[100px] flex items-center justify-center bg-gray-50/30 dark:bg-zinc-800/10 rounded-lg border border-dashed border-gray-100 dark:border-zinc-800/50">
-                                                                <span className="text-gray-300 dark:text-zinc-700 font-black text-xs">-</span>
+                                                                <span className="text-gray-300 dark:text-zinc-700 font-bold text-xs">-</span>
                                                             </div>
                                                         )}
                                                     </td>
@@ -569,31 +574,34 @@ export const StudentSchedulePage: React.FC = () => {
                 </Card>
             </div>
 
-            {/* Detail Modal */}
-            {
-                selectedSlot && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedSlot(null)}>
-                        <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
-                            {/* Header */}
-                            <div className="bg-fpt-orange px-6 py-4 flex items-center justify-between">
-                                <h3 className="text-white font-bold text-lg">Chi tiết buổi học</h3>
-                                <button
-                                    onClick={() => setSelectedSlot(null)}
-                                    className="text-white/80 hover:text-white transition-colors rounded-full p-1 hover:bg-white/10"
-                                >
-                                    <X size={20} />
-                                </button>
-                            </div>
+            {selectedSlot && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => { setSelectedSlot(null); setShowLecturerPopup(false); }}>
+                    <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
+                        
+                        {/* Header */}
+                        <div className="bg-fpt-orange px-8 py-6 relative">
+                            <h3 className="text-white font-bold text-xl mb-1">Chi tiết buổi học</h3>
+                            <p className="text-white/80 text-sm">Thông tin chi tiết lịch trình học tập</p>
+                            <button
+                                onClick={() => { setSelectedSlot(null); setShowLecturerPopup(false); }}
+                                className="absolute top-6 right-6 text-white/80 hover:text-white transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
 
-                            {/* Body */}
-                            <div className="p-6 space-y-4">
-                                <div className="flex items-start gap-4">
-                                    <div className="w-8 flex justify-center pt-1">
-                                        <CalendarIcon className="text-gray-400" size={20} />
+                        {/* Content */}
+                        <div className="p-8 space-y-6">
+                            
+                            {/* Date & Time Row */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-fpt-orange shrink-0">
+                                        <CalendarIcon size={20} />
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">Ngày</p>
-                                        <p className="font-medium text-gray-900 dark:text-white">
+                                        <p className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider mb-0.5">NGÀY</p>
+                                        <p className="font-bold text-gray-900 dark:text-white text-sm">
                                             {selectedSlot.date ? (() => {
                                                 const d = new Date(selectedSlot.date);
                                                 return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()} (${getDayLabel(selectedSlot.date)})`;
@@ -601,105 +609,169 @@ export const StudentSchedulePage: React.FC = () => {
                                         </p>
                                     </div>
                                 </div>
-
-                                <div className="flex items-start gap-4">
-                                    <div className="w-8 flex justify-center pt-1">
-                                        <Clock className="text-gray-400" size={20} />
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-fpt-orange shrink-0">
+                                        <Clock size={20} />
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">Thời gian</p>
-                                        <p className="font-medium text-gray-900 dark:text-white">
-                                            Slot {selectedSlot.slotNumber} <span className="text-gray-400 text-sm font-normal">({selectedSlot.startTime} - {selectedSlot.endTime})</span>
+                                        <p className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider mb-0.5">THỜI GIAN</p>
+                                        <p className="font-bold text-gray-900 dark:text-white text-sm">
+                                            Slot {selectedSlot.slotNumber} <span className="text-gray-400 font-normal">({selectedSlot.startTime} - {selectedSlot.endTime})</span>
                                         </p>
                                     </div>
                                 </div>
+                            </div>
 
-                                <div className="flex items-start gap-4">
-                                    <div className="w-8 flex justify-center pt-1">
-                                        <BookOpen className="text-gray-400" size={20} />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">Môn học / Lớp</p>
-                                        <p className="font-medium text-gray-900 dark:text-white">
-                                            {selectedSlot.courseName}
-                                        </p>
-                                        <p className="text-sm text-fpt-orange font-bold mt-1">
-                                            {selectedSlot.className}
-                                        </p>
-                                    </div>
+                            {/* Course / Class */}
+                            <div className="flex items-start gap-4">
+                                <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-fpt-orange mt-1 shrink-0">
+                                    <BookOpen size={20} />
                                 </div>
+                                <div>
+                                    <p className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider mb-0.5">MÔN HỌC / LỚP</p>
+                                    <p className="font-bold text-gray-900 dark:text-white text-base leading-tight mb-2">
+                                        {selectedSlot.courseName}
+                                    </p>
+                                    <button
+                                        onClick={() => {
+                                            if (selectedSlot.className) {
+                                                setSelectedSlot(null);
+                                                navigate(`/student/classes/${selectedSlot.className}/members`);
+                                            }
+                                        }}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-50 text-fpt-orange font-bold text-[11px] rounded-full hover:bg-orange-100 transition-colors border border-orange-100 group"
+                                        title="Xem danh sách sinh viên"
+                                    >
+                                        Lớp: {selectedSlot.className}
+                                        <ChevronRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity translate-x-[-4px] group-hover:translate-x-0" />
+                                    </button>
+                                </div>
+                            </div>
 
-                                <div className="flex items-start gap-4">
-                                    <div className="w-8 flex justify-center pt-1">
-                                        <MapPin className="text-gray-400" size={20} />
+                            {/* Room & Lecturer Row */}
+                            <div className="grid grid-cols-2 gap-4">
+                                {/* Room */}
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-fpt-orange shrink-0">
+                                        <MapPin size={20} />
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">Phòng học</p>
-                                        <p className="font-medium text-gray-900 dark:text-white">
+                                        <p className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider mb-0.5">PHÒNG HỌC</p>
+                                        <p className="font-bold text-gray-900 dark:text-white text-sm">
                                             {selectedSlot.roomCode || selectedSlot.roomName}
                                         </p>
                                     </div>
                                 </div>
-
-                                <div className="flex items-start gap-4">
-                                    <div className="w-8 flex justify-center pt-1">
-                                        <User className="text-gray-400" size={20} />
+                                {/* Lecturer */}
+                                <div className="flex items-center gap-4 relative">
+                                    <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-fpt-orange shrink-0">
+                                        <User size={20} />
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">Giáo viên</p>
-                                        <p className="font-medium text-gray-900 dark:text-white">
-                                            {selectedSlot.lecturerName || 'Chưa phân công'}
+                                        <p className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider mb-0.5">GIẢNG VIÊN</p>
+                                        <p 
+                                            className={`font-bold text-sm text-gray-900 dark:text-white ${selectedSlot.lecturerName ? 'cursor-pointer hover:text-fpt-orange transition-colors' : ''}`}
+                                            onClick={() => {
+                                                if (selectedSlot.lecturerName) {
+                                                    setShowLecturerPopup(!showLecturerPopup);
+                                                }
+                                            }}
+                                        >
+                                            {selectedSlot.lecturerName ? (
+                                                <span className="flex items-center gap-1">
+                                                    {selectedSlot.lecturerName}
+                                                    <ChevronRight size={14} className="text-gray-400" />
+                                                </span>
+                                            ) : 'Chưa phân công'}
                                         </p>
-                                    </div>
-                                </div>
-
-                                {/* Assignment Info Section */}
-                                <div className="flex items-start gap-4 pt-2 border-t border-gray-100 dark:border-zinc-800 mt-2">
-                                    <div className="w-8 flex justify-center pt-1">
-                                        <FileText className="text-gray-400" size={20} />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">Bài tập</p>
-                                        <p className="font-medium text-gray-900 dark:text-white mt-1">
-                                            {selectedSlot.assignmentId
-                                                ? selectedSlot.assignmentTitle
-                                                : 'Chưa có bài tập'}
-                                        </p>
-                                        {selectedSlot.assignmentId && (
-                                            <>
-                                                <p className="text-sm mt-1">
-                                                    Trạng thái: {selectedSlot.submissionStatus === 'SUBMITTED'
-                                                        ? <span className="text-green-600 dark:text-green-400 font-semibold">Đã nộp</span>
-                                                        : selectedSlot.assignmentStatus === 'CLOSED'
-                                                            ? <span className="text-red-500 dark:text-red-400 font-semibold">Đã đóng</span>
-                                                            : <span className="text-amber-500 dark:text-amber-400 font-semibold">Chưa nộp</span>}
-                                                </p>
-                                                <button
-                                                    onClick={() => { setSelectedSlot(null); navigate(`/student/assignments/${selectedSlot.assignmentId}`); }}
-                                                    className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-fpt-orange/10 hover:bg-fpt-orange/20 text-fpt-orange rounded-lg text-xs font-semibold transition-colors"
-                                                >
-                                                    <FileText className="w-3.5 h-3.5" />
-                                                    Xem bài tập
-                                                </button>
-                                            </>
+                                        
+                                        {/* Lecturer Info Popup */}
+                                        {showLecturerPopup && selectedSlot.lecturerName && (
+                                            <div className="absolute top-full left-0 mt-2 z-50 bg-white dark:bg-zinc-800 rounded-xl shadow-xl border border-gray-100 dark:border-zinc-700 p-4 w-64 animate-in fade-in slide-in-from-top-2">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 dark:bg-zinc-700 shrink-0 border border-gray-200 dark:border-zinc-600">
+                                                        {selectedSlot.lecturerAvatar ? (
+                                                            <img src={selectedSlot.lecturerAvatar} alt={selectedSlot.lecturerName} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center text-gray-400 font-bold text-lg">
+                                                                {selectedSlot.lecturerName.charAt(0)}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-bold text-gray-900 dark:text-white truncate" title={selectedSlot.lecturerName}>{selectedSlot.lecturerName}</p>
+                                                        {selectedSlot.lecturerEmail ? (
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate" title={selectedSlot.lecturerEmail}>{selectedSlot.lecturerEmail}</p>
+                                                        ) : (
+                                                            <p className="text-xs text-gray-400 italic">Chưa có email</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
+                            </div>
 
-                                <div className="flex items-start gap-4 pt-2 border-t border-gray-100 dark:border-zinc-800 mt-2">
-                                    <div className="w-8 flex justify-center pt-1">
+                            {/* Assignment info section */}
+                            {selectedSlot.assignmentId ? (
+                                <div
+                                    className="mt-6 flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 bg-gray-50/80 dark:bg-zinc-800/50 rounded-2xl border border-gray-100 dark:border-zinc-800"
+                                >
+                                    <div className="w-12 h-12 rounded-xl bg-orange-100/50 dark:bg-orange-900/30 flex items-center justify-center shrink-0 text-fpt-orange">
+                                        <FileText size={20} />
                                     </div>
-                                    <div className="flex items-center gap-2 w-full justify-between">
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">Trạng thái điểm danh:</p>
-                                        <span className={`font-bold uppercase px-3 py-1 rounded-full text-xs border ${getStatusStyle(selectedSlot)}`}>
-                                            {getStatusLabel(selectedSlot)}
-                                        </span>
+                                    <div className="flex-1 w-full">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                            <div>
+                                                <p className="text-sm text-fpt-orange font-bold">Bài tập</p>
+                                                <p className="font-medium text-gray-800 dark:text-gray-200 text-sm mt-0.5 line-clamp-1">
+                                                    {selectedSlot.assignmentTitle}
+                                                </p>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2 shrink-0">
+                                                {selectedSlot.submissionStatus === 'SUBMITTED' ? (
+                                                    <span className="inline-flex items-center px-2 py-1 rounded bg-green-100/80 text-green-700 text-[10px] font-extrabold uppercase tracking-wider">
+                                                        Đã nộp
+                                                    </span>
+                                                ) : selectedSlot.assignmentStatus === 'CLOSED' ? (
+                                                    <span className="inline-flex items-center px-2 py-1 rounded bg-gray-200 text-gray-600 text-[10px] font-extrabold uppercase tracking-wider">
+                                                        Đã đóng
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center px-2 py-1 rounded bg-amber-100 text-amber-600 text-[10px] font-extrabold uppercase tracking-wider">
+                                                        Chưa nộp
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="mt-3">
+                                            <button 
+                                                onClick={() => { setSelectedSlot(null); navigate(`/student/assignments/${selectedSlot.assignmentId}`); }} 
+                                                className="inline-flex w-full sm:w-auto justify-center items-center gap-1.5 px-4 py-1.5 bg-white text-fpt-orange border border-fpt-orange rounded-lg hover:bg-orange-50 transition-colors text-xs font-bold"
+                                            >
+                                                <FileText className="w-3.5 h-3.5" /> Xem bài tập
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
+                            ) : null}
+
+                        </div>
+
+                        {/* Footer Action area */}
+                        <div className="bg-gray-50/50 dark:bg-zinc-800/30 px-6 sm:px-8 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-gray-100 dark:border-zinc-800">
+                            <div className="flex items-center gap-3 shrink-0">
+                                <span className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">Điểm danh:</span>
+                                <span className={`font-bold uppercase px-3 py-1 rounded text-[11px] border whitespace-nowrap ${getStatusStyle(selectedSlot)}`}>
+                                    {getStatusLabel(selectedSlot)}
+                                </span>
                             </div>
                         </div>
+
                     </div>
-                )}
+                </div>
+            )}
         </StudentLayout>
     );
 };

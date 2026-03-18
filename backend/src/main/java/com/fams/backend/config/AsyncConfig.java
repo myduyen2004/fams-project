@@ -49,4 +49,9 @@ public class AsyncConfig {
     public Executor emailExecutor() {
         return Executors.newVirtualThreadPerTaskExecutor();
     }
+
+    @Bean(name = "dashboardExecutor")
+    public Executor dashboardExecutor() {
+        return Executors.newVirtualThreadPerTaskExecutor();
+    }
 }

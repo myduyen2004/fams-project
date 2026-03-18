@@ -15,13 +15,28 @@ public class AcademicStaffDashboardResponse {
     private DashboardStats stats;
     private List<TopStudentDTO> topStudents;
     private List<DashboardNotificationResponse> notifications;
+    private Integer unreadNotificationsCount;
     private AttendanceStatsDTO attendanceStats;
+    private List<RunningRoomDTO> runningRooms;
+    private Integer totalRunningRooms;
+    private List<WeeklyAttendanceDTO> weeklyAttendance;
+
+    @Data
+    @Builder
+    public static class RunningRoomDTO {
+        private String roomName;
+        private String lecturerName;
+        private Double attendancePercentage;
+    }
 
     @Data
     @Builder
     public static class DashboardStats {
-        private Integer totalStudents;
-        private Integer totalLecturers;
+        private Long totalStudents;
+        private Long totalLecturers;
+        private Long totalRequests;
+        private List<GroupedStatDTO> studentStats;
+        private List<GroupedStatDTO> lecturerStats;
     }
 
     @Data
@@ -42,5 +57,13 @@ public class AcademicStaffDashboardResponse {
         private Integer present;
         private Integer absent;
         private String date;
+    }
+
+    @Data
+    @Builder
+    public static class WeeklyAttendanceDTO {
+        private String day; // "Thứ 2", "Thứ 3", etc.
+        private String date; // "dd/MM"
+        private Double absencePercentage;
     }
 }

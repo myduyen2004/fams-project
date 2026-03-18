@@ -68,19 +68,17 @@ export const ProfilePage: React.FC = () => {
     if (editedProfile) {
       try {
         setIsUploadingAvatar(true);
-        const updateData: any = {
-          fullName: editedProfile.fullName,
-          code: editedProfile.code,
-          email: editedProfile.email,
+        const updateData = {
           dob: editedProfile.dob,
-          phone: editedProfile.phone,
-          role: editedProfile.role
+          phone: editedProfile.phone
         };
 
-        const updatedUser = await userService.updateUser(editedProfile.id, updateData, selectedAvatarFile || undefined);
+        const updatedUser = await userService.updateProfile(updateData, selectedAvatarFile || undefined);
 
-        setProfile(updatedUser as any);
-        localStorage.setItem('user', JSON.stringify(updatedUser));
+        // Merge with existing profile to keep non-updatable fields like fullName, email, etc.
+        const mergedUser = { ...profile, ...updatedUser };
+        setProfile(mergedUser as any);
+        localStorage.setItem('user', JSON.stringify(mergedUser));
         setIsEditing(false);
         setSelectedAvatarFile(null);
 
@@ -309,17 +307,8 @@ export const ProfilePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Code and Phone Row */}
+              {/* Phone Row */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                    Mã số
-                  </label>
-                  <p className="text-gray-900 dark:text-white font-medium">
-                    {displayProfile.code}
-                  </p>
-                </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
                     Số điện thoại

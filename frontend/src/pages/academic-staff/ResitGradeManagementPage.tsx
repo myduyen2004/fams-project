@@ -558,7 +558,7 @@ export const ResitGradeManagementPage: React.FC = () => {
                             <button
                                 onClick={handleExport}
                                 className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-zinc-700 transition-all disabled:opacity-50"
-                                disabled={!gradeOverview || exporting}
+                                disabled={!gradeOverview || exporting || !gradeOverview.anyGradesSubmitted}
                             >
                                 {exporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
                                 Xuất Excel
@@ -566,13 +566,13 @@ export const ResitGradeManagementPage: React.FC = () => {
                             <button
                                 onClick={() => setShowImportModal(true)}
                                 className="flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                disabled={!selectedCourse || !selectedSemester || !gradeOverview?.examGradesPublished || gradeOverview?.resitGradesPublished}
+                                disabled={!selectedCourse || !selectedSemester || !gradeOverview?.examGradesPublished || gradeOverview?.resitGradesPublished || (gradeOverview ? !gradeOverview.anyGradesSubmitted : false)}
                                 title={
                                     !gradeOverview?.examGradesPublished
                                         ? "Cần công bố điểm thi (FE) trước khi nhập điểm thi lại"
                                         : gradeOverview?.resitGradesPublished
                                             ? "Điểm thi lại đã được công bố, không thể chỉnh sửa"
-                                            : "Nhập điểm thi lại từ Excel"
+                                            : (!gradeOverview?.anyGradesSubmitted ? "Giảng viên chưa gửi điểm, không thể nhập thêm" : "Nhập điểm thi lại từ Excel")
                                 }
                             >
                                 <FileSpreadsheet size={16} />
@@ -636,7 +636,7 @@ export const ResitGradeManagementPage: React.FC = () => {
                                         Điểm TB
                                     </div>
                                     <div className="text-xl font-bold text-gray-900 dark:text-white">
-                                        {gradeOverview.averageGrade ?? '--'}
+                                        {!gradeOverview.anyGradesSubmitted ? '--' : (gradeOverview.averageGrade ?? '--')}
                                     </div>
                                 </div>
                                 <div className="bg-green-50 dark:bg-green-900/10 rounded-lg px-3 py-2 border border-green-100 dark:border-green-900/30 min-w-[100px]">
@@ -645,7 +645,7 @@ export const ResitGradeManagementPage: React.FC = () => {
                                         Tỷ lệ đạt
                                     </div>
                                     <div className="text-xl font-bold text-gray-900 dark:text-white">
-                                        {gradeOverview.passRate ? `${gradeOverview.passRate}%` : '--'}
+                                        {!gradeOverview.anyGradesSubmitted ? '--' : (gradeOverview.passRate ? `${gradeOverview.passRate}%` : '--')}
                                     </div>
                                 </div>
                             </div>
@@ -694,8 +694,12 @@ export const ResitGradeManagementPage: React.FC = () => {
                                     <button
                                         onClick={handleStartEdit}
                                         className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all disabled:opacity-50"
-                                        disabled={gradeOverview.gradesPublished}
-                                        title={gradeOverview.gradesPublished ? "Không thể chỉnh sửa sau khi đã công bố điểm" : "Chỉnh sửa điểm trực tiếp"}
+                                        disabled={gradeOverview.gradesPublished || !gradeOverview.anyGradesSubmitted}
+                                        title={gradeOverview.gradesPublished 
+                                            ? "Không thể chỉnh sửa sau khi đã công bố điểm" 
+                                            : !gradeOverview.anyGradesSubmitted
+                                                ? "Giảng viên chưa nộp điểm thành phần, chưa thể chỉnh sửa"
+                                                : "Chỉnh sửa điểm trực tiếp"}
                                     >
                                         <Edit3 size={18} />
                                         Chỉnh sửa
@@ -775,61 +779,65 @@ export const ResitGradeManagementPage: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50 dark:divide-zinc-800">
-                                    {filteredStudents.map((student, index) => (
-                                        <tr key={student.enrollmentId} className="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
-                                            <td className="px-4 py-2 text-center text-sm text-gray-500 dark:text-zinc-400">
-                                                {(index + 1).toString().padStart(2, '0')}
-                                            </td>
-                                            <td className="px-4 py-2">
-                                                <div className="flex flex-col">
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedStudentCode(student.studentCode);
-                                                            setIsStudentInfoModalOpen(true);
-                                                        }}
-                                                        className="text-left font-bold text-gray-900 dark:text-white text-sm hover:text-fpt-orange transition-colors"
-                                                    >
-                                                        {student.studentName}
-                                                    </button>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-2 text-sm font-medium text-gray-500 dark:text-zinc-400">
-                                                {student.studentCode}
-                                            </td>
-                                            <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">
-                                                {student.className}
-                                            </td>
-                                            {sortedGradeComponents.map((component) => {
-                                                const gradeKey = `${student.enrollmentId}_${component.id}`;
-                                                const score = student.grades[component.id];
-                                                const editValue = editedGrades[gradeKey];
+                                    {filteredStudents.map((student, index) => {
+                                        const isSubmitted = gradeOverview.submittedClasses?.includes(student.className) ?? false;
 
-                                                return (
-                                                    <td key={component.id} className="px-2 py-2 text-center">
-                                                        {isEditMode && component.type === 'RESIT' ? (
-                                                            <input
-                                                                type="text"
-                                                                inputMode="decimal"
-                                                                value={editValue ?? (score !== null && score !== undefined ? score.toFixed(1) : '')}
-                                                                onChange={(e) => handleGradeChange(student.enrollmentId, component.id, e.target.value)}
-                                                                className="w-14 text-center px-1 py-1 rounded-lg border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-gray-900 dark:text-white font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                                placeholder="--"
-                                                            />
-                                                        ) : (
-                                                            <span className={`inline-block px-2 py-1 rounded-lg font-semibold text-sm border border-gray-200 dark:border-zinc-600 ${getScoreColor(score)}`}>
-                                                                {formatScore(score)}
-                                                            </span>
-                                                        )}
-                                                    </td>
-                                                );
-                                            })}
-                                            <td className="px-4 py-2 text-center">
-                                                <span className={`inline-block min-w-[50px] px-3 py-1.5 rounded-lg border text-sm font-bold ${getFinalGradeColor(student.finalGrade)}`}>
-                                                    {formatScore(student.finalGrade)}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                        return (
+                                            <tr key={student.enrollmentId} className="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
+                                                <td className="px-4 py-2 text-center text-sm text-gray-500 dark:text-zinc-400">
+                                                    {(index + 1).toString().padStart(2, '0')}
+                                                </td>
+                                                <td className="px-4 py-2">
+                                                    <div className="flex flex-col">
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedStudentCode(student.studentCode);
+                                                                setIsStudentInfoModalOpen(true);
+                                                            }}
+                                                            className="text-left font-bold text-gray-900 dark:text-white text-sm hover:text-fpt-orange transition-colors"
+                                                        >
+                                                            {student.studentName}
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-2 text-sm font-medium text-gray-500 dark:text-zinc-400">
+                                                    {student.studentCode}
+                                                </td>
+                                                <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">
+                                                    {student.className}
+                                                </td>
+                                                {sortedGradeComponents.map((component) => {
+                                                    const gradeKey = `${student.enrollmentId}_${component.id}`;
+                                                    const score = student.grades[component.id];
+                                                    const editValue = editedGrades[gradeKey];
+
+                                                    return (
+                                                        <td key={component.id} className="px-2 py-2 text-center">
+                                                            {isEditMode && component.type === 'RESIT' && isSubmitted ? (
+                                                                <input
+                                                                    type="text"
+                                                                    inputMode="decimal"
+                                                                    value={editValue ?? (score !== null && score !== undefined ? score.toFixed(1) : '')}
+                                                                    onChange={(e) => handleGradeChange(student.enrollmentId, component.id, e.target.value)}
+                                                                    className="w-14 text-center px-1 py-1 rounded-lg border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-gray-900 dark:text-white font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                                    placeholder="--"
+                                                                />
+                                                            ) : (
+                                                                <span className={`inline-block px-2 py-1 rounded-lg font-semibold text-sm border border-gray-200 dark:border-zinc-600 ${isSubmitted ? getScoreColor(score) : 'text-gray-400'}`}>
+                                                                    {isSubmitted ? formatScore(score) : '--'}
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                    );
+                                                })}
+                                                <td className="px-4 py-2 text-center">
+                                                    <span className={`inline-block min-w-[50px] px-3 py-1.5 rounded-lg border text-sm font-bold ${isSubmitted ? getFinalGradeColor(student.finalGrade) : 'text-gray-400 border-gray-200'}`}>
+                                                        {isSubmitted ? formatScore(student.finalGrade) : '--'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>

@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AttendanceConfigServiceImpl implements AttendanceConfigService {
 
     private final AttendanceConfigRepository configRepository;
+    private final SystemLogService systemLogService;
     private static final String DEFAULT_CONFIG_KEY = "SYSTEM_CONFIG";
 
     @Override
@@ -50,6 +51,8 @@ public class AttendanceConfigServiceImpl implements AttendanceConfigService {
 
         existing.setWifiLocationEnabled(config.getWifiLocationEnabled());
 
-        return configRepository.save(existing);
+        AttendanceConfig saved = configRepository.save(existing);
+        systemLogService.logAttendanceConfigUpdated();
+        return saved;
     }
 }

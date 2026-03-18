@@ -38,6 +38,7 @@ export interface UserInfo {
   role: string;
   avatar?: string;
   isPasswordChanged?: boolean;
+  gpa?: number;
 }
 
 export interface ApiError {

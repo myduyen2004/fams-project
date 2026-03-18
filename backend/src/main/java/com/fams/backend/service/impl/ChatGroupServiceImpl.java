@@ -6,6 +6,8 @@ import com.fams.backend.dto.response.ReadReceiptDTO;
 import com.fams.backend.entity.*;
 import com.fams.backend.repository.*;
 import com.fams.backend.service.ChatGroupService;
+import com.fams.backend.dto.response.MessageReactionDTO;
+import com.fams.backend.service.ContentFilterService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -16,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,6 +33,8 @@ public class ChatGroupServiceImpl implements ChatGroupService {
     private final EnrollmentRepository enrollmentRepository;
     private final UserRepository userRepository;
     private final ChatMessageReadRepository chatMessageReadRepository;
+    private final ChatMessageReactionRepository chatMessageReactionRepository;
+    private final ContentFilterService contentFilterService;
 
     @Override
     @Transactional
@@ -155,13 +160,18 @@ public class ChatGroupServiceImpl implements ChatGroupService {
     @Transactional(readOnly = true)
     public Page<ChatMessageResponse> getMessages(Long groupId, Pageable pageable) {
         User currentUser = getCurrentUser();
+        log.info("Getting messages for group {} | User: {} | Page: {} | Size: {}", 
+                groupId, currentUser.getUsername(), pageable.getPageNumber(), pageable.getPageSize());
 
         // Check membership
         if (!chatGroupMemberRepository.existsByChatGroupIdAndUserIdAndLeftAtIsNull(groupId, currentUser.getId())) {
+            log.warn("User {} is not an active member of group {}", currentUser.getUsername(), groupId);
             throw new RuntimeException("Bạn không phải thành viên của nhóm này");
         }
 
-        Page<ChatMessage> messages = chatMessageRepository.findByGroupIdWithSender(groupId, pageable);
+        Page<ChatMessage> messages = chatMessageRepository.findByChatGroupIdOrderBySentAtDesc(groupId, pageable);
+        log.info("Found {} messages for group {}", messages.getTotalElements(), groupId);
+        
         List<Long> readMessageIds = chatMessageReadRepository.findReadMessageIds(currentUser.getId(), groupId);
 
         return messages.map(msg -> {
@@ -175,6 +185,8 @@ public class ChatGroupServiceImpl implements ChatGroupService {
     @Transactional
     public ChatMessageResponse sendMessage(Long groupId, String content, String type, Long replyToId,
             String attachmentUrl, String attachmentName) {
+        // CONTENT FILTER
+        contentFilterService.validate(content);
         User currentUser = getCurrentUser();
 
         // Check membership
@@ -237,6 +249,37 @@ public class ChatGroupServiceImpl implements ChatGroupService {
 
         log.info("User {} deleted message {} in group {}", currentUser.getUsername(), messageId, groupId);
 
+        return convertToMessageResponse(message, currentUser.getId(), true);
+    }
+
+    @Override
+    @Transactional
+    public ChatMessageResponse toggleReaction(Long messageId, String emoji) {
+        User currentUser = getCurrentUser();
+        ChatMessage message = chatMessageRepository.findById(messageId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy tin nhắn"));
+
+        // Check membership
+        if (!chatGroupMemberRepository.existsByChatGroupIdAndUserIdAndLeftAtIsNull(message.getChatGroup().getId(), currentUser.getId())) {
+            throw new RuntimeException("Bạn không phải thành viên của nhóm này");
+        }
+
+        var existingReaction = chatMessageReactionRepository.findByMessageAndUserAndEmoji(message, currentUser, emoji);
+
+        if (existingReaction.isPresent()) {
+            chatMessageReactionRepository.deleteByMessageAndUserAndEmoji(message, currentUser, emoji);
+            log.info("User {} removed reaction {} from message {}", currentUser.getUsername(), emoji, messageId);
+        } else {
+            ChatMessageReaction reaction = ChatMessageReaction.builder()
+                    .message(message)
+                    .user(currentUser)
+                    .emoji(emoji)
+                    .build();
+            chatMessageReactionRepository.save(reaction);
+            log.info("User {} added reaction {} to message {}", currentUser.getUsername(), emoji, messageId);
+        }
+
+        // Return updated message response
         return convertToMessageResponse(message, currentUser.getId(), true);
     }
 
@@ -342,6 +385,7 @@ public class ChatGroupServiceImpl implements ChatGroupService {
                                 .avatar(r.getUser().getAvatar())
                                 .build())
                         .collect(Collectors.toList()) : new ArrayList<>())
+                .reactions(mapReactions(message.getReactions(), currentUserId))
                 .build();
 
         if (message.getReplyTo() != null) {
@@ -390,6 +434,21 @@ public class ChatGroupServiceImpl implements ChatGroupService {
                             .memberRole(m.getRole().name())
                             .build();
                 })
+                .collect(Collectors.toList());
+    }
+
+    private List<MessageReactionDTO> mapReactions(List<ChatMessageReaction> reactions, Long currentUserId) {
+        if (reactions == null) return new ArrayList<>();
+
+        Map<String, List<ChatMessageReaction>> groupedByEmoji = reactions.stream()
+                .collect(Collectors.groupingBy(ChatMessageReaction::getEmoji));
+
+        return groupedByEmoji.entrySet().stream()
+                .map(entry -> MessageReactionDTO.builder()
+                        .emoji(entry.getKey())
+                        .count(entry.getValue().size())
+                        .reactedByMe(entry.getValue().stream().anyMatch(r -> r.getUser().getId().equals(currentUserId)))
+                        .build())
                 .collect(Collectors.toList());
     }
 }

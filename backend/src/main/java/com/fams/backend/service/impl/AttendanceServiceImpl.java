@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -24,6 +24,9 @@ public class AttendanceServiceImpl implements AttendanceService {
         private final StudentAttendanceRepository studentAttendanceRepository;
         private final UserRepository userRepository;
         private final EnrollmentRepository enrollmentRepository;
+        private final SemesterRepository semesterRepository;
+        private final ClassSectionRepository classSectionRepository;
+        private final SystemLogService systemLogService;
 
         @Override
         @Transactional
@@ -170,7 +173,11 @@ public class AttendanceServiceImpl implements AttendanceService {
                         throw new RuntimeException("Unauthorized: You are not the lecturer for this session");
                 }
 
-                User student = userRepository.findById(request.getStudentId())
+                if (request.getStudentId() == null) {
+                        throw new RuntimeException("Student ID must be provided");
+                }
+                long studentIdRes = request.getStudentId();
+                User student = userRepository.findById(studentIdRes)
                                 .orElseThrow(() -> new RuntimeException("Student not found"));
 
                 StudentAttendance attendance = studentAttendanceRepository
@@ -189,6 +196,10 @@ public class AttendanceServiceImpl implements AttendanceService {
                 }
 
                 studentAttendanceRepository.save(attendance);
+
+                String performerName = session.getLecturer().getFullName();
+                systemLogService.logSensitiveDataChange(performerName, student.getUsername(),
+                        "Điểm danh (Manual)", "N/A", request.getStatus());
 
                 return mapToDetailResponse(sessionRepository.findById(session.getId()).get());
         }
@@ -312,8 +323,15 @@ public class AttendanceServiceImpl implements AttendanceService {
                 }
 
                 // 7. Calculate absent % and build student reports
-                int totalClassSlots = classSection.getNumberOfSlots() != null ? classSection.getNumberOfSlots()
-                                : slots.size();
+                int totalClassSlots = slots.size();
+                if (totalClassSlots == 0) {
+                        if (classSection.getCourse() != null && classSection.getCourse().getNumberOfSlots() != null) {
+                                totalClassSlots = classSection.getCourse().getNumberOfSlots();
+                        } else if (classSection.getNumberOfSlots() != null) {
+                                totalClassSlots = classSection.getNumberOfSlots();
+                        }
+                }
+
                 if (totalClassSlots == 0)
                         totalClassSlots = 1;
 
@@ -370,8 +388,7 @@ public class AttendanceServiceImpl implements AttendanceService {
                                         .studentCode(student.getCode())
                                         .studentName(student.getFullName())
                                         .avatarUrl(student.getAvatar())
-                                        .absentPercentage(Math.round(absentPercentage * 100.0) / 100.0) // round to 2
-                                                                                                        // decimals
+                                        .absentPercentage(absentPercentage)
                                         .attendanceDetails(details)
                                         .build());
                 }
@@ -383,6 +400,168 @@ public class AttendanceServiceImpl implements AttendanceService {
                                 .semesterName(classSection.getSemester().getName())
                                 .slots(slotInfos)
                                 .studentReports(studentReports)
+                                .build();
+        }
+
+        @Override
+        @Transactional(readOnly = true)
+        public AttendanceDTO.StudentAttendanceSummaryResponse getStudentAttendanceSummary(Long studentId,
+                        String semesterCode) {
+                User student = userRepository.findById(studentId)
+                                .orElseThrow(() -> new RuntimeException("Sinh viên không tồn tại"));
+
+                Semester semester;
+                if (semesterCode == null || semesterCode.isEmpty()) {
+                        semester = semesterRepository.findActiveSemesters().stream().findFirst()
+                                        .orElseThrow(() -> new RuntimeException("Không tìm thấy học kỳ hiện tại"));
+                } else {
+                        semester = semesterRepository.findByCode(semesterCode)
+                                        .orElseThrow(() -> new RuntimeException(
+                                                        "Học kỳ không tồn tại: " + semesterCode));
+                }
+
+                List<Enrollment> enrollments = enrollmentRepository.findByStudentIdAndSemesterId(studentId,
+                                semester.getId());
+                List<AttendanceDTO.ClassAttendanceSummary> summaries = new ArrayList<>();
+                LocalDateTime now = LocalDateTime.now();
+
+                for (Enrollment enrollment : enrollments) {
+                        ClassSection cs = enrollment.getClassSection();
+                        List<TimetableSlot> allSlots = timetableSlotRepository.findByClassName(cs.getClassName());
+                        List<TimetableSlot> slots = allSlots.stream()
+                                        .filter(s -> s.getStatus() != TimetableSlot.TimetableSlotStatus.CANCELLED)
+                                        .collect(Collectors.toList());
+
+                        int totalSlots = slots.size();
+                        if (totalSlots == 0) {
+                                if (cs.getCourse() != null && cs.getCourse().getNumberOfSlots() != null) {
+                                        totalSlots = cs.getCourse().getNumberOfSlots();
+                                } else if (cs.getNumberOfSlots() != null) {
+                                        totalSlots = cs.getNumberOfSlots();
+                                }
+                        }
+
+                        if (totalSlots == 0) {
+                                totalSlots = 1;
+                        }
+
+                        int sessionsHeld = 0;
+                        int presentCount = 0;
+                        int unexcusedAbsentCount = 0;
+                        int excusedAbsentCount = 0;
+
+                        // Fetch student attendance for this class
+                        List<StudentAttendance> attendances = studentAttendanceRepository
+                                        .findByStudentIdAndClassName(studentId, cs.getClassName());
+                        Map<Long, StudentAttendance> attendanceMap = attendances.stream()
+                                        .filter(sa -> sa.getSession() != null
+                                                        && sa.getSession().getTimetableSlot() != null)
+                                        .collect(Collectors.toMap(sa -> sa.getSession().getTimetableSlot().getId(),
+                                                        sa -> sa, (a, b) -> a));
+
+                        for (TimetableSlot slot : slots) {
+                                LocalDateTime slotEnd = LocalDateTime.of(slot.getDate(),
+                                                slot.getSlotType().getEndTime());
+                                if (now.isAfter(slotEnd)) {
+                                        sessionsHeld++;
+                                        StudentAttendance sa = attendanceMap.get(slot.getId());
+                                        if (sa != null) {
+                                                if (sa.getStatus() == StudentAttendance.AttendanceStatus.PRESENT) {
+                                                        presentCount++;
+                                                } else if (sa.getStatus() == StudentAttendance.AttendanceStatus.EXCUSED) {
+                                                        excusedAbsentCount++;
+                                                } else {
+                                                        unexcusedAbsentCount++;
+                                                }
+                                        } else {
+                                                unexcusedAbsentCount++;
+                                        }
+                                }
+                        }
+
+                        double attendancePercentage = sessionsHeld > 0
+                                        ? (double) (presentCount + excusedAbsentCount) / sessionsHeld * 100.0
+                                        : 100.0;
+                        double absentPercentage = (double) unexcusedAbsentCount / totalSlots * 100.0;
+
+                        summaries.add(AttendanceDTO.ClassAttendanceSummary.builder()
+                                        .className(cs.getClassName())
+                                        .courseCode(cs.getCourse().getCode())
+                                        .courseName(cs.getCourse().getName())
+                                        .lecturerName(cs.getLecturer() != null ? cs.getLecturer().getFullName() : "N/A")
+                                        .totalSlots(totalSlots)
+                                        .totalSessionsHeld(sessionsHeld)
+                                        .presentCount(presentCount)
+                                        .unexcusedAbsentCount(unexcusedAbsentCount)
+                                        .excusedAbsentCount(excusedAbsentCount)
+                                        .attendancePercentage(Math.round(attendancePercentage * 100.0) / 100.0)
+                                        .absentPercentage(Math.round(absentPercentage * 100.0) / 100.0)
+                                        .build());
+                }
+
+                return AttendanceDTO.StudentAttendanceSummaryResponse.builder()
+                                .studentName(student.getFullName())
+                                .studentCode(student.getCode())
+                                .semesterName(semester.getName())
+                                .classSummaries(summaries)
+                                .build();
+        }
+
+        @Override
+        @Transactional(readOnly = true)
+        public AttendanceDTO.IndividualAttendanceDetail getStudentAttendanceDetail(Long studentId, String className) {
+                ClassSection cs = classSectionRepository.findByClassName(className)
+                                .orElseThrow(() -> new RuntimeException("Lớp học không tồn tại"));
+
+                List<TimetableSlot> allSlots = timetableSlotRepository.findByClassName(className);
+                List<TimetableSlot> slots = allSlots.stream()
+                                .filter(s -> s.getStatus() != TimetableSlot.TimetableSlotStatus.CANCELLED)
+                                .collect(Collectors.toList());
+
+                List<StudentAttendance> attendances = studentAttendanceRepository
+                                .findByStudentIdAndClassName(studentId, className);
+                Map<Long, StudentAttendance> attendanceMap = attendances.stream()
+                                .filter(sa -> sa.getSession() != null && sa.getSession().getTimetableSlot() != null)
+                                .collect(Collectors.toMap(sa -> sa.getSession().getTimetableSlot().getId(), sa -> sa,
+                                                (a, b) -> a));
+
+                LocalDateTime now = LocalDateTime.now();
+                List<AttendanceDTO.IndividualSlotAttendance> slotAttendanceList = slots.stream().map(slot -> {
+                        LocalDateTime slotEnd = LocalDateTime.of(slot.getDate(), slot.getSlotType().getEndTime());
+                        String statusStr = "FUTURE";
+                        if (now.isAfter(slotEnd)) {
+                                StudentAttendance sa = attendanceMap.get(slot.getId());
+                                if (sa != null) {
+                                        statusStr = sa.getStatus().name();
+                                } else {
+                                        statusStr = "ABSENT";
+                                }
+                        }
+
+                        return AttendanceDTO.IndividualSlotAttendance.builder()
+                                        .slotId(slot.getId())
+                                        .slotIndex(0)
+                                        .date(slot.getDate())
+                                        .startTime(slot.getSlotType().getStartTime())
+                                        .endTime(slot.getSlotType().getEndTime())
+                                        .roomCode(slot.getRoom().getCode())
+                                        .status(statusStr)
+                                        .lecturerName(cs.getLecturer() != null ? cs.getLecturer().getFullName() : "N/A")
+                                        .build();
+                }).collect(Collectors.toList());
+
+                // Set slot index after sorting
+                slotAttendanceList.sort(Comparator.comparing(AttendanceDTO.IndividualSlotAttendance::getDate)
+                                .thenComparing(AttendanceDTO.IndividualSlotAttendance::getStartTime));
+                for (int i = 0; i < slotAttendanceList.size(); i++) {
+                        slotAttendanceList.get(i).setSlotIndex(i + 1);
+                }
+
+                return AttendanceDTO.IndividualAttendanceDetail.builder()
+                                .className(cs.getClassName())
+                                .courseCode(cs.getCourse().getCode())
+                                .courseName(cs.getCourse().getName())
+                                .slots(slotAttendanceList)
                                 .build();
         }
 }
