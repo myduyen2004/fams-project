@@ -11,6 +11,7 @@ import {
 } from '../../services/api/permissionService';
 import { authService } from '../../services/api/authService';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
+import { toast } from 'react-hot-toast';
 
 export const PermissionsPage: React.FC = () => {
   const user = authService.getUser();

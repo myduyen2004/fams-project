@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useRef, useMemo, Fragment } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useRoleAwareNavigate } from '../../hooks/useRoleAwareNavigate';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import axios from 'axios';
@@ -219,7 +218,6 @@ const ErrorSuggestionsPanel: React.FC<{ error: string; onClose: () => void }> = 
 
 export const SchedulePage: React.FC = () => {
   const navigate = useRoleAwareNavigate();
-  const rawNavigate = useNavigate(); // For cases where we definitely want standard behavior
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [slotTimes, setSlotTimes] = useState<SlotTime[]>(DEFAULT_SLOT_TIMES);
