@@ -9,6 +9,7 @@ services:
       - NEON_STAGING_DB_URL=${NEON_STAGING_DB_URL}
       - NEON_STAGING_DB_USER=${NEON_STAGING_DB_USER}
       - NEON_STAGING_DB_PASSWORD=${NEON_STAGING_DB_PASSWORD}
+      - MONGODB_URI=${MONGODB_URI}
     depends_on:
       redis:
         condition: service_healthy
