@@ -30,12 +30,7 @@ const SLOTS = [
     { id: 4, label: 'SLOT 4', time: '15:30 - 17:45' },
 ];
 
-interface Semester {
-    code: string;
-    name: string;
-    startDate: string;
-    endDate: string;
-}
+
 
 export const StudentSchedulePage: React.FC = () => {
     const navigate = useNavigate();
@@ -49,10 +44,7 @@ export const StudentSchedulePage: React.FC = () => {
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
     // Semester State
-    const [semesters, setSemesters] = useState<Semester[]>([]);
     const [selectedSemester, setSelectedSemester] = useState<string>('');
-    const [semesterStartDate, setSemesterStartDate] = useState<string>('');
-    const [semesterEndDate, setSemesterEndDate] = useState<string>('');
 
     // Helper to get Monday of the week for a given date (Local time)
     const getStartOfWeek = (date: Date) => {
@@ -100,18 +92,6 @@ export const StudentSchedulePage: React.FC = () => {
 
     const weeks = generateWeeks();
 
-    const handleSemesterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const semesterCode = e.target.value;
-        setSelectedSemester(semesterCode);
-        const sem = semesters.find(s => s.code === semesterCode);
-        if (sem) {
-            setSemesterStartDate(sem.startDate);
-            setSemesterEndDate(sem.endDate);
-            const newDate = new Date(sem.startDate);
-            setCurrentDate(newDate);
-        }
-    };
-
     const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const year = Number(e.target.value);
         setSelectedYear(year);
@@ -142,7 +122,6 @@ export const StudentSchedulePage: React.FC = () => {
         try {
             const resp = await axios.get('/api/v1/semesters/active');
             const data = Array.isArray(resp.data) ? resp.data : [];
-            setSemesters(data);
 
             if (data.length > 0) {
                 const today = new Date();
@@ -155,8 +134,6 @@ export const StudentSchedulePage: React.FC = () => {
 
                 if (currentSem) {
                     setSelectedSemester(currentSem.code);
-                    setSemesterStartDate(currentSem.startDate);
-                    setSemesterEndDate(currentSem.endDate);
                 } else {
                     // Default to first semester but don't change currentDate
                     setSelectedSemester(data[0].code);
