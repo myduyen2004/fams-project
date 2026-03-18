@@ -12,6 +12,8 @@ export default {
         'fpt-orange': '#F37021',
         'fpt-blue': '#00529C',
         'fpt-green': '#4BA840',
+        'brand-orange-primary': '#F26F21',
+        'brand-orange-secondary': '#EA5C36',
         
         // Primary (Orange scale)
         primary: {
