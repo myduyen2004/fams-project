@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { useRoleAwareNavigate } from '../../hooks/useRoleAwareNavigate';
 import { ArrowLeft, ChevronRight, Search, FileText, Trash2, RefreshCw, Calendar, Plus, Edit } from 'lucide-react';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { Pagination } from '../../components/common/Pagination';
@@ -10,7 +11,7 @@ import { ImportEnrollmentModal } from '../../components/academic-staff/ImportEnr
 import { ClassSectionFormModal } from '../../components/academic-staff/ClassSectionFormModal';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { usePagination } from '../../hooks/usePagination';
-import axios from 'axios';
+import apiClient from '../../services/api/authService';
 import toast from 'react-hot-toast';
 
 // Custom hook for debounce
@@ -60,7 +61,7 @@ interface PageResponse {
 }
 
 export const ClassSectionManagement: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useRoleAwareNavigate();
   const { semesterCode } = useParams<{ semesterCode: string }>();
   const [classSections, setClassSections] = useState<ClassSection[]>([]);
   const [lecturers, setLecturers] = useState<LecturerOption[]>([]);
@@ -92,9 +93,10 @@ export const ClassSectionManagement: React.FC = () => {
   });
 
   // Fetch lecturers for filter dropdown
+  // Fetch lecturers for filter dropdown
   const fetchLecturers = async () => {
     try {
-      const response = await axios.get(`/api/v1/class-sections/semester/${semesterCode}/lecturers`);
+      const response = await apiClient.get(`/v1/class-sections/semester/${semesterCode}/lecturers`);
       setLecturers(response.data);
     } catch (error) {
       console.error('Error fetching lecturers:', error);
@@ -104,7 +106,7 @@ export const ClassSectionManagement: React.FC = () => {
   // Fetch semester info to get status even if no class sections exist
   const fetchSemesterInfo = useCallback(async () => {
     try {
-      const response = await axios.get(`/api/v1/semesters/get-by-code/${semesterCode}`);
+      const response = await apiClient.get(`/v1/semesters/get-by-code/${semesterCode}`);
       // Map back to uppercase values used in this component
       const statusMap: { [key: string]: string } = {
         'upcoming': 'UPCOMING',
@@ -121,16 +123,15 @@ export const ClassSectionManagement: React.FC = () => {
   const fetchClassSections = useCallback(async () => {
     try {
       setLoading(true);
-      const params: any = {
-        page: currentPage,
-        size: pageSize,
-      };
-
-      if (debouncedSearchTerm) params.search = debouncedSearchTerm;
-      if (statusFilter !== 'ALL') params.status = statusFilter;
-      if (lecturerFilter !== 'ALL') params.lecturerId = lecturerFilter;
-
-      const response = await axios.get(`/api/v1/class-sections/semester/${semesterCode}`, { params });
+      const response = await apiClient.get<PageResponse>(`/v1/class-sections/semester/${semesterCode}`, {
+        params: {
+          search: debouncedSearchTerm,
+          status: statusFilter === 'ALL' ? undefined : statusFilter,
+          lecturerId: lecturerFilter === 'ALL' ? undefined : lecturerFilter,
+          page: currentPage,
+          size: pageSize
+        }
+      });
       const data: PageResponse = response.data;
 
       setClassSections(data.content);
@@ -245,7 +246,7 @@ export const ClassSectionManagement: React.FC = () => {
     setShowDeleteConfirm(false);
     try {
       setDeleting(true);
-      await axios.delete('/api/v1/class-sections/bulk', {
+      await apiClient.delete('/v1/class-sections/bulk', {
         data: Array.from(selectedRows)
       });
       toast.success(`Đã xóa ${selectedRows.size} lớp học phần`);

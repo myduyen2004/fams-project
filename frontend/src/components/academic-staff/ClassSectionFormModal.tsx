@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Loader2, Save, Search, ChevronDown } from 'lucide-react';
-import axios from 'axios';
+import apiClient from '../../services/api/authService';
 import toast from 'react-hot-toast';
 
 interface ClassSection {
@@ -213,7 +213,7 @@ export const ClassSectionFormModal: React.FC<ClassSectionFormModalProps> = ({
     const fetchLecturers = async () => {
         try {
             setLoadingLecturers(true);
-            const response = await axios.get('/api/v1/class-sections/lecturers');
+            const response = await apiClient.get('/v1/class-sections/lecturers');
             setLecturers(response.data);
         } catch (error) {
             console.error('Error fetching lecturers:', error);
@@ -227,7 +227,7 @@ export const ClassSectionFormModal: React.FC<ClassSectionFormModalProps> = ({
         try {
             setLoadingCourses(true);
             // Use search endpoint which is more permissive
-            const response = await axios.get('/api/courses/search', {
+            const response = await apiClient.get('/courses/search', {
                 params: { limit: 1000 }
             });
             setCourses(response.data || []);
@@ -264,10 +264,10 @@ export const ClassSectionFormModal: React.FC<ClassSectionFormModalProps> = ({
             };
 
             if (isEditMode) {
-                await axios.put(`/api/v1/class-sections/${encodeURIComponent(classSection!.className)}`, payload);
+                await apiClient.put(`/v1/class-sections/${encodeURIComponent(classSection!.className)}`, payload);
                 toast.success('Cập nhật lớp học phần thành công');
             } else {
-                await axios.post('/api/v1/class-sections', payload);
+                await apiClient.post('/v1/class-sections', payload);
                 toast.success('Tạo lớp học phần thành công');
             }
 
