@@ -44,6 +44,7 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
     private final RoomRepository roomRepository;
     private final SlotTypeRepository slotTypeRepository;
     private final com.fams.backend.repository.EnrollmentRepository enrollmentRepository;
+    private final com.fams.backend.service.impl.SystemLogService systemLogService;
 
     @Override
     public ScheduleRequestResponse createRequest(CreateScheduleRequest request, Long requesterId) {
