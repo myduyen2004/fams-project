@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Bell, Check, Trash2, Clock, CheckCircle2, AlertCircle, Loader2, Settings } from 'lucide-react';
+import { Bell, Check, Trash2, Clock, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { userService } from '../../services/api/userService';
 import { authService } from '../../services/api/authService';
 import { dashboardService } from '../../services/api/dashboardService';
@@ -340,18 +340,6 @@ export const NotificationBell: React.FC = () => {
                   title="Đánh dấu tất cả đã đọc"
                 >
                   <Check size={18} />
-                </button>
-              )}
-              {(role === 'admin' || role === 'academic_staff') && (
-                <button
-                  onClick={() => {
-                    navigate('/admin/notification-management');
-                    setShowDropdown(false);
-                  }}
-                  className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-gray-500"
-                  title="Quản lý thông báo"
-                >
-                  <Settings size={18} />
                 </button>
               )}
             </div>

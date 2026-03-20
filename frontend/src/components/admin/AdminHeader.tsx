@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Moon, Sun, User, Settings, LogOut } from 'lucide-react';
+import { Moon, Sun, User, Settings, LogOut, Newspaper } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../../services/api/authService';
 import { userService } from '../../services/api/userService';
@@ -122,6 +122,13 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
         </button>
 
         {/* Notification Bell */}
+        <button
+          onClick={() => navigate('/news')}
+          className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
+          title="Tin tức"
+        >
+          <Newspaper size={20} />
+        </button>
         <ChatMessageIcon />
         <NotificationBell />
 
