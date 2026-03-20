@@ -120,13 +120,24 @@ export const AcademicStaffDashboard: React.FC = () => {
             >
               <div className="flex justify-between items-center mb-2">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Thông báo mới
+                  Thông báo tự động
                 </h3>
-                {data?.unreadNotificationsCount !== undefined && data.unreadNotificationsCount > 0 && (
-                  <span className="w-5 h-5 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full font-bold">
-                    {data.unreadNotificationsCount}
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate('/news');
+                    }}
+                    className="text-xs font-semibold text-fpt-orange hover:text-orange-600"
+                  >
+                    Tin tức
+                  </button>
+                  {data?.unreadNotificationsCount !== undefined && data.unreadNotificationsCount > 0 && (
+                    <span className="w-5 h-5 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full font-bold">
+                      {data.unreadNotificationsCount}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2 flex-grow">
