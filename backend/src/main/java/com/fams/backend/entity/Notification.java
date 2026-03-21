@@ -85,13 +85,6 @@ public class Notification {
     @Builder.Default
     private NotificationStatus status = NotificationStatus.DRAFT;
 
-    // Danh sách người nhận
-    @OneToMany(mappedBy = "notification", cascade = CascadeType.ALL)
-    @Builder.Default
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
-    private List<NotificationRecipient> recipients = new ArrayList<>();
-
     @ElementCollection
     @CollectionTable(name = "notification_attachments", joinColumns = @JoinColumn(name = "notification_id"))
     @Column(name = "url", columnDefinition = "TEXT")
@@ -127,6 +120,8 @@ public class Notification {
         STUDENT, // Tất cả sinh viên
         LECTURER, // Tất cả giảng viên
         CLASS, // Lớp cụ thể
+        ACADEMIC_STAFF, // Tất cả phòng đào tạo
+        ADMIN, // Tất cả quản trị viên
         USER, // Cá nhân người dùng
     }
 

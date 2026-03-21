@@ -41,10 +41,14 @@ public class DashboardBroadcastService {
         messagingTemplate.convertAndSend("/topic/alerts", alerts);
         log.info("Sent /topic/alerts (count: {})", alerts.size());
 
-        // 4. Notifications
-        List<DashboardNotificationResponse> notifications = dashboardService.getNotifications();
-        messagingTemplate.convertAndSend("/topic/notifications", notifications);
-        log.info("Sent /topic/notifications (count: {})", notifications.size());
+        // 4. Notifications (skip in scheduled context — requires authenticated user)
+        try {
+            List<DashboardNotificationResponse> notifications = dashboardService.getNotifications();
+            messagingTemplate.convertAndSend("/topic/notifications", notifications);
+            log.info("Sent /topic/notifications (count: {})", notifications.size());
+        } catch (Exception e) {
+            log.debug("Skipped /topic/notifications broadcast (no authenticated user in context)");
+        }
 
         // 5. System Logs
         List<SystemLogResponse> systemLogs = dashboardService.getSystemLogs();

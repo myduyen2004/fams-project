@@ -95,7 +95,7 @@ public class SecurityConfig {
                 CorsConfiguration configuration = new CorsConfiguration();
 
                 // Split comma-separated origins from properties
-                List<String> origins = Arrays.asList(allowedOrigins.split(","));
+                List<String> origins = Arrays.asList(allowedOrigins.split(",\\s*"));
                 configuration.setAllowedOriginPatterns(origins);
 
                 // Allow HTTP methods

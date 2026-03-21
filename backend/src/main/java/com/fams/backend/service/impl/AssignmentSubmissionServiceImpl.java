@@ -7,6 +7,7 @@ import com.fams.backend.dto.response.AssignmentSubmissionResponse;
 import com.fams.backend.entity.*;
 import com.fams.backend.repository.*;
 import com.fams.backend.service.AssignmentSubmissionService;
+import com.fams.backend.service.UserNotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -41,7 +42,7 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
     private final UserRepository userRepository;
     private final ClassSectionRepository classSectionRepository;
     private final TimetableSlotRepository timetableSlotRepository;
-    private final NotificationServiceImpl notificationService;
+    private final UserNotificationService notificationService;
 
     @Override
     public AssignmentResponse createAssignment(CreateAssignmentRequest request, Long lecturerId) {
@@ -457,10 +458,6 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
         Assignment assignment = submission.getAssignment();
         if (!assignment.getCreatedBy().getId().equals(lecturerId)) {
             throw new RuntimeException("Bạn không phải người tạo bài tập này");
-        }
-
-        if (assignment.getStatus() != Assignment.AssignmentStatus.CLOSED) {
-            throw new RuntimeException("Chỉ được nhận xét khi bài tập đã đóng");
         }
 
         submission.setLecturerComment(comment);

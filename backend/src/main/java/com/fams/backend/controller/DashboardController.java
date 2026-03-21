@@ -2,7 +2,7 @@ package com.fams.backend.controller;
 
 import com.fams.backend.dto.response.*;
 import com.fams.backend.service.DashboardService;
-import com.fams.backend.service.impl.NotificationServiceImpl;
+import com.fams.backend.service.UserNotificationService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +20,7 @@ import java.util.List;
 public class DashboardController {
 
     private final DashboardService dashboardService;
-    private final NotificationServiceImpl notificationService;
+    private final UserNotificationService notificationService;
 
     @GetMapping("/stats")
     @Operation(summary = "Lấy thống kê trang dashboard")
