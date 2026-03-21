@@ -31,13 +31,6 @@ const SLOTS = [
     { id: 4, label: 'SLOT 4', time: '15:30 - 17:45' },
 ];
 
-interface Semester {
-    code: string;
-    name: string;
-    startDate: string;
-    endDate: string;
-}
-
 export const StudentSchedulePage: React.FC = () => {
     const navigate = useNavigate();
     const [timetable, setTimetable] = useState<WeeklyTimetableDTO | null>(null);
