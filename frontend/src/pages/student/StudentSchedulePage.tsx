@@ -50,7 +50,6 @@ export const StudentSchedulePage: React.FC = () => {
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
     // Semester State
-    const [semesters, setSemesters] = useState<Semester[]>([]);
     const [selectedSemester, setSelectedSemester] = useState<string>('');
 
     // Helper to get Monday of the week for a given date (Local time)
@@ -130,7 +129,7 @@ export const StudentSchedulePage: React.FC = () => {
         try {
             const resp = await apiClient.get('/v1/semesters/active');
             const data = Array.isArray(resp.data) ? resp.data : [];
-            setSemesters(data);
+            // setSemesters(data); // Unused in UI
 
             if (data.length > 0) {
                 const today = new Date();
