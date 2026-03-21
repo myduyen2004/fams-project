@@ -71,7 +71,8 @@ export const AcademicStaffSidebar: React.FC = () => {
         { label: 'Giảng viên', path: '/academic-staff/lecturers' },
         { label: 'Sinh viên', path: '/academic-staff/students' },
         { label: 'Điểm thi', path: '/academic-staff/exam-grades' },
-        { label: 'Thi lại', path: '/academic-staff/resit-grades' }
+        { label: 'Thi lại', path: '/academic-staff/resit-grades' },
+        { label: 'Phân quyền', path: '/academic-staff/permissions' }
       ]
     },
     {

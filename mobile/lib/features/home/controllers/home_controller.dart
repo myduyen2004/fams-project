@@ -1,18 +1,24 @@
 import 'package:get/get.dart';
-import '../../auth/controllers/auth_controller.dart';
 
-/// Home Controller
 class HomeController extends GetxController {
-  final AuthController _authController = Get.find<AuthController>();
+  // Current tab index
+  var currentIndex = 0;
 
-  int currentIndex = 0;
+  // ✨ ADDED: Home View States ✨
+  var selectedDate = DateTime.now().obs;
+  var isCalendarVisible = true.obs;
 
   void changeTab(int index) {
     currentIndex = index;
-    update();
+    update(); // Notifies GetBuilder
   }
 
-  Future<void> logout() async {
-    await _authController.logout();
+  // ✨ ADDED: Home View Actions ✨
+  void toggleCalendar() {
+    isCalendarVisible.value = !isCalendarVisible.value;
+  }
+
+  void updateSelectedDate(DateTime date) {
+    selectedDate.value = date;
   }
 }

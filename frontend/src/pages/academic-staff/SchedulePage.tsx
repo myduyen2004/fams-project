@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef, useMemo, Fragment } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRoleAwareNavigate } from '../../hooks/useRoleAwareNavigate';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import axios from 'axios';
+import apiClient from '../../services/api/authService';
 import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
 import { toast } from 'react-hot-toast';
 import { Calendar, BookOpen, ChevronLeft, ChevronRight, X, MapPin, AlertTriangle, Check, ChevronsUpDown, Eye, EyeOff, Loader2, Play, Users, School, Download, MoreVertical, Home, RefreshCw, Save } from 'lucide-react';
@@ -105,6 +106,8 @@ const FilterCombobox: React.FC<FilterComboboxProps> = ({ value, onChange, option
 interface Semester {
   code: string;
   name: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 interface SlotTime {
@@ -216,7 +219,7 @@ const ErrorSuggestionsPanel: React.FC<{ error: string; onClose: () => void }> = 
 };
 
 export const SchedulePage: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useRoleAwareNavigate();
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [slotTimes, setSlotTimes] = useState<SlotTime[]>(DEFAULT_SLOT_TIMES);
@@ -270,10 +273,24 @@ export const SchedulePage: React.FC = () => {
 
   const fetchSemesters = async () => {
     try {
-      const resp = await axios.get('/api/v1/semesters/active');
+      const resp = await apiClient.get('/v1/semesters/active');
       const data = Array.isArray(resp.data) ? resp.data : [];
       setSemesters(data);
-      if (data.length > 0 && !selected) setSelected(data[0].code);
+
+      if (data.length > 0 && !selected) {
+        // Try to find the current active semester based on today's date
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        const currentSem = data.find(s =>
+          s.startDate && s.endDate && todayStr >= s.startDate && todayStr <= s.endDate
+        );
+
+        if (currentSem) {
+          setSelected(currentSem.code);
+        } else {
+          // If no semester covers today, default to the first one (most recent)
+          setSelected(data[0].code);
+        }
+      }
     } catch (err) {
       console.error('Failed to load semesters', err);
       toast.error('Không thể tải danh sách học kỳ');
@@ -283,16 +300,28 @@ export const SchedulePage: React.FC = () => {
 
   const fetchSemesterDetails = async (semesterCode: string) => {
     try {
-      const resp = await axios.get(`/api/v1/semesters/get-by-code/${semesterCode}`);
+      const resp = await apiClient.get(`/v1/semesters/get-by-code/${semesterCode}`);
       const semesterData = resp.data;
 
       // Extract start and end dates from semester
       if (semesterData.startDate) {
         setSemesterStartDate(semesterData.startDate);
-        setSelectedDate(semesterData.startDate); // Auto-select first day of semester
       }
       if (semesterData.endDate) {
         setSemesterEndDate(semesterData.endDate);
+      }
+
+      // Auto-select today if it falls within the semester, otherwise default to start date
+      if (semesterData.startDate) {
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        const isPastStart = todayStr >= semesterData.startDate;
+        const isBeforeEnd = !semesterData.endDate || todayStr <= semesterData.endDate;
+
+        if (isPastStart && isBeforeEnd) {
+          setSelectedDate(todayStr);
+        } else {
+          setSelectedDate(semesterData.startDate);
+        }
       }
 
       // Set published status from semester config
@@ -605,7 +634,7 @@ export const SchedulePage: React.FC = () => {
     if (!selected) return;
     const newValue = !showLockedSchedule;
     try {
-      await axios.patch(`/api/v1/semesters/${selected}/publish`, { isPublished: newValue });
+      await apiClient.patch(`/v1/semesters/${selected}/publish`, { isPublished: newValue });
       setShowLockedSchedule(newValue);
       toast.success(newValue ? 'Đã công khai thời khóa biểu cho sinh viên' : 'Đã ẩn thời khóa biểu');
     } catch (err) {
@@ -1386,7 +1415,15 @@ export const SchedulePage: React.FC = () => {
               {!isRescheduling ? (
                 <>
                   <button
-                    onClick={() => window.open(`/academic-staff/attendance/realtime/${selectedSlot.id}`, '_blank')}
+                    onClick={() => {
+                      const path = `/academic-staff/attendance/realtime/${selectedSlot.id}`;
+                      const userStr = localStorage.getItem('user');
+                      const user = userStr ? JSON.parse(userStr) : null;
+                      const mappedPath = (user?.role === 'LECTURER') 
+                        ? path.replace('/academic-staff/', '/lecturer/granted/') 
+                        : path;
+                      window.open(mappedPath, '_blank');
+                    }}
                     className="w-full py-3.5 bg-fpt-orange hover:bg-orange-600 text-white rounded-[20px] font-bold transition-all shadow-lg shadow-orange-100 active:scale-[0.98]"
                   >
                     Xem điểm danh

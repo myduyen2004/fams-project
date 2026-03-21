@@ -36,8 +36,13 @@ export const EditNotificationPage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isAcademicStaff = location.pathname.startsWith('/academic-staff');
-  const Layout = isAcademicStaff ? AcademicStaffLayout : AdminLayout;
-  const backUrl = isAcademicStaff ? '/academic-staff/notification-management' : '/admin/notification-management';
+  const isLecturerGranted = location.pathname.startsWith('/lecturer/granted');
+  const Layout = (isAcademicStaff || isLecturerGranted) ? AcademicStaffLayout : AdminLayout;
+  const backUrl = isAcademicStaff 
+    ? '/academic-staff/notification-management' 
+    : isLecturerGranted 
+      ? '/lecturer/granted/notifications' 
+      : '/admin/notification-management';
 
   const [notification, setNotification] = useState<AdminNotification | null>(null);
   const [loading, setLoading] = useState(true);
@@ -342,7 +347,7 @@ export const EditNotificationPage = () => {
     <Layout pageTitle="Chỉnh sửa thông báo">
       <div className="max-w-4xl mx-auto">
         <button
-          onClick={() => navigate(`${isAcademicStaff ? '/academic-staff' : '/admin'}/notifications/${id}`)}
+          onClick={() => navigate(`${isAcademicStaff ? '/academic-staff' : isLecturerGranted ? '/lecturer/granted' : '/admin'}/notifications/${id}`)}
           className="flex items-center gap-2 text-sm text-gray-500 hover:text-fpt-orange mb-4 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />

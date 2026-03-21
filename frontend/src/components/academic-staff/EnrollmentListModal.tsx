@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, Trash2, Plus, Search, UserPlus, ArrowRightLeft } from 'lucide-react';
 import { ConfirmModal } from '../common/ConfirmModal';
-import axios from 'axios';
+import apiClient from '../../services/api/authService';
 import toast from 'react-hot-toast';
 
 interface Enrollment {
@@ -124,7 +124,7 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
   const fetchEnrollments = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/v1/class-sections/${encodeURIComponent(className)}/enrollments`);
+      const response = await apiClient.get(`/v1/class-sections/${encodeURIComponent(className)}/enrollments`);
       setEnrollments(response.data);
       setSelectedRows(new Set());
     } catch (error) {
@@ -138,7 +138,7 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
   const fetchAvailableStudents = async () => {
     try {
       setLoadingStudents(true);
-      const response = await axios.get(`/api/v1/class-sections/${encodeURIComponent(className)}/available-students`);
+      const response = await apiClient.get(`/v1/class-sections/${encodeURIComponent(className)}/available-students`);
       setAvailableStudents(response.data);
       setFilteredStudents(response.data.slice(0, 50));
     } catch (error) {
@@ -182,7 +182,7 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
     setShowDeleteConfirm(false);
     try {
       setDeleting(true);
-      await axios.delete('/api/v1/class-sections/enrollments/bulk', {
+      await apiClient.delete('/v1/class-sections/enrollments/bulk', {
         data: Array.from(selectedRows)
       });
       toast.success(`Đã xóa ${selectedRows.size} đăng ký`);
@@ -201,7 +201,7 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
   const fetchTransferTargets = async () => {
     try {
       setLoadingTransferTargets(true);
-      const response = await axios.get(`/api/v1/class-sections/${encodeURIComponent(className)}/transfer-targets`);
+      const response = await apiClient.get(`/v1/class-sections/${encodeURIComponent(className)}/transfer-targets`);
       setTransferTargets(response.data);
       setSelectedTransferTarget('');
     } catch (error) {
@@ -235,7 +235,7 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
 
     try {
       setTransferring(true);
-      await axios.post('/api/v1/class-sections/enrollments/transfer', {
+      await apiClient.post('/v1/class-sections/enrollments/transfer', {
         enrollmentIds: Array.from(selectedRows),
         targetClassName: selectedTransferTarget
       });
@@ -285,7 +285,7 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
       // Add students sequentially to avoid race conditions
       for (const code of studentCodes) {
         try {
-          await axios.post('/api/v1/class-sections/enrollments', {
+          await apiClient.post('/v1/class-sections/enrollments', {
             className,
             studentCode: code
           });

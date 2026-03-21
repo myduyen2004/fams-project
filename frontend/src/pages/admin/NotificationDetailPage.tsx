@@ -13,9 +13,13 @@ export const NotificationDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isAcademicStaff = location.pathname.startsWith('/academic-staff');
-
-  const Layout = isAcademicStaff ? AcademicStaffLayout : AdminLayout;
-  const backUrl = isAcademicStaff ? '/academic-staff/notification-management' : '/admin/notification-management';
+  const isLecturerGranted = location.pathname.startsWith('/lecturer/granted');
+  const Layout = (isAcademicStaff || isLecturerGranted) ? AcademicStaffLayout : AdminLayout;
+  const backUrl = isAcademicStaff 
+    ? '/academic-staff/notification-management' 
+    : isLecturerGranted 
+      ? '/lecturer/granted/notifications' 
+      : '/admin/notification-management';
 
   const [notification, setNotification] = useState<AdminNotification | null>(null);
   const [loading, setLoading] = useState(true);
@@ -286,7 +290,7 @@ export const NotificationDetailPage: React.FC = () => {
           <div className="flex justify-end items-center gap-3 pt-4">
             {isEditable && (
               <Link
-                to={`${isAcademicStaff ? '/academic-staff' : '/admin'}/notifications/edit/${notification.id}`}
+                to={`${isAcademicStaff ? '/academic-staff' : isLecturerGranted ? '/lecturer/granted' : '/admin'}/notifications/edit/${notification.id}`}
                 className="inline-flex items-center gap-2 px-6 py-2.5 bg-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-300 transition-colors shadow-sm dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
               >
                 Chỉnh sửa thông báo

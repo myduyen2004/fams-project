@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { X, Upload, Loader2, CheckCircle, AlertTriangle, XCircle, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
-import axios from 'axios';
+import apiClient from '../../services/api/authService';
 
 // Preview response from fast-preview endpoint
 interface FastPreviewResponse {
@@ -79,8 +79,8 @@ export const ImportClassSectionModal: React.FC<ImportClassSectionModalProps> = (
             const formData = new FormData();
             formData.append('file', file);
 
-            const response = await axios.post<FastPreviewResponse>(
-                `/api/v1/class-sections/semester/${semesterCode}/fast-preview`,
+            const response = await apiClient.post<FastPreviewResponse>(
+                `/v1/class-sections/semester/${semesterCode}/fast-preview`,
                 formData,
                 { headers: { 'Content-Type': 'multipart/form-data' } }
             );
@@ -108,8 +108,8 @@ export const ImportClassSectionModal: React.FC<ImportClassSectionModalProps> = (
             const formData = new FormData();
             formData.append('file', file);
 
-            const response = await axios.post<BulkImportResponse>(
-                `/api/v1/class-sections/semester/${semesterCode}/bulk-import`,
+            const response = await apiClient.post<BulkImportResponse>(
+                `/v1/class-sections/semester/${semesterCode}/bulk-import`,
                 formData,
                 { headers: { 'Content-Type': 'multipart/form-data' } }
             );
@@ -176,7 +176,7 @@ export const ImportClassSectionModal: React.FC<ImportClassSectionModalProps> = (
                                 type="button"
                                 onClick={async () => {
                                     try {
-                                        const response = await axios.get('/api/v1/class-sections/import/template', {
+                                        const response = await apiClient.get('/v1/class-sections/import/template', {
                                             responseType: 'blob',
                                         });
                                         const url = window.URL.createObjectURL(new Blob([response.data]));

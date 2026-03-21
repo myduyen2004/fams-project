@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Upload, Loader2, Download, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import axios from 'axios';
+import apiClient from '../../services/api/authService';
 
 // Preview response from fast-preview endpoint
 interface FastPreviewResponse {
@@ -69,7 +69,7 @@ export const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
 
     const handleDownloadTemplate = async () => {
         try {
-            const response = await axios.get(`/api/v1/class-sections/semester/${encodeURIComponent(semesterCode)}/enrollments/import/template`, {
+            const response = await apiClient.get(`/v1/class-sections/semester/${encodeURIComponent(semesterCode)}/enrollments/import/template`, {
                 responseType: 'blob',
             });
             const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -100,8 +100,8 @@ export const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
             const formData = new FormData();
             formData.append('file', file);
 
-            const response = await axios.post<FastPreviewResponse>(
-                `/api/v1/class-sections/semester/${encodeURIComponent(semesterCode)}/enrollments/fast-preview`,
+            const response = await apiClient.post<FastPreviewResponse>(
+                `/v1/class-sections/semester/${encodeURIComponent(semesterCode)}/enrollments/fast-preview`,
                 formData,
                 { headers: { 'Content-Type': 'multipart/form-data' } }
             );
@@ -129,8 +129,8 @@ export const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
             const formData = new FormData();
             formData.append('file', file);
 
-            const response = await axios.post<BulkImportResponse>(
-                `/api/v1/class-sections/semester/${encodeURIComponent(semesterCode)}/enrollments/bulk-import`,
+            const response = await apiClient.post<BulkImportResponse>(
+                `/v1/class-sections/semester/${encodeURIComponent(semesterCode)}/enrollments/bulk-import`,
                 formData,
                 { headers: { 'Content-Type': 'multipart/form-data' } }
             );
