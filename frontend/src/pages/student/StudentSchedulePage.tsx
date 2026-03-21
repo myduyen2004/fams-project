@@ -21,6 +21,7 @@ import {
 import axios from 'axios';
 import { Listbox, Transition } from '@headlessui/react';
 import { toast } from 'react-hot-toast';
+import apiClient from '../../services/api/authService';
 import timetableService, { WeeklyTimetableDTO, TimetableSlotDTO } from '../../services/api/timetableService';
 
 const SLOTS = [
@@ -127,7 +128,7 @@ export const StudentSchedulePage: React.FC = () => {
 
     const fetchSemesters = async () => {
         try {
-            const resp = await axios.get('/api/v1/semesters/active');
+            const resp = await apiClient.get('/v1/semesters/active');
             const data = Array.isArray(resp.data) ? resp.data : [];
             setSemesters(data);
 

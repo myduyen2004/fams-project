@@ -125,12 +125,12 @@ public class StagingImportService {
                         NOW(),
                         NOW()
                     FROM %s s
-                    JOIN courses c ON UPPER(TRIM(s.course_code)) = UPPER(c.code)
-                    LEFT JOIN users u ON LOWER(TRIM(s.lecturer_code)) = LOWER(u.username) AND u.role = 'LECTURER'
+                    JOIN courses c ON s.course_code = c.code
+                    LEFT JOIN users u ON s.lecturer_code = u.username AND u.role = 'LECTURER'
                     WHERE s.error_message IS NULL
                     AND NOT EXISTS (
                         SELECT 1 FROM class_sections cs
-                        WHERE UPPER(cs.class_name) = UPPER(s.class_name)
+                        WHERE cs.class_name = s.class_name
                     )
                     """
                     .formatted(stagingTable);
@@ -247,7 +247,11 @@ public class StagingImportService {
             result.put("message",
                     buildMessage((int) validationResult.get("validCount"), (int) validationResult.get("errorCount")));
 
-            log.info("Fast preview enrollments: {} rows in {}ms", rowsCopied, duration);
+            log.info("Fast preview enrollments: {} rows ({} valid, {} errors) in {}ms", 
+                rowsCopied, validationResult.get("validCount"), validationResult.get("errorCount"), duration);
+            if ((int)validationResult.get("errorCount") > 0) {
+                log.warn("Sample errors: {}", validationResult.get("sampleErrors"));
+            }
             return result;
 
         } catch (Exception e) {
@@ -379,7 +383,7 @@ public class StagingImportService {
 
     private void createClassSectionStagingTable(@org.springframework.lang.NonNull String tableName) {
         jdbcTemplate.execute("""
-                CREATE TEMP TABLE %s (
+                CREATE UNLOGGED TABLE %s (
                     row_num SERIAL PRIMARY KEY,
                     class_name VARCHAR(100),
                     course_code VARCHAR(50),
@@ -392,7 +396,7 @@ public class StagingImportService {
 
     private void createEnrollmentStagingTable(@org.springframework.lang.NonNull String tableName) {
         jdbcTemplate.execute("""
-                CREATE TEMP TABLE %s (
+                CREATE UNLOGGED TABLE %s (
                     row_num SERIAL PRIMARY KEY,
                     student_code VARCHAR(50),
                     class_name VARCHAR(100),
@@ -437,8 +441,11 @@ public class StagingImportService {
                     xmlReader.setContentHandler(new XSSFSheetXMLHandler(styles, strings, handler, false));
                     xmlReader.parse(new InputSource(sheetStream));
 
-                    // Flush remaining batch
                     handler.flushBatch();
+                    
+                    // Add indices to speed up validation
+                    jdbcTemplate.execute("CREATE INDEX ON " + stagingTable + " (class_name)");
+                    jdbcTemplate.execute("CREATE INDEX ON " + stagingTable + " (course_code)");
                 }
             }
         }
@@ -472,6 +479,10 @@ public class StagingImportService {
                     xmlReader.parse(new InputSource(sheetStream));
 
                     handler.flushBatch();
+                    
+                    // Add indices to speed up validation
+                    jdbcTemplate.execute("CREATE INDEX ON " + stagingTable + " (student_code)");
+                    jdbcTemplate.execute("CREATE INDEX ON " + stagingTable + " (class_name)");
                 }
             }
         }
@@ -498,8 +509,8 @@ public class StagingImportService {
         jdbcTemplate
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Không tìm thấy môn học: ' || s.course_code
-                        WHERE TRIM(COALESCE(s.course_code, '')) != ''
-                        AND NOT EXISTS (SELECT 1 FROM courses c WHERE UPPER(TRIM(s.course_code)) = UPPER(c.code))
+                        WHERE s.course_code != ''
+                        AND NOT EXISTS (SELECT 1 FROM courses c WHERE s.course_code = c.code)
                         AND s.error_message IS NULL
                         """
                         .formatted(stagingTable));
@@ -508,8 +519,8 @@ public class StagingImportService {
         jdbcTemplate
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Không tìm thấy giảng viên: ' || s.lecturer_code
-                        WHERE TRIM(COALESCE(s.lecturer_code, '')) != ''
-                        AND NOT EXISTS (SELECT 1 FROM users u WHERE LOWER(TRIM(s.lecturer_code)) = LOWER(u.username) AND u.role = 'LECTURER')
+                        WHERE s.lecturer_code != ''
+                        AND NOT EXISTS (SELECT 1 FROM users u WHERE s.lecturer_code = u.username AND u.role = 'LECTURER')
                         AND s.error_message IS NULL
                         """
                         .formatted(stagingTable));
@@ -518,9 +529,9 @@ public class StagingImportService {
         jdbcTemplate.update("""
                 UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Mã lớp bị trùng trong file'
                 WHERE s.row_num NOT IN (
-                    SELECT MIN(row_num) FROM %s GROUP BY TRIM(class_name)
+                    SELECT MIN(row_num) FROM %s GROUP BY class_name
                 )
-                AND TRIM(COALESCE(s.class_name, '')) != ''
+                WHERE s.class_name != ''
                 AND s.error_message IS NULL
                 """.formatted(stagingTable, stagingTable));
 
@@ -530,7 +541,7 @@ public class StagingImportService {
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Lớp học phần đã tồn tại trong hệ thống'
                         WHERE EXISTS (
                             SELECT 1 FROM class_sections cs
-                            WHERE UPPER(cs.class_name) = UPPER(TRIM(s.class_name))
+                            WHERE cs.class_name = s.class_name
                         )
                         AND s.error_message IS NULL
                         """
@@ -556,8 +567,8 @@ public class StagingImportService {
         jdbcTemplate
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Không tìm thấy sinh viên: ' || s.student_code
-                        WHERE TRIM(COALESCE(s.student_code, '')) != ''
-                        AND NOT EXISTS (SELECT 1 FROM users u WHERE UPPER(TRIM(s.student_code)) = UPPER(u.code) AND u.role = 'STUDENT')
+                        WHERE s.student_code != ''
+                        AND NOT EXISTS (SELECT 1 FROM users u WHERE s.student_code = u.code AND u.role = 'STUDENT')
                         AND s.error_message IS NULL
                         """
                         .formatted(stagingTable));
@@ -566,8 +577,8 @@ public class StagingImportService {
         jdbcTemplate
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Không tìm thấy lớp học phần: ' || s.class_name
-                        WHERE TRIM(COALESCE(s.class_name, '')) != ''
-                        AND NOT EXISTS (SELECT 1 FROM class_sections cs WHERE TRIM(s.class_name) = cs.class_name AND cs.semester_id = ?)
+                        WHERE s.class_name != ''
+                        AND NOT EXISTS (SELECT 1 FROM class_sections cs WHERE s.class_name = cs.class_name AND cs.semester_id = ?)
                         AND s.error_message IS NULL
                         """
                         .formatted(stagingTable), semesterId);
@@ -577,15 +588,14 @@ public class StagingImportService {
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Sinh viên đã đăng ký lớp này trong file'
                         WHERE s.row_num NOT IN (
-                            SELECT MIN(row_num) FROM %s GROUP BY UPPER(TRIM(student_code)), TRIM(class_name)
+                            SELECT MIN(row_num) FROM %s GROUP BY student_code, class_name
                         )
-                        AND TRIM(COALESCE(s.student_code, '')) != ''
-                        AND TRIM(COALESCE(s.class_name, '')) != ''
+                        AND s.student_code != ''
+                        AND s.class_name != ''
                         AND s.error_message IS NULL
                         """
                         .formatted(stagingTable, stagingTable));
 
-        // Mark rows where enrollment already exists (enrollments uses class_name as FK)
         jdbcTemplate
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Sinh viên đã đăng ký lớp này rồi'
@@ -593,8 +603,8 @@ public class StagingImportService {
                             SELECT 1 FROM enrollments e
                             JOIN users u ON e.student_id = u.id
                             JOIN class_sections cs ON e.class_name = cs.class_name
-                            WHERE UPPER(TRIM(s.student_code)) = UPPER(u.code)
-                            AND TRIM(s.class_name) = cs.class_name
+                            WHERE s.student_code = u.code
+                            AND s.class_name = cs.class_name
                             AND cs.semester_id = ?
                         )
                         AND s.error_message IS NULL
@@ -609,7 +619,7 @@ public class StagingImportService {
                         AND NOT EXISTS (
                             SELECT 1 FROM users u
                             JOIN student_profiles sp ON u.id = sp.user_id
-                            WHERE UPPER(TRIM(s.student_code)) = UPPER(u.code)
+                            WHERE s.student_code = u.code
                             AND u.role = 'STUDENT'
                         )
                         """
@@ -623,15 +633,13 @@ public class StagingImportService {
                         AND EXISTS (
                             SELECT 1 FROM users u
                             JOIN student_profiles sp ON u.id = sp.user_id
-                            WHERE UPPER(TRIM(s.student_code)) = UPPER(u.code)
+                            WHERE s.student_code = u.code
                             AND u.role = 'STUDENT'
                             AND (sp.major_id IS NULL OR sp.specialization_id IS NULL)
                         )
                         """
                         .formatted(stagingTable));
 
-        // Mark rows where course is not in student's specialization or
-        // sub-specialization
         jdbcTemplate
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Môn học không nằm trong chuyên ngành của sinh viên'
@@ -639,8 +647,8 @@ public class StagingImportService {
                         AND EXISTS (
                             SELECT 1 FROM users u
                             JOIN student_profiles sp ON sp.user_id = u.id
-                            JOIN class_sections cs ON TRIM(s.class_name) = cs.class_name AND cs.semester_id = ?
-                            WHERE UPPER(TRIM(s.student_code)) = UPPER(u.code)
+                            JOIN class_sections cs ON s.class_name = cs.class_name AND cs.semester_id = ?
+                            WHERE s.student_code = u.code
                             AND u.role = 'STUDENT'
                             AND NOT EXISTS (
                                 SELECT 1 FROM specialization_courses sc
@@ -757,7 +765,12 @@ public class StagingImportService {
         public void cell(String cellReference, String formattedValue, XSSFComment comment) {
             int col = cellReferenceToColumn(cellReference);
             if (col >= 0 && col < 4) {
-                currentRow[col] = formattedValue != null ? formattedValue.trim() : "";
+                String val = formattedValue != null ? formattedValue.trim() : "";
+                // Uppercase course_code and lecturer_code, keep class_name case-sensitive
+                if (col == 1 || col == 2) {
+                    val = val.toUpperCase();
+                }
+                currentRow[col] = val;
             }
         }
 
@@ -840,7 +853,12 @@ public class StagingImportService {
         public void cell(String cellReference, String formattedValue, XSSFComment comment) {
             int col = cellReferenceToColumn(cellReference);
             if (col >= 0 && col < 2) {
-                currentRow[col] = formattedValue != null ? formattedValue.trim() : "";
+                String val = formattedValue != null ? formattedValue.trim() : "";
+                // Uppercase student_code, keep class_name case-sensitive
+                if (col == 0) {
+                    val = val.toUpperCase();
+                }
+                currentRow[col] = val;
             }
         }
 

@@ -381,8 +381,8 @@ public class TimetableController {
                                                 targetDate);
                         }
 
-                        List<TimetableSlot> slots = timetableSlotRepository.findByStudentCodeAndDateBetween(
-                                        student.getCode(), weekStart, weekEnd);
+                        List<TimetableSlot> slots = timetableSlotRepository.findByStudentIdAndDateBetween(
+                                        studentId, weekStart, weekEnd);
 
                         // Fallback: If semester wasn't found by date, check the semester of the found
                         // slots
@@ -502,8 +502,8 @@ public class TimetableController {
                 }
 
                 // Fetch ALL slots for this student in this semester
-                List<TimetableSlot> slots = timetableSlotRepository.findByStudentCodeAndDateBetween(
-                                student.getCode(), semester.getStartDate(), semester.getEndDate());
+                List<TimetableSlot> slots = timetableSlotRepository.findByStudentIdAndDateBetween(
+                                studentId, semester.getStartDate(), semester.getEndDate());
 
                 // Map to DTOs and sort
                 List<TimetableDTO.TimetableSlotDTO> slotDTOs = slots.stream()
@@ -590,8 +590,8 @@ public class TimetableController {
                 }
 
                 // 1. Fetch ALL slots for this student in this semester
-                List<TimetableSlot> slots = timetableSlotRepository.findByStudentCodeAndDateBetween(
-                                student.getCode(), semester.getStartDate(), semester.getEndDate());
+                List<TimetableSlot> slots = timetableSlotRepository.findByStudentIdAndDateBetween(
+                                studentId, semester.getStartDate(), semester.getEndDate());
 
                 // 2. Map to DTOs
                 List<TimetableDTO.TimetableSlotDTO> slotDTOs = slots.stream()

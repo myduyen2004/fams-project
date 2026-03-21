@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:solar_icons/solar_icons.dart';
 import 'dart:math' as math;
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_routes.dart';
@@ -14,7 +15,7 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
   final AuthController _authController = Get.find<AuthController>();
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
@@ -22,18 +23,39 @@ class _LoginScreenState extends State<LoginScreen> {
   final _usernameFocusNode = FocusNode();
   final _passwordFocusNode = FocusNode();
   bool _obscurePassword = true;
+  bool _isUsernameFocused = false;
+  bool _isPasswordFocused = false;
+
+  late AnimationController _animController;
+  late Animation<double> _cardFadeIn;
+  late Animation<Offset> _cardSlideIn;
 
   @override
   void initState() {
     super.initState();
-    // Add listeners to ensure the field is visible when focused
     _usernameFocusNode.addListener(_onFocusChange);
     _passwordFocusNode.addListener(_onFocusChange);
+
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _cardFadeIn = CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic);
+    _cardSlideIn = Tween<Offset>(
+      begin: const Offset(0, 0.08),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic));
+
+    _animController.forward();
   }
 
   void _onFocusChange() {
+    setState(() {
+      _isUsernameFocused = _usernameFocusNode.hasFocus;
+      _isPasswordFocused = _passwordFocusNode.hasFocus;
+    });
+
     if (_usernameFocusNode.hasFocus || _passwordFocusNode.hasFocus) {
-      // Delay to wait for keyboard animation to start
       Future.delayed(const Duration(milliseconds: 350), () {
         if (!mounted) return;
         
@@ -46,7 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
             focusedContext,
             duration: const Duration(milliseconds: 350),
             curve: Curves.easeOutCubic,
-            alignment: 0.2, // Show the field slightly above the center
+            alignment: 0.2,
           );
         }
       });
@@ -59,6 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
     _passwordController.dispose();
     _usernameFocusNode.dispose();
     _passwordFocusNode.dispose();
+    _animController.dispose();
     super.dispose();
   }
 
@@ -99,7 +122,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                    // Geometric/Network Pattern Background (Height Expanded)
                   Container(
-                    height: 380.h,
+                    height: 320.h,
                     width: double.infinity,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -119,7 +142,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   
-                  // Logo at Top Left - Based on the "F A M S" image
+                  // Logo at Top Left
                   Positioned(
                     top: 65.h,
                     left: 25.w,
@@ -136,147 +159,241 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
 
-              // Login Content - Using Transform for overlap (Padding doesn't support negative values)
-              Transform.translate(
-                offset: Offset(0, -60.h),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20.w),
-                  child: Column(
-                    children: [
-                      // Login Card
-                      Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.all(35.w),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(30.r),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.06),
-                              blurRadius: 30,
-                              offset: const Offset(0, 15),
-                            )
-                          ],
-                        ),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Đăng nhập",
-                                style: TextStyle(
-                                  fontSize: 26.sp,
-                                  fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF2D3142),
-                                ),
-                              ),
-                              SizedBox(height: 35.h),
-                              
-                              // Field: Tên đăng nhập (Light Pill Style)
-                              _buildPillTextField(
-                                controller: _usernameController,
-                                hintText: "Tên đăng nhập",
-                                focusNode: _usernameFocusNode,
-                                validator: Validators.username,
-                              ),
-                              
-                              SizedBox(height: 18.h),
-                              
-                              // Field: Mật khẩu (Light Pill Style)
-                              _buildPillTextField(
-                                controller: _passwordController,
-                                hintText: "Mật khẩu",
-                                focusNode: _passwordFocusNode,
-                                isPassword: true,
-                                validator: Validators.password,
-                              ),
-                              
-                              SizedBox(height: 25.h),
-                              
-                              // Forgot Password (Aligned Right, Orange)
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: TextButton(
-                                  onPressed: () => Get.toNamed(AppRoutes.forgotPassword),
-                                  style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                                  child: Text(
-                                    "Quên mật khẩu?",
-                                    style: TextStyle(
-                                      fontSize: 14.sp,
-                                      fontWeight: FontWeight.w500,
-                                      color: orangePrimary,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      
-                      SizedBox(height: 35.h),
-
-                      // Bottom Action Area - Login Button Aligned Right
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 5.w),
-                        child: Align(
-                          alignment: Alignment.centerRight,
-                          child: Obx(() => Container(
-                            width: 140.w,
-                            height: 52.h,
+              // Login Content — Polished Card with entrance animation
+              SlideTransition(
+                position: _cardSlideIn,
+                child: FadeTransition(
+                  opacity: _cardFadeIn,
+                  child: Transform.translate(
+                    offset: Offset(0, -80.h),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20.w),
+                      child: Column(
+                        children: [
+                          // ──── Login Card (polished) ────
+                          Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.symmetric(horizontal: 30.w, vertical: 35.w),
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(20.r),
-                              gradient: const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [orangePrimary, Color(0xFFE85D36)],
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(28.r),
+                              border: Border.all(
+                                color: orangePrimary.withOpacity(0.06),
+                                width: 1.2,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: orangePrimary.withOpacity(0.3),
-                                  blurRadius: 15,
-                                  offset: const Offset(0, 8),
-                                )
+                                  color: orangePrimary.withOpacity(0.08),
+                                  blurRadius: 40,
+                                  spreadRadius: 0,
+                                  offset: const Offset(0, 18),
+                                ),
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.04),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
                               ],
                             ),
-                            child: ElevatedButton(
-                              onPressed: _authController.isLoading.value ? null : _handleLogin,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                shadowColor: Colors.transparent,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
-                                padding: EdgeInsets.zero,
-                              ),
-                              child: _authController.isLoading.value
-                                  ? const SizedBox(
-                                      height: 22, 
-                                      width: 22, 
-                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                                    )
-                                  : Center(
-                                      child: FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        child: Padding(
-                                          padding: EdgeInsets.symmetric(horizontal: 15.w),
-                                          child: Text(
-                                            "ĐĂNG NHẬP",
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // ── Title with accent bar ──
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 4.w,
+                                        height: 30.h,
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(
+                                            begin: Alignment.topCenter,
+                                            end: Alignment.bottomCenter,
+                                            colors: [orangePrimary, orangeSecondary],
+                                          ),
+                                          borderRadius: BorderRadius.circular(2.r),
+                                        ),
+                                      ),
+                                      SizedBox(width: 12.w),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            "Đăng nhập",
                                             style: TextStyle(
-                                              fontSize: 15.sp, 
-                                              fontWeight: FontWeight.bold, 
-                                              color: Colors.white,
-                                              letterSpacing: 1.0,
+                                              fontSize: 26.sp,
+                                              fontWeight: FontWeight.w700,
+                                              color: const Color(0xFF1E2A3A),
+                                              letterSpacing: -0.3,
                                             ),
                                           ),
+                                          SizedBox(height: 2.h),
+                                          Text(
+                                            "Chào mừng bạn trở lại!",
+                                            style: TextStyle(
+                                              fontSize: 13.sp,
+                                              fontWeight: FontWeight.w400,
+                                              color: Colors.grey.shade500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 32.h),
+                                  
+                                  // ── Label: Tên đăng nhập ──
+                                  Padding(
+                                    padding: EdgeInsets.only(left: 8.w, bottom: 8.h),
+                                    child: Text(
+                                      "Tên đăng nhập",
+                                      style: TextStyle(
+                                        fontSize: 13.sp,
+                                        fontWeight: FontWeight.w600,
+                                        color: _isUsernameFocused 
+                                            ? orangePrimary 
+                                            : const Color(0xFF4A5568),
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ),
+                                  _buildPillTextField(
+                                    controller: _usernameController,
+                                    hintText: "Nhập mã số sinh viên",
+                                    focusNode: _usernameFocusNode,
+                                    isFocused: _isUsernameFocused,
+                                    prefixIcon: SolarIconsOutline.user,
+                                    validator: Validators.username,
+                                  ),
+                                  
+                                  SizedBox(height: 20.h),
+                                  
+                                  // ── Label: Mật khẩu ──
+                                  Padding(
+                                    padding: EdgeInsets.only(left: 8.w, bottom: 8.h),
+                                    child: Text(
+                                      "Mật khẩu",
+                                      style: TextStyle(
+                                        fontSize: 13.sp,
+                                        fontWeight: FontWeight.w600,
+                                        color: _isPasswordFocused 
+                                            ? orangePrimary 
+                                            : const Color(0xFF4A5568),
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ),
+                                  _buildPillTextField(
+                                    controller: _passwordController,
+                                    hintText: "Nhập mật khẩu",
+                                    focusNode: _passwordFocusNode,
+                                    isFocused: _isPasswordFocused,
+                                    prefixIcon: SolarIconsOutline.lock,
+                                    isPassword: true,
+                                    validator: Validators.password,
+                                  ),
+                                  
+                                  SizedBox(height: 20.h),
+                                  
+                                  // Forgot Password (Aligned Right, Orange)
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton(
+                                      onPressed: () => Get.toNamed(AppRoutes.forgotPassword),
+                                      style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                                      child: Text(
+                                        "Quên mật khẩu?",
+                                        style: TextStyle(
+                                          fontSize: 13.5.sp,
+                                          fontWeight: FontWeight.w600,
+                                          color: orangePrimary,
                                         ),
                                       ),
                                     ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          )),
-                        ),
+                          ),
+                          
+                          SizedBox(height: 32.h),
+
+                          // ──── Login Button (polished) ────
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 5.w),
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: Obx(() => Container(
+                                width: 155.w,
+                                height: 54.h,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(22.r),
+                                  gradient: const LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Color(0xFFF77D31),
+                                      orangePrimary,
+                                      Color(0xFFE85D36),
+                                    ],
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: orangePrimary.withOpacity(0.40),
+                                      blurRadius: 20,
+                                      spreadRadius: 0,
+                                      offset: const Offset(0, 10),
+                                    ),
+                                    BoxShadow(
+                                      color: orangeSecondary.withOpacity(0.20),
+                                      blurRadius: 40,
+                                      spreadRadius: -5,
+                                      offset: const Offset(0, 20),
+                                    ),
+                                  ],
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: _authController.isLoading.value ? null : _handleLogin,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.transparent,
+                                    shadowColor: Colors.transparent,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22.r)),
+                                    padding: EdgeInsets.zero,
+                                  ),
+                                  child: _authController.isLoading.value
+                                      ? const SizedBox(
+                                          height: 22, 
+                                          width: 22, 
+                                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)
+                                        )
+                                      : Center(
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                "ĐĂNG NHẬP",
+                                                style: TextStyle(
+                                                  fontSize: 14.5.sp, 
+                                                  fontWeight: FontWeight.w700, 
+                                                  color: Colors.white,
+                                                  letterSpacing: 1.2,
+                                                ),
+                                              ),
+                                              SizedBox(width: 6.w),
+                                              Icon(SolarIconsOutline.altArrowRight, color: Colors.white, size: 18.sp),
+                                            ],
+                                          ),
+                                        ),
+                                ),
+                              )),
+                            ),
+                          ),
+                          SizedBox(height: 60.h),
+                        ],
                       ),
-                      SizedBox(height: 60.h),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -287,50 +404,96 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Build the geometric/network pattern background
+  // ──── Polished Pill Text Field ────
   Widget _buildPillTextField({
     required TextEditingController controller,
     required String hintText,
     FocusNode? focusNode,
+    bool isFocused = false,
+    IconData? prefixIcon,
     bool isPassword = false,
     String? Function(String?)? validator,
   }) {
-    return Container(
+    const Color orangePrimary = Color(0xFFF26F21);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
-        color: Colors.white, // Pure white for better shadow visibility
-        borderRadius: BorderRadius.circular(25.r),
+        color: isFocused ? Colors.white : const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(16.r),
         border: Border.all(
-          color: Colors.grey.withOpacity(0.12), // Subtle clear border
-          width: 0.8,
+          color: isFocused 
+              ? orangePrimary.withOpacity(0.5) 
+              : const Color(0xFFE2E8F0),
+          width: isFocused ? 1.8 : 1.2,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.07), // More prominent shadow
-            blurRadius: 16,
-            spreadRadius: 0,
-            offset: const Offset(0, 5),
-          )
-        ],
+        boxShadow: isFocused
+            ? [
+                BoxShadow(
+                  color: orangePrimary.withOpacity(0.12),
+                  blurRadius: 20,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 6),
+                ),
+                BoxShadow(
+                  color: orangePrimary.withOpacity(0.06),
+                  blurRadius: 8,
+                  spreadRadius: -2,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 3),
+                ),
+              ],
       ),
       child: TextFormField(
         controller: controller,
         focusNode: focusNode,
         obscureText: isPassword && _obscurePassword,
         validator: validator,
-        style: TextStyle(fontSize: 16.sp, color: Colors.black54, fontWeight: FontWeight.w500),
+        style: TextStyle(
+          fontSize: 15.5.sp, 
+          color: const Color(0xFF1E2A3A), 
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.1,
+        ),
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14.sp, fontWeight: FontWeight.w500),
-          contentPadding: EdgeInsets.symmetric(horizontal: 25.w, vertical: 15.h),
+          hintStyle: TextStyle(
+            color: const Color(0xFFADB5BD), 
+            fontSize: 14.sp, 
+            fontWeight: FontWeight.w400,
+          ),
+          contentPadding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 16.h),
           border: InputBorder.none,
+          prefixIcon: prefixIcon != null
+              ? Padding(
+                  padding: EdgeInsets.only(left: 16.w, right: 8.w),
+                  child: Icon(
+                    prefixIcon,
+                    color: isFocused ? orangePrimary : const Color(0xFF9CA3AF),
+                    size: 22.sp,
+                  ),
+                )
+              : null,
+          prefixIconConstraints: BoxConstraints(minWidth: 48.w),
           suffixIcon: isPassword 
-            ? IconButton(
-                icon: Icon(
-                  _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                  color: Colors.grey.shade400,
-                  size: 20.sp,
+            ? Padding(
+                padding: EdgeInsets.only(right: 8.w),
+                child: IconButton(
+                  icon: Icon(
+                    _obscurePassword ? SolarIconsOutline.eyeClosed : SolarIconsOutline.eye,
+                    color: isFocused ? orangePrimary.withOpacity(0.7) : const Color(0xFFADB5BD),
+                    size: 20.sp,
+                  ),
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                 ),
-                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
               )
             : null,
         ),
