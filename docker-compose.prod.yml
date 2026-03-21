@@ -10,6 +10,7 @@ services:
       - NEON_PROD_DB_USER=${NEON_PROD_DB_USER}
       - NEON_PROD_DB_PASSWORD=${NEON_PROD_DB_PASSWORD}
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      - MONGODB_URI=${MONGODB_URI}
     ports:
       - "8080:8080"
     networks:

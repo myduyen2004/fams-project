@@ -44,10 +44,7 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
     private final RoomRepository roomRepository;
     private final SlotTypeRepository slotTypeRepository;
     private final com.fams.backend.repository.EnrollmentRepository enrollmentRepository;
-    private final com.fams.backend.repository.NotificationRepository notificationRepository;
-    private final com.fams.backend.repository.NotificationRecipientRepository notificationRecipientRepository;
-    private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
-    private final SystemLogService systemLogService;
+    private final com.fams.backend.service.impl.SystemLogService systemLogService;
 
     @Override
     public ScheduleRequestResponse createRequest(CreateScheduleRequest request, Long requesterId) {
@@ -283,7 +280,8 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
         ScheduleRequest savedRequest = scheduleRequestRepository.saveAndFlush(request);
 
         // Log system activity
-        String className = savedRequest.getClassSection() != null ? savedRequest.getClassSection().getClassName() : "N/A";
+        String className = savedRequest.getClassSection() != null ? savedRequest.getClassSection().getClassName()
+                : "N/A";
         if (status == ScheduleRequest.RequestStatus.APPROVED) {
             systemLogService.logScheduleRequestApproved(savedRequest.getId(), approver.getFullName(), className);
         } else if (status == ScheduleRequest.RequestStatus.REJECTED) {
@@ -481,43 +479,22 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
                     "Hệ thống ghi nhận Giảng viên %s đã thu hồi đơn yêu cầu %s cho lớp %s.",
                     requesterName, getTypeLabel(request.getType()), className);
 
-            // Tạo notification trực tiếp với sender = null để hiển thị "Người gửi: Hệ
-            // thống"
-            User recipient = academicStaffs.get(0);
-            com.fams.backend.entity.Notification notification = com.fams.backend.entity.Notification.builder()
-                    .title(title)
-                    .content(content)
-                    .type(com.fams.backend.entity.Notification.NotificationType.SYSTEM)
-                    .status(com.fams.backend.entity.Notification.NotificationStatus.SENT)
-                    .sentAt(java.time.LocalDateTime.now())
-                    .targetType(com.fams.backend.entity.Notification.TargetType.USER)
-                    .sender(null)
-                    .build();
-            com.fams.backend.entity.Notification savedNotification = notificationRepository.save(notification);
+            int count = 0;
+            for (User staff : academicStaffs) {
+                com.fams.backend.dto.request.NotificationRequest notifRequest = com.fams.backend.dto.request.NotificationRequest
+                        .builder()
+                        .title(title)
+                        .content(content)
+                        .type(com.fams.backend.entity.Notification.NotificationType.SYSTEM)
+                        .targetType(com.fams.backend.entity.Notification.TargetType.USER)
+                        .status(com.fams.backend.entity.Notification.NotificationStatus.SENT)
+                        .recipientId(staff.getId())
+                        .build();
+                notificationService.createNotification(notifRequest);
+                count++;
+            }
 
-            com.fams.backend.entity.NotificationRecipient nr = com.fams.backend.entity.NotificationRecipient.builder()
-                    .notification(savedNotification)
-                    .recipient(recipient)
-                    .isRead(false)
-                    .build();
-            notificationRecipientRepository.save(nr);
-
-            // Broadcast qua WebSocket
-            com.fams.backend.dto.response.NotificationResponse response = com.fams.backend.dto.response.NotificationResponse
-                    .builder()
-                    .id(nr.getId())
-                    .title(title)
-                    .content(content)
-                    .type(com.fams.backend.entity.Notification.NotificationType.SYSTEM.name())
-                    .status(com.fams.backend.entity.Notification.NotificationStatus.SENT.name())
-                    .sentAt(java.time.LocalDateTime.now())
-                    .createdAt(java.time.LocalDateTime.now())
-                    .sender(null)
-                    .build();
-            messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/notifications",
-                    java.util.Collections.singletonList(response));
-
-            log.info("Sent revocation notification to Academic Staff (sender=null for Hệ thống)");
+            log.info("Sent revocation notification to {} Academic Staff members", count);
         } catch (Exception e) {
             log.error("Error sending revocation notification to Academic Staff: {}", e.getMessage(), e);
         }

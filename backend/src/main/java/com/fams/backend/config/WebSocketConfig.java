@@ -33,9 +33,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        String[] origins = allowedOrigins.split(",");
+        String[] origins = allowedOrigins.split(",\\s*");
+        // SockJS endpoint for web browsers
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns(origins)
                 .withSockJS();
+        // Native WebSocket endpoint for mobile (no SockJS overhead)
+        registry.addEndpoint("/ws-native")
+                .setAllowedOriginPatterns(origins);
     }
 }
