@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import type { AxiosError } from 'axios';
 import { Loader2 } from 'lucide-react';
 import { Pagination } from '../../components/academic-staff/Pagination';
@@ -23,12 +23,15 @@ import { usePagination } from '../../hooks/usePagination';
 
 export const NotificationManagementPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [userRole, setUserRole] = useState<string>('');
+  const isLecturerGranted = location.pathname.startsWith('/lecturer/granted');
 
-  // Determine base path based on user role
+  // Determine base path based on user role and current path
   const basePath = useMemo(() => {
+    if (isLecturerGranted) return '/lecturer/granted';
     return userRole === 'ACADEMIC_STAFF' ? '/academic-staff' : '/admin';
-  }, [userRole]);
+  }, [userRole, isLecturerGranted]);
 
   // Get user role on mount
   useEffect(() => {
@@ -181,7 +184,7 @@ export const NotificationManagementPage = () => {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  const Layout = userRole === 'ACADEMIC_STAFF' ? AcademicStaffLayout : AdminLayout;
+  const Layout = (userRole === 'ACADEMIC_STAFF' || isLecturerGranted) ? AcademicStaffLayout : AdminLayout;
 
   return (
     <Layout pageTitle="Quản lý thông báo">

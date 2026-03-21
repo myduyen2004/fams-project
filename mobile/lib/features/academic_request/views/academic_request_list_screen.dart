@@ -4,8 +4,10 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/app_background.dart';
 import '../controllers/academic_request_controller.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../models/academic_request_model.dart';
 import '../widgets/academic_request_status_badge.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Screen showing the student's academic request list
 class AcademicRequestListScreen extends StatelessWidget {
@@ -38,7 +40,7 @@ class AcademicRequestListScreen extends StatelessWidget {
                     onRefresh: controller.refreshList,
                     color: AppColors.primaryOrange,
                     child: ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                      padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 100.h),
                       physics: const BouncingScrollPhysics(),
                       itemCount: controller.requests.length,
                       itemBuilder: (context, index) {
@@ -59,52 +61,52 @@ class AcademicRequestListScreen extends StatelessWidget {
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.primaryOrange,
         onPressed: () => Get.toNamed('/student/academic-requests/create'),
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Tạo yêu cầu', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        icon: Icon(SolarIconsOutline.addCircle, color: Colors.white, size: 24.sp),
+        label: Text('Tạo yêu cầu', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14.sp)),
       ),
     );
   }
 
   Widget _buildHeader(AcademicRequestController controller) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+      padding: EdgeInsets.fromLTRB(16.w, 20.h, 16.w, 12.h),
       child: Row(
         children: [
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(12.r),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+                  blurRadius: 8.r,
+                  offset: Offset(0, 2.h),
                 ),
               ],
             ),
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+              icon: Icon(SolarIconsOutline.altArrowLeft, size: 20.sp),
               onPressed: () => Get.back(),
               color: const Color(0xFF2D3436),
             ),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: 16.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Yêu Cầu Học Thuật',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 18.sp,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF2D3436),
+                    color: const Color(0xFF2D3436),
                     letterSpacing: -0.5,
                   ),
                 ),
                 Obx(() => Text(
                   '${controller.totalElements.value} yêu cầu',
-                  style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                  style: TextStyle(fontSize: 13.sp, color: Colors.grey[600]),
                 )),
               ],
             ),
@@ -116,26 +118,26 @@ class AcademicRequestListScreen extends StatelessWidget {
 
   Widget _buildFilterBar(AcademicRequestController controller) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Obx(() => Row(
           children: [
             _FilterChip(label: 'Tất cả', isSelected: controller.statusFilter.value == '',
                 onTap: () => controller.changeStatusFilter('')),
-            const SizedBox(width: 8),
+            SizedBox(width: 8.w),
             _FilterChip(label: 'Chờ xử lý', color: Colors.amber,
                 isSelected: controller.statusFilter.value == 'PENDING',
                 onTap: () => controller.changeStatusFilter('PENDING')),
-            const SizedBox(width: 8),
+            SizedBox(width: 8.w),
             _FilterChip(label: 'Đã duyệt', color: Colors.green,
                 isSelected: controller.statusFilter.value == 'APPROVED',
                 onTap: () => controller.changeStatusFilter('APPROVED')),
-            const SizedBox(width: 8),
+            SizedBox(width: 8.w),
             _FilterChip(label: 'Từ chối', color: Colors.red,
                 isSelected: controller.statusFilter.value == 'REJECTED',
                 onTap: () => controller.changeStatusFilter('REJECTED')),
-            const SizedBox(width: 8),
+            SizedBox(width: 8.w),
             _FilterChip(label: 'Đã hủy', color: Colors.grey,
                 isSelected: controller.statusFilter.value == 'CANCELLED',
                 onTap: () => controller.changeStatusFilter('CANCELLED')),
@@ -148,18 +150,18 @@ class AcademicRequestListScreen extends StatelessWidget {
   Widget _buildEmptyState(AcademicRequestController controller) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(40),
+        padding: EdgeInsets.all(40.w),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.inbox_outlined, size: 80, color: Colors.grey[300]),
-            const SizedBox(height: 16),
+            Icon(Icons.inbox_outlined, size: 80.sp, color: Colors.grey[300]),
+            SizedBox(height: 16.h),
             Text(
               controller.statusFilter.value.isNotEmpty
                   ? 'Không có yêu cầu nào với trạng thái này'
                   : 'Chưa có yêu cầu nào.\nNhấn "Tạo yêu cầu" để bắt đầu!',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 15, color: Colors.grey[500]),
+              style: TextStyle(fontSize: 15.sp, color: Colors.grey[500]),
             ),
           ],
         ),
@@ -172,8 +174,8 @@ class AcademicRequestListScreen extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
       ),
       builder: (_) => _DetailSheet(request: req, controller: controller),
     );
@@ -200,15 +202,15 @@ class _AcademicRequestCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: 12.h),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            blurRadius: 10.r,
+            offset: Offset(0, 4.h),
           ),
         ],
       ),
@@ -218,7 +220,7 @@ class _AcademicRequestCard extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(16),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16.w),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -226,15 +228,15 @@ class _AcademicRequestCard extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFFF0E0),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(8.r),
                       ),
                       child: Text(
                         request.requestTypeLabel,
-                        style: const TextStyle(
-                          fontSize: 11,
+                        style: TextStyle(
+                          fontSize: 11.sp,
                           color: AppColors.primaryOrange,
                           fontWeight: FontWeight.w600,
                         ),
@@ -247,35 +249,35 @@ class _AcademicRequestCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: 10.h),
                 // Title
                 Text(
                   request.requestTitle,
-                  style: const TextStyle(
-                    fontSize: 15,
+                  style: TextStyle(
+                    fontSize: 15.sp,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF2D3436),
+                    color: const Color(0xFF2D3436),
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8.h),
                 // Footer: dates
                 Row(
                   children: [
-                    Icon(Icons.calendar_today_rounded, size: 12, color: Colors.grey[500]),
-                    const SizedBox(width: 4),
+                    Icon(Icons.calendar_today_rounded, size: 12.sp, color: Colors.grey[500]),
+                    SizedBox(width: 4.w),
                     Text(
                       'Ngày tạo: ${_formatDate(request.createdAt)}',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      style: TextStyle(fontSize: 12.sp, color: Colors.grey[500]),
                     ),
                     if (request.dueDate != null) ...[
-                      const SizedBox(width: 12),
-                      Icon(Icons.timer_outlined, size: 12, color: Colors.grey[500]),
-                      const SizedBox(width: 4),
+                      SizedBox(width: 12.w),
+                      Icon(Icons.timer_outlined, size: 12.sp, color: Colors.grey[500]),
+                      SizedBox(width: 4.w),
                       Text(
                         'Hạn: ${request.dueDate}',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                        style: TextStyle(fontSize: 12.sp, color: Colors.grey[500]),
                       ),
                     ],
                   ],
@@ -303,44 +305,42 @@ class _DetailSheet extends StatelessWidget {
       initialChildSize: 0.6,
       maxChildSize: 0.92,
       minChildSize: 0.4,
-      expand: false,
       builder: (_, scrollController) => Container(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(20.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Handle
             Center(
               child: Container(
-                width: 40,
-                height: 4,
+                width: 40.w,
+                height: 4.h,
                 decoration: BoxDecoration(
                   color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(2.r),
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            // Title row
+            SizedBox(height: 16.h),
             Row(
               children: [
                 Expanded(
                   child: Text(
                     request.requestTitle,
-                    style: const TextStyle(
-                      fontSize: 17,
+                    style: TextStyle(
+                      fontSize: 17.sp,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF2D3436),
+                      color: const Color(0xFF2D3436),
                     ),
                   ),
                 ),
                 AcademicRequestStatusBadge(status: request.status, label: request.statusLabel),
               ],
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: 4.h),
             Text(request.requestTypeLabel,
-                style: TextStyle(fontSize: 13, color: Colors.grey[600])),
-            const Divider(height: 24),
+                style: TextStyle(fontSize: 13.sp, color: Colors.grey[600])),
+            Divider(height: 24.h),
             Expanded(
               child: ListView(
                 controller: scrollController,
@@ -374,15 +374,15 @@ class _DetailSheet extends StatelessWidget {
                     _DetailRow('Ghi chú người duyệt', request.approverNote!),
                   if (request.fileUrl != null && request.fileUrl!.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      padding: EdgeInsets.symmetric(vertical: 6.h),
                       child: Row(
                         children: [
-                          const Icon(Icons.attach_file_rounded, size: 16, color: AppColors.primaryOrange),
-                          const SizedBox(width: 8),
-                          const Text('File đính kèm: ', style: TextStyle(fontWeight: FontWeight.w600)),
-                          const Expanded(
+                          Icon(SolarIconsOutline.paperclip, size: 16.sp, color: AppColors.primaryOrange),
+                          SizedBox(width: 8.w),
+                          Text('File đính kèm: ', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.sp)),
+                          Expanded(
                             child: Text('Có file đính kèm',
-                                style: TextStyle(color: AppColors.primaryOrange)),
+                                style: TextStyle(color: AppColors.primaryOrange, fontSize: 13.sp)),
                           ),
                         ],
                       ),
@@ -392,16 +392,16 @@ class _DetailSheet extends StatelessWidget {
             ),
             // Cancel button if PENDING
             if (request.status == 'PENDING') ...[
-              const SizedBox(height: 12),
+              SizedBox(height: 12.h),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  icon: const Icon(Icons.cancel_outlined, color: Colors.red),
-                  label: const Text('Thu hồi yêu cầu', style: TextStyle(color: Colors.red)),
+                  icon: Icon(SolarIconsOutline.closeCircle, color: Colors.red, size: 18.sp),
+                  label: Text('Thu hồi yêu cầu', style: TextStyle(color: Colors.red, fontSize: 14.sp)),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.red),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: EdgeInsets.symmetric(vertical: 14.h),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
                   ),
                   onPressed: () {
                     Get.back();
@@ -440,18 +440,18 @@ class _DetailRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: EdgeInsets.symmetric(vertical: 6.h),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 150,
+            width: 150.w,
             child: Text(label,
-                style: TextStyle(fontSize: 13, color: Colors.grey[600], fontWeight: FontWeight.w500)),
+                style: TextStyle(fontSize: 13.sp, color: Colors.grey[600], fontWeight: FontWeight.w500)),
           ),
           Expanded(
             child: Text(value,
-                style: const TextStyle(fontSize: 13, color: Color(0xFF2D3436), fontWeight: FontWeight.w600)),
+                style: TextStyle(fontSize: 13.sp, color: const Color(0xFF2D3436), fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -478,19 +478,19 @@ class _FilterChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
         decoration: BoxDecoration(
           color: isSelected ? (color ?? AppColors.primaryOrange) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(20.r),
           border: Border.all(
             color: isSelected ? (color ?? AppColors.primaryOrange) : Colors.grey[300]!,
-            width: 1.5,
+            width: 1.5.w,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 12.sp,
             fontWeight: FontWeight.w600,
             color: isSelected ? Colors.white : Colors.grey[700],
           ),

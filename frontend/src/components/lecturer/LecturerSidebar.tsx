@@ -10,13 +10,26 @@ import {
     LogOut,
     ChevronDown,
     KeyRound,
-    List
+    List,
+    ShieldCheck
 } from 'lucide-react';
 import { authService } from '../../services/api/authService';
 import { ConfirmModal } from '../common/ConfirmModal';
 import { OtpSetupModal } from './OtpSetupModal';
 import { OtpChangeModal } from './OtpChangeModal';
 import { lecturerOtpService } from '../../services/api/lecturerOtpService';
+import { permissionService, PERMISSION_ROUTE_MAP } from '../../services/api/permissionService';
+
+// Define fixed order for granted permissions
+const PERMISSION_ORDER = [
+    'MANAGE_MAJORS',
+    'MANAGE_COURSES',
+    'MANAGE_USERS',
+    'MANAGE_SEMESTERS',
+    'MANAGE_SCHEDULE',
+    'MANAGE_NOTIFICATIONS',
+    'VIEW_SYSTEM_LOGS'
+];
 
 interface SubMenuItem {
     label: string;
@@ -39,8 +52,9 @@ export const LecturerSidebar: React.FC = () => {
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [showOtpModal, setShowOtpModal] = useState(false);
     const [hasOtp, setHasOtp] = useState(true); // Assume has OTP by default
+    const [grantedPermissions, setGrantedPermissions] = useState<string[]>([]);
 
-    const menuItems: MenuItem[] = [
+    const baseMenuItems: MenuItem[] = [
         {
             id: 'dashboard',
             label: 'Dashboard',
@@ -86,6 +100,63 @@ export const LecturerSidebar: React.FC = () => {
         }
     ];
 
+    // Build menu items with granted permissions
+    const menuItems: MenuItem[] = (() => {
+        const items = [...baseMenuItems];
+
+        if (grantedPermissions.length > 0) {
+            // Sort permissions by the predefined order
+            const sortedPermissions = [...grantedPermissions].sort((a, b) => {
+                const indexA = PERMISSION_ORDER.indexOf(a);
+                const indexB = PERMISSION_ORDER.indexOf(b);
+                // If permission is not in PERMISSION_ORDER, put it at the end
+                if (indexA === -1 && indexB === -1) return 0;
+                if (indexA === -1) return 1;
+                if (indexB === -1) return -1;
+                return indexA - indexB;
+            });
+
+            const grantedSubmenu: SubMenuItem[] = sortedPermissions
+                .filter(perm => PERMISSION_ROUTE_MAP[perm])
+                .map(perm => ({
+                    label: PERMISSION_ROUTE_MAP[perm].label,
+                    path: PERMISSION_ROUTE_MAP[perm].path,
+                }));
+
+            if (grantedSubmenu.length > 0) {
+                items.push({
+                    id: 'granted-permissions',
+                    label: 'Quyền quản lý',
+                    icon: <ShieldCheck size={20} />,
+                    submenu: grantedSubmenu,
+                });
+            }
+        }
+
+        return items;
+    })();
+
+    // Fetch granted permissions
+    useEffect(() => {
+        const fetchPermissions = async () => {
+            try {
+                const permissions = await permissionService.getMyPermissions();
+                setGrantedPermissions(permissions);
+                // Cache permissions
+                sessionStorage.setItem('user_permissions', JSON.stringify(permissions));
+                sessionStorage.setItem('user_permissions_time', Date.now().toString());
+            } catch (error) {
+                console.error('Failed to fetch permissions:', error);
+            }
+        };
+
+        fetchPermissions();
+
+        // Poll every 15 seconds to detect permission changes
+        const interval = setInterval(fetchPermissions, 15000);
+        return () => clearInterval(interval);
+    }, []);
+
     // Auto-expand submenu if current route matches
     useEffect(() => {
         const activeMenuItem = menuItems.find(item =>
@@ -94,7 +165,7 @@ export const LecturerSidebar: React.FC = () => {
         if (activeMenuItem) {
             setOpenSubmenu(activeMenuItem.id);
         }
-    }, [location.pathname]);
+    }, [location.pathname, grantedPermissions]);
 
     // Check OTP status on mount
     useEffect(() => {
@@ -111,6 +182,9 @@ export const LecturerSidebar: React.FC = () => {
 
     const handleLogout = async () => {
         setShowLogoutModal(false);
+        // Clear permission cache on logout
+        sessionStorage.removeItem('user_permissions');
+        sessionStorage.removeItem('user_permissions_time');
         try {
             await authService.logout();
         } catch (error) {
