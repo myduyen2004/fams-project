@@ -12,6 +12,7 @@ import com.fams.backend.repository.SlotTypeRepository;
 import com.fams.backend.repository.TimetableSlotRepository;
 import com.fams.backend.repository.UserRepository;
 import com.fams.backend.service.ScheduleRequestService;
+import com.fams.backend.service.UserNotificationService;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
@@ -39,7 +40,7 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
 
     private final ScheduleRequestRepository scheduleRequestRepository;
     private final UserRepository userRepository;
-    private final com.fams.backend.service.NotificationService notificationService;
+    private final UserNotificationService notificationService;
     private final TimetableSlotRepository timetableSlotRepository;
     private final RoomRepository roomRepository;
     private final SlotTypeRepository slotTypeRepository;
@@ -370,16 +371,16 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
                             "Thân mến,<br>Phòng đào tạo",
                     originalDateFormatted, requestedDateFormatted, slotNumber != null ? slotNumber : 0, roomName);
 
-                for (Long studentId : studentIds) {
-                userRepository.findById(studentId).ifPresent(student ->
-                    notificationService.createNotification(
-                        student,
-                        title,
-                        content,
-                        com.fams.backend.entity.Notification.NotificationType.SCHEDULE_CHANGE,
-                        "/student/schedule",
-                        request.getRequester()));
-                }
+            List<User> students = userRepository.findAllById(studentIds).stream()
+                    .filter(user -> user.getStatus() == User.UserStatus.ACTIVE)
+                    .toList();
+
+            notificationService.createBatchNotification(
+                    students,
+                    title,
+                    content,
+                    com.fams.backend.entity.Notification.NotificationType.SCHEDULE_CHANGE,
+                    "/student/schedule");
 
             log.info("Sent schedule change notification to {} students in class {}", studentIds.size(), className);
         } catch (Exception e) {
@@ -408,18 +409,17 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
             String content = String.format("Giảng viên %s đã gửi yêu cầu %s cho lớp %s. Vui lòng kiểm tra và xử lý.",
                     requesterName, typeLabel, className);
 
-            int count = 0;
-            for (User staff : academicStaffs) {
-                notificationService.createNotification(
-                        staff,
-                        title,
-                        content,
-                        com.fams.backend.entity.Notification.NotificationType.ACADEMIC,
-                        "/academic-staff/requests",
-                        request.getRequester());
-                count++;
-            }
-            log.info("Sent notification to {} Academic Staff members", count);
+                List<User> activeStaffs = academicStaffs.stream()
+                    .filter(staff -> staff.getStatus() == User.UserStatus.ACTIVE)
+                    .toList();
+
+                notificationService.createBatchNotification(
+                    activeStaffs,
+                    title,
+                    content,
+                    com.fams.backend.entity.Notification.NotificationType.ACADEMIC,
+                    "/academic-staff/requests");
+                log.info("Sent notification to {} Academic Staff members", activeStaffs.size());
         } catch (Exception e) {
             log.error("Error sending notification to Academic Staff: {}", e.getMessage(), e);
         }
@@ -464,19 +464,18 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
                     "Hệ thống ghi nhận Giảng viên %s đã thu hồi đơn yêu cầu %s cho lớp %s.",
                     requesterName, getTypeLabel(request.getType()), className);
 
-                int count = 0;
-            for (User staff : academicStaffs) {
-                notificationService.createNotification(
-                        staff,
-                        title,
-                        content,
-                        com.fams.backend.entity.Notification.NotificationType.ACADEMIC,
-                        "/academic-staff/requests",
-                        request.getRequester());
-                count++;
-            }
+            List<User> activeStaffs = academicStaffs.stream()
+                    .filter(staff -> staff.getStatus() == User.UserStatus.ACTIVE)
+                    .toList();
 
-                log.info("Sent revocation notification to {} Academic Staff members", count);
+            notificationService.createBatchNotification(
+                    activeStaffs,
+                    title,
+                    content,
+                    com.fams.backend.entity.Notification.NotificationType.ACADEMIC,
+                    "/academic-staff/requests");
+
+            log.info("Sent revocation notification to {} Academic Staff members", activeStaffs.size());
         } catch (Exception e) {
             log.error("Error sending revocation notification to Academic Staff: {}", e.getMessage(), e);
         }

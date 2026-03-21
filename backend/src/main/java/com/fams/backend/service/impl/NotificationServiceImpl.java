@@ -95,6 +95,78 @@ public class NotificationServiceImpl implements UserNotificationService {
         }
 
         @Override
+        @Transactional
+        public void createBatchNotification(List<User> recipients, String title, String content,
+                        Notification.NotificationType type, String targetUrl) {
+                if (recipients == null || recipients.isEmpty()) {
+                        log.info("Skip batch notification because recipient list is empty: {}", title);
+                        return;
+                }
+
+                Map<Long, User> uniqueRecipients = new HashMap<>();
+                for (User recipient : recipients) {
+                        if (recipient != null && recipient.getId() != null) {
+                                uniqueRecipients.putIfAbsent(recipient.getId(), recipient);
+                        }
+                }
+
+                if (uniqueRecipients.isEmpty()) {
+                        log.info("Skip batch notification because no valid recipients found: {}", title);
+                        return;
+                }
+
+                Notification notification = Notification.builder()
+                                .title(title)
+                                .content(content)
+                                .type(type)
+                                .sentAt(LocalDateTime.now())
+                                .targetType(Notification.TargetType.USER)
+                                .targetUrl(targetUrl)
+                                .build();
+
+                Notification savedNotification = notificationRepository.save(notification);
+
+                Set<Long> recipientIds = new HashSet<>(uniqueRecipients.keySet());
+                NotificationReadStatus readStatus = NotificationReadStatus.builder()
+                                .notificationId(savedNotification.getId())
+                                .targetType(Notification.TargetType.USER.name())
+                                .recipientIds(recipientIds)
+                                .createdAt(LocalDateTime.now())
+                                .build();
+                notificationReadStatusRepository.save(readStatus);
+
+                try {
+                        Map<String, String> data = new HashMap<>();
+                        data.put("type", type.name());
+                        data.put("notificationId", savedNotification.getId().toString());
+                        if (targetUrl != null && !targetUrl.isBlank()) {
+                                data.put("targetUrl", targetUrl);
+                        }
+
+                        fcmService.sendPushNotificationsForUsers(new ArrayList<>(recipientIds), title, content, data);
+                } catch (Exception e) {
+                        log.warn("Failed to send batch FCM push notification: {}", e.getMessage());
+                }
+
+                NotificationResponse response = NotificationResponse.builder()
+                                .id(savedNotification.getId())
+                                .title(title)
+                                .content(content)
+                                .type(type.name())
+                                .sentAt(savedNotification.getSentAt())
+                                .createdAt(savedNotification.getCreatedAt())
+                                .targetUrl(targetUrl)
+                                .build();
+
+                for (User recipient : uniqueRecipients.values()) {
+                        if (recipient.getUsername() != null && !recipient.getUsername().isBlank()) {
+                                messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/notifications",
+                                                Collections.singletonList(response));
+                        }
+                }
+        }
+
+        @Override
         @Transactional(readOnly = true)
         public List<NotificationResponse> getMyNotifications() {
                 String username = SecurityContextHolder.getContext().getAuthentication().getName();
