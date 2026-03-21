@@ -117,7 +117,7 @@ export const NewsDetailPage = () => {
               </span>
               <span className="flex items-center gap-1.5 bg-white/60 dark:bg-zinc-800/60 px-3 py-2 rounded-xl border border-gray-200/50 dark:border-zinc-700/50 backdrop-blur-sm">
                 <Tag className="w-4 h-4" />
-                {news.type === 'EVENT' ? 'Sự kiện' : news.type === 'IMPORTANT' ? 'Thông báo' : 'Tin tức'}
+                {news.type === 'EVENT' ? 'Sự kiện' : news.type === 'IMPORTANT' ? 'Quan trọng' : 'Tin tức'}
               </span>
               <span className="flex items-center gap-1.5 bg-white/60 dark:bg-zinc-800/60 px-3 py-2 rounded-xl border border-gray-200/50 dark:border-zinc-700/50 backdrop-blur-sm">
                 <Calendar className="w-4 h-4" />

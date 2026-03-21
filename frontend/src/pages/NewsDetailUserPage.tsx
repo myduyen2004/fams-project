@@ -81,31 +81,27 @@ export const NewsDetailUserPage = () => {
           </div>
           
           <div className="relative z-10 max-w-[1400px] mx-auto px-4 md:px-8">
-              <span className="inline-block px-3 py-1 bg-white/90 dark:bg-zinc-800/90 text-red-600 dark:text-red-400 rounded-full text-xs font-bold uppercase tracking-wider mb-4 border border-red-100 dark:border-red-900/30 shadow-sm backdrop-blur-sm">
-                Tin tức & Sự kiện
-              </span>
-              <h1 className="text-3xl lg:text-5xl font-bold text-gray-900 dark:text-white leading-[1.2] mb-6 max-w-5xl tracking-tight">
-                {news.title}
-              </h1>
-              
-              <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 mb-8">
-                <span className="flex items-center gap-1.5 bg-white/60 dark:bg-zinc-800/60 px-3 py-2 rounded-xl border border-gray-200/50 dark:border-zinc-700/50 backdrop-blur-sm">
-                  <Tag className="w-4 h-4" />
-                  {news.type === 'EVENT' ? 'Sự kiện' : news.type === 'IMPORTANT' ? 'Thông báo' : 'Tin tức'}
-                </span>
-                <span className="flex items-center gap-1.5 bg-white/60 dark:bg-zinc-800/60 px-3 py-2 rounded-xl border border-gray-200/50 dark:border-zinc-700/50 backdrop-blur-sm">
-                  <Calendar className="w-4 h-4" />
-                  {new Date(news.publishedAt || news.createdAt).toLocaleString('vi-VN')}
-                </span>
+            <div className="flex flex-wrap items-center justify-end gap-4 mb-4">
+              <div className="flex items-center gap-3">
+                <button onClick={() => navigate('/news')} className="px-4 py-2 bg-white/80 dark:bg-zinc-800/80 border border-gray-200 dark:border-zinc-700 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-zinc-700 transition-colors backdrop-blur-sm">
+                  Quay lại danh sách
+                </button>
               </div>
+            </div>
 
-            {/* Breadcrumb */}
-            <div className="flex items-center gap-2 text-xs md:text-sm text-gray-500 bg-white/80 dark:bg-zinc-800/80 px-4 py-2.5 rounded-xl backdrop-blur-md w-fit border border-gray-200/50 dark:border-zinc-700/50 shadow-sm">
-              <span className="hover:text-fpt-orange cursor-pointer transition-colors" onClick={() => navigate('/dashboard')}>Trang chủ</span>
-              <span className="text-gray-300 dark:text-gray-600">/</span>
-              <span className="hover:text-fpt-orange cursor-pointer transition-colors" onClick={() => navigate('/news')}>Tin tức</span>
-              <span className="text-gray-300 dark:text-gray-600">/</span>
-              <span className="text-gray-900 dark:text-gray-200 font-semibold break-words">{news.title}</span>
+            <h1 className="text-3xl lg:text-5xl font-bold text-gray-900 dark:text-white leading-[1.2] mb-6 max-w-5xl tracking-tight">
+              {news.title}
+            </h1>
+            
+            <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 mb-8">
+              <span className="flex items-center gap-1.5 bg-white/60 dark:bg-zinc-800/60 px-3 py-2 rounded-xl border border-gray-200/50 dark:border-zinc-700/50 backdrop-blur-sm">
+                <Tag className="w-4 h-4" />
+                {news.type === 'EVENT' ? 'Sự kiện' : news.type === 'IMPORTANT' ? 'Quan trọng' : 'Tin tức'}
+              </span>
+              <span className="flex items-center gap-1.5 bg-white/60 dark:bg-zinc-800/60 px-3 py-2 rounded-xl border border-gray-200/50 dark:border-zinc-700/50 backdrop-blur-sm">
+                <Calendar className="w-4 h-4" />
+                {new Date(news.publishedAt || news.createdAt).toLocaleString('vi-VN')}
+              </span>
             </div>
           </div>
         </div>
@@ -169,8 +165,14 @@ export const NewsDetailUserPage = () => {
                 
                 <div className="space-y-0 text-sm">
                   <div className="flex justify-between items-center py-4 border-b border-gray-100 dark:border-zinc-800/60">
-                    <span className="text-gray-500 dark:text-gray-400 font-medium">ID:</span>
+                    <span className="text-gray-500 dark:text-gray-400 font-medium">ID Bài viết:</span>
                     <span className="font-bold text-gray-900 dark:text-white">{news.id}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-4 border-b border-gray-100 dark:border-zinc-800/60">
+                    <span className="text-gray-500 dark:text-gray-400 font-medium">Đối tượng:</span>
+                    <span className="font-bold text-gray-900 dark:text-white">
+                      {news.targetType === 'ALL' ? 'Toàn trường' : news.targetType === 'STUDENT' ? 'Sinh viên' : 'Giảng viên'}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center py-4 border-gray-100 dark:border-zinc-800/60">
                     <span className="text-gray-500 dark:text-gray-400 font-medium">Người đăng:</span>
