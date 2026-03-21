@@ -9,7 +9,7 @@ import com.fams.backend.repository.AccessLogRepository;
 import com.fams.backend.repository.UserRepository;
 import com.fams.backend.repository.UserSessionRepository;
 import com.fams.backend.security.jwt.JwtUtil;
-import com.fams.backend.service.UserActivityService;
+import com.fams.backend.repository.UserPermissionRepository;
 import com.fams.backend.service.impl.AuthService;
 import com.fams.backend.service.impl.DashboardBroadcastService;
 import com.fams.backend.service.impl.SystemLogService;
@@ -19,7 +19,6 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -72,7 +71,7 @@ class LoginTest {
     private SystemLogService systemLogService;
 
     @Mock
-    private UserActivityService userActivityService;
+    private UserPermissionRepository userPermissionRepository;
 
     private AuthService authService;
 
@@ -94,8 +93,8 @@ class LoginTest {
             dashboardBroadcastService,
             emailService,
             redisTemplate,
-            userActivityService,
-            systemLogService
+            systemLogService,
+            userPermissionRepository
         );
 
         loginRequest = new LoginRequest();

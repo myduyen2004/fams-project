@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +20,8 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/sub-specializations")
 @RequiredArgsConstructor
+@Tag(name = "Sub-Specialization", description = "API cho quản lý chuyên ngành hẹp")
+@PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
 public class SubSpecializationController {
 
     private final SubSpecializationService subSpecializationService;

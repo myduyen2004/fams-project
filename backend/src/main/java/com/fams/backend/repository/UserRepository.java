@@ -122,4 +122,6 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
            "LEFT JOIN FETCH u.lecturerProfile lp " +
            "WHERE u.role = 'LECTURER'")
     List<User> findAllLecturersWithProfiles();
+
+    List<User> findByRoleAndStatus(User.UserRole role, User.UserStatus status);
 }

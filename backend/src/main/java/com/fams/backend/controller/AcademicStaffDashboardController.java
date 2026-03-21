@@ -31,7 +31,6 @@ import java.util.List;
 @CrossOrigin(origins = "*")
 @Slf4j
 @Tag(name = "Academic Staff", description = "API cho cán bộ đào tạo")
-@PreAuthorize("hasRole('ACADEMIC_STAFF')")
 public class AcademicStaffDashboardController {
 
     private final AcademicStaffDashboardService dashboardService;
@@ -41,6 +40,7 @@ public class AcademicStaffDashboardController {
     private final com.fams.backend.repository.SystemLogRepository systemLogRepository;
 
     @GetMapping("/dashboard")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF')")
     @Operation(summary = "Lấy dữ liệu dashboard")
     public ResponseEntity<AcademicStaffDashboardResponse> getDashboardData(
             @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate startDate) {
@@ -49,6 +49,7 @@ public class AcademicStaffDashboardController {
     }
 
     @GetMapping("/dashboard/weekly-attendance")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF')")
     @Operation(summary = "Lấy dữ liệu tỷ lệ nghỉ học theo tuần (lightweight)")
     public ResponseEntity<java.util.List<AcademicStaffDashboardResponse.WeeklyAttendanceDTO>> getWeeklyAttendance(
             @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate startDate) {
@@ -57,6 +58,7 @@ public class AcademicStaffDashboardController {
     }
 
     @GetMapping("/dashboard/daily-attendance")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF')")
     @Operation(summary = "Lấy dữ liệu chuyên cần theo ngày (lightweight)")
     public ResponseEntity<AcademicStaffDashboardResponse.AttendanceStatsDTO> getDailyAttendance(
             @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate date) {
@@ -65,6 +67,7 @@ public class AcademicStaffDashboardController {
     }
 
     @GetMapping("/dashboard/system-logs")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('VIEW_SYSTEM_LOGS')")
     @Operation(summary = "Lấy nhật ký hệ thống (phân trang)")
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<org.springframework.data.domain.Page<com.fams.backend.dto.response.SystemLogResponse>> getSystemLogs(
@@ -109,6 +112,7 @@ public class AcademicStaffDashboardController {
     }
 
     @PostMapping(value = "/lecturers", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS')")
     @Operation(summary = "Tạo giảng viên mới")
     public ResponseEntity<UserResponse> createLecturer(
             @RequestPart("user") @Valid UserRequest request,
@@ -119,6 +123,7 @@ public class AcademicStaffDashboardController {
     }
 
     @GetMapping("/lecturers")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS')")
     @Operation(summary = "Lấy danh sách giảng viên", description = "Lấy danh sách giảng viên với phân trang, tìm kiếm và lọc")
     public ResponseEntity<Page<LecturerResponse>> getLecturers(
             @RequestParam(required = false) String search,
@@ -132,6 +137,7 @@ public class AcademicStaffDashboardController {
     }
 
     @GetMapping("/lecturers/{id}")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS')")
     @Operation(summary = "Lấy thông tin chi tiết giảng viên")
     public ResponseEntity<LecturerResponse> getLecturerById(@PathVariable Long id) {
         log.info("GET /academic-staff/lecturers/{}", id);
@@ -139,12 +145,14 @@ public class AcademicStaffDashboardController {
     }
 
     @GetMapping("/lecturers/departments")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS') or hasAuthority('MANAGE_MAJORS')")
     @Operation(summary = "Lấy danh sách các khoa/bộ môn")
     public ResponseEntity<List<String>> getAllDepartments() {
         return ResponseEntity.ok(lecturerService.getAllDepartments());
     }
 
     @DeleteMapping("/lecturers/{id}")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS')")
     @Operation(summary = "Xóa giảng viên")
     public ResponseEntity<Void> deleteLecturer(@PathVariable Long id) {
         log.info("DELETE /academic-staff/lecturers/{}", id);
@@ -153,6 +161,7 @@ public class AcademicStaffDashboardController {
     }
 
     @DeleteMapping("/lecturers")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS')")
     @Operation(summary = "Xóa nhiều giảng viên")
     public ResponseEntity<Void> deleteLecturers(@RequestBody List<Long> ids) {
         log.info("DELETE /academic-staff/lecturers | ids={}", ids);
@@ -161,6 +170,7 @@ public class AcademicStaffDashboardController {
     }
 
     @PostMapping("/lecturers/{id}/profile")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS')")
     @Operation(summary = "Đăng ký thông tin giảng viên", description = "Tạo LecturerProfile cho giảng viên chưa có profile")
     public ResponseEntity<LecturerResponse> registerLecturerProfile(
             @PathVariable Long id,
@@ -170,6 +180,7 @@ public class AcademicStaffDashboardController {
     }
 
     @GetMapping("/students")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS')")
     @Operation(summary = "Lấy danh sách sinh viên", description = "Lấy danh sách sinh viên với phân trang và tìm kiếm")
     public ResponseEntity<Page<com.fams.backend.dto.response.StudentResponse>> getStudents(
             @RequestParam(required = false) String search,
@@ -186,6 +197,7 @@ public class AcademicStaffDashboardController {
     }
 
     @GetMapping("/students/{id}")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS')")
     @Operation(summary = "Lấy thông tin chi tiết sinh viên")
     public ResponseEntity<com.fams.backend.dto.response.StudentResponse> getStudentById(@PathVariable Long id) {
         log.info("GET /academic-staff/students/{}", id);
@@ -193,6 +205,7 @@ public class AcademicStaffDashboardController {
     }
 
     @DeleteMapping("/students/{id}")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS')")
     @Operation(summary = "Xóa sinh viên")
     public ResponseEntity<Void> deleteStudent(@PathVariable Long id) {
         log.info("DELETE /academic-staff/students/{}", id);
@@ -201,6 +214,7 @@ public class AcademicStaffDashboardController {
     }
 
     @DeleteMapping("/students")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS')")
     @Operation(summary = "Xóa nhiều sinh viên")
     public ResponseEntity<Void> deleteStudents(@RequestBody List<Long> ids) {
         log.info("DELETE /academic-staff/students | ids={}", ids);
@@ -209,6 +223,7 @@ public class AcademicStaffDashboardController {
     }
 
     @PutMapping(value = "/students/{id}", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS')")
     @Operation(summary = "Cập nhật thông tin sinh viên")
     public ResponseEntity<com.fams.backend.dto.response.StudentResponse> updateStudent(
             @PathVariable Long id,
@@ -219,6 +234,7 @@ public class AcademicStaffDashboardController {
     }
 
     @PostMapping("/students/import")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS')")
     @Operation(summary = "Import sinh viên từ file Excel")
     public ResponseEntity<java.util.Map<String, Object>> importStudents(@RequestParam("file") MultipartFile file) {
         log.info("POST /academic-staff/students/import | filename={}", file.getOriginalFilename());
@@ -226,6 +242,7 @@ public class AcademicStaffDashboardController {
     }
 
     @PostMapping("/students/import/preview")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS')")
     @Operation(summary = "Xem trước import sinh viên từ file Excel")
     public ResponseEntity<List<com.fams.backend.dto.StudentImportDTO>> previewImportStudents(
             @RequestParam("file") MultipartFile file) {
@@ -234,6 +251,7 @@ public class AcademicStaffDashboardController {
     }
 
     @PostMapping("/students/import/save")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS')")
     @Operation(summary = "Lưu danh sách sinh viên đã import")
     public ResponseEntity<java.util.Map<String, Object>> saveImportedStudents(
             @RequestBody List<com.fams.backend.dto.StudentImportDTO> dtos) {
@@ -242,6 +260,7 @@ public class AcademicStaffDashboardController {
     }
 
     @GetMapping("/students/export")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS')")
     @Operation(summary = "Xuất danh sách sinh viên ra Excel")
     public ResponseEntity<byte[]> exportStudents(
             @RequestParam(required = false) String major,
@@ -259,30 +278,35 @@ public class AcademicStaffDashboardController {
     }
 
     @GetMapping("/majors-list")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS') or hasAuthority('MANAGE_MAJORS')")
     @Operation(summary = "Lấy danh sách các ngành học (cho dropdown)")
     public ResponseEntity<List<String>> getAllMajors() {
         return ResponseEntity.ok(studentService.getAllMajors());
     }
 
     @GetMapping("/specializations-list")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS') or hasAuthority('MANAGE_MAJORS')")
     @Operation(summary = "Lấy danh sách các chuyên ngành (cho dropdown)")
     public ResponseEntity<List<String>> getAllSpecializations() {
         return ResponseEntity.ok(studentService.getAllSpecializations());
     }
 
     @GetMapping("/specializations-by-major")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS') or hasAuthority('MANAGE_MAJORS')")
     @Operation(summary = "Lấy danh sách chuyên ngành theo Major")
     public ResponseEntity<List<String>> getSpecializationsByMajor(@RequestParam String majorName) {
         return ResponseEntity.ok(studentService.getSpecializationsByMajor(majorName));
     }
 
     @GetMapping("/sub-specializations-by-specialization")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAnyAuthority('MANAGE_USERS', 'MANAGE_MAJORS')")
     @Operation(summary = "Lấy danh sách Combo theo Specialization")
     public ResponseEntity<List<String>> getSubSpecializationsBySpecialization(@RequestParam String specializationName) {
         return ResponseEntity.ok(studentService.getSubSpecializationsBySpecialization(specializationName));
     }
 
     @PutMapping(value = "/lecturers/{id}", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS')")
     @Operation(summary = "Cập nhật thông tin giảng viên")
     public ResponseEntity<LecturerResponse> updateLecturer(
             @PathVariable Long id,
@@ -293,6 +317,7 @@ public class AcademicStaffDashboardController {
     }
 
     @PostMapping("/lecturers/import")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS')")
     @Operation(summary = "Import giảng viên từ file Excel")
     public ResponseEntity<java.util.Map<String, Object>> importLecturers(@RequestParam("file") MultipartFile file) {
         log.info("POST /academic-staff/lecturers/import | filename={}", file.getOriginalFilename());
@@ -301,6 +326,7 @@ public class AcademicStaffDashboardController {
     }
 
     @PostMapping("/lecturers/import/preview")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS')")
     @Operation(summary = "Xem trước import giảng viên từ file Excel")
     public ResponseEntity<List<LecturerImportDTO>> previewImportLecturers(@RequestParam("file") MultipartFile file) {
         log.info("POST /academic-staff/lecturers/import/preview | filename={}", file.getOriginalFilename());
@@ -308,6 +334,7 @@ public class AcademicStaffDashboardController {
     }
 
     @PostMapping("/lecturers/import/save")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS')")
     @Operation(summary = "Lưu danh sách giảng viên đã import")
     public ResponseEntity<java.util.Map<String, Object>> saveImportedLecturers(
             @RequestBody List<LecturerImportDTO> dtos) {
@@ -316,6 +343,7 @@ public class AcademicStaffDashboardController {
     }
 
     @GetMapping("/lecturers/export")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_USERS')")
     @Operation(summary = "Xuất danh sách giảng viên ra Excel")
     public ResponseEntity<byte[]> exportLecturers(
             @RequestParam(required = false) String department,

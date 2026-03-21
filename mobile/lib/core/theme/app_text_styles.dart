@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
-/// Typography System with inter Font Family
+/// Typography System with Be Vietnam Pro Font Family
 class AppTextStyles {
   AppTextStyles._();
 
-  // Base inter TextTheme
-  static TextTheme get interTextTheme => GoogleFonts.interTextTheme();
+  // Base Be Vietnam Pro TextTheme
+  static TextTheme get textTheme => GoogleFonts.interTextTheme();
 
   // Display Styles - For large headings
   static TextStyle displayLarge = GoogleFonts.inter(

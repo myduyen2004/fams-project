@@ -7,6 +7,8 @@ import '../controllers/schedule_controller.dart';
 import '../widgets/schedule_calendar.dart';
 import '../widgets/slot_card.dart';
 import 'qr_scanner_screen.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 import '../../../core/widgets/app_background.dart';
 
@@ -38,15 +40,21 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     final controller = Get.find<ScheduleController>();
     if (controller.selectedDaySlots.isEmpty) return;
 
-    // Find the index of the active or next slot
-    final targetSlot = controller.activeSlot.value ?? controller.nextSlot.value;
+    // ✨ Prioritize the slot requested from Home Screen
+    final targetSlot = controller.requestedScrollSlot.value ?? 
+                       controller.activeSlot.value ?? 
+                       controller.nextSlot.value;
+    
     if (targetSlot == null) return;
 
     final index = controller.selectedDaySlots.indexOf(targetSlot);
     if (index == -1) return;
 
+    // Reset requested slot so we don't keep jumping back on every build
+    controller.requestedScrollSlot.value = null;
+
     // Typical SlotCard height is around 120-140px. Let's aim for a middle-ground.
-    const double estimateItemHeight = 130.0;
+    final double estimateItemHeight = 145.h; // Responsive height
     final offset = (index * estimateItemHeight).clamp(0.0, _scrollController.position.maxScrollExtent);
 
     _scrollController.animateTo(
@@ -67,7 +75,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           children: [
             // 1. Header with Semester Selector
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 28, 24, 10),
+              padding: EdgeInsets.fromLTRB(24.w, 28.h, 24.w, 10.h),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -76,19 +84,19 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     children: [
                       Text(
                         'Kì học',
-                        style: TextStyle(fontSize: 13, color: Colors.grey[500], fontWeight: FontWeight.w600),
+                        style: TextStyle(fontSize: 13.sp, color: Colors.grey[500], fontWeight: FontWeight.w600),
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8.h),
                       GestureDetector(
                         onTap: () => _showSemesterPicker(context, controller),
                         child: Row(
                           children: [
                             Obx(() => Text(
                               controller.selectedSemester.value?.code ?? 'CHỌN KỲ',
-                              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF2D3436)),
+                              style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.w900, color: const Color(0xFF2D3436)),
                             )),
-                            const SizedBox(width: 4),
-                            Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey[800], size: 24),
+                            SizedBox(width: 4.w),
+                            Icon(SolarIconsOutline.altArrowDown, color: Colors.grey[800], size: 24.sp),
                           ],
                         ),
                       ),
@@ -99,12 +107,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         ? null 
                         : () => controller.saveAllSemesterToCalendar(),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
                       decoration: BoxDecoration(
                         color: controller.isSavingToCalendar.value 
                             ? AppColors.primaryOrange.withOpacity(0.6) 
                             : AppColors.primaryOrange,
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(14.r),
                         boxShadow: [
                           BoxShadow(
                             color: AppColors.primaryOrange.withOpacity(0.2),
@@ -114,17 +122,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         ],
                       ),
                       child: controller.isSavingToCalendar.value
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
+                          ? SizedBox(
+                              width: 16.sp,
+                              height: 16.sp,
+                              child: const CircularProgressIndicator(
                                 strokeWidth: 2,
                                 color: Colors.white,
                               ),
                             )
-                          : const Text(
+                          : Text(
                               'Lưu vào lịch',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13),
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13.sp),
                             ),
                     ),
                   )),
@@ -133,40 +141,40 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             ),
 
             // 2. Redesigned Calendar
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: ScheduleCalendar(),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: const ScheduleCalendar(),
             ),
 
-            const SizedBox(height: 10),
+            SizedBox(height: 10.h),
 
             // 3. Section Title and Slot Count Badge
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Obx(() => Text(
                     controller.isLecturer ? 'Lịch dạy' : 'Lịch học',
-                    style: const TextStyle(
-                      fontSize: 24,
+                    style: TextStyle(
+                      fontSize: 24.sp,
                       fontWeight: FontWeight.w900,
-                      color: Color(0xFF2D3436),
+                      color: const Color(0xFF2D3436),
                       letterSpacing: -0.5,
                     ),
                   )),
                   Obx(() => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFF0E0),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(20.r),
                     ),
                     child: Text(
                       '${controller.selectedDaySlots.length} Slot',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.primaryOrange,
                         fontWeight: FontWeight.w900,
-                        fontSize: 12,
+                        fontSize: 12.sp,
                       ),
                     ),
                   )),
@@ -188,16 +196,16 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   
                   return Center(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 40),
+                      padding: EdgeInsets.symmetric(horizontal: 40.w),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            isNotPublished ? Icons.lock_clock_outlined : Icons.event_busy_outlined, 
-                            size: 80, 
+                            isNotPublished ? SolarIconsBroken.lock : SolarIconsBroken.calendar, 
+                            size: 80.sp, 
                             color: Colors.grey[200]
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: 16.h),
                           Text(
                             isNotPublished && !controller.isLecturer
                               ? 'Lịch học học kỳ này chưa được công bố.'
@@ -207,7 +215,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Colors.grey[400], 
-                              fontSize: 15, 
+                              fontSize: 15.sp, 
                               fontStyle: FontStyle.italic
                             ),
                           ),
@@ -224,7 +232,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
                 return ListView.builder(
                   controller: _scrollController,
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+                  padding: EdgeInsets.fromLTRB(24.w, 8.h, 24.w, 20.h),
                   physics: const BouncingScrollPhysics(),
                   itemCount: controller.selectedDaySlots.length,
                   itemBuilder: (context, index) {
@@ -255,18 +263,18 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
     Get.bottomSheet(
       Container(
-        padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(
+        padding: EdgeInsets.all(24.w),
+        decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+          borderRadius: BorderRadius.only(topLeft: Radius.circular(24.r), topRight: Radius.circular(24.r)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Chọn học kỳ',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2D3436)),
+              style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold, color: const Color(0xFF2D3436)),
             ),
             const SizedBox(height: 20),
             Flexible(
@@ -280,17 +288,18 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     title: Text(
                       sem.name,
                       style: TextStyle(
+                        fontSize: 14.sp,
                         fontWeight: controller.selectedSemester.value?.code == sem.code ? FontWeight.bold : FontWeight.normal,
                         color: controller.selectedSemester.value?.code == sem.code ? AppColors.primaryOrange : const Color(0xFF2D3436),
                       ),
                     ),
-                    subtitle: Text(sem.code, style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                    subtitle: Text(sem.code, style: TextStyle(color: Colors.grey[500], fontSize: 12.sp)),
                     onTap: () {
                       controller.selectedSemester.value = sem;
                       Get.back();
                     },
                     trailing: controller.selectedSemester.value?.code == sem.code 
-                      ? const Icon(Icons.check_circle, color: AppColors.primaryOrange) 
+                      ? Icon(SolarIconsBold.checkCircle, color: AppColors.primaryOrange, size: 20.sp) 
                       : null,
                   );
                 },

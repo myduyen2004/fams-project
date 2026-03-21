@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, CalendarRange } from 'lucide-react';
 import axios from 'axios';
+import apiClient from '../../services/api/authService';
 
 interface Semester {
     code: string;
@@ -57,7 +58,7 @@ export const SemesterListTemplate: React.FC<SemesterListTemplateProps> = ({ Layo
         const fetchSemesters = async () => {
             try {
                 setLoading(true);
-                const response = await axios.get('/api/v1/semesters/active');
+                const response = await apiClient.get('/v1/semesters/active');
                 const data = Array.isArray(response.data) ? response.data : [];
                 setSemesters(data);
                 setError(null);

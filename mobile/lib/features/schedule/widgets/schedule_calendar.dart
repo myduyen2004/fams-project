@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../controllers/schedule_controller.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class ScheduleCalendar extends StatefulWidget {
   const ScheduleCalendar({super.key});
@@ -38,10 +40,10 @@ class _ScheduleCalendarState extends State<ScheduleCalendar> {
     final date = controller.selectedDate.value;
     final index = date.weekday - 1; // 0 for Monday, 6 for Sunday
     
-    final screenWidth = MediaQuery.of(context).size.width;
-    final cardWidth = (screenWidth - 110) / 5 + 5; // cardWidth + horizontal margins
+    // cardWidth = width + margins
+    final cardWidth = (1.sw - 110.w) / 5 + 5.w; 
     
-    final offset = (index * cardWidth).clamp(0.0, _scrollController.position.maxScrollExtent);
+    final double offset = (index * cardWidth).clamp(0.0, _scrollController.position.maxScrollExtent);
     
     if (animate) {
       _scrollController.animateTo(
@@ -65,11 +67,11 @@ class _ScheduleCalendarState extends State<ScheduleCalendar> {
         children: [
           IconButton(
             onPressed: () => _changeWeek(controller, -7),
-            icon: Icon(Icons.chevron_left_rounded, color: Colors.orange[400], size: 26),
+            icon: Icon(SolarIconsOutline.altArrowLeft, color: Colors.orange[400], size: 26.sp),
           ),
           Expanded(
             child: SizedBox(
-              height: 94,
+              height: 94.h,
               child: Obx(() {
                 // Subscribe to date changes
                 final date = controller.selectedDate.value;
@@ -94,7 +96,7 @@ class _ScheduleCalendarState extends State<ScheduleCalendar> {
           ),
           IconButton(
             onPressed: () => _changeWeek(controller, 7),
-            icon: Icon(Icons.chevron_right_rounded, color: Colors.orange[400], size: 26),
+            icon: Icon(SolarIconsOutline.altArrowRight, color: Colors.orange[400], size: 26.sp),
           ),
         ],
       ),
@@ -115,12 +117,12 @@ class _ScheduleCalendarState extends State<ScheduleCalendar> {
       onTap: () => controller.selectDate(date),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        width: (MediaQuery.of(context).size.width - 110) / 5, 
-        margin: const EdgeInsets.symmetric(horizontal: 2.5, vertical: 5),
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        width: (1.sw - 110.w) / 5, 
+        margin: EdgeInsets.symmetric(horizontal: 2.5.w, vertical: 5.h),
+        padding: EdgeInsets.symmetric(vertical: 8.h),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primaryOrange : Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(16.r),
           boxShadow: [
             BoxShadow(
               color: isSelected 
@@ -137,32 +139,32 @@ class _ScheduleCalendarState extends State<ScheduleCalendar> {
             Text(
               _getDayName(date.weekday),
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 11.sp,
                 color: isSelected ? Colors.white70 : Colors.grey[500],
                 fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: 4.h),
             Text(
               "${date.day}/${date.month}",
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 16.sp,
                 color: isSelected ? Colors.white : const Color(0xFF2D3436),
                 fontWeight: FontWeight.w900,
               ),
             ),
-            const SizedBox(height: 2),
+            SizedBox(height: 2.h),
             if (hasSchedule)
               Container(
-                width: 4,
-                height: 4,
+                width: 4.sp,
+                height: 4.sp,
                 decoration: BoxDecoration(
                   color: isSelected ? Colors.white : AppColors.primaryOrange,
                   shape: BoxShape.circle,
                 ),
               )
             else
-              const SizedBox(height: 4),
+              SizedBox(height: 4.h),
           ],
         ),
       ),

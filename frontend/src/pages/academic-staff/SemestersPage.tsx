@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRoleAwareNavigate } from '../../hooks/useRoleAwareNavigate';
 import { Settings, Pen, Plus, Search, Trash2, Info } from 'lucide-react';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { AddSemesterModal } from '../../components/academic-staff/AddSemesterModal';
@@ -9,6 +9,7 @@ import { Pagination } from '../../components/academic-staff';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { usePagination } from '../../hooks/usePagination';
 import axios from 'axios';
+import apiClient from '../../services/api/authService';
 
 interface Semester {
   code: string;
@@ -19,7 +20,7 @@ interface Semester {
 }
 
 export const SemestersPage: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useRoleAwareNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,7 +53,7 @@ export const SemestersPage: React.FC = () => {
   const fetchSemesters = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/v1/semesters/active');
+      const response = await apiClient.get('/v1/semesters/active');
       const data = Array.isArray(response.data) ? response.data : [];
       setSemesters(data);
       setError(null);
@@ -88,7 +89,7 @@ export const SemestersPage: React.FC = () => {
     endDate: string;
   }) => {
     try {
-      await axios.post('/api/v1/semesters', semesterData);
+      await apiClient.post('/v1/semesters', semesterData);
       await fetchSemesters();
     } catch (error) {
       throw error;
@@ -103,7 +104,7 @@ export const SemestersPage: React.FC = () => {
     endDate: string;
   }) => {
     try {
-      await axios.put(`/api/v1/semesters/${semesterData.code}`, semesterData);
+      await apiClient.put(`/v1/semesters/${semesterData.code}`, semesterData);
       await fetchSemesters();
     } catch (error) {
       throw error;
@@ -126,7 +127,7 @@ export const SemestersPage: React.FC = () => {
   const handleDeleteSemester = async () => {
     if (!selectedSemester) return;
     try {
-      await axios.delete(`/api/v1/semesters/${selectedSemester.code}`);
+      await apiClient.delete(`/v1/semesters/${selectedSemester.code}`);
       await fetchSemesters();
     } catch (error) {
       console.error('Error deleting semester:', error);
@@ -286,7 +287,7 @@ export const SemestersPage: React.FC = () => {
                       const handleBulkDelete = async () => {
                         try {
                           const deletePromises = upcomingSemesters.map(s =>
-                            axios.delete(`/api/v1/semesters/${s.code}`)
+                            apiClient.delete(`/v1/semesters/${s.code}`)
                           );
                           await Promise.all(deletePromises);
                           await fetchSemesters();
