@@ -148,7 +148,15 @@ public class NewsService {
     @Transactional(readOnly = true)
     public Page<NewsResponse> getPublishedNews(int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "sentAt"));
-        Specification<News> spec = (root, query, cb) -> cb.equal(root.get("status"), News.NewsStatus.SENT);
+        User currentUser = getCurrentUser();
+        List<News.TargetType> visibleTargets = getVisibleTargetTypes(currentUser);
+
+        Specification<News> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.equal(root.get("status"), News.NewsStatus.SENT));
+            predicates.add(root.get("targetType").in(visibleTargets));
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
         return newsRepository.findAll(spec, pageable).map(this::toResponse);
     }
 
@@ -157,7 +165,35 @@ public class NewsService {
         News news = newsRepository.findById(id)
                 .filter(n -> n.getStatus() == News.NewsStatus.SENT)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy tin tức đã xuất bản với ID: " + id));
+
+        User currentUser = getCurrentUser();
+        List<News.TargetType> visibleTargets = getVisibleTargetTypes(currentUser);
+        if (!visibleTargets.contains(news.getTargetType())) {
+            throw new NotFoundException("Bạn không có quyền xem tin tức này");
+        }
+
         return toResponse(news);
+    }
+
+    /**
+     * Xác định các TargetType mà user hiện tại có quyền xem.
+     */
+    private List<News.TargetType> getVisibleTargetTypes(User user) {
+        List<News.TargetType> targets = new ArrayList<>();
+        targets.add(News.TargetType.ALL);
+
+        switch (user.getRole()) {
+            case STUDENT -> targets.add(News.TargetType.STUDENT);
+            case LECTURER -> targets.add(News.TargetType.LECTURER);
+            case ACADEMIC_STAFF -> targets.add(News.TargetType.ACADEMIC_STAFF);
+            case ADMIN -> {
+                targets.add(News.TargetType.STUDENT);
+                targets.add(News.TargetType.LECTURER);
+                targets.add(News.TargetType.ACADEMIC_STAFF);
+                targets.add(News.TargetType.ADMIN);
+            }
+        }
+        return targets;
     }
 
     private User getCurrentUser() {

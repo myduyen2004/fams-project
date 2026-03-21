@@ -8,6 +8,7 @@ import { newsService } from '../../services/api/newsService';
 import { NewsItem } from '../../types/news';
 import { Pagination } from '../../components/common/Pagination';
 import { usePagination } from '../../hooks/usePagination';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 import toast from 'react-hot-toast';
 
 export const NewsManagementPage = () => {
@@ -16,6 +17,7 @@ export const NewsManagementPage = () => {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [userRole, setUserRole] = useState('');
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -67,16 +69,21 @@ export const NewsManagementPage = () => {
     loadNews();
   }, [loadNews]);
 
-  const handleBulkDelete = async () => {
+  const handleBulkDeleteSelect = () => {
     if (selectedIds.length === 0) return;
-    if (!window.confirm('Bạn có chắc chắn muốn xóa các tin tức đã chọn?')) return;
+    setIsDeleteModalOpen(true);
+  };
+
+  const executeBulkDelete = async () => {
     try {
       await newsService.bulkDeleteNews(selectedIds);
       setSelectedIds([]);
       toast.success('Đã xóa các tin tức đã chọn');
+      setIsDeleteModalOpen(false);
       loadNews();
     } catch {
       toast.error('Không thể xóa nhiều tin tức');
+      setIsDeleteModalOpen(false);
     }
   };
 
@@ -103,7 +110,7 @@ export const NewsManagementPage = () => {
                 placeholder="Tìm kiếm tin tức..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-zinc-700 rounded-xl bg-gray-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-900 focus:ring-2 focus:ring-fpt-orange/20 transition-all text-sm outline-none"
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-zinc-700 rounded-xl bg-gray-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-900 focus:ring-2 focus:ring-fpt-orange/20 transition-all text-sm outline-none text-gray-900 dark:text-gray-100"
               />
               <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
             </div>
@@ -112,7 +119,7 @@ export const NewsManagementPage = () => {
             <select
               value={targetFilter}
               onChange={(e) => setTargetFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-200 dark:border-zinc-700 rounded-xl bg-gray-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-900 text-sm outline-none"
+              className="px-4 py-2 border border-gray-200 dark:border-zinc-700 rounded-xl bg-gray-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-900 text-sm outline-none text-gray-900 dark:text-gray-100"
             >
               <option value="ALL">Tất cả đối tượng</option>
               <option value="STUDENT">Sinh viên</option>
@@ -124,7 +131,7 @@ export const NewsManagementPage = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-200 dark:border-zinc-700 rounded-xl bg-gray-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-900 text-sm outline-none"
+              className="px-4 py-2 border border-gray-200 dark:border-zinc-700 rounded-xl bg-gray-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-900 text-sm outline-none text-gray-900 dark:text-gray-100"
             >
               <option value="ALL">Tất cả trạng thái</option>
               <option value="DRAFT">Bản nháp</option>
@@ -144,7 +151,7 @@ export const NewsManagementPage = () => {
             )}
             {selectedIds.length > 0 && (
               <button
-                onClick={handleBulkDelete}
+                onClick={handleBulkDeleteSelect}
                 className="px-4 py-2 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-600 font-medium hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors flex items-center text-sm"
               >
                 <Trash2 size={16} className="mr-2" /> Xóa ({selectedIds.length})
@@ -249,6 +256,17 @@ export const NewsManagementPage = () => {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={executeBulkDelete}
+        title="Xác nhận xóa"
+        message={`Bạn có chắc chắn muốn xóa ${selectedIds.length} bản tin đã chọn không? Hành động này không thể hoàn tác.`}
+        confirmLabel="Khóa và Xóa"
+        cancelLabel="Hủy"
+        type="danger"
+      />
     </Layout>
   );
 };

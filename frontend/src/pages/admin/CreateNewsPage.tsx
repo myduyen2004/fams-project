@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
@@ -18,18 +18,51 @@ export const CreateNewsPage = () => {
   const basePath = useMemo(() => isAcademicStaff ? '/academic-staff' : '/admin', [isAcademicStaff]);
   const Layout = isAcademicStaff ? AcademicStaffLayout : AdminLayout;
 
-  const [form, setForm] = useState<NewsRequest>({
-    title: '',
-    content: '',
-    targetType: NewsTargetType.ALL,
-    type: NewsType.EVENT,
-    thumbnailImage: '',
-    attachmentUrls: []
+  const [form, setForm] = useState<NewsRequest>(() => {
+    const saved = localStorage.getItem('createNewsDraft');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        // ignore JSON parse error
+      }
+    }
+    return {
+      title: '',
+      content: '',
+      targetType: NewsTargetType.ALL,
+      type: NewsType.EVENT,
+      thumbnailImage: '',
+      attachmentUrls: []
+    };
   });
 
-  const [sendType, setSendType] = useState<'NOW' | 'SCHEDULED' | 'DRAFT'>('NOW');
-  const [scheduledDate, setScheduledDate] = useState('');
+  const [sendType, setSendType] = useState<'NOW' | 'SCHEDULED' | 'DRAFT'>(() => {
+    return (localStorage.getItem('createNewsSendType') as 'NOW' | 'SCHEDULED' | 'DRAFT') || 'NOW';
+  });
+  const [scheduledDate, setScheduledDate] = useState(() => {
+    return localStorage.getItem('createNewsScheduledDate') || '';
+  });
   const [submitting, setSubmitting] = useState(false);
+
+  // Save to localStorage on change
+  useEffect(() => {
+    localStorage.setItem('createNewsDraft', JSON.stringify(form));
+  }, [form]);
+
+  useEffect(() => {
+    localStorage.setItem('createNewsSendType', sendType);
+  }, [sendType]);
+
+  useEffect(() => {
+    localStorage.setItem('createNewsScheduledDate', scheduledDate);
+  }, [scheduledDate]);
+
+  const clearDraft = () => {
+    localStorage.removeItem('createNewsDraft');
+    localStorage.removeItem('createNewsSendType');
+    localStorage.removeItem('createNewsScheduledDate');
+  };
 
   // Editor modules
   const modules = {
@@ -130,6 +163,7 @@ export const CreateNewsPage = () => {
       setSubmitting(true);
       await newsService.createNews(payload);
       toast.success(status === NewsStatus.DRAFT ? 'Đã lưu nháp' : 'Tạo bài viết thành công');
+      clearDraft();
       navigate(`${basePath}/news-management`);
     } catch {
       toast.error('Không thể xử lý yêu cầu bài viết');
@@ -281,7 +315,7 @@ export const CreateNewsPage = () => {
                   onChange={(e) => setForm({ ...form, targetType: e.target.value as NewsTargetType })}
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-900 focus:ring-2 focus:ring-fpt-orange/20 outline-none mb-6 text-sm"
                 >
-                  <option value={NewsTargetType.ALL}>Toàn bộ (Mặc định)</option>
+                  <option value={NewsTargetType.ALL}>Toàn trường</option>
                   <option value={NewsTargetType.STUDENT}>Tất cả sinh viên</option>
                   <option value={NewsTargetType.LECTURER}>Tất cả giảng viên</option>
                 </select>
