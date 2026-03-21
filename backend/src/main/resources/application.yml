@@ -55,6 +55,9 @@ spring:
           min-idle: 5
           max-wait: 5000ms
 
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/fams_notifications?authSource=admin}
+
   # ---------------- File Upload ----------------
   servlet:
     multipart:

@@ -38,6 +38,14 @@ public class SemesterServiceImpl implements SemesterService {
     }
 
     @Override
+    public List<SemesterResponse> getUpcomingSemesters() {
+        return semesterRepository.findUpcomingSemesters()
+                .stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public SemesterResponse getSemesterById(Long id) {
         Semester semester = semesterRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Semester not found with id: " + id));

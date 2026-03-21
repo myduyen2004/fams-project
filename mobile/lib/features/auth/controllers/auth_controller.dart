@@ -167,6 +167,10 @@ class AuthController extends GetxController {
         currentUser.value = user;
         isAuthenticated.value = true;
 
+        if (Get.isRegistered<FcmService>()) {
+          await FcmService.to.registerDeviceToken();
+        }
+
         Get.snackbar(
           'Thành công',
           'Đăng nhập thành công',
@@ -217,6 +221,10 @@ class AuthController extends GetxController {
   Future<void> logout() async {
     try {
       isLoading.value = true;
+
+      if (Get.isRegistered<FcmService>()) {
+        await FcmService.to.unregisterDeviceToken();
+      }
 
       // Call logout API
       await apiService.post(ApiConstants.logout);

@@ -37,6 +37,10 @@ build/
 .env.local
 .env.*.local
 
+### Firebase Admin SDK ###
+src/main/resources/firebase-adminsdk.json
+src/main/resources/*firebase-adminsdk*.json
+
 ### Log Files ###
 *.log
 logs/

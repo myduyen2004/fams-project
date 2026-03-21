@@ -6,7 +6,6 @@ import '../models/chat_models.dart';
 import '../services/chat_service.dart';
 import '../../../core/services/websocket_service.dart';
 import '../../auth/controllers/auth_controller.dart';
-import '../../notification/services/notification_polling_service.dart';
 
 /// Chat Controller — manages all chat state (mirrors MessagesPage.tsx state)
 class ChatController extends GetxController {
@@ -182,16 +181,6 @@ class ChatController extends GetxController {
 
       // Mark as read
       _triggerMarkAsRead(groupId);
-    } else if (!msg.isOwn) {
-      // Show local notification if not in this group and not own message
-      NotificationPollingService().showImmediateNotification(
-        id: groupId,
-        title:
-            groups.firstWhereOrNull((g) => g.id == groupId)?.name ??
-            'Tin nhắn mới',
-        body: '${msg.senderName}: ${msg.content}',
-        payload: 'CHAT_$groupId',
-      );
     }
   }
 

@@ -2,12 +2,12 @@ package com.fams.backend.service;
 
 import com.fams.backend.dto.request.NotificationRequest;
 import com.fams.backend.dto.response.NotificationResponse;
+import com.fams.backend.document.NotificationReadStatus;
 import com.fams.backend.entity.Notification;
 import com.fams.backend.entity.Notification.NotificationStatus;
-import com.fams.backend.entity.NotificationRecipient;
 import com.fams.backend.entity.User;
 import com.fams.backend.exception.NotFoundException;
-import com.fams.backend.repository.NotificationRecipientRepository;
+import com.fams.backend.repository.NotificationReadStatusRepository;
 import com.fams.backend.repository.NotificationRepository;
 import com.fams.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +24,9 @@ import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.criteria.Predicate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -32,8 +34,9 @@ import java.util.List;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
-    private final NotificationRecipientRepository notificationRecipientRepository;
+    private final NotificationReadStatusRepository notificationReadStatusRepository;
     private final UserRepository userRepository;
+    private final FcmService fcmService;
 
     /**
      * Lấy danh sách thông báo có phân trang
@@ -173,7 +176,6 @@ public class NotificationService {
                 .priority(request.getPriority() != null ? request.getPriority()
                         : Notification.NotificationPriority.MEDIUM)
                 .targetType(request.getTargetType() != null ? request.getTargetType() : Notification.TargetType.ALL)
-                .targetClassName(request.getTargetClassName())  // ✅ NEW: Map targetClassName from request
                 .status(request.getStatus() != null ? request.getStatus() : Notification.NotificationStatus.DRAFT)
                 .scheduledAt(request.getScheduledAt())
                 .sender(sender)
@@ -190,7 +192,7 @@ public class NotificationService {
         Notification saved = notificationRepository.save(notification);
         log.info("Created notification: {} by {}, status: {}", saved.getId(), username, saved.getStatus());
 
-        // Tạo NotificationRecipient nếu status là SENT
+        // Tạo read-status document nếu status là SENT
         if (saved.getStatus() == NotificationStatus.SENT) {
             if (request.getRecipientId() != null) {
                 // Targeted notification to a specific user
@@ -211,13 +213,25 @@ public class NotificationService {
      * Helper to create a single recipient record
      */
     private void createSingleRecipient(Notification notification, User recipient) {
-        NotificationRecipient recipientRecord = NotificationRecipient.builder()
-                .notification(notification)
-                .recipient(recipient)
-                .isRead(false)
+        NotificationReadStatus readStatus = NotificationReadStatus.builder()
+            .notificationId(notification.getId())
+            .targetType(Notification.TargetType.USER.name())
+            .recipientId(recipient.getId())
+            .createdAt(LocalDateTime.now())
                 .build();
-        notificationRecipientRepository.save(recipientRecord);
-        log.info("Created recipient record for user: {} on notification: {}", recipient.getId(), notification.getId());
+        notificationReadStatusRepository.save(readStatus);
+        log.info("Created MongoDB read-status for user: {} on notification: {}", recipient.getId(), notification.getId());
+
+        // Send FCM push notification
+        fcmService.sendPushNotification(
+                recipient.getId(),
+                notification.getTitle(),
+                notification.getContent(),
+                java.util.Map.of(
+                        "notificationId", String.valueOf(notification.getId()),
+                        "type", notification.getType() != null ? notification.getType().name() : "SYSTEM"
+                )
+        );
     }
 
     /**
@@ -409,7 +423,7 @@ public class NotificationService {
     }
 
     /**
-     * Tạo NotificationRecipient records dựa trên targetType
+     * Tạo read-status document dựa trên targetType
      */
     public void createNotificationRecipients(Notification notification) {
         List<User> recipients = new ArrayList<>();
@@ -436,20 +450,19 @@ public class NotificationService {
                         .filter(u -> !u.equals(notification.getSender()))
                         .collect(java.util.stream.Collectors.toList());
                 break;
-            case CLASS:
-                // ✅ NEW: Gửi cho sinh viên trong lớp cụ thể
-                if (notification.getTargetClassName() != null && !notification.getTargetClassName().isEmpty()) {
-                    // TODO: Query để lấy danh sách sinh viên trong lớp từ enrollment table
-                    // Tạm thời fallback sang STUDENT (cần implement)
-                    recipients = userRepository.findByRole(User.UserRole.STUDENT)
-                            .orElse(new ArrayList<>()).stream()
-                            .filter(u -> u.getStatus() == User.UserStatus.ACTIVE)
-                            .filter(u -> !u.equals(notification.getSender()))
-                            .collect(java.util.stream.Collectors.toList());
-                    log.warn("CLASS target type requires proper enrollment lookup - currently using all STUDENT");
-                } else {
-                    log.warn("CLASS target type but targetClassName is null or empty");
-                }
+            case ACADEMIC_STAFF:
+                recipients = userRepository.findByRole(User.UserRole.ACADEMIC_STAFF)
+                        .orElse(new ArrayList<>()).stream()
+                        .filter(u -> u.getStatus() == User.UserStatus.ACTIVE)
+                        .filter(u -> !u.equals(notification.getSender()))
+                        .collect(java.util.stream.Collectors.toList());
+                break;
+            case ADMIN:
+                recipients = userRepository.findByRole(User.UserRole.ADMIN)
+                        .orElse(new ArrayList<>()).stream()
+                        .filter(u -> u.getStatus() == User.UserStatus.ACTIVE)
+                        .filter(u -> !u.equals(notification.getSender()))
+                        .collect(java.util.stream.Collectors.toList());
                 break;
             case USER:
                 // USER case is handled via recipientId in createNotification method
@@ -460,19 +473,27 @@ public class NotificationService {
         if (!recipients.isEmpty()) {
             log.info("Found {} recipients for target type {}", recipients.size(), notification.getTargetType());
             try {
-                List<NotificationRecipient> notificationRecipients = recipients.stream()
-                        .map(recipient -> NotificationRecipient.builder()
-                                .notification(notification)
-                                .recipient(recipient)
-                                .isRead(false)
-                                .build())
-                        .collect(java.util.stream.Collectors.toList());
+            NotificationReadStatus readStatus = NotificationReadStatus.builder()
+                .notificationId(notification.getId())
+                .targetType(notification.getTargetType().name())
+                .createdAt(LocalDateTime.now())
+                .build();
 
-                log.info("Saving {} notification recipients...", notificationRecipients.size());
-                notificationRecipientRepository.saveAll(notificationRecipients);
-                log.info("Successfully created {} notification recipients for notification {}",
-                        notificationRecipients.size(),
-                        notification.getId());
+            notificationReadStatusRepository.save(readStatus);
+            log.info("Successfully created MongoDB read-status for notification {}", notification.getId());
+
+                // Use batch FCM push notification
+                java.util.Map<String, String> fcmData = java.util.Map.of(
+                        "notificationId", String.valueOf(notification.getId()),
+                        "type", notification.getType() != null ? notification.getType().name() : "SYSTEM"
+                );
+                List<Long> recipientIds = recipients.stream().map(User::getId).collect(java.util.stream.Collectors.toList());
+                fcmService.sendPushNotificationsForUsers(
+                        recipientIds,
+                        notification.getTitle(),
+                        notification.getContent(),
+                        fcmData
+                );
             } catch (Exception e) {
                 log.error("Error saving notification recipients: ", e);
                 throw e; // Re-throw to ensure transaction rollback if needed
@@ -480,6 +501,16 @@ public class NotificationService {
         } else {
             log.warn("No recipients found for target type {}", notification.getTargetType());
         }
+    }
+
+    private void createUserTargetReadStatus(Notification notification, Set<Long> recipientIds) {
+        NotificationReadStatus readStatus = NotificationReadStatus.builder()
+                .notificationId(notification.getId())
+                .targetType(Notification.TargetType.USER.name())
+                .recipientIds(recipientIds)
+                .createdAt(LocalDateTime.now())
+                .build();
+        notificationReadStatusRepository.save(readStatus);
     }
 
     /**
@@ -511,15 +542,22 @@ public class NotificationService {
         List<User> academicStaff = userRepository.findByRole(User.UserRole.ACADEMIC_STAFF)
                 .orElse(new ArrayList<>());
 
-        for (User staff : academicStaff) {
-            if (staff.getStatus() == User.UserStatus.ACTIVE) {
-                NotificationRecipient recipient = NotificationRecipient.builder()
-                        .notification(notification)
-                        .recipient(staff)
-                        .isRead(false)
-                        .build();
-                notificationRecipientRepository.save(recipient);
-            }
+        List<Long> staffIds = academicStaff.stream()
+                .filter(s -> s.getStatus() == User.UserStatus.ACTIVE)
+                .map(User::getId)
+                .collect(java.util.stream.Collectors.toList());
+
+        if (!staffIds.isEmpty()) {
+            createUserTargetReadStatus(notification, new HashSet<>(staffIds));
+            fcmService.sendPushNotificationsForUsers(
+                    staffIds,
+                    notification.getTitle(),
+                    notification.getContent(),
+                    java.util.Map.of(
+                            "notificationId", String.valueOf(notification.getId()),
+                            "type", "ACADEMIC"
+                    )
+            );
         }
 
         log.info("Sent notification to {} academic staff for new academic request {}",
@@ -561,13 +599,19 @@ public class NotificationService {
 
         notification = notificationRepository.save(notification);
 
-        // Send to student
-        NotificationRecipient recipient = NotificationRecipient.builder()
-                .notification(notification)
-                .recipient(academicRequest.getStudent())
-                .isRead(false)
-                .build();
-        notificationRecipientRepository.save(recipient);
+        // Save single-recipient read status in MongoDB
+        createSingleRecipient(notification, academicRequest.getStudent());
+
+        // Send FCM push notification to student
+        fcmService.sendPushNotification(
+                academicRequest.getStudent().getId(),
+                notification.getTitle(),
+                notification.getContent(),
+                java.util.Map.of(
+                        "notificationId", String.valueOf(notification.getId()),
+                        "type", "ACADEMIC"
+                )
+        );
 
         log.info("Sent notification to student {} for academic request {} status change to {}",
                 academicRequest.getStudent().getId(), academicRequest.getId(), academicRequest.getStatus());
@@ -610,22 +654,29 @@ public class NotificationService {
 
         notification = notificationRepository.save(notification);
 
-        // Send to all students in the list
-        List<NotificationRecipient> recipients = new ArrayList<>();
-        for (User student : students) {
-            if (student.getStatus() == User.UserStatus.ACTIVE) {
-                recipients.add(NotificationRecipient.builder()
-                        .notification(notification)
-                        .recipient(student)
-                        .isRead(false)
-                        .build());
-            }
-        }
+        List<Long> activeStudentIds = students.stream()
+            .filter(s -> s.getStatus() == User.UserStatus.ACTIVE)
+            .map(User::getId)
+            .collect(java.util.stream.Collectors.toList());
 
-        if (!recipients.isEmpty()) {
-            notificationRecipientRepository.saveAll(recipients);
+        if (!activeStudentIds.isEmpty()) {
+            createUserTargetReadStatus(notification, new HashSet<>(activeStudentIds));
             log.info("Sent notifications to {} students for published {} of course {}",
-                    recipients.size(), gradeTypeName, course.getCode());
+                activeStudentIds.size(), gradeTypeName, course.getCode());
+
+            // Send FCM push notification to all active students
+            java.util.Map<String, String> fcmData = java.util.Map.of(
+                    "notificationId", String.valueOf(notification.getId()),
+                    "type", "SYSTEM"
+            );
+            if (!activeStudentIds.isEmpty()) {
+                fcmService.sendPushNotificationsForUsers(
+                        activeStudentIds,
+                        notification.getTitle(),
+                        notification.getContent(),
+                        fcmData
+                );
+            }
         }
     }
 }
