@@ -38,6 +38,9 @@ spring:
       host: ${SPRING_DATA_REDIS_HOST:redis}
       port: 6379
 
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/fams_notifications?authSource=admin}
+
 management:
   health:
     redis:

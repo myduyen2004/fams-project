@@ -29,6 +29,9 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: 6379
 
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/fams_notifications?authSource=admin}
+
   flyway:
     enabled: true
     baseline-on-migrate: true
@@ -41,7 +44,7 @@ server:
 app:
   environment: development
   cors:
-    allowed-origins: http://localhost:5173,http://localhost:3000
+    allowed-origins: http://localhost:5173,http://localhost:3000,*
   
 logging:
   level:

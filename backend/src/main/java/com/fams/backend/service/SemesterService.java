@@ -7,6 +7,8 @@ import com.fams.backend.dto.response.SemesterResponse;
 public interface SemesterService {
     List<SemesterResponse> getAllSemesters();
 
+    List<SemesterResponse> getUpcomingSemesters();
+
     SemesterResponse getSemesterById(Long id);
 
     SemesterResponse createSemester(SemesterResponse semesterDTO);

@@ -29,6 +29,9 @@ spring:
       host: redis
       port: 6379
 
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://mongodb:27017/fams_notifications?authSource=admin}
+
   # Flyway for safe production migrations
   flyway:
     enabled: true
