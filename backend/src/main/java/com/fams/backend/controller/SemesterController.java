@@ -20,7 +20,7 @@ public class SemesterController {
     private final SemesterService semesterService;
 
     @GetMapping("/active")
-    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_SEMESTERS')")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasRole('STUDENT') or hasRole('LECTURER') or hasAuthority('MANAGE_SEMESTERS')")
     public ResponseEntity<List<SemesterResponse>> getAllSemesters() {
         return ResponseEntity.ok(semesterService.getAllSemesters());
     }
