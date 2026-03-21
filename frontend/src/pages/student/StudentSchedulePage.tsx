@@ -21,6 +21,7 @@ import {
 import axios from 'axios';
 import { Listbox, Transition } from '@headlessui/react';
 import { toast } from 'react-hot-toast';
+import apiClient from '../../services/api/authService';
 import timetableService, { WeeklyTimetableDTO, TimetableSlotDTO } from '../../services/api/timetableService';
 
 const SLOTS = [
@@ -29,8 +30,6 @@ const SLOTS = [
     { id: 3, label: 'SLOT 3', time: '13:00 - 15:15' },
     { id: 4, label: 'SLOT 4', time: '15:30 - 17:45' },
 ];
-
-
 
 export const StudentSchedulePage: React.FC = () => {
     const navigate = useNavigate();
@@ -92,6 +91,7 @@ export const StudentSchedulePage: React.FC = () => {
 
     const weeks = generateWeeks();
 
+
     const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const year = Number(e.target.value);
         setSelectedYear(year);
@@ -120,8 +120,9 @@ export const StudentSchedulePage: React.FC = () => {
 
     const fetchSemesters = async () => {
         try {
-            const resp = await axios.get('/api/v1/semesters/active');
+            const resp = await apiClient.get('/v1/semesters/active');
             const data = Array.isArray(resp.data) ? resp.data : [];
+            // setSemesters(data); // Unused in UI
 
             if (data.length > 0) {
                 const today = new Date();

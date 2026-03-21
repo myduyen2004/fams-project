@@ -4,9 +4,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/app_background.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../controllers/notification_controller.dart';
 import '../models/notification_model.dart';
 import 'notification_detail_screen.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class NotificationListScreen extends StatelessWidget {
   const NotificationListScreen({super.key});
@@ -39,7 +41,7 @@ class NotificationListScreen extends StatelessWidget {
                     color: AppColors.primaryOrange,
                     child: SingleChildScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.only(bottom: 100), // Space for FAB
+                      padding: EdgeInsets.only(bottom: 100.h), // Space for FAB
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -50,7 +52,7 @@ class NotificationListScreen extends StatelessWidget {
                             onMarkRead: controller.markAllAsRead,
                           ),
                           
-                          const SizedBox(height: 16),
+                          SizedBox(height: 16.h),
                           
                           _buildNotificationSection(
                             title: 'Trước đó',
@@ -59,12 +61,12 @@ class NotificationListScreen extends StatelessWidget {
                           ),
                           
                           // End of list
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 40),
+                          Padding(
+                            padding: EdgeInsets.symmetric(vertical: 40.h),
                             child: Center(
                               child: Text(
                                 'Không còn thông báo nào khác',
-                                style: TextStyle(color: Colors.grey, fontSize: 13),
+                                style: TextStyle(color: Colors.grey, fontSize: 13.sp),
                               ),
                             ),
                           ),
@@ -104,14 +106,14 @@ class NotificationListScreen extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min, // Important for left align
                   children: [
-                    const Icon(Icons.chevron_left, color: AppColors.primaryOrange, size: 28),
-                    const SizedBox(width: 4),
+                    Icon(SolarIconsOutline.altArrowLeft, color: AppColors.primaryOrange, size: 28.sp),
+                    SizedBox(width: 4.w),
                     Text(
                       'Quay lại',
                       style: GoogleFonts.inter(
                         color: AppColors.primaryOrange,
                         fontWeight: FontWeight.w500,
-                        fontSize: 16,
+                        fontSize: 16.sp,
                       ),
                     ),
                   ],
@@ -120,12 +122,12 @@ class NotificationListScreen extends StatelessWidget {
               // Removed "Đã đọc hết" TextButton as requested
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12.h),
           Text(
             'Thông báo',
             textAlign: TextAlign.left,
             style: GoogleFonts.inter(
-              fontSize: 28, 
+              fontSize: 28.sp, 
               fontWeight: FontWeight.bold,
               color: const Color(0xFF181411),
               letterSpacing: -0.5,
@@ -141,11 +143,11 @@ class NotificationListScreen extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.notifications_none, size: 64, color: Colors.grey[300]),
-          const SizedBox(height: 16),
+          Icon(SolarIconsOutline.bell, size: 64.sp, color: Colors.grey[300]),
+          SizedBox(height: 16.h),
           Text(
             'Không có thông báo nào',
-            style: TextStyle(color: Colors.grey[500], fontSize: 16),
+            style: TextStyle(color: Colors.grey[500], fontSize: 16.sp),
           ),
         ],
       ),
@@ -164,7 +166,7 @@ class NotificationListScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -172,7 +174,7 @@ class NotificationListScreen extends StatelessWidget {
               Text(
                 title,
                 style: GoogleFonts.inter(
-                  fontSize: 18,
+                  fontSize: 18.sp,
                   fontWeight: FontWeight.bold,
                   color: const Color(0xFF181411),
                 ),
@@ -183,7 +185,7 @@ class NotificationListScreen extends StatelessWidget {
                   child: Text(
                     'Đánh dấu đã đọc',
                     style: GoogleFonts.inter(
-                      fontSize: 12,
+                      fontSize: 12.sp,
                       fontWeight: FontWeight.w500,
                       color: AppColors.primaryOrange,
                     ),
@@ -207,13 +209,13 @@ class NotificationListScreen extends StatelessWidget {
         Get.to(() => NotificationDetailScreen(notification: notification));
       },
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6), // Added margin for card look to pop from background
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h), // Added margin for card look to pop from background
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
         decoration: BoxDecoration(
           color: notification.isRead 
               ? Colors.white.withOpacity(0.7) // Slightly translucent for read
               : Colors.white, // Solid white for unread to pop
-          borderRadius: BorderRadius.circular(16), // Rounded corners matches Request Card
+          borderRadius: BorderRadius.circular(16.r), // Rounded corners matches Request Card
           border: Border.all(
             color: notification.isRead 
                 ? Colors.transparent
@@ -223,8 +225,8 @@ class NotificationListScreen extends StatelessWidget {
              if (!notification.isRead)
                BoxShadow(
                  color: AppColors.primaryOrange.withOpacity(0.05),
-                 blurRadius: 10,
-                 offset: const Offset(0, 4),
+                 blurRadius: 10.r,
+                 offset: Offset(0, 4.h),
                ),
           ],
         ),
@@ -244,14 +246,14 @@ class NotificationListScreen extends StatelessWidget {
                         child: Text(
                           notification.title,
                           style: GoogleFonts.inter(
-                            fontSize: 15,
+                            fontSize: 15.sp,
                             fontWeight: notification.isRead ? FontWeight.w500 : FontWeight.w600,
                             color: const Color(0xFF181411),
                             height: 1.3,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8.w),
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.center,
@@ -259,16 +261,16 @@ class NotificationListScreen extends StatelessWidget {
                           Text(
                             _getExactTime(notification.timestamp),
                             style: GoogleFonts.inter(
-                              fontSize: 12,
+                              fontSize: 12.sp,
                               fontWeight: FontWeight.w500,
                               color: Colors.grey[600],
                             ),
                           ),
                           if (!notification.isRead) ...[
-                            const SizedBox(width: 6),
+                            SizedBox(width: 6.w),
                             Container(
-                              width: 8,
-                              height: 8,
+                              width: 8.r,
+                              height: 8.r,
                               decoration: const BoxDecoration(
                                 color: AppColors.primaryOrange,
                                 shape: BoxShape.circle,
@@ -279,21 +281,21 @@ class NotificationListScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4.h),
                   // Sender name
                   Text(
                     notification.senderFullName?.toUpperCase() ?? 'HỆ THỐNG',
                     style: GoogleFonts.inter(
-                      fontSize: 12,
+                      fontSize: 12.sp,
                       fontWeight: FontWeight.w600,
                       color: AppColors.primaryOrange,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4.h),
                   Text(
                     notification.cleanDescription,
                     style: GoogleFonts.inter(
-                      fontSize: 14,
+                      fontSize: 14.sp,
                       color: Colors.grey[600],
                       height: 1.4,
                     ),

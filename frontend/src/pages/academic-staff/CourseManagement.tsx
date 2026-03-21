@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRoleAwareNavigate } from '../../hooks/useRoleAwareNavigate';
 import { Plus, Search, Upload, Layers } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
@@ -13,7 +13,7 @@ import { Course } from '../../types/course';
 import { usePagination } from '../../hooks/usePagination';
 
 export const CourseManagement: React.FC = () => {
-    const navigate = useNavigate();
+    const navigate = useRoleAwareNavigate();
     const [courses, setCourses] = useState<Course[]>([]);
     const [loading, setLoading] = useState(true);
     const [totalElements, setTotalElements] = useState(0);

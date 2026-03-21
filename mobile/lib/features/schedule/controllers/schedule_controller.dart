@@ -31,6 +31,9 @@ class ScheduleController extends GetxController {
   final RxDouble activeProgress = 0.0.obs;
   final RxString timeLeftStr = "0 phút".obs;
 
+  // ✨ ADDED: Scroll to specific slot from external triggers (e.g. Home Screen)
+  final Rx<TimetableSlot?> requestedScrollSlot = Rx<TimetableSlot?>(null);
+
   bool get isLecturer => _authController.currentUser.value?.isLecturer ?? false;
 
   @override
@@ -215,6 +218,14 @@ class ScheduleController extends GetxController {
       fetchSchedule(date: date);
     } else {
       selectedDate.value = date;
+    }
+  }
+
+  /// Navigate to a specific slot (used from Home Screen or notifications)
+  void scrollToSlot(TimetableSlot slot, DateTime date) {
+    requestedScrollSlot.value = slot;
+    if (!_isSameDay(selectedDate.value, date)) {
+      selectDate(date);
     }
   }
 

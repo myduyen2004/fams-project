@@ -484,8 +484,8 @@ public class ClassSectionServiceImpl implements ClassSectionService {
 
         // Get student's current slots in this semester (excluding the class they are
         // leaving)
-        List<TimetableSlot> studentSlots = timetableSlotRepository.findByStudentCodeAndDateBetween(
-                student.getCode(),
+        List<TimetableSlot> studentSlots = timetableSlotRepository.findByStudentIdAndDateBetween(
+                student.getId(),
                 currentClass.getSemester().getStartDate(),
                 currentClass.getSemester().getEndDate());
 

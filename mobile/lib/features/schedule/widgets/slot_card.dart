@@ -8,6 +8,8 @@ import 'package:get/get.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../controllers/schedule_controller.dart';
 import '../views/slot_detail_screen.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class SlotCard extends StatelessWidget {
   final TimetableSlot slot;
@@ -24,28 +26,27 @@ class SlotCard extends StatelessWidget {
       return GestureDetector(
         onTap: () => Get.to(() => SlotDetailScreen(slot: slot)),
         child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+          margin: EdgeInsets.only(bottom: 12.h),
+          padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 16.w),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            // ONLY active slot gets the orange border and glow
+            borderRadius: BorderRadius.circular(20.r),
             border: isActive 
-                ? Border.all(color: AppColors.primaryOrange, width: 1.5)
+                ? Border.all(color: AppColors.primaryOrange, width: 1.5.w)
                 : null,
             boxShadow: [
               if (isActive)
                 BoxShadow(
                   color: AppColors.primaryOrange.withOpacity(0.3),
-                  blurRadius: 20,
+                  blurRadius: 20.r,
                   spreadRadius: 1,
-                  offset: const Offset(0, 4),
+                  offset: Offset(0, 4.h),
                 )
               else
                 BoxShadow(
                   color: Colors.black.withOpacity(0.03),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+                  blurRadius: 10.r,
+                  offset: Offset(0, 4.h),
                 ),
             ],
           ),
@@ -58,11 +59,11 @@ class SlotCard extends StatelessWidget {
                 style: GoogleFonts.inter(
                   color: AppColors.primaryOrange,
                   fontWeight: FontWeight.w900,
-                  fontSize: 12,
+                  fontSize: 12.sp,
                   letterSpacing: 0.5,
                 ),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: 4.h),
               IntrinsicHeight(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -72,11 +73,11 @@ class SlotCard extends StatelessWidget {
                       child: Text(
                         slot.courseCode ?? 'COURSE',
                         style: GoogleFonts.inter(
-                          fontSize: 22,
+                          fontSize: 22.sp,
                           fontWeight: FontWeight.w900,
                           color: const Color(0xFF2D3436),
                           letterSpacing: -0.5,
-                          height: 1.0, // Remove line height internal padding
+                          height: 1.0, 
                         ),
                       ),
                     ),
@@ -88,43 +89,43 @@ class SlotCard extends StatelessWidget {
               
               // If active, show progress bar
               if (isActive) ...[
-                const SizedBox(height: 12),
+                SizedBox(height: 12.h),
                 Row(
                   children: [
                     Expanded(
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(6.r),
                         child: LinearProgressIndicator(
                           value: controller.activeProgress.value,
                           backgroundColor: const Color(0xFFF1F2F6),
                           color: AppColors.primaryOrange,
-                          minHeight: 6,
+                          minHeight: 6.h,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    SizedBox(width: 10.w),
                     Text(
                       'Còn ${controller.timeLeftStr.value}',
                       style: GoogleFonts.inter(
                         color: AppColors.primaryOrange,
                         fontWeight: FontWeight.w700,
-                        fontSize: 11,
+                        fontSize: 11.sp,
                       ),
                     ),
                   ],
                 ),
               ],
               
-              const SizedBox(height: 16),
+              SizedBox(height: 16.h),
               
               // Unified Information Layout: Phòng -> Lớp -> Giờ -> GV
-              _buildInfoItem(Icons.location_on_rounded, slot.roomCode ?? 'Online'),
-              const SizedBox(height: 8),
-              _buildInfoItem(Icons.people_alt_rounded, slot.className ?? 'N/A'),
-              const SizedBox(height: 8),
-              _buildInfoItem(Icons.access_time_filled_rounded, "${_formatTime(slot.startTime)} - ${_formatTime(slot.endTime)}"),
-              const SizedBox(height: 8),
-              _buildInfoItem(Icons.person_rounded, slot.lecturerName ?? 'N/A'),
+              _buildInfoItem(SolarIconsOutline.mapPoint, slot.roomCode ?? 'Online'),
+              SizedBox(height: 8.h),
+              _buildInfoItem(SolarIconsOutline.usersGroupRounded, slot.className ?? 'N/A'),
+              SizedBox(height: 8.h),
+              _buildInfoItem(SolarIconsOutline.clockCircle, "${_formatTime(slot.startTime)} - ${_formatTime(slot.endTime)}"),
+              SizedBox(height: 8.h),
+              _buildInfoItem(SolarIconsOutline.user, slot.lecturerName ?? 'N/A'),
             ],
           ),
         ),
@@ -145,12 +146,12 @@ class SlotCard extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 15, color: const Color(0xFFB2BEC3)),
-        const SizedBox(width: 8),
+        Icon(icon, size: 15.sp, color: const Color(0xFFB2BEC3)),
+        SizedBox(width: 8.w),
         Text(
           text,
           style: GoogleFonts.inter(
-            fontSize: 12,
+            fontSize: 12.sp,
             color: const Color(0xFF2D3436),
             fontWeight: FontWeight.w600,
           ),
@@ -172,15 +173,15 @@ class SlotCard extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
+      padding: EdgeInsets.symmetric(horizontal: 10.w),
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(6.r),
       ),
       child: Text(
         status,
-        style: TextStyle(color: textColor, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.2),
+        style: TextStyle(color: textColor, fontSize: 11.sp, fontWeight: FontWeight.w900, letterSpacing: 0.2),
       ),
     );
   }

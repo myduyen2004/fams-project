@@ -12,14 +12,13 @@ import com.fams.backend.security.jwt.JwtUtil;
 import com.fams.backend.service.EmailService;
 import com.fams.backend.service.GeoLocationService;
 import jakarta.servlet.http.HttpServletRequest;
-import com.fams.backend.service.UserActivityService;
+import com.fams.backend.repository.UserPermissionRepository;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -58,7 +57,7 @@ class AuthServiceTest {
     @Mock
     private SystemLogService systemLogService;
     @Mock
-    private UserActivityService userActivityService;
+    private UserPermissionRepository userPermissionRepository;
 
     private AuthService authService;
 
@@ -79,8 +78,8 @@ class AuthServiceTest {
             dashboardBroadcastService,
             emailService,
             redisTemplate,
-            userActivityService,
-            systemLogService
+            systemLogService,
+            userPermissionRepository
         );
 
         activeUser = User.builder()
