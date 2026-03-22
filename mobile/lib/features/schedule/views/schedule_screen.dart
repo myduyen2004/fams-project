@@ -68,183 +68,350 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   Widget build(BuildContext context) {
     final ScheduleController controller = Get.put(ScheduleController());
 
-    return Scaffold(
-      body: AppBackground(
-        child: SafeArea(
-        child: Column(
-          children: [
-            // 1. Header with Semester Selector
-            Padding(
-              padding: EdgeInsets.fromLTRB(24.w, 28.h, 24.w, 10.h),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Kì học',
-                        style: TextStyle(fontSize: 13.sp, color: Colors.grey[500], fontWeight: FontWeight.w600),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            const Color(0xFFFEF3DE), // Peach-like light orange
+            Colors.white,
+          ],
+          stops: const [0.0, 0.3], // Soft fade 
+        ),
+      ),
+      child: Column(
+        children: [
+          // 1. Redesigned Top Header
+          Padding(
+            padding: EdgeInsets.fromLTRB(24.w, 32.h, 24.w, 4.h), // Reduced padding
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: () => _showSemesterPicker(context, controller),
+                  child: Icon(SolarIconsOutline.altArrowDown, color: AppColors.primaryOrange, size: 24.sp),
+                ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => _showSemesterPicker(context, controller),
+                    child: Obx(() => Text(
+                      controller.selectedSemester.value?.name.toUpperCase() ?? 'KỲ HỌC',
+                      style: GoogleFonts.beVietnamPro(
+                        fontSize: 14.sp, // Even smaller
+                        fontWeight: FontWeight.w600, // Even lighter
+                        color: AppColors.primaryOrange.withOpacity(0.9),
+                        letterSpacing: -0.5,
                       ),
-                      SizedBox(height: 8.h),
-                      GestureDetector(
-                        onTap: () => _showSemesterPicker(context, controller),
-                        child: Row(
-                          children: [
-                            Obx(() => Text(
-                              controller.selectedSemester.value?.code ?? 'CHỌN KỲ',
-                              style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.w900, color: const Color(0xFF2D3436)),
-                            )),
-                            SizedBox(width: 4.w),
-                            Icon(SolarIconsOutline.altArrowDown, color: Colors.grey[800], size: 24.sp),
-                          ],
-                        ),
-                      ),
-                    ],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    )),
                   ),
-                  Obx(() => GestureDetector(
-                    onTap: controller.isSavingToCalendar.value 
-                        ? null 
-                        : () => controller.saveAllSemesterToCalendar(),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-                      decoration: BoxDecoration(
-                        color: controller.isSavingToCalendar.value 
-                            ? AppColors.primaryOrange.withOpacity(0.6) 
-                            : AppColors.primaryOrange,
-                        borderRadius: BorderRadius.circular(14.r),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primaryOrange.withOpacity(0.2),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
+                ),
+                Obx(() => Text(
+                  '${controller.selectedDate.value.year}',
+                  style: GoogleFonts.beVietnamPro(
+                    fontSize: 13.sp, 
+                    fontWeight: FontWeight.w700, 
+                    color: Colors.grey[400],
+                  ),
+                )),
+                SizedBox(width: 8.w),
+                GestureDetector(
+                  onTap: () => _showYearPicker(context, controller),
+                  child: Icon(SolarIconsBold.calendar, color: AppColors.primaryOrange, size: 24.sp),
+                ),
+              ],
+            ),
+          ),
+                    // 3. New Title Section (Moved up)
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Obx(() => Text(
+                      _getWeekdayNameAllCaps(controller.selectedDate.value.weekday),
+                      style: GoogleFonts.beVietnamPro(
+                        fontSize: 10.sp, // Smaller caps text
+                        fontWeight: FontWeight.w600, // Even lighter
+                        color: AppColors.primaryOrange.withOpacity(0.6),
+                        letterSpacing: 2.0,
+                      ),
+                    )),
+                    SizedBox(height: 4.h),
+                    Obx(() => Text(
+                      '${controller.isLecturer ? 'Lịch dạy' : 'Lịch học'} ${controller.selectedDate.value.year}',
+                      style: GoogleFonts.beVietnamPro(
+                        fontSize: 20.sp, // Even more compact
+                        fontWeight: FontWeight.w700, // Bold but not heavy
+                        color: const Color(0xFF2D3436).withOpacity(0.85),
+                        letterSpacing: -0.2,
+                      ),
+                    )),
+                  ],
+                ),
+                Obx(() => GestureDetector(
+                  onTap: controller.isSavingToCalendar.value 
+                      ? null 
+                      : () => controller.saveAllSemesterToCalendar(),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppColors.primaryOrange,
+                          const Color(0xFFE05200), // Original matching orange
                         ],
                       ),
-                      child: controller.isSavingToCalendar.value
-                          ? SizedBox(
-                              width: 16.sp,
-                              height: 16.sp,
-                              child: const CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(
-                              'Lưu vào lịch',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13.sp),
-                            ),
+                      borderRadius: BorderRadius.circular(16.r), // More square
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primaryOrange.withOpacity(0.3),
+                          blurRadius: 15,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
-                  )),
-                ],
-              ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (controller.isSavingToCalendar.value)
+                          SizedBox(
+                            width: 16.sp,
+                            height: 16.sp,
+                            child: const CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        else ...[
+                          Icon(SolarIconsBold.bookmark, color: Colors.white, size: 16.sp),
+                          SizedBox(width: 8.w),
+                          Text(
+                            'Lưu',
+                            style: GoogleFonts.beVietnamPro(
+                              color: Colors.white, 
+                              fontWeight: FontWeight.w700, // Lighter 
+                              fontSize: 13.sp
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                )),
+              ],
             ),
+          ),
+ 
+          // 2. Calendar (Moved down)
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 2.w),
+            child: const ScheduleCalendar(),
+          ),
 
-            // 2. Redesigned Calendar
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: const ScheduleCalendar(),
-            ),
+          // 3.5 Attendance Statistics
+          Obx(() {
+            if (controller.selectedDaySlots.isEmpty) return const SizedBox.shrink();
+            
+            final now = controller.currentTime.value;
+            int presentCount = 0;
+            int absentCount = 0;
 
-            SizedBox(height: 10.h),
-
-            // 3. Section Title and Slot Count Badge
-            Padding(
+            for (var slot in controller.selectedDaySlots) {
+              if (slot.attendanceStatus == 'PRESENT') {
+                presentCount++;
+              } else if (slot.attendanceStatus == 'ABSENT') {
+                absentCount++;
+              } else if (slot.startTime != null) {
+                // If not marked, check if it should be marked as absent (time passed threshold)
+                // Using the threshold from config
+                try {
+                  final startParts = slot.startTime!.split(':');
+                  final slotStart = DateTime(
+                    slot.date.year, slot.date.month, slot.date.day,
+                    int.parse(startParts[0]), int.parse(startParts[1]),
+                  );
+                  final threshold = slot.absentThresholdMinutes ?? controller.attendanceConfig.value.absentThresholdMinutes;
+                  final limitTime = slotStart.add(Duration(minutes: threshold));
+                  
+                  if (now.isAfter(limitTime)) {
+                    absentCount++;
+                  }
+                } catch (_) {}
+              }
+            }
+            
+            return Padding(
               padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Obx(() => Text(
-                    controller.isLecturer ? 'Lịch dạy' : 'Lịch học',
-                    style: TextStyle(
-                      fontSize: 24.sp,
-                      fontWeight: FontWeight.w900,
-                      color: const Color(0xFF2D3436),
-                      letterSpacing: -0.5,
-                    ),
-                  )),
-                  Obx(() => Container(
-                    padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF0E0),
-                      borderRadius: BorderRadius.circular(20.r),
-                    ),
-                    child: Text(
-                      '${controller.selectedDaySlots.length} Slot',
-                      style: TextStyle(
-                        color: AppColors.primaryOrange,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 12.sp,
-                      ),
-                    ),
-                  )),
+                   Text(
+                     'Có mặt: ',
+                     style: GoogleFonts.beVietnamPro(fontSize: 11.sp, fontWeight: FontWeight.w600, color: const Color(0xFF2D3436)),
+                   ),
+                   Container(
+                     padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 1.h),
+                     decoration: BoxDecoration(color: const Color(0xFF27AE60), borderRadius: BorderRadius.circular(10.r)),
+                     child: Text('$presentCount', style: TextStyle(fontSize: 11.sp, color: Colors.white, fontWeight: FontWeight.bold)),
+                   ),
+                   SizedBox(width: 12.w),
+                   Text(
+                     'Vắng mặt: ',
+                     style: GoogleFonts.beVietnamPro(fontSize: 11.sp, fontWeight: FontWeight.w600, color: const Color(0xFF2D3436)),
+                   ),
+                   Container(
+                     padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 1.h),
+                     decoration: BoxDecoration(color: const Color(0xFFFF4757), borderRadius: BorderRadius.circular(10.r)),
+                     child: Text('$absentCount', style: TextStyle(fontSize: 11.sp, color: Colors.white, fontWeight: FontWeight.bold)),
+                   ),
                 ],
               ),
+            );
+          }),
+
+          // 4. Slots List
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoading.value) {
+                return const Center(
+                  child: CircularProgressIndicator(color: AppColors.primaryOrange),
+                );
+              }
+
+              if (controller.selectedDaySlots.isEmpty) {
+                final isNotPublished = controller.errorStatusCode.value == 403;
+                
+                return Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 40.w),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          isNotPublished ? SolarIconsBroken.lock : SolarIconsBroken.calendar, 
+                          size: 80.sp, 
+                          color: Colors.grey[200]
+                        ),
+                        SizedBox(height: 16.h),
+                        Text(
+                          isNotPublished && !controller.isLecturer
+                            ? 'Lịch học học kỳ này chưa được công bố.'
+                            : controller.isLecturer
+                              ? 'Không có lịch dạy trong ngày này!'
+                              : 'Nghỉ ngơi thôi, hông có lịch học đâu!',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.grey[400], 
+                            fontSize: 15.sp, 
+                            fontStyle: FontStyle.italic
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              // Auto scroll after build when slots change or loading finishes
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _scrollToActiveSlot();
+              });
+
+              return ListView.builder(
+                controller: _scrollController,
+                padding: EdgeInsets.fromLTRB(24.w, 8.h, 24.w, 100.h), // Increased bottom padding for floating navbar
+                physics: const BouncingScrollPhysics(),
+                itemCount: controller.selectedDaySlots.length,
+                itemBuilder: (context, index) {
+                  final slot = controller.selectedDaySlots[index];
+                  return SlotCard(slot: slot);
+                },
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getWeekdayNameAllCaps(int weekday) {
+    switch (weekday) {
+      case 1: return 'THỨ HAI';
+      case 2: return 'THỨ BA';
+      case 3: return 'THỨ TƯ';
+      case 4: return 'THỨ NĂM';
+      case 5: return 'THỨ SÁU';
+      case 6: return 'THỨ BẢY';
+      case 7: return 'CHỦ NHẬT';
+      default: return '';
+    }
+  }
+
+  void _showYearPicker(BuildContext context, ScheduleController controller) {
+    // Mock year picker
+    Get.bottomSheet(
+      Container(
+        padding: EdgeInsets.all(24.w),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20.r),
+            topRight: Radius.circular(20.r),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Chọn năm',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF2D3436),
+              ),
             ),
-
-            // 4. Slots List
-            Expanded(
-              child: Obx(() {
-                if (controller.isLoading.value) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: AppColors.primaryOrange),
-                  );
-                }
-
-                if (controller.selectedDaySlots.isEmpty) {
-                  final isNotPublished = controller.errorStatusCode.value == 403;
-                  
-                  return Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 40.w),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            isNotPublished ? SolarIconsBroken.lock : SolarIconsBroken.calendar, 
-                            size: 80.sp, 
-                            color: Colors.grey[200]
-                          ),
-                          SizedBox(height: 16.h),
-                          Text(
-                            isNotPublished && !controller.isLecturer
-                              ? 'Lịch học học kỳ này chưa được công bố.'
-                              : controller.isLecturer
-                                ? 'Không có lịch dạy trong ngày này!'
-                                : 'Nghỉ ngơi thôi, hông có lịch học đâu!',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.grey[400], 
-                              fontSize: 15.sp, 
-                              fontStyle: FontStyle.italic
-                            ),
-                          ),
-                        ],
+            SizedBox(height: 20.h),
+            Wrap(
+              spacing: 12.w,
+              runSpacing: 12.h,
+              children: List.generate(5, (index) {
+                final year = DateTime.now().year - 2 + index;
+                final isSelected = controller.selectedDate.value.year == year;
+                return GestureDetector(
+                  onTap: () {
+                    final current = controller.selectedDate.value;
+                    controller.selectDate(DateTime(year, current.month, current.day));
+                    Get.back();
+                  },
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppColors.primaryOrange : Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                    child: Text(
+                      year.toString(),
+                      style: GoogleFonts.plusJakartaSans(
+                        color: isSelected ? Colors.white : Colors.grey[600],
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                  );
-                }
-
-                // Auto scroll after build when slots change or loading finishes
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  _scrollToActiveSlot();
-                });
-
-                return ListView.builder(
-                  controller: _scrollController,
-                  padding: EdgeInsets.fromLTRB(24.w, 8.h, 24.w, 20.h),
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: controller.selectedDaySlots.length,
-                  itemBuilder: (context, index) {
-                    final slot = controller.selectedDaySlots[index];
-                    return SlotCard(slot: slot);
-                  },
+                  ),
                 );
               }),
             ),
+            SizedBox(height: 20.h),
           ],
         ),
-      ),
       ),
     );
   }
