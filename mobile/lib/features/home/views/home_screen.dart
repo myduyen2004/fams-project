@@ -567,8 +567,11 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildBottomNav(HomeController controller, AuthController authController) {
+    final user = authController.currentUser.value;
+    final String attendanceLabel = user?.isLecturer == true ? "Lịch dạy" : "Lịch học";
+
     return Container(
-      height: 82.h, // Adjusted height to accommodate larger icons (from 74.h)
+      height: 82.h,
       margin: EdgeInsets.fromLTRB(16.w, 0, 16.w, 20.h), 
       decoration: BoxDecoration(
         color: Colors.white,
@@ -576,10 +579,10 @@ class HomeScreen extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade200.withOpacity(0.8), width: 1.0),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.12), // Slightly softer shadow
-            blurRadius: 20,
-            spreadRadius: 1,
-            offset: const Offset(0, 8), 
+            color: Colors.black.withOpacity(0.18), // Darker and clearer shadow (increased from 0.12)
+            blurRadius: 25, // Increased blur for better depth
+            spreadRadius: 2, // Increased spread
+            offset: const Offset(0, 10), // Lower offset for more floating effect
           ),
         ],
       ),
@@ -589,7 +592,7 @@ class HomeScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _buildNavBtn(controller, 0, SolarIconsOutline.home2, SolarIconsBold.home2, "Trang chủ"),
-            _buildNavBtn(controller, 1, SolarIconsOutline.checklist, SolarIconsBold.checklist, "Điểm danh"),
+            _buildNavBtn(controller, 1, SolarIconsOutline.checklist, SolarIconsBold.checklist, attendanceLabel),
             _buildNavBtn(controller, 3, SolarIconsOutline.bus, SolarIconsBold.bus, "Đưa đón"),
             _buildNavBtn(controller, 4, SolarIconsOutline.user, SolarIconsBold.user, "Tôi"),
           ],
