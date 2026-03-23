@@ -61,7 +61,8 @@ public class Notification {
         ATTENDANCE_WARNING,
         SYSTEM,
         ACADEMIC,
-        CHAT
+        CHAT,
+        NEWS
     }
 
     public enum TargetType {

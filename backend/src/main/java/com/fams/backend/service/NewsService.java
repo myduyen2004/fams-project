@@ -9,6 +9,7 @@ import com.fams.backend.repository.NewsRepository;
 import com.fams.backend.repository.UserRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -21,13 +22,16 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class NewsService {
 
     private final NewsRepository newsRepository;
     private final UserRepository userRepository;
+    private final FcmService fcmService;
 
     @Transactional(readOnly = true)
     public Page<NewsResponse> getAdminNews(String search, String targetType, String status, int page, int size) {
@@ -75,6 +79,9 @@ public class NewsService {
     public NewsResponse createNews(NewsRequest request) {
         User sender = getCurrentUser();
 
+        log.info("Creating news: title='{}', targetType={}, status={}, scheduledAt={}",
+            request.getTitle(), request.getTargetType(), request.getStatus(), request.getScheduledAt());
+
         News news = News.builder()
                 .title(request.getTitle())
                 .content(request.getContent())
@@ -87,7 +94,23 @@ public class NewsService {
                 .scheduledAt(request.getScheduledAt())
                 .build();
 
-        return toResponse(newsRepository.save(news));
+        if (news.getStatus() == News.NewsStatus.SENT) {
+            news.setSentAt(LocalDateTime.now());
+        }
+
+        News saved = newsRepository.save(news);
+
+        log.info("Created news ID {} with status {}", saved.getId(), saved.getStatus());
+
+        if (saved.getStatus() == News.NewsStatus.SENT) {
+            try {
+                sendNewsPushNotification(saved);
+            } catch (Exception e) {
+                log.warn("Failed to send FCM for news {}", saved.getId(), e);
+            }
+        }
+
+        return toResponse(saved);
     }
 
     @Transactional
@@ -114,10 +137,19 @@ public class NewsService {
         News news = newsRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy tin tức với ID: " + id));
 
+        log.info("Publishing news ID {}", id);
+
         news.setStatus(News.NewsStatus.SENT);
         news.setSentAt(LocalDateTime.now());
 
-        return toResponse(newsRepository.save(news));
+        News saved = newsRepository.save(news);
+        try {
+            sendNewsPushNotification(saved);
+        } catch (Exception e) {
+            log.warn("Failed to send FCM for news {}", id, e);
+        }
+
+        return toResponse(saved);
     }
 
     @Transactional
@@ -125,11 +157,66 @@ public class NewsService {
         List<News> upcomingNews = newsRepository.findByStatusAndScheduledAtLessThanEqual(News.NewsStatus.SCHEDULED, LocalDateTime.now());
         if (upcomingNews.isEmpty()) return;
 
+        log.info("Publishing {} scheduled news item(s)", upcomingNews.size());
+
         for (News news : upcomingNews) {
             news.setStatus(News.NewsStatus.SENT);
             news.setSentAt(LocalDateTime.now());
+            try {
+                sendNewsPushNotification(news);
+            } catch (Exception e) {
+                log.warn("Failed to send FCM for scheduled news {}", news.getId(), e);
+            }
         }
         newsRepository.saveAll(upcomingNews);
+    }
+
+    private void sendNewsPushNotification(News news) {
+        List<User> recipients = switch (news.getTargetType()) {
+            case ALL -> userRepository.findAll().stream()
+                    .filter(u -> u.getStatus() == User.UserStatus.ACTIVE)
+                    .toList();
+            case STUDENT -> userRepository.findByRole(User.UserRole.STUDENT)
+                    .orElse(List.of()).stream()
+                    .filter(u -> u.getStatus() == User.UserStatus.ACTIVE)
+                    .toList();
+            case LECTURER -> userRepository.findByRole(User.UserRole.LECTURER)
+                    .orElse(List.of()).stream()
+                    .filter(u -> u.getStatus() == User.UserStatus.ACTIVE)
+                    .toList();
+            case ACADEMIC_STAFF -> userRepository.findByRole(User.UserRole.ACADEMIC_STAFF)
+                    .orElse(List.of()).stream()
+                    .filter(u -> u.getStatus() == User.UserStatus.ACTIVE)
+                    .toList();
+            case ADMIN -> userRepository.findByRole(User.UserRole.ADMIN)
+                    .orElse(List.of()).stream()
+                    .filter(u -> u.getStatus() == User.UserStatus.ACTIVE)
+                    .toList();
+            default -> List.of();
+        };
+
+        if (recipients.isEmpty()) {
+            log.info("No active recipients for news ID {} targetType {}", news.getId(), news.getTargetType());
+            return;
+        }
+
+        String rawTitle = news.getTitle() == null ? "" : news.getTitle().trim();
+        String pushTitle = rawTitle.length() > 100 ? rawTitle.substring(0, 100) + "..." : rawTitle;
+        
+        String rawContent = news.getContent() == null ? "" : news.getContent();
+        String pushBody = fcmService.formatPushBody(rawContent, 150);
+        if (pushBody.isEmpty()) {
+            pushBody = "Nhấn để xem chi tiết.";
+        }
+
+        List<Long> recipientIds = recipients.stream().map(User::getId).toList();
+        Map<String, String> fcmData = Map.of(
+                "type", "NEWS",
+                "newsId", String.valueOf(news.getId())
+        );
+
+        fcmService.sendPushNotificationsForUsers(recipientIds, pushTitle, pushBody, fcmData);
+        log.info("Sent news FCM push to {} users for news ID {}", recipientIds.size(), news.getId());
     }
 
     @Transactional

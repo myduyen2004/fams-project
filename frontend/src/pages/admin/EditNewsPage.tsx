@@ -53,7 +53,7 @@ export const EditNewsPage = () => {
   const uploadToCloudinary = async (file: File) => {
     try {
       setUploadingImg(true);
-      const res = await apiClient.get('/cloudinary/signature?folder=news_thumbnails');
+      const res = await apiClient.get('/v1/cloudinary/signature?folder=news_thumbnails');
       const { signature, timestamp, apiKey, cloudName, folder } = res.data;
       
       const formData = new FormData();
@@ -79,7 +79,7 @@ export const EditNewsPage = () => {
         const fileWithExt = parts.pop();
         const folder = parts.pop();
         const publicId = `${folder}/${fileWithExt?.split('.')[0]}`;
-        await apiClient.delete(`/cloudinary/image?publicId=${publicId}`);
+        await apiClient.delete(`/v1/cloudinary/image?publicId=${publicId}`);
     } catch (e) {
         console.error('Failed to delete old image', e);
     }
@@ -327,74 +327,11 @@ export const EditNewsPage = () => {
                   onChange={(e) => setForm({ ...form, targetType: e.target.value as NewsTargetType })}
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-900 focus:ring-2 focus:ring-fpt-orange/20 outline-none mb-6 text-sm"
                 >
-                  <option value={NewsTargetType.ALL}>Toàn bộ (Mặc định)</option>
+                  <option value={NewsTargetType.ALL}>Toàn trường</option>
                   <option value={NewsTargetType.STUDENT}>Tất cả sinh viên</option>
                   <option value={NewsTargetType.LECTURER}>Tất cả giảng viên</option>
                 </select>
 
-                {/* Lịch gửi */}
-                <div className="space-y-4 mt-4">
-                  <label className="flex items-center gap-3 cursor-pointer group">
-                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${sendType === 'NOW' ? 'border-fpt-orange' : 'border-gray-300 dark:border-zinc-600'}`}>
-                      {sendType === 'NOW' && <div className="w-3 h-3 bg-fpt-orange rounded-full" />}
-                    </div>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
-                      Gửi/Xuất bản ngay
-                    </span>
-                    <input 
-                      type="radio" 
-                      name="sendType" 
-                      className="hidden" 
-                      checked={sendType === 'NOW'} 
-                      onChange={() => setSendType('NOW')} 
-                    />
-                  </label>
-
-                  <label className="flex items-center gap-3 cursor-pointer group">
-                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${sendType === 'DRAFT' ? 'border-fpt-orange' : 'border-gray-300 dark:border-zinc-600'}`}>
-                      {sendType === 'DRAFT' && <div className="w-3 h-3 bg-fpt-orange rounded-full" />}
-                    </div>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
-                      Lưu nháp
-                    </span>
-                    <input 
-                      type="radio" 
-                      name="sendType" 
-                      className="hidden" 
-                      checked={sendType === 'DRAFT'} 
-                      onChange={() => setSendType('DRAFT')} 
-                    />
-                  </label>
-                  
-                  <div className="flex flex-col gap-2">
-                    <label className="flex items-center gap-3 cursor-pointer group">
-                      <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${sendType === 'SCHEDULED' ? 'border-fpt-orange' : 'border-gray-300 dark:border-zinc-600'}`}>
-                        {sendType === 'SCHEDULED' && <div className="w-3 h-3 bg-fpt-orange rounded-full" />}
-                      </div>
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
-                        Lên lịch gửi
-                      </span>
-                      <input 
-                        type="radio" 
-                        name="sendType" 
-                        className="hidden" 
-                        checked={sendType === 'SCHEDULED'} 
-                        onChange={() => setSendType('SCHEDULED')} 
-                      />
-                    </label>
-                    
-                    {sendType === 'SCHEDULED' && (
-                      <div className="pl-8 animate-in slide-in-from-top-2 fade-in duration-200 mt-2">
-                        <input
-                          type="datetime-local"
-                          value={scheduledDate}
-                          onChange={(e) => setScheduledDate(e.target.value)}
-                          className="w-full px-4 py-2 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm bg-gray-50 dark:bg-zinc-800 outline-none focus:ring-2 focus:ring-fpt-orange/20"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
               </div>
             </div>
             
@@ -412,7 +349,7 @@ export const EditNewsPage = () => {
                 onClick={() => handleSave(sendType === 'DRAFT' ? NewsStatus.DRAFT : sendType === 'SCHEDULED' ? NewsStatus.SCHEDULED : NewsStatus.SENT)}
                 className="px-5 py-2.5 rounded-xl bg-fpt-orange hover:bg-[#e06912] text-white font-medium shadow-sm shadow-orange-500/20 transition-colors flex items-center gap-2 text-sm disabled:opacity-70"
               >
-                {submitting ? 'Đang lưu...' : sendType === 'DRAFT' ? 'Lưu nháp' : sendType === 'SCHEDULED' ? 'Cập nhật lịch' : 'Lưu và Xuất bản'}
+                {submitting ? 'Đang lưu...' : 'Lưu thay đổi'}
               </button>
             </div>
           </div>

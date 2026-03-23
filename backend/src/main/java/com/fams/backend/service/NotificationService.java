@@ -2,6 +2,7 @@ package com.fams.backend.service;
 
 import com.fams.backend.dto.response.NotificationResponse;
 import com.fams.backend.document.NotificationReadStatus;
+import com.fams.backend.entity.News;
 import com.fams.backend.entity.Notification;
 import com.fams.backend.entity.User;
 import com.fams.backend.exception.NotFoundException;
@@ -15,8 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -74,7 +77,14 @@ public class NotificationService {
      * Tạo read-status document dựa trên targetType.
      */
     public void createNotificationRecipients(Notification notification) {
+        createNotificationRecipients(notification, Map.of());
+    }
+
+    public void createNotificationRecipients(Notification notification, Map<String, String> extraData) {
         List<User> recipients = new ArrayList<>();
+
+        log.info("Resolving recipients for notificationId={}, type={}, targetType={}",
+            notification.getId(), notification.getType(), notification.getTargetType());
 
         switch (notification.getTargetType()) {
             case ALL:
@@ -125,11 +135,14 @@ public class NotificationService {
                 log.info("Successfully created MongoDB read-status for notification {}", notification.getId());
 
                 // Use batch FCM push notification
-                java.util.Map<String, String> fcmData = java.util.Map.of(
-                        "notificationId", String.valueOf(notification.getId()),
-                        "type", notification.getType() != null ? notification.getType().name() : "SYSTEM"
-                );
+                Map<String, String> fcmData = new HashMap<>();
+                fcmData.put("notificationId", String.valueOf(notification.getId()));
+                fcmData.put("type", notification.getType() != null ? notification.getType().name() : "SYSTEM");
+                if (extraData != null && !extraData.isEmpty()) {
+                    fcmData.putAll(extraData);
+                }
                 List<Long> recipientIds = recipients.stream().map(User::getId).collect(java.util.stream.Collectors.toList());
+                log.info("Dispatching FCM for notificationId={} to {} user(s)", notification.getId(), recipientIds.size());
                 fcmService.sendPushNotificationsForUsers(
                         recipientIds,
                         notification.getTitle(),
@@ -143,6 +156,32 @@ public class NotificationService {
         } else {
             log.warn("No recipients found for target type {}", notification.getTargetType());
         }
+    }
+
+    @Transactional
+    public void notifyNewsPublished(News news) {
+        Notification.TargetType mappedTargetType = Notification.TargetType.valueOf(news.getTargetType().name());
+        String body = fcmService.formatPushBody(news.getContent(), 200);
+
+        log.info("notifyNewsPublished called for newsId={}, targetType={}, mappedTargetType={}",
+            news.getId(), news.getTargetType(), mappedTargetType);
+
+        Notification notification = Notification.builder()
+                .title(news.getTitle())
+                .content(body)
+                .type(Notification.NotificationType.NEWS)
+                .targetType(mappedTargetType)
+                .targetUrl("/news/" + news.getId())
+                .sentAt(LocalDateTime.now())
+                .build();
+
+        notification = notificationRepository.save(notification);
+
+        log.info("Created NEWS notificationId={} for newsId={}", notification.getId(), news.getId());
+
+        Map<String, String> extraData = new HashMap<>();
+        extraData.put("newsId", String.valueOf(news.getId()));
+        createNotificationRecipients(notification, extraData);
     }
 
     private void createUserTargetReadStatus(Notification notification, Set<Long> recipientIds) {

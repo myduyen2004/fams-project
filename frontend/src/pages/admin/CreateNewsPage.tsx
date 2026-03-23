@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
@@ -44,6 +44,8 @@ export const CreateNewsPage = () => {
     return localStorage.getItem('createNewsScheduledDate') || '';
   });
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingContentImg, setUploadingContentImg] = useState(false);
+  const quillRef = useRef<ReactQuill>(null);
 
   // Save to localStorage on change
   useEffect(() => {
@@ -64,27 +66,67 @@ export const CreateNewsPage = () => {
     localStorage.removeItem('createNewsScheduledDate');
   };
 
+  // Custom image handler: uploads to Cloudinary instead of embedding base64
+  const handleContentImageInsert = useCallback(async () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      try {
+        setUploadingContentImg(true);
+        const sigRes = await apiClient.get('/v1/cloudinary/signature?folder=news_content');
+        const { signature, timestamp, apiKey, cloudName, folder } = sigRes.data;
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('api_key', apiKey);
+        formData.append('timestamp', timestamp);
+        formData.append('signature', signature);
+        formData.append('folder', folder);
+        const uploadRes = await axios.post(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, formData);
+        const url: string = uploadRes.data.secure_url;
+        const editor = quillRef.current?.getEditor();
+        if (editor) {
+          const range = editor.getSelection(true);
+          editor.insertEmbed(range.index, 'image', url);
+          editor.setSelection(range.index + 1, 0);
+        }
+      } catch {
+        toast.error('Lỗi khi tải ảnh nội dung lên Cloudinary');
+      } finally {
+        setUploadingContentImg(false);
+      }
+    };
+    input.click();
+  }, []);
+
   // Editor modules
-  const modules = {
-    toolbar: [
-      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-      [{ 'font': [] }],
-      [{ 'size': [] }],
-      ['bold', 'italic', 'underline', 'strike', 'blockquote', 'code-block'],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'indent': '-1' }, { 'indent': '+1' }],
-      [{ 'color': [] }, { 'background': [] }],
-      [{ 'align': [] }],
-      ['link', 'image', 'video'],
-      ['clean']
-    ]
-  };
+  const modules = useMemo(() => ({
+    toolbar: {
+      container: [
+        [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+        [{ 'font': [] }],
+        [{ 'size': [] }],
+        ['bold', 'italic', 'underline', 'strike', 'blockquote', 'code-block'],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'indent': '-1' }, { 'indent': '+1' }],
+        [{ 'color': [] }, { 'background': [] }],
+        [{ 'align': [] }],
+        ['link', 'image', 'video'],
+        ['clean']
+      ],
+      handlers: {
+        image: handleContentImageInsert,
+      }
+    }
+  }), [handleContentImageInsert]);
 
   const [uploadingImg, setUploadingImg] = useState(false);
 
   const uploadToCloudinary = async (file: File) => {
     try {
       setUploadingImg(true);
-      const res = await apiClient.get('/cloudinary/signature?folder=news_thumbnails');
+      const res = await apiClient.get('/v1/cloudinary/signature?folder=news_thumbnails');
       const { signature, timestamp, apiKey, cloudName, folder } = res.data;
       
       const formData = new FormData();
@@ -110,7 +152,7 @@ export const CreateNewsPage = () => {
         const fileWithExt = parts.pop();
         const folder = parts.pop();
         const publicId = `${folder}/${fileWithExt?.split('.')[0]}`;
-        await apiClient.delete(`/cloudinary/image?publicId=${publicId}`);
+        await apiClient.delete(`/v1/cloudinary/image?publicId=${publicId}`);
     } catch (e) {
         console.error('Failed to delete old image', e);
     }
@@ -141,7 +183,9 @@ export const CreateNewsPage = () => {
       return;
     }
 
-    let payload = { ...form, status };
+    // Strip any stray base64 images that might have slipped in (safety net)
+    const safeContent = form.content.replace(/<img[^>]+src="data:image[^"]*"[^>]*>/gi, '');
+    let payload = { ...form, content: safeContent, status };
 
     if (sendType === 'SCHEDULED') {
       if (!scheduledDate) {
@@ -206,17 +250,23 @@ export const CreateNewsPage = () => {
                   Nội dung <span className="text-red-500">*</span>
                 </label>
                 <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 flex-1 flex flex-col">
+                  {uploadingContentImg && (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-sm border-b border-gray-200 dark:border-zinc-700">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Đang tải ảnh lên, vui lòng chờ...
+                    </div>
+                  )}
                   <ReactQuill
+                    ref={quillRef}
                     theme="snow"
                     value={form.content}
                     onChange={(val) => {
                       const newForm = { ...form, content: val };
-                      // Tự động lấy ảnh đầu tiên làm ảnh bìa nếu chưa có ảnh bìa
+                      // Tự động lấy ảnh Cloudinary đầu tiên làm ảnh bìa nếu chưa có
                       if (!form.thumbnailImage) {
-                        const match = val.match(/<img[^>]+src="([^">]+)"/);
+                        const cloudImgRe = new RegExp('<img[^>]+src="(https://[^"]+)"');
+                        const match = val.match(cloudImgRe);
                         if (match && match[1]) {
-                          // Ignore base64 if needed, but data:image is fine for thumbnail sometimes.
-                          // To prevent huge payloads if user pastes a very large base64, we might just allow it.
                           newForm.thumbnailImage = match[1];
                           toast.success('Đã tự động lấy ảnh đầu tiên làm ảnh bìa');
                         }
