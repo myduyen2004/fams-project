@@ -1,6 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, Plus } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { NotificationStatus, TargetType } from '../../../types/notification';
 
 interface NotificationFiltersProps {
@@ -10,7 +9,6 @@ interface NotificationFiltersProps {
   onTargetTypeFilterChange: (value: string) => void;
   statusFilter: string;
   onStatusFilterChange: (value: string) => void;
-  basePath?: string;
 }
 
 export const NotificationFilters: React.FC<NotificationFiltersProps> = React.memo(({
@@ -20,9 +18,7 @@ export const NotificationFilters: React.FC<NotificationFiltersProps> = React.mem
   onTargetTypeFilterChange,
   statusFilter,
   onStatusFilterChange,
-  basePath = '/admin'
 }) => {
-  const navigate = useNavigate();
   return (
     <div className="space-y-4 mb-6">
       {/* Top Action Bar */}
@@ -37,13 +33,6 @@ export const NotificationFilters: React.FC<NotificationFiltersProps> = React.mem
             onChange={(e) => onSearchChange(e.target.value)}
           />
         </div>
-        <button
-          onClick={() => navigate(`${basePath}/notifications/create`)}
-          className="flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white rounded-lg hover:bg-orange-600 transition-colors font-medium text-sm"
-        >
-          <Plus size={18} />
-          Tạo thông báo
-        </button>
       </div>
 
       {/* Filter Area */}

@@ -181,6 +181,20 @@ export const NotificationBell: React.FC = () => {
     }
   }, []);
 
+  // Sync read state when the tab regains focus (handles reads done on mobile)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadNotifications();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const loadNotifications = async () => {
     try {
       console.log('[NotificationBell] Loading notifications from API...');
@@ -193,6 +207,7 @@ export const NotificationBell: React.FC = () => {
       console.error('[NotificationBell] Error loading notifications:', error);
     }
   };
+
 
   const addJob = (job: ImportJobNotification) => {
     setJobs(prev => {

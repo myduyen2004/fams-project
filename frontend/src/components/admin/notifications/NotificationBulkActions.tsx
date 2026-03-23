@@ -3,7 +3,6 @@ import { Loader2, Trash2, AlertCircle } from 'lucide-react';
 
 interface NotificationBulkActionsProps {
   selectedCount: number;
-  onEdit: () => void;
   onDelete: () => void;
   isDeleting: boolean;
   canDelete?: boolean;
@@ -12,7 +11,6 @@ interface NotificationBulkActionsProps {
 
 export const NotificationBulkActions: React.FC<NotificationBulkActionsProps> = React.memo(({
   selectedCount,
-  onEdit,
   onDelete,
   isDeleting,
   canDelete = true,
@@ -35,14 +33,7 @@ export const NotificationBulkActions: React.FC<NotificationBulkActionsProps> = R
           Đã chọn {selectedCount} thông báo
         </span>
         <div className="flex gap-2">
-          {selectedCount === 1 && (
-            <button
-              onClick={onEdit}
-              className="px-4 py-1.5 text-sm bg-white dark:bg-zinc-800 border border-orange-200 dark:border-orange-800 text-fpt-orange rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
-            >
-              Chỉnh sửa
-            </button>
-          )}
+
           <button
             onClick={onDelete}
             disabled={isDeleting || !canDelete}

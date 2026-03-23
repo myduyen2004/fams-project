@@ -82,6 +82,8 @@ const LecturerRoomList = lazy(() => import('./pages/lecturer/RoomList').then(m =
 const LecturerRoomDetail = lazy(() => import('./pages/lecturer/RoomDetail').then(m => ({ default: m.RoomDetail })));
 const LecturerSemestersPage = lazy(() => import('./pages/lecturer/SemestersPage').then(m => ({ default: m.SemestersPage })));
 const AcademicStaffSystemLogsPage = lazy(() => import('./pages/academic-staff/SystemLogsPage').then(m => ({ default: m.SystemLogsPage })));
+const NotificationManagementPage = lazy(() => import('./pages/admin/NotificationManagementPage').then(m => ({ default: m.NotificationManagementPage })));
+const NotificationDetailPage = lazy(() => import('./pages/admin/NotificationDetailPage').then(m => ({ default: m.NotificationDetailPage })));
 const ChatPage = lazy(() => import('./pages/chatbot/ChatPage').then(m => ({ default: m.ChatPage })));
 const StudentClassMembersPage = lazy(() => import('./pages/student/StudentClassMembersPage').then(m => ({ default: m.StudentClassMembersPage })));
 const StudentProfilePage = lazy(() => import('./pages/student/StudentProfilePage').then(m => ({ default: m.StudentProfilePage })));
@@ -380,8 +382,26 @@ function App() {
           <Route path="/lecturer/granted/logs" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="VIEW_SYSTEM_LOGS"><AcademicStaffSystemLogsPage /></PermissionProtectedRoute></ProtectedRoute>} />
           <Route path="/lecturer/granted/schedule" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="MANAGE_SCHEDULE"><SchedulePage /></PermissionProtectedRoute></ProtectedRoute>} />
           <Route path="/lecturer/granted/notifications" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="MANAGE_NOTIFICATIONS"><NotificationManagementPage /></PermissionProtectedRoute></ProtectedRoute>} />
-          <Route path="/lecturer/granted/notifications/create" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="MANAGE_NOTIFICATIONS"><CreateNotificationPage /></PermissionProtectedRoute></ProtectedRoute>} />
-          <Route path="/lecturer/granted/notifications/edit/:id" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="MANAGE_NOTIFICATIONS"><EditNotificationPage /></PermissionProtectedRoute></ProtectedRoute>} />
+          <Route
+            path="/lecturer/granted/notifications"
+            element={
+              <ProtectedRoute allowedRoles={['LECTURER']}>
+                <PermissionProtectedRoute requiredPermission="MANAGE_NOTIFICATIONS">
+                  <NotificationManagementPage />
+                </PermissionProtectedRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/lecturer/granted/notifications/:id"
+            element={
+              <ProtectedRoute allowedRoles={['LECTURER']}>
+                <PermissionProtectedRoute requiredPermission="MANAGE_NOTIFICATIONS">
+                  <NotificationDetailPage />
+                </PermissionProtectedRoute>
+              </ProtectedRoute>
+            }
+          />
           <Route path="/lecturer/granted/notifications/:id" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="MANAGE_NOTIFICATIONS"><NotificationDetailPage /></PermissionProtectedRoute></ProtectedRoute>} />
 
           {/* Student Routes */}
