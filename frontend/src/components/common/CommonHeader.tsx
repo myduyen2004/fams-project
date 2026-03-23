@@ -3,6 +3,7 @@ import { Moon, Sun, User, Settings, LogOut, Newspaper } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../../services/api/authService';
 import { userService } from '../../services/api/userService';
+import { newsService } from '../../services/api/newsService';
 import { ConfirmModal } from './ConfirmModal';
 import { NotificationBell } from './NotificationBell';
 import { ChatMessageIcon } from './ChatMessageIcon';
@@ -25,6 +26,7 @@ export const CommonHeader: React.FC<CommonHeaderProps> = ({
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [activeJob, setActiveJob] = useState<any>(null);
   const [avatarError, setAvatarError] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -74,6 +76,28 @@ export const CommonHeader: React.FC<CommonHeaderProps> = ({
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const loadUnreadCount = async () => {
+      try {
+        const count = await newsService.getUnreadNewsCount();
+        setUnreadCount(count);
+      } catch {
+        setUnreadCount(0);
+      }
+    };
+
+    loadUnreadCount();
+
+    const handleRefresh = () => loadUnreadCount();
+    window.addEventListener('newsUnreadRefresh', handleRefresh);
+
+    const timer = window.setInterval(loadUnreadCount, 60000);
+    return () => {
+      window.removeEventListener('newsUnreadRefresh', handleRefresh);
+      window.clearInterval(timer);
+    };
   }, []);
 
   const toggleTheme = () => {
@@ -143,13 +167,20 @@ export const CommonHeader: React.FC<CommonHeaderProps> = ({
         {/* Notification Bell */}
         <div className="flex items-center gap-2">
           {showNotifications && (
-            <button
-              onClick={() => navigate('/news')}
-              className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
-              title="Tin tức"
-            >
-              <Newspaper size={20} />
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => navigate('/news')}
+                className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
+                title="Tin tức"
+              >
+                <Newspaper size={20} />
+              </button>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 text-[10px] font-bold bg-red-500 text-white rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </div>
           )}
           {showNotifications && <ChatMessageIcon />}
           {showNotifications && <NotificationBell />}

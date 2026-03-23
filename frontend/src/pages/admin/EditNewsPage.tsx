@@ -66,7 +66,7 @@ export const EditNewsPage = () => {
       const uploadRes = await axios.post(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, formData);
       setForm(prev => ({ ...prev, thumbnailImage: uploadRes.data.secure_url }));
       toast.success('Tải ảnh bìa thành công');
-    } catch (e) {
+    } catch {
       toast.error('Lỗi khi tải ảnh lên Cloudinary');
     } finally {
       setUploadingImg(false);
@@ -145,7 +145,7 @@ export const EditNewsPage = () => {
       return;
     }
 
-    let payload = { ...form, status };
+    const payload = { ...form, status };
 
     if (sendType === 'SCHEDULED') {
       if (!scheduledDate) {
@@ -170,8 +170,16 @@ export const EditNewsPage = () => {
       await newsService.updateNews(Number(id), payload);
       toast.success(status === NewsStatus.DRAFT ? 'Đã lưu nháp' : 'Cập nhật tin tức thành công');
       navigate(`${basePath}/news/${id}`); 
-    } catch {
-      toast.error('Không thể xử lý yêu cầu bài viết');
+    } catch (error: unknown) {
+      const errData = (error as { response?: { data?: { errors?: Record<string, string>; message?: string } } })?.response?.data;
+      if (errData?.errors) {
+        const messages = Object.values(errData.errors).join('\n');
+        toast.error(messages);
+      } else if (errData?.message) {
+        toast.error(errData.message);
+      } else {
+        toast.error('Không thể xử lý yêu cầu bài viết');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -314,9 +322,14 @@ export const EditNewsPage = () => {
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-900 focus:ring-2 focus:ring-fpt-orange/20 outline-none mb-6 text-sm"
                 >
                   <option value={NewsType.EVENT}>Sự kiện</option>
+                  <option value={NewsType.FEATURED}>Sự kiện nổi bật</option>
                   <option value={NewsType.IMPORTANT}>Thông báo quan trọng</option>
                   <option value={NewsType.OTHER}>Khác</option>
                 </select>
+
+                {form.type === NewsType.FEATURED && (
+                  <p className="text-sm text-red-500 -mt-4 mb-6">* Sự kiện này sẽ được đặt ở mục nổi bật</p>
+                )}
 
                 {/* Đối tượng */}
                 <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">

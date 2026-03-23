@@ -111,6 +111,7 @@ public class News {
         CHAT,
         SCHEDULE,
         EVENT,
+        FEATURED,
         IMPORTANT,
         OTHER
     }

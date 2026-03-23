@@ -12,6 +12,7 @@ export enum NewsType {
   CHAT = 'CHAT',
   SCHEDULE = 'SCHEDULE',
   EVENT = 'EVENT',
+  FEATURED = 'FEATURED',
   IMPORTANT = 'IMPORTANT',
   OTHER = 'OTHER'
 }

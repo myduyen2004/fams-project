@@ -5,9 +5,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:solar_icons/solar_icons.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_html/flutter_html.dart';
-import 'dart:convert';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/api_constants.dart';
+import '../../../core/utils/safe_image_decoder.dart';
 import '../models/news_model.dart';
 import '../controllers/news_controller.dart';
 
@@ -24,10 +25,42 @@ class NewsDetailScreen extends StatelessWidget {
     return '${ApiConstants.baseUrl}$src';
   }
 
+  /// Remove base64 img tags and invalid img tags from HTML before passing to flutter_html.
+  /// flutter_html internally decodes images at the native level BEFORE our TagExtension,
+  /// so we must strip them from the source string to prevent Android decoder crashes.
+  String _sanitizeHtmlContent(String html) {
+    // Remove base64 images to prevent flutter_html native decode issues.
+    // Regular images will be left intact and processed by the TagExtension.
+    final base64ImgRegex = RegExp(r'<img\b[^>]+src="data:image[^"]*"[^>]*>', caseSensitive: false);
+    const placeholder = '<p><em>[Hình ảnh không thể hiển thị]</em></p>';
+
+    return html.replaceAll(base64ImgRegex, placeholder);
+  }
+
+  Widget _buildSafeImage({required String url, double? width, double? height, BoxFit? fit, required Widget errorWidget}) {
+    // Use SafeImageDecoder to sanitize URL first
+    final safeUrl = SafeImageDecoder.sanitizeImageUrl(url);
+    if (safeUrl == null) {
+      return errorWidget;
+    }
+    return CachedNetworkImage(
+      imageUrl: safeUrl,
+      width: width,
+      height: height,
+      fit: fit,
+      errorWidget: (context, url, error) => errorWidget,
+      placeholder: (context, url) => Container(
+        width: width, height: height, color: Colors.grey.shade100,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    bool hasImage = news.thumbnailImage != null && news.thumbnailImage!.isNotEmpty;
-    final String resolvedThumbnail = hasImage ? _resolveImageUrl(news.thumbnailImage!) : '';
+    // Only use thumbnailImage if it's a valid http/https URL
+    final String? safeThumbnail = SafeImageDecoder.sanitizeImageUrl(news.thumbnailImage);
+    bool hasImage = safeThumbnail != null;
+    final String resolvedThumbnail = safeThumbnail ?? '';
 
     String formattedDate = '';
     try {
@@ -41,6 +74,8 @@ class NewsDetailScreen extends StatelessWidget {
     if (displayCategory == 'SYSTEM') displayCategory = 'Hệ thống';
     else if (displayCategory == 'ACADEMIC') displayCategory = 'Học tập';
     else if (displayCategory == 'EVENT') displayCategory = 'Sự kiện';
+    else if (displayCategory == 'FEATURED') displayCategory = 'Sự kiện nổi bật';
+    else if (displayCategory == 'IMPORTANT') displayCategory = 'Quan trọng';
 
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
@@ -80,96 +115,105 @@ class NewsDetailScreen extends StatelessWidget {
 
           // 2. Content
           SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Category & Date Meta
-                  Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Banner with Title and Metadata overlaid on faded Thumbnail
+                Stack(
+                  children: [
+                    Positioned.fill(
+                      child: hasImage
+                          ? Opacity(
+                              opacity: 0.35,
+                              child: _buildSafeImage(
+                                url: resolvedThumbnail,
+                                width: double.infinity,
+                                height: double.infinity,
+                                fit: BoxFit.cover,
+                                errorWidget: const SizedBox.shrink(),
+                              ),
+                            )
+                          : Opacity(
+                              opacity: 0.15,
+                              child: Image.asset(
+                                'assets/images/logo.png',
+                                width: double.infinity,
+                                height: double.infinity,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                    ),
+                    Positioned.fill(
+                      child: DecoratedBox(
                         decoration: BoxDecoration(
-                          color: AppColors.brandOrangePrimary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20.r),
-                        ),
-                        child: Text(
-                          displayCategory.toUpperCase(),
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 10.sp,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.brandOrangePrimary,
-                            letterSpacing: 0.5,
+                          gradient: LinearGradient(
+                            colors: [
+                              AppColors.backgroundColor.withOpacity(0.0),
+                              AppColors.backgroundColor.withOpacity(0.8),
+                              AppColors.backgroundColor,
+                            ],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
                           ),
                         ),
                       ),
-                      SizedBox(width: 12.w),
-                      Text(
-                        formattedDate,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 20.h),
-
-                  // Headline
-                  Text(
-                    news.title,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 24.sp,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
-                      height: 1.3,
-                      letterSpacing: -0.5,
                     ),
-                  ),
-                  SizedBox(height: 8.h),
-                  Text(
-                    'Người đăng: Phòng đào tạo',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  SizedBox(height: 20.h),
-
-                  // Hero Image  
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16.r),
-                    child: hasImage
-                      ? Image.network(
-                          resolvedThumbnail,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            width: double.infinity,
-                            height: 200.h,
-                            color: Colors.grey.shade100,
-                            alignment: Alignment.center,
-                            child: Image.asset('assets/images/logo.png', height: 60.h, fit: BoxFit.contain),
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 24.h),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                            decoration: BoxDecoration(
+                              color: AppColors.brandOrangePrimary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20.r),
+                            ),
+                            child: Text(
+                              displayCategory.toUpperCase(),
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.brandOrangePrimary,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
                           ),
-                        )
-                      : Container(
-                          width: double.infinity,
-                          height: 200.h,
-                          color: Colors.grey.shade100,
-                          alignment: Alignment.center,
-                          child: Image.asset('assets/images/logo.png', height: 60.h, fit: BoxFit.contain),
-                        ),
-                  ),
-                  SizedBox(height: 24.h),
+                          SizedBox(height: 20.h),
+                          Text(
+                            news.title,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 24.sp,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                              height: 1.3,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          SizedBox(height: 16.h),
+                          Text(
+                            'Người đăng: ${news.senderName}   $formattedDate',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
 
-                  SizedBox(height: 16.h),
-
-                  // Article HTML Content with custom image rendering
+                // Layout padding for the rest of the content
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Article HTML Content with custom image rendering
                   Html(
-                    data: news.content,
+                    data: _sanitizeHtmlContent(news.content),
                     style: {
                       "body": Style(
                         fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
@@ -237,24 +281,7 @@ class NewsDetailScreen extends StatelessWidget {
 
                           // Handle base64 images
                           if (resolvedSrc.startsWith('data:image')) {
-                            try {
-                              final base64String = resolvedSrc.split(',').last;
-                              final bytes = base64Decode(base64String);
-                              return Padding(
-                                padding: EdgeInsets.symmetric(vertical: 12.h),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(12.r),
-                                  child: Image.memory(
-                                    bytes,
-                                    width: double.infinity,
-                                    fit: BoxFit.contain,
-                                    errorBuilder: (ctx, err, st) => _buildImagePlaceholder(),
-                                  ),
-                                ),
-                              );
-                            } catch (e) {
-                              return _buildImagePlaceholder();
-                            }
+                            return _buildImagePlaceholder();
                           }
 
                           // Handle network images
@@ -262,27 +289,11 @@ class NewsDetailScreen extends StatelessWidget {
                             padding: EdgeInsets.symmetric(vertical: 12.h),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(12.r),
-                              child: Image.network(
-                                resolvedSrc,
+                              child: _buildSafeImage(
+                                url: resolvedSrc,
                                 width: double.infinity,
                                 fit: BoxFit.contain,
-                                loadingBuilder: (context, child, loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return Container(
-                                    width: double.infinity,
-                                    height: 200.h,
-                                    color: Colors.grey.shade100,
-                                    alignment: Alignment.center,
-                                    child: CircularProgressIndicator(
-                                      value: loadingProgress.expectedTotalBytes != null
-                                          ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                                          : null,
-                                      color: AppColors.brandOrangePrimary,
-                                      strokeWidth: 2,
-                                    ),
-                                  );
-                                },
-                                errorBuilder: (ctx, err, st) => _buildImagePlaceholder(),
+                                errorWidget: _buildImagePlaceholder(),
                               ),
                             ),
                           );
@@ -301,8 +312,10 @@ class NewsDetailScreen extends StatelessWidget {
 
                   // Bottom spacing
                   SizedBox(height: 60.h),
-                ],
-              ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -416,12 +429,12 @@ class NewsDetailScreen extends StatelessWidget {
                 topRight: Radius.circular(16.r),
               ),
               child: hasImg
-                ? Image.network(
-                    resolvedImg,
+                ? _buildSafeImage(
+                    url: resolvedImg,
                     width: double.infinity,
                     height: 180.h,
                     fit: BoxFit.cover,
-                    errorBuilder: (ctx, err, st) => Container(
+                    errorWidget: Container(
                       width: double.infinity,
                       height: 180.h,
                       color: Colors.grey.shade100,

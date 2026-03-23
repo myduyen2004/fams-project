@@ -5,8 +5,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:solar_icons/solar_icons.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_routes.dart';
+import '../../../core/utils/safe_image_decoder.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../controllers/home_controller.dart';
 import '../../profile/views/profile_screen.dart';
@@ -90,11 +92,18 @@ class HomeScreen extends StatelessWidget {
       {"icon": SolarIconsBold.chatLine, "title": "Liên lạc"},
     ];
 
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return RefreshIndicator(
+      color: orangePrimary,
+      onRefresh: () async {
+        await newsController.fetchNews();
+        await scheduleController.fetchSemesters(); 
+        await scheduleController.fetchSchedule();
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           // 1. Header with Chat, Search and Notification
           Padding(
             padding: EdgeInsets.fromLTRB(20.w, 60.h, 20.w, 15.h),
@@ -447,6 +456,7 @@ class HomeScreen extends StatelessWidget {
           SizedBox(height: 120.h), 
         ],
       ),
+      ),
     );
   }
 
@@ -523,10 +533,11 @@ class HomeScreen extends StatelessWidget {
     }
 
     String displayCategory = news.type ?? 'Tin tức';
-    // Translate some common types if needed
     if (displayCategory == 'SYSTEM') displayCategory = 'Hệ thống';
     else if (displayCategory == 'ACADEMIC') displayCategory = 'Học tập';
     else if (displayCategory == 'EVENT') displayCategory = 'Sự kiện';
+    else if (displayCategory == 'FEATURED') displayCategory = 'Sự kiện nổi bật';
+    else if (displayCategory == 'FEATURED') displayCategory = 'Sự kiện nổi bật';
 
     return GestureDetector(
       onTap: () => Get.to(() => NewsDetailScreen(news: news)),
@@ -546,13 +557,13 @@ class HomeScreen extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.only(topLeft: Radius.circular(24.r), topRight: Radius.circular(24.r)),
-            child: hasImage 
-              ? Image.network(
-                  news.thumbnailImage!,
+            child: hasImage
+              ? _buildSafeNewsImage(
+                  url: news.thumbnailImage!,
                   height: 140.h,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
+                  errorWidget: Container(
                     height: 140.h,
                     color: Colors.white,
                     alignment: Alignment.center,
@@ -596,6 +607,23 @@ class HomeScreen extends StatelessWidget {
         ],
       ),
     ));
+  }
+
+  Widget _buildSafeNewsImage({required String url, double? width, double? height, BoxFit? fit, required Widget errorWidget}) {
+    final safeUrl = SafeImageDecoder.sanitizeImageUrl(url);
+    if (safeUrl == null) {
+      return errorWidget;
+    }
+    return CachedNetworkImage(
+      imageUrl: safeUrl,
+      width: width,
+      height: height,
+      fit: fit,
+      errorWidget: (context, url, error) => errorWidget,
+      placeholder: (context, url) => Container(
+        width: width, height: height, color: Colors.grey.shade100,
+      ),
+    );
   }
 
   String _getGreeting() {

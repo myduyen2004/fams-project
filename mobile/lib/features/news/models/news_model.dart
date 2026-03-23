@@ -42,10 +42,19 @@ class NewsModel {
       publishedAt: json['publishedAt'],
       createdAt: json['createdAt'] ?? '',
       scheduledAt: json['scheduledAt'],
-      thumbnailImage: json['thumbnailImage'],
+      thumbnailImage: _sanitizeThumbnail(json['thumbnailImage']),
       attachmentUrls: json['attachmentUrls'] != null
           ? List<String>.from(json['attachmentUrls'])
           : [],
     );
+  }
+  static String? _sanitizeThumbnail(dynamic value) {
+    if (value == null) return null;
+    final s = value.toString();
+    if (s.startsWith('http://') || s.startsWith('https://')) return s;
+    if (s.startsWith('data:image')) return s;
+    if (s.startsWith('/')) return s; // Allow relative API paths like /api/files/download
+    // Reject other non-image strings
+    return null;
   }
 }

@@ -3,9 +3,12 @@ package com.fams.backend.service;
 import com.fams.backend.dto.request.NewsRequest;
 import com.fams.backend.dto.response.NewsResponse;
 import com.fams.backend.entity.News;
+import com.fams.backend.document.NewsReadStatus;
 import com.fams.backend.entity.User;
+import com.fams.backend.exception.BadRequestException;
 import com.fams.backend.exception.NotFoundException;
 import com.fams.backend.repository.NewsRepository;
+import com.fams.backend.repository.NewsReadStatusMongoRepository;
 import com.fams.backend.repository.UserRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +33,7 @@ import java.util.Map;
 public class NewsService {
 
     private final NewsRepository newsRepository;
+    private final NewsReadStatusMongoRepository newsReadStatusMongoRepository;
     private final UserRepository userRepository;
     private final FcmService fcmService;
 
@@ -79,6 +83,10 @@ public class NewsService {
     public NewsResponse createNews(NewsRequest request) {
         User sender = getCurrentUser();
 
+        if (newsRepository.existsByTitleIgnoreCase(request.getTitle())) {
+            throw new BadRequestException("Tiêu đề đã tồn tại, vui lòng dùng tiêu đề khác");
+        }
+
         log.info("Creating news: title='{}', targetType={}, status={}, scheduledAt={}",
             request.getTitle(), request.getTargetType(), request.getStatus(), request.getScheduledAt());
 
@@ -117,6 +125,10 @@ public class NewsService {
     public NewsResponse updateNews(Long id, NewsRequest request) {
         News news = newsRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy tin tức với ID: " + id));
+
+        if (newsRepository.existsByTitleIgnoreCaseAndIdNot(request.getTitle(), id)) {
+            throw new BadRequestException("Tiêu đề đã tồn tại, vui lòng dùng tiêu đề khác");
+        }
 
         // Cho phép chỉnh sửa ở mọi trạng thái
 
@@ -260,6 +272,43 @@ public class NewsService {
         }
 
         return toResponse(news);
+    }
+
+    @Transactional
+    public void markAsRead(Long newsId) {
+        User currentUser = getCurrentUser();
+        News news = newsRepository.findById(newsId)
+                .filter(n -> n.getStatus() == News.NewsStatus.SENT)
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy tin tức đã xuất bản với ID: " + newsId));
+
+        List<News.TargetType> visibleTargets = getVisibleTargetTypes(currentUser);
+        if (!visibleTargets.contains(news.getTargetType())) {
+            throw new NotFoundException("Bạn không có quyền xem tin tức này");
+        }
+
+        if (newsReadStatusMongoRepository.existsByUserIdAndNewsId(currentUser.getId(), news.getId())) {
+            return;
+        }
+
+        NewsReadStatus readStatus = NewsReadStatus.builder()
+                .userId(currentUser.getId())
+                .newsId(news.getId())
+                .readAt(LocalDateTime.now())
+                .build();
+        newsReadStatusMongoRepository.save(readStatus);
+    }
+
+    @Transactional(readOnly = true)
+    public long getUnreadCount() {
+        User currentUser = getCurrentUser();
+        List<News.TargetType> visibleTargets = getVisibleTargetTypes(currentUser);
+
+        List<Long> visibleSentNewsIds = newsRepository.findIdsByStatusAndTargetTypeIn(News.NewsStatus.SENT, visibleTargets);
+        if (visibleSentNewsIds.isEmpty()) return 0;
+        
+        long readVisibleSent = newsReadStatusMongoRepository.countByUserIdAndNewsIdIn(currentUser.getId(), visibleSentNewsIds);
+        long unreadCount = visibleSentNewsIds.size() - readVisibleSent;
+        return Math.max(unreadCount, 0);
     }
 
     /**

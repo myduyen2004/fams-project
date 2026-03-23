@@ -109,7 +109,7 @@ export const CreateNewsPage = () => {
         [{ 'font': [] }],
         [{ 'size': [] }],
         ['bold', 'italic', 'underline', 'strike', 'blockquote', 'code-block'],
-        [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'indent': '-1' }, { 'indent': '+1' }],
+        [{ 'list': 'ordered' }, { 'list': 'bullet' }, { 'indent': '-1' }, { 'indent': '+1' }],
         [{ 'color': [] }, { 'background': [] }],
         [{ 'align': [] }],
         ['link', 'image', 'video'],
@@ -128,7 +128,7 @@ export const CreateNewsPage = () => {
       setUploadingImg(true);
       const res = await apiClient.get('/v1/cloudinary/signature?folder=news_thumbnails');
       const { signature, timestamp, apiKey, cloudName, folder } = res.data;
-      
+
       const formData = new FormData();
       formData.append('file', file);
       formData.append('api_key', apiKey);
@@ -148,13 +148,13 @@ export const CreateNewsPage = () => {
 
   const deleteFromCloudinary = async (url: string) => {
     try {
-        const parts = url.split('/');
-        const fileWithExt = parts.pop();
-        const folder = parts.pop();
-        const publicId = `${folder}/${fileWithExt?.split('.')[0]}`;
-        await apiClient.delete(`/v1/cloudinary/image?publicId=${publicId}`);
+      const parts = url.split('/');
+      const fileWithExt = parts.pop();
+      const folder = parts.pop();
+      const publicId = `${folder}/${fileWithExt?.split('.')[0]}`;
+      await apiClient.delete(`/v1/cloudinary/image?publicId=${publicId}`);
     } catch (e) {
-        console.error('Failed to delete old image', e);
+      console.error('Failed to delete old image', e);
     }
   };
 
@@ -194,7 +194,7 @@ export const CreateNewsPage = () => {
       }
       const selectedTime = new Date(scheduledDate).getTime();
       const currentTime = new Date().getTime();
-      
+
       if (selectedTime <= currentTime) {
         toast.error('Ngày giờ lên lịch không hợp lệ. Vui lòng chọn thời gian trong tương lai.');
         return;
@@ -209,8 +209,16 @@ export const CreateNewsPage = () => {
       toast.success(status === NewsStatus.DRAFT ? 'Đã lưu nháp' : 'Tạo bài viết thành công');
       clearDraft();
       navigate(`${basePath}/news-management`);
-    } catch {
-      toast.error('Không thể xử lý yêu cầu bài viết');
+    } catch (error: unknown) {
+      const errData = (error as { response?: { data?: { errors?: Record<string, string>; message?: string } } })?.response?.data;
+      if (errData?.errors) {
+        const messages = Object.values(errData.errors).join('\n');
+        toast.error(messages);
+      } else if (errData?.message) {
+        toast.error(errData.message);
+      } else {
+        toast.error('Không thể xử lý yêu cầu bài viết');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -219,17 +227,17 @@ export const CreateNewsPage = () => {
   return (
     <Layout pageTitle="Tạo tin tức">
       <div className="max-w-[1400px] mx-auto p-4 md:p-6 bg-gray-50 dark:bg-zinc-950 min-h-[calc(100vh-100px)] flex flex-col">
-        
+
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Tạo bài viết mới</h2>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
-          
+
           {/* CỘT TRÁI - NỘI DUNG CHÍNH */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-zinc-800 space-y-6 h-full flex flex-col">
-              
+
               {/* Tiêu đề bài viết */}
               <div>
                 <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
@@ -286,25 +294,25 @@ export const CreateNewsPage = () => {
           {/* CỘT PHẢI - CÀI ĐẶT */}
           <div className="lg:col-span-1 space-y-6 sticky top-6 h-fit">
             <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-zinc-800 space-y-6">
-              
+
               {/* Ảnh bìa */}
               <div>
                 <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
                   Ảnh bìa (Thumbnail)
                 </label>
-                
+
                 {/* Khung Kéo thả / Xem chi tiết ảnh */}
                 <div className="border-2 border-dashed border-gray-200 dark:border-zinc-700 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 p-2 flex flex-col items-center justify-center text-center relative overflow-hidden mb-3 min-h-[200px]">
                   {uploadingImg ? (
                     <div className="flex flex-col items-center justify-center p-8">
-                       <Loader2 className="w-8 h-8 text-fpt-orange animate-spin mb-2" />
-                       <span className="text-sm">Đang tải ảnh lên...</span>
+                      <Loader2 className="w-8 h-8 text-fpt-orange animate-spin mb-2" />
+                      <span className="text-sm">Đang tải ảnh lên...</span>
                     </div>
                   ) : form.thumbnailImage ? (
                     <div className="relative w-full h-full group flex items-center justify-center">
                       <img src={form.thumbnailImage} alt="Thumbnail preview" className="max-w-full object-contain rounded-xl" style={{ maxHeight: '200px' }} />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
-                        <button 
+                        <button
                           onClick={handleRemoveImage}
                           className="px-4 py-2 bg-red-500 text-white font-medium rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2 shadow-lg"
                         >
@@ -314,14 +322,14 @@ export const CreateNewsPage = () => {
                     </div>
                   ) : (
                     <div className="p-8 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors w-full h-full"
-                         onDragOver={(e) => e.preventDefault()}
-                         onDrop={(e) => { e.preventDefault(); handleUploadImage(e.dataTransfer.files?.[0]); }}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => { e.preventDefault(); handleUploadImage(e.dataTransfer.files?.[0]); }}
                     >
                       <div className="w-14 h-14 bg-orange-100 dark:bg-orange-900/20 text-fpt-orange rounded-full flex items-center justify-center mb-4 transition-transform hover:scale-110">
                         <CloudUpload className="w-7 h-7" />
                       </div>
                       <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-3">
-                        Kéo thả ảnh vào đây<br/>hoặc
+                        Kéo thả ảnh vào đây<br />hoặc
                       </p>
                       <label className="px-5 py-2.5 bg-fpt-orange text-white text-sm font-medium rounded-xl cursor-pointer hover:bg-[#e06912] transition-colors shadow-sm inline-block">
                         Chọn file
@@ -352,9 +360,14 @@ export const CreateNewsPage = () => {
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-900 focus:ring-2 focus:ring-fpt-orange/20 outline-none mb-6 text-sm"
                 >
                   <option value={NewsType.EVENT}>Sự kiện</option>
+                  <option value={NewsType.FEATURED}>Sự kiện nổi bật</option>
                   <option value={NewsType.IMPORTANT}>Thông báo quan trọng</option>
                   <option value={NewsType.OTHER}>Khác</option>
                 </select>
+
+                {form.type === NewsType.FEATURED && (
+                  <p className="text-sm text-red-500 -mt-4 mb-6">* Sự kiện này sẽ được đặt ở mục nổi bật</p>
+                )}
 
                 {/* Đối tượng */}
                 <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
@@ -379,12 +392,12 @@ export const CreateNewsPage = () => {
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
                       Gửi ngay
                     </span>
-                    <input 
-                      type="radio" 
-                      name="sendType" 
-                      className="hidden" 
-                      checked={sendType === 'NOW'} 
-                      onChange={() => setSendType('NOW')} 
+                    <input
+                      type="radio"
+                      name="sendType"
+                      className="hidden"
+                      checked={sendType === 'NOW'}
+                      onChange={() => setSendType('NOW')}
                     />
                   </label>
 
@@ -395,15 +408,15 @@ export const CreateNewsPage = () => {
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
                       Lưu nháp
                     </span>
-                    <input 
-                      type="radio" 
-                      name="sendType" 
-                      className="hidden" 
-                      checked={sendType === 'DRAFT'} 
-                      onChange={() => setSendType('DRAFT')} 
+                    <input
+                      type="radio"
+                      name="sendType"
+                      className="hidden"
+                      checked={sendType === 'DRAFT'}
+                      onChange={() => setSendType('DRAFT')}
                     />
                   </label>
-                  
+
                   <div className="flex flex-col gap-2">
                     <label className="flex items-center gap-3 cursor-pointer group">
                       <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${sendType === 'SCHEDULED' ? 'border-fpt-orange' : 'border-gray-300 dark:border-zinc-600'}`}>
@@ -412,15 +425,15 @@ export const CreateNewsPage = () => {
                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
                         Lên lịch gửi
                       </span>
-                      <input 
-                        type="radio" 
-                        name="sendType" 
-                        className="hidden" 
-                        checked={sendType === 'SCHEDULED'} 
-                        onChange={() => setSendType('SCHEDULED')} 
+                      <input
+                        type="radio"
+                        name="sendType"
+                        className="hidden"
+                        checked={sendType === 'SCHEDULED'}
+                        onChange={() => setSendType('SCHEDULED')}
                       />
                     </label>
-                    
+
                     {sendType === 'SCHEDULED' && (
                       <div className="pl-8 animate-in slide-in-from-top-2 fade-in duration-200 mt-2">
                         <input
@@ -438,18 +451,18 @@ export const CreateNewsPage = () => {
                 </div>
               </div>
             </div>
-            
+
             {/* BUTTONS XUỐNG DƯỚI GÓC PHẢI */}
             <div className="flex flex-wrap items-center justify-end gap-3 mt-4">
-              <button 
+              <button
                 onClick={() => navigate(`${basePath}/news-management`)}
                 className="px-5 py-2.5 rounded-xl border border-gray-300 dark:border-zinc-700 font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-sm"
               >
                 Hủy
               </button>
 
-              <button 
-                disabled={submitting} 
+              <button
+                disabled={submitting}
                 onClick={() => handleSave(sendType === 'DRAFT' ? NewsStatus.DRAFT : sendType === 'SCHEDULED' ? NewsStatus.SCHEDULED : NewsStatus.SENT)}
                 className="px-5 py-2.5 rounded-xl bg-fpt-orange hover:bg-[#e06912] text-white font-medium shadow-sm shadow-orange-500/20 transition-colors flex items-center gap-2 text-sm disabled:opacity-70"
               >

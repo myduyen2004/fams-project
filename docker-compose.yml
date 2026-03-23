@@ -40,7 +40,7 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGODB_ROOT_USERNAME:-fams_user}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_ROOT_PASSWORD:-fams_pass}
-      MONGO_INITDB_DATABASE: ${MONGODB_DATABASE:-fams_notifications}
+      MONGO_INITDB_DATABASE: ${MONGODB_DATABASE:-fams_read_status}
     volumes:
       - mongodb_data:/data/db
     healthcheck:
@@ -83,7 +83,7 @@ services:
       - SPRING_PROFILES_ACTIVE=dev
       - DB_HOST=postgres
       - REDIS_HOST=redis
-      - MONGODB_URI=${MONGODB_URI:-mongodb://fams_user:fams_pass@mongodb:27017/fams_notifications?authSource=admin}
+      - MONGODB_URI=${MONGODB_URI:-mongodb://fams_user:fams_pass@mongodb:27017/fams_read_status?authSource=admin}
       - AI_SERVICE_URL=http://ai-service:5000
       - TZ=Asia/Ho_Chi_Minh
       # Firebase secret mounted at runtime - never committed to git

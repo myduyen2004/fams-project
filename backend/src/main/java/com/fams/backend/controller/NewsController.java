@@ -97,6 +97,19 @@ public class NewsController {
         return ResponseEntity.ok(newsService.getPublishedNews(page, size));
     }
 
+    @GetMapping("/api/news/unread-count")
+    @Operation(summary = "Lấy số lượng tin tức chưa đọc")
+    public ResponseEntity<Map<String, Long>> getUnreadNewsCount() {
+        return ResponseEntity.ok(Map.of("count", newsService.getUnreadCount()));
+    }
+
+    @PostMapping("/api/news/{id}/read")
+    @Operation(summary = "Đánh dấu tin tức đã đọc")
+    public ResponseEntity<Void> markNewsAsRead(@PathVariable Long id) {
+        newsService.markAsRead(id);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/api/news/{id}")
     @Operation(summary = "Lấy chi tiết tin tức đã xuất bản")
     public ResponseEntity<NewsResponse> getPublishedNewsById(@PathVariable Long id) {
