@@ -21,7 +21,7 @@ subprojects {
     tasks.withType<JavaCompile>().configureEach {
         sourceCompatibility = JavaVersion.VERSION_17.toString()
         targetCompatibility = JavaVersion.VERSION_17.toString()
-        options.compilerArgs.add("-Xlint:-options")
+        options.compilerArgs.addAll(listOf("-nowarn", "-Xlint:none", "-Xlint:-options", "-Xlint:-unchecked"))
     }
 }
 

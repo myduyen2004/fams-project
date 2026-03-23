@@ -7,7 +7,6 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import '../../../core/constants/app_colors.dart';
-import '../../../core/widgets/app_background.dart';
 import '../models/schedule_model.dart';
 import '../models/assignment_submission_model.dart';
 import '../services/schedule_service.dart';
@@ -21,6 +20,7 @@ import '../controllers/schedule_controller.dart';
 import 'lecturer_info_screen.dart';
 import 'assignment_detail_screen.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class SlotDetailScreen extends StatefulWidget {
   final TimetableSlot slot;
@@ -47,8 +47,6 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
   Future<void> _fetchSubmissionIfAvailable() async {
     final authController = Get.find<AuthController>();
     final isLecturer = authController.currentUser.value?.isLecturer ?? false;
-
-    // Only fetch submission for student and if assignment exists
     if (!isLecturer && widget.slot.assignmentId != null) {
       setState(() => _isLoadingSubmission = true);
       try {
@@ -72,20 +70,31 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
     final isLecturer = authController.currentUser.value?.isLecturer ?? false;
 
     return Scaffold(
-      body: AppBackground(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFFEF3DE),
+              Colors.white,
+            ],
+            stops: [0.0, 0.4],
+          ),
+        ),
         child: SafeArea(
           child: Column(
             children: [
               _buildAppBar(context, isLecturer),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+                  padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 4.h),
                   child: Column(
                     children: [
                       _buildInfoCard(),
-                      16.verticalSpace,
+                      12.verticalSpace,
                       _buildContentCard(),
-                      16.verticalSpace,
+                      12.verticalSpace,
                       if (_hasCheckedIn) _buildSuccessCard(),
                     ],
                   ),
@@ -107,23 +116,19 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
         children: [
           IconButton(
             onPressed: () {
-              // If we checked in, trigger a refresh in the parent when going back
               Get.back(result: _hasCheckedIn != (widget.slot.attendanceStatus == 'PRESENT'));
             },
-            icon: Icon(Icons.arrow_back_ios_new_rounded, color: const Color(0xFFFF6B00), size: 24.r),
+            icon: Icon(Icons.arrow_back_ios_new_rounded, color: const Color(0xFFFF6B00), size: 22.r),
           ),
           Text(
             isLecturer ? 'Chi tiết Slot dạy' : 'Chi tiết Slot học',
-            style: GoogleFonts.inter(
-              fontSize: 20.sp,
-              fontWeight: FontWeight.bold,
+            style: GoogleFonts.beVietnamPro(
+              fontSize: 18.sp,
+              fontWeight: FontWeight.w800,
               color: const Color(0xFF2D3436),
             ),
           ),
-          IconButton(
-            onPressed: () {},
-            icon: Icon(Icons.more_horiz_rounded, color: const Color(0xFF636E72), size: 24.r),
-          ),
+          const SizedBox(width: 48), // Spacer to keep title centered
         ],
       ),
     );
@@ -135,11 +140,11 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(32.r),
+        borderRadius: BorderRadius.circular(24.r),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
-            blurRadius: 20.r,
+            blurRadius: 15.r,
             offset: Offset(0, 4.h),
           ),
         ],
@@ -151,17 +156,17 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
+                padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFF4E6),
-                  borderRadius: BorderRadius.circular(20.r),
+                  borderRadius: BorderRadius.circular(16.r),
                 ),
                 child: Text(
                   'SLOT ${widget.slot.slotNumber}',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.beVietnamPro(
                     color: const Color(0xFFFF922B),
                     fontWeight: FontWeight.bold,
-                    fontSize: 12.sp,
+                    fontSize: 10.sp, // Reduced from 11.sp
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -169,36 +174,45 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
               _buildSmallAttendanceButton(),
             ],
           ),
-          16.verticalSpace,
+          12.verticalSpace,
           Text(
             widget.slot.courseCode ?? 'N/A',
-            style: GoogleFonts.inter(
-              fontSize: 32.sp,
+            style: GoogleFonts.beVietnamPro(
+              fontSize: 20.sp, // Reduced from 24.sp
               fontWeight: FontWeight.w900,
               color: const Color(0xFF1E293B),
               height: 1.1,
             ),
           ),
-          4.verticalSpace,
+          2.verticalSpace,
           Text(
             widget.slot.courseName ?? 'N/A',
-            style: GoogleFonts.inter(
-              fontSize: 16.sp,
+            style: GoogleFonts.beVietnamPro(
+              fontSize: 13.sp, // Reduced from 14.sp
               color: const Color(0xFF64748B),
               fontWeight: FontWeight.w400,
             ),
           ),
-          24.verticalSpace,
+          16.verticalSpace,
           
           const Divider(height: 1, color: Color(0xFFF1F5F9)),
-          20.verticalSpace,
+          8.verticalSpace,
 
-          Row(
-            children: [
-              Expanded(child: _buildSimpleDetail('PHÒNG HỌC', widget.slot.roomCode ?? 'Online')),
-              const SizedBox(width: 16),
-              Expanded(
-                child: GestureDetector(
+          // Timeline Details
+          Padding(
+            padding: EdgeInsets.only(left: 4.w),
+            child: Column(
+              children: [
+                // Room Row
+                _buildTimelineItem(
+                  icon: SolarIconsOutline.home2,
+                  title: 'Phòng ${widget.slot.roomCode ?? 'Online'}',
+                  isFirst: true,
+                ),
+                // Class Row
+                _buildTimelineItem(
+                  icon: SolarIconsOutline.usersGroupRounded,
+                  title: 'Lớp ${_formatClassName(widget.slot.className)}',
                   onTap: () {
                     final classSection = widget.slot.classSection;
                     if (classSection != null) {
@@ -209,170 +223,180 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
                       Get.to(() => StudentListScreen(classSection: classSection));
                     }
                   },
-                  child: Container(
-                    color: Colors.transparent,
-                    child: _buildSimpleDetail(
-                      'LỚP HỌC', 
-                      _formatClassName(widget.slot.className),
-                      extra: Icon(Icons.arrow_forward_ios_rounded, size: 12.r, color: const Color(0xFF94A3B8)),
-                    ),
-                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: _buildSimpleDetail(
-                  'THỜI GIAN', 
-                  '${_formatTime(widget.slot.startTime)} - ${_formatTime(widget.slot.endTime)}', 
-                  extra: Text(
-                    '(2h 15m)',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: const Color(0xFF94A3B8),
-                    ),
-                  ),
+                // Time Row
+                _buildTimelineItem(
+                  icon: SolarIconsOutline.clockCircle,
+                  title: '${_formatTime(widget.slot.startTime)} - ${_formatTime(widget.slot.endTime)}',
+                  subtitle: '(2h 15m)',
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
+                // Lecturer Row
+                _buildTimelineItem(
+                  icon: SolarIconsOutline.user,
+                  title: 'Giảng viên ${widget.slot.lecturerName ?? 'N/A'}',
+                  isLast: true,
                   onTap: () {
                     if (widget.slot.lecturerId != null) {
                       Get.to(() => LecturerInfoScreen(lecturerId: widget.slot.lecturerId!));
                     }
                   },
-                  child: Container(
-                    color: Colors.transparent, // Ensure whole area is clickable
-                    child: _buildSimpleDetail(
-                      'GIẢNG VIÊN', 
-                      widget.slot.lecturerName ?? 'N/A',
-                      extra: const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFF94A3B8)),
-                    ),
-                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           
-          // User Registration Guidance & Time Warning (Students only)
-          Obx(() {
-            final authController = Get.find<AuthController>();
-            final user = authController.currentUser.value;
-            final isLecturer = user?.isLecturer ?? false;
-            
-            if (isLecturer) return const SizedBox.shrink();
-
-            final hasFace = user?.hasFaceRegistered ?? false;
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (!hasFace)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 20),
-                    child: Text(
-                      '* Cần đăng ký khuôn mặt mới có thể điểm danh bằng khuôn mặt',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontStyle: FontStyle.italic,
-                        color: AppColors.orange600,
-                      ),
-                    ),
-                  ),
-                if (!_hasCheckedIn)
-                  Obx(() {
-                    final config = Get.find<ScheduleController>().attendanceConfig.value;
-                    final start = _getSlotDateTime(widget.slot.startTime);
-                    if (start == null) return const SizedBox.shrink();
-                    
-                    final threshold = widget.slot.absentThresholdMinutes ?? config.absentThresholdMinutes;
-                    final deadline = start.add(Duration(minutes: threshold));
-                    final now = Get.find<ScheduleController>().currentTime.value;
-                    final isPastDeadline = now.isAfter(deadline);
-                    final isBeforeStart = now.isBefore(start);
-
-                    if (isBeforeStart || isPastDeadline) {
-                      return Padding(
-                        padding: EdgeInsets.only(top: 16.h),
-                        child: Container(
-                          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.info_outline, color: Colors.red, size: 16.r),
-                              8.horizontalSpace,
-                              Expanded(
-                                child: Text(
-                                  isBeforeStart ? "Chưa đến giờ điểm danh" : "Đã hết thời gian điểm danh khuôn mặt",
-                                  style: GoogleFonts.inter(
-                                    color: Colors.red,
-                                    fontSize: 13.sp,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  }),
-              ],
-            );
-          }),
+          _buildFaceGuidance(scheduleController: Get.find<ScheduleController>()),
         ],
       ),
     );
   }
 
-  Widget _buildSimpleDetail(String label, String value, {Widget? extra}) {
+  Widget _buildFaceGuidance({required ScheduleController scheduleController}) {
+    final authController = Get.find<AuthController>();
+    final user = authController.currentUser.value;
+    final isLecturer = user?.isLecturer ?? false;
+    if (isLecturer) return const SizedBox.shrink();
+
+    final hasFace = user?.hasFaceRegistered ?? false;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 11.sp,
-            color: const Color(0xFF94A3B8),
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.8,
-          ),
-        ),
-        8.verticalSpace,
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Flexible(
-              child: Text(
-                value,
-                style: GoogleFonts.inter(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF334155),
-                ),
-                overflow: TextOverflow.ellipsis,
+        if (!hasFace)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              '* Cần đăng ký khuôn mặt mới có thể điểm danh bằng khuôn mặt',
+              style: GoogleFonts.beVietnamPro(
+                fontSize: 11.sp,
+                fontStyle: FontStyle.italic,
+                color: AppColors.orange600,
               ),
             ),
-            if (extra != null) ...[
-              8.horizontalSpace,
-              extra,
-            ],
-          ],
-        ),
+          ),
+        if (!_hasCheckedIn)
+          Obx(() {
+            final config = scheduleController.attendanceConfig.value;
+            final start = _getSlotDateTime(widget.slot.startTime);
+            if (start == null) return const SizedBox.shrink();
+            
+            final threshold = widget.slot.absentThresholdMinutes ?? config.absentThresholdMinutes;
+            final deadline = start.add(Duration(minutes: threshold));
+            final now = scheduleController.currentTime.value;
+            final isPastDeadline = now.isAfter(deadline);
+            final isBeforeStart = now.isBefore(start);
+
+            if (isBeforeStart || isPastDeadline) {
+              return Padding(
+                padding: EdgeInsets.only(top: 12.h),
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(SolarIconsOutline.infoCircle, color: Colors.red, size: 14.r),
+                      8.horizontalSpace,
+                      Expanded(
+                        child: Text(
+                          isBeforeStart ? "Chưa đến giờ điểm danh" : "Đã quá thời gian điểm danh",
+                          style: GoogleFonts.beVietnamPro(
+                            color: Colors.red,
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          }),
       ],
+    );
+  }
+
+  Widget _buildTimelineItem({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    bool isFirst = false,
+    bool isLast = false,
+    VoidCallback? onTap,
+  }) {
+    return IntrinsicHeight(
+      child: Row(
+        children: [
+          Column(
+            children: [
+              Container(
+                width: 1.5.w,
+                height: 8.h,
+                color: isFirst ? Colors.transparent : AppColors.primaryOrange.withOpacity(0.3),
+              ),
+              Container(
+                padding: EdgeInsets.all(7.r),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryOrange.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: AppColors.primaryOrange, size: 16.sp),
+              ),
+              Expanded(
+                child: Container(
+                  width: 1.5.w,
+                  color: isLast ? Colors.transparent : AppColors.primaryOrange.withOpacity(0.3),
+                ),
+              ),
+            ],
+          ),
+          16.horizontalSpace,
+          Expanded(
+            child: GestureDetector(
+              onTap: onTap,
+              behavior: HitTestBehavior.opaque,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  12.verticalSpace,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: GoogleFonts.beVietnamPro(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1E293B),
+                          ),
+                        ),
+                      ),
+                      if (onTap != null)
+                        Icon(Icons.arrow_forward_ios_rounded, size: 12.r, color: const Color(0xFF94A3B8)),
+                    ],
+                  ),
+                  if (subtitle != null) ...[
+                    2.verticalSpace,
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.beVietnamPro(
+                        fontSize: 11.sp,
+                        color: const Color(0xFF64748B),
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                  12.verticalSpace,
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -386,11 +410,11 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(32.r),
+        borderRadius: BorderRadius.circular(24.r),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
-            blurRadius: 20.r,
+            blurRadius: 15.r,
             offset: Offset(0, 4.h),
           ),
         ],
@@ -403,8 +427,8 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
               Expanded(
                 child: Text(
                   hasAssignment ? (isLecturer ? 'Bài tập đã giao' : 'Bài tập được giao') : 'Nội dung bài học',
-                  style: GoogleFonts.inter(
-                    fontSize: 18.sp,
+                  style: GoogleFonts.beVietnamPro(
+                    fontSize: 16.sp,
                     fontWeight: FontWeight.w900,
                     color: const Color(0xFF1E293B),
                   ),
@@ -414,27 +438,20 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
                 12.horizontalSpace,
                 InkWell(
                   onTap: () {
-                    Get.to(
-                      () => AssignmentDetailScreen(
-                        slot: widget.slot,
-                        submission: _submission,
-                        isLecturer: isLecturer,
-                      ),
-                      transition: Transition.rightToLeft,
-                    );
+                    Get.to(() => AssignmentDetailScreen(slot: widget.slot, submission: _submission, isLecturer: isLecturer), transition: Transition.rightToLeft);
                   },
                   borderRadius: BorderRadius.circular(8.r),
                   child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                    padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
                     decoration: BoxDecoration(
-                      color: AppColors.primaryOrange.withOpacity(0.1),
+                      color: AppColors.primaryOrange.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(8.r),
                       border: Border.all(color: AppColors.primaryOrange),
                     ),
                     child: Text(
                       'Chi tiết',
-                      style: GoogleFonts.inter(
-                        fontSize: 13.sp,
+                      style: GoogleFonts.beVietnamPro(
+                        fontSize: 11.sp,
                         fontWeight: FontWeight.w600,
                         color: AppColors.primaryOrange,
                       ),
@@ -444,19 +461,19 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
               ],
             ],
           ),
-          16.verticalSpace,
+          12.verticalSpace,
           if (hasAssignment) ...[
             Text(
               widget.slot.assignmentTitle ?? 'Bài tập tuần',
-              style: GoogleFonts.inter(
-                fontSize: 15.sp,
+              style: GoogleFonts.beVietnamPro(
+                fontSize: 14.sp,
                 fontWeight: FontWeight.bold,
                 color: const Color(0xFF334155),
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            12.verticalSpace,
+            8.verticalSpace,
             Row(
               children: [
                 Expanded(
@@ -465,17 +482,17 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
                     children: [
                       Text(
                         'HẠN NỘP',
-                        style: GoogleFonts.inter(
-                          fontSize: 10.sp,
+                        style: GoogleFonts.beVietnamPro(
+                          fontSize: 9.sp,
                           fontWeight: FontWeight.bold,
                           color: const Color(0xFF94A3B8),
                         ),
                       ),
-                      4.verticalSpace,
+                      2.verticalSpace,
                       Text(
                         DateFormat('dd/MM/yyyy').format(widget.slot.assignmentDueDate ?? widget.slot.date),
-                        style: GoogleFonts.inter(
-                          fontSize: 14.sp,
+                        style: GoogleFonts.beVietnamPro(
+                          fontSize: 13.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF475569),
                         ),
@@ -490,21 +507,21 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
                       children: [
                         Text(
                           'TRẠNG THÁI',
-                          style: GoogleFonts.inter(
-                            fontSize: 10.sp,
+                          style: GoogleFonts.beVietnamPro(
+                            fontSize: 9.sp,
                             fontWeight: FontWeight.bold,
                             color: const Color(0xFF94A3B8),
                           ),
                         ),
-                        4.verticalSpace,
+                        2.verticalSpace,
                         _isLoadingSubmission 
-                          ? SizedBox(height: 14.h, width: 14.w, child: const CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryOrange))
+                          ? SizedBox(height: 12.h, width: 12.w, child: const CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryOrange))
                           : Text(
                               _submission != null && _submission!.status != 'NOT_SUBMITTED' 
                                 ? _getTaskStatusText(_submission!.status) 
                                 : 'Chưa nộp',
-                              style: GoogleFonts.inter(
-                                fontSize: 14.sp,
+                              style: GoogleFonts.beVietnamPro(
+                                fontSize: 13.sp,
                                 fontWeight: FontWeight.w800,
                                 color: _submission != null && _submission!.status != 'NOT_SUBMITTED' 
                                   ? const Color(0xFF10B981) 
@@ -519,8 +536,8 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
           ] else ...[
             Text(
               'Không có bài học hoặc bài tập cho buổi này.',
-              style: GoogleFonts.inter(
-                fontSize: 14,
+              style: GoogleFonts.beVietnamPro(
+                fontSize: 13.sp,
                 color: const Color(0xFF64748B),
                 fontStyle: FontStyle.italic,
               ),
@@ -531,78 +548,54 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
     );
   }
 
-
   String _getTaskStatusText(String? status) {
     if (status == null) return 'Không xác định';
     switch (status) {
-      case 'SUBMITTED':
-        return 'Đã nộp';
-      case 'LATE_SUBMITTED':
-        return 'Nộp trễ';
-      case 'NOT_SUBMITTED':
-        return 'Chưa nộp';
-      default:
-        return 'Chưa nộp';
+      case 'SUBMITTED': return 'Đã nộp';
+      case 'LATE_SUBMITTED': return 'Nộp trễ';
+      case 'NOT_SUBMITTED': return 'Chưa nộp';
+      default: return 'Chưa nộp';
     }
   }
 
-
   Widget _buildSuccessCard() {
-    String timeStr = 'N/A';
-    if (widget.slot.checkInTime != null) {
-      timeStr = DateFormat('HH:mm - dd/MM/yyyy').format(widget.slot.checkInTime!);
-    } else if (_hasCheckedIn) {
-      // If we just checked in, show current time
-      timeStr = DateFormat('HH:mm - dd/MM/yyyy').format(DateTime.now());
-    }
+    String timeStr = widget.slot.checkInTime != null 
+        ? DateFormat('HH:mm - dd/MM/yyyy').format(widget.slot.checkInTime!)
+        : DateFormat('HH:mm - dd/MM/yyyy').format(DateTime.now());
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: 32.h),
+      padding: EdgeInsets.symmetric(vertical: 24.h),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(32.r),
-        border: Border.all(color: const Color(0xFFE8F5E9), width: 2.w),
+        borderRadius: BorderRadius.circular(24.r),
+        border: Border.all(color: const Color(0xFFE8F5E9), width: 1.5.w),
       ),
       child: Column(
         children: [
           Container(
-            padding: EdgeInsets.all(16.r),
-            decoration: const BoxDecoration(
-              color: Color(0xFFE8F5E9),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.check_circle_rounded,
-              color: const Color(0xFF27AE60),
-              size: 40.r,
-            ),
+            padding: EdgeInsets.all(12.r),
+            decoration: const BoxDecoration(color: Color(0xFFE8F5E9), shape: BoxShape.circle),
+            child: Icon(Icons.check_circle_rounded, color: const Color(0xFF27AE60), size: 32.r),
           ),
-          16.verticalSpace,
+          12.verticalSpace,
           Text(
             'Điểm danh thành công',
-            style: GoogleFonts.inter(
-              fontSize: 20.sp,
+            style: GoogleFonts.beVietnamPro(
+              fontSize: 18.sp,
               fontWeight: FontWeight.bold,
               color: const Color(0xFF27AE60),
             ),
           ),
-          8.verticalSpace,
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.access_time_filled_rounded, size: 16.r, color: const Color(0xFF94A3B8)),
-              6.horizontalSpace,
-              Text(
-                'HOÀN TẤT LÚC $timeStr',
-                style: GoogleFonts.inter(
-                  fontSize: 12.sp,
-                  color: const Color(0xFF94A3B8),
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ],
+          4.verticalSpace,
+          Text(
+            'HOÀN TẤT LÚC $timeStr',
+            style: GoogleFonts.beVietnamPro(
+              fontSize: 11.sp,
+              color: const Color(0xFF94A3B8),
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
           ),
         ],
       ),
@@ -615,87 +608,45 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
       final user = authController.currentUser.value;
       if (user == null || (user.isLecturer ?? false)) return const SizedBox.shrink();
 
-      final hasFace = user.hasFaceRegistered ?? false;
       final scheduleController = Get.find<ScheduleController>();
-      final config = scheduleController.attendanceConfig.value;
-      final faceEnabled = config.faceRecognitionEnabled;
-      final threshold = widget.slot.absentThresholdMinutes ?? config.absentThresholdMinutes;
-      
-      if (_hasCheckedIn) {
-        return _buildStatusChip('Đã điểm danh', const Color(0xFF27AE60), Icons.check_circle_rounded);
-      }
-
       final now = scheduleController.currentTime.value;
       final start = _getSlotDateTime(widget.slot.startTime);
-      
       if (start == null) return const SizedBox.shrink();
+      
+      if (_hasCheckedIn) return _buildStatusChip('Đã điểm danh', const Color(0xFF27AE60), Icons.check_circle_rounded);
 
-      // If before start time
-      if (now.isBefore(start)) {
-        return _buildStatusChip('Chưa đến giờ', const Color(0xFF94A3B8), Icons.access_time_rounded);
-      }
+      if (now.isBefore(start)) return _buildStatusChip('Chưa đến giờ', const Color(0xFF94A3B8), Icons.access_time_rounded);
 
-      // Check if past the attendance threshold
-      final lateDeadline = start.add(Duration(minutes: threshold));
-      if (now.isAfter(lateDeadline)) {
-        return _buildStatusChip('Vắng', const Color(0xFFEF4444), Icons.cancel_rounded);
-      }
+      final threshold = widget.slot.absentThresholdMinutes ?? scheduleController.attendanceConfig.value.absentThresholdMinutes;
+      if (now.isAfter(start.add(Duration(minutes: threshold)))) return _buildStatusChip('Vắng', const Color(0xFFEF4444), Icons.cancel_rounded);
 
-      // Within attendance window - Show Button
+      final hasFace = user.hasFaceRegistered ?? false;
       return ElevatedButton(
         onPressed: () async {
-          if (!faceEnabled) {
-            Get.snackbar(
-              'Thông báo',
-              'Quản trị viên chưa cho phép điểm danh bằng khuôn mặt cho hệ thống này.',
-              snackPosition: SnackPosition.BOTTOM,
-              backgroundColor: Colors.red.withOpacity(0.9),
-              colorText: Colors.white,
-              icon: const Icon(Icons.lock_outline_rounded, color: Colors.white),
-            );
+          if (!scheduleController.attendanceConfig.value.faceRecognitionEnabled) {
+            Get.snackbar('Thông báo', 'Quản trị viên chưa cho phép điểm danh bằng khuôn mặt.', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red.withOpacity(0.9), colorText: Colors.white);
             return;
           }
-
           if (hasFace) {
             if (widget.slot.id != null) {
               final result = await Get.to(() => FaceAttendanceView(slotId: widget.slot.id!));
-              if (result == true) {
-                setState(() => _hasCheckedIn = true);
-                if (Get.isRegistered<ScheduleController>()) {
-                  Get.find<ScheduleController>().fetchSchedule();
-                }
-              }
+              if (result == true) { setState(() => _hasCheckedIn = true); scheduleController.fetchSchedule(); }
             }
-          } else {
-            Get.to(() => const FaceRegistrationView());
-          }
+          } else { Get.to(() => const FaceRegistrationView()); }
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: hasFace ? AppColors.primaryOrange : const Color(0xFF334155),
-          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 0),
-          minimumSize: Size(0, 32.h),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-          elevation: 2,
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 0),
+          minimumSize: Size(0, 30.h),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+          elevation: 1,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              hasFace ? Icons.camera_alt_rounded : Icons.face_retouching_natural_rounded, 
-              color: Colors.white, 
-              size: 14.r,
-            ),
+            Icon(hasFace ? Icons.camera_alt_rounded : Icons.face_retouching_natural_rounded, color: Colors.white, size: 12.r),
             6.horizontalSpace,
-            Text(
-              hasFace ? 'Điểm danh' : 'Đăng ký khuôn mặt',
-              style: GoogleFonts.inter(
-                fontSize: 12.sp,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
+            Text(hasFace ? 'Điểm danh' : 'Đăng ký', style: GoogleFonts.beVietnamPro(fontSize: 11.sp, fontWeight: FontWeight.bold, color: Colors.white)),
           ],
         ),
       );
@@ -704,25 +655,14 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
 
   Widget _buildStatusChip(String text, Color color, IconData icon) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: color.withOpacity(0.5), width: 1.w),
-      ),
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+      decoration: BoxDecoration(color: color.withOpacity(0.08), borderRadius: BorderRadius.circular(10.r), border: Border.all(color: color.withOpacity(0.3), width: 1.w)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 14.r),
-          6.horizontalSpace,
-          Text(
-            text,
-            style: GoogleFonts.inter(
-              fontSize: 12.sp,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
+          Icon(icon, color: color, size: 12.r),
+          4.horizontalSpace,
+          Text(text, style: GoogleFonts.beVietnamPro(fontSize: 11.sp, fontWeight: FontWeight.bold, color: color)),
         ],
       ),
     );
@@ -732,57 +672,14 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
     if (timeStr == null) return null;
     try {
       final parts = timeStr.split(':');
-      if (parts.length < 2) return null;
-      return DateTime(
-        widget.slot.date.year,
-        widget.slot.date.month,
-        widget.slot.date.day,
-        int.parse(parts[0]),
-        int.parse(parts[1]),
-      );
-    } catch (e) {
-      return null;
-    }
+      return DateTime(widget.slot.date.year, widget.slot.date.month, widget.slot.date.day, int.parse(parts[0]), int.parse(parts[1]));
+    } catch (e) { return null; }
   }
 
   String _formatTime(String? time) {
     if (time == null) return 'N/A';
     final parts = time.split(':');
-    if (parts.length >= 2) {
-      return "${parts[0]}:${parts[1]}";
-    }
-    return time;
-  }
-
-  bool _isDuringAttendanceTime() {
-    final scheduleController = Get.find<ScheduleController>();
-    final now = scheduleController.currentTime.value;
-    final start = _getSlotDateTime(widget.slot.startTime);
-    if (start == null) return false;
-    
-    final threshold = widget.slot.absentThresholdMinutes ?? scheduleController.attendanceConfig.value.absentThresholdMinutes;
-    final deadline = start.add(Duration(minutes: threshold));
-    
-    return now.isAfter(start) && now.isBefore(deadline);
-  }
-
-  String _getTimeStatusMessage() {
-    final scheduleController = Get.find<ScheduleController>();
-    final now = scheduleController.currentTime.value;
-    if (!_isSameDay(now, widget.slot.date)) {
-      return "Không đúng ngày điểm danh";
-    }
-    
-    final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
-    if (timeStr.compareTo(widget.slot.startTime!) < 0) {
-      return "Chưa đến giờ học";
-    } else {
-      return "Buổi học đã kết thúc";
-    }
-  }
-
-  bool _isSameDay(DateTime d1, DateTime d2) {
-    return d1.year == d2.year && d1.month == d2.month && d1.day == d2.day;
+    return parts.length >= 2 ? "${parts[0]}:${parts[1]}" : time;
   }
 
   String _formatClassName(String? className) {
@@ -794,13 +691,14 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
 
 extension on TimetableSlot {
   ClassSection? get classSection {
+    final controller = Get.find<ScheduleController>();
     return ClassSection(
       className: className ?? '',
       courseCode: courseCode ?? '',
       courseName: courseName ?? '',
-      semesterCode: '',
-      semesterName: '',
-      status: 'ONGOING',
+      semesterCode: controller.selectedSemester.value?.code ?? '',
+      semesterName: controller.selectedSemester.value?.name ?? '',
+      status: 'ONGOING', // Default status for viewing student list
     );
   }
 }
