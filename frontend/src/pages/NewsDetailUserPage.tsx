@@ -33,6 +33,14 @@ export const NewsDetailUserPage = () => {
         setNews(data);
       } catch {
         toast.error('Không thể tải tin tức');
+        return;
+      }
+
+      try {
+        await newsService.markNewsAsRead(Number(id));
+        window.dispatchEvent(new Event('newsUnreadRefresh'));
+      } catch {
+        // Keep detail page visible even if read-status sync fails.
       }
     };
     load();
@@ -96,7 +104,7 @@ export const NewsDetailUserPage = () => {
             <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 mb-8">
               <span className="flex items-center gap-1.5 bg-white/60 dark:bg-zinc-800/60 px-3 py-2 rounded-xl border border-gray-200/50 dark:border-zinc-700/50 backdrop-blur-sm">
                 <Tag className="w-4 h-4" />
-                {news.type === 'EVENT' ? 'Sự kiện' : news.type === 'IMPORTANT' ? 'Quan trọng' : 'Tin tức'}
+                {news.type === 'FEATURED' ? 'Sự kiện nổi bật' : news.type === 'EVENT' ? 'Sự kiện' : news.type === 'IMPORTANT' ? 'Quan trọng' : 'Tin tức'}
               </span>
               <span className="flex items-center gap-1.5 bg-white/60 dark:bg-zinc-800/60 px-3 py-2 rounded-xl border border-gray-200/50 dark:border-zinc-700/50 backdrop-blur-sm">
                 <Calendar className="w-4 h-4" />

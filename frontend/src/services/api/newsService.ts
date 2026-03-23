@@ -17,6 +17,15 @@ export const newsService = {
     return response.data;
   },
 
+  markNewsAsRead: async (id: number): Promise<void> => {
+    await apiClient.post(`/news/${id}/read`);
+  },
+
+  getUnreadNewsCount: async (): Promise<number> => {
+    const response = await apiClient.get<{ count: number }>('/news/unread-count');
+    return response.data.count ?? 0;
+  },
+
   getAdminNews: async (filter: NewsAdminFilter): Promise<NewsPageResponse> => {
     const params: Record<string, unknown> = {
       page: filter.page,

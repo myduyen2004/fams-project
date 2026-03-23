@@ -179,6 +179,7 @@ export const NewsManagementPage = () => {
                   />
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Tiêu đề</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Danh mục</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Đối tượng</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Trạng thái</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider rounded-tr-lg">Ngày tạo</th>
@@ -187,14 +188,14 @@ export const NewsManagementPage = () => {
             <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-10 text-center text-gray-500">
+                  <td colSpan={7} className="py-10 text-center text-gray-500">
                     <Loader2 className="w-8 h-8 mx-auto animate-spin mb-2" />
                     Đang tải dữ liệu...
                   </td>
                 </tr>
               ) : news.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-10 text-center text-gray-500">
+                  <td colSpan={7} className="py-10 text-center text-gray-500">
                     Không tìm thấy tin tức nào.
                   </td>
                 </tr>
@@ -215,6 +216,24 @@ export const NewsManagementPage = () => {
                     </td>
                     <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100 max-w-md truncate">
                       {item.title}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        item.type === 'FEATURED' ? 'bg-orange-100 text-orange-700' :
+                        item.type === 'IMPORTANT' ? 'bg-red-100 text-red-700' :
+                        item.type === 'EVENT' ? 'bg-blue-100 text-blue-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {item.type === 'FEATURED' ? 'Sự kiện nổi bật' :
+                         item.type === 'IMPORTANT' ? 'Quan trọng' :
+                         item.type === 'EVENT' ? 'Sự kiện' :
+                         item.type === 'ACADEMIC' ? 'Học tập' :
+                         item.type === 'SYSTEM' ? 'Hệ thống' :
+                         item.type === 'ATTENDANCE' ? 'Điểm danh' :
+                         item.type === 'GRADE' ? 'Điểm số' :
+                         item.type === 'CHAT' ? 'Tin nhắn' :
+                         item.type === 'SCHEDULE' ? 'Lịch trình' : 'Khác'}
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                       {item.targetType === 'ALL' ? 'Toàn trường' : 
