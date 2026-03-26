@@ -12,6 +12,9 @@ public interface UserNotificationService {
     void createNotification(User recipient, String title, String content, Notification.NotificationType type,
             String targetUrl, User sender);
 
+    void createBatchNotification(List<User> recipients, String title, String content,
+        Notification.NotificationType type, String targetUrl);
+
     List<NotificationResponse> getMyNotifications();
 
     void markAsRead(Long notificationId);

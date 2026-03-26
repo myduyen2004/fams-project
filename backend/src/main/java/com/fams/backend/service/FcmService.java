@@ -245,6 +245,20 @@ public class FcmService {
         }
     }
 
+    public String formatPushBody(String content, int maxLength) {
+        String plainText = stripHtml(content);
+        if (plainText == null) {
+            return "";
+        }
+
+        String normalized = plainText.replaceAll("\\s+", " ").trim();
+        if (maxLength <= 0 || normalized.length() <= maxLength) {
+            return normalized;
+        }
+
+        return normalized.substring(0, maxLength - 1).trim() + "...";
+    }
+
     /**
      * Strip HTML tags from a string so push notification body displays as plain text.
      */

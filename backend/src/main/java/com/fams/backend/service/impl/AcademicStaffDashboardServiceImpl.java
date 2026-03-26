@@ -101,8 +101,8 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
                                                         Notification.TargetType.ALL,
                                                         Notification.TargetType.ACADEMIC_STAFF
                                                 );
-                                                List<Notification> systemNotifications = notificationRepository.findByTargetTypeInAndStatusOrderBySentAtDesc(
-                                                                targetTypes, Notification.NotificationStatus.SENT)
+                                                List<Notification> systemNotifications = notificationRepository.findByTargetTypeInOrderBySentAtDesc(
+                                                                targetTypes)
                                                         .stream()
                                                         .filter(n -> n.getType() == Notification.NotificationType.SYSTEM)
                                                         .collect(Collectors.toList());
@@ -310,11 +310,10 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
                         Notification.TargetType.ACADEMIC_STAFF
                 );
 
-                List<Notification> systemNotifications = notificationRepository.findByTargetTypeInAndStatusOrderBySentAtDesc(
-                                targetTypes, Notification.NotificationStatus.SENT)
+                List<Notification> systemNotifications = notificationRepository.findByTargetTypeInOrderBySentAtDesc(
+                                targetTypes)
                         .stream()
                         .filter(n -> n.getType() == Notification.NotificationType.SYSTEM)
-                        .filter(n -> n.getSender() == null || !n.getSender().getId().equals(user.getId()))
                         .collect(Collectors.toList());
 
                 List<Long> notificationIds = systemNotifications.stream().map(Notification::getId).collect(Collectors.toList());
@@ -341,10 +340,10 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
                                                         .description(n.getContent())
                                                         .timestamp(n.getCreatedAt().format(FORMATTER))
                                                         .type(n.getType().name())
-                                                        .senderName(n.getSender() != null ? n.getSender().getUsername() : "System")
-                                                        .senderFullName(n.getSender() != null ? n.getSender().getFullName() : "Hệ thống")
+                                                        .senderName("System")
+                                                        .senderFullName("Hệ thống")
                                                         .isRead(isRead)
-                                                        .attachmentUrls(n.getAttachmentUrls() != null ? new java.util.ArrayList<>(n.getAttachmentUrls()) : new java.util.ArrayList<>())
+                                                        .attachmentUrls(new java.util.ArrayList<>())
                                                         .build();
                                 })
                                 .collect(Collectors.toList());

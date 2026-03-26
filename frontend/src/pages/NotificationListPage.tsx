@@ -144,33 +144,49 @@ export const NotificationListPage: React.FC = () => {
 
   const LayoutComponent = getLayout(user?.role);
 
-  // Load notifications
+  // Load notifications (extracted so it can be called both on mount and on visibility change)
+  const loadNotifications = async () => {
+    try {
+      setLoading(true);
+      const recipientNotifications = await dashboardService.getNotifications();
+
+      let allNotifs = [...recipientNotifications];
+
+      // Sort by timestamp desc (requires proper parsing)
+      allNotifs.sort((a, b) => {
+        const dateA = parseDateTime(a.timestamp);
+        const dateB = parseDateTime(b.timestamp);
+        if (!dateA || !dateB) return 0;
+        return dateB.getTime() - dateA.getTime();
+      });
+
+      setNotifications(allNotifs);
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+      toast.error('Không thể tải thông báo');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load on mount
   useEffect(() => {
-    const loadNotifications = async () => {
-      try {
-        setLoading(true);
-        const recipientNotifications = await dashboardService.getNotifications();
+    loadNotifications();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-        let allNotifs = [...recipientNotifications];
-
-        // Sort by timestamp desc (requires proper parsing)
-        allNotifs.sort((a, b) => {
-          const dateA = parseDateTime(a.timestamp);
-          const dateB = parseDateTime(b.timestamp);
-          if (!dateA || !dateB) return 0;
-          return dateB.getTime() - dateA.getTime();
-        });
-
-        setNotifications(allNotifs);
-      } catch (error) {
-        console.error('Failed to load notifications:', error);
-        toast.error('Không thể tải thông báo');
-      } finally {
-        setLoading(false);
+  // Re-fetch when browser tab regains focus (syncs read state across mobile/web)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadNotifications();
       }
     };
-
-    loadNotifications();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Filter notifications
