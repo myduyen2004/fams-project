@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { MessageCircle, Send, FileText, X, Search, Users, ArrowLeft, ChevronDown, Image as ImageIcon, Info, Plus, Trash2, Download, Folder, File as FileIcon, ExternalLink, Reply, Eye } from 'lucide-react';
+import { MessageCircle, Send, FileText, X, Search, Users, ArrowLeft, ChevronDown, Image as ImageIcon, Info, Plus, Trash2, Download, Folder, File as FileIcon, ExternalLink, Reply, Eye, Smile } from 'lucide-react';
 import { chatGroupService, ChatGroupResponse, ChatMessageResponse } from '../../services/api/chatGroupService';
 import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
 import SockJS from 'sockjs-client';
@@ -57,6 +57,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
     const [isUnreadOnly, setIsUnreadOnly] = useState(false);
     const [expandedMessageId, setExpandedMessageId] = useState<number | null>(null);
     const [replyingTo, setReplyingTo] = useState<{ id: number; senderName: string; content: string; attachmentUrl?: string | null; type?: string } | null>(null);
+    const [showReactionPickerId, setShowReactionPickerId] = useState<number | null>(null);
 
     // Sidebar resizing state
     const [leftSidebarWidth, setLeftSidebarWidth] = useState(320);
@@ -849,18 +850,33 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
         }
     };
 
-    const formatTime = (dateString: string) => {
+    const formatFullTime = (dateString: string | undefined) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleString('vi-VN', { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            day: '2-digit', 
+            month: '2-digit', 
+            year: 'numeric' 
+        });
+    };
+
+    const formatTime = (dateString: string | undefined) => {
+        if (!dateString) return '';
         const date = new Date(dateString);
         return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
     };
 
-    const formatDate = (dateString: string) => {
+    const formatDate = (dateString: string | undefined) => {
+        if (!dateString) return '';
         const date = new Date(dateString);
         return date.toLocaleDateString('vi-VN');
     };
 
 
-    const getFriendlyDate = (dateString: string) => {
+    const getFriendlyDate = (dateString: string | undefined) => {
+        if (!dateString) return '';
         const date = new Date(dateString);
         const today = new Date();
         const yesterday = new Date();
@@ -882,7 +898,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
     };
 
 
-    const handleOpenPreview = (url: string, name: string, type: string) => {
+    const handleOpenPreview = (url: string, name: string, type: string, id?: string | number) => {
         setPreviewData({
             isOpen: true,
             url,
@@ -892,21 +908,52 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
     };
 
     const renderMessageContent = (msg: ChatMessageResponse) => {
+        if (msg.type === 'IMAGE_GROUP' && (msg as any).imageMessages) {
+            const images = (msg as any).imageMessages as ChatMessageResponse[];
+            const count = images.length;
+            
+            // Layout logic: 1-large, 2-side by side, 3-grid, 4-2x2, >4-3 columns
+            let gridClass = "grid-cols-2";
+            if (count === 1) gridClass = "grid-cols-1";
+            else if (count === 3) gridClass = "grid-cols-3";
+            else if (count > 4) gridClass = "grid-cols-3";
+
+            return (
+                <div className={`grid ${gridClass} gap-1 w-full max-w-[280px] sm:max-w-[320px]`}>
+                    {images.map((img) => (
+                        <div 
+                            key={img.id} 
+                            className={`relative aspect-square cursor-pointer active:scale-95 transition-transform overflow-hidden ${
+                                count === 1 ? 'max-h-[300px]' : ''
+                            }`}
+                            onClick={() => handleOpenPreview(img.attachmentUrl!, img.attachmentName || 'Hình ảnh', 'IMAGE', img.id)}
+                        >
+                            <img
+                                src={(img.attachmentUrl && img.attachmentUrl.includes('cloudinary.com'))
+                                    ? img.attachmentUrl.replace('/upload/', '/upload/f_auto,q_auto,w_300/')
+                                    : (img.attachmentUrl || '')}
+                                alt={img.attachmentName || 'Image'}
+                                className="w-full h-full object-cover"
+                            />
+                        </div>
+                    ))}
+                </div>
+            );
+        }
         if (msg.type === 'IMAGE' && msg.attachmentUrl) {
             return (
                 <div className="overflow-hidden cursor-pointer active:scale-[0.99] transition-transform"
-                    onClick={() => handleOpenPreview(msg.attachmentUrl!, msg.attachmentName || 'Hình ảnh', 'IMAGE')}
+                    onClick={() => handleOpenPreview(msg.attachmentUrl!, msg.attachmentName || 'Hình ảnh', 'IMAGE', msg.id)}
                 >
-                    <div className="max-w-sm rounded-none overflow-hidden bg-gray-100 shadow-sm border border-gray-100">
+                    <div className="w-[150px] h-[150px] rounded-2xl overflow-hidden bg-gray-100 shadow-sm border border-gray-100">
                         <img
                             src={msg.attachmentUrl && msg.attachmentUrl.includes('cloudinary.com')
-                                ? msg.attachmentUrl.replace('/upload/', '/upload/f_auto,q_auto/')
+                                ? msg.attachmentUrl.replace('/upload/', '/upload/f_auto,q_auto,w_300/')
                                 : msg.attachmentUrl}
                             alt={msg.attachmentName || 'Image'}
-                            className="w-full h-auto block"
-                            style={{ maxHeight: '400px', objectFit: 'contain' }}
+                            className="w-full h-full object-cover block"
                             onError={(e) => {
-                                (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect width="400" height="300" fill="%23f0f0f0"/%3E%3Ctext x="50%25" y="50%25" font-family="Arial" font-size="16" fill="%23999" text-anchor="middle" dominant-baseline="middle"%3ELỗi tải ảnh%3C/text%3E%3C/svg%3E';
+                                (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect width="200" height="200" fill="%23f0f0f0"/%3E%3Ctext x="50%25" y="50%25" font-family="Arial" font-size="14" fill="%23999" text-anchor="middle" dominant-baseline="middle"%3ELỗi tải ảnh%3C/text%3E%3C/svg%3E';
                             }}
                         />
                     </div>
@@ -1039,7 +1086,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                 </a>
             );
         }
-        return <p>{msg.content}</p>;
+        return <span className="whitespace-pre-wrap">{(msg.content || '').trim()}</span>;
     };
 
     return (
@@ -1155,13 +1202,13 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                                             })()}
                                             <div className=" flex-1 min-w-0">
                                                 <div className="flex justify-between items-start mb-1">
-                                                    <h3 className="font-bold text-[13px] text-gray-800 truncate tracking-tight uppercase leading-tight">{group.name}</h3>
+                                                    <h3 className="font-bold text-[14px] text-gray-800 truncate tracking-tight uppercase leading-tight">{group.name}</h3>
                                                     <span className="text-[10px] text-gray-400 font-medium whitespace-nowrap">
                                                         {group.lastMessage?.sentAt ? formatTime(group.lastMessage.sentAt) : ''}
                                                     </span>
                                                 </div>
                                                 <div className="flex justify-between items-center gap-2">
-                                                    <p className="text-[11px] text-gray-500 truncate font-medium">
+                                                    <p className="text-[12px] text-gray-500 truncate font-medium">
                                                         {group.lastMessage
                                                             ? (() => {
                                                                 const lm = group.lastMessage;
@@ -1249,7 +1296,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                                     );
                                 })()}
                                 <div className="flex-1">
-                                    <h2 className="font-bold text-lg text-gray-800 uppercase tracking-wide">{selectedGroup.name}</h2>
+                                    <h2 className="font-bold text-xl text-gray-800 uppercase tracking-wide">{selectedGroup.name}</h2>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button
@@ -1318,7 +1365,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                                 <div 
                                     ref={scrollContainerRef} 
                                     onScroll={handleScroll}
-                                    className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#FBFBFC]"
+                                    className="flex-1 overflow-y-auto p-4 flex flex-col gap-0.5 bg-[#FBFBFC]"
                                 >
                                 {messagesLoading ? (
                                     <div className="flex items-center justify-center h-full">
@@ -1330,288 +1377,286 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                                         <p className="text-lg font-bold">Chưa có tin nhắn nào</p>
                                     </div>
                                 ) : (
-                                    messages.map((msg, index) => {
-                                        const currentMsgDate = new Date(msg.sentAt);
-                                        const prevMsgDate = index > 0 ? new Date(messages[index - 1].sentAt) : null;
+                                    (() => {
+                                        const processedMessages: any[] = [];
+                                        let i = 0;
+                                        while (i < messages.length) {
+                                            const currentMsg = messages[i];
+                                            if (currentMsg.type === 'IMAGE' && !currentMsg.isDeleted) {
+                                                const group: any[] = [currentMsg];
+                                                let j = i + 1;
+                                                while (j < messages.length) {
+                                                    const nextMsg = messages[j];
+                                                    const timeDiff = nextMsg.sentAt && messages[j - 1] && messages[j - 1].sentAt 
+                                                        ? new Date(nextMsg.sentAt).getTime() - new Date(messages[j - 1].sentAt).getTime() 
+                                                        : 999999;
+                                                    if (nextMsg.type === 'IMAGE' && !nextMsg.isDeleted && nextMsg.senderId === currentMsg.senderId && timeDiff < 60000) {
+                                                        group.push(nextMsg);
+                                                        j++;
+                                                    } else {
+                                                        break;
+                                                    }
+                                                }
+                                                if (group.length > 1) {
+                                                    processedMessages.push({
+                                                        ...currentMsg,
+                                                        type: 'IMAGE_GROUP',
+                                                        imageMessages: group,
+                                                        id: `group-${currentMsg.id}`
+                                                    });
+                                                    i = j;
+                                                } else {
+                                                    processedMessages.push(currentMsg);
+                                                    i++;
+                                                }
+                                            } else {
+                                                processedMessages.push(currentMsg);
+                                                i++;
+                                            }
+                                        }
 
-                                        const isDateChanged = !prevMsgDate || formatDate(messages[index - 1].sentAt) !== formatDate(msg.sentAt);
+                                        return processedMessages.map((msg, index) => {
+                                            const currentMsgDate = new Date(msg.sentAt);
+                                            const prevMsgDate = index > 0 ? new Date(processedMessages[index - 1].sentAt) : null;
+                                            const isDateChanged = !prevMsgDate || formatDate(processedMessages[index - 1].sentAt) !== formatDate(msg.sentAt);
+                                            const timeGapSinceLast = prevMsgDate ? currentMsgDate.getTime() - prevMsgDate.getTime() : 0;
+                                            const showDateSeparator = isDateChanged;
+                                            const showTimeSeparator = timeGapSinceLast > 3600000 && !isDateChanged;
 
-                                        const timeGapSinceLast = prevMsgDate ? currentMsgDate.getTime() - prevMsgDate.getTime() : 0;
-                                        const showDateSeparator = isDateChanged;
-                                        const showTimeSeparator = timeGapSinceLast > 3600000 && !isDateChanged;
-
-                                        return (
-                                            <React.Fragment key={msg.id}>
-                                                {showDateSeparator && (
-                                                    <div className="flex justify-center my-4">
-                                                        <span className="text-[10px] font-medium uppercase tracking-widest text-gray-500 px-4 py-1.5 bg-gray-200/50 rounded-full">
-                                                            {formatTime(msg.sentAt)} {getFriendlyDate(msg.sentAt)}
-                                                        </span>
-                                                    </div>
-                                                )}
-
-                                                {msg.id === selectedGroup?.firstUnreadMessageId && selectedGroup.unreadCount && selectedGroup.unreadCount > UNREAD_THRESHOLD && (
-                                                    <div className="flex items-center my-6">
-                                                        <div className="flex-1 h-px bg-red-200"></div>
-                                                        <div className="px-4 py-1 bg-red-50 text-red-500 text-[11px] font-bold uppercase tracking-wider rounded-full border border-red-100 shadow-sm">
-                                                            Tin nhắn mới
+                                            return (
+                                                <React.Fragment key={msg.id}>
+                                                    {showDateSeparator && (
+                                                        <div className="flex justify-center my-6">
+                                                            <span className="text-[11px] font-bold uppercase tracking-widest text-gray-500 px-4 py-1.5 bg-gray-200/50 rounded-full">
+                                                                {getFriendlyDate(msg.sentAt)}
+                                                            </span>
                                                         </div>
-                                                        <div className="flex-1 h-px bg-red-200"></div>
-                                                    </div>
-                                                )}
-                                                {showTimeSeparator && (
-                                                    <div className="flex justify-center my-4">
-                                                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 py-1.5 bg-gray-50 rounded-full border border-gray-100 shadow-sm">
-                                                            {formatTime(msg.sentAt)}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                                {(() => {
-                                                    const isFirstInSequence = index === 0 ||
-                                                        messages[index - 1].senderId !== msg.senderId ||
-                                                        showDateSeparator ||
-                                                        showTimeSeparator;
+                                                    )}
+                                                    {msg.id === selectedGroup?.firstUnreadMessageId && selectedGroup.unreadCount && selectedGroup.unreadCount > UNREAD_THRESHOLD && (
+                                                        <div className="flex items-center my-6">
+                                                            <div className="flex-1 h-px bg-red-200"></div>
+                                                            <div className="px-4 py-1 bg-red-50 text-red-500 text-[11px] font-bold uppercase tracking-wider rounded-full border border-red-100 shadow-sm">
+                                                                Tin nhắn mới
+                                                            </div>
+                                                            <div className="flex-1 h-px bg-red-200"></div>
+                                                        </div>
+                                                    )}
+                                                    {showTimeSeparator && (
+                                                        <div className="flex justify-center my-4">
+                                                            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 py-1.5 bg-gray-50 rounded-full border border-gray-100 shadow-sm">
+                                                                {formatTime(msg.sentAt)}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    {(() => {
+                                                        const isFirstInSequence = index === 0 ||
+                                                            processedMessages[index - 1].senderId !== msg.senderId ||
+                                                            showDateSeparator ||
+                                                            showTimeSeparator;
 
-                                                    return (
-                                                        <div
-                                                            ref={el => messageRefs.current[msg.id] = el}
-                                                            className={`flex ${msg.isOwn ? 'justify-end' : 'justify-start'} ${isFirstInSequence ? 'mt-3' : 'mt-0.5'}`}
-                                                        >
-                                                            <div className={`flex gap-3 max-w-[80%] ${msg.isOwn ? 'flex-row-reverse' : ''}`}>
-                                                                {!msg.isOwn && (
-                                                                    <div className="w-9 flex-shrink-0 flex flex-col justify-start">
-                                                                        {isFirstInSequence ? (
-                                                                            <div className="w-9 h-9 bg-orange-100 rounded-full flex items-center justify-center border-2 border-white shadow-sm overflow-hidden transition-all duration-300 mt-0.5">
-                                                                                {msg.senderAvatar ? (
-                                                                                    <img src={msg.senderAvatar} alt="" className="w-full h-full object-cover" />
-                                                                                ) : (
-                                                                                    <span className="text-xs font-bold text-orange-600 leading-none">{msg.senderName.charAt(0)}</span>
-                                                                                )}
-                                                                            </div>
-                                                                        ) : (
-                                                                            <div className="w-9" />
-                                                                        )}
-                                                                    </div>
-                                                                )}
-                                                                <div className="flex flex-col">
-                                                                    <div
-                                                                        className="relative group/msg cursor-pointer"
-                                                                        onClick={() => setExpandedMessageId(expandedMessageId === msg.id ? null : msg.id)}
-                                                                    >
-                                                                        <div className={`relative group/bubble ${(msg.type === 'IMAGE' || msg.type === 'FILE') && !msg.isDeleted ? 'p-0 overflow-hidden rounded-none shadow-none' : 'px-4 py-2 rounded-2xl shadow-sm'} ${msg.isOwn
-                                                                            ? `bg-gradient-to-br from-[#FF8C33] to-[#FF7A1A] text-white`
-                                                                            : `bg-white border border-gray-100 text-gray-700`
-                                                                            } min-w-[80px]`}>
+                                                        const isLastInSequence = index === processedMessages.length - 1 ||
+                                                            processedMessages[index + 1].senderId !== msg.senderId ||
+                                                            (index < processedMessages.length - 1 && (
+                                                                formatDate(processedMessages[index + 1].sentAt) !== formatDate(msg.sentAt) ||
+                                                                new Date(processedMessages[index + 1].sentAt).getTime() - currentMsgDate.getTime() > 3600000
+                                                            ));
 
-                                                                            <div className="flex flex-col gap-1">
-                                                                                {!msg.isOwn && isFirstInSequence && !msg.isDeleted && (
-                                                                                    <span className="text-[13px] font-semibold text-slate-500 mb-0.5">{msg.senderName}</span>
-                                                                                )}
+                                                        const getRadiusClasses = () => {
+                                                            const shadow = "shadow-[0_1px_2px_rgba(0,0,0,0.05)]";
+                                                            if (msg.isOwn) {
+                                                                return `${shadow} ${isFirstInSequence ? 'rounded-tr-2xl' : 'rounded-tr-sm'} ${isLastInSequence ? 'rounded-br-2xl' : 'rounded-br-sm'} rounded-l-2xl`;
+                                                            } else {
+                                                                return `${shadow} ${isFirstInSequence ? 'rounded-tl-2xl' : 'rounded-tl-sm'} ${isLastInSequence ? 'rounded-bl-2xl' : 'rounded-bl-sm'} rounded-r-2xl`;
+                                                            }
+                                                        };
 
-                                                                                {msg.replyToId && (
-                                                                                    <div className={`mb-2 p-2 rounded-lg text-xs border-l-2 ${msg.isOwn
-                                                                                        ? 'bg-orange-600/20 border-white/50 text-white/90'
-                                                                                        : 'bg-gray-100 border-orange-500 text-gray-500'
-                                                                                        }`}>
-                                                                                        <p className="font-bold mb-0.5">Trả lời {msg.replyToSenderName || ''}:</p>
-                                                                                        <div className="flex items-center gap-2">
-                                                                                            {msg.replyToType === 'IMAGE' && msg.replyToAttachmentUrl && (
-                                                                                                <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity"
-                                                                                                    onClick={(e) => {
-                                                                                                        e.stopPropagation();
-                                                                                                        handleOpenPreview(msg.replyToAttachmentUrl!, 'Ảnh trả lời', 'IMAGE');
-                                                                                                    }}
-                                                                                                >
-                                                                                                    <img
-                                                                                                        src={msg.replyToAttachmentUrl.includes('cloudinary.com')
-                                                                                                            ? msg.replyToAttachmentUrl.replace('/upload/', '/upload/c_thumb,w_100,h_100,f_auto/')
-                                                                                                            : msg.replyToAttachmentUrl}
-                                                                                                        alt="Reply thumbnail"
-                                                                                                        className="w-full h-full object-cover"
-                                                                                                    />
-                                                                                                </div>
-                                                                                            )}
-                                                                                            <p className="line-clamp-2 italic text-xs">
-                                                                                                {msg.replyToContent || (msg.replyToType === 'IMAGE' ? '[Hình ảnh]' : (msg.replyToType === 'FILE' ? '[Tệp tin]' : ''))}
-                                                                                            </p>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                )}
-
-                                                                                {msg.isDeleted ? (
-                                                                                    <p className="text-sm italic opacity-70">Tin nhắn đã bị thu hồi</p>
-                                                                                ) : (
-                                                                                    <div className="text-[15px] leading-relaxed">
-                                                                                        {renderMessageContent(msg)}
-                                                                                    </div>
-                                                                                )}
-
-                                                                                {!msg.isDeleted && (expandedMessageId === msg.id || index === messages.length - 1) && (
-                                                                                    <div className={`mt-1 flex ${msg.isOwn ? 'justify-end' : 'justify-start'}`}>
-                                                                                        <span className={`text-[11px] font-medium ${msg.isOwn ? 'text-white/70' : 'text-slate-400'}`}>
-                                                                                            {formatTime(msg.sentAt)}
-                                                                                        </span>
-                                                                                    </div>
-                                                                                )}
-                                                                            </div>
+                                                        return (
+                                                            <div
+                                                                ref={el => messageRefs.current[msg.id] = el}
+                                                                className={`flex ${msg.isOwn ? 'justify-end' : 'justify-start'} ${isFirstInSequence ? 'mt-4' : 'mt-0'} w-full relative z-0`}
+                                                            >
+                                                                <div className={`flex gap-3 max-w-[85%] ${msg.isOwn ? 'flex-row-reverse' : ''}`}>
+                                                                    {!msg.isOwn && (
+                                                                        <div className="w-8 flex-shrink-0 flex flex-col justify-end pb-1">
+                                                                            {isLastInSequence ? (
+                                                                                <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center border-2 border-white shadow-sm overflow-hidden mt-0.5" title={msg.senderName}>
+                                                                                    {msg.senderAvatar ? (
+                                                                                        <img src={msg.senderAvatar} alt="" className="w-full h-full object-cover" />
+                                                                                    ) : (
+                                                                                        <span className="text-[10px] font-bold text-orange-600 leading-none">{msg.senderName.charAt(0)}</span>
+                                                                                    )}
+                                                                                </div>
+                                                                            ) : (
+                                                                                <div className="w-8" />
+                                                                            )}
                                                                         </div>
-
-                                                                        {/* Message Reactions Pill */}
-                                                                        {!msg.isDeleted && msg.reactions && msg.reactions.length > 0 && (
-                                                                            <div className="absolute -bottom-3 -right-2 flex flex-wrap gap-1 z-30 scale-90 origin-bottom-right max-w-[150px] justify-end">
-                                                                                {msg.reactions.map((r, i) => (
-                                                                                    <div
-                                                                                        key={i}
-                                                                                        className={`px-2 py-0.5 rounded-full shadow-md border flex items-center gap-1 cursor-pointer transition-all duration-200 hover:scale-110 ${r.reactedByMe ? 'bg-orange-50 border-orange-200 text-orange-600' : 'bg-white border-gray-100 text-gray-700'
-                                                                                            }`}
-                                                                                        onClick={(e) => {
-                                                                                            e.stopPropagation();
-                                                                                            handleSelectReaction(msg.id, r.emoji);
-                                                                                        }}
-                                                                                    >
-                                                                                        <span className="text-xs">{r.emoji}</span>
-                                                                                        <span className="text-[10px] font-bold">{r.count}</span>
-                                                                                    </div>
-                                                                                ))}
-                                                                            </div>
+                                                                    )}
+                                                                    <div className="flex flex-col">
+                                                                        {!msg.isOwn && isFirstInSequence && !msg.isDeleted && (
+                                                                            <span className="text-sm font-bold text-gray-500 mb-1 ml-1">{msg.senderName}</span>
                                                                         )}
-
-                                                                        {/* Reaction Picker on Hover */}
-                                                                        {!msg.isDeleted && (
-                                                                            <div className={`absolute -top-11 ${msg.isOwn ? 'right-0' : 'left-0'} opacity-0 group-hover/msg:opacity-100 transition-all duration-200 z-50 pointer-events-none group-hover/msg:pointer-events-auto pb-4`}>
-                                                                                <div className="bg-white rounded-full shadow-xl border border-gray-100 p-1 flex items-center gap-0.5 animate-in zoom-in-50 duration-200 origin-bottom">
-                                                                                    {['👍', '❤️', '😂', '😮', '😭', '😡'].map(emoji => (
+                                                                        <div
+                                                                            className="relative group/msg"
+                                                                            onClick={() => setExpandedMessageId(expandedMessageId === msg.id ? null : msg.id)}
+                                                                        >
+                                                                            <div
+                                                                                title={formatFullTime(msg.sentAt)}
+                                                                                className={`group/bubble relative cursor-pointer transition-all duration-200 ${
+                                                                                    (msg.type === 'IMAGE' || msg.type === 'IMAGE_GROUP' || msg.type === 'FILE') && !msg.isDeleted
+                                                                                        ? 'p-0 overflow-hidden'
+                                                                                        : 'px-4 py-2.5'
+                                                                                } ${getRadiusClasses()} ${
+                                                                                    (msg.type === 'IMAGE' || msg.type === 'IMAGE_GROUP') && !msg.isDeleted
+                                                                                        ? ''
+                                                                                        : msg.isOwn
+                                                                                            ? 'bg-gradient-to-br from-[#FF8C33] to-[#FF7A1A] text-white shadow-sm'
+                                                                                            : 'bg-white text-gray-700 shadow-sm'
+                                                                                } min-w-[40px]`}
+                                                                            >
+                                                                                <div className="flex flex-col">
+                                                                                    {msg.replyToId && (
+                                                                                        <div className={`mb-2 p-2 rounded-lg text-xs border-l-2 ${msg.isOwn
+                                                                                            ? 'bg-orange-600/30 border-white/50 text-white/90'
+                                                                                            : 'bg-gray-100 border-orange-500 text-gray-500'
+                                                                                        }`}>
+                                                                                            <p className="font-bold mb-0.5">Trả lời {msg.replyToSenderName || ''}:</p>
+                                                                                            <div className="flex items-center gap-2">
+                                                                                                {msg.replyToType === 'IMAGE' && msg.replyToAttachmentUrl && (
+                                                                                                    <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 border border-gray-200">
+                                                                                                        <img
+                                                                                                            src={(msg.replyToAttachmentUrl && msg.replyToAttachmentUrl.includes('cloudinary.com'))
+                                                                                                                ? msg.replyToAttachmentUrl.replace('/upload/', '/upload/c_thumb,w_100,h_100,f_auto/')
+                                                                                                                : (msg.replyToAttachmentUrl || '')}
+                                                                                                            alt=""
+                                                                                                            className="w-full h-full object-cover"
+                                                                                                        />
+                                                                                                    </div>
+                                                                                                )}
+                                                                                                <p className="line-clamp-2 italic text-xs">
+                                                                                                    {msg.replyToContent || (msg.replyToType === 'IMAGE' ? '[Hình ảnh]' : (msg.replyToType === 'FILE' ? '[Tệp tin]' : ''))}
+                                                                                                </p>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    )}
+                                                                                    {msg.isDeleted ? (
+                                                                                        <p className="text-sm italic opacity-70 flex items-center gap-2">
+                                                                                            <Trash2 size={12} />
+                                                                                            Tin nhắn đã bị thu hồi
+                                                                                        </p>
+                                                                                    ) : (
+                                                                                        <div className="text-[15.5px] leading-tight break-words">
+                                                                                            {renderMessageContent(msg)}
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
+                                                                            {!msg.isDeleted && showReactionPickerId === msg.id && (
+                                                                                <div
+                                                                                    className={`absolute -top-12 ${msg.isOwn ? 'right-0' : 'left-0'} z-[100] pb-2`}
+                                                                                    onMouseLeave={() => setShowReactionPickerId(null)}
+                                                                                >
+                                                                                    <div className="bg-white rounded-full shadow-2xl border border-gray-100 p-1.5 flex items-center gap-1 animate-in zoom-in-95 duration-200 origin-bottom">
+                                                                                        {['👍', '❤️', '😂', '😮', '😭', '😡'].map(emoji => (
+                                                                                            <button
+                                                                                                key={emoji}
+                                                                                                className="w-9 h-9 flex items-center justify-center hover:bg-gray-100 rounded-full transition-all text-xl hover:scale-125 duration-200"
+                                                                                                onClick={(e) => {
+                                                                                                    e.stopPropagation();
+                                                                                                    handleSelectReaction(msg.id, emoji);
+                                                                                                    setShowReactionPickerId(null);
+                                                                                                }}
+                                                                                            >
+                                                                                                {emoji}
+                                                                                            </button>
+                                                                                        ))}
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                            {!msg.isDeleted && (
+                                                                                <div className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity z-20 ${msg.isOwn ? '-left-28' : '-right-20'}`}>
+                                                                                    <button
+                                                                                        onClick={(e) => { e.stopPropagation(); setShowReactionPickerId(showReactionPickerId === msg.id ? null : msg.id); }}
+                                                                                        className="p-2 bg-white/90 rounded-full shadow-md text-gray-500 hover:text-orange-500 hover:bg-orange-50"
+                                                                                        title="Bày tỏ cảm xúc"
+                                                                                    >
+                                                                                        <Smile size={14} />
+                                                                                    </button>
+                                                                                    <button
+                                                                                        onClick={() => handleReply(msg)}
+                                                                                        className="p-2 bg-white/90 text-blue-500 rounded-full shadow-md hover:bg-blue-50"
+                                                                                        title="Trả lời"
+                                                                                    >
+                                                                                        <Reply size={14} />
+                                                                                    </button>
+                                                                                    {msg.isOwn && (
                                                                                         <button
-                                                                                            key={emoji}
-                                                                                            className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full transition-colors text-xl hover:scale-125 duration-200"
+                                                                                            onClick={() => handleDeleteMessage(msg.id)}
+                                                                                            className="p-2 bg-white/90 text-red-500 rounded-full shadow-md hover:bg-red-50"
+                                                                                            title="Thu hồi"
+                                                                                        >
+                                                                                            <Trash2 size={14} />
+                                                                                        </button>
+                                                                                    )}
+                                                                                </div>
+                                                                            )}
+                                                                            {!msg.isDeleted && msg.reactions && msg.reactions.length > 0 && (
+                                                                                <div className="absolute -bottom-3 -right-2 flex flex-wrap gap-1 z-30 scale-90 origin-bottom-right max-w-[150px] justify-end">
+                                                                                    {msg.reactions.map((r: any, ri: number) => (
+                                                                                        <div
+                                                                                            key={ri}
+                                                                                            className={`px-2 py-0.5 rounded-full shadow-md border flex items-center gap-1 cursor-pointer transition-all duration-200 hover:scale-110 ${
+                                                                                                r.reactedByMe ? 'bg-orange-50 border-orange-200 text-orange-600' : 'bg-white border-gray-100 text-gray-700'
+                                                                                            }`}
                                                                                             onClick={(e) => {
                                                                                                 e.stopPropagation();
-                                                                                                handleSelectReaction(msg.id, emoji);
+                                                                                                handleSelectReaction(msg.id, r.emoji);
                                                                                             }}
                                                                                         >
-                                                                                            {emoji}
-                                                                                        </button>
+                                                                                            <span className="text-xs">{r.emoji}</span>
+                                                                                            <span className="text-[10px] font-bold">{r.count}</span>
+                                                                                        </div>
                                                                                     ))}
-                                                                                    <div className="w-[1px] h-4 bg-gray-200 mx-1" />
-                                                                                    <button className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-red-500">
-                                                                                        <X size={16} />
-                                                                                    </button>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                        {!msg.isDeleted && (expandedMessageId === msg.id || index === processedMessages.length - 1) && msg.readers && msg.readers.filter((r: any) => Number(r.userId) !== Number(msg.senderId)).length > 0 && (
+                                                                            <div className={`flex items-center mt-1 ${msg.isOwn ? 'justify-end' : 'justify-start'} px-1 relative z-10 min-h-[20px] gap-2 animate-in fade-in slide-in-from-top-1 duration-200`}>
+                                                                                <div className="flex items-center -space-x-2 transition-all duration-300 hover:space-x-1">
+                                                                                    {msg.readers
+                                                                                        .filter((r: any) => Number(r.userId) !== Number(msg.senderId))
+                                                                                        .slice(0, 5)
+                                                                                        .map((reader: any) => (
+                                                                                            <div
+                                                                                                key={reader.userId}
+                                                                                                className="w-5 h-5 rounded-full border border-white shadow-sm overflow-hidden bg-gray-200 flex-shrink-0 transition-transform hover:scale-125 z-0 hover:z-10 flex items-center justify-center"
+                                                                                                title={reader.fullName}
+                                                                                            >
+                                                                                                {reader.avatar ? (
+                                                                                                    <img src={reader.avatar} alt={reader.fullName} className="w-full h-full object-cover" />
+                                                                                                ) : (
+                                                                                                    <div className={`w-full h-full flex items-center justify-center text-[8px] font-bold text-white ${bgColor} leading-none`}>
+                                                                                                        {reader.fullName?.charAt(0) || '?'}
+                                                                                                    </div>
+                                                                                                )}
+                                                                                            </div>
+                                                                                        ))}
                                                                                 </div>
                                                                             </div>
                                                                         )}
-                                                                        {!msg.isDeleted && msg.isOwn && (
-                                                                            <div className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity z-20 -left-[5.5rem]`}>
-                                                                                <button
-                                                                                    onClick={() => handleReply(msg)}
-                                                                                    className="p-2 bg-white/90 text-blue-500 rounded-full shadow-md hover:bg-blue-50"
-                                                                                    title="Trả lời"
-                                                                                >
-                                                                                    <Reply size={14} />
-                                                                                </button>
-                                                                                <button
-                                                                                    onClick={() => handleDeleteMessage(msg.id)}
-                                                                                    className="p-2 bg-white/90 text-red-500 rounded-full shadow-md hover:bg-red-50"
-                                                                                    title="Thu hồi"
-                                                                                >
-                                                                                    <Trash2 size={14} />
-                                                                                </button>
-                                                                            </div>
-                                                                        )}
-
-                                                                        {!msg.isDeleted && !msg.isOwn && (
-                                                                            <div className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity z-20 -right-12`}>
-                                                                                <button
-                                                                                    onClick={() => handleReply(msg)}
-                                                                                    className="p-2 bg-white/90 text-blue-500 rounded-full shadow-md hover:bg-blue-50"
-                                                                                    title="Trả lời"
-                                                                                >
-                                                                                    <Reply size={14} />
-                                                                                </button>
+                                                                        {msg.isOwn && msg.isSending && (
+                                                                            <div className="flex justify-end mt-1 px-1">
+                                                                                <span className="text-[9px] font-bold text-orange-400 mr-2 animate-pulse">Đang gửi...</span>
                                                                             </div>
                                                                         )}
                                                                     </div>
-                                                                    {msg.isOwn && (
-                                                                        <>
-                                                                            {/* Render Read Receipts - Only when clicked OR Latest Message */}
-                                                                            {!msg.isDeleted && (expandedMessageId === msg.id || index === messages.length - 1) && msg.readers && msg.readers.filter(r => Number(r.userId) !== Number(msg.senderId)).length > 0 && (
-                                                                                <div className="flex items-center mt-1 justify-end px-1 relative z-10 min-h-[20px] gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                                                                                    <div className="flex items-center -space-x-2 transition-all duration-300 hover:space-x-1">
-                                                                                        {msg.readers
-                                                                                            .filter(r => Number(r.userId) !== Number(msg.senderId))
-                                                                                            .slice(0, 5)
-                                                                                            .map((reader) => (
-                                                                                                <div
-                                                                                                    key={reader.userId}
-                                                                                                    className="w-5 h-5 rounded-full border border-white shadow-sm overflow-hidden bg-gray-200 flex-shrink-0 transition-transform hover:scale-125 z-0 hover:z-10 flex items-center justify-center"
-                                                                                                    title={reader.fullName}
-                                                                                                >
-                                                                                                    {reader.avatar ? (
-                                                                                                        <img src={reader.avatar} alt={reader.fullName} className="w-full h-full object-cover" />
-                                                                                                    ) : (
-                                                                                                        <div className={`w-full h-full flex items-center justify-center text-[8px] font-bold text-white ${bgColor} leading-none`}>
-                                                                                                            {reader.fullName?.charAt(0) || '?'}
-                                                                                                        </div>
-                                                                                                    )}
-                                                                                                </div>
-                                                                                            ))}
-                                                                                        {msg.readers.filter(r => Number(r.userId) !== Number(msg.senderId)).length > 5 && (
-                                                                                            <div className="w-5 h-5 rounded-full border border-white shadow-sm bg-gray-100 flex items-center justify-center text-[8px] font-bold text-gray-500 z-0">
-                                                                                                +{msg.readers.filter(r => Number(r.userId) !== Number(msg.senderId)).length - 5}
-                                                                                            </div>
-                                                                                        )}
-                                                                                    </div>
-                                                                                </div>
-                                                                            )}
-                                                                            <div className="flex justify-end mt-1 px-1">
-                                                                                {msg.isSending && (
-                                                                                    <span className="text-[9px] font-bold text-orange-400 mr-2 animate-pulse">Đang gửi...</span>
-                                                                                )}
-                                                                            </div>
-                                                                        </>
-                                                                    )}
-                                                                    {!msg.isOwn && (
-                                                                        <>
-                                                                            {/* Render Read Receipts - Only when clicked OR Latest Message */}
-                                                                            {!msg.isDeleted && (expandedMessageId === msg.id || index === messages.length - 1) && msg.readers && msg.readers.filter(r => Number(r.userId) !== Number(msg.senderId)).length > 0 && (
-                                                                                <div className="flex items-center mt-1 justify-start px-1 relative z-10 min-h-[20px] gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                                                                                    <div className="flex items-center -space-x-2 transition-all duration-300 hover:space-x-1">
-                                                                                        {msg.readers
-                                                                                            .filter(r => Number(r.userId) !== Number(msg.senderId))
-                                                                                            .slice(0, 5)
-                                                                                            .map((reader) => (
-                                                                                                <div
-                                                                                                    key={reader.userId}
-                                                                                                    className="w-5 h-5 rounded-full border border-white shadow-sm overflow-hidden bg-gray-200 flex-shrink-0 transition-transform hover:scale-125 z-0 hover:z-10"
-                                                                                                    title={reader.fullName}
-                                                                                                >
-                                                                                                    {reader.avatar ? (
-                                                                                                        <img src={reader.avatar} alt={reader.fullName} className="w-full h-full object-cover" />
-                                                                                                    ) : (
-                                                                                                        <div className={`w-full h-full flex items-center justify-center text-[10px] font-bold text-white ${bgColor}`}>
-                                                                                                            {reader.fullName?.charAt(0) || '?'}
-                                                                                                        </div>
-                                                                                                    )}
-                                                                                                </div>
-                                                                                            ))}
-                                                                                        {msg.readers.filter(r => Number(r.userId) !== Number(msg.senderId)).length > 5 && (
-                                                                                            <div className="w-5 h-5 rounded-full border border-white shadow-sm bg-gray-100 flex items-center justify-center text-[8px] font-bold text-gray-500 z-0">
-                                                                                                +{msg.readers.filter(r => Number(r.userId) !== Number(msg.senderId)).length - 5}
-                                                                                            </div>
-                                                                                        )}
-                                                                                    </div>
-                                                                                </div>
-                                                                            )}
-                                                                            {/* Removed toggle-only timestamp as it's now internal */}
-                                                                        </>
-                                                                    )}
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                    );
-                                                })()}
-                                            </React.Fragment>
-                                        );
-                                    })
+                                                        );
+                                                    })()}
+                                                </React.Fragment>
+                                            );
+                                        });
+                                    })()
                                 )}
                                 {typingUsers.length > 0 && (
                                     <div className="flex items-center gap-2 text-gray-400 text-xs font-bold bg-white/50 py-2 px-4 rounded-full w-fit animate-pulse mb-2">
@@ -1699,7 +1744,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                                         }}
                                         onKeyPress={handleKeyPress}
                                         placeholder="Type a message..."
-                                        className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-medium text-gray-800 py-2"
+                                        className="flex-1 bg-transparent border-none focus:ring-0 text-base font-medium text-gray-800 py-2"
                                     />
                                     <button
                                         onClick={handleSendMessage}
