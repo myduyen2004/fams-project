@@ -129,7 +129,7 @@ class ChatMessage {
   final String senderRole;
   final String? senderAvatarUrl;
   final String content;
-  final String type; // TEXT, IMAGE, FILE, LINK
+  final String type; // TEXT, IMAGE, FILE, LINK, IMAGE_GROUP
   final String? attachmentUrl;
   final String? attachmentName;
   final bool isOwn;
@@ -139,6 +139,7 @@ class ChatMessage {
   final String? replyToContent;
   final String? replyToSenderName;
   final String? replyToType;
+  final List<ChatMessage>? imageMessages; // For IMAGE_GROUP
   List<ReadReceipt> readBy;
 
   ChatMessage({
@@ -159,6 +160,7 @@ class ChatMessage {
     this.replyToContent,
     this.replyToSenderName,
     this.replyToType,
+    this.imageMessages,
     List<ReadReceipt>? readBy,
   }) : readBy = readBy ?? [];
 

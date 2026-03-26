@@ -25,6 +25,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final _textController = TextEditingController();
   final _scrollController = ScrollController();
   final _focusNode = FocusNode();
+  ChatController get controller => Get.find<ChatController>();
 
   @override
   void initState() {
@@ -78,6 +79,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     ),
                   );
                 }
+                final List<ChatMessage> processedMessages = _groupMessages(controller.messages);
                 return ListView.builder(
                   controller: _scrollController,
                   reverse: true,
@@ -85,15 +87,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     horizontal: 12.w,
                     vertical: 8.h,
                   ),
-                  itemCount: controller.messages.length,
+                  itemCount: processedMessages.length,
                   itemBuilder: (context, index) {
-                    final msg = controller.messages[index];
+                    final msg = processedMessages[index];
 
-                    // index 0 is newest (bottom), last index is oldest (top)
-                    final isOldest = index == controller.messages.length - 1;
+                    final isOldest = index == processedMessages.length - 1;
                     final chronologicalPrev = isOldest
                         ? null
-                        : controller.messages[index + 1];
+                        : processedMessages[index + 1];
 
                     final showDate =
                         isOldest ||
@@ -661,6 +662,43 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     }
 
     switch (msg.type) {
+      case 'IMAGE_GROUP':
+        final images = msg.imageMessages ?? [];
+        return SizedBox(
+          width: 240,
+          child: GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: images.length,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: images.length == 1 ? 1 : (images.length <= 4 ? 2 : 3),
+              crossAxisSpacing: 2,
+              mainAxisSpacing: 2,
+            ),
+            itemBuilder: (context, idx) {
+              final img = images[idx];
+              return GestureDetector(
+                onTap: () {
+                  Get.to(
+                    () => ImagePreviewScreen(
+                      imageUrl: img.attachmentUrl ?? '',
+                      senderName: img.senderName,
+                    ),
+                  );
+                },
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: CachedNetworkImage(
+                    imageUrl: img.attachmentUrl ?? '',
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Container(color: Colors.grey[200]),
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+
       case 'IMAGE':
         return GestureDetector(
           onTap: () {
@@ -1304,6 +1342,67 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         ),
       ),
     );
+  }
+
+  List<ChatMessage> _groupMessages(List<ChatMessage> messages) {
+    if (messages.isEmpty) return [];
+
+    final List<ChatMessage> processed = [];
+    int i = 0;
+
+    // Messages are in reverse order: newest at index 0
+    // So "chronologically previous" is at index i + 1
+    while (i < messages.length) {
+      final current = messages[i];
+
+      if (current.type == 'IMAGE' && !current.deleted) {
+        final List<ChatMessage> group = [current];
+        int j = i + 1;
+
+        while (j < messages.length) {
+          final next = messages[j];
+          final currentAt = DateTime.parse(messages[j - 1].sentAt);
+          final nextAt = DateTime.parse(next.sentAt);
+          final timeDiff = currentAt.difference(nextAt).inMinutes.abs();
+
+          if (next.type == 'IMAGE' &&
+              !next.deleted &&
+              next.senderId == current.senderId &&
+              timeDiff < 1) {
+            group.add(next);
+            j++;
+          } else {
+            break;
+          }
+        }
+
+        if (group.length > 1) {
+          processed.add(ChatMessage(
+            id: current.id,
+            groupId: current.groupId,
+            senderId: current.senderId,
+            senderName: current.senderName,
+            senderRole: current.senderRole,
+            senderAvatarUrl: current.senderAvatarUrl,
+            content: '',
+            type: 'IMAGE_GROUP',
+            isOwn: current.isOwn,
+            sentAt: current.sentAt,
+            imageMessages: group.reversed.toList(), // Maintain chronological order in grid
+            readBy: current.readBy,
+          ));
+          i = j;
+        } else {
+          processed.add(current);
+          i++;
+        }
+      } else {
+        processed.add(current);
+        i++;
+      }
+    }
+
+    return processed;
   }
 }
 
