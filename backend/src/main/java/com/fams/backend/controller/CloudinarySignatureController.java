@@ -7,8 +7,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.cloudinary.utils.ObjectUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -29,9 +32,8 @@ public class CloudinarySignatureController {
 
     @GetMapping("/signature")
     @Operation(summary = "Get Cloudinary upload signature")
-    public ResponseEntity<Map<String, Object>> getSignature() {
+    public ResponseEntity<Map<String, Object>> getSignature(@RequestParam(required = false, defaultValue = "chat_attachments") String folder) {
         long timestamp = System.currentTimeMillis() / 1000L;
-        String folder = "chat_attachments";
 
         Map<String, Object> params = new HashMap<>();
         params.put("timestamp", timestamp);
@@ -47,5 +49,16 @@ public class CloudinarySignatureController {
         response.put("folder", folder);
 
         return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/image")
+    @Operation(summary = "Delete an image from Cloudinary by public ID")
+    public ResponseEntity<?> deleteImage(@RequestParam String publicId) {
+        try {
+            Map result = cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 }

@@ -52,11 +52,9 @@ public class NotificationServiceImpl implements UserNotificationService {
                                 .title(title)
                                 .content(content)
                                 .type(type)
-                                .status(Notification.NotificationStatus.SENT)
                                 .sentAt(LocalDateTime.now())
                                 .targetType(Notification.TargetType.USER)
                                 .targetUrl(targetUrl)
-                                .sender(sender)
                                 .build();
 
                 Notification savedNotification = notificationRepository.save(notification);
@@ -87,20 +85,85 @@ public class NotificationServiceImpl implements UserNotificationService {
                                 .title(title)
                                 .content(content)
                                 .type(type.name())
-                                .status(Notification.NotificationStatus.SENT.name())
                                 .sentAt(savedNotification.getSentAt())
                                 .createdAt(savedNotification.getCreatedAt())
                                 .targetUrl(targetUrl)
-                                .sender(sender != null ? NotificationResponse.UserBasic.builder()
-                                                .id(sender.getId())
-                                                .username(sender.getUsername())
-                                                .fullName(sender.getFullName())
-                                                .avatarUrl(sender.getAvatar())
-                                                .build() : null)
                                 .build();
 
                 messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/notifications",
                                 Collections.singletonList(response));
+        }
+
+        @Override
+        @Transactional
+        public void createBatchNotification(List<User> recipients, String title, String content,
+                        Notification.NotificationType type, String targetUrl) {
+                if (recipients == null || recipients.isEmpty()) {
+                        log.info("Skip batch notification because recipient list is empty: {}", title);
+                        return;
+                }
+
+                Map<Long, User> uniqueRecipients = new HashMap<>();
+                for (User recipient : recipients) {
+                        if (recipient != null && recipient.getId() != null) {
+                                uniqueRecipients.putIfAbsent(recipient.getId(), recipient);
+                        }
+                }
+
+                if (uniqueRecipients.isEmpty()) {
+                        log.info("Skip batch notification because no valid recipients found: {}", title);
+                        return;
+                }
+
+                Notification notification = Notification.builder()
+                                .title(title)
+                                .content(content)
+                                .type(type)
+                                .sentAt(LocalDateTime.now())
+                                .targetType(Notification.TargetType.USER)
+                                .targetUrl(targetUrl)
+                                .build();
+
+                Notification savedNotification = notificationRepository.save(notification);
+
+                Set<Long> recipientIds = new HashSet<>(uniqueRecipients.keySet());
+                NotificationReadStatus readStatus = NotificationReadStatus.builder()
+                                .notificationId(savedNotification.getId())
+                                .targetType(Notification.TargetType.USER.name())
+                                .recipientIds(recipientIds)
+                                .createdAt(LocalDateTime.now())
+                                .build();
+                notificationReadStatusRepository.save(readStatus);
+
+                try {
+                        Map<String, String> data = new HashMap<>();
+                        data.put("type", type.name());
+                        data.put("notificationId", savedNotification.getId().toString());
+                        if (targetUrl != null && !targetUrl.isBlank()) {
+                                data.put("targetUrl", targetUrl);
+                        }
+
+                        fcmService.sendPushNotificationsForUsers(new ArrayList<>(recipientIds), title, content, data);
+                } catch (Exception e) {
+                        log.warn("Failed to send batch FCM push notification: {}", e.getMessage());
+                }
+
+                NotificationResponse response = NotificationResponse.builder()
+                                .id(savedNotification.getId())
+                                .title(title)
+                                .content(content)
+                                .type(type.name())
+                                .sentAt(savedNotification.getSentAt())
+                                .createdAt(savedNotification.getCreatedAt())
+                                .targetUrl(targetUrl)
+                                .build();
+
+                for (User recipient : uniqueRecipients.values()) {
+                        if (recipient.getUsername() != null && !recipient.getUsername().isBlank()) {
+                                messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/notifications",
+                                                Collections.singletonList(response));
+                        }
+                }
         }
 
         @Override
@@ -134,8 +197,7 @@ public class NotificationServiceImpl implements UserNotificationService {
                                         return status == null || !status.getDeletedBy().contains(userIdStr);
                                 })
                                 .limit(DEFAULT_NOTIFICATION_LIMIT)
-                                .map(notification -> toNotificationResponse(notification,
-                                                statusMap.get(notification.getId()), userIdStr))
+                                .map(notification -> toNotificationResponse(notification, statusMap.get(notification.getId()), userIdStr))
                                 .collect(Collectors.toList());
         }
 
@@ -198,8 +260,8 @@ public class NotificationServiceImpl implements UserNotificationService {
                         List<NotificationReadStatus> statusesToSave = new ArrayList<>();
 
                         for (Notification notification : visibleNotifications) {
-                                NotificationReadStatus status = statusMap.computeIfAbsent(notification.getId(),
-                                                key -> NotificationReadStatus.builder()
+                                NotificationReadStatus status = statusMap.computeIfAbsent(notification.getId(), key ->
+                                                NotificationReadStatus.builder()
                                                                 .notificationId(notification.getId())
                                                                 .targetType(notification.getTargetType().name())
                                                                 .createdAt(now)
@@ -305,9 +367,7 @@ public class NotificationServiceImpl implements UserNotificationService {
                 }
 
                 List<Notification> notifications = new ArrayList<>(notificationRepository
-                                .findByTargetTypeInAndStatusOrderBySentAtDesc(
-                                                broadcastTypes,
-                                                Notification.NotificationStatus.SENT));
+                                .findByTargetTypeInOrderBySentAtDesc(broadcastTypes));
 
                 Set<Long> userTargetedIds = new HashSet<>();
                 notificationReadStatusRepository.findByRecipientId(user.getId())
@@ -317,13 +377,8 @@ public class NotificationServiceImpl implements UserNotificationService {
 
                 if (!userTargetedIds.isEmpty()) {
                         notifications.addAll(notificationRepository.findUserTargetedNotifications(
-                                        new ArrayList<>(userTargetedIds),
-                                        Notification.NotificationStatus.SENT));
+                                        new ArrayList<>(userTargetedIds)));
                 }
-
-                // Filter out notifications created by the user themselves
-                notifications.removeIf(notification -> notification.getSender() != null &&
-                                notification.getSender().getId().equals(user.getId()));
 
                 Map<Long, Notification> uniqueNotifications = new HashMap<>();
                 for (Notification notification : notifications) {
@@ -340,10 +395,6 @@ public class NotificationServiceImpl implements UserNotificationService {
         }
 
         private boolean isNotificationVisibleToUser(Notification notification, User user) {
-                if (notification.getStatus() != Notification.NotificationStatus.SENT) {
-                        return false;
-                }
-
                 if (notification.getTargetType() == Notification.TargetType.ALL) {
                         return true;
                 }
@@ -389,26 +440,13 @@ public class NotificationServiceImpl implements UserNotificationService {
                                 .title(notification.getTitle())
                                 .content(notification.getContent())
                                 .type(notification.getType() != null ? notification.getType().name() : null)
-                                .priority(notification.getPriority() != null ? notification.getPriority().name() : null)
-                                .targetType(notification.getTargetType() != null ? notification.getTargetType().name()
-                                                : null)
-                                .status(notification.getStatus() != null ? notification.getStatus().name() : null)
+                                .targetType(notification.getTargetType() != null ? notification.getTargetType().name() : null)
                                 .createdAt(notification.getCreatedAt())
                                 .sentAt(notification.getSentAt())
                                 .isRead(readAt != null)
                                 .readAt(readAt)
                                 .targetUrl(notification.getTargetUrl())
-                                .attachmentUrls(notification.getAttachmentUrls() != null
-                                                ? new ArrayList<>(notification.getAttachmentUrls())
-                                                : new ArrayList<>())
-                                .sender(notification.getSender() != null
-                                                ? NotificationResponse.UserBasic.builder()
-                                                                .id(notification.getSender().getId())
-                                                                .username(notification.getSender().getUsername())
-                                                                .fullName(notification.getSender().getFullName())
-                                                                .avatarUrl(notification.getSender().getAvatar())
-                                                                .build()
-                                                : null)
                                 .build();
         }
 }
+

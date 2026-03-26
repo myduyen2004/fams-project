@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Home,
+    Newspaper,
     Calendar,
     FolderOpen,
     MessageCircle,
@@ -97,6 +98,12 @@ export const LecturerSidebar: React.FC = () => {
             label: 'Gửi đơn yêu cầu',
             icon: <Send size={20} />,
             path: '/lecturer/requests'
+        },
+        {
+            id: 'news',
+            label: 'Tin tức',
+            icon: <Newspaper size={20} />,
+            path: '/news'
         }
     ];
 

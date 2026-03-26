@@ -1,6 +1,5 @@
 package com.fams.backend.service.impl;
 
-import com.fams.backend.dto.request.NotificationRequest;
 import com.fams.backend.dto.request.UserRequest;
 import com.fams.backend.entity.Notification;
 import com.fams.backend.entity.User;
@@ -197,39 +196,7 @@ public class AIChatActionServiceImpl implements AIChatActionService {
     }
 
     private String handleCreateNotification(Map<String, Object> params) {
-        String title = extractString(params, "title");
-        String content = extractString(params, "content");
-        String targetTypeStr = extractString(params, "target_type");
-        String recipientCode = extractString(params, "recipient_code");
-
-        Notification.TargetType targetType = Notification.TargetType.ALL;
-        if (targetTypeStr != null) {
-            try {
-                targetType = Notification.TargetType.valueOf(targetTypeStr.toUpperCase());
-            } catch (Exception e) {
-                log.warn("Invalid target type: {}", targetTypeStr);
-            }
-        }
-
-        NotificationRequest request = NotificationRequest.builder()
-                .title(title != null ? title : "Thông báo hệ thống")
-                .content(content != null ? content : "Nội dung trống")
-                .targetType(targetType)
-                .type(Notification.NotificationType.SYSTEM)
-                .status(Notification.NotificationStatus.SENT)
-                .build();
-
-        if (targetType == Notification.TargetType.USER && recipientCode != null) {
-            User recipient = userRepository.findByCode(recipientCode.toUpperCase()).orElse(null);
-            if (recipient != null) {
-                request.setRecipientId(recipient.getId());
-            } else {
-                return "❌ Không tìm thấy người nhận có mã: " + recipientCode;
-            }
-        }
-
-        notificationService.createNotification(request);
-        return "✅ Đã gửi thông báo thành công: **" + title + "**";
+        return "❌ Chức năng tạo thông báo thủ công đã bị tắt. Vui lòng dùng module Tin tức (/news).";
     }
 
     private String handleSendEmail(Map<String, Object> params) {
