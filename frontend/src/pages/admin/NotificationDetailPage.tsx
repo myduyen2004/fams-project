@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
-import { ConfirmationModal } from '../../components/admin/notifications/NotificationModals';
+
 import { notificationService, AdminNotification } from '../../services/api/notificationService';
 import { NotificationStatus, getStatusLabel, getTargetTypeLabel } from '../../types/notification';
 import { ArrowLeft, Loader2 } from 'lucide-react';
@@ -23,7 +23,6 @@ export const NotificationDetailPage: React.FC = () => {
 
   const [notification, setNotification] = useState<AdminNotification | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // Helper function to format date
   const formatDateTime = (dateStr: string | null | undefined): string => {
@@ -64,39 +63,7 @@ export const NotificationDetailPage: React.FC = () => {
     }
   };
 
-  const handlePublishClick = () => {
-    setShowConfirmModal(true);
-  };
 
-  const handleConfirmPublish = async () => {
-    if (!notification) return;
-
-    try {
-      setLoading(true);
-
-      const submitData = {
-        title: notification.title,
-        content: notification.content,
-        type: notification.type,
-        priority: notification.priority,
-        targetType: notification.targetType,
-        status: NotificationStatus.SENT,
-        scheduledAt: null,
-        attachmentUrls: notification.attachmentUrls || []
-      };
-
-      await notificationService.updateNotification(notification.id, submitData);
-      toast.success('Đã gửi thông báo thành công');
-      await fetchNotification(notification.id);
-    } catch (error: any) {
-      console.error(error);
-      const errorMessage = error?.response?.data?.message || error?.message || 'Không thể gửi thông báo';
-      toast.error(errorMessage);
-    } finally {
-      setLoading(false);
-      setShowConfirmModal(false);
-    }
-  };
 
   const getStatusBadgeColor = (status: NotificationStatus) => {
     switch (status) {
@@ -127,7 +94,6 @@ export const NotificationDetailPage: React.FC = () => {
     );
   }
 
-  const isEditable = notification.status === NotificationStatus.DRAFT || notification.status === NotificationStatus.SCHEDULED;
 
   return (
     <Layout pageTitle="Chi tiết thông báo">
@@ -286,41 +252,8 @@ export const NotificationDetailPage: React.FC = () => {
             </div>
           )}
 
-          {/* Bottom Actions Section */}
-          <div className="flex justify-end items-center gap-3 pt-4">
-            {isEditable && (
-              <Link
-                to={`${isAcademicStaff ? '/academic-staff' : isLecturerGranted ? '/lecturer/granted' : '/admin'}/notifications/edit/${notification.id}`}
-                className="inline-flex items-center gap-2 px-6 py-2.5 bg-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-300 transition-colors shadow-sm dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
-              >
-                Chỉnh sửa thông báo
-              </Link>
-            )}
-
-            {notification.status === NotificationStatus.DRAFT && (
-              <button
-                onClick={handlePublishClick}
-                className="inline-flex items-center gap-2 px-6 py-2.5 bg-fpt-orange text-white text-sm font-bold rounded-lg hover:bg-orange-600 transition-colors shadow-sm"
-                title="Gửi thông báo ngay lập tức"
-              >
-                Gửi ngay
-              </button>
-            )}
-          </div>
         </div>
       </div>
-
-      <ConfirmationModal
-        isOpen={showConfirmModal}
-        onClose={() => setShowConfirmModal(false)}
-        onConfirm={handleConfirmPublish}
-        title="Gửi thông báo ngay?"
-        message="Thông báo sẽ được gửi ngay lập tức đến tất cả người nhận đã chọn. Bạn có chắc chắn muốn tiếp tục?"
-        confirmLabel="Gửi ngay"
-        variant="success"
-        isProcessing={loading}
-        hideIcon={true}
-      />
     </Layout >
   );
 };

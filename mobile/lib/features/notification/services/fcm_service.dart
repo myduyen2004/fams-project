@@ -16,6 +16,8 @@ import 'package:fams_mobile/features/notification/services/notification_service.
 import 'package:fams_mobile/features/notification/views/notification_detail_screen.dart';
 import 'package:fams_mobile/features/notification/views/notification_list_screen.dart';
 import 'package:fams_mobile/features/auth/controllers/auth_controller.dart';
+import 'package:fams_mobile/features/news/controllers/news_controller.dart';
+import 'package:fams_mobile/features/news/views/news_detail_screen.dart';
 
 class FcmService extends GetxService {
   static FcmService get to => Get.find();
@@ -178,6 +180,38 @@ class FcmService extends GetxService {
         print('Error navigating to chat room: $e');
       }
       return;
+    }
+
+    // Navigate to news detail when tapping a NEWS notification
+    if (data['type'] == 'NEWS' && data['newsId'] != null) {
+      final newsId = int.tryParse(data['newsId'].toString());
+      if (newsId != null) {
+        await _waitForAppReady();
+        try {
+          // Go to home screen (tab 0 - home tab)
+          Get.offAllNamed(AppRoutes.home, arguments: 0);
+          await Future.delayed(const Duration(milliseconds: 500));
+
+          // Ensure NewsController is available and fetch the news by id
+          late final NewsController newsController;
+          if (Get.isRegistered<NewsController>()) {
+            newsController = Get.find<NewsController>();
+          } else {
+            newsController = Get.put(NewsController());
+          }
+
+          final news = await newsController.getNewsById(newsId);
+          if (news != null) {
+            Get.to(
+              () => NewsDetailScreen(news: news),
+              transition: Transition.cupertino,
+            );
+          }
+        } catch (e) {
+          debugPrint('Error navigating to news detail from push: $e');
+        }
+        return;
+      }
     }
 
     await _waitForAppReady();

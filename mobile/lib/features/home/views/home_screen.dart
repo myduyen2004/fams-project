@@ -5,16 +5,23 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:solar_icons/solar_icons.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_routes.dart';
+import '../../../core/utils/safe_image_decoder.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../controllers/home_controller.dart';
 import '../../profile/views/profile_screen.dart';
 import '../../schedule/views/schedule_screen.dart';
 import '../../schedule/controllers/schedule_controller.dart';
+import '../../schedule/controllers/schedule_controller.dart';
 import '../../notification/controllers/notification_controller.dart';
 import '../../notification/views/notification_list_screen.dart';
 import '../../chat/views/chat_list_screen.dart';
+import '../../news/controllers/news_controller.dart';
+import '../../news/views/news_list_screen.dart';
+import '../../news/models/news_model.dart';
+import '../../news/views/news_detail_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -25,6 +32,7 @@ class HomeScreen extends StatelessWidget {
     final HomeController homeController = Get.find<HomeController>();
     // Integrate ScheduleController for real data
     final ScheduleController scheduleController = Get.put(ScheduleController());
+    final NewsController newsController = Get.put(NewsController());
 
     return Scaffold(
       extendBody: true, // Crucial for floating navbar
@@ -58,6 +66,7 @@ class HomeScreen extends StatelessWidget {
 
   // 🏛️ MODERN F-SCHOOL LAYOUT (PASSING CONTROLLERS) 🏛️
   Widget _buildModernHome(BuildContext context, AuthController authController, HomeController homeController, ScheduleController scheduleController) {
+    final NewsController newsController = Get.find<NewsController>();
     const Color orangePrimary = Color(0xFFF26F21);
     const Color orangeSecondary = Color(0xFFF7941D);
 
@@ -83,11 +92,18 @@ class HomeScreen extends StatelessWidget {
       {"icon": SolarIconsBold.chatLine, "title": "Liên lạc"},
     ];
 
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return RefreshIndicator(
+      color: orangePrimary,
+      onRefresh: () async {
+        await newsController.fetchNews();
+        await scheduleController.fetchSemesters(); 
+        await scheduleController.fetchSchedule();
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           // 1. Header with Chat, Search and Notification
           Padding(
             padding: EdgeInsets.fromLTRB(20.w, 60.h, 20.w, 15.h),
@@ -407,26 +423,39 @@ class HomeScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text("Tin tức mới", style: GoogleFonts.plusJakartaSans(fontSize: 18.sp, fontWeight: FontWeight.w800, color: const Color(0xFF1E2A3A))),
-                Text("Xem tất cả", style: GoogleFonts.plusJakartaSans(fontSize: 13.sp, fontWeight: FontWeight.w600, color: orangePrimary)),
+                GestureDetector(
+                  onTap: () => Get.to(() => const NewsListScreen()),
+                  child: Text("Xem tất cả", style: GoogleFonts.plusJakartaSans(fontSize: 13.sp, fontWeight: FontWeight.w600, color: orangePrimary)),
+                ),
               ],
             ),
           ),
 
           SizedBox(
             height: 220.h,
-            child: ListView.builder(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              itemCount: 3,
-              itemBuilder: (context, index) {
-                return _buildNewsCard(index, orangePrimary);
-              },
-            ),
+            child: Obx(() {
+              if (newsController.isLoading.value && newsController.newsList.isEmpty) {
+                return const Center(child: CircularProgressIndicator(color: orangePrimary));
+              }
+              if (newsController.newsList.isEmpty) {
+                return Center(child: Text("Chưa có tin tức nào", style: GoogleFonts.plusJakartaSans(color: Colors.grey)));
+              }
+              final displayList = newsController.newsList.take(5).toList();
+              return ListView.builder(
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                itemCount: displayList.length,
+                itemBuilder: (context, index) {
+                  return _buildNewsCard(displayList[index], orangePrimary);
+                },
+              );
+            }),
           ),
           
           SizedBox(height: 120.h), 
         ],
+      ),
       ),
     );
   }
@@ -492,22 +521,29 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildNewsCard(int index, Color brandColor) {
-    final List<String> imageUrls = [
-      "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=800",
-      "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=800",
-      "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=800"
-    ];
+  Widget _buildNewsCard(NewsModel news, Color brandColor) {
+    bool hasImage = news.thumbnailImage != null && news.thumbnailImage!.isNotEmpty;
+    
+    String formattedDate = '';
+    try {
+      final dateToParse = news.publishedAt ?? news.createdAt;
+      formattedDate = DateFormat('dd/MM/yyyy').format(DateTime.parse(dateToParse));
+    } catch (e) {
+      formattedDate = 'Vừa xong';
+    }
 
-    final titles = [
-      "Thông báo đăng ký chuyên ngành học kỳ Spring 2026",
-      "Khai mạc ngày hội thể thao F-Sport Festival",
-      "Chương trình trao học bổng doanh nghiệp cho sinh viên CNTT"
-    ];
+    String displayCategory = news.type ?? 'Tin tức';
+    if (displayCategory == 'SYSTEM') displayCategory = 'Hệ thống';
+    else if (displayCategory == 'ACADEMIC') displayCategory = 'Học tập';
+    else if (displayCategory == 'EVENT') displayCategory = 'Sự kiện';
+    else if (displayCategory == 'FEATURED') displayCategory = 'Sự kiện nổi bật';
+    else if (displayCategory == 'FEATURED') displayCategory = 'Sự kiện nổi bật';
 
-    return Container(
-      width: 325.w,
-      margin: EdgeInsets.symmetric(horizontal: 8.w),
+    return GestureDetector(
+      onTap: () => Get.to(() => NewsDetailScreen(news: news)),
+      child: Container(
+        width: 325.w,
+        margin: EdgeInsets.symmetric(horizontal: 8.w),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24.r),
@@ -521,12 +557,26 @@ class HomeScreen extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.only(topLeft: Radius.circular(24.r), topRight: Radius.circular(24.r)),
-            child: Image.network(
-              imageUrls[index % imageUrls.length],
-              height: 140.h,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            ),
+            child: hasImage
+              ? _buildSafeNewsImage(
+                  url: news.thumbnailImage!,
+                  height: 140.h,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorWidget: Container(
+                    height: 140.h,
+                    color: Colors.white,
+                    alignment: Alignment.center,
+                    child: Image.asset('assets/images/logo.png', height: 60.h, fit: BoxFit.contain),
+                  ),
+                )
+              : Container(
+                  height: 140.h,
+                  width: double.infinity,
+                  color: Colors.white,
+                  alignment: Alignment.center,
+                  child: Image.asset('assets/images/logo.png', height: 60.h, fit: BoxFit.contain),
+                ),
           ),
           Padding(
             padding: EdgeInsets.all(12.r),
@@ -534,7 +584,7 @@ class HomeScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  titles[index % titles.length],
+                  news.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.plusJakartaSans(fontSize: 13.sp, fontWeight: FontWeight.w800, color: const Color(0xFF1E2A3A)),
@@ -546,15 +596,32 @@ class HomeScreen extends StatelessWidget {
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
                       decoration: BoxDecoration(color: brandColor.withOpacity(0.1), borderRadius: BorderRadius.circular(20.r)),
-                      child: Text("Tin nhà trường", style: GoogleFonts.plusJakartaSans(fontSize: 10.sp, fontWeight: FontWeight.w700, color: brandColor)),
+                      child: Text(displayCategory, style: GoogleFonts.plusJakartaSans(fontSize: 10.sp, fontWeight: FontWeight.w700, color: brandColor)),
                     ),
-                    Text("19/03/2026", style: GoogleFonts.plusJakartaSans(fontSize: 11.sp, fontWeight: FontWeight.w500, color: Colors.grey.shade400)),
+                    Text(formattedDate, style: GoogleFonts.plusJakartaSans(fontSize: 11.sp, fontWeight: FontWeight.w500, color: Colors.grey.shade400)),
                   ],
                 ),
               ],
             ),
           ),
         ],
+      ),
+    ));
+  }
+
+  Widget _buildSafeNewsImage({required String url, double? width, double? height, BoxFit? fit, required Widget errorWidget}) {
+    final safeUrl = SafeImageDecoder.sanitizeImageUrl(url);
+    if (safeUrl == null) {
+      return errorWidget;
+    }
+    return CachedNetworkImage(
+      imageUrl: safeUrl,
+      width: width,
+      height: height,
+      fit: fit,
+      errorWidget: (context, url, error) => errorWidget,
+      placeholder: (context, url) => Container(
+        width: width, height: height, color: Colors.grey.shade100,
       ),
     );
   }

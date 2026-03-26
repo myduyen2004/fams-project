@@ -138,14 +138,10 @@ public class DashboardServiceImpl implements DashboardService {
                                         .isRead(true)
                                         .type(notification.getType() != null ? notification.getType().name() : null)
                                         .targetUrl(notification.getTargetUrl())
-                                        .senderName(notification.getSender() != null ? notification.getSender().getUsername() : null)
-                                        .senderFullName(notification.getSender() != null
-                                                        ? notification.getSender().getFullName()
-                                                        : null)
-                                        .senderAvatar(notification.getSender() != null ? notification.getSender().getAvatar() : null)
-                                        .attachmentUrls(notification.getAttachmentUrls() != null
-                                                        ? new ArrayList<>(notification.getAttachmentUrls())
-                                                        : new ArrayList<>())
+                                        .senderName("System")
+                                        .senderFullName("Hệ thống")
+                                        .senderAvatar(null)
+                                        .attachmentUrls(new ArrayList<>())
                                         .build();
                 }
 
@@ -154,21 +150,15 @@ public class DashboardServiceImpl implements DashboardService {
 
         @Override
         public List<SystemLogResponse> getSystemLogs() {
-                List<SystemLog> logs = systemLogRepository.findTop10ByOrderByCreatedAtDesc();
+                List<SystemLog> logs = systemLogRepository.findTop5ByOrderByCreatedAtDesc();
 
                 return logs.stream()
-                                .map(logEntry -> SystemLogResponse.builder()
-                                                .id(logEntry.getId())
-                                                .title(logEntry.getTitle())
-                                                .description(logEntry.getDescription())
-                                                .timestamp(logEntry.getCreatedAt().format(DATE_TIME_FORMATTER))
-                                                .type(logEntry.getType().name().toLowerCase())
-                                                .performerName(logEntry.getPerformer() != null ? logEntry.getPerformer().getFullName() : "Hệ thống")
-                                                .performerAvatar(logEntry.getPerformer() != null ? logEntry.getPerformer().getAvatar() : null)
-                                                .ipAddress(logEntry.getIpAddress())
-                                                .userAgent(logEntry.getUserAgent())
-                                                .oldValue(logEntry.getOldValue())
-                                                .newValue(logEntry.getNewValue())
+                                .map(log -> SystemLogResponse.builder()
+                                                .id(log.getId())
+                                                .title(log.getTitle())
+                                                .description(log.getDescription())
+                                                .timestamp(log.getCreatedAt().format(DATE_TIME_FORMATTER))
+                                                .type(log.getType().name().toLowerCase())
                                                 .build())
                                 .collect(Collectors.toList());
         }
