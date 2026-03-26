@@ -898,7 +898,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
     };
 
 
-    const handleOpenPreview = (url: string, name: string, type: string, id?: string | number) => {
+    const handleOpenPreview = (url: string, name: string, type: string) => {
         setPreviewData({
             isOpen: true,
             url,
@@ -926,7 +926,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                             className={`relative aspect-square cursor-pointer active:scale-95 transition-transform overflow-hidden ${
                                 count === 1 ? 'max-h-[300px]' : ''
                             }`}
-                            onClick={() => handleOpenPreview(img.attachmentUrl!, img.attachmentName || 'Hình ảnh', 'IMAGE', img.id)}
+                            onClick={() => handleOpenPreview(img.attachmentUrl!, img.attachmentName || 'Hình ảnh', 'IMAGE')}
                         >
                             <img
                                 src={(img.attachmentUrl && img.attachmentUrl.includes('cloudinary.com'))
@@ -943,7 +943,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
         if (msg.type === 'IMAGE' && msg.attachmentUrl) {
             return (
                 <div className="overflow-hidden cursor-pointer active:scale-[0.99] transition-transform"
-                    onClick={() => handleOpenPreview(msg.attachmentUrl!, msg.attachmentName || 'Hình ảnh', 'IMAGE', msg.id)}
+                onClick={() => handleOpenPreview(msg.attachmentUrl!, msg.attachmentName || 'Hình ảnh', 'IMAGE')}
                 >
                     <div className="w-[150px] h-[150px] rounded-2xl overflow-hidden bg-gray-100 shadow-sm border border-gray-100">
                         <img
