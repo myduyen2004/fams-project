@@ -22,7 +22,9 @@ public class StudentAllGradesSummaryResponse {
     private Integer passedCourses;
     private Integer failedCourses;
     private Integer pendingCourses;
-    private Double gpa; // Cumulative GPA
+    private Double gpa;  // Cumulative GPA hệ 10
+    private Double gpa4; // Cumulative GPA hệ 4 (theo thang điểm chữ FPT)
+
     private String specializationName; // Tên chuyên ngành
     private String majorName; // Tên ngành
 

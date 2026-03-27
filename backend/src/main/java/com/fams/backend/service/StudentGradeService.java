@@ -124,7 +124,8 @@ public class StudentGradeService {
             Double finalGrade = GradeCalculator.calculateAverage(scoresForCalc, weightsForCalc);
 
             // Check attendance failure
-            boolean hasFailedAttendance = checkAttendanceFailure(enrollment.getStudent().getId(), className, course.getNumberOfSlots());
+            boolean hasFailedAttendance = checkAttendanceFailure(enrollment.getStudent().getId(), className,
+                    course.getNumberOfSlots());
 
             // Updated pass logic using helper
             boolean isPassing = calculatePassStatus(finalGrade, hasMissingOrZero, hasFailedExam, hasFailedAttendance);
@@ -960,18 +961,23 @@ public class StudentGradeService {
      * 3. Final average >= 5.0
      * 4. Absent < 20%
      */
-    private boolean calculatePassStatus(Double finalGrade, boolean hasMissingOrZero, boolean hasFailedExam, boolean hasFailedAttendance) {
+    private boolean calculatePassStatus(Double finalGrade, boolean hasMissingOrZero, boolean hasFailedExam,
+            boolean hasFailedAttendance) {
         return !hasMissingOrZero && !hasFailedExam && !hasFailedAttendance && finalGrade != null && finalGrade >= 5.0;
     }
 
     /**
-     * Checks if a student has failed due to excessive absence (> 20% of total slots).
+     * Checks if a student has failed due to excessive absence (> 20% of total
+     * slots).
      */
     private boolean checkAttendanceFailure(Long studentId, String className, Integer totalSlots) {
-        if (totalSlots == null || totalSlots <= 0) return false;
+        if (totalSlots == null || totalSlots <= 0)
+            return false;
 
-        List<StudentAttendance> attendances = studentAttendanceRepository.findByStudentIdAndClassName(studentId, className);
-        if (attendances == null || attendances.isEmpty()) return false;
+        List<StudentAttendance> attendances = studentAttendanceRepository.findByStudentIdAndClassName(studentId,
+                className);
+        if (attendances == null || attendances.isEmpty())
+            return false;
 
         long absentCount = attendances.stream()
                 .filter(a -> a.getStatus() == StudentAttendance.AttendanceStatus.ABSENT)
@@ -1217,7 +1223,8 @@ public class StudentGradeService {
 
             boolean hasFailedAttendance = checkAttendanceFailure(studentId, className, course.getNumberOfSlots());
 
-            if (hasMissingOrZero || hasFailedExam || hasFailedAttendance || (courseAverage != null && courseAverage < 5.0)) {
+            if (hasMissingOrZero || hasFailedExam || hasFailedAttendance
+                    || (courseAverage != null && courseAverage < 5.0)) {
                 status = "FAILED";
             } else if (courseAverage != null && courseAverage >= 5.0) {
                 status = "PASSED";
@@ -1409,8 +1416,6 @@ public class StudentGradeService {
         List<StudentAllGradesSummaryResponse.CourseGradeSummary> courses = new ArrayList<>();
         int no = 1;
         int passed = 0, failed = 0, pending = 0;
-        double totalWeightedScore = 0;
-        int totalCreditsForGPA = 0;
 
         for (CurriculumEntry entry : curriculum) {
             Course course = entry.course();
@@ -1500,8 +1505,10 @@ public class StudentGradeService {
                         break;
                     }
                 }
-                boolean hasFailedAttendance = checkAttendanceFailure(enrollment.getStudent().getId(), cs.getClassName(), course.getNumberOfSlots());
-                boolean isPassing = calculatePassStatus(courseAverage, hasMissingOrZero, hasFailedExam, hasFailedAttendance);
+                boolean hasFailedAttendance = checkAttendanceFailure(enrollment.getStudent().getId(), cs.getClassName(),
+                        course.getNumberOfSlots());
+                boolean isPassing = calculatePassStatus(courseAverage, hasMissingOrZero, hasFailedExam,
+                        hasFailedAttendance);
                 if (isPassing) {
                     status = "PASSED";
                 } else {
@@ -1519,7 +1526,7 @@ public class StudentGradeService {
                     .credits(course.getCredits())
                     .prerequisiteCodes(prerequisiteCodes)
                     .className(cs.getClassName())
-                    .grade(isPublished && courseAverage != null ? Math.round(courseAverage * 10.0) / 10.0 : null)
+                    .grade(isPublished ? courseAverage : null)
                     .status(status)
                     .gradesPublished(isPublished)
                     .isCalculatedInGpa(course.getIsCalculatedInGpa())
@@ -1527,11 +1534,6 @@ public class StudentGradeService {
 
             if ("PASSED".equals(status)) {
                 passed++;
-                if (Boolean.TRUE.equals(course.getIsCalculatedInGpa()) && courseAverage != null
-                        && course.getCredits() != null) {
-                    totalWeightedScore += courseAverage * course.getCredits();
-                    totalCreditsForGPA += course.getCredits();
-                }
             } else if ("FAILED".equals(status)) {
                 failed++;
             } else {
@@ -1539,8 +1541,9 @@ public class StudentGradeService {
             }
         }
 
-        Double gpa = totalCreditsForGPA > 0 ? Math.round(totalWeightedScore / totalCreditsForGPA * 100.0) / 100.0
-                : null;
+        double[] gpaResult = calculateStudentGPA(courses);
+        Double gpa10 = gpaResult[0] < 0 ? null : gpaResult[0];
+        Double gpa4 = gpaResult[1] < 0 ? null : gpaResult[1];
 
         return StudentAllGradesSummaryResponse.builder()
                 .courses(courses)
@@ -1548,9 +1551,88 @@ public class StudentGradeService {
                 .passedCourses(passed)
                 .failedCourses(failed)
                 .pendingCourses(pending)
-                .gpa(gpa)
+                .gpa(gpa10)
+                .gpa4(gpa4)
                 .specializationName(specializationName)
                 .majorName(majorName)
                 .build();
+    }
+
+    /**
+     * Tính GPA tích lũy theo đúng quy chế FPT:
+     * - Chỉ tính các môn đã PASSED (các môn rớt không tính vào CGPA tích lũy)
+     * - Điểm phải được công bố (gradesPublished = true)
+     * - Môn phải được đánh dấu tính GPA (isCalculatedInGpa = true)
+     * 
+     * Trả về mảng double 2 phần tử: [0] = GPA hệ 10, [1] = GPA hệ 4
+     * Giá trị -1 biểu thị không có dữ liệu (null)
+     */
+    private double[] calculateStudentGPA(List<StudentAllGradesSummaryResponse.CourseGradeSummary> courses) {
+        if (courses == null || courses.isEmpty()) {
+            return new double[] { -1, -1 };
+        }
+
+        double totalWeightedScore10 = 0;
+        double totalWeightedScore4 = 0;
+        int totalCredits = 0;
+
+        for (StudentAllGradesSummaryResponse.CourseGradeSummary course : courses) {
+            boolean isIncluded = "PASSED".equalsIgnoreCase(course.getStatus());
+            boolean isCalculated = Boolean.TRUE.equals(course.getIsCalculatedInGpa());
+            boolean isPublished = Boolean.TRUE.equals(course.getGradesPublished());
+            boolean hasValidData = course.getGrade() != null && course.getCredits() != null;
+
+            if (isIncluded && isCalculated && isPublished && hasValidData) {
+                int credits = course.getCredits();
+                double grade10 = course.getGrade();
+                double grade4 = convertTo4PointScale(grade10);
+
+                totalWeightedScore10 += grade10 * credits;
+                totalWeightedScore4 += grade4 * credits;
+                totalCredits += credits;
+            }
+        }
+
+        if (totalCredits == 0) {
+            return new double[] { -1, -1 };
+        }
+
+        double gpa10 = Math.round((totalWeightedScore10 / totalCredits) * 100.0) / 100.0;
+        double gpa4 = Math.round((totalWeightedScore4 / totalCredits) * 100.0) / 100.0;
+        return new double[] { gpa10, gpa4 };
+    }
+
+    /**
+     * Quy đổi điểm hệ 10 sang hệ 4 theo thang điểm chữ của FPT University.
+     * Chỉ áp dụng cho các môn đã PASSED (>= 5.0).
+     * A : 9.0+ → 4.0
+     * B+ : 8.5+ → 3.5
+     * B : 8.0+ → 3.0
+     * C+ : 7.5+ → 2.5
+     * C : 7.0+ → 2.0
+     * D+ : 6.5+ → 1.5
+     * D : 6.0+ → 1.0
+     * F : < 5.0 → 0.0 (không gặp vì đã lọc PASSED)
+     */
+    private double convertTo4PointScale(double grade10) {
+        if (grade10 >= 9.0)
+            return 4.0;
+        if (grade10 >= 8.5)
+            return 3.75;
+        if (grade10 >= 8.0)
+            return 3.5;
+        if (grade10 >= 7.5)
+            return 3.25;
+        if (grade10 >= 7.0)
+            return 3.0;
+        if (grade10 >= 6.5)
+            return 2.75;
+        if (grade10 >= 6.0)
+            return 2.5;
+        if (grade10 >= 5.5)
+            return 2.25;
+        if (grade10 >= 5.0)
+            return 2.0;
+        return 0.0;
     }
 }
