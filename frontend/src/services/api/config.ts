@@ -2,6 +2,20 @@
 // Logic to determine API URL based on environment
 const isProd = import.meta.env.PROD;
 const envApiUrl = import.meta.env.VITE_API_URL;
+const envWsUrl = import.meta.env.VITE_WS_URL;
+
+/**
+ * Ensures a URL uses HTTPS if the current page is loaded over HTTPS.
+ * This prevents "Mixed Content" and "SecurityError" (especially for SockJS).
+ */
+const ensureSecureUrl = (url: string) => {
+    if (!url) return url;
+    const processed = url.trim().replace(/\/+$/, '');
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:' && processed.startsWith('http:')) {
+        return processed.replace(/^http:/, 'https:');
+    }
+    return processed;
+};
 
 const getBaseUrl = () => {
     let url = '';
@@ -18,17 +32,7 @@ const getBaseUrl = () => {
     } else {
         url = 'http://localhost:8080';
     }
-    
-    // Remove trailing slash if exists
-    let processedUrl = url.replace(/\/$/, '');
-
-    // Tự động nâng cấp giao thức: Nếu trang web chạy trên HTTPS (như Vercel), 
-    // hệ thống sẽ tự động chuyển URL Ngrok sang https:// (để tránh lỗi Mixed Content)
-    if (typeof window !== 'undefined' && window.location.protocol === 'https:' && processedUrl.startsWith('http:')) {
-        processedUrl = processedUrl.replace(/^http:/, 'https:');
-    }
-
-    return processedUrl;
+    return ensureSecureUrl(url);
 };
 
 export const BASE_URL = getBaseUrl();
@@ -37,5 +41,5 @@ export const BASE_URL = getBaseUrl();
 export const API_URL = `${BASE_URL}/api`;
 
 // WebSocket Endpoint (BASE_URL + /ws)
-// SockJS will handle the protocol upgrade (http/https internally) based on BASE_URL
-export const WS_URL = import.meta.env.VITE_WS_URL || `${BASE_URL}/ws`;
+// Force HTTPS for WS_URL regardless of whether it comes from env or BASE_URL
+export const WS_URL = ensureSecureUrl(envWsUrl) || `${BASE_URL}/ws`;
