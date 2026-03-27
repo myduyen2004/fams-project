@@ -64,6 +64,7 @@ public class SecurityConfig {
                                                                 "/v3/api-docs/**",
                                                                 "/actuator/health",
                                                                 "/ws/**", // WebSocket endpoint
+                                                                "/ws-native/**", // Native WebSocket endpoint
                                                                 "/api/files/**",
                                                                 "/api/courses/**")
                                                 .permitAll()

@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { MessageCircle, Send, FileText, X, Search, Users, ArrowLeft, ChevronDown, Image as ImageIcon, Info, Plus, Trash2, Download, Folder, File as FileIcon, ExternalLink, Reply, Eye, Smile } from 'lucide-react';
 import { chatGroupService, ChatGroupResponse, ChatMessageResponse } from '../../services/api/chatGroupService';
 import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
+import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import { WS_URL } from '../../services/api/config';
 import { toast } from 'react-hot-toast';
@@ -209,7 +210,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
 
         const token = localStorage.getItem('token');
         const stompClient = new Client({
-            brokerURL: WS_URL,
+            webSocketFactory: () => new SockJS(WS_URL),
             connectHeaders: {
                 Authorization: `Bearer ${token}`
             },
