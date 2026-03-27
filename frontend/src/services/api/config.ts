@@ -4,6 +4,13 @@ const isProd = import.meta.env.PROD;
 const envApiUrl = import.meta.env.VITE_API_URL;
 const envWsUrl = import.meta.env.VITE_WS_URL;
 
+// Debug logs to identify environment variable issues on Vercel
+if (isProd) {
+    console.debug('[EnvDebug] PROD=true');
+    console.debug('[EnvDebug] VITE_API_URL:', envApiUrl ? 'FOUND' : 'MISSING');
+    if (envApiUrl) console.debug('[EnvDebug] Value:', envApiUrl);
+}
+
 /**
  * Ensures a URL uses HTTPS if the current page is loaded over HTTPS.
  * This prevents "Mixed Content" and "SecurityError" (especially for SockJS).
@@ -19,17 +26,21 @@ const ensureSecureUrl = (url: string) => {
 
 const getBaseUrl = () => {
     let url = '';
-    if (envApiUrl) {
+    // Priority 1: Environment Variable
+    if (envApiUrl && envApiUrl.trim().length > 0) {
         url = envApiUrl;
-    } else if (isProd) {
-        // Automatically switch port based on hostname for Staging vs Production
+    } 
+    // Priority 2: Hardcoded Production Fallback (Staging/Production IP)
+    else if (isProd) {
         const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
         if (hostname.includes('staging') || hostname.includes('vercel.app')) {
             url = 'http://16.176.158.195:8081';
         } else {
             url = 'http://16.176.158.195:8080';
         }
-    } else {
+    } 
+    // Priority 3: Local Development
+    else {
         url = 'http://localhost:8080';
     }
     return ensureSecureUrl(url);
@@ -41,5 +52,4 @@ export const BASE_URL = getBaseUrl();
 export const API_URL = `${BASE_URL}/api`;
 
 // WebSocket Endpoint (BASE_URL + /ws)
-// Force HTTPS for WS_URL regardless of whether it comes from env or BASE_URL
 export const WS_URL = ensureSecureUrl(envWsUrl) || `${BASE_URL}/ws`;
