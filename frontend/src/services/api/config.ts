@@ -1,7 +1,6 @@
 // Logic to determine API URL based on environment
 const isProd = import.meta.env.PROD;
 const VITE_API_URL = import.meta.env.VITE_API_URL;
-const VITE_WS_URL = import.meta.env.VITE_WS_URL;
 
 /**
  * Ensures a URL uses HTTPS if the current page is loaded over HTTPS.
@@ -41,8 +40,8 @@ export const BASE_URL = getBaseUrl();
 export const API_URL = BASE_URL ? `${BASE_URL}/api` : '/api';
 
 // WebSocket Endpoint (BASE_URL + /ws)
-// Force HTTPS for WS_URL regardless of source
-export const WS_URL = ensureSecureUrl(VITE_WS_URL) || (BASE_URL ? `${BASE_URL}/ws` : `${typeof window !== 'undefined' ? (window.location.protocol === 'https:' ? 'https:' : 'http:') : ''}//${typeof window !== 'undefined' ? window.location.host : ''}/ws`);
+// Deriving directly from BASE_URL prevents stale IP issues if VITE_WS_URL is forgotten in Vercel settings
+export const WS_URL = BASE_URL ? `${BASE_URL}/ws` : `${typeof window !== 'undefined' ? (window.location.protocol === 'https:' ? 'https:' : 'http:') : ''}//${typeof window !== 'undefined' ? window.location.host : ''}/ws`;
 
 console.debug('[ConfigDebug] BASE_URL:', BASE_URL);
 console.debug('[ConfigDebug] API_URL:', API_URL);
