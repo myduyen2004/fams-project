@@ -24,7 +24,6 @@ import org.springframework.data.jpa.domain.Specification;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -80,12 +79,12 @@ public class UserServiceImpl implements UserService {
         Specification<User> spec = (root, query, cb) -> {
             // Eager loading for UserResponse mapping - ONLY on data query, not count query
             if (query.getResultType() != Long.class && query.getResultType() != long.class) {
-                Fetch<User, com.fams.backend.entity.StudentProfile> studentProfileFetch = 
-                    root.fetch("studentProfile", JoinType.LEFT);
+                Fetch<User, com.fams.backend.entity.StudentProfile> studentProfileFetch = root.fetch("studentProfile",
+                        JoinType.LEFT);
                 studentProfileFetch.fetch("major", JoinType.LEFT);
                 studentProfileFetch.fetch("specialization", JoinType.LEFT);
                 studentProfileFetch.fetch("subSpecialization", JoinType.LEFT);
-                
+
                 root.fetch("lecturerProfile", JoinType.LEFT);
             }
 
@@ -118,7 +117,6 @@ public class UserServiceImpl implements UserService {
                         cb.like(cb.lower(root.get("code")), searchLower),
                         cb.like(cb.lower(root.get("username")), searchLower)));
             }
-
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
@@ -349,7 +347,8 @@ public class UserServiceImpl implements UserService {
         // Audit log for role change
         if (oldRole != savedUser.getRole()) {
             String adminUsername = SecurityContextHolder.getContext().getAuthentication().getName();
-            systemLogService.logRoleChanged(adminUsername, savedUser.getUsername(), oldRole.name(), savedUser.getRole().name());
+            systemLogService.logRoleChanged(adminUsername, savedUser.getUsername(), oldRole.name(),
+                    savedUser.getRole().name());
         }
 
         log.info("User updated successfully: id={}, code={}", id, user.getCode());
