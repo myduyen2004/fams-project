@@ -1,4 +1,3 @@
-
 // Logic to determine API URL based on environment
 const isProd = import.meta.env.PROD;
 const VITE_API_URL = import.meta.env.VITE_API_URL;
