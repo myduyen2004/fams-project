@@ -40,19 +40,18 @@ export const BASE_URL = getBaseUrl();
 export const API_URL = BASE_URL ? `${BASE_URL}/api` : '/api';
 
 /**
- * WebSocket endpoint — uses SockJS over HTTPS (NOT wss://).
- *
- * SockJS handles the upgrade internally.
- * We append ?ngrok-skip-browser-warning=true so Ngrok's free-tier interstitial page
- * is bypassed — this was the true root cause of all CORS failures on /ws/info requests.
+ * WebSocket endpoint — Switch to Native WebSocket (wss://) for Ngrok.
+ * 
+ * We use the '/ws-native' endpoint which we configured in Spring Boot.
+ * Native WebSockets bypass Ngrok's HTML interstitial pages because they 
+ * use the 'Upgrade' protocol which Ngrok forwards directly.
  */
 export const WS_URL = (() => {
-    const base = BASE_URL
-        ? `${BASE_URL}/ws`
-        : `${typeof window !== 'undefined' ? window.location.origin : ''}/ws`;
-    // Only add the bypass param when going through an ngrok tunnel
-    const isNgrok = base.includes('ngrok');
-    return isNgrok ? `${base}?ngrok-skip-browser-warning=true` : base;
+    if (!BASE_URL) {
+        return `${typeof window !== 'undefined' ? (window.location.protocol === 'https:' ? 'wss:' : 'ws:') : ''}//${typeof window !== 'undefined' ? window.location.host : ''}/ws-native`;
+    }
+    // Replace http/https with ws/wss
+    return `${BASE_URL.replace(/^http/, 'ws')}/ws-native`;
 })();
 
 console.debug('[ConfigDebug] BASE_URL:', BASE_URL);
