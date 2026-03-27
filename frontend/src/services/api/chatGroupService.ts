@@ -1,4 +1,4 @@
-import apiClient from './authService';
+import apiClient from './apiClient';
 import axios from 'axios';
 
 export interface ChatGroupResponse {
@@ -117,6 +117,11 @@ export const chatGroupService = {
         return response.data;
     },
 
+    /**
+     * Upload to Cloudinary directly.
+     * Note: We keep direct axios here because it's a 3rd party API (Cloudinary),
+     * NOT our own backend, so it doesn't need the ngrok header or auth interceptors.
+     */
     uploadToCloudinaryDirect: async (file: File, signature: string, timestamp: number, apiKey: string, cloudName: string, folder: string): Promise<{ secure_url: string; original_filename: string }> => {
         const formData = new FormData();
         formData.append('file', file);

@@ -1,4 +1,4 @@
-import apiClient from './authService';
+import apiClient from './apiClient';
 import { Course, CourseSearchParams, CourseCreateRequest, CourseImportDTO, CoursePrerequisite } from '../../types/course';
 import { Page } from '../../types/major';
 

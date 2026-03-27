@@ -1,4 +1,4 @@
-import apiClient from './authService';
+import apiClient from './apiClient';
 
 export interface UserRequest {
     code?: string;

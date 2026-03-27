@@ -1,4 +1,4 @@
-import apiClient from './authService';
+import apiClient from './apiClient';
 
 // Types for Exam Grade Overview (ME, FE, PE, Resit)
 export interface ExamGradeComponentInfo {

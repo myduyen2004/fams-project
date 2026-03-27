@@ -1,4 +1,4 @@
-import apiClient from './authService';
+import apiClient from './apiClient';
 import { StudentResponse } from './academicStaffService';
 
 export interface GradeComponentInfo {
