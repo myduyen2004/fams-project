@@ -53,7 +53,7 @@ server:
 app:
   environment: staging
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://staging.fams-edu.online,https://fams-staging.vercel.app}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://staging.fams-edu.online,https://fams-staging.vercel.app,https://*.vercel.app,https://*.ngrok-free.app,https://*.ngrok-free.dev,*}
   
 logging:
   level:

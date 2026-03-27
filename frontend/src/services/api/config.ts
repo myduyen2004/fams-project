@@ -39,9 +39,9 @@ export const BASE_URL = getBaseUrl();
 // API Endpoint (BASE_URL + /api)
 export const API_URL = BASE_URL ? `${BASE_URL}/api` : '/api';
 
-// WebSocket Endpoint (BASE_URL + /ws)
+// WebSocket Endpoint (BASE_URL + /ws-native)
 // Deriving directly from BASE_URL prevents stale IP issues if VITE_WS_URL is forgotten in Vercel settings
-export const WS_URL = BASE_URL ? `${BASE_URL}/ws` : `${typeof window !== 'undefined' ? (window.location.protocol === 'https:' ? 'https:' : 'http:') : ''}//${typeof window !== 'undefined' ? window.location.host : ''}/ws`;
+export const WS_URL = BASE_URL ? `${BASE_URL.replace(/^http/, 'ws')}/ws-native` : `${typeof window !== 'undefined' ? (window.location.protocol === 'https:' ? 'wss:' : 'ws:') : ''}//${typeof window !== 'undefined' ? window.location.host : ''}/ws-native`;
 
 console.debug('[ConfigDebug] BASE_URL:', BASE_URL);
 console.debug('[ConfigDebug] API_URL:', API_URL);

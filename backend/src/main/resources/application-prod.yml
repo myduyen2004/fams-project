@@ -47,7 +47,7 @@ server:
 app:
   environment: production
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://fams-edu.online,https://www.fams-edu.online}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://fams-edu.online,https://www.fams-edu.online,https://*.vercel.app,https://*.ngrok-free.app,https://*.ngrok-free.dev,*}
   discord:
     webhook-url: ${DISCORD_WEBHOOK_URL}
     enabled: true
