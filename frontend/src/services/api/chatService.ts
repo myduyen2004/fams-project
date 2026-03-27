@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import apiClient from './authService';
+import apiClient from './apiClient';
 
 export interface AIChatSession {
     id: number;

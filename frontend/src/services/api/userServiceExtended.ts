@@ -1,5 +1,5 @@
 import { userService as baseUserService } from './userService';
-import apiClient from './authService';
+import apiClient from './apiClient';
 
 export interface ImportJobStatus {
     jobId: string;

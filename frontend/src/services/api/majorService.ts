@@ -1,4 +1,4 @@
-import apiClient from './authService';
+import apiClient from './apiClient';
 import { Major, MajorCreateRequest, MajorSearchParams, MajorImportDTO, MajorImportResult, Page } from '../../types/major';
 import { Course } from '../../types/course';
 

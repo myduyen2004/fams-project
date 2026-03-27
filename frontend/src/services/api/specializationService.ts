@@ -1,4 +1,4 @@
-import apiClient from './authService';
+import apiClient from './apiClient';
 import { Specialization, SpecializationSearchParams, SpecializationCreateRequest, SpecializationImportDTO, SpecializationImportResult } from '../../types/specialization';
 import { Page } from '../../types/major';
 import { Course } from '../../types/course';

@@ -1,4 +1,4 @@
-import apiClient from './authService';
+import apiClient from './apiClient';
 import { AcademicStaffDashboardResponse } from '../../types/dashboard';
 import { UserResponse, PageResponse, UserRequest } from './userService';
 

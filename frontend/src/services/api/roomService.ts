@@ -1,4 +1,4 @@
-import apiClient from './authService';
+import apiClient from './apiClient';
 import { Room, RoomRequest } from '../../types/room';
 
 // Room with availability status
