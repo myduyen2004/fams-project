@@ -1,15 +1,16 @@
 
-// Definitive API Configuration
+// Logic to determine API URL based on environment
 const isProd = import.meta.env.PROD;
 const VITE_API_URL = import.meta.env.VITE_API_URL;
 const VITE_WS_URL = import.meta.env.VITE_WS_URL;
 
 /**
- * Ensures a URL is secure (https/wss) if the page is HTTPS.
+ * Ensures a URL uses HTTPS if the current page is loaded over HTTPS.
+ * This prevents "Mixed Content" and "SecurityError" (especially for SockJS).
  */
 const ensureSecureUrl = (url: string) => {
     if (!url) return url;
-    let processed = url.trim().replace(/\/+$/, '');
+    const processed = url.trim().replace(/\/+$/, '');
     if (typeof window !== 'undefined' && window.location.protocol === 'https:' && processed.startsWith('http:')) {
         return processed.replace(/^http:/, 'https:');
     }
@@ -17,30 +18,33 @@ const ensureSecureUrl = (url: string) => {
 };
 
 const getBaseUrl = () => {
-    // 1. Force the Environment Variable if present (Ngrok)
+    // 1. Primary: Environment Variable (Ngrok)
     if (VITE_API_URL && VITE_API_URL.trim().length > 0) {
         return ensureSecureUrl(VITE_API_URL);
     }
 
-    // 2. Production fallback based on hostname (Only if VITE_API_URL is missing)
-    if (isProd) {
-        const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
-        console.warn('[Config] VITE_API_URL is MISSING. Determining fallback from hostname:', hostname);
-        
-        // If we are on Vercel, we SHOULD have VITE_API_URL. 
-        // If not, we fallback to the same domain (which might not work for cross-domain API, but is safer than random IP)
+    // 2. Secondary: If on Vercel but VITE_API_URL is missing, use relative or origin
+    if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
         if (hostname.includes('vercel.app')) {
-            return ''; // Let it fail or use relative path if possible, but don't hit 16.176.158.195
+            console.warn('[Config] VITE_API_URL is missing on Vercel. Some features may not work.');
+            return ''; // Bails out to relative path to avoid hitting old IPs
         }
-        return 'http://16.176.158.195:8080';
     }
 
-    return 'http://localhost:8080';
+    // 3. Fallback for Local Development
+    return isProd ? '' : 'http://localhost:8080';
 };
 
 export const BASE_URL = getBaseUrl();
+
+// API Endpoint (BASE_URL + /api)
 export const API_URL = BASE_URL ? `${BASE_URL}/api` : '/api';
-export const WS_URL = ensureSecureUrl(VITE_WS_URL) || (BASE_URL ? `${BASE_URL}/ws` : '/ws');
+
+// WebSocket Endpoint (BASE_URL + /ws)
+// Force HTTPS for WS_URL regardless of source
+export const WS_URL = ensureSecureUrl(VITE_WS_URL) || (BASE_URL ? `${BASE_URL}/ws` : `${typeof window !== 'undefined' ? (window.location.protocol === 'https:' ? 'https:' : 'http:') : ''}//${typeof window !== 'undefined' ? window.location.host : ''}/ws`);
 
 console.debug('[ConfigDebug] BASE_URL:', BASE_URL);
+console.debug('[ConfigDebug] API_URL:', API_URL);
 console.debug('[ConfigDebug] WS_URL:', WS_URL);
