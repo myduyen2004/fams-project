@@ -14,7 +14,10 @@ import { timetableService } from '../../services/api/timetableService';
 import { useNavigate } from 'react-router-dom';
 import attendanceService, { StudentAttendanceSummaryResponse } from '../../services/api/attendanceService';
 import { lecturerClassService } from '../../services/api/LecturerClass';
-import { authService, UserInfo } from '../../services/api/authService';
+import apiClient from '../../services/api/authService';
+import { AllGradesSummaryResponse } from './StudentAllGradesPage';
+import { GpaTrendChart } from '../../components/student/dashboard/GpaTrendChart';
+import { CourseStatsWidget } from '../../components/student/dashboard/CourseStatsWidget';
 
 export const StudentDashboard: React.FC = () => {
     const navigate = useNavigate();
@@ -24,13 +27,13 @@ export const StudentDashboard: React.FC = () => {
     const [isScheduleHidden, setIsScheduleHidden] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [attendanceSummaries, setAttendanceSummaries] = useState<StudentAttendanceSummaryResponse | null>(null);
-    const [userProfile, setUserProfile] = useState<UserInfo | null>(null);
+    const [gradesSummary, setGradesSummary] = useState<AllGradesSummaryResponse | null>(null);
 
     useEffect(() => {
         fetchMonthlySlotCounts();
         fetchDaySchedule(new Date());
         fetchAttendanceData();
-        fetchUserProfile();
+        fetchGradesSummary();
 
         const timer = setInterval(() => {
             setCurrentTime(new Date());
@@ -42,10 +45,10 @@ export const StudentDashboard: React.FC = () => {
         try {
             const semesters = await lecturerClassService.getSemesters();
             let semesterCode: string | undefined = undefined;
-            
+
             if (semesters && semesters.length > 0) {
                 const now = new Date();
-                
+
                 // Find semester containing current date
                 const currentSemester = semesters.find(s => {
                     if (!s.startDate || !s.endDate) return false;
@@ -60,7 +63,7 @@ export const StudentDashboard: React.FC = () => {
                 const ongoing = semesters.find(s => s.status === 'ONGOING');
                 semesterCode = currentSemester ? currentSemester.code : (ongoing ? ongoing.code : semesters[0].code);
             }
-            
+
             const data = await attendanceService.getStudentReport(semesterCode);
             setAttendanceSummaries(data);
         } catch (error) {
@@ -75,12 +78,16 @@ export const StudentDashboard: React.FC = () => {
         }
     };
 
-    const fetchUserProfile = async () => {
+    const fetchGradesSummary = async () => {
         try {
-            const profile = await authService.getCurrentUser();
-            setUserProfile(profile);
+            const userStr = localStorage.getItem('user');
+            if (userStr) {
+                const user = JSON.parse(userStr);
+                const response = await apiClient.get(`/v1/students/${user.id}/all-grades`);
+                setGradesSummary(response.data);
+            }
         } catch (error) {
-            console.error('Failed to fetch user profile:', error);
+            console.error('Failed to fetch grades summary:', error);
         }
     };
 
@@ -214,7 +221,7 @@ export const StudentDashboard: React.FC = () => {
                             <div className="flex justify-between items-start">
                                 <div>
                                     <h3 className="text-base font-medium text-white/95">Điểm trung bình (GPA)</h3>
-                                    <p className="text-sm text-white/90 mt-1">Học kỳ Spring 2024</p>
+                                    {/* <p className="text-sm text-white/90 mt-1">Học kỳ Spring 2024</p> */}
                                 </div>
                                 <div className="p-3 bg-[#FFE4D6] rounded-xl shadow-sm">
                                     <Bookmark size={24} className="text-[#F37B24]" strokeWidth={2.5} />
@@ -224,7 +231,7 @@ export const StudentDashboard: React.FC = () => {
                             <div className="mt-4">
                                 <div className="flex items-baseline gap-3 mb-4">
                                     <span className="text-6xl font-black tracking-tight">
-                                        {typeof userProfile?.gpa === 'number' ? userProfile.gpa.toFixed(2) : '0.00'}
+                                        {typeof gradesSummary?.gpa4 === 'number' ? gradesSummary.gpa4.toFixed(2) : '0.00'}
                                     </span>
                                     <span className="text-2xl text-white/90 font-medium">/ 4.0</span>
                                 </div>
@@ -232,12 +239,12 @@ export const StudentDashboard: React.FC = () => {
                                 <div className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-sm font-medium w-fit border border-white/10">
                                     <ArrowUpRight size={16} strokeWidth={3} />
                                     <span>Danh hiệu: {
-                                        typeof userProfile?.gpa === 'number' 
-                                            ? userProfile.gpa >= 3.6 ? 'Xuất sắc' 
-                                            : userProfile.gpa >= 3.2 ? 'Giỏi' 
-                                            : userProfile.gpa >= 2.5 ? 'Khá' 
-                                            : 'Trung bình'
-                                            : 'Khá'
+                                        typeof gradesSummary?.gpa4 === 'number'
+                                            ? gradesSummary.gpa4 >= 3.6 ? 'Xuất sắc'
+                                                : gradesSummary.gpa4 >= 3.2 ? 'Giỏi'
+                                                    : gradesSummary.gpa4 >= 2.5 ? 'Khá'
+                                                        : 'Trung bình'
+                                            : 'Chưa xét'
                                     }</span>
                                 </div>
                             </div>
@@ -258,14 +265,14 @@ export const StudentDashboard: React.FC = () => {
                                     const progressColor = isDanger ? 'bg-red-500' : isWarning ? 'bg-yellow-500' : 'bg-emerald-500';
                                     const textColor = isDanger ? 'text-red-500' : isWarning ? 'text-yellow-500' : 'text-emerald-500';
                                     const statusText = isDanger ? 'Cảnh báo cấm thi' : isWarning ? 'Cảnh báo' : 'An toàn';
-                                    
+
                                     const absPercent = typeof item.absentPercentage === 'number' ? item.absentPercentage : 0;
                                     const participationRate = (100 - absPercent).toFixed(1);
 
                                     return (
                                         <div key={idx} className="group">
                                             <div className="flex justify-between items-baseline text-xs mb-1.5">
-                                                <button 
+                                                <button
                                                     onClick={() => navigate('/student/attendance', { state: { selectedClassName: item.className } })}
                                                     className="font-bold text-gray-800 dark:text-gray-200 hover:text-fpt-orange transition-colors"
                                                 >
@@ -278,8 +285,8 @@ export const StudentDashboard: React.FC = () => {
                                             <div className="h-1 w-full bg-gray-100 dark:bg-zinc-800/50 rounded-full overflow-hidden shadow-inner cursor-pointer"
                                                 onClick={() => navigate('/student/attendance', { state: { selectedClassName: item.className } })}
                                             >
-                                                <div 
-                                                    className={`h-full ${progressColor} rounded-full transition-all duration-700 ease-out`} 
+                                                <div
+                                                    className={`h-full ${progressColor} rounded-full transition-all duration-700 ease-out`}
                                                     style={{ width: `${participationRate}%` }}
                                                 />
                                             </div>
@@ -313,6 +320,22 @@ export const StudentDashboard: React.FC = () => {
                             onDateSelect={handleDateSelect}
                             onMonthChange={(yr, mo) => fetchMonthlySlotCounts(yr, mo)}
                             selectedDate={selectedDate}
+                        />
+                    </div>
+                </div>
+
+                {/* Trend & Stats Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <div className="lg:col-span-8">
+                        <GpaTrendChart courses={gradesSummary?.courses || []} currentGpa={gradesSummary?.gpa4 || null} />
+                    </div>
+                    <div className="lg:col-span-4">
+                        <CourseStatsWidget
+                            courses={gradesSummary?.courses || []}
+                            totalCourses={gradesSummary?.totalCourses || 0}
+                            passedCourses={gradesSummary?.passedCourses || 0}
+                            failedCourses={gradesSummary?.failedCourses || 0}
+                            pendingCourses={gradesSummary?.pendingCourses || 0}
                         />
                     </div>
                 </div>
@@ -369,7 +392,7 @@ export const StudentDashboard: React.FC = () => {
 
                                             {/* Real-time indicator line */}
                                             {indicatorPos !== null && (
-                                                <div 
+                                                <div
                                                     className="absolute top-0 bottom-0 w-[2px] bg-red-500 z-20 pointer-events-none shadow-[0_0_8px_rgba(239,68,68,0.5)]"
                                                     style={{ left: `${indicatorPos}%` }}
                                                 >

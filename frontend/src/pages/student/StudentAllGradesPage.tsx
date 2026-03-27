@@ -28,6 +28,7 @@ export interface AllGradesSummaryResponse {
     failedCourses: number;
     pendingCourses: number;
     gpa: number | null;
+    gpa4?: number | null;
     specializationName?: string | null;
     majorName?: string | null;
 }
