@@ -6,7 +6,6 @@ import { ArrowLeft, Users, User, UserCheck, Clock, MapPin, Loader2, Edit3, Chevr
 import attendanceService, { SessionDetailResponse, StudentAttendanceResponse } from '../../services/api/attendanceService';
 import { WS_URL } from '../../services/api/config';
 import { Client } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
 import { toast } from 'react-hot-toast';
 import dayjs from 'dayjs';
 
@@ -71,9 +70,8 @@ export const RealTimeAttendancePage: React.FC = () => {
     };
 
     const connectWebSocket = () => {
-        const socket = new SockJS(WS_URL);
         const client = new Client({
-            webSocketFactory: () => socket,
+            brokerURL: WS_URL,
             onConnect: () => {
                 setConnected(true);
                 client.subscribe(`/topic/attendance/slot/${slotId}`, (message) => {

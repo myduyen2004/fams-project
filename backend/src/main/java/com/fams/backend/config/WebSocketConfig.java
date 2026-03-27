@@ -33,13 +33,16 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        String[] origins = allowedOrigins.split(",\\s*");
+        // Allow all origins for the handshake. Actual security is handled by the Authentication Interceptor and JWT.
+        // This is necessary because Vercel generates dynamic subdomains for every preview.
+        
         // SockJS endpoint for web browsers
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns(origins)
+                .setAllowedOriginPatterns("*")
                 .withSockJS();
-        // Native WebSocket endpoint for mobile (no SockJS overhead)
+        
+        // Native WebSocket endpoint
         registry.addEndpoint("/ws-native")
-                .setAllowedOriginPatterns(origins);
+                .setAllowedOriginPatterns("*");
     }
 }
