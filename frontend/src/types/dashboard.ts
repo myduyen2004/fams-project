@@ -24,12 +24,18 @@ export interface Alert {
     timestamp: string;
 }
 
-export interface Notification {
+export interface AppNotification {
     id: number;
     title: string;
     description: string;
     isRead: boolean;
     timestamp: string;
+    type?: 'SYSTEM' | 'ALERT' | 'IMPORT' | 'CHAT' | 'SCHEDULE' | 'ACADEMIC';
+    targetUrl?: string;
+    senderName?: string;
+    senderFullName?: string;
+    senderAvatar?: string;
+    attachmentUrls?: string[];
 }
 
 export interface SystemLog {
@@ -51,6 +57,8 @@ export interface AcademicStaffDashboardResponse {
         totalStudents: number;
         totalLecturers: number;
         totalRequests: number;
+        studentStats: { name: string; value: number }[];
+        lecturerStats: { name: string; value: number }[];
     };
     topStudents: {
         rank: number;
@@ -68,14 +76,26 @@ export interface AcademicStaffDashboardResponse {
         date: string;
         status: string;
     }[];
-    notifications: NotificationResponse[];
+    notifications: AppNotification[];
     attendanceStats: {
         present: number;
         absent: number;
         date: string;
     };
+    runningRooms: {
+        roomName: string;
+        lecturerName: string;
+        attendancePercentage: number;
+    }[];
+    totalRunningRooms: number;
     roomRequests: {
         room: string;
         date: string;
+    }[];
+    unreadNotificationsCount?: number;
+    weeklyAttendance?: {
+        day: string;
+        date: string;
+        absencePercentage: number;
     }[];
 }

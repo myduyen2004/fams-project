@@ -6,20 +6,23 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
 @Configuration
 @EnableAsync
 public class AsyncConfig {
-    
+
     @Bean(name = "importExecutor")
     public Executor importExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(30);
-        executor.setMaxPoolSize(100);
-        executor.setQueueCapacity(1500);
+        executor.setCorePoolSize(100); // 30x ready: more cores
+        executor.setMaxPoolSize(200);
+        executor.setQueueCapacity(20000);
         executor.setThreadNamePrefix("import-executor-");
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(30);
         executor.initialize();
         return executor;
     }
@@ -27,12 +30,28 @@ public class AsyncConfig {
     @Bean(name = "asyncImportExecutor")
     public Executor asyncImportExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(5);
-        executor.setMaxPoolSize(10);
-        executor.setQueueCapacity(50);
+        executor.setCorePoolSize(50);
+        executor.setMaxPoolSize(100);
+        executor.setQueueCapacity(10000);
         executor.setThreadNamePrefix("async-import-");
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(30);
         executor.initialize();
         return executor;
+    }
+
+    /**
+     * Virtual Thread Executor for I/O bound tasks like Email Sending.
+     * Perfect for 2000+ concurrent emails without blocking.
+     */
+    @Bean(name = "emailExecutor")
+    public Executor emailExecutor() {
+        return Executors.newVirtualThreadPerTaskExecutor();
+    }
+
+    @Bean(name = "dashboardExecutor")
+    public Executor dashboardExecutor() {
+        return Executors.newVirtualThreadPerTaskExecutor();
     }
 }

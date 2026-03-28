@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Moon, Sun, User,Settings, LogOut } from 'lucide-react';
+import { Moon, Sun, User, Settings, LogOut, Newspaper } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../../services/api/authService';
+import { userService } from '../../services/api/userService';
+import { newsService } from '../../services/api/newsService';
 import { ConfirmModal } from '../common/ConfirmModal';
 import { NotificationBell } from '../common/NotificationBell';
+import { ChatMessageIcon } from '../common/ChatMessageIcon';
 
 interface AdminHeaderProps {
   title: string;
@@ -15,6 +18,9 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
   const [user, setUser] = useState<{ email: string; fullName: string; avatar?: string } | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [activeJob, setActiveJob] = useState<any>(null);
+  const [avatarError, setAvatarError] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,6 +41,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
 
     // Listen for profile updates
     const handleProfileUpdate = (event: any) => {
+      setAvatarError(false);
       if (event.detail) {
         setUser(event.detail);
       } else {
@@ -66,6 +73,28 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    const loadUnreadCount = async () => {
+      try {
+        const count = await newsService.getUnreadNewsCount();
+        setUnreadCount(count);
+      } catch {
+        setUnreadCount(0);
+      }
+    };
+
+    loadUnreadCount();
+
+    const handleRefresh = () => loadUnreadCount();
+    window.addEventListener('newsUnreadRefresh', handleRefresh);
+
+    const timer = window.setInterval(loadUnreadCount, 60000);
+    return () => {
+      window.removeEventListener('newsUnreadRefresh', handleRefresh);
+      window.clearInterval(timer);
+    };
+  }, []);
+
   const toggleTheme = () => {
     setIsDark(!isDark);
     document.documentElement.classList.toggle('dark');
@@ -73,11 +102,27 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
 
   const handleLogout = async () => {
     try {
+      if (activeJob) {
+        // Hủy tiến trình treo nếu người dùng chọn phương án này
+        // (Logic hủy đơn giản là cleanupStuckJobs)
+        await userService.cleanupStuckJobs();
+      }
       await authService.logout();
     } catch (error) {
       console.error('Logout failed:', error);
     }
     navigate('/login');
+  };
+
+  const handleOpenLogoutModal = async () => {
+    try {
+      const job = await userService.getActiveImportJob();
+      setActiveJob(job);
+    } catch (error) {
+      console.error('Failed to check active job:', error);
+    }
+    setShowLogoutModal(true);
+    setShowDropdown(false);
   };
 
   return (
@@ -101,6 +146,21 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
         </button>
 
         {/* Notification Bell */}
+        <div className="relative">
+          <button
+            onClick={() => navigate('/news')}
+            className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
+            title="Tin tức"
+          >
+            <Newspaper size={20} />
+          </button>
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 text-[10px] font-bold bg-red-500 text-white rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
+        </div>
+        <ChatMessageIcon />
         <NotificationBell />
 
         {/* User Info with Dropdown */}
@@ -111,11 +171,15 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
           >
             {/* Avatar */}
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-fpt-orange to-orange-600 flex items-center justify-center overflow-hidden">
-              {user?.avatar ? (
-                <img 
-                  src={`${user.avatar}${user.avatar.includes('?') ? '&' : '?'}t=${new Date().getTime()}`} 
-                  alt={user.fullName} 
-                  className="w-full h-full object-cover" 
+              {user?.avatar && !avatarError ? (
+                <img
+                  src={user.avatar.startsWith('data:')
+                    ? user.avatar
+                    : `${user.avatar}${user.avatar.includes('?') ? '&' : '?'}t=${new Date().getTime()}`
+                  }
+                  alt={user.fullName}
+                  className="w-full h-full object-cover"
+                  onError={() => setAvatarError(true)}
                 />
               ) : (
                 <span className="text-white font-semibold text-sm">
@@ -163,10 +227,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
               <hr className="my-2 border-gray-200 dark:border-zinc-700" />
 
               <button
-                onClick={() => {
-                  setShowLogoutModal(true);
-                  setShowDropdown(false);
-                }}
+                onClick={handleOpenLogoutModal}
                 className="w-full flex items-center gap-3 px-4 py-2 text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
               >
                 <LogOut size={18} />
@@ -181,9 +242,12 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
         isOpen={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
         onConfirm={handleLogout}
-        title="Đăng xuất"
-        message="Bạn có chắc chắn muốn đăng xuất khỏi hệ thống FAMS không?"
-        confirmLabel="Đăng xuất ngay"
+        title={activeJob ? "Cảnh báo: Tiến trình đang thực hiện" : "Đăng xuất"}
+        message={activeJob
+          ? `Hệ thống đang thực hiện import dữ liệu (${activeJob.percentage}%). Nếu bạn đăng xuất và hủy bây giờ, dữ liệu có thể bị dở dang. Bạn có chắc muốn DỪNG tiến trình và đăng xuất không?`
+          : "Bạn có chắc chắn muốn đăng xuất khỏi hệ thống FAMS không?"
+        }
+        confirmLabel={activeJob ? "Dừng và đăng xuất" : "Đăng xuất ngay"}
         cancelLabel="Ở lại"
         type="danger"
       />

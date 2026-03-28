@@ -36,6 +36,9 @@ public class LoginResponse {
         private String specialization;
         private String department;
         private String expertise;
+        
+        // Face data
+        private String faceDataStatus;
     }
 
     // Helper method để tạo UserInfo từ User entity
@@ -49,7 +52,8 @@ public class LoginResponse {
                 .avatar(user.getAvatar())
                 .isPasswordChanged(user.getIsPasswordChanged())
                 .phone(user.getPhone())
-                .dob(user.getDob());
+                .dob(user.getDob())
+                .faceDataStatus(user.getFaceDataStatus() != null ? user.getFaceDataStatus().name() : null);
 
         // Safely access StudentProfile (may be lazy-loaded)
         try {

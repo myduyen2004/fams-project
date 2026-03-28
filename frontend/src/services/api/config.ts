@@ -1,18 +1,59 @@
-
-
 // Logic to determine API URL based on environment
 const isProd = import.meta.env.PROD;
-const envApiUrl = import.meta.env.VITE_API_URL;
+const VITE_API_URL = import.meta.env.VITE_API_URL;
 
-// Cấu hình URL cho API
-// - Khi chạy LOCAL (npm run dev): Sẽ dùng http://localhost:8080
-// - Khi chạy PRODUCTION (Vercel): Dùng '' (đường dẫn tương đối) để đi qua Vercel Proxy
-//   Vercel sẽ proxy /api/* tới EC2 backend (xem vercel.json)
-export const BASE_URL = isProd ? '' : (envApiUrl || 'http://localhost:8080');
+/**
+ * Ensures a URL uses HTTPS if the current page is loaded over HTTPS.
+ * This prevents "Mixed Content" errors.
+ */
+const ensureSecureUrl = (url: string) => {
+    if (!url) return url;
+    const processed = url.trim().replace(/\/+$/, '');
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:' && processed.startsWith('http:')) {
+        return processed.replace(/^http:/, 'https:');
+    }
+    return processed;
+};
 
-// API Endpoint (BASE_URL + /api)
-export const API_URL = `${BASE_URL}/api`;
+const getBaseUrl = () => {
+    // 1. Primary: Environment Variable (Ngrok or any external URL)
+    if (VITE_API_URL && VITE_API_URL.trim().length > 0) {
+        return ensureSecureUrl(VITE_API_URL);
+    }
 
-// WebSocket Endpoint (BASE_URL + /ws)
-// SockJS will handle the protocol upgrade (http/https)
-export const WS_URL = import.meta.env.VITE_WS_URL || `${BASE_URL}/ws`;
+    // 2. If on Vercel but VITE_API_URL is missing, bail out gracefully
+    if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+        if (hostname.includes('vercel.app')) {
+            console.warn('[Config] VITE_API_URL is missing on Vercel. Some features may not work.');
+            return '';
+        }
+    }
+
+    // 3. Fallback for Local Development
+    return isProd ? '' : 'http://localhost:8080';
+};
+
+export const BASE_URL = getBaseUrl();
+
+// API Endpoint
+export const API_URL = BASE_URL ? `${BASE_URL}/api` : '/api';
+
+/**
+ * WebSocket endpoint — Switch to Native WebSocket (wss://) for Ngrok.
+ * 
+ * We use the '/ws-native' endpoint which we configured in Spring Boot.
+ * Native WebSockets bypass Ngrok's HTML interstitial pages because they 
+ * use the 'Upgrade' protocol which Ngrok forwards directly.
+ */
+export const WS_URL = (() => {
+    if (!BASE_URL) {
+        return `${typeof window !== 'undefined' ? (window.location.protocol === 'https:' ? 'wss:' : 'ws:') : ''}//${typeof window !== 'undefined' ? window.location.host : ''}/ws-native`;
+    }
+    // Replace http/https with ws/wss
+    return `${BASE_URL.replace(/^http/, 'ws')}/ws-native`;
+})();
+
+console.debug('[ConfigDebug] BASE_URL:', BASE_URL);
+console.debug('[ConfigDebug] API_URL:', API_URL);
+console.debug('[ConfigDebug] WS_URL:', WS_URL);

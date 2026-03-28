@@ -31,6 +31,10 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Localization
+  flutter_localizations:
+    sdk: flutter
+
   # State Management & Navigation (GetX - fastest & most efficient)
   get: ^4.6.6
 
@@ -47,22 +51,64 @@ dependencies:
   qr_flutter: ^4.1.0
   google_fonts: ^6.1.0
   flutter_svg: ^2.0.9
+  flutter_screenutil: any
+  flutter_markdown: ^0.7.5
+  solar_icons: ^0.0.5
 
   # Utils
-  intl: ^0.19.0
+  intl: ^0.20.2
+  badges: ^3.1.2
   
   # QR Code Scanning (Future Ready)
-  mobile_scanner: ^3.5.5
+  mobile_scanner: ^5.0.0
+
+  # Firebase & Notifications
+  firebase_core: ^3.10.1
+  firebase_messaging: ^15.2.10
+  flutter_local_notifications: ^18.0.0
+  app_badge_plus: ^1.1.0
   
   # Face Recognition (Future Ready)
-  google_mlkit_face_detection: ^0.10.0
+  google_mlkit_face_detection: ^0.13.1
   camera: ^0.10.5+7
   
   # WiFi Detection (Future Ready)
-  network_info_plus: ^5.0.1
+  network_info_plus: ^7.0.0
+
+  # WebSocket (STOMP protocol for chat)
+  stomp_dart_client: ^2.0.0
+  web_socket_channel: ^3.0.1
+  
+  # File Picker (chat attachments)
+  file_picker: ^8.0.0
+  
+  # Cached Network Image
+  cached_network_image: ^3.3.1
+  
+  # MIME type detection
+  mime: ^2.0.0
+  # Permission Handling
+  permission_handler: ^11.3.1
 
   # Image Picker
   image_picker: ^1.0.7
+  
+  # Image manipulation
+  image: ^4.1.7
+  
+  # URL Launcher (for opening attachments)
+  url_launcher: ^6.2.5
+
+  # File Content Parsing (Deep-Content Vision)
+  excel: ^4.0.6
+  archive: ^3.6.1
+  pdfx: ^2.4.0
+
+  # Calendar Integration
+  add_2_calendar: ^3.0.1
+  open_filex: ^4.3.4
+  path_provider: ^2.1.1
+  flutter_html: ^3.0.0
 
 dev_dependencies:
   flutter_test:
@@ -73,7 +119,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

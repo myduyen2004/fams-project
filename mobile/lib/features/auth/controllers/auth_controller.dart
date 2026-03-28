@@ -8,6 +8,7 @@ import '../models/user_model.dart';
 import '../models/login_response.dart';
 import 'package:http_parser/http_parser.dart';
 import 'dart:convert';
+import '../../notification/services/fcm_service.dart';
 
 /// Auth Controller - Handle authentication logic with GetX
 class AuthController extends GetxController {
@@ -17,29 +18,71 @@ class AuthController extends GetxController {
   final isLoading = false.obs;
   final Rx<User?> currentUser = Rx<User?>(null);
   final isAuthenticated = false.obs;
+  final isInitialized = false.obs;
 
   @override
   void onInit() {
     super.onInit();
     apiService.init();
-    checkAuthStatus();
+    apiService.onUnauthorized = _handleUnauthorized;
+    _initializeApp();
+  }
+
+  void _handleUnauthorized() {
+    debugPrint('AuthController: Handling unauthorized error (401)...');
+    // We don't want to nuke everything immediately if it's just a polling error,
+    // but if we are authenticated and get a 401, something is wrong with the token.
+    if (isAuthenticated.value) {
+      logout();
+    }
+  }
+
+  Future<void> _initializeApp() async {
+    debugPrint('AuthController: Starting _initializeApp...');
+    try {
+      await checkAuthStatus();
+    } catch (e) {
+      debugPrint('AuthController: Error during _initializeApp: $e');
+    } finally {
+      debugPrint(
+        'AuthController: Initialization complete. Setting isInitialized to true.',
+      );
+      isInitialized.value = true;
+    }
   }
 
   /// Check if user is already logged in
   Future<void> checkAuthStatus() async {
     try {
+      debugPrint('AuthController: Reading token from storage...');
       final token = await apiService.getToken();
+      debugPrint(
+        'AuthController: Token read result: ${token != null ? "FOUND" : "NOT FOUND"}',
+      );
+
+      debugPrint('AuthController: Reading user data from storage...');
       final userData = await apiService.getUserData();
+      debugPrint(
+        'AuthController: User data read result: ${userData != null ? "FOUND" : "NOT FOUND"}',
+      );
 
       if (token != null && userData != null) {
         currentUser.value = User.fromJson(userData);
         isAuthenticated.value = true;
-        
-        // Refresh user data from server to get latest fields
-        await fetchCurrentUser();
+        debugPrint('AuthController: User authenticated from local storage.');
+
+        // Refresh user data from server in background to get latest fields
+        fetchCurrentUser();
+
+        // Register FCM token
+        if (Get.isRegistered<FcmService>()) {
+          FcmService.to.registerDeviceToken();
+        }
+      } else {
+        debugPrint('AuthController: No local session found.');
       }
     } catch (e) {
-      debugPrint('Check auth status error: $e');
+      debugPrint('AuthController: Check auth status CRITICAL error: $e');
     }
   }
 
@@ -61,28 +104,28 @@ class AuthController extends GetxController {
   String getOptimizedAvatarUrl(String? originalUrl) {
     if (originalUrl == null || originalUrl.isEmpty) return '';
     if (!originalUrl.contains('cloudinary.com')) return originalUrl;
-    
+
     // Check if it already has transformations
     // Pattern: /upload/w_...,.../
     // We want to force w_300,h_300,c_fill,q_auto,f_auto
     const transformation = '/upload/w_300,h_300,c_fill,q_auto,f_auto/';
-    
+
     // If it has /upload/, replace or insert
     if (originalUrl.contains('/upload/')) {
-       // If it has existing transformations after upload/, replace them or just insert ours?
-       // Cloudinary URLs are usually .../upload/v12345/... or .../upload/transformations/v12345/...
-       // Safest is to replace '/upload/' with '/upload/TRANSFORMATION/'
-       // But if there are already transformations, we might duplicate. 
-       // Regex replace is safer but simple replaceFirst is okay if we assume standard format.
-       // Let's rely on standard format: .../upload/(v[0-9]+/)?...
-       
-       // If we see /upload/v, it means no transformation yet.
-       // If we see /upload/w_..., it means existing key.
-       
-       // Simple approach: Replace '/upload/' with '/upload/w_300,h_300,c_fill,q_auto,f_auto/'
-       // But if user ALREADY put transformations, this prepends ours. Cloudinary applies chained transformations.
-       // This is acceptable and often desired if we want to enforce size.
-       return originalUrl.replaceFirst('/upload/', transformation);
+      // If it has existing transformations after upload/, replace them or just insert ours?
+      // Cloudinary URLs are usually .../upload/v12345/... or .../upload/transformations/v12345/...
+      // Safest is to replace '/upload/' with '/upload/TRANSFORMATION/'
+      // But if there are already transformations, we might duplicate.
+      // Regex replace is safer but simple replaceFirst is okay if we assume standard format.
+      // Let's rely on standard format: .../upload/(v[0-9]+/)?...
+
+      // If we see /upload/v, it means no transformation yet.
+      // If we see /upload/w_..., it means existing key.
+
+      // Simple approach: Replace '/upload/' with '/upload/w_300,h_300,c_fill,q_auto,f_auto/'
+      // But if user ALREADY put transformations, this prepends ours. Cloudinary applies chained transformations.
+      // This is acceptable and often desired if we want to enforce size.
+      return originalUrl.replaceFirst('/upload/', transformation);
     }
     return originalUrl;
   }
@@ -94,10 +137,7 @@ class AuthController extends GetxController {
 
       final response = await apiService.post(
         ApiConstants.login,
-        data: {
-          'username': username,
-          'password': password,
-        },
+        data: {'username': username, 'password': password},
       );
 
       if (response.statusCode == 200) {
@@ -126,6 +166,10 @@ class AuthController extends GetxController {
         // Update state
         currentUser.value = user;
         isAuthenticated.value = true;
+
+        if (Get.isRegistered<FcmService>()) {
+          await FcmService.to.registerDeviceToken();
+        }
 
         Get.snackbar(
           'Thành công',
@@ -177,6 +221,10 @@ class AuthController extends GetxController {
   Future<void> logout() async {
     try {
       isLoading.value = true;
+
+      if (Get.isRegistered<FcmService>()) {
+        await FcmService.to.unregisterDeviceToken();
+      }
 
       // Call logout API
       await apiService.post(ApiConstants.logout);
@@ -265,10 +313,7 @@ class AuthController extends GetxController {
 
       final response = await apiService.post(
         ApiConstants.verifyOtp,
-        data: {
-          'email': email,
-          'otp': otp,
-        },
+        data: {'email': email, 'otp': otp},
       );
 
       if (response.statusCode == 200) {
@@ -320,29 +365,33 @@ class AuthController extends GetxController {
   }) async {
     try {
       isLoading.value = true;
-      
+
       // Prepare JSON data manually
       // Prepare JSON data safely
       final Map<String, dynamic> dataMap = {};
       if (phone != null) dataMap['phone'] = phone;
       if (dob != null) {
-        dataMap['dob'] = "${dob.year}-${dob.month.toString().padLeft(2, '0')}-${dob.day.toString().padLeft(2, '0')}";
+        dataMap['dob'] =
+            "${dob.year}-${dob.month.toString().padLeft(2, '0')}-${dob.day.toString().padLeft(2, '0')}";
       }
-      
+
       final String jsonBody = jsonEncode(dataMap);
-      
+
       final formDataMap = <String, dynamic>{
-         'data': MultipartFile.fromString(
-            jsonBody,
-            contentType: MediaType.parse('application/json'),
-         ),
+        'data': MultipartFile.fromString(
+          jsonBody,
+          contentType: MediaType.parse('application/json'),
+        ),
       };
-      
+
       if (avatarPath != null && avatarPath.isNotEmpty) {
         String fileName = avatarPath.split('/').last;
-        formDataMap['avatar'] = await MultipartFile.fromFile(avatarPath, filename: fileName);
+        formDataMap['avatar'] = await MultipartFile.fromFile(
+          avatarPath,
+          filename: fileName,
+        );
       }
-      
+
       final formDataObj = FormData.fromMap(formDataMap);
 
       final response = await apiService.put(
@@ -355,7 +404,7 @@ class AuthController extends GetxController {
         final updatedUser = User.fromJson(response.data);
         currentUser.value = updatedUser;
         await saveUserToStorage(updatedUser);
-        
+
         Get.snackbar(
           'Thành công',
           'Cập nhật hồ sơ thành công',
@@ -366,15 +415,25 @@ class AuthController extends GetxController {
       }
       return false;
     } on DioException catch (e) {
-       String errorMessage = 'Cập nhật thất bại';
-       if (e.response?.data != null) {
-          errorMessage = e.response?.data['message'] ?? errorMessage;
-       }
-       Get.snackbar('Lỗi', errorMessage, backgroundColor: Colors.red, colorText: Colors.white);
-       return false;
+      String errorMessage = 'Cập nhật thất bại';
+      if (e.response?.data != null) {
+        errorMessage = e.response?.data['message'] ?? errorMessage;
+      }
+      Get.snackbar(
+        'Lỗi',
+        errorMessage,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return false;
     } catch (e) {
-       Get.snackbar('Lỗi', 'Lỗi hệ thống: $e', backgroundColor: Colors.red, colorText: Colors.white);
-       return false;
+      Get.snackbar(
+        'Lỗi',
+        'Lỗi hệ thống: $e',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return false;
     } finally {
       isLoading.value = false;
     }
@@ -387,10 +446,7 @@ class AuthController extends GetxController {
 
       final response = await apiService.post(
         ApiConstants.resetPassword,
-        data: {
-          'email': email,
-          'newPassword': newPassword,
-        },
+        data: {'email': email, 'newPassword': newPassword},
       );
 
       if (response.statusCode == 200) {
@@ -431,7 +487,7 @@ class AuthController extends GetxController {
       isLoading.value = false;
     }
   }
-  
+
   Future<void> saveUserToStorage(User user) async {
     await apiService.saveUserData(user.toJson());
     currentUser.value = user;

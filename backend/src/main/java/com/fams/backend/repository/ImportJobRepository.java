@@ -15,4 +15,14 @@ public interface ImportJobRepository extends JpaRepository<ImportJob, Long> {
     List<ImportJob> findByCreatedByOrderByCreatedAtDesc(String createdBy);
 
     List<ImportJob> findByStatusOrderByCreatedAtDesc(ImportJob.JobStatus status);
+
+    boolean existsByStatusIn(java.util.Collection<ImportJob.JobStatus> statuses);
+
+    java.util.Optional<ImportJob> findTopByStatusInOrderByCreatedAtDesc(
+            java.util.Collection<ImportJob.JobStatus> statuses);
+
+    java.util.Optional<ImportJob> findTopByStatusInAndCreatedByOrderByCreatedAtDesc(
+            java.util.Collection<ImportJob.JobStatus> statuses, String createdBy);
+
+    java.util.List<ImportJob> findByStatusIn(java.util.Collection<ImportJob.JobStatus> statuses);
 }

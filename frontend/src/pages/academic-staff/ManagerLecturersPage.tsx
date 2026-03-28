@@ -11,6 +11,7 @@ import {
   AddLecturerModal,
   ImportLecturerModal
 } from '../../components/academic-staff/lecturers';
+import { usePagination } from '../../hooks/usePagination';
 
 export const ManagerLecturersPage = () => {
   const [lecturers, setLecturers] = useState<LecturerResponse[]>([]);
@@ -19,9 +20,13 @@ export const ManagerLecturersPage = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [departmentFilter, setDepartmentFilter] = useState('all');
   const [departments, setDepartments] = useState<string[]>([]);
-  const [page, setPage] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [selectedLecturers, setSelectedLecturers] = useState<number[]>([]);
+
+  // Use custom pagination hook - auto resets to page 0 when filters change
+  const { page, setPage } = usePagination({
+    resetDependencies: [statusFilter, departmentFilter, search]
+  });
 
   const [isExporting, setIsExporting] = useState(false);
 
@@ -54,7 +59,7 @@ export const ManagerLecturersPage = () => {
         department: departmentFilter === 'all' ? undefined : departmentFilter,
         search,
         page,
-        size: 10,
+        size: 50,
         sort: 'id,asc'
       });
       setLecturers(data.content);
@@ -133,7 +138,7 @@ export const ManagerLecturersPage = () => {
     fetchLecturers();
   }, [fetchLecturers]);
 
-  const totalPages = Math.ceil(totalElements / 10);
+  const totalPages = Math.ceil(totalElements / 50);
 
   return (
     <AcademicStaffLayout pageTitle="Quản lý Giảng viên">
@@ -159,7 +164,7 @@ export const ManagerLecturersPage = () => {
         />
 
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
+        {/* <div className="flex items-center gap-3 mb-6">
           <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
             <GraduationCap className="w-6 h-6 text-blue-600" />
           </div>
@@ -167,7 +172,7 @@ export const ManagerLecturersPage = () => {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Danh sách Giảng viên</h2>
             <p className="text-sm text-gray-500">Tổng cộng {totalElements} giảng viên đã có thông tin</p>
           </div>
-        </div>
+        </div> */}
 
         {/* Bulk Actions */}
 
@@ -184,7 +189,7 @@ export const ManagerLecturersPage = () => {
                   Mã GV
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">
-                  Chuyên môn
+                  Chuyên khoa
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">
                   Trạng thái
@@ -234,13 +239,13 @@ export const ManagerLecturersPage = () => {
         {totalElements > 0 && (
           <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-100 dark:border-zinc-800 text-sm text-gray-500">
             <div>
-              Hiển thị <span className="font-medium text-gray-900 dark:text-white">{page * 10 + 1}</span> đến{' '}
-              <span className="font-medium text-gray-900 dark:text-white">{Math.min((page + 1) * 10, totalElements)}</span> trong số{' '}
+              Hiển thị <span className="font-medium text-gray-900 dark:text-white">{page * 50 + 1}</span> đến{' '}
+              <span className="font-medium text-gray-900 dark:text-white">{Math.min((page + 1) * 50, totalElements)}</span> trong số{' '}
               <span className="font-medium text-gray-900 dark:text-white">{totalElements}</span> giảng viên
             </div>
             <div className="flex items-center gap-1">
               <button
-                onClick={() => setPage(p => Math.max(0, p - 1))}
+                onClick={() => setPage(Math.max(0, page - 1))}
                 disabled={page === 0}
                 className="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50 text-gray-500"
               >
@@ -271,7 +276,7 @@ export const ManagerLecturersPage = () => {
                 );
               })}
               <button
-                onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
                 disabled={page >= totalPages - 1}
                 className="px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50 text-gray-500"
               >

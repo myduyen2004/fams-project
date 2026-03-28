@@ -1,9 +1,14 @@
 package com.fams.backend.service;
 
+import com.fams.backend.dto.SpecializationImportDTO;
 import com.fams.backend.entity.Major;
 import com.fams.backend.entity.Specialization;
+import com.fams.backend.repository.CourseRepository;
 import com.fams.backend.repository.MajorRepository;
+import com.fams.backend.repository.SpecializationCourseRepository;
 import com.fams.backend.repository.SpecializationRepository;
+import com.fams.backend.repository.StudentProfileRepository;
+import com.fams.backend.repository.SubSpecializationCourseRepository;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,264 +23,476 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ImportSpecializationsTest {
 
-    @Mock
-    private SpecializationRepository specializationRepository;
+        @Mock
+        private SpecializationRepository specializationRepository;
 
-    @Mock
-    private MajorRepository majorRepository;
+        @Mock
+        private MajorRepository majorRepository;
 
-    @InjectMocks
-    private SpecializationService specializationService;
+        @Mock
+        private StudentProfileRepository studentProfileRepository;
 
-    private Major testMajor;
-    private MultipartFile validExcelFile;
-    private MultipartFile emptyCodeExcelFile;
-    private MultipartFile emptyNameExcelFile;
-    private MultipartFile duplicateCodeExcelFile;
-    private MultipartFile onlyHeaderExcelFile;
-    private MultipartFile differentMajorCodeFile;
+        @Mock
+        private SpecializationCourseRepository specializationCourseRepository;
 
-    @BeforeEach
-    void setUp() throws IOException {
-        // Tạo Major test
-        testMajor = Major.builder()
-                .id(1L)
-                .code("SE")
-                .name("Software Engineering")
-                .status(Major.MajorStatus.ACTIVE)
-                .build();
+        @Mock
+        private SubSpecializationCourseRepository subSpecializationCourseRepository;
 
-        // File Excel hợp lệ (cột: majorCode, code, name, description, totalCredits,
-        // status)
-        validExcelFile = createExcelFile(new String[][] {
-                { "major code", "specialization code", "specialization name", "description", "totalCredits", "status" },
-                { "SE", "SE-WEB", "Web Development", "Phát triển ứng dụng Web", "35", "ACTIVE" },
-                { "SE", "SE-MOB", "Mobile App Development", "Phát triển ứng dụng di động", "35", "ACTIVE" }
-        });
+        @Mock
+        private CourseRepository courseRepository;
 
-        // File với mã chuyên ngành trống
-        emptyCodeExcelFile = createExcelFile(new String[][] {
-                { "major code", "specialization code", "specialization name", "description", "totalCredits", "status" },
-                { "SE", "", "Web Development", "Mô tả", "35", "ACTIVE" }
-        });
+        @InjectMocks
+        private SpecializationService specializationService;
 
-        // File với tên chuyên ngành trống
-        emptyNameExcelFile = createExcelFile(new String[][] {
-                { "major code", "specialization code", "specialization name", "description", "totalCredits", "status" },
-                { "SE", "SE-WEB", "", "Mô tả", "35", "ACTIVE" }
-        });
+        private Major testMajor;
+        private MultipartFile validExcelFile;
+        private MultipartFile emptyCodeExcelFile;
+        private MultipartFile emptyNameExcelFile;
+        private MultipartFile duplicateCodeExcelFile;
+        private MultipartFile onlyHeaderExcelFile;
 
-        // File với mã chuyên ngành trùng trong file
-        duplicateCodeExcelFile = createExcelFile(new String[][] {
-                { "major code", "specialization code", "specialization name", "description", "totalCredits", "status" },
-                { "SE", "SE-WEB", "Web Development", "Mô tả 1", "35", "ACTIVE" },
-                { "SE", "SE-WEB", "Web Development 2", "Mô tả 2", "35", "ACTIVE" }
-        });
+        @BeforeEach
+        void setUp() throws IOException {
+                // Tạo Major test
+                testMajor = Major.builder()
+                                .id(1L)
+                                .code("SE")
+                                .name("Software Engineering")
+                                .status(Major.MajorStatus.ACTIVE)
+                                .build();
 
-        // File chỉ có header
-        onlyHeaderExcelFile = createExcelFile(new String[][] {
-                { "major code", "specialization code", "specialization name", "description", "totalCredits", "status" }
-        });
+                // File Excel hợp lệ (cột: major_code, code, name, description, status)
+                validExcelFile = createExcelFile(new String[][] {
+                                { "major_code", "code", "name", "description", "status" },
+                                { "SE", "SE-WEB", "Web Development", "Phát triển ứng dụng Web", "ACTIVE" },
+                                { "SE", "SE-MOB", "Mobile App Development", "Phát triển ứng dụng di động", "ACTIVE" }
+                });
 
-        // File với major code khác
-        differentMajorCodeFile = createExcelFile(new String[][] {
-                { "major code", "specialization code", "specialization name", "description", "totalCredits", "status" },
-                { "AI", "AI-ML", "Machine Learning", "Học máy", "35", "ACTIVE" },
-                { "IA", "IA-NET", "Network Security", "Bảo mật mạng", "35", "ACTIVE" }
-        });
-    }
+                // File với mã chuyên ngành trống
+                emptyCodeExcelFile = createExcelFile(new String[][] {
+                                { "major_code", "code", "name", "description", "status" },
+                                { "SE", "", "Web Development", "Mô tả", "ACTIVE" }
+                });
 
-    private MultipartFile createExcelFile(String[][] data) throws IOException {
-        try (Workbook workbook = new XSSFWorkbook()) {
-            Sheet sheet = workbook.createSheet("Specializations");
-            for (int i = 0; i < data.length; i++) {
-                Row row = sheet.createRow(i);
-                for (int j = 0; j < data[i].length; j++) {
-                    Cell cell = row.createCell(j);
-                    cell.setCellValue(data[i][j]);
-                }
-            }
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            workbook.write(out);
-            return new MockMultipartFile(
-                    "file",
-                    "specializations.xlsx",
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    out.toByteArray());
+                // File với tên chuyên ngành trống
+                emptyNameExcelFile = createExcelFile(new String[][] {
+                                { "major_code", "code", "name", "description", "status" },
+                                { "SE", "SE-WEB", "", "Mô tả", "ACTIVE" }
+                });
+
+                // File với mã chuyên ngành trùng trong file
+                duplicateCodeExcelFile = createExcelFile(new String[][] {
+                                { "major_code", "code", "name", "description", "status" },
+                                { "SE", "SE-WEB", "Web Development", "Mô tả 1", "ACTIVE" },
+                                { "SE", "SE-WEB", "Web Development 2", "Mô tả 2", "ACTIVE" }
+                });
+
+                // File chỉ có header
+                onlyHeaderExcelFile = createExcelFile(new String[][] {
+                                { "major_code", "code", "name", "description", "status" }
+                });
         }
-    }
 
-    @Test
-    @DisplayName("UTCID01: Import thành công với file Excel hợp lệ")
-    void importSpecializations_Success() throws IOException {
-        // Arrange
-        when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
-        when(specializationRepository.findByCode("SE-WEB")).thenReturn(Optional.empty());
-        when(specializationRepository.findByCode("SE-MOB")).thenReturn(Optional.empty());
-        when(specializationRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+        private MultipartFile createExcelFile(String[][] data) throws IOException {
+                try (Workbook workbook = new XSSFWorkbook()) {
+                        Sheet sheet = workbook.createSheet("Specializations");
+                        for (int i = 0; i < data.length; i++) {
+                                Row row = sheet.createRow(i);
+                                for (int j = 0; j < data[i].length; j++) {
+                                        Cell cell = row.createCell(j);
+                                        cell.setCellValue(data[i][j]);
+                                }
+                        }
+                        ByteArrayOutputStream out = new ByteArrayOutputStream();
+                        workbook.write(out);
+                        return new MockMultipartFile(
+                                        "file",
+                                        "specializations.xlsx",
+                                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                        out.toByteArray());
+                }
+        }
 
-        // Act
-        List<Specialization> result = specializationService.importSpecializations(1L, validExcelFile);
+        // ============== Tests for Preview Import ==============
 
-        // Assert
-        assertEquals(2, result.size());
-        assertEquals("SE-WEB", result.get(0).getCode());
-        assertEquals("SE-MOB", result.get(1).getCode());
-        verify(specializationRepository, times(1)).saveAll(anyList());
-    }
+        @Test
+        @DisplayName("UTCID01: Preview import trả về danh sách DTO hợp lệ")
+        void previewImportSpecializations_Success() throws IOException {
+                // Arrange
+                when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
+                when(specializationRepository.existsByCode("SE-WEB")).thenReturn(false);
+                when(specializationRepository.existsByCode("SE-MOB")).thenReturn(false);
 
-    @Test
-    @DisplayName("UTCID02: Import thất bại khi không tìm thấy Major")
-    void importSpecializations_MajorNotFound_ThrowsException() {
-        // Arrange
-        when(majorRepository.findById(999L)).thenReturn(Optional.empty());
+                // Act
+                List<SpecializationImportDTO> result = specializationService.previewImportSpecializations(1L,
+                                validExcelFile);
 
-        // Act & Assert
-        RuntimeException exception = assertThrows(
-                RuntimeException.class,
-                () -> specializationService.importSpecializations(999L, validExcelFile));
-        assertTrue(exception.getMessage().contains("Không tìm thấy ngành"));
-    }
+                // Assert
+                assertEquals(2, result.size());
+                assertEquals("VALID", result.get(0).getStatus());
+                assertEquals("VALID", result.get(1).getStatus());
+                assertEquals("SE-WEB", result.get(0).getCode());
+                assertEquals("SE-MOB", result.get(1).getCode());
+        }
 
-    @Test
-    @DisplayName("UTCID03: Import thất bại khi mã chuyên ngành để trống")
-    void importSpecializations_EmptyCode_ThrowsException() {
-        // Arrange
-        when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
+        @Test
+        @DisplayName("UTCID02: Preview import với mã chuyên ngành đã tồn tại trả về ERROR")
+        void previewImportSpecializations_CodeExists_ReturnsError() throws IOException {
+                // Arrange
+                when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
+                when(specializationRepository.existsByCode("SE-WEB")).thenReturn(true);
+                when(specializationRepository.existsByCode("SE-MOB")).thenReturn(false);
 
-        // Act & Assert
-        RuntimeException exception = assertThrows(
-                RuntimeException.class,
-                () -> specializationService.importSpecializations(1L, emptyCodeExcelFile));
-        assertTrue(exception.getMessage().contains("Mã chuyên ngành không được để trống"));
-    }
+                // Act
+                List<SpecializationImportDTO> result = specializationService.previewImportSpecializations(1L,
+                                validExcelFile);
 
-    @Test
-    @DisplayName("UTCID04: Import thất bại khi tên chuyên ngành để trống")
-    void importSpecializations_EmptyName_ThrowsException() {
-        // Arrange
-        when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
+                // Assert
+                assertEquals(2, result.size());
+                assertEquals("ERROR", result.get(0).getStatus());
+                assertTrue(result.get(0).getErrorMessage().contains("đã tồn tại trong hệ thống"));
+                assertEquals("VALID", result.get(1).getStatus());
+        }
 
-        // Act & Assert
-        RuntimeException exception = assertThrows(
-                RuntimeException.class,
-                () -> specializationService.importSpecializations(1L, emptyNameExcelFile));
-        assertTrue(exception.getMessage().contains("Tên chuyên ngành không được để trống"));
-    }
+        @Test
+        @DisplayName("UTCID03: Preview import với status không hợp lệ có warningMessage")
+        void previewImportSpecializations_InvalidStatus_HasWarning() throws IOException {
+                // Arrange
+                MultipartFile invalidStatusFile = createExcelFile(new String[][] {
+                                { "major_code", "code", "name", "description", "status" },
+                                { "SE", "SE-WEB", "Web Development", "Mô tả", "INVALID_STATUS" }
+                });
+                when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
+                when(specializationRepository.existsByCode("SE-WEB")).thenReturn(false);
 
-    @Test
-    @DisplayName("UTCID05: Import thất bại khi mã chuyên ngành bị trùng trong file")
-    void importSpecializations_DuplicateCodeInFile_ThrowsException() {
-        // Arrange
-        when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
-        when(specializationRepository.findByCode("SE-WEB")).thenReturn(Optional.empty());
+                // Act
+                List<SpecializationImportDTO> result = specializationService.previewImportSpecializations(1L,
+                                invalidStatusFile);
 
-        // Act & Assert
-        RuntimeException exception = assertThrows(
-                RuntimeException.class,
-                () -> specializationService.importSpecializations(1L, duplicateCodeExcelFile));
-        assertTrue(exception.getMessage().contains("bị trùng trong file"));
-    }
+                // Assert
+                assertEquals(1, result.size());
+                assertEquals("VALID", result.get(0).getStatus());
+                assertEquals("ACTIVE", result.get(0).getStatusStr()); // Defaults to ACTIVE
+                assertNotNull(result.get(0).getWarningMessage());
+                assertTrue(result.get(0).getWarningMessage().contains("không hợp lệ"));
+        }
 
-    @Test
-    @DisplayName("UTCID06: Import thất bại khi mã chuyên ngành đã tồn tại trong database")
-    void importSpecializations_CodeExistsInDatabase_ThrowsException() {
-        // Arrange
-        Specialization existingSpec = Specialization.builder()
-                .id(1L)
-                .code("SE-WEB")
-                .name("Existing Specialization")
-                .build();
-        when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
-        when(specializationRepository.findByCode("SE-WEB")).thenReturn(Optional.of(existingSpec));
+        @Test
+        @DisplayName("UTCID04: Preview import với mã chuyên ngành trùng trong file")
+        void previewImportSpecializations_DuplicateCodeInFile_ReturnsError() throws IOException {
+                // Arrange
+                when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
+                when(specializationRepository.existsByCode("SE-WEB")).thenReturn(false);
 
-        // Act & Assert
-        RuntimeException exception = assertThrows(
-                RuntimeException.class,
-                () -> specializationService.importSpecializations(1L, validExcelFile));
-        assertTrue(exception.getMessage().contains("đã tồn tại trong hệ thống"));
-    }
+                // Act
+                List<SpecializationImportDTO> result = specializationService.previewImportSpecializations(1L,
+                                duplicateCodeExcelFile);
 
-    @Test
-    @DisplayName("UTCID07: Import file chỉ có header throws exception")
-    void importSpecializations_OnlyHeader_ThrowsException() {
-        // Arrange
-        when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
+                // Assert
+                assertEquals(2, result.size());
+                assertEquals("VALID", result.get(0).getStatus());
+                assertEquals("ERROR", result.get(1).getStatus());
+                assertTrue(result.get(1).getErrorMessage().contains("bị trùng trong file"));
+        }
 
-        // Act & Assert
-        RuntimeException exception = assertThrows(
-                RuntimeException.class,
-                () -> specializationService.importSpecializations(1L, onlyHeaderExcelFile));
-        assertTrue(exception.getMessage().contains("File không chứa dữ liệu chuyên ngành hợp lệ"));
-        verify(specializationRepository, never()).saveAll(anyList());
-    }
+        @Test
+        @DisplayName("UTCID05: Preview import với mã chuyên ngành trống trả về ERROR")
+        void previewImportSpecializations_EmptyCode_ReturnsError() throws IOException {
+                // Arrange
+                when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
 
-    @Test
-    @DisplayName("UTCID08: Import throws exception khi tất cả dòng có major code khác")
-    void importSpecializations_DifferentMajorCode_ThrowsException() {
-        // Arrange
-        when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
+                // Act
+                List<SpecializationImportDTO> result = specializationService.previewImportSpecializations(1L,
+                                emptyCodeExcelFile);
 
-        // Act & Assert
-        RuntimeException exception = assertThrows(
-                RuntimeException.class,
-                () -> specializationService.importSpecializations(1L, differentMajorCodeFile));
-        assertTrue(exception.getMessage().contains("Không có chuyên ngành nào được import"));
-        assertTrue(exception.getMessage().contains("mã ngành không khớp"));
-        verify(specializationRepository, never()).saveAll(anyList());
-    }
+                // Assert
+                assertEquals(1, result.size());
+                assertEquals("ERROR", result.get(0).getStatus());
+                assertTrue(result.get(0).getErrorMessage().contains("Mã chuyên ngành không được để trống"));
+        }
 
-    @Test
-    @DisplayName("UTCID09: Import với status không hợp lệ sẽ mặc định là ACTIVE")
-    void importSpecializations_InvalidStatus_DefaultsToActive() throws IOException {
-        // Arrange
-        MultipartFile invalidStatusFile = createExcelFile(new String[][] {
-                { "major code", "specialization code", "specialization name", "description", "totalCredits", "status" },
-                { "SE", "SE-WEB", "Web Development", "Mô tả", "35", "INVALID_STATUS" }
-        });
-        when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
-        when(specializationRepository.findByCode("SE-WEB")).thenReturn(Optional.empty());
-        when(specializationRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+        @Test
+        @DisplayName("UTCID06: Preview import với tên chuyên ngành trống trả về ERROR")
+        void previewImportSpecializations_EmptyName_ReturnsError() throws IOException {
+                // Arrange
+                when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
 
-        // Act
-        List<Specialization> result = specializationService.importSpecializations(1L, invalidStatusFile);
+                // Act
+                List<SpecializationImportDTO> result = specializationService.previewImportSpecializations(1L,
+                                emptyNameExcelFile);
 
-        // Assert
-        assertEquals(1, result.size());
-        assertEquals(Specialization.SpecializationStatus.ACTIVE, result.get(0).getStatus());
-    }
+                // Assert
+                assertEquals(1, result.size());
+                assertEquals("ERROR", result.get(0).getStatus());
+                assertTrue(result.get(0).getErrorMessage().contains("Tên chuyên ngành không được để trống"));
+        }
 
-    @Test
-    @DisplayName("UTCID10: Import file có cả dòng hợp lệ và dòng major code khác")
-    void importSpecializations_MixedMajorCodes_OnlyImportsMatching() throws IOException {
-        // Arrange
-        MultipartFile mixedFile = createExcelFile(new String[][] {
-                { "major code", "specialization code", "specialization name", "description", "totalCredits", "status" },
-                { "SE", "SE-WEB", "Web Development", "Mô tả 1", "35", "ACTIVE" },
-                { "AI", "AI-ML", "Machine Learning", "Mô tả 2", "35", "ACTIVE" },
-                { "SE", "SE-MOB", "Mobile Development", "Mô tả 3", "35", "ACTIVE" }
-        });
-        when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
-        when(specializationRepository.findByCode("SE-WEB")).thenReturn(Optional.empty());
-        when(specializationRepository.findByCode("SE-MOB")).thenReturn(Optional.empty());
-        when(specializationRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+        @Test
+        @DisplayName("UTCID07: Preview import file chỉ có header trả về danh sách rỗng")
+        void previewImportSpecializations_OnlyHeader_ReturnsEmptyList() throws IOException {
+                // Arrange
+                when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
 
-        // Act
-        List<Specialization> result = specializationService.importSpecializations(1L, mixedFile);
+                // Act
+                List<SpecializationImportDTO> result = specializationService.previewImportSpecializations(1L,
+                                onlyHeaderExcelFile);
 
-        // Assert
-        assertEquals(2, result.size()); // Chỉ import 2 dòng có major code "SE"
-        assertEquals("SE-WEB", result.get(0).getCode());
-        assertEquals("SE-MOB", result.get(1).getCode());
-    }
+                // Assert
+                assertEquals(0, result.size());
+        }
+
+        @Test
+        @DisplayName("UTCID08: Preview import thất bại khi không tìm thấy Major")
+        void previewImportSpecializations_MajorNotFound_ThrowsException() {
+                // Arrange
+                when(majorRepository.findById(999L)).thenReturn(Optional.empty());
+
+                // Act & Assert
+                RuntimeException exception = assertThrows(
+                                RuntimeException.class,
+                                () -> specializationService.previewImportSpecializations(999L, validExcelFile));
+                assertTrue(exception.getMessage().contains("Không tìm thấy ngành"));
+        }
+
+        // ============== Tests for Save Imported Specializations ==============
+
+        @Test
+        @DisplayName("UTCID09: Save imported specializations thành công")
+        void saveImportedSpecializations_Success() {
+                // Arrange
+                List<SpecializationImportDTO> dtos = new ArrayList<>();
+                dtos.add(SpecializationImportDTO.builder()
+                                .rowNumber(2)
+                                .majorCode("SE")
+                                .code("SE-WEB")
+                                .name("Web Development")
+                                .description("Phát triển ứng dụng Web")
+                                .statusStr("ACTIVE")
+                                .status("VALID")
+                                .build());
+                dtos.add(SpecializationImportDTO.builder()
+                                .rowNumber(3)
+                                .majorCode("SE")
+                                .code("SE-MOB")
+                                .name("Mobile App Development")
+                                .description("Phát triển ứng dụng di động")
+                                .statusStr("ACTIVE")
+                                .status("VALID")
+                                .build());
+
+                when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
+                when(specializationRepository.existsByCode("SE-WEB")).thenReturn(false);
+                when(specializationRepository.existsByCode("SE-MOB")).thenReturn(false);
+                when(specializationRepository.save(any(Specialization.class)))
+                                .thenAnswer(invocation -> invocation.getArgument(0));
+
+                // Act
+                Map<String, Object> result = specializationService.saveImportedSpecializations(1L, dtos);
+
+                // Assert
+                assertEquals(2, result.get("created"));
+                assertEquals(0, result.get("failed"));
+                verify(specializationRepository, times(2)).save(any(Specialization.class));
+        }
+
+        @Test
+        @DisplayName("UTCID10: Save imported specializations bỏ qua các entry có ERROR")
+        void saveImportedSpecializations_SkipsErrorEntries() {
+                // Arrange
+                List<SpecializationImportDTO> dtos = new ArrayList<>();
+                dtos.add(SpecializationImportDTO.builder()
+                                .rowNumber(2)
+                                .majorCode("SE")
+                                .code("SE-WEB")
+                                .name("Web Development")
+                                .status("ERROR")
+                                .errorMessage("Mã chuyên ngành đã tồn tại")
+                                .build());
+                dtos.add(SpecializationImportDTO.builder()
+                                .rowNumber(3)
+                                .majorCode("SE")
+                                .code("SE-MOB")
+                                .name("Mobile App Development")
+                                .statusStr("ACTIVE")
+                                .status("VALID")
+                                .build());
+
+                when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
+                when(specializationRepository.existsByCode("SE-MOB")).thenReturn(false);
+                when(specializationRepository.save(any(Specialization.class)))
+                                .thenAnswer(invocation -> invocation.getArgument(0));
+
+                // Act
+                Map<String, Object> result = specializationService.saveImportedSpecializations(1L, dtos);
+
+                // Assert
+                assertEquals(1, result.get("created"));
+                assertEquals(1, result.get("failed"));
+                verify(specializationRepository, times(1)).save(any(Specialization.class));
+        }
+
+        @Test
+        @DisplayName("UTCID11: Save imported specializations thất bại khi mã đã tồn tại trong DB")
+        void saveImportedSpecializations_CodeExistsInDB_ReturnsError() {
+                // Arrange
+                List<SpecializationImportDTO> dtos = new ArrayList<>();
+                dtos.add(SpecializationImportDTO.builder()
+                                .rowNumber(2)
+                                .majorCode("SE")
+                                .code("SE-WEB")
+                                .name("Web Development")
+                                .statusStr("ACTIVE")
+                                .status("VALID")
+                                .build());
+
+                when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
+                when(specializationRepository.existsByCode("SE-WEB")).thenReturn(true);
+
+                // Act
+                Map<String, Object> result = specializationService.saveImportedSpecializations(1L, dtos);
+
+                // Assert
+                assertEquals(0, result.get("created"));
+                assertEquals(1, result.get("failed"));
+                @SuppressWarnings("unchecked")
+                List<String> errors = (List<String>) result.get("errors");
+                assertTrue(errors.stream().anyMatch(e -> e.contains("đã tồn tại trong hệ thống")));
+                verify(specializationRepository, never()).save(any(Specialization.class));
+        }
+
+        @Test
+        @DisplayName("UTCID12: Save imported specializations với status không hợp lệ sẽ mặc định là ACTIVE")
+        void saveImportedSpecializations_InvalidStatus_DefaultsToActive() {
+                // Arrange
+                List<SpecializationImportDTO> dtos = new ArrayList<>();
+                dtos.add(SpecializationImportDTO.builder()
+                                .rowNumber(2)
+                                .majorCode("SE")
+                                .code("SE-WEB")
+                                .name("Web Development")
+                                .statusStr("INVALID_STATUS")
+                                .status("VALID")
+                                .build());
+
+                when(majorRepository.findById(1L)).thenReturn(Optional.of(testMajor));
+                when(specializationRepository.existsByCode("SE-WEB")).thenReturn(false);
+                when(specializationRepository.save(any(Specialization.class))).thenAnswer(invocation -> {
+                        Specialization savedSpec = invocation.getArgument(0);
+                        assertEquals(Specialization.SpecializationStatus.ACTIVE, savedSpec.getStatus());
+                        return savedSpec;
+                });
+
+                // Act
+                Map<String, Object> result = specializationService.saveImportedSpecializations(1L, dtos);
+
+                // Assert
+                assertEquals(1, result.get("created"));
+                verify(specializationRepository, times(1)).save(any(Specialization.class));
+        }
+
+        @Test
+        @DisplayName("UTCID13: Save imported specializations thất bại khi không tìm thấy Major")
+        void saveImportedSpecializations_MajorNotFound_ThrowsException() {
+                // Arrange
+                List<SpecializationImportDTO> dtos = new ArrayList<>();
+                dtos.add(SpecializationImportDTO.builder()
+                                .rowNumber(2)
+                                .majorCode("SE")
+                                .code("SE-WEB")
+                                .name("Web Development")
+                                .status("VALID")
+                                .build());
+
+                when(majorRepository.findById(999L)).thenReturn(Optional.empty());
+
+                // Act & Assert
+                RuntimeException exception = assertThrows(
+                                RuntimeException.class,
+                                () -> specializationService.saveImportedSpecializations(999L, dtos));
+                assertTrue(exception.getMessage().contains("Không tìm thấy ngành"));
+        }
+
+        // ============== Tests for Export Specialization Template ==============
+
+        @Test
+        @DisplayName("UTCID14: Export template trả về file Excel hợp lệ với headers")
+        void exportSpecializationTemplate_ReturnsValidExcelWithHeaders() throws IOException {
+                // Act
+                byte[] templateBytes = specializationService.exportSpecializationTemplate();
+
+                // Assert
+                assertNotNull(templateBytes);
+                assertTrue(templateBytes.length > 0);
+
+                // Verify Excel content
+                try (Workbook workbook = new XSSFWorkbook(new java.io.ByteArrayInputStream(templateBytes))) {
+                        Sheet sheet = workbook.getSheetAt(0);
+                        assertNotNull(sheet);
+
+                        // Verify header row
+                        Row headerRow = sheet.getRow(0);
+                        assertNotNull(headerRow);
+                        assertEquals("major code", headerRow.getCell(0).getStringCellValue());
+                        assertEquals("specialization code", headerRow.getCell(1).getStringCellValue());
+                        assertEquals("specialization name", headerRow.getCell(2).getStringCellValue());
+                        assertEquals("description", headerRow.getCell(3).getStringCellValue());
+                        assertEquals("status", headerRow.getCell(4).getStringCellValue());
+                }
+        }
+
+        @Test
+        @DisplayName("UTCID15: Export template chứa dữ liệu mẫu")
+        void exportSpecializationTemplate_ContainsSampleData() throws IOException {
+                // Act
+                byte[] templateBytes = specializationService.exportSpecializationTemplate();
+
+                // Assert
+                try (Workbook workbook = new XSSFWorkbook(new java.io.ByteArrayInputStream(templateBytes))) {
+                        Sheet sheet = workbook.getSheetAt(0);
+
+                        // Verify sample data row
+                        Row sampleRow = sheet.getRow(1);
+                        assertNotNull(sampleRow);
+                        assertEquals("SE", sampleRow.getCell(0).getStringCellValue());
+                        assertEquals("SE-WEB", sampleRow.getCell(1).getStringCellValue());
+                        assertEquals("Web Development", sampleRow.getCell(2).getStringCellValue());
+                        assertNotNull(sampleRow.getCell(3).getStringCellValue()); // Description
+                        assertEquals("ACTIVE", sampleRow.getCell(4).getStringCellValue());
+                }
+        }
+
+        @Test
+        @DisplayName("UTCID16: Export template có đúng 5 cột")
+        void exportSpecializationTemplate_HasCorrectNumberOfColumns() throws IOException {
+                // Act
+                byte[] templateBytes = specializationService.exportSpecializationTemplate();
+
+                // Assert
+                try (Workbook workbook = new XSSFWorkbook(new java.io.ByteArrayInputStream(templateBytes))) {
+                        Sheet sheet = workbook.getSheetAt(0);
+                        Row headerRow = sheet.getRow(0);
+
+                        // Count non-null cells in header row
+                        int columnCount = 0;
+                        for (int i = 0; i < headerRow.getLastCellNum(); i++) {
+                                Cell cell = headerRow.getCell(i);
+                                if (cell != null && !cell.getStringCellValue().isEmpty()) {
+                                        columnCount++;
+                                }
+                        }
+                        assertEquals(5, columnCount);
+                }
+        }
 }
