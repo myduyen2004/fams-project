@@ -18,7 +18,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/chat-groups")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Slf4j
 @Tag(name = "Chat Groups", description = "API for managing chat groups")
 public class ChatGroupController {

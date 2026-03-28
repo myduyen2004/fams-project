@@ -4,6 +4,7 @@ import com.fams.backend.dto.response.ScheduleRequestResponse;
 import com.fams.backend.entity.ScheduleRequest;
 import com.fams.backend.entity.User;
 import com.fams.backend.service.ScheduleRequestService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -20,9 +21,9 @@ import java.time.LocalDate;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/academic-staff/schedule-requests")
+@RequestMapping("/api/v1/schedule-requests")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*", exposedHeaders = { "Content-Disposition" })
+@Tag(name = "Schedule Request", description = "API quản lý yêu cầu thay đổi lịch học")
 @PreAuthorize("hasRole('ACADEMIC_STAFF')")
 @Slf4j
 public class ScheduleRequestController {

@@ -21,10 +21,9 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/majors")
+@RequestMapping("/api/v1/majors")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
-@Tag(name = "Major", description = "API cho quản lý ngành học")
+@Tag(name = "Major", description = "API cho quản lý Ngành học")
 public class MajorController {
 
     private final MajorService majorService;

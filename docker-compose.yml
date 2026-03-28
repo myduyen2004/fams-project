@@ -92,6 +92,7 @@ services:
       - MONGODB_URI=${MONGODB_URI:-mongodb://fams_user:fams_pass@mongodb:27017/fams_read_status?authSource=admin}
       - AI_SERVICE_URL=http://ai-service:5000
       - TZ=Asia/Ho_Chi_Minh
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000,https://*.vercel.app,https://*.ngrok-free.app,https://*.ngrok-free.dev,https://*.ngrok.io}
       # Firebase secret mounted at runtime - never committed to git
       - FIREBASE_CONFIG_PATH=/app/secrets/firebase-adminsdk.json
     volumes:
@@ -109,7 +110,7 @@ services:
     networks:
       - fams-network
   #  frontend:
-  #    image: node:18-alpine
+  #    image: node:20-alpine
   #    container_name: fams-frontend
   #    working_dir: /app
   #    volumes:
