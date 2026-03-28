@@ -28,7 +28,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/academic-staff")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Slf4j
 @Tag(name = "Academic Staff", description = "API cho cán bộ đào tạo")
 public class AcademicStaffDashboardController {

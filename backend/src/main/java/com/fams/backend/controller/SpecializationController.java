@@ -28,10 +28,9 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/specializations")
+@RequestMapping("/api/v1/specializations")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
-@Tag(name = "Specialization", description = "API cho quản lý chuyên ngành")
+@Tag(name = "Specialization", description = "API cho quản lý Chuyên ngành")
 public class SpecializationController {
 
     private final SpecializationService specializationService;

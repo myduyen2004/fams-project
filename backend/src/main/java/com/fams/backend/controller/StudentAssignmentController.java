@@ -6,6 +6,8 @@ import com.fams.backend.entity.User;
 import com.fams.backend.repository.EnrollmentRepository;
 import com.fams.backend.repository.UserRepository;
 import com.fams.backend.service.AssignmentSubmissionService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,10 +19,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/student/assignments")
+@RequestMapping("/api/student-assignments")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @PreAuthorize("hasRole('STUDENT')")
+@Tag(name = "Student Assignment", description = "API for student assignments")
 public class StudentAssignmentController {
 
     private final AssignmentSubmissionService assignmentSubmissionService;

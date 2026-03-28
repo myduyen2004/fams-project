@@ -30,7 +30,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/class-sections")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Slf4j
 @Tag(name = "Class Sections", description = "API for managing class sections")
 public class ClassSectionController {

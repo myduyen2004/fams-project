@@ -6,6 +6,7 @@ import com.fams.backend.entity.AcademicRequest.AcademicRequestType;
 import com.fams.backend.entity.AcademicRequest.RequestStatus;
 import com.fams.backend.entity.User;
 import com.fams.backend.service.AcademicRequestService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -25,7 +26,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/academic-requests")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+@Tag(name = "Academic Request", description = "API quản lý yêu cầu đào tạo")
 @Slf4j
 public class AcademicRequestController {
 

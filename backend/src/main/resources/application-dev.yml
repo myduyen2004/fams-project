@@ -44,7 +44,7 @@ server:
 app:
   environment: development
   cors:
-    allowed-origins: http://localhost:5173,http://localhost:3000,https://*.vercel.app,https://*.ngrok-free.app,https://*.ngrok-free.dev,*
+    allowed-origins: http://localhost:5173,http://localhost:3000,https://*.vercel.app,https://*.ngrok-free.app,https://*.ngrok-free.dev
   
 logging:
   level:

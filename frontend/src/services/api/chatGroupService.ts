@@ -113,7 +113,7 @@ export const chatGroupService = {
     },
 
     getUploadSignature: async (): Promise<{ signature: string; timestamp: number; apiKey: string; cloudName: string; folder: string }> => {
-        const response = await apiClient.get('/cloudinary/signature');
+        const response = await apiClient.get('/v1/cloudinary/signature');
         return response.data;
     },
 

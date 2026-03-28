@@ -22,7 +22,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "AI Chat", description = "API cho Chatbot AI Learning Assistant")
-@CrossOrigin(origins = "*", maxAge = 3600)
 public class AIChatController {
 
     private final AIChatService aiChatService;

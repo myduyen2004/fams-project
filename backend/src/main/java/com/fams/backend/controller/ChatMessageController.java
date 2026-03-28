@@ -33,7 +33,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/chat-messages")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Slf4j
 @Tag(name = "Chat Messages", description = "API for sending and receiving chat messages")
 public class ChatMessageController {
