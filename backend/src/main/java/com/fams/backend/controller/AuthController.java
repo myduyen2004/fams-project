@@ -16,11 +16,11 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Authentication", description = "API xác thực người dùng")
+@CrossOrigin(origins = "*", maxAge = 3600)
 public class AuthController {
 
     private final AuthService authService;
     private final com.fams.backend.service.UserService userService;
-    private final com.fams.backend.service.impl.SystemLogService systemLogService;
 
     /**
      * POST /auth/login
@@ -32,14 +32,8 @@ public class AuthController {
             @Valid @RequestBody LoginRequest request,
             jakarta.servlet.http.HttpServletRequest httpRequest) {
         log.info("POST /auth/login - username: {}", request.getUsername());
-        try {
-            LoginResponse response = authService.login(request, httpRequest);
-            systemLogService.logLoginSuccess(request.getUsername());
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            systemLogService.logLoginFailed(request.getUsername());
-            throw e;
-        }
+        LoginResponse response = authService.login(request, httpRequest);
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -116,13 +110,6 @@ public class AuthController {
         return ResponseEntity.ok(userService.updateMyProfile(username, request, avatar));
     }
 
-    @GetMapping("/user/{id}/profile")
-    @Operation(summary = "Lấy thông tin công khai của người dùng", description = "Sử dụng cho sinh viên xem thông tin giảng viên")
-    public ResponseEntity<com.fams.backend.dto.response.UserResponse> getPublicUserProfile(@PathVariable Long id) {
-        log.info("GET /auth/user/{}/profile", id);
-        return ResponseEntity.ok(userService.getUserById(id));
-    }
-
     /**
      * GET /auth/me
      * Lấy thông tin user hiện tại (cần JWT token)
@@ -130,7 +117,6 @@ public class AuthController {
     @GetMapping("/me")
     @Operation(summary = "Lấy thông tin người dùng hiện tại")
     public ResponseEntity<com.fams.backend.dto.response.UserResponse> getCurrentUser() {
-        log.info("GET /auth/me - Hot reload is working!");
         String username = org.springframework.security.core.context.SecurityContextHolder.getContext()
                 .getAuthentication().getName();
         return ResponseEntity.ok(userService.getUserByUsername(username));

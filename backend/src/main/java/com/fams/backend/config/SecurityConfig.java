@@ -26,7 +26,9 @@ import java.util.List;
 public class SecurityConfig {
 
         private final JwtAuthenticationFilter jwtAuthenticationFilter;
-        private final CorsConfigurationSource corsConfigurationSource;
+
+        @org.springframework.beans.factory.annotation.Value("${app.cors.allowed-origins}")
+        private String allowedOrigins;
 
         // Cấu hình security chính
         @Bean
@@ -36,7 +38,7 @@ public class SecurityConfig {
                                 .csrf(AbstractHttpConfigurer::disable)
 
                                 // Enable CORS
-                                .cors(cors -> cors.configurationSource(corsConfigurationSource))
+                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
                                 // Session management
                                 .sessionManagement(session -> session
@@ -54,33 +56,16 @@ public class SecurityConfig {
                                                                 "/api/auth/**", // auth with /api prefix
                                                                 "/api/map/**", // map endpoints
                                                                 "/api/v1/semesters/**", // semester endpoints
-                                                                "/api/v1/class-sections/**", // class section endpoints
-                                                                "/api/v1/files/**", // file download endpoints
                                                                 "/api-docs/**",
                                                                 "/swagger-ui/**",
                                                                 "/swagger-ui.html",
                                                                 "/v3/api-docs/**",
                                                                 "/actuator/health",
-                                                                "/ws/**", // WebSocket endpoint
-                                                                "/ws-native/**", // Native WebSocket endpoint
-                                                                "/api/files/**",
-                                                                "/api/courses/**")
-                                                .permitAll()
+                                                                "/ws/**" // WebSocket endpoint
+                                                ).permitAll()
 
                                                 // All other endpoints require authentication
                                                 .anyRequest().authenticated())
-
-                                // Custom Exception handling
-                                .exceptionHandling(exception -> exception
-                                                .authenticationEntryPoint((request, response, authException) -> {
-                                                        response.setStatus(
-                                                                        jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
-                                                        response.setContentType("application/json");
-                                                        response.getWriter().write(
-                                                                        "{\"status\": 401, \"error\": \"Unauthorized\", \"message\": \""
-                                                                                        + authException.getMessage()
-                                                                                        + "\"}");
-                                                }))
 
                                 // Add JWT filter
                                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
@@ -88,5 +73,31 @@ public class SecurityConfig {
                 return http.build();
         }
 
-        // CORS configuration defined in CorsConfig.java
+        // CORS configuration
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource() {
+                CorsConfiguration configuration = new CorsConfiguration();
+
+                // Split comma-separated origins from properties
+                List<String> origins = Arrays.asList(allowedOrigins.split(","));
+                configuration.setAllowedOriginPatterns(origins);
+
+                // Allow HTTP methods
+                configuration.setAllowedMethods(List.of(
+                                "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+
+                // Allow all headers
+                configuration.setAllowedHeaders(List.of("*"));
+
+                // Allow cookies / credentials
+                configuration.setAllowCredentials(true);
+
+                // Max age preflight
+                configuration.setMaxAge(3600L);
+
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", configuration);
+
+                return source;
+        }
 }

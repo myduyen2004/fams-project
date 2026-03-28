@@ -67,16 +67,19 @@ export const ProfilePage: React.FC = () => {
       try {
         setIsUploadingAvatar(true);
         // Prepare data for update
-        const updateData = {
+        const updateData: any = {
+          fullName: editedProfile.fullName,
+          code: editedProfile.code,
+          email: editedProfile.email,
           dob: editedProfile.dob,
-          phone: editedProfile.phone
+          phone: editedProfile.phone,
+          role: editedProfile.role
         };
 
-        const updatedUser = await userService.updateProfile(updateData, selectedAvatarFile || undefined);
+        const updatedUser = await userService.updateUser(editedProfile.id, updateData, selectedAvatarFile || undefined);
         
-        const mergedUser = { ...profile, ...updatedUser };
-        setProfile(mergedUser as any);
-        localStorage.setItem('user', JSON.stringify(mergedUser));
+        setProfile(updatedUser as any);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
         setIsEditing(false);
         setSelectedAvatarFile(null);
         

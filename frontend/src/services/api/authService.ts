@@ -1,4 +1,5 @@
-import apiClient from './apiClient';
+import axios, { AxiosError } from 'axios';
+import { API_URL } from './config';
 
 // ========================================
 // Types
@@ -37,7 +38,6 @@ export interface UserInfo {
   role: string;
   avatar?: string;
   isPasswordChanged?: boolean;
-  gpa?: number;
 }
 
 export interface ApiError {
@@ -48,8 +48,45 @@ export interface ApiError {
 }
 
 // ========================================
-// Auth Service
+// Axios Instance
 // ========================================
+const apiClient = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 30000,
+});
+
+// Request Interceptor - Add token to headers
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Response Interceptor - Handle errors
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError<ApiError>) => {
+    if (error.response?.status === 401) {
+      // Unauthorized - Clear token and redirect to login
+      // BUT skip redirect if already on login page to avoid reload
+      const currentPath = window.location.pathname;
+      if (currentPath !== '/login' && currentPath !== '/') {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 // ========================================
 // Auth Service

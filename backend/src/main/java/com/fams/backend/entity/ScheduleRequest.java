@@ -57,18 +57,9 @@ public class ScheduleRequest {
     @Column(nullable = false, length = 20)
     private RequestType type;
 
-    // Ngày yêu cầu thay đổi (cho trường hợp đổi lịch, mượn phòng)
-    private java.time.LocalDate requestedDate;
-
-    // Slot yêu cầu (số từ 1-4)
-    private Integer requestedSlotNumber;
-
     // Lý do
     @Column(columnDefinition = "TEXT")
     private String reason;
-
-    @Column(columnDefinition = "TEXT")
-    private String file;
 
     // Trạng thái
     @Enumerated(EnumType.STRING)
@@ -106,7 +97,6 @@ public class ScheduleRequest {
     public enum RequestStatus {
         PENDING, // Đang chờ duyệt
         APPROVED, // Đã duyệt
-        REJECTED, // Đã từ chối
-        REVOKED // Đã thu hồi
+        REJECTED // Đã từ chối
     }
 }

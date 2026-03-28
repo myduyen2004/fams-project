@@ -13,7 +13,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import com.fams.backend.service.UserNotificationService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
@@ -31,8 +30,6 @@ class DashboardServiceImplTest {
     private NotificationRepository notificationRepository;
     @Mock
     private SystemLogRepository systemLogRepository;
-    @Mock
-    private UserNotificationService notificationService;
 
     @InjectMocks
     private DashboardServiceImpl dashboardService;

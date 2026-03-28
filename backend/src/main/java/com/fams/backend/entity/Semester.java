@@ -58,20 +58,6 @@ public class Semester {
     @Builder.Default
     private List<SlotType> slotTypes = new ArrayList<>();
 
-    // Cấu hình chi tiết (One-to-One)
-    @OneToOne(mappedBy = "semester", cascade = CascadeType.ALL, orphanRemoval = true)
-    private SemesterConfig config;
-
-    // Các ngày học trong tuần (One-to-Many)
-    @OneToMany(mappedBy = "semester", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<SemesterWeekday> weekdays = new ArrayList<>();
-
-    // Các ngày nghỉ (One-to-Many)
-    @OneToMany(mappedBy = "semester", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<Holiday> holidays = new ArrayList<>();
-
     // Mô tả học kỳ
     @Column(columnDefinition = "TEXT")
     private String description;

@@ -32,18 +32,8 @@ public class UserResponse implements Serializable {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    // Student specific fields (optional)
-    private String major;
-    private Long majorId;
-    private String specialization;
-    private Long specializationId;
-    private String subSpecialization;
-    private Long subSpecializationId;
-    private String course;
-    private Double gpa;
-
     public static UserResponse fromUser(User user) {
-        UserResponse builder = UserResponse.builder()
+        return UserResponse.builder()
                 .id(user.getId())
                 .code(user.getCode())
                 .username(user.getUsername())
@@ -60,25 +50,6 @@ public class UserResponse implements Serializable {
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();
-
-        if (user.getRole() == User.UserRole.STUDENT && user.getStudentProfile() != null) {
-            var profile = user.getStudentProfile();
-            builder.setCourse(profile.getCourse());
-            builder.setGpa(profile.getGpa());
-            if (profile.getMajor() != null) {
-                builder.setMajor(profile.getMajor().getName());
-                builder.setMajorId(profile.getMajor().getId());
-            }
-            if (profile.getSpecialization() != null) {
-                builder.setSpecialization(profile.getSpecialization().getName());
-                builder.setSpecializationId(profile.getSpecialization().getId());
-            }
-            if (profile.getSubSpecialization() != null) {
-                builder.setSubSpecialization(profile.getSubSpecialization().getName());
-                builder.setSubSpecializationId(profile.getSubSpecialization().getId());
-            }
-        }
-        return builder;
     }
 
     private static String getRoleDisplayName(User.UserRole role) {

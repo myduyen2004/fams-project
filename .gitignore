@@ -23,16 +23,9 @@ backend_error.log
 frontend_error.log
 ai_error.log
 build_log.txt
-logs.txt
-logs_5m.txt
-debug_logs.txt
-test_backend_proxy.py
 
 # --- Backend (Spring Boot / Maven) ---
-backend/service-account.json
-backend/src/main/resources/firebase-adminsdk.json
 backend/target/
-backend/target_old/
 backend/.mvn/wrapper/maven-wrapper.jar
 backend/backend_test_output*.txt
 backend/mvnw
@@ -52,14 +45,11 @@ ai-service/__pycache__/
 ai-service/*.py[cod]
 ai-service/.pytest_cache/
 ai-service/data/
-ai-service/app/models/anti_spoof/*.onnx
-ai-service/app/models/face_recognition/*.onnx
-ai-service/ml_models/
-ai-service/app/models/*/*.onnx
-ai-service/app/models/*/*.bin
-ai-service/app/models/*/*.pth
-ai-service/app/models/*/*.h5
-ai-service/app/models/*/*.pkl
+ai-service/ml_models/*.h5
+ai-service/ml_models/*.pkl
+ai-service/ml_models/*.dat
+ai-service/ml_models/*.pyd
+ai-service/ml_models/*.dll
 
 # --- Mobile (Flutter/React Native) ---
 mobile/.dart_tool/
@@ -81,7 +71,6 @@ mobile/ios/GeneratedPluginRegistrant.h
 mobile/ios/GeneratedPluginRegistrant.m
 mobile/macos/Flutter/ephemeral/
 mobile/windows/flutter/ephemeral/
-mobile/android/app/google-services.json
 
 # Docker & Persistence
 data/
@@ -91,23 +80,3 @@ redis_data/
 ai-service/data/
 .vercel
 .env*.local
-
-# Common Python/Jupyter artifacts
-.ipynb_checkpoints/
-.tox/
-.coverage
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.pyo
-*.pyc
-
-# Final OS files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Icon?

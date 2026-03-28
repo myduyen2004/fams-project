@@ -149,30 +149,12 @@ export const AddLecturerModal: React.FC<{ onClose: () => void; onSuccess: () => 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-zinc-400 mb-1">Chuyên ngành</label>
               <select className="w-full px-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none text-gray-900 dark:text-white" value={formData.department || ''} onChange={e => setFormData({ ...formData, department: e.target.value })}>
-                <option value="">Chọn khoa</option>
-
-                <option value="Khoa Công nghệ Thông tin">Khoa Công nghệ Thông tin</option>
-                <option value="Khoa Khoa học Máy tính">Khoa Khoa học Máy tính</option>
-                <option value="Khoa Trí tuệ Nhân tạo">Khoa Trí tuệ Nhân tạo</option>
-                <option value="Khoa Kỹ thuật Phần mềm">Khoa Kỹ thuật Phần mềm</option>
-
-                <option value="Khoa Kinh tế">Khoa Kinh tế</option>
-                <option value="Khoa Quản trị Kinh doanh">Khoa Quản trị Kinh doanh</option>
-                <option value="Khoa Marketing">Khoa Marketing</option>
-                <option value="Khoa Tài chính – Ngân hàng">Khoa Tài chính – Ngân hàng</option>
-
-                <option value="Khoa Ngôn ngữ Anh">Khoa Ngôn ngữ Anh</option>
-                <option value="Khoa Ngôn ngữ Nhật">Khoa Ngôn ngữ Nhật</option>
-                <option value="Khoa Ngôn ngữ Hàn Quốc">Khoa Ngôn ngữ Hàn Quốc</option>
-                <option value="Khoa Ngôn ngữ Trung Quốc">Khoa Ngôn ngữ Trung Quốc</option>
-
-                <option value="Khoa Thiết kế Đồ họa">Khoa Thiết kế Đồ họa</option>
-                <option value="Khoa Mỹ thuật">Khoa Mỹ thuật</option>
-                <option value="Khoa Kiến trúc">Khoa Kiến trúc</option>
-
-                <option value="Khoa Luật">Khoa Luật</option>
-                <option value="Khoa Khoa học Xã hội">Khoa Khoa học Xã hội</option>
-                <option value="Khoa Du lịch – Khách sạn">Khoa Du lịch – Khách sạn</option>
+                <option value="">Chọn chuyên ngành</option>
+                <option value="Kỹ thuật phần mềm">Kỹ thuật phần mềm</option>
+                <option value="Khoa học máy tính">Khoa học máy tính</option>
+                <option value="Mạng máy tính">Mạng máy tính</option>
+                <option value="Trí tuệ nhân tạo">Trí tuệ nhân tạo</option>
+                <option value="An toàn thông tin">An toàn thông tin</option>
               </select>
             </div>
             <div>
@@ -307,30 +289,12 @@ export const EditLecturerModal: React.FC<{ lecturer: LecturerResponse; onClose: 
                 value={formData.department}
                 onChange={e => setFormData({ ...formData, department: e.target.value })}
               >
-
-
-                <option value="Khoa Công nghệ Thông tin">Khoa Công nghệ Thông tin</option>
-                <option value="Khoa Khoa học Máy tính">Khoa Khoa học Máy tính</option>
-                <option value="Khoa Trí tuệ Nhân tạo">Khoa Trí tuệ Nhân tạo</option>
-                <option value="Khoa Kỹ thuật Phần mềm">Khoa Kỹ thuật Phần mềm</option>
-
-                <option value="Khoa Kinh tế">Khoa Kinh tế</option>
-                <option value="Khoa Quản trị Kinh doanh">Khoa Quản trị Kinh doanh</option>
-                <option value="Khoa Marketing">Khoa Marketing</option>
-                <option value="Khoa Tài chính – Ngân hàng">Khoa Tài chính – Ngân hàng</option>
-
-                <option value="Khoa Ngôn ngữ Anh">Khoa Ngôn ngữ Anh</option>
-                <option value="Khoa Ngôn ngữ Nhật">Khoa Ngôn ngữ Nhật</option>
-                <option value="Khoa Ngôn ngữ Hàn Quốc">Khoa Ngôn ngữ Hàn Quốc</option>
-                <option value="Khoa Ngôn ngữ Trung Quốc">Khoa Ngôn ngữ Trung Quốc</option>
-
-                <option value="Khoa Thiết kế Đồ họa">Khoa Thiết kế Đồ họa</option>
-                <option value="Khoa Mỹ thuật">Khoa Mỹ thuật</option>
-                <option value="Khoa Kiến trúc">Khoa Kiến trúc</option>
-
-                <option value="Khoa Luật">Khoa Luật</option>
-                <option value="Khoa Khoa học Xã hội">Khoa Khoa học Xã hội</option>
-                <option value="Khoa Du lịch – Khách sạn">Khoa Du lịch – Khách sạn</option>
+                <option value="">Chọn chuyên ngành</option>
+                <option value="Kỹ thuật phần mềm">Kỹ thuật phần mềm</option>
+                <option value="Khoa học máy tính">Khoa học máy tính</option>
+                <option value="Mạng máy tính">Mạng máy tính</option>
+                <option value="Trí tuệ nhân tạo">Trí tuệ nhân tạo</option>
+                <option value="An toàn thông tin">An toàn thông tin</option>
               </select>
             </div>
 
@@ -423,7 +387,7 @@ export const ViewLecturerModal: React.FC<{
               <div className="pt-4 border-t border-gray-100 dark:border-zinc-800">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-gray-400">Chuyên khoa</p>
+                    <p className="text-gray-400">Chuyên ngành</p>
                     <p className="font-medium text-gray-700 dark:text-gray-300">{lecturer.department}</p>
                   </div>
                   <div>
@@ -708,22 +672,19 @@ export const ImportLecturerModal: React.FC<{ onClose: () => void; onSuccess: () 
                       <th className="px-4 py-3">Chuyên ngành</th>
                       <th className="px-4 py-3">Chuyên môn</th>
                       <th className="px-4 py-3">Tiểu sử</th>
-                      <th className="px-4 py-3 text-center">Ghi chú</th>
                       <th className="px-4 py-3 text-center">Trạng thái</th>
-
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
                     {previewData.map((row, index) => (
                       <tr key={index} className={row.status === 'ERROR' ? 'bg-red-50 dark:bg-red-900/10' : ''}>
-                        <td className="px-4 py-3 text-center text-gray-500">{row.rowNumber - 1}</td>
+                        <td className="px-4 py-3 text-center text-gray-500">{row.rowNumber}</td>
                         <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{row.code}</td>
                         <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{row.fullName || '---'}</td>
                         <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{row.email || '---'}</td>
                         <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{row.department || '---'}</td>
                         <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{row.expertise || '---'}</td>
                         <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{row.bio || '---'}</td>
-                        <td className="px-4 py-3 text-red-500 text-xs italic max-w-xs">{row.errorMessage || ''}</td>
                         <td className="px-4 py-3 text-center">
                           {row.status === 'VALID' ? (
                             <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
@@ -757,7 +718,7 @@ export const ImportLecturerModal: React.FC<{ onClose: () => void; onSuccess: () 
                   <button onClick={onClose} className="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Hủy</button>
                   <button
                     onClick={handleConfirmImport}
-                    disabled={loading || validCount === 0 || errorCount > 0}
+                    disabled={loading || validCount === 0}
                     className="px-6 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                   >
                     {loading && <Loader2 size={16} className="animate-spin" />}

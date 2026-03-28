@@ -5,7 +5,7 @@
 # STAGE 1: Build Stage
 # ========================================
 # GIẢI THÍCH: Stage này compile code Java thành file .jar
-FROM maven:3.9.6-eclipse-temurin-21-alpine AS build
+FROM maven:3.9-eclipse-temurin-21-alpine AS build
 
 # Set working directory trong container
 WORKDIR /app
@@ -14,21 +14,18 @@ WORKDIR /app
 # Nếu pom.xml không thay đổi, Maven không cần download lại dependencies
 COPY pom.xml .
 
-# GIẢI THÍCH: Tải các dependencies và plugin cần thiết trước. 
-# Thay vì go-offline (đôi khi bị thiếu plugin), ta chạy lệnh tập lệnh 'dependency:resolve-plugins' và 'dependency:resolve'
-RUN mvn dependency:resolve-plugins dependency:resolve -B
+# Download dependencies (cached nếu pom.xml không đổi)
+RUN mvn dependency:go-offline -B
 
 # Copy toàn bộ source code
 COPY src ./src
 
 # Build application (skip tests để build nhanh hơn)
 # GIẢI THÍCH: 
-# - -T 1C: Sử dụng 1 core CPU cho mỗi tác vụ biên dịch (biên dịch song song)
-# - -Dmaven.test.skip=true: Bỏ qua hoàn toàn giai đoạn test và compile test code
-# - -Dmaven.compile.fork=true: Chạy trình biên dịch trong một tiến trình riêng biệt
-# - -XX:+TieredCompilation -XX:TieredStopAtLevel=1: Tăng tốc JVM startup thời gian build
-ENV MAVEN_OPTS="-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
-RUN mvn package -DskipTests -T 1C -B
+# - clean: Xóa thư mục target cũ
+# - package: Build và tạo file .jar (dependencies sẽ tự động download)
+# - -DskipTests: Bỏ qua tests khi build
+RUN mvn clean package -DskipTests
 
 # ========================================
 # STAGE 2: Runtime Stage
@@ -74,8 +71,8 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
 # - -Xms512m -Xmx1024m: Set min/max heap memory
 # - -Djava.security.egd: Tăng tốc random number generation
 ENTRYPOINT ["java", \
-  "-Xms512m", \
-  "-Xmx1024m", \
+  "-Xms256m", \
+  "-Xmx512m", \
   "-Djava.security.egd=file:/dev/./urandom", \
   "-jar", \
   "app.jar"]

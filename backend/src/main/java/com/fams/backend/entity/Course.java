@@ -16,7 +16,8 @@ import java.util.List;
 @Entity
 @Table(name = "courses", indexes = {
         @Index(name = "idx_course_code", columnList = "code"),
-        @Index(name = "idx_course_name", columnList = "name")
+        @Index(name = "idx_course_name", columnList = "name"),
+        @Index(name = "idx_course_fixed_semester", columnList = "fixedSemester")
 })
 @Data
 @Builder
@@ -49,21 +50,15 @@ public class Course {
     @Column(nullable = false)
     private Integer numberOfSlots;
 
-    // Tổng trọng số điểm thành phần (Calculated)
-    // Chỉ tính các thành phần KHÔNG phải là RESIT
-    @org.hibernate.annotations.Formula("(SELECT COALESCE(SUM(gc.weight), 0) FROM grade_components gc WHERE gc.course_id = id AND gc.is_resit = false)")
-    private Double totalWeight;
+    // Kỳ học cố định sẽ học môn này (e.g., 1, 2, 3, 4, 5, 6, 7, 8, 9)
+    @Column(nullable = false)
+    private Integer fixedSemester;
 
     // Trạng thái môn học
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
     private CourseStatus status = CourseStatus.ACTIVE;
-
-    // Có tính điểm trung bình (GPA) không
-    @Column(nullable = false, columnDefinition = "boolean default true")
-    @Builder.Default
-    private Boolean isCalculatedInGpa = true;
 
     // Các loại điểm thành phần của môn học (One-to-Many)
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -86,15 +81,6 @@ public class Course {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private List<SubSpecializationCourse> subSpecializationCourses = new ArrayList<>();
-
-    // Môn học tiên quyết (ManyToMany self-join)
-    @ManyToMany
-    @JoinTable(name = "course_prerequisites", joinColumns = @JoinColumn(name = "course_id"), inverseJoinColumns = @JoinColumn(name = "prerequisite_id"))
-    @Builder.Default
-    @com.fasterxml.jackson.annotation.JsonIgnore
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
-    private List<Course> prerequisites = new ArrayList<>();
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

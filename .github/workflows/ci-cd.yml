@@ -25,16 +25,6 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -57,12 +47,6 @@ jobs:
           SPRING_DATASOURCE_USERNAME: postgres
           SPRING_DATASOURCE_PASSWORD: postgres
           JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY || 'test-secret-key-for-ci-only-must-be-at-least-512-bits-long' }}
-          SPRING_MAIL_USERNAME: ${{ secrets.MAIL_USERNAME || 'vtmyduyen3103@gmail.com' }}
-          SPRING_MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD || 'zwytifrdkabedwlu' }}
-          SPRING_MAIL_HOST: smtp.gmail.com
-          SPRING_MAIL_PORT: 587
-          SPRING_DATA_REDIS_HOST: localhost
-          SPRING_DATA_REDIS_PORT: 6379
         run: mvn test
 
   # Job 2: Build Frontend

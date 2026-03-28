@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Edit2, Save, X, Camera, Eye, EyeOff, Lock, Key } from 'lucide-react';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
-import { authService } from '../../services/api/authService';
-import { userService } from '../../services/api/userService';
 import toast from 'react-hot-toast';
 
 interface UserProfile {
@@ -27,7 +25,6 @@ export const ProfilePage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedProfile, setEditedProfile] = useState<UserProfile | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
   const [passwordData, setPasswordData] = useState<PasswordChangeData>({
     currentPassword: '',
     newPassword: '',
@@ -64,33 +61,13 @@ export const ProfilePage: React.FC = () => {
     setIsEditing(false);
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (editedProfile) {
-      try {
-        setIsUploadingAvatar(true);
-        const updateData = {
-          dob: editedProfile.dob,
-          phone: editedProfile.phone
-        };
-
-        const updatedUser = await userService.updateProfile(updateData, selectedAvatarFile || undefined);
-
-        // Merge with existing profile to keep non-updatable fields like fullName, email, etc.
-        const mergedUser = { ...profile, ...updatedUser };
-        setProfile(mergedUser as any);
-        localStorage.setItem('user', JSON.stringify(mergedUser));
-        setIsEditing(false);
-        setSelectedAvatarFile(null);
-
-        // Dispatch event for Header to update avatar in real-time
-        window.dispatchEvent(new CustomEvent('user-profile-updated', { detail: updatedUser }));
-
-        toast.success('Cập nhật hồ sơ thành công!');
-      } catch (error: any) {
-        toast.error(error.response?.data?.message || 'Không thể cập nhật hồ sơ');
-      } finally {
-        setIsUploadingAvatar(false);
-      }
+      // TODO: Call API to save profile
+      setProfile(editedProfile);
+      localStorage.setItem('user', JSON.stringify(editedProfile));
+      setIsEditing(false);
+      toast.success('Cập nhật hồ sơ thành công!');
     }
   };
 
@@ -130,12 +107,14 @@ export const ProfilePage: React.FC = () => {
         if (editedProfile) {
           setEditedProfile({ ...editedProfile, avatar: newAvatar });
         }
-        setIsEditing(true);
+        if (profile) {
+          setProfile({ ...profile, avatar: newAvatar });
+          localStorage.setItem('user', JSON.stringify({ ...profile, avatar: newAvatar }));
+        }
       };
       reader.readAsDataURL(file);
-      setSelectedAvatarFile(file);
 
-      toast.success('Đã chọn ảnh. Nhấn Lưu để cập nhật!');
+      toast.success('Cập nhật ảnh đại diện thành công!');
     } catch (error) {
       console.error('Avatar upload failed:', error);
       toast.error('Không thể tải ảnh lên. Vui lòng thử lại!');
@@ -169,7 +148,8 @@ export const ProfilePage: React.FC = () => {
     }
 
     try {
-      await authService.changePassword(passwordData.newPassword);
+      // TODO: Call backend API to change password
+      // await changePassword(passwordData);
 
       toast.success('Đổi mật khẩu thành công!');
       setPasswordData({
@@ -211,9 +191,7 @@ export const ProfilePage: React.FC = () => {
                 <div className="w-32 h-32 rounded-full border-4 border-white dark:border-zinc-900 bg-gradient-to-br from-fpt-orange to-orange-600 overflow-hidden">
                   {displayProfile.avatar ? (
                     <img
-                      src={displayProfile.avatar.startsWith('data:')
-                        ? displayProfile.avatar
-                        : `${displayProfile.avatar}${displayProfile.avatar.includes('?') ? '&' : '?'}t=${new Date().getTime()}`}
+                      src={displayProfile.avatar}
                       alt={displayProfile.fullName}
                       className="w-full h-full object-cover"
                     />
@@ -307,8 +285,17 @@ export const ProfilePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Phone Row */}
+              {/* Code and Phone Row */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                    Mã số
+                  </label>
+                  <p className="text-gray-900 dark:text-white font-medium">
+                    {displayProfile.code}
+                  </p>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
                     Số điện thoại

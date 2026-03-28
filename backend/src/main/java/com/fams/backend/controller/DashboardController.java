@@ -2,9 +2,6 @@ package com.fams.backend.controller;
 
 import com.fams.backend.dto.response.*;
 import com.fams.backend.service.DashboardService;
-import com.fams.backend.service.UserNotificationService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -16,17 +13,16 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/dashboard")
 @RequiredArgsConstructor
-@Tag(name = "Dashboard", description = "Dashboard API")
+@CrossOrigin(origins = "*")
 @Slf4j
 public class DashboardController {
 
     private final DashboardService dashboardService;
-    private final UserNotificationService notificationService;
 
-    @GetMapping("/stats")
-    @Operation(summary = "Lấy thống kê trang dashboard")
-    public ResponseEntity<DashboardStatsResponse> getStats() {
-        log.info("GET /api/dashboard/stats");
+    @GetMapping("/statistics")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<DashboardStatsResponse> getStatistics() {
+        log.info("GET /api/dashboard/statistics");
         return ResponseEntity.ok(dashboardService.getStatistics());
     }
 
@@ -45,40 +41,10 @@ public class DashboardController {
     }
 
     @GetMapping("/notifications")
-    public ResponseEntity<List<DashboardNotificationResponse>> getNotifications() {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<NotificationResponse>> getNotifications() {
         log.info("GET /api/dashboard/notifications");
         return ResponseEntity.ok(dashboardService.getNotifications());
-    }
-
-    @GetMapping("/notifications/unread-count")
-    @Operation(summary = "Lấy số lượng thông báo chưa đọc")
-    public ResponseEntity<java.util.Map<String, Integer>> getUnreadCount() {
-        log.info("GET /api/dashboard/notifications/unread-count");
-        return ResponseEntity
-                .ok(java.util.Collections.singletonMap("count", dashboardService.getUnreadNotificationCount()));
-    }
-
-    @GetMapping("/notifications/{id}")
-    @Operation(summary = "Lấy chi tiết thông báo trên dashboard theo ID")
-    public ResponseEntity<DashboardNotificationResponse> getNotificationById(@PathVariable Long id) {
-        log.info("GET /api/dashboard/notifications/{}", id);
-        return ResponseEntity.ok(dashboardService.getNotificationById(id));
-    }
-
-    @PostMapping("/notifications/{id}/read")
-    @Operation(summary = "Đánh dấu thông báo là đã đọc")
-    public ResponseEntity<Void> markAsRead(@PathVariable Long id) {
-        log.info("POST /api/dashboard/notifications/{}/read", id);
-        notificationService.markAsRead(id);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/notifications/read-all")
-    @Operation(summary = "Đánh dấu tất cả thông báo là đã đọc")
-    public ResponseEntity<Void> markAllAsRead() {
-        log.info("POST /api/dashboard/notifications/read-all");
-        notificationService.markAllAsRead();
-        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/system-logs")

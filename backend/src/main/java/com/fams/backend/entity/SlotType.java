@@ -13,9 +13,7 @@ import java.time.LocalTime;
  * Represents a time slot type within a semester
  */
 @Entity
-@Table(name = "slot_types", uniqueConstraints = {
-        @UniqueConstraint(columnNames = { "semester_id", "slotIndex" })
-}, indexes = {
+@Table(name = "slot_types", indexes = {
         @Index(name = "idx_slot_type_semester", columnList = "semester_id"),
         @Index(name = "idx_slot_type_name", columnList = "name")
 })
@@ -29,13 +27,9 @@ public class SlotType {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Tên slot (e.g., "Slot 1", "Slot 2")
+    // Tên slot (e.g., "Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5", "Slot 6")
     @Column(nullable = false, length = 50)
     private String name;
-
-    // Số thứ tự slot (1, 2, 3...)
-    @Column(nullable = false)
-    private Integer slotIndex;
 
     // Giờ bắt đầu của slot
     @Column(nullable = false)
@@ -70,7 +64,7 @@ public class SlotType {
 
     public enum SlotDuration {
         MINUTES_90(90), // 90 phút
-        MINUTES_135(135); // 135 phút
+        MINUTES_120(120); // 120 phút
 
         private final int minutes;
 

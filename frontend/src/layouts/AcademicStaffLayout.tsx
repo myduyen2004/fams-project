@@ -1,6 +1,5 @@
 import React from 'react';
 import { AcademicStaffSidebar } from '../components/academic-staff/AcademicStaffSidebar';
-import { LecturerSidebar } from '../components/lecturer/LecturerSidebar';
 import { CommonHeader } from '../components/common/CommonHeader';
 
 interface AcademicStaffLayoutProps {
@@ -13,16 +12,11 @@ export const AcademicStaffLayout: React.FC<AcademicStaffLayoutProps> = ({ childr
     document.title = `${pageTitle} - FAMS`;
   }, [pageTitle]);
 
-  // Check if the current user is a LECTURER accessing via granted permissions
-  const userStr = localStorage.getItem('user');
-  const user = userStr ? JSON.parse(userStr) : null;
-  const isLecturer = user?.role === 'LECTURER';
-
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-zinc-950">
-      {/* Sidebar - Show appropriate sidebar based on role */}
-      {isLecturer ? <LecturerSidebar /> : <AcademicStaffSidebar />}
-      <div className="w-16 flex-shrink-0" />
+      {/* Sidebar */}
+      <AcademicStaffSidebar />
+      <div className="w-20 flex-shrink-0" />
       
       {/* Main Content */}
       <div className="flex flex-col flex-1 overflow-hidden">
@@ -31,9 +25,7 @@ export const AcademicStaffLayout: React.FC<AcademicStaffLayoutProps> = ({ childr
         
         {/* Content */}
         <main className="flex-1 overflow-auto p-6">
-          <div className="max-w-[1600px] mx-auto">
-            {children}
-          </div>
+          {children}
         </main>
       </div>
     </div>

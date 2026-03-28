@@ -1,14 +1,12 @@
 package com.fams.backend.service;
 
 import com.fams.backend.dto.response.*;
-import com.fams.backend.dto.response.DashboardNotificationResponse;
 import com.fams.backend.entity.AccessLog;
 import com.fams.backend.entity.Alert;
 import com.fams.backend.entity.Notification;
 import com.fams.backend.entity.SystemLog;
 import com.fams.backend.entity.User;
 import com.fams.backend.repository.*;
-import com.fams.backend.service.UserNotificationService;
 import com.fams.backend.service.impl.DashboardServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,8 +32,6 @@ class DashboardServiceImplTest {
     private AlertRepository alertRepository;
     @Mock
     private NotificationRepository notificationRepository;
-    @Mock
-    private UserNotificationService notificationService;
     @Mock
     private SystemLogRepository systemLogRepository;
 
@@ -96,21 +92,18 @@ class DashboardServiceImplTest {
 
     @Test
     void whenGetNotifications_thenReturnMappedList() {
-        NotificationResponse response = NotificationResponse.builder()
-            .id(100L)
-            .title("New Message")
-            .content("Hello")
-            .type(Notification.NotificationType.SYSTEM.name())
-            .status("SENT")
-            .createdAt(LocalDateTime.now())
-            .isRead(false)
-            .build();
-        when(notificationService.getMyNotifications()).thenReturn(Collections.singletonList(response));
+        Notification notification = new Notification();
+        notification.setTitle("New Message");
+        notification.setContent("Hello");
+        notification.setType(Notification.NotificationType.SYSTEM);
+        notification.setStatus(Notification.NotificationStatus.SENT);
+        notification.setCreatedAt(LocalDateTime.now());
 
-        // Act
-        List<DashboardNotificationResponse> results = dashboardService.getNotifications();
+        when(notificationRepository.findTop5ByOrderByCreatedAtDesc())
+                .thenReturn(Collections.singletonList(notification));
 
-        // Assert
+        List<NotificationResponse> results = dashboardService.getNotifications();
+
         assertFalse(results.isEmpty());
         assertEquals("New Message", results.get(0).getTitle());
         assertFalse(results.get(0).getIsRead());

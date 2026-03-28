@@ -45,11 +45,5 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
-	<key>NSCameraUsageDescription</key>
-	<string>Ứng dụng cần quyền sử dụng camera để thực hiện chức năng điểm danh bằng khuôn mặt.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Ứng dụng cần quyền sử dụng microphone khi mở camera.</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Ứng dụng cần quyền truy cập vị trí để xác minh bạn đang ở trong phòng học qua thông tin WiFi.</string>
 </dict>
 </plist>

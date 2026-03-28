@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/error-boundaries */
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 
@@ -31,7 +30,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       user.role !== 'ADMIN' &&
       location.pathname !== '/change-password'
     ) {
-      // eslint-disable-next-line react-hooks/error-boundaries
       return <Navigate to="/change-password" replace state={{ firstLogin: true }} />;
     }
     

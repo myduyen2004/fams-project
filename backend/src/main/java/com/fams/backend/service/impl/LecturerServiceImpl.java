@@ -9,8 +9,6 @@ import com.fams.backend.exception.NotFoundException;
 import com.fams.backend.repository.LecturerProfileRepository;
 import com.fams.backend.repository.UserRepository;
 import com.fams.backend.service.LecturerService;
-import com.fams.backend.repository.MajorRepository;
-import com.fams.backend.repository.SpecializationRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,8 +17,6 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -41,40 +37,6 @@ public class LecturerServiceImpl implements LecturerService {
 
     private final UserRepository userRepository;
     private final LecturerProfileRepository lecturerProfileRepository;
-    private final MajorRepository majorRepository;
-    private final SpecializationRepository specializationRepository;
-    private final SystemLogService systemLogService;
-
-    private String normalizeDepartment(String dept) {
-        if (dept == null) return "";
-        String normalized = dept.trim().toLowerCase();
-        if (normalized.startsWith("khoa ")) {
-            normalized = normalized.substring(5).trim();
-        } else if (normalized.startsWith("bộ môn ")) {
-            normalized = normalized.substring(7).trim();
-        } else if (normalized.startsWith("chuyên ngành ")) {
-            normalized = normalized.substring(13).trim();
-        }
-        return normalized;
-    }
-
-    private Set<String> getNormalizedValidDepartments() {
-        Set<String> validNames = new HashSet<>();
-        
-        // Add all Major names and codes
-        majorRepository.findAll().forEach(m -> {
-            if (m.getName() != null) validNames.add(normalizeDepartment(m.getName()));
-            if (m.getCode() != null) validNames.add(normalizeDepartment(m.getCode()));
-        });
-        
-        // Add all Specialization names and codes
-        specializationRepository.findAll().forEach(s -> {
-            if (s.getName() != null) validNames.add(normalizeDepartment(s.getName()));
-            if (s.getCode() != null) validNames.add(normalizeDepartment(s.getCode()));
-        });
-        
-        return validNames;
-    }
 
     @Override
     public Page<LecturerResponse> getAllLecturers(String search, String status, String department, Boolean hasProfile,
@@ -85,19 +47,11 @@ public class LecturerServiceImpl implements LecturerService {
             // Filter by LECTURER role
             predicates.add(cb.equal(root.get("role"), User.UserRole.LECTURER));
 
-            // ALWAYS exclude INACTIVE users
-            predicates.add(cb.notEqual(root.get("status"), User.UserStatus.INACTIVE));
-
-            // Filter by status (if provided, and not INACTIVE)
+            // Filter by status
             if (status != null && !status.isEmpty() && !status.equalsIgnoreCase("all")) {
                 try {
                     User.UserStatus userStatus = User.UserStatus.valueOf(status.toUpperCase());
-                    if (userStatus != User.UserStatus.INACTIVE) {
-                        predicates.add(cb.equal(root.get("status"), userStatus));
-                    } else {
-                        // If someone explicitly asks for INACTIVE, they get nothing
-                        predicates.add(cb.disjunction());
-                    }
+                    predicates.add(cb.equal(root.get("status"), userStatus));
                 } catch (Exception e) {
                     log.error("Invalid status filter: {}", status);
                 }
@@ -190,7 +144,6 @@ public class LecturerServiceImpl implements LecturerService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "dashboardStats", allEntries = true)
     public void deleteLecturer(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy giảng viên với ID: " + id));
@@ -201,11 +154,9 @@ public class LecturerServiceImpl implements LecturerService {
 
         // Delete profile first if exists
         lecturerProfileRepository.findByUser(user).ifPresent(lecturerProfileRepository::delete);
-        String code = user.getCode();
         // Delete user
         userRepository.deleteById(id);
         log.info("Deleted lecturer with ID: {}", id);
-        systemLogService.logLecturerDeleted(code);
     }
 
     @Override
@@ -218,7 +169,6 @@ public class LecturerServiceImpl implements LecturerService {
                 log.error("Failed to delete lecturer with ID: {}", id, e);
             }
         }
-        systemLogService.logLecturersDeleted(ids.size());
     }
 
     @Override
@@ -252,7 +202,6 @@ public class LecturerServiceImpl implements LecturerService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "dashboardStats", allEntries = true)
     public LecturerResponse updateLecturer(Long id, com.fams.backend.dto.request.LecturerUpdateRequest request,
             MultipartFile avatar) {
         // Find User
@@ -292,7 +241,6 @@ public class LecturerServiceImpl implements LecturerService {
         }
         LecturerProfile savedProfile = lecturerProfileRepository.save(profile);
         log.info("Saved profile: id={}, dept={}", savedProfile.getUserId(), savedProfile.getDepartment());
-        systemLogService.logLecturerUpdated(user.getCode(), user.getFullName());
 
         // Note: Avatar is NOT updated here because it belongs to User. If needed, we
         // can update it separately,
@@ -342,14 +290,15 @@ public class LecturerServiceImpl implements LecturerService {
             }
 
             // Get data - giữ nguyên thứ tự từ database
-            List<User> users = userRepository.findAllLecturersWithProfiles();
+            Optional<List<User>> usersOpt = userRepository.findByRole(User.UserRole.LECTURER);
+            List<User> users = usersOpt.orElse(new ArrayList<>());
 
             int rowNum = 1;
             for (User user : users) {
                 if (status != null && !status.isEmpty() && !user.getStatus().name().equals(status)) {
                     continue;
                 }
-                LecturerProfile profile = user.getLecturerProfile();
+                LecturerProfile profile = lecturerProfileRepository.findByUser(user).orElse(null);
                 if (department != null && !department.isEmpty()) {
                     if (profile == null || !department.equals(profile.getDepartment())) {
                         continue;
@@ -377,7 +326,6 @@ public class LecturerServiceImpl implements LecturerService {
             java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
             workbook.write(out);
             workbook.close();
-            systemLogService.logLecturerExported();
             return out.toByteArray();
         } catch (Exception e) {
             log.error("Error exporting lecturers", e);
@@ -506,7 +454,6 @@ public class LecturerServiceImpl implements LecturerService {
         result.put("updated", updatedCount);
         result.put("failed", failedCount);
         result.put("errors", errors);
-        systemLogService.logLecturerImportCompleted(createdCount, updatedCount, failedCount);
         return result;
     }
 
@@ -548,7 +495,6 @@ public class LecturerServiceImpl implements LecturerService {
 
             int rowNumber = 0;
             Set<String> seenCodes = new HashSet<>();
-            Set<String> validNormalizedDepts = getNormalizedValidDepartments();
 
             while (rows.hasNext()) {
                 Row currentRow = rows.next();
@@ -561,9 +507,6 @@ public class LecturerServiceImpl implements LecturerService {
                 }
 
                 String code = getCellValueAsString(currentRow.getCell(1));
-                String fullName = getCellValueAsString(currentRow.getCell(2));
-                String email = getCellValueAsString(currentRow.getCell(3));
-                String phone = getCellValueAsString(currentRow.getCell(4));
                 String department = getCellValueAsString(currentRow.getCell(5));
                 String expertise = getCellValueAsString(currentRow.getCell(6));
                 String bio = getCellValueAsString(currentRow.getCell(7));
@@ -598,55 +541,10 @@ public class LecturerServiceImpl implements LecturerService {
                         User user = userOpt.get();
                         dto.setFullName(user.getFullName());
                         dto.setEmail(user.getEmail());
-                        dto.setPhone(phone); // Set phone from excel to DTO for preview
 
                         if (user.getRole() != User.UserRole.LECTURER) {
                             dto.setStatus("ERROR");
                             dto.setErrorMessage("Không phải là giảng viên");
-                        } else {
-                            // STRICT VALIDATION
-                            StringBuilder errorMsg = new StringBuilder();
-                            boolean hasError = false;
-
-                            // Validate Full Name
-                            if (fullName != null && !fullName.trim().equalsIgnoreCase(user.getFullName())) {
-                                errorMsg.append("Tên không trùng khớp (Excel: ").append(fullName).append(" vs DB: ")
-                                        .append(user.getFullName()).append("). ");
-                                hasError = true;
-                            }
-
-                            // Validate Email
-                            if (email != null && !email.trim().equalsIgnoreCase(user.getEmail())) {
-                                errorMsg.append("Email không trùng khớp (Excel: ").append(email).append(" vs DB: ")
-                                        .append(user.getEmail()).append("). ");
-                                hasError = true;
-                            }
-
-                            // Validate Phone
-                            // Note: user.getPhone() might be null
-                            String dbPhone = user.getPhone() != null ? user.getPhone() : "";
-                            String excelPhone = phone != null ? phone : "";
-                            // Simple comparison, you might want to normalize phone numbers (remove spaces,
-                            // etc) if needed
-                            if (!excelPhone.trim().equals(dbPhone)) {
-                                errorMsg.append("SĐT không trùng khớp (Excel: ").append(excelPhone).append(" vs DB: ")
-                                        .append(dbPhone).append("). ");
-                                hasError = true;
-                            }
-
-                            // Validate Department
-                            if (department != null && !department.trim().isEmpty()) {
-                                String normalizedDept = normalizeDepartment(department);
-                                if (!validNormalizedDepts.contains(normalizedDept)) {
-                                    errorMsg.append("Khoa không hợp lệ: ").append(department).append(". ");
-                                    hasError = true;
-                                }
-                            }
-
-                            if (hasError) {
-                                dto.setStatus("ERROR");
-                                dto.setErrorMessage(errorMsg.toString().trim());
-                            }
                         }
                     }
                 }
@@ -664,7 +562,6 @@ public class LecturerServiceImpl implements LecturerService {
 
     @Override
     @Transactional
-    @CacheEvict(value = "dashboardStats", allEntries = true)
     public Map<String, Object> saveImportedLecturers(List<LecturerImportDTO> dtos) {
         Map<String, Object> result = new HashMap<>();
         List<String> errors = new ArrayList<>();
@@ -672,43 +569,7 @@ public class LecturerServiceImpl implements LecturerService {
         int updatedCount = 0;
         int failedCount = 0;
 
-        if (dtos == null || dtos.isEmpty()) {
-            result.put("created", 0);
-            result.put("updated", 0);
-            result.put("failed", 0);
-            result.put("errors", errors);
-            return result;
-        }
-
-        // Phase 0: Deduplicate input by code (last one wins)
-        Map<String, LecturerImportDTO> uniqueDtosMap = new LinkedHashMap<>();
         for (LecturerImportDTO dto : dtos) {
-            String code = dto.getCode() != null ? dto.getCode().trim().toLowerCase() : null;
-            if (code != null) {
-                uniqueDtosMap.put(code, dto);
-            }
-        }
-        Collection<LecturerImportDTO> uniqueDtos = uniqueDtosMap.values();
-
-        log.info("Starting robust lecturer import processing for {} records (Unique: {})", dtos.size(), uniqueDtos.size());
-
-        // Phase 1: Pre-fetch & Cache
-        List<String> codes = uniqueDtos.stream()
-                .filter(d -> !"ERROR".equals(d.getStatus()))
-                .map(d -> d.getCode().trim().toLowerCase())
-                .collect(Collectors.toList());
-
-        Map<String, User> userMap = userRepository.findByCodeInIgnoreCase(codes).stream()
-                .collect(Collectors.toMap(u -> u.getCode().trim().toLowerCase(), u -> u));
-
-        List<Long> userIds = userMap.values().stream().map(User::getId).collect(Collectors.toList());
-        Map<Long, LecturerProfile> profileMap = lecturerProfileRepository.findAllByUserIdIn(userIds).stream()
-                .collect(Collectors.toMap(LecturerProfile::getUserId, p -> p));
-
-        List<LecturerProfile> profilesToSave = new ArrayList<>();
-
-        // Phase 2: In-memory Transformation
-        for (LecturerImportDTO dto : uniqueDtos) {
             if ("ERROR".equals(dto.getStatus())) {
                 failedCount++;
                 errors.add("Dòng " + dto.getRowNumber() + ": " + dto.getErrorMessage());
@@ -716,72 +577,38 @@ public class LecturerServiceImpl implements LecturerService {
             }
 
             try {
-                User user = userMap.get(dto.getCode().trim().toLowerCase());
-                if (user == null) {
-                    throw new NotFoundException("Không tìm thấy user với mã: " + dto.getCode());
-                }
+                User user = userRepository.findByCode(dto.getCode())
+                        .orElseThrow(() -> new NotFoundException("Not found user: " + dto.getCode()));
 
-                LecturerProfile profile = profileMap.get(user.getId());
+                Optional<LecturerProfile> existingProfile = lecturerProfileRepository.findByUser(user);
 
-                String newDept = dto.getDepartment() != null ? dto.getDepartment().trim() : null;
-                String newExp = dto.getExpertise() != null ? dto.getExpertise().trim() : null;
-                String newBio = dto.getBio() != null ? dto.getBio().trim() : null;
+                if (existingProfile.isPresent()) {
+                    LecturerProfile profile = existingProfile.get();
+                    if (dto.getDepartment() != null && !dto.getDepartment().isEmpty())
+                        profile.setDepartment(dto.getDepartment().trim());
+                    if (dto.getExpertise() != null && !dto.getExpertise().isEmpty())
+                        profile.setExpertise(dto.getExpertise().trim());
+                    if (dto.getBio() != null && !dto.getBio().isEmpty())
+                        profile.setBio(dto.getBio().trim());
 
-                if (profile == null) {
-                    // CREATE new profile - rely on @MapsId by setting user
-                    profile = LecturerProfile.builder()
-                            .user(user)
-                            .department(newDept)
-                            .expertise(newExp)
-                            .bio(newBio)
-                            .build();
-                    createdCount++;
-                    profilesToSave.add(profile);
+                    lecturerProfileRepository.save(profile);
+                    updatedCount++;
                 } else {
-                    // UPDATE existing profile
-                    boolean changed = false;
-                    if (!Objects.equals(profile.getDepartment(), newDept)) {
-                        profile.setDepartment(newDept);
-                        changed = true;
-                    }
-                    if (!Objects.equals(profile.getExpertise(), newExp)) {
-                        profile.setExpertise(newExp);
-                        changed = true;
-                    }
-                    if (!Objects.equals(profile.getBio(), newBio)) {
-                        profile.setBio(newBio);
-                        changed = true;
-                    }
+                    LecturerProfile profile = LecturerProfile.builder()
+                            .user(user)
+                            .department(dto.getDepartment() != null ? dto.getDepartment().trim() : null)
+                            .expertise(dto.getExpertise() != null ? dto.getExpertise().trim() : null)
+                            .bio(dto.getBio() != null ? dto.getBio().trim() : null)
+                            .build();
 
-                    if (changed) {
-                        updatedCount++;
-                        profilesToSave.add(profile);
-                    }
+                    lecturerProfileRepository.save(profile);
+                    createdCount++;
                 }
+
             } catch (Exception e) {
                 failedCount++;
-                errors.add("Lỗi xử lý GV " + dto.getCode() + ": " + e.getMessage());
-                log.error("Error processing imported lecturer {}: {}", dto.getCode(), e.getMessage());
-            }
-        }
-
-        // Phase 3: Optimized Batch Persistence
-        if (!profilesToSave.isEmpty()) {
-            try {
-                lecturerProfileRepository.saveAll(profilesToSave);
-                log.info("Batch saved {} modified lecturer profiles successfully", profilesToSave.size());
-            } catch (Exception e) {
-                log.error("Batch save failed: {}. Attempting individual saves...", e.getMessage());
-                // Fallback to individual saves to pinpoint error row
-                for (LecturerProfile profile : profilesToSave) {
-                    try {
-                        lecturerProfileRepository.save(profile);
-                    } catch (Exception ex) {
-                        log.error("Failed to save profile for user {}: {}", profile.getUser().getCode(), ex.getMessage());
-                        failedCount++;
-                        errors.add("Lỗi lưu dữ liệu GV " + profile.getUser().getCode() + ": " + ex.getMessage());
-                    }
-                }
+                errors.add("Lỗi xử lý giảng viên " + dto.getCode() + ": " + e.getMessage());
+                log.error("Error saving imported lecturer {}", dto.getCode(), e);
             }
         }
 
@@ -789,7 +616,6 @@ public class LecturerServiceImpl implements LecturerService {
         result.put("updated", updatedCount);
         result.put("failed", failedCount);
         result.put("errors", errors);
-        systemLogService.logLecturerImportCompleted(createdCount, updatedCount, failedCount);
         return result;
     }
 }

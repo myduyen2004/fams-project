@@ -10,10 +10,6 @@ export const COLORS = {
     orange: '#F37021',      // FPT Orange - Primary brand color
     blue: '#00529C',        // FPT Blue
     green: '#4BA840',       // FPT Green
-    
-    // New Brand Colors
-    brandOrangePrimary: '#F26F21',
-    brandOrangeSecondary: '#EA5C36',
 
     // ========================================
     // PRIMARY SHADES (Orange)

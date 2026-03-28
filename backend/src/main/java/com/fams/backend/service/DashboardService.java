@@ -11,11 +11,7 @@ public interface DashboardService {
 
     List<AlertResponse> getAlerts();
 
-    List<DashboardNotificationResponse> getNotifications();
-
-    DashboardNotificationResponse getNotificationById(Long id);
+    List<NotificationResponse> getNotifications();
 
     List<SystemLogResponse> getSystemLogs();
-
-    int getUnreadNotificationCount();
 }
