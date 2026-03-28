@@ -5,6 +5,8 @@ import com.fams.backend.service.DashboardService;
 import com.fams.backend.service.MapService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -15,14 +17,14 @@ import java.util.List;
 @Slf4j
 public class DashboardBroadcastService {
 
-    private final @org.springframework.context.annotation.Lazy org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
+    private final SimpMessagingTemplate messagingTemplate;
     private final DashboardService dashboardService;
     private final MapService mapService;
 
     /**
      * Broadcast all dashboard statistics and logs
      */
-    @org.springframework.scheduling.annotation.Async
+    @Async
     public void broadcastUpdate() {
         log.info("Broadcasting dashboard updates to all topics...");
 
@@ -41,14 +43,10 @@ public class DashboardBroadcastService {
         messagingTemplate.convertAndSend("/topic/alerts", alerts);
         log.info("Sent /topic/alerts (count: {})", alerts.size());
 
-        // 4. Notifications (skip in scheduled context — requires authenticated user)
-        try {
-            List<DashboardNotificationResponse> notifications = dashboardService.getNotifications();
-            messagingTemplate.convertAndSend("/topic/notifications", notifications);
-            log.info("Sent /topic/notifications (count: {})", notifications.size());
-        } catch (Exception e) {
-            log.debug("Skipped /topic/notifications broadcast (no authenticated user in context)");
-        }
+        // 4. Notifications
+        List<NotificationResponse> notifications = dashboardService.getNotifications();
+        messagingTemplate.convertAndSend("/topic/notifications", notifications);
+        log.info("Sent /topic/notifications (count: {})", notifications.size());
 
         // 5. System Logs
         List<SystemLogResponse> systemLogs = dashboardService.getSystemLogs();

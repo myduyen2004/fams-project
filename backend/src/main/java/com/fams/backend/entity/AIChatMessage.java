@@ -1,7 +1,5 @@
 package com.fams.backend.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -16,7 +14,7 @@ import java.time.LocalDateTime;
 @Table(name = "ai_chat_messages", indexes = {
         @Index(name = "idx_ai_message_session", columnList = "session_id"),
         @Index(name = "idx_ai_message_role", columnList = "role"),
-        @Index(name = "idx_ai_message_sent_at", columnList = "created_at")
+        @Index(name = "idx_ai_message_sent_at", columnList = "sentAt")
 })
 @Data
 @Builder
@@ -31,7 +29,6 @@ public class AIChatMessage {
     // Phiên chat
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "session_id", nullable = false)
-    @JsonIgnore
     private AIChatSession session;
 
     // Vai trò người gửi
@@ -45,8 +42,8 @@ public class AIChatMessage {
 
     // Thời gian gửi
     @CreationTimestamp
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+    @Column(nullable = false)
+    private LocalDateTime sentAt;
 
     // === Metadata for analytics ===
     // Số token sử dụng
@@ -58,9 +55,6 @@ public class AIChatMessage {
 
     // Thời gian xử lý (ms)
     private Long processingTimeMs;
-
-    @Column(length = 255)
-    private String redirectPath;
 
     public enum MessageRole {
         USER, // Tin nhắn từ người dùng

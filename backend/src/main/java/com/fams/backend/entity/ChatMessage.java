@@ -5,6 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -15,7 +16,7 @@ import java.util.List;
 @Table(name = "chat_messages", indexes = {
         @Index(name = "idx_chat_message_group", columnList = "chat_group_id"),
         @Index(name = "idx_chat_message_sender", columnList = "sender_id"),
-        @Index(name = "idx_chat_message_sent_at", columnList = "sent_at")
+        @Index(name = "idx_chat_message_sent_at", columnList = "sentAt")
 })
 @Data
 @Builder
@@ -67,22 +68,18 @@ public class ChatMessage {
 
     // Thời gian gửi
     @CreationTimestamp
-    @Column(name = "sent_at", nullable = false)
+    @Column(nullable = false)
     private LocalDateTime sentAt;
 
     // Danh sách đã đọc
-    @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-    private List<ChatMessageRead> readReceipts;
-
-    // Danh sách cảm xúc
-    @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<ChatMessageReaction> reactions;
+    @OneToMany(mappedBy = "message", cascade = CascadeType.ALL)
+    @Builder.Default
+    private List<ChatMessageRead> readReceipts = new ArrayList<>();
 
     public enum MessageType {
         TEXT, // Văn bản
         IMAGE, // Hình ảnh
         FILE, // File
-        LINK, // Chia sẻ link
         SYSTEM // Tin nhắn hệ thống
     }
 }

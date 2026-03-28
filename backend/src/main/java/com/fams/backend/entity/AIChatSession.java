@@ -1,7 +1,5 @@
 package com.fams.backend.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -34,7 +32,6 @@ public class AIChatSession {
     // Người dùng
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    @JsonIgnore
     private User user;
 
     // Tiêu đề phiên (auto-generated từ tin nhắn đầu tiên)
@@ -53,7 +50,6 @@ public class AIChatSession {
     // Danh sách tin nhắn
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL)
     @Builder.Default
-    @JsonIgnore
     private List<AIChatMessage> messages = new ArrayList<>();
 
     @CreationTimestamp

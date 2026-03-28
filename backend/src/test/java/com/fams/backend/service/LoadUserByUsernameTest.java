@@ -9,8 +9,6 @@ import com.fams.backend.repository.UserSessionRepository;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import com.fams.backend.security.jwt.JwtUtil;
-import com.fams.backend.service.impl.SystemLogService;
-import com.fams.backend.repository.UserPermissionRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -49,10 +47,6 @@ class LoadUserByUsernameTest {
     private EmailService emailService;
     @Mock
     private StringRedisTemplate redisTemplate;
-    @Mock
-    private SystemLogService systemLogService;
-    @Mock
-    private UserPermissionRepository userPermissionRepository;
 
     @InjectMocks
     private AuthService authService;
@@ -60,13 +54,11 @@ class LoadUserByUsernameTest {
     @Test
     void whenUsernameExists_thenReturnUserDetails() {
         User user = new User();
-        user.setId(1L);
         user.setUsername("admin");
         user.setPassword("pass");
         user.setRole(User.UserRole.ADMIN);
 
         when(userRepository.findByUsername("admin")).thenReturn(Optional.of(user));
-        when(userPermissionRepository.findPermissionsByUserId(1L)).thenReturn(java.util.Collections.emptyList());
 
         UserDetails userDetails = authService.loadUserByUsername("admin");
 

@@ -1,15 +1,11 @@
 # ========================================
-# UPDATED BUILD: Full Python base for ONNX compatibility
+# STAGE 1: Builder
 # ========================================
-FROM python:3.10
+FROM python:3.10-slim AS builder
 
 WORKDIR /app
 
-# Enable bytecode compilation and unbuffered output
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
-
-# Install system dependencies
+# Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
@@ -18,6 +14,37 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     git \
     libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv (Fast Pip replacement)
+RUN pip install uv
+
+# Create Virtual Environment
+RUN uv venv /venv
+
+# Install Heavy Dependencies (Split for caching & timeout prevention)
+# 1. Scientific Stack
+RUN uv pip install --python /venv numpy==1.26.3 pandas==2.1.4 scikit-learn==1.4.0
+
+# 2. Computer Vision (Heavy download)
+RUN uv pip install --python /venv opencv-python-headless==4.11.0.86 mediapipe==0.10.9
+
+# 3. Face Recognition (Might require compilation)
+RUN uv pip install --python /venv face-recognition==1.3.0
+
+# 4. Install remaining dependencies
+COPY requirements.txt .
+RUN uv pip install --python /venv -r requirements.txt
+
+# ========================================
+# STAGE 2: Runtime
+# ========================================
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install runtime dependencies ONLY
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libglib2.0-0 \
     libsm6 \
@@ -25,48 +52,31 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxrender1 \
     libgomp1 \
     libpq5 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
-
-# Install uv
-RUN pip install uv
-
-# Install core scientific stack
-RUN uv pip install --system numpy==1.26.3 pandas==2.1.4 scikit-learn==1.4.0
-
-# Install CV and MediaPipe
-RUN uv pip install --system opencv-python-headless==4.11.0.86 mediapipe==0.10.9
-
-# Install Face Recognition models
-RUN git clone https://github.com/ageitgey/face_recognition_models /tmp/models && \
-    uv pip install --system /tmp/models && \
-    rm -rf /tmp/models
-RUN uv pip install --system face-recognition==1.3.0
-
-# Install remaining requirements
-COPY requirements.txt .
-RUN uv pip install --system -r requirements.txt
 
 # Create non-root user
 RUN useradd -m -u 1001 appuser
 
-# Create required folders
-RUN mkdir -p data/faces/registered data/faces/temp data/temp data/logs \
-    app/models/anti_spoof && \
-    chown -R appuser:appuser /app
-
-# Download anti-spoof V2 model (Verified Release Binary)
-RUN curl -L -o app/models/anti_spoof/MiniFASNetV2.onnx \
-    https://github.com/yakhyo/face-anti-spoofing/releases/download/weights/MiniFASNetV2.onnx || \
-    echo "Warning: Failed to download model"
+# Copy virtual environment from builder
+COPY --from=builder /venv /venv
 
 # Copy source code
 COPY --chown=appuser:appuser . .
 
-USER appuser
-EXPOSE 5000
+# Create required folders
+RUN mkdir -p data/faces/registered data/faces/temp data/temp data/logs \
+    ml_models/pretrained ml_models/trained && \
+    chown -R appuser:appuser data ml_models
 
-# Environment (merged)
+# Switch to non-root user
+USER appuser
+
+# Environment
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONPATH="/app"
-CMD ["python", "-m", "app.main"]
+    PATH="/venv/bin:$PATH"
+
+EXPOSE 5000
+
+CMD ["python", "app/main.py"]

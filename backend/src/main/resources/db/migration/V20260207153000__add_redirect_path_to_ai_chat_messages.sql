@@ -1,1 +1,0 @@
-ALTER TABLE ai_chat_messages ADD COLUMN redirect_path VARCHAR(255);

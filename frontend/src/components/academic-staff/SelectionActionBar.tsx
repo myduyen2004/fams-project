@@ -10,8 +10,6 @@ interface SelectionActionBarProps {
     canDelete?: boolean;
     isDeleting?: boolean;
     itemLabel?: string;
-    activateLabel?: string;
-    deactivateLabel?: string;
 }
 
 /**
@@ -25,9 +23,7 @@ export const SelectionActionBar: React.FC<SelectionActionBarProps> = ({
     onStatusChange,
     canDelete = true,
     isDeleting = false,
-    itemLabel = 'mục',
-    activateLabel = 'Mở hoạt động',
-    deactivateLabel = 'Ngừng hoạt động'
+    itemLabel = 'mục'
 }) => {
     if (selectedCount === 0) return null;
 
@@ -50,20 +46,10 @@ export const SelectionActionBar: React.FC<SelectionActionBarProps> = ({
                     )}
                     <button
                         onClick={() => onStatusChange('INACTIVE')}
-                        className="px-4 py-1.5 text-sm bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors flex items-center gap-2"
+                        className="px-4 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
                     >
-                        {deactivateLabel}
+                        Ngừng đào tạo
                     </button>
-                    {canDelete && onDelete && (
-                        <button
-                            onClick={onDelete}
-                            disabled={isDeleting}
-                            className="px-4 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 disabled:opacity-50"
-                        >
-                            <Trash2 className="h-4 w-4" />
-                            {isDeleting ? 'Đang xóa...' : 'Xóa'}
-                        </button>
-                    )}
                 </div>
             </div>
         );
@@ -89,7 +75,7 @@ export const SelectionActionBar: React.FC<SelectionActionBarProps> = ({
                     onClick={() => onStatusChange('ACTIVE')}
                     className="px-4 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
                 >
-                    {activateLabel}
+                    Mở lại
                 </button>
                 {canDelete && onDelete && (
                     <button

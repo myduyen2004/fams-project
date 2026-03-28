@@ -27,7 +27,7 @@ export const Pagination: React.FC<PaginationProps> = ({
   const getPageNumbers = () => {
     const pages = [];
     const showMax = 5;
-
+    
     if (totalPages <= showMax) {
       for (let i = 0; i < totalPages; i++) pages.push(i);
     } else {
@@ -57,33 +57,34 @@ export const Pagination: React.FC<PaginationProps> = ({
         Hiển thị <span className="font-medium text-gray-900 dark:text-white">{currentPage * pageSize + 1}</span> đến <span className="font-medium text-gray-900 dark:text-white">{Math.min((currentPage + 1) * pageSize, totalElements)}</span> trong số <span className="font-medium text-gray-900 dark:text-white">{totalElements}</span> bản ghi
       </div>
       <div className="flex items-center gap-1">
-        <button
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 0}
+        <button 
+          onClick={() => onPageChange(currentPage - 1)} 
+          disabled={currentPage === 0} 
           className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50 text-gray-500 flex items-center gap-1"
         >
           <ChevronLeft size={16} />
           Trước
         </button>
-
+        
         {getPageNumbers().map((p, i) => (
           p === '...' ? (
             <span key={`dots-${i}`} className="px-2 text-gray-400">...</span>
           ) : (
-            <button
+            <button 
               key={p}
               onClick={() => onPageChange(p as number)}
-              className={`w-8 h-8 flex items-center justify-center rounded-lg font-medium transition-colors ${currentPage === p ? 'bg-fpt-orange text-white' : 'hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-600 dark:text-zinc-400'
-                }`}
+              className={`w-8 h-8 flex items-center justify-center rounded-lg font-medium transition-colors ${
+                currentPage === p ? 'bg-red-600 text-white' : 'hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-600 dark:text-zinc-400'
+              }`}
             >
               {(p as number) + 1}
             </button>
           )
         ))}
 
-        <button
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages - 1}
+        <button 
+          onClick={() => onPageChange(currentPage + 1)} 
+          disabled={currentPage === totalPages - 1} 
           className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-50 text-gray-500 flex items-center gap-1"
         >
           Sau

@@ -1,14 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Lock, Info } from 'lucide-react';
 
-interface Semester {
-  code: string;
-  name: string;
-  startDate: string;
-  endDate: string;
-  status: string;
-}
-
 interface UpdateSemesterModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -18,8 +10,13 @@ interface UpdateSemesterModalProps {
     startDate: string;
     endDate: string;
   }) => Promise<void>;
-  semester: Semester | null;
-  existingSemesters?: Semester[];
+  semester: {
+    code: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+    status: string;
+  } | null;
 }
 
 export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
@@ -27,7 +24,6 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
   onClose,
   onSubmit,
   semester,
-  existingSemesters = [],
 }) => {
   const [formData, setFormData] = useState({
     code: '',
@@ -57,11 +53,9 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
     });
   };
 
-  const isActive = semester?.status === 'active';
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     // Validation
     if (!formData.name || !formData.startDate || !formData.endDate) {
       setError('Vui lòng điền đầy đủ thông tin');
@@ -70,28 +64,6 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
 
     if (new Date(formData.startDate) >= new Date(formData.endDate)) {
       setError('Ngày kết thúc phải sau ngày bắt đầu');
-      return;
-    }
-
-    // For upcoming semesters, validate that start date is in the future
-    if (semester?.status === 'upcoming') {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const [startYear, startMonth, startDay] = formData.startDate.split('-').map(Number);
-      const startDate = new Date(startYear, startMonth - 1, startDay);
-
-      if (startDate <= today) {
-        setError('Ngày bắt đầu học kỳ phải sau ngày hôm nay');
-        return;
-      }
-    }
-
-    // Check for duplicate name (excluding current semester)
-    const duplicateName = existingSemesters.find(
-      s => s.name.toLowerCase() === formData.name.toLowerCase() && s.code !== semester?.code
-    );
-    if (duplicateName) {
-      setError(`Tên học kỳ "${formData.name}" đã tồn tại trong hệ thống`);
       return;
     }
 
@@ -106,26 +78,8 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
       setError(null);
       await onSubmit(formData);
       onClose();
-    } catch (err: unknown) {
-      let errorMessage = 'Có lỗi xảy ra khi cập nhật học kỳ';
-      if (err && typeof err === 'object' && 'response' in err) {
-        const axiosError = err as { response?: { data?: { message?: string; error?: string }, status?: number } };
-        if (axiosError.response?.data?.message) {
-          errorMessage = axiosError.response.data.message;
-        } else if (axiosError.response?.data?.error) {
-          errorMessage = axiosError.response.data.error;
-        } else if (axiosError.response?.status === 409) {
-          errorMessage = 'Tên học kỳ đã tồn tại trong hệ thống';
-        } else if (axiosError.response?.status === 400) {
-          errorMessage = 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin';
-        } else if (axiosError.response?.status === 500) {
-          // Default message for server errors related to date overlap
-          errorMessage = 'Thời gian học kỳ bị trùng với học kỳ khác hoặc có lỗi hệ thống. Vui lòng kiểm tra lại';
-        }
-      } else if (err instanceof Error) {
-        errorMessage = err.message;
-      }
-      setError(errorMessage);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật học kỳ');
     } finally {
       setLoading(false);
     }
@@ -180,49 +134,29 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                 Ngày bắt đầu <span className="text-red-500">*</span>
-                {isActive && <Lock className="w-3 h-3 inline ml-1 text-gray-400" />}
               </label>
-              <div className="relative">
-                <input
-                  type="date"
-                  name="startDate"
-                  value={formData.startDate}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-orange-500 transition shadow-sm text-transparent caret-transparent ${isActive ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
-                    }`}
-                  disabled={loading || isActive}
-                  style={{ colorScheme: 'light' }}
-                />
-                <div className={`absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-sm ${isActive ? 'text-gray-500' : 'text-gray-700'}`}>
-                  {formData.startDate
-                    ? formData.startDate.split('-').reverse().join('/')
-                    : <span className="text-gray-400">dd/mm/yyyy</span>}
-                </div>
-              </div>
+              <input
+                type="date"
+                name="startDate"
+                value={formData.startDate}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-orange-500 transition shadow-sm bg-white"
+                disabled={loading}
+              />
             </div>
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                 Ngày kết thúc <span className="text-red-500">*</span>
-                {isActive && <Lock className="w-3 h-3 inline ml-1 text-gray-400" />}
               </label>
-              <div className="relative">
-                <input
-                  type="date"
-                  name="endDate"
-                  value={formData.endDate}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-orange-500 transition shadow-sm text-transparent caret-transparent ${isActive ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
-                    }`}
-                  disabled={loading || isActive}
-                  style={{ colorScheme: 'light' }}
-                />
-                <div className={`absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-sm ${isActive ? 'text-gray-500' : 'text-gray-700'}`}>
-                  {formData.endDate
-                    ? formData.endDate.split('-').reverse().join('/')
-                    : <span className="text-gray-400">dd/mm/yyyy</span>}
-                </div>
-              </div>
+              <input
+                type="date"
+                name="endDate"
+                value={formData.endDate}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-orange-500 transition shadow-sm bg-white"
+                disabled={loading}
+              />
             </div>
           </div>
 
@@ -230,9 +164,7 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
           <div className="flex items-start gap-2 text-amber-600">
             <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
             <p className="text-[11px] font-medium">
-              {isActive
-                ? 'Học kỳ đang diễn ra: Không được phép thay đổi ngày bắt đầu và kết thúc. Chỉ có thể cập nhật tên học kỳ.'
-                : 'Lưu ý: Ngày bắt đầu học kỳ phải sau ngày hôm nay.'}
+              Lưu ý: Chỉ có thể cập nhật các học kỳ sắp diễn ra hoặc đang diễn ra.
             </p>
           </div>
 
@@ -242,16 +174,18 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
               type="button"
               onClick={handleCancel}
               disabled={loading}
-              className="px-5 py-2.5 bg-gray-400 hover:bg-gray-500 text-white rounded-lg font-semibold text-sm transition shadow-md disabled:opacity-50"
+              className="flex items-center gap-2 px-5 py-2.5 bg-gray-400 hover:bg-gray-500 text-white rounded-lg font-semibold text-sm transition shadow-md disabled:opacity-50"
             >
+              <Lock className="w-3 h-3" />
               Hủy
             </button>
 
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold text-sm transition shadow-md disabled:opacity-50"
+              className="flex items-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold text-sm transition shadow-md disabled:opacity-50"
             >
+              <Lock className="w-3 h-3" />
               {loading ? 'Đang cập nhật...' : 'Cập nhật học kỳ'}
             </button>
           </div>

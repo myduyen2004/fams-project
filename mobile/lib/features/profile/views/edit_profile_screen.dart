@@ -3,11 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../auth/models/user_model.dart';
 import '../../../core/constants/app_colors.dart'; // Assuming this exists or hardcode colors
-import '../../../core/widgets/app_background.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -106,15 +104,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       setState(() => _isLoading = false);
       
       if (success) {
-        Get.back(); // Go back to profile screen (Thông tin cá nhân)
-        Get.snackbar(
-          'Thành công',
-          'Thông tin cá nhân đã được cập nhật',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2),
-        );
+        Get.back(); // Go back to profile screen
       }
     }
   }
@@ -128,16 +118,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
       child: Scaffold(
         resizeToAvoidBottomInset: true, // Ensure screen resizes when keyboard opens
+        backgroundColor: const Color(0xFFFFE8D6),
         appBar: AppBar(
           title: const Text('Chỉnh sửa hồ sơ'),
           backgroundColor: Colors.transparent,
           elevation: 0,
           centerTitle: true,
         ),
-        body: AppBackground(
-          child: SingleChildScrollView(
+        body: SingleChildScrollView(
           physics: const ClampingScrollPhysics(), // Better scrolling behavior
-          padding: EdgeInsets.all(20.r),
+          padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: Column(
@@ -156,8 +146,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       ),
                       child: ClipOval(
                         child: SizedBox(
-                          width: 100.r,
-                          height: 100.r,
+                          width: 120,
+                          height: 120,
                           child: _avatarPath != null
                               ? Image.file(File(_avatarPath!), fit: BoxFit.cover)
                               : (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty)
@@ -177,31 +167,31 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         child: GestureDetector(
                           onTap: _pickImage,
                           child: Container(
-                            padding: EdgeInsets.all(8.r),
+                            padding: const EdgeInsets.all(8),
                             decoration: const BoxDecoration(
                               color: Color(0xFFFF6B00),
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(Icons.camera_alt, color: Colors.white, size: 20.r),
+                            child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
                           ),
                         ),
                       ),
                   ],
                 ),
               ),
-              30.verticalSpace,
+              const SizedBox(height: 30),
 
               // Full Name (Read Only)
               _buildReadOnlyField('Họ và tên', user?.fullName ?? ''),
-              15.verticalSpace,
+              const SizedBox(height: 15),
 
               // Student Code (Read Only)
               _buildReadOnlyField(isStudent ? 'MSSV' : 'Mã số', user?.username.toUpperCase() ?? ''),
-               15.verticalSpace,
+               const SizedBox(height: 15),
 
               // Email (Read Only)
               _buildReadOnlyField('Email', user?.email ?? ''),
-               15.verticalSpace,
+               const SizedBox(height: 15),
 
               // Phone Field
               TextFormField(
@@ -226,31 +216,31 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     _selectedDob != null
                         ? DateFormat('dd/MM/yyyy').format(_selectedDob!)
                         : 'Chọn ngày sinh',
-                    style: TextStyle(fontSize: 16.sp),
+                    style: const TextStyle(fontSize: 16),
                   ),
                 ),
               ),
 
-              40.verticalSpace,
+              const SizedBox(height: 40),
 
               // Save Button
               SizedBox(
                 width: double.infinity,
-                height: 50.h,
+                height: 50,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _saveProfile,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFF6B00),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15.r),
+                      borderRadius: BorderRadius.circular(15),
                     ),
                   ),
                   child: _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : Text(
+                      : const Text(
                           'Lưu thay đổi',
                           style: TextStyle(
-                            fontSize: 18.sp,
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
@@ -259,7 +249,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
             ],
           ),
-        ),
         ),
       ),
     ),
@@ -283,16 +272,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       labelText: label,
       labelStyle: const TextStyle(color: Colors.grey),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15.r),
+        borderRadius: BorderRadius.circular(15),
         borderSide: const BorderSide(color: Colors.grey),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15.r),
+        borderRadius: BorderRadius.circular(15),
         borderSide: const BorderSide(color: Color(0xFFFF6B00)),
       ),
       filled: true,
       fillColor: Colors.white,
-      contentPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
     );
   }
 }

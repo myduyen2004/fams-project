@@ -23,21 +23,3 @@ export interface SpecializationCreateRequest {
     majorId: number;
     status?: 'ACTIVE' | 'INACTIVE';
 }
-
-export interface SpecializationImportDTO {
-    rowNumber: number;
-    majorCode: string;
-    code: string;
-    name: string;
-    description: string;
-    statusStr: string;
-    status: 'VALID' | 'ERROR';
-    errorMessage?: string;
-    warningMessage?: string;
-}
-
-export interface SpecializationImportResult {
-    created: number;
-    failed: number;
-    errors: string[];
-}

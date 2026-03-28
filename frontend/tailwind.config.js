@@ -12,8 +12,6 @@ export default {
         'fpt-orange': '#F37021',
         'fpt-blue': '#00529C',
         'fpt-green': '#4BA840',
-        'brand-orange-primary': '#F26F21',
-        'brand-orange-secondary': '#EA5C36',
         
         // Primary (Orange scale)
         primary: {
@@ -37,9 +35,6 @@ export default {
         warning: '#F59E0B',
         error: '#EF4444',
         info: '#00529C',
-      },
-      fontFamily: {
-        sans: ['"Be Vietnam Pro"', 'Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', '"Noto Sans"', 'sans-serif', '"Apple Color Emoji"', '"Segoe UI Emoji"', '"Segoe UI Symbol"', '"Noto Color Emoji"'],
       },
     },
   },
