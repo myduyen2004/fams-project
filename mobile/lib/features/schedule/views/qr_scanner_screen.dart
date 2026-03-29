@@ -33,10 +33,11 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                     return const Icon(Icons.flash_off, color: Colors.grey);
                   case TorchState.on:
                     return const Icon(Icons.flash_on, color: Colors.orange);
-                  case TorchState.auto: // Handle auto case if present
-                     return const Icon(Icons.flash_auto, color: Colors.orange);
+                  case TorchState.auto:
+                    return const Icon(Icons.flash_auto, color: Colors.orange);
                   case TorchState.unavailable:
-                     return const Icon(Icons.no_flash, color: Colors.grey);
+                  default:
+                    return const Icon(Icons.no_flash, color: Colors.grey);
                 }
               },
             ),
@@ -50,6 +51,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                   case CameraFacing.front:
                     return const Icon(Icons.camera_front, color: Colors.grey);
                   case CameraFacing.back:
+                  default:
                     return const Icon(Icons.camera_rear, color: Colors.grey);
                 }
               },

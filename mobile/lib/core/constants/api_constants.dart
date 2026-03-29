@@ -3,6 +3,7 @@ class ApiConstants {
   ApiConstants._();
 
   // Base URLs
+  static const String baseUrlNgrok = 'https://nonprotrusive-crimpier-eula.ngrok-free.dev';
   static const String baseUrlLocal = 'http://10.0.2.2:8080'; // Android Emulator
   static const String baseUrlUsb =
       'http://127.0.0.1:8080'; // Real device via USB (adb reverse)
@@ -10,7 +11,7 @@ class ApiConstants {
       'http://10.0.14.210:8080'; // Real device via WiFi
 
   // Current Environment
-  static const String baseUrl = baseUrlUsb; // Use USB (adb reverse)
+  static const String baseUrl = baseUrlNgrok; // Use ngrok for remote backend
 
   // Auth Endpoints
   static const String login = '/api/auth/login';
