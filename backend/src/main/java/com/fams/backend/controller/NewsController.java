@@ -31,7 +31,7 @@ public class NewsController {
 
     private final NewsService newsService;
 
-    @GetMapping("/api/admin/news")
+    @GetMapping("/admin")
     @Operation(summary = "Lấy danh sách tin tức cho admin")
     @PreAuthorize("hasRole('ADMIN') or hasRole('ACADEMIC_STAFF')")
     public ResponseEntity<Page<NewsResponse>> getAdminNews(
@@ -43,35 +43,35 @@ public class NewsController {
         return ResponseEntity.ok(newsService.getAdminNews(search, targetType, status, page, size));
     }
 
-    @GetMapping("/api/admin/news/{id}")
-    @Operation(summary = "Lấy chi tiết tin tức")
+    @GetMapping("/admin/{id}")
+    @Operation(summary = "Lấy chi tiết tin tức (admin)")
     @PreAuthorize("hasRole('ADMIN') or hasRole('ACADEMIC_STAFF')")
     public ResponseEntity<NewsResponse> getAdminNewsById(@PathVariable Long id) {
         return ResponseEntity.ok(newsService.getAdminNewsById(id));
     }
 
-    @PostMapping("/api/admin/news")
+    @PostMapping("/admin")
     @Operation(summary = "Tạo tin tức")
     @PreAuthorize("hasRole('ADMIN') or hasRole('ACADEMIC_STAFF')")
     public ResponseEntity<NewsResponse> createNews(@Valid @RequestBody NewsRequest request) {
         return ResponseEntity.ok(newsService.createNews(request));
     }
 
-    @PutMapping("/api/admin/news/{id}")
+    @PutMapping("/admin/{id}")
     @Operation(summary = "Cập nhật tin tức")
     @PreAuthorize("hasRole('ADMIN') or hasRole('ACADEMIC_STAFF')")
     public ResponseEntity<NewsResponse> updateNews(@PathVariable Long id, @Valid @RequestBody NewsRequest request) {
         return ResponseEntity.ok(newsService.updateNews(id, request));
     }
 
-    @PostMapping("/api/admin/news/{id}/publish")
+    @PostMapping("/admin/{id}/publish")
     @Operation(summary = "Xuất bản tin tức")
     @PreAuthorize("hasRole('ADMIN') or hasRole('ACADEMIC_STAFF')")
     public ResponseEntity<NewsResponse> publishNews(@PathVariable Long id) {
         return ResponseEntity.ok(newsService.publishNews(id));
     }
 
-    @DeleteMapping("/api/admin/news/{id}")
+    @DeleteMapping("/admin/{id}")
     @Operation(summary = "Xóa tin tức")
     @PreAuthorize("hasRole('ADMIN') or hasRole('ACADEMIC_STAFF')")
     public ResponseEntity<Void> deleteNews(@PathVariable Long id) {
@@ -79,7 +79,7 @@ public class NewsController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/api/admin/news/bulk-delete")
+    @PostMapping("/admin/bulk-delete")
     @Operation(summary = "Xóa nhiều tin tức")
     @PreAuthorize("hasRole('ADMIN') or hasRole('ACADEMIC_STAFF')")
     public ResponseEntity<Map<String, String>> bulkDeleteNews(@RequestBody Map<String, List<Long>> body) {
@@ -88,7 +88,7 @@ public class NewsController {
         return ResponseEntity.ok(Map.of("message", "Đã xóa " + ids.size() + " tin tức"));
     }
 
-    @GetMapping("/api/news")
+    @GetMapping
     @Operation(summary = "Lấy danh sách tin tức đã xuất bản")
     public ResponseEntity<Page<NewsResponse>> getPublishedNews(
             @RequestParam(defaultValue = "0") int page,
@@ -96,20 +96,20 @@ public class NewsController {
         return ResponseEntity.ok(newsService.getPublishedNews(page, size));
     }
 
-    @GetMapping("/api/news/unread-count")
+    @GetMapping("/unread-count")
     @Operation(summary = "Lấy số lượng tin tức chưa đọc")
     public ResponseEntity<Map<String, Long>> getUnreadNewsCount() {
         return ResponseEntity.ok(Map.of("count", newsService.getUnreadCount()));
     }
 
-    @PostMapping("/api/news/{id}/read")
+    @PostMapping("/{id}/read")
     @Operation(summary = "Đánh dấu tin tức đã đọc")
     public ResponseEntity<Void> markNewsAsRead(@PathVariable Long id) {
         newsService.markAsRead(id);
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/api/news/{id}")
+    @GetMapping("/{id}")
     @Operation(summary = "Lấy chi tiết tin tức đã xuất bản")
     public ResponseEntity<NewsResponse> getPublishedNewsById(@PathVariable Long id) {
         return ResponseEntity.ok(newsService.getPublishedNewsById(id));

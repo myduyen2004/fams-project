@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/lecturer-assignments")
+@RequestMapping("/api/v1/lecturer/assignments")
 @RequiredArgsConstructor
 @Tag(name = "Lecturer Assignment")
 @PreAuthorize("hasRole('LECTURER')")
