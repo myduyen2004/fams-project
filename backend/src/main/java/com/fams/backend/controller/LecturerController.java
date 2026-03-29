@@ -15,7 +15,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/lecturer")
+@RequestMapping("/api/v1/lecturer")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('LECTURER')")
 public class LecturerController {
@@ -88,50 +88,10 @@ public class LecturerController {
         @GetMapping("/classes")
         public ResponseEntity<java.util.List<String>> getClasses(
                         @AuthenticationPrincipal UserDetails userDetails) {
-                System.out.println("[DEBUG getClasses] Called by: " + userDetails.getUsername());
                 User lecturer = userRepository.findByUsername(userDetails.getUsername())
                                 .orElseThrow(() -> new RuntimeException("Logged in user not found"));
-                System.out.println("[DEBUG getClasses] Lecturer ID: " + lecturer.getId());
-
-                // 1. Find active semester (assumes only 1 active at a time, or takes the latest
-                // start date)
-                java.util.List<com.fams.backend.entity.Semester> activeSemesters = semesterRepository
-                                .findActiveSemesters();
-                System.out.println("[DEBUG getClasses] Active semesters count: " + activeSemesters.size());
-                if (activeSemesters.isEmpty()) {
-                        // Fallback: try upcoming if no active
-                        activeSemesters = semesterRepository.findUpcomingSemesters();
-                        System.out.println("[DEBUG getClasses] Upcoming semesters count: " + activeSemesters.size());
-                        if (activeSemesters.isEmpty()) {
-                                System.out.println("[DEBUG getClasses] No semesters found, using lecturer-wide fallback");
-                                java.util.List<String> fallbackClassNames = classSectionRepository
-                                                .findDistinctClassNamesByLecturerId(lecturer.getId());
-                                System.out.println("[DEBUG getClasses] Fallback class names: " + fallbackClassNames);
-                                return ResponseEntity.ok(fallbackClassNames);
-                        }
-                }
-                com.fams.backend.entity.Semester currentSemester = activeSemesters.get(0);
-                System.out.println("[DEBUG getClasses] Using semester: " + currentSemester.getCode() + " (status="
-                                + currentSemester.getStatus() + ")");
-
-                // 2. Find classes for lecturer in this semester
-                java.util.List<com.fams.backend.entity.ClassSection> classes = classSectionRepository
-                                .findByLecturerIdAndSemesterCode(lecturer.getId(), currentSemester.getCode());
-                System.out.println("[DEBUG getClasses] Classes found: " + classes.size());
-
-                // 3. Map to class names
-                java.util.List<String> classNames = classes.stream()
-                                .map(com.fams.backend.entity.ClassSection::getClassName)
-                                .collect(java.util.stream.Collectors.toList());
-
-                // Fallback: if semester-status-based query returns empty, fetch all classes of
-                // lecturer across semesters.
-                if (classNames.isEmpty()) {
-                        System.out.println("[DEBUG getClasses] No classes found in selected semester, using fallback");
-                        classNames = classSectionRepository.findDistinctClassNamesByLecturerId(lecturer.getId());
-                }
-
-                System.out.println("[DEBUG getClasses] Returning class names: " + classNames);
+                java.util.List<String> classNames = classSectionRepository
+                                .findDistinctClassNamesByLecturerId(lecturer.getId());
 
                 return ResponseEntity.ok(classNames);
         }

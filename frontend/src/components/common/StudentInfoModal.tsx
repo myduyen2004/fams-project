@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { studentGradeService } from '../../services/api/studentGradeService';
 import { X, Mail, Phone, Calendar, BookOpen, GraduationCap, Award, User as UserIcon, Loader2 } from 'lucide-react';
-import axios from 'axios';
 
 interface StudentInfo {
     id: number;
@@ -42,13 +42,8 @@ export const StudentInfoModal: React.FC<StudentInfoModalProps> = ({ isOpen, onCl
         setLoading(true);
         setError(null);
         try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get(`/api/v1/students/${studentCode}/info`, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            });
-            setStudent(response.data);
+            const data = await studentGradeService.getStudentInfo(studentCode!);
+            setStudent(data as unknown as StudentInfo);
         } catch (err: any) {
             console.error('Failed to fetch student info:', err);
             setError('Không thể tải thông tin sinh viên');
