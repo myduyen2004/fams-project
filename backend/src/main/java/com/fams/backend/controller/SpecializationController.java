@@ -36,7 +36,7 @@ public class SpecializationController {
     private final SpecializationService specializationService;
 
     @GetMapping("/by-major/{majorId}")
-    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS') or hasRole('STUDENT') or hasRole('LECTURER')")
     public ResponseEntity<Page<SpecializationResponse>> getSpecializationsByMajor(
             @PathVariable Long majorId,
             @RequestParam(required = false) String keyword,
@@ -56,7 +56,7 @@ public class SpecializationController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS') or hasRole('STUDENT') or hasRole('LECTURER')")
     public ResponseEntity<SpecializationResponse> getSpecialization(@PathVariable Long id) {
         return ResponseEntity.ok(specializationService.getSpecialization(id));
     }
@@ -150,7 +150,7 @@ public class SpecializationController {
     // ========== Course Management ==========
 
     @GetMapping("/{id}/courses")
-    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS') or hasRole('STUDENT') or hasRole('LECTURER')")
     public ResponseEntity<List<CourseResponse>> getCourses(@PathVariable Long id) {
         return ResponseEntity.ok(specializationService.getCourses(id));
     }
