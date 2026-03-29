@@ -82,7 +82,6 @@ public class LecturerController {
                 return ResponseEntity.ok(scheduleRequestService.getSlotsForClass(className, lecturer.getId()));
         }
 
-        private final com.fams.backend.repository.SemesterRepository semesterRepository;
         private final com.fams.backend.repository.ClassSectionRepository classSectionRepository;
 
         @GetMapping("/classes")

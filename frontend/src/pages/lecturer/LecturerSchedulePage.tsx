@@ -451,8 +451,8 @@ export const LecturerSchedulePage: React.FC = () => {
         if (!dlAssignmentId) return;
         try {
             setDownloadingZip(true);
-            const resp = await assignmentService.downloadAllSubmissions(dlAssignmentId);
-            const url = window.URL.createObjectURL(new Blob([resp.data]));
+            const blob = await assignmentService.downloadAllSubmissions(dlAssignmentId);
+            const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
             link.setAttribute('download', `${dlClassName}_${dlAssignmentTitle}_submissions.zip`);
