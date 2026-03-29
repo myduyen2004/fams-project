@@ -29,7 +29,7 @@ public class MajorController {
     private final MajorService majorService;
 
     @GetMapping
-    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS') or hasRole('STUDENT') or hasRole('LECTURER')")
     public ResponseEntity<Page<MajorResponse>> getMajors(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Major.MajorStatus status,
@@ -54,7 +54,7 @@ public class MajorController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS') or hasRole('STUDENT') or hasRole('LECTURER')")
     public ResponseEntity<MajorResponse> getMajor(@PathVariable Long id) {
         return ResponseEntity.ok(majorService.getMajor(id));
     }
@@ -66,7 +66,7 @@ public class MajorController {
     }
 
     @GetMapping("/{id}/courses")
-    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS') or hasRole('STUDENT') or hasRole('LECTURER')")
     public ResponseEntity<List<CourseResponse>> getCourses(@PathVariable Long id) {
         return ResponseEntity.ok(majorService.getCourses(id));
     }
