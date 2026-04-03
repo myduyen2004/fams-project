@@ -1,0 +1,238 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36">
+  <diagram name="Attendance Taking and Reporting" id="d1">
+    <mxGraphModel dx="4000" dy="3000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="2000" pageHeight="1600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+<mxCell id="C1" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#dae8fc;strokeColor=#6c8ebf;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;RestController&amp;gt;&amp;gt;&#xa;AttendanceController" vertex="1">
+          <mxGeometry height="220" width="540" x="40" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="C1_0" parent="C1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- attendanceService : AttendanceService&#xa;- userRepository : UserRepository" vertex="1">
+          <mxGeometry height="52" width="540" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="C1_line" parent="C1" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=inherit;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="540" y="82" as="geometry" />
+        </mxCell>
+        <mxCell id="C1_1" parent="C1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ startSession(StartSessionRequest) : SessionDetailResponse&#xa;+ getSession(sessionId) : SessionDetailResponse&#xa;+ getSessionBySlot(slotId) : SessionDetailResponse&#xa;+ updateManualAttendance(ManualAttendanceRequest) : SessionDetailResponse&#xa;+ getClassAttendanceReport(className) : ClassAttendanceReportResponse&#xa;+ getStudentAttendanceSummary(semesterCode) : StudentAttendanceSummaryResponse&#xa;+ getStudentAttendanceDetail(className) : IndividualAttendanceDetail" vertex="1">
+          <mxGeometry height="130" width="540" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="C2" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#dae8fc;strokeColor=#6c8ebf;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;RestController&amp;gt;&amp;gt;&#xa;FaceAttendanceController" vertex="1">
+          <mxGeometry height="300" width="540" x="700" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="C2_0" parent="C2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- faceAttendanceService : FaceAttendanceService&#xa;- userRepository : UserRepository" vertex="1">
+          <mxGeometry height="52" width="540" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="C2_line" parent="C2" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=inherit;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="540" y="82" as="geometry" />
+        </mxCell>
+        <mxCell id="C2_1" parent="C2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ registerFace(RegisterFaceRequest) : RegisterFaceResponse&#xa;+ checkInWithFace(FaceCheckInRequest) : FaceCheckInResponse&#xa;+ getFaceStatus() : FaceStatusResponse&#xa;+ getFaceAttendanceStatus(slotId) : FaceStatusResponse&#xa;+ preCheckFace(FacePreCheckRequest) : FacePreCheckResponse&#xa;+ getPendingVerifications() : PendingVerificationsResponse&#xa;+ manualVerify(ManualVerifyRequest) : void&#xa;+ getFaceImage() : FaceImagesResponse&#xa;+ checkQuality(FaceQualityRequest) : FaceQualityResponse" vertex="1">
+          <mxGeometry height="210" width="540" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="C3" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#dae8fc;strokeColor=#6c8ebf;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;RestController&amp;gt;&amp;gt;&#xa;FaceController" vertex="1">
+          <mxGeometry height="120" width="400" x="1360" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="C3_0" parent="C3" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- faceService : FaceAttendanceService" vertex="1">
+          <mxGeometry height="26" width="400" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="C3_line" parent="C3" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=inherit;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="400" y="56" as="geometry" />
+        </mxCell>
+        <mxCell id="C3_1" parent="C3" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ detectFace(Map&amp;lt;String, String&amp;gt;) : FaceDetectResponse" vertex="1">
+          <mxGeometry height="26" width="400" y="64" as="geometry" />
+        </mxCell>
+<mxCell id="SI1" parent="1" style="swimlane;fontStyle=3;align=center;startSize=30;html=1;collapsible=0;fillColor=#e1d5e7;strokeColor=#9673a6;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&#xa;AttendanceService" vertex="1">
+          <mxGeometry height="230" width="470" x="75" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="SI1_line" parent="SI1" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=inherit;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="470" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="SI1_1" parent="SI1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ startSession(Long, StartSessionRequest) : SessionDetailResponse&#xa;+ getSessionDetail(Long) : SessionDetailResponse&#xa;+ getSessionBySlot(Long) : SessionDetailResponse&#xa;+ updateManualAttendance(Long, ManualAttendanceRequest) : SessionDetailResponse&#xa;+ getClassAttendanceReport(String) : ClassAttendanceReportResponse&#xa;+ getStudentAttendanceSummary(Long, String) : StudentAttendanceSummaryResponse&#xa;+ getStudentAttendanceDetail(Long, String) : IndividualAttendanceDetail" vertex="1">
+          <mxGeometry height="182" width="470" y="38" as="geometry" />
+        </mxCell>
+        <mxCell id="SI2" parent="1" style="swimlane;fontStyle=3;align=center;startSize=30;html=1;collapsible=0;fillColor=#e1d5e7;strokeColor=#9673a6;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&#xa;FaceAttendanceService" vertex="1">
+          <mxGeometry height="320" width="520" x="710" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="SI2_line" parent="SI2" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=inherit;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="520" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="SI2_1" parent="SI2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ registerFace(Long, RegisterFaceRequest) : RegisterFaceResponse&#xa;+ checkInWithFace(Long, FaceCheckInRequest) : FaceCheckInResponse&#xa;+ getFaceStatus(Long) : FaceStatusResponse&#xa;+ getFaceAttendanceStatus(Long, Long) : FaceStatusResponse&#xa;+ preCheckFace(Long, FacePreCheckRequest) : FacePreCheckResponse&#xa;+ getPendingVerifications(Long) : PendingVerificationsResponse&#xa;+ manualVerify(Long, ManualVerifyRequest) : void&#xa;+ isValidWiFiLocation(Long, String, String, Integer) : boolean&#xa;+ getFaceImage(Long) : FaceImagesResponse&#xa;+ checkQuality(FaceQualityRequest) : FaceQualityResponse&#xa;+ detectFace(String) : FaceDetectResponse" vertex="1">
+          <mxGeometry height="280" width="520" y="38" as="geometry" />
+        </mxCell>
+<mxCell id="S1" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#d5e8d4;strokeColor=#82b366;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;Service&amp;gt;&amp;gt;&#xa;AttendanceServiceImpl" vertex="1">
+          <mxGeometry height="430" width="470" x="75" y="650" as="geometry" />
+        </mxCell>
+        <mxCell id="S1_0" parent="S1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- sessionRepository : AttendanceSessionRepository&#xa;- timetableSlotRepository : TimetableSlotRepository&#xa;- configRepository : AttendanceConfigRepository&#xa;- studentAttendanceRepository : StudentAttendanceRepository&#xa;- userRepository : UserRepository&#xa;- enrollmentRepository : EnrollmentRepository&#xa;- semesterRepository : SemesterRepository&#xa;- classSectionRepository : ClassSectionRepository&#xa;- systemLogService : SystemLogService" vertex="1">
+          <mxGeometry height="180" width="470" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="S1_line" parent="S1" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=inherit;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="470" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="S1_1" parent="S1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ startSession(...) : SessionDetailResponse&#xa;+ getSessionDetail(Long) : SessionDetailResponse&#xa;+ getSessionBySlot(Long) : SessionDetailResponse&#xa;+ updateManualAttendance(...) : SessionDetailResponse&#xa;+ getClassAttendanceReport(String) : ClassAttendanceReportResponse&#xa;+ getStudentAttendanceSummary(...) : StudentAttendanceSummaryResponse&#xa;+ getStudentAttendanceDetail(...) : IndividualAttendanceDetail&#xa;- createNewSession(TimetableSlot, Long) : SessionDetailResponse&#xa;- mapToDetailResponse(AttendanceSession) : SessionDetailResponse" vertex="1">
+          <mxGeometry height="210" width="470" y="218" as="geometry" />
+        </mxCell>
+        <mxCell id="S2" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#d5e8d4;strokeColor=#82b366;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;Service&amp;gt;&amp;gt;&#xa;FaceAttendanceServiceImpl" vertex="1">
+          <mxGeometry height="490" width="520" x="710" y="820" as="geometry" />
+        </mxCell>
+        <mxCell id="S2_0" parent="S2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- faceClient : FaceRecognitionClient&#xa;- faceEncodingRepository : FaceEncodingRepository&#xa;- attendanceRepository : StudentAttendanceRepository&#xa;- sessionRepository : AttendanceSessionRepository&#xa;- slotRepository : TimetableSlotRepository&#xa;- userRepository : UserRepository&#xa;- roomWifiRepository : RoomWiFiAccessPointRepository&#xa;- uploadService : UploadService&#xa;- messagingTemplate : SimpMessagingTemplate&#xa;- configService : AttendanceConfigService" vertex="1">
+          <mxGeometry height="200" width="520" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="S2_line" parent="S2" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=inherit;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="520" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="S2_1" parent="S2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ registerFace(...) : RegisterFaceResponse&#xa;+ checkInWithFace(...) : FaceCheckInResponse&#xa;+ getFaceStatus(Long) : FaceStatusResponse&#xa;+ getFaceAttendanceStatus(Long, Long) : FaceStatusResponse&#xa;+ preCheckFace(...) : FacePreCheckResponse&#xa;+ getPendingVerifications(Long) : PendingVerificationsResponse&#xa;+ manualVerify(Long, ManualVerifyRequest) : void&#xa;+ isValidWiFiLocation(...) : boolean&#xa;+ getFaceImage(Long) : FaceImagesResponse&#xa;+ checkQuality(...) : FaceQualityResponse&#xa;+ detectFace(String) : FaceDetectResponse" vertex="1">
+          <mxGeometry height="250" width="520" y="238" as="geometry" />
+        </mxCell>
+<mxCell id="R1" parent="1" style="swimlane;fontStyle=3;align=center;startSize=30;html=1;collapsible=0;fillColor=#d0e8f2;strokeColor=#5b9bd5;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&#xa;AttendanceSessionRepository" vertex="1">
+          <mxGeometry height="100" width="420" x="-470" y="780" as="geometry" />
+        </mxCell>
+        <mxCell id="R1_line" parent="R1" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=inherit;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="420" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="R1_1" parent="R1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ findByTimetableSlotId(Long) : Optional&amp;lt;AttendanceSession&amp;gt;&#xa;+ findByTimetableSlotIdIn(Collection) : List&amp;lt;AttendanceSession&amp;gt;" vertex="1">
+          <mxGeometry height="52" width="420" y="38" as="geometry" />
+        </mxCell>
+        <mxCell id="R2" parent="1" style="swimlane;fontStyle=3;align=center;startSize=30;html=1;collapsible=0;fillColor=#d0e8f2;strokeColor=#5b9bd5;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&#xa;StudentAttendanceRepository" vertex="1">
+          <mxGeometry height="180" width="460" x="-500" y="940" as="geometry" />
+        </mxCell>
+        <mxCell id="R2_line" parent="R2" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=inherit;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="460" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="R2_1" parent="R2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ findBySessionId(Long) : List&amp;lt;StudentAttendance&amp;gt;&#xa;+ findBySessionIdIn(Collection) : List&amp;lt;StudentAttendance&amp;gt;&#xa;+ findBySessionIdAndStudentId(Long, Long) : Optional&#xa;+ findByRequiresManualVerifyTrue...() : List&#xa;+ findByStudentIdAndClassName(Long, String) : List&#xa;+ countPresentBySessionIdIn(Collection) : List&amp;lt;Object[]&amp;gt;&#xa;+ countPresentBySessionId(Long) : long" vertex="1">
+          <mxGeometry height="140" width="460" y="38" as="geometry" />
+        </mxCell>
+        <mxCell id="R3" parent="1" style="swimlane;fontStyle=3;align=center;startSize=30;html=1;collapsible=0;fillColor=#d0e8f2;strokeColor=#5b9bd5;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&#xa;FaceEncodingRepository" vertex="1">
+          <mxGeometry height="140" width="390" x="1360" y="860" as="geometry" />
+        </mxCell>
+        <mxCell id="R3_line" parent="R3" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=inherit;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="390" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="R3_1" parent="R3" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ findAllByUserId(Long) : List&amp;lt;FaceEncoding&amp;gt;&#xa;+ findByUserId(Long) : Optional&amp;lt;FaceEncoding&amp;gt;&#xa;+ existsByUserId(Long) : boolean&#xa;+ deleteByUserId(Long) : void&#xa;+ countVerifiedEncodings() : long" vertex="1">
+          <mxGeometry height="100" width="390" y="38" as="geometry" />
+        </mxCell>
+<mxCell id="E1" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#f8cecc;strokeColor=#b85450;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&#xa;AttendanceSession" vertex="1">
+          <mxGeometry height="230" width="320" x="-430" y="1200" as="geometry" />
+        </mxCell>
+        <mxCell id="E1_0" parent="E1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- id : Long&#xa;- timetableSlot : TimetableSlot&#xa;- lecturer : User&#xa;- openedAt : LocalDateTime&#xa;- closedAt : LocalDateTime&#xa;- status : SessionStatus&#xa;- studentAttendances : List&#xa;- createdAt : LocalDateTime" vertex="1">
+          <mxGeometry height="190" width="320" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="E2" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#f8cecc;strokeColor=#b85450;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&#xa;StudentAttendance" vertex="1">
+          <mxGeometry height="480" width="330" x="10" y="1200" as="geometry" />
+        </mxCell>
+        <mxCell id="E2_0" parent="E2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- id : Long&#xa;- session : AttendanceSession&#xa;- student : User&#xa;- status : AttendanceStatus&#xa;- method : CheckInMethod&#xa;- checkInTime : LocalDateTime&#xa;- faceConfidence : Double&#xa;- wifiBssid : String&#xa;- wifiRssi : Integer&#xa;- note : String&#xa;- updatedBy : User&#xa;- attemptCount : Integer&#xa;- failureReason : String&#xa;- requiresManualVerify : Boolean&#xa;- manualVerifiedBy : User&#xa;- manualVerifiedAt : LocalDateTime&#xa;- capturedFaceUrl : String&#xa;- createdAt : LocalDateTime&#xa;- updatedAt : LocalDateTime" vertex="1">
+          <mxGeometry height="440" width="330" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="E3" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#f8cecc;strokeColor=#b85450;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&#xa;FaceEncoding" vertex="1">
+          <mxGeometry height="250" width="300" x="1405" y="1080" as="geometry" />
+        </mxCell>
+        <mxCell id="E3_0" parent="E3" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- id : Long&#xa;- user : User&#xa;- encodingData : byte[]&#xa;- registeredAt : LocalDateTime&#xa;- livenessVerified : Boolean&#xa;- faceImage : String&#xa;- createdAt : LocalDateTime&#xa;- updatedAt : LocalDateTime" vertex="1">
+          <mxGeometry height="210" width="300" y="30" as="geometry" />
+        </mxCell>
+<mxCell id="EN1" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#e1d5e7;strokeColor=#9673a6;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;enumeration&amp;gt;&amp;gt;&#xa;SessionStatus" vertex="1">
+          <mxGeometry height="90" width="180" x="-680" y="1280" as="geometry" />
+        </mxCell>
+        <mxCell id="EN1_1" parent="EN1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="OPEN&#xa;CLOSED" vertex="1">
+          <mxGeometry height="50" width="180" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EN2" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#e1d5e7;strokeColor=#9673a6;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;enumeration&amp;gt;&amp;gt;&#xa;AttendanceStatus" vertex="1">
+          <mxGeometry height="110" width="180" x="430" y="1400" as="geometry" />
+        </mxCell>
+        <mxCell id="EN2_1" parent="EN2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="PRESENT&#xa;ABSENT&#xa;EXCUSED" vertex="1">
+          <mxGeometry height="70" width="180" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EN3" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#e1d5e7;strokeColor=#9673a6;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;enumeration&amp;gt;&amp;gt;&#xa;CheckInMethod" vertex="1">
+          <mxGeometry height="110" width="180" x="430" y="1560" as="geometry" />
+        </mxCell>
+        <mxCell id="EN3_1" parent="EN3" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="QR_CODE&#xa;FACE_RECOGNITION&#xa;MANUAL" vertex="1">
+          <mxGeometry height="70" width="180" y="30" as="geometry" />
+        </mxCell>
+<mxCell id="D1" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#fff2cc;strokeColor=#d6b656;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&#xa;AttendanceDTO (inner classes)" vertex="1">
+          <mxGeometry height="310" width="350" x="-500" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="D1_1" parent="D1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="StartSessionRequest&#xa;SessionDetailResponse&#xa;StudentAttendanceResponse&#xa;ManualAttendanceRequest&#xa;ClassAttendanceReportResponse&#xa;SlotInfo&#xa;StudentReport&#xa;AttendanceDetail&#xa;StudentAttendanceSummaryResponse&#xa;ClassAttendanceSummary&#xa;IndividualAttendanceDetail&#xa;IndividualSlotAttendance" vertex="1">
+          <mxGeometry height="270" width="350" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="D2" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#fff2cc;strokeColor=#d6b656;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&#xa;FaceDTO (inner classes)" vertex="1">
+          <mxGeometry height="360" width="330" x="1400" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="D2_1" parent="D2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="RegisterFaceRequest&#xa;FaceCheckInRequest&#xa;LivenessProofDTO&#xa;ManualVerifyRequest&#xa;FacePreCheckRequest&#xa;FaceQualityRequest&#xa;RegisterFaceResponse&#xa;FaceCheckInResponse&#xa;FaceStatusResponse&#xa;PendingVerificationDTO&#xa;PendingVerificationsResponse&#xa;FaceImagesResponse&#xa;FaceQualityResponse&#xa;FacePreCheckResponse" vertex="1">
+          <mxGeometry height="320" width="330" y="30" as="geometry" />
+        </mxCell>
+<mxCell id="EX1" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#f5f5f5;strokeColor=#666666;rounded=1;shadow=1;fontSize=15;fontColor=#333333;" value="&amp;lt;&amp;lt;Client&amp;gt;&amp;gt;&#xa;FaceRecognitionClient" vertex="1">
+          <mxGeometry height="130" width="350" x="1400" y="670" as="geometry" />
+        </mxCell>
+        <mxCell id="EX1_line" parent="EX1" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=inherit;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="350" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EX1_1" parent="EX1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ registerFace(FaceRegisterRequest) : FaceRegisterResponse&#xa;+ verifyFace(FaceVerifyRequest) : FaceVerifyResponse&#xa;+ detectFace(FaceDetectRequest) : FaceDetectResponse&#xa;+ checkQuality(FaceQualityRequest) : FaceQualityResponse" vertex="1">
+          <mxGeometry height="90" width="350" y="38" as="geometry" />
+        </mxCell>
+<!-- Controller -> Service Interface -->
+        <mxCell id="Edge1" edge="1" parent="1" source="C1" target="SI1" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;fontSize=15;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge2" edge="1" parent="1" source="C2" target="SI2" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;fontSize=15;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge3" edge="1" parent="1" source="C3" target="SI2" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;fontSize=15;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+<mxCell id="Edge4" edge="1" parent="1" source="S1" target="SI1" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=block;endFill=0;dashed=1;dashPattern=8 4;fontSize=15;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge5" edge="1" parent="1" source="S2" target="SI2" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=block;endFill=0;dashed=1;dashPattern=8 4;fontSize=15;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- ServiceImpl -> Repositories -->
+        <mxCell id="Edge6" edge="1" parent="1" source="S1" target="R1" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;fontSize=15;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge7" edge="1" parent="1" source="S1" target="R2" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;fontSize=15;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge8" edge="1" parent="1" source="S2" target="R3" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;fontSize=15;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge8b" edge="1" parent="1" source="S2" target="R1" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;fontSize=15;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge8c" edge="1" parent="1" source="S2" target="R2" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;fontSize=15;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- Repo -> Entity -->
+        <mxCell id="Edge9" edge="1" parent="1" source="R1" target="E1" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;fontSize=15;" value="1        *">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge10" edge="1" parent="1" source="R2" target="E2" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;fontSize=15;" value="1        *">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge11" edge="1" parent="1" source="R3" target="E3" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;fontSize=15;" value="1        *">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- Entity -> Enum -->
+        <mxCell id="Edge12" edge="1" parent="1" source="E1" target="EN1" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;fontSize=15;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge13" edge="1" parent="1" source="E2" target="EN2" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;fontSize=15;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge14" edge="1" parent="1" source="E2" target="EN3" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;fontSize=15;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- Controller -> DTO (dashed dependency) -->
+        <mxCell id="Edge15" edge="1" parent="1" source="C1" target="D1" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;dashed=1;fontSize=15;" value="&amp;lt;&amp;lt;use&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Edge16" edge="1" parent="1" source="C2" target="D2" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;dashed=1;fontSize=15;" value="&amp;lt;&amp;lt;use&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- FaceAttendanceServiceImpl -> FaceRecognitionClient -->
+        <mxCell id="Edge17" edge="1" parent="1" source="S2" target="EX1" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;fontSize=15;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+<mxCell id="Edge18" edge="1" parent="1" source="E1" target="E2" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;fontSize=15;" value="1        *">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,715 @@
+// =====================================================================
+// FAMS - Flexible Academic Management System
+// Database Diagram (DBML format for dbdiagram.io)
+// Paste this entire file at: https://dbdiagram.io/d
+// =====================================================================
+
+// ========================
+// 1. USER MANAGEMENT
+// ========================
+
+Table users {
+  id bigint [pk, increment]
+  code varchar(50) [unique, note: 'MSSV/MSGV/MSNV']
+  username varchar(50) [unique]
+  password varchar(255)
+  full_name varchar(150) [not null]
+  email varchar(150) [not null, unique]
+  dob date
+  phone varchar(20)
+  role varchar(50) [not null, note: 'ADMIN, ACADEMIC_STAFF, LECTURER, STUDENT']
+  status varchar(20) [not null, note: 'ACTIVE, INACTIVE, LOCKED']
+  face_data_status varchar(20) [note: 'REGISTERED, NOT_REGISTERED']
+  avatar varchar(255)
+  face_registration_attempts int [not null, default: 0]
+  face_registration_blocked_until timestamp
+  is_password_changed boolean [not null, default: false]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table student_profiles {
+  user_id bigint [pk, ref: - users.id]
+  course varchar(20)
+  gpa double
+  major_id bigint [ref: > majors.id]
+  specialization_id bigint [ref: > specializations.id]
+  sub_specialization_id bigint [ref: > sub_specializations.id]
+}
+
+Table lecturer_profiles {
+  user_id bigint [pk, ref: - users.id]
+  department varchar(100)
+  expertise varchar(100)
+  bio text
+}
+
+Table lecturer_grade_otps {
+  user_id bigint [pk, ref: - users.id]
+  otp_hash varchar(255) [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  last_used_at timestamp
+}
+
+Table user_permissions {
+  id bigint [pk, increment]
+  user_id bigint [not null, ref: > users.id]
+  permission varchar(50) [not null, note: 'MANAGE_MAJORS, MANAGE_COURSES, MANAGE_USERS, etc.']
+  granted_by bigint [ref: > users.id]
+  granted_at timestamp [not null]
+
+  indexes {
+    (user_id, permission) [unique]
+  }
+}
+
+Table user_device_tokens {
+  id bigint [pk, increment]
+  user_id bigint [not null, ref: > users.id]
+  token varchar(255) [not null]
+  platform varchar(50) [note: 'android, ios, web']
+  device_id varchar(100)
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table face_encodings {
+  id bigint [pk, increment]
+  user_id bigint [not null, ref: > users.id]
+  encoding_data bytea [not null]
+  registered_at timestamp [not null]
+  liveness_verified boolean [not null, default: true]
+  face_image text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// ========================
+// 2. ACADEMIC STRUCTURE
+// ========================
+
+Table majors {
+  id bigint [pk, increment]
+  code varchar(20) [not null, unique]
+  name varchar(200) [not null]
+  description text
+  program_duration varchar(50)
+  status varchar(20) [not null, default: 'ACTIVE', note: 'ACTIVE, INACTIVE']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table specializations {
+  id bigint [pk, increment]
+  code varchar(20) [not null, unique]
+  name varchar(200) [not null]
+  description text
+  status varchar(20) [not null, default: 'ACTIVE']
+  major_id bigint [not null, ref: > majors.id]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table sub_specializations {
+  id bigint [pk, increment]
+  code varchar(20) [not null, unique]
+  name varchar(200) [not null]
+  description text
+  status varchar(20) [not null, default: 'ACTIVE']
+  specialization_id bigint [not null, ref: > specializations.id]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table courses {
+  id bigint [pk, increment]
+  code varchar(20) [not null, unique]
+  name varchar(200) [not null]
+  description text
+  credits int [not null]
+  number_of_slots int [not null]
+  status varchar(20) [not null, default: 'ACTIVE']
+  is_calculated_in_gpa boolean [not null, default: true]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table course_prerequisites {
+  course_id bigint [ref: > courses.id]
+  prerequisite_id bigint [ref: > courses.id]
+
+  indexes {
+    (course_id, prerequisite_id) [pk]
+  }
+}
+
+Table specialization_courses {
+  id bigint [pk, increment]
+  specialization_id bigint [not null, ref: > specializations.id]
+  course_id bigint [not null, ref: > courses.id]
+  order_index int [default: 0]
+  semester int [default: 1]
+  note varchar(500)
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+
+  indexes {
+    (specialization_id, course_id) [unique]
+  }
+}
+
+Table sub_specialization_courses {
+  id bigint [pk, increment]
+  sub_specialization_id bigint [not null, ref: > sub_specializations.id]
+  course_id bigint [not null, ref: > courses.id]
+  order_index int [default: 0]
+  semester int [default: 1]
+  note varchar(500)
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+
+  indexes {
+    (sub_specialization_id, course_id) [unique]
+  }
+}
+
+Table grade_components {
+  id bigint [pk, increment]
+  name varchar(100) [not null]
+  description text
+  type varchar(50) [not null, note: 'PROGRESS_TEST, ASSIGNMENT, FINAL_EXAM, etc.']
+  weight double [not null]
+  is_resit boolean [not null, default: false]
+  reference_component_id bigint [ref: > grade_components.id]
+  course_id bigint [not null, ref: > courses.id]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// ========================
+// 3. SEMESTER & SCHEDULING
+// ========================
+
+Table semesters {
+  id bigint [pk, increment]
+  code varchar(20) [not null, unique, note: "e.g. FA24, SP25"]
+  name varchar(100) [not null]
+  start_date date [not null]
+  end_date date [not null]
+  status varchar(20) [not null, default: 'UPCOMING', note: 'UPCOMING, ONGOING, COMPLETED']
+  description text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table semester_configs {
+  id bigint [pk, increment]
+  semester_id bigint [not null, unique, ref: - semesters.id]
+  max_slot_per_day int [not null]
+  slot_per_subject_per_week int [not null]
+  slot_duration int [not null, note: 'minutes: 90, 120']
+  is_published boolean [not null, default: false]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table semester_weekdays {
+  id bigint [pk, increment]
+  semester_id bigint [not null, ref: > semesters.id]
+  weekday int [not null, note: '2=Mon, 3=Tue...8=Sun']
+
+  indexes {
+    (semester_id, weekday) [unique]
+  }
+}
+
+Table holidays {
+  id bigint [pk, increment]
+  semester_id bigint [ref: > semesters.id, note: 'NULL=system-wide']
+  holiday_date date [not null]
+  description varchar(255)
+  is_recurring boolean [not null, default: false]
+}
+
+Table slot_types {
+  id bigint [pk, increment]
+  name varchar(50) [not null]
+  slot_index int [not null]
+  start_time time [not null]
+  end_time time [not null]
+  description varchar(255)
+  semester_id bigint [not null, ref: > semesters.id]
+  duration varchar(20) [not null, default: 'MINUTES_90']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+
+  indexes {
+    (semester_id, slot_index) [unique]
+  }
+}
+
+Table rooms {
+  id bigint [pk, increment]
+  code varchar(20) [not null, unique]
+  name varchar(100) [not null]
+  capacity int [not null]
+  building varchar(50)
+  description varchar(500)
+  floor int
+  grid_row int
+  grid_col int
+  grid_row_span int [default: 1]
+  grid_col_span int [default: 1]
+  type varchar(20) [not null, default: 'CLASSROOM', note: 'PSEUDO_ROOM, CLASSROOM, COMPUTER_LAB']
+  status varchar(20) [not null, default: 'ACTIVE']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table wifi_access_points {
+  id bigint [pk, increment]
+  ssid varchar(100) [not null]
+  bssid varchar(17) [not null, unique]
+  name varchar(100)
+  location varchar(200)
+  status varchar(20) [not null, default: 'ACTIVE']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table room_wifi_access_points {
+  id bigint [pk, increment]
+  room_id bigint [not null, ref: > rooms.id]
+  wifi_access_point_id bigint [not null, ref: > wifi_access_points.id]
+  signal_strength int
+  is_primary boolean [not null, default: false]
+  position_note varchar(200)
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+
+  indexes {
+    (room_id, wifi_access_point_id) [unique]
+  }
+}
+
+// ========================
+// 4. CLASS MANAGEMENT
+// ========================
+
+Table class_sections {
+  class_name varchar(50) [pk]
+  course_id bigint [not null, ref: > courses.id]
+  semester_id bigint [not null, ref: > semesters.id]
+  lecturer_id bigint [ref: > users.id]
+  number_of_slots int [not null, default: 20]
+  max_students int [not null, default: 30]
+  current_enrollment int [not null, default: 0]
+  status varchar(20) [not null, default: 'UPCOMING', note: 'UPCOMING, ONGOING, FINISHED']
+  grades_submitted boolean [not null, default: false]
+  grades_submitted_at timestamp
+  grades_submitted_by bigint [ref: > users.id]
+  grades_published boolean [not null, default: false]
+  grades_published_at timestamp
+  grades_published_by bigint [ref: > users.id]
+  resit_grades_published boolean [not null, default: false]
+  resit_grades_published_at timestamp
+  resit_grades_published_by bigint [ref: > users.id]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table teaching_assignments {
+  id bigint [pk, increment]
+  lecturer_id bigint [not null, ref: > users.id]
+  course_id bigint [not null, ref: > courses.id]
+  semester_id bigint [not null, ref: > semesters.id]
+  max_classes int [not null, default: 3]
+  assigned_classes int [not null, default: 0]
+  status varchar(20) [not null, default: 'ACTIVE']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+
+  indexes {
+    (lecturer_id, course_id, semester_id) [unique]
+  }
+}
+
+Table enrollments {
+  id bigint [pk, increment]
+  class_name varchar(50) [not null, ref: > class_sections.class_name]
+  student_code varchar(20) [not null]
+  student_id bigint [not null, ref: > users.id]
+  status varchar(20) [not null, default: 'ENROLLED', note: 'ENROLLED, DROPPED, COMPLETED, FAILED']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+
+  indexes {
+    (class_name, student_id) [unique]
+  }
+}
+
+Table timetable_slots {
+  id bigint [pk, increment]
+  class_name varchar(50) [not null, ref: > class_sections.class_name]
+  room_id bigint [not null, ref: > rooms.id]
+  slot_type_id bigint [not null, ref: > slot_types.id]
+  date date [not null]
+  day_of_week int [not null]
+  slot_number int [not null]
+  status varchar(20) [not null, default: 'SCHEDULED', note: 'SCHEDULED, CANCELLED, RESCHEDULED, COMPLETED']
+  note varchar(500)
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table student_grades {
+  id bigint [pk, increment]
+  enrollment_id bigint [not null, ref: > enrollments.id]
+  grade_component_id bigint [not null, ref: > grade_components.id]
+  score double [not null]
+  attempt int [not null, default: 1]
+  graded_at timestamp
+  graded_by_id bigint [ref: > users.id]
+  note varchar(500)
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// ========================
+// 5. ATTENDANCE
+// ========================
+
+Table attendance_configs {
+  id bigint [pk, increment]
+  config_key varchar(50) [not null, unique, default: 'SYSTEM_CONFIG']
+  manual_enabled boolean [not null, default: true]
+  absent_threshold_minutes int [not null, default: 30]
+  min_attendance_percentage double [not null, default: 80.0]
+  face_recognition_enabled boolean [not null, default: true]
+  max_attempts int [not null, default: 5]
+  wifi_location_enabled boolean [not null, default: true]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table attendance_sessions {
+  id bigint [pk, increment]
+  timetable_slot_id bigint [not null, ref: > timetable_slots.id]
+  lecturer_id bigint [not null, ref: > users.id]
+  opened_at timestamp [not null]
+  closed_at timestamp
+  status varchar(20) [not null, default: 'OPEN', note: 'OPEN, CLOSED']
+  created_at timestamp [not null]
+}
+
+Table student_attendances {
+  id bigint [pk, increment]
+  session_id bigint [not null, ref: > attendance_sessions.id]
+  student_id bigint [not null, ref: > users.id]
+  status varchar(20) [not null, default: 'ABSENT', note: 'PRESENT, ABSENT, EXCUSED']
+  method varchar(20) [note: 'QR_CODE, FACE_RECOGNITION, MANUAL']
+  check_in_time timestamp
+  face_confidence double
+  wifi_bssid varchar(17)
+  wifi_rssi int
+  note varchar(500)
+  updated_by_id bigint [ref: > users.id]
+  attempt_count int [default: 0]
+  failure_reason varchar(500)
+  requires_manual_verify boolean [default: false]
+  manual_verified_by bigint [ref: > users.id]
+  manual_verified_at timestamp
+  captured_face_url varchar(500)
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+
+  indexes {
+    (session_id, student_id) [unique]
+  }
+}
+
+// ========================
+// 6. ASSIGNMENTS
+// ========================
+
+Table assignments {
+  id bigint [pk, increment]
+  title varchar(255) [not null]
+  description text
+  class_name varchar(50) [not null, ref: > class_sections.class_name]
+  created_by bigint [not null, ref: > users.id]
+  timetable_slot_id bigint [ref: > timetable_slots.id]
+  due_date timestamp
+  status varchar(20) [not null, default: 'OPEN', note: 'OPEN, CLOSED']
+  reference_url varchar(500)
+  reference_name varchar(255)
+  reminder_sent boolean [not null, default: false]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table assignment_submissions {
+  id bigint [pk, increment]
+  assignment_id bigint [not null, ref: > assignments.id]
+  student_id bigint [not null, ref: > users.id]
+  enrollment_id bigint [not null, ref: > enrollments.id]
+  file_url varchar(2000)
+  file_name varchar(1000)
+  note text
+  lecturer_comment text
+  status varchar(20) [not null, default: 'SUBMITTED']
+  submitted_at timestamp [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+
+  indexes {
+    (assignment_id, student_id) [unique]
+  }
+}
+
+// ========================
+// 7. CHAT / MESSAGING
+// ========================
+
+Table chat_groups {
+  id bigint [pk, increment]
+  name varchar(200) [not null]
+  class_name varchar(50) [unique, ref: - class_sections.class_name]
+  created_by_id bigint [not null, ref: > users.id]
+  type varchar(20) [not null, default: 'CLASS', note: 'CLASS, COURSE, CUSTOM']
+  created_at timestamp [not null]
+}
+
+Table chat_group_members {
+  id bigint [pk, increment]
+  chat_group_id bigint [not null, ref: > chat_groups.id]
+  user_id bigint [not null, ref: > users.id]
+  role varchar(20) [not null, default: 'MEMBER', note: 'ADMIN, MEMBER']
+  joined_at timestamp [not null]
+  left_at timestamp
+
+  indexes {
+    (chat_group_id, user_id) [unique]
+  }
+}
+
+Table chat_messages {
+  id bigint [pk, increment]
+  chat_group_id bigint [not null, ref: > chat_groups.id]
+  sender_id bigint [not null, ref: > users.id]
+  content text
+  type varchar(20) [not null, default: 'TEXT', note: 'TEXT, IMAGE, FILE, LINK, SYSTEM']
+  attachment_url varchar(500)
+  attachment_name varchar(255)
+  reply_to_id bigint [ref: > chat_messages.id]
+  is_deleted boolean [not null, default: false]
+  sent_at timestamp [not null]
+}
+
+Table chat_message_reads {
+  id bigint [pk, increment]
+  message_id bigint [not null, ref: > chat_messages.id]
+  user_id bigint [not null, ref: > users.id]
+  read_at timestamp [not null]
+
+  indexes {
+    (message_id, user_id) [unique]
+  }
+}
+
+Table chat_message_reactions {
+  id bigint [pk, increment]
+  message_id bigint [not null, ref: > chat_messages.id]
+  user_id bigint [not null, ref: > users.id]
+  emoji varchar(50) [not null]
+  reacted_at timestamp [not null]
+
+  indexes {
+    (message_id, user_id, emoji) [unique]
+  }
+}
+
+// ========================
+// 8. AI CHATBOT
+// ========================
+
+Table ai_chat_sessions {
+  id bigint [pk, increment]
+  user_id bigint [not null, ref: > users.id]
+  title varchar(200)
+  status varchar(20) [not null, default: 'ACTIVE']
+  last_message_at timestamp
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table ai_chat_messages {
+  id bigint [pk, increment]
+  session_id bigint [not null, ref: > ai_chat_sessions.id]
+  role varchar(20) [not null, note: 'USER, ASSISTANT']
+  content text [not null]
+  created_at timestamp [not null]
+  token_count int
+  model_version varchar(50)
+  processing_time_ms bigint
+  redirect_path varchar(255)
+}
+
+// ========================
+// 9. NOTIFICATIONS & NEWS
+// ========================
+
+Table notifications {
+  id bigint [pk, increment]
+  title varchar(200) [not null]
+  content text [not null]
+  type varchar(30) [not null, default: 'SYSTEM']
+  target_url varchar(255)
+  target_type varchar(20) [not null, default: 'USER']
+  sent_at timestamp [not null]
+  created_at timestamp [not null]
+}
+
+Table news {
+  id bigint [pk, increment]
+  title varchar(200) [not null]
+  content text [not null]
+  type varchar(20) [not null, default: 'SYSTEM']
+  priority varchar(20) [not null, default: 'MEDIUM']
+  sender_id bigint [ref: > users.id]
+  target_url varchar(255)
+  target_type varchar(20) [not null, default: 'ALL']
+  target_class_name varchar(100)
+  scheduled_at timestamp
+  sent_at timestamp
+  status varchar(20) [not null, default: 'DRAFT']
+  thumbnail_image varchar(500)
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table news_attachments {
+  news_id bigint [ref: > news.id]
+  url text
+}
+
+// ========================
+// 10. REQUEST MANAGEMENT
+// ========================
+
+Table academic_requests {
+  id bigint [pk, increment]
+  student_id bigint [not null, ref: > users.id]
+  request_type varchar(50) [not null, note: 'PAUSE_SEMESTER, RETAKE_COURSE, CHANGE_CLASS, etc.']
+  request_title varchar(255) [not null]
+  semester_id bigint [ref: > semesters.id]
+  course_id bigint [ref: > courses.id]
+  class_section_id varchar(50) [ref: > class_sections.class_name]
+  to_class_name varchar(100)
+  to_major varchar(100)
+  to_specialization varchar(100)
+  to_sub_specialization varchar(100)
+  reason text
+  note text
+  file_url varchar(500)
+  status varchar(20) [not null, default: 'PENDING']
+  start_date date
+  due_date date
+  approver_id bigint [ref: > users.id]
+  approved_at timestamp
+  approver_note varchar(500)
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table schedule_requests {
+  id bigint [pk, increment]
+  requester_id bigint [not null, ref: > users.id]
+  class_name varchar(50) [not null, ref: > class_sections.class_name]
+  original_slot_id bigint [ref: > timetable_slots.id]
+  requested_slot_id bigint [ref: > timetable_slots.id]
+  requested_room_id bigint [ref: > rooms.id]
+  type varchar(20) [not null, note: 'RESCHEDULE, CANCEL, SWAP, ROOM_CHANGE']
+  requested_date date
+  requested_slot_number int
+  reason text
+  file text
+  status varchar(20) [not null, default: 'PENDING']
+  approver_id bigint [ref: > users.id]
+  approved_at timestamp
+  approver_note varchar(500)
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// ========================
+// 11. SYSTEM & LOGGING
+// ========================
+
+Table access_logs {
+  id bigint [pk, increment]
+  user_id bigint [not null, ref: > users.id]
+  location varchar(100) [not null]
+  status varchar(50) [not null]
+  access_time timestamp [not null]
+  ip_address varchar(45)
+  user_agent varchar(255)
+}
+
+Table user_sessions {
+  id bigint [pk, increment]
+  user_id bigint [not null, ref: > users.id]
+  ip_address varchar(45)
+  province varchar(100)
+  city varchar(100)
+  latitude decimal(10,8)
+  longitude decimal(11,8)
+  login_time timestamp [not null]
+  last_activity_time timestamp [not null]
+  is_active boolean [default: true]
+  user_agent varchar(500)
+}
+
+Table alerts {
+  id bigint [pk, increment]
+  title varchar(200) [not null]
+  description text [not null]
+  level varchar(20) [not null, note: 'INFO, WARNING, ERROR, CRITICAL']
+  type varchar(30) [not null, default: 'SYSTEM']
+  user_id bigint [ref: > users.id]
+  is_resolved boolean [not null, default: false]
+  created_at timestamp [not null]
+}
+
+Table system_logs {
+  id bigint [pk, increment]
+  title varchar(200) [not null]
+  description text [not null]
+  type varchar(20) [not null, note: 'INFO, SUCCESS, WARNING, ERROR']
+  created_at timestamp [not null]
+  source varchar(100)
+  ip_address varchar(50)
+  user_agent text
+  old_value text
+  new_value text
+  performer_id bigint [ref: > users.id]
+}
+
+Table import_jobs {
+  id bigint [pk, increment]
+  job_id varchar(255) [not null, unique]
+  type varchar(20) [not null, note: 'EXCEL_ONLY, ZIP_FULL, AVATAR_UPLOAD']
+  status varchar(20) [not null, default: 'PENDING']
+  filename varchar(255)
+  total_records int
+  processed_records int [default: 0]
+  success_count int [default: 0]
+  failed_count int [default: 0]
+  status_message varchar(255)
+  error_message text
+  created_by varchar(255) [not null]
+  created_at timestamp [not null]
+  started_at timestamp
+  completed_at timestamp
+}

@@ -1,0 +1,68 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36">
+  <diagram name="AI Support Service" id="d2">
+    <mxGraphModel dx="4000" dy="4000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="2500" pageHeight="2500" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- ========== LAYER 1: CONTROLLER (ID 12XX) ========== -->
+        
+        <mxCell id="1201" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#d5e8d4;strokeColor=#82b366;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;RestController&amp;gt;&amp;gt;&#xa;AIChatController" vertex="1">
+          <mxGeometry height="240" width="560" x="430" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="1211" parent="1201" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- aiChatService : AIChatService" vertex="1">
+          <mxGeometry height="30" width="560" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="1212" parent="1201" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=inherit;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="560" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="1213" parent="1201" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ createSession() : AIChatSession&#xa;+ getUserSessions() : List&amp;lt;AIChatSession&amp;gt;&#xa;+ getSessionMessages(Long sessionId) : List&amp;lt;AIChatMessage&amp;gt;&#xa;+ sendMessage(sessionId, Map request) : Map&amp;lt;String, Object&amp;gt;&#xa;+ uploadFile(sessionId, MultipartFile, Map) : Map&amp;lt;String, Object&amp;gt;&#xa;+ deleteSession(Long sessionId) : void" vertex="1">
+          <mxGeometry height="160" width="560" y="68" as="geometry" />
+        </mxCell>
+
+        <!-- ========== LAYER 2: SERVICES (ID 13XX) ========== -->
+
+        <mxCell id="1301" parent="1" style="swimlane;fontStyle=3;align=center;startSize=30;html=1;collapsible=0;fillColor=#e1d5e7;strokeColor=#9673a6;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&#xa;AIChatService" vertex="1">
+          <mxGeometry height="260" width="600" x="410" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="1311" parent="1301" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ createSession(User) : AIChatSession&#xa;+ getUserSessions(User) : List&amp;lt;AIChatSession&amp;gt;&#xa;+ sendMessage(sessionId, message, routingModel, answerModel) : Map&#xa;+ streamMessage(sessionId, message, routingModel, answerModel) : Flux&#xa;+ uploadFile(sessionId, file, routingModel, answerModel) : Map&#xa;+ deleteSession(Long sessionId) : void" vertex="1">
+          <mxGeometry height="220" width="600" y="30" as="geometry" />
+        </mxCell>
+
+        <!-- ========== LAYER 4: ENTITIES (ID 14XX) ========== -->
+
+        <mxCell id="1401" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#f8cecc;strokeColor=#b85450;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&#xa;AIChatSession" vertex="1">
+          <mxGeometry height="140" width="280" x="280" y="750" as="geometry" />
+        </mxCell>
+        <mxCell id="1411" parent="1401" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- id : Long&#xa;- user : User&#xa;- title : String&#xa;- startedAt : LocalDateTime" vertex="1">
+          <mxGeometry height="100" width="280" y="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="1402" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#f8cecc;strokeColor=#b85450;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&#xa;AIChatMessage" vertex="1">
+          <mxGeometry height="160" width="280" x="650" y="750" as="geometry" />
+        </mxCell>
+        <mxCell id="1421" parent="1402" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- id : Long&#xa;- session : AIChatSession&#xa;- sender : UserRole (USER/AI)&#xa;- content : String&#xa;- sentAt : LocalDateTime" vertex="1">
+          <mxGeometry height="120" width="280" y="30" as="geometry" />
+        </mxCell>
+
+        <!-- Auxiliary Context -->
+        <mxCell id="1001" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#d5e8d4;strokeColor=#82b366;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;External Entity&amp;gt;&amp;gt;&#xa;User" vertex="1">
+          <mxGeometry height="160" width="280" x="470" y="1000" as="geometry" />
+        </mxCell>
+
+        <!-- ========== EDGES (ID 15XX+) ========== -->
+        
+        <mxCell id="1501" edge="1" parent="1" source="1201" target="1301" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;fontSize=15;" value="&amp;lt;&amp;lt;use&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="1510" edge="1" parent="1" source="1402" target="1401" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=diamond;endFill=1;fontSize=15;" value="*        1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="1511" edge="1" parent="1" source="1401" target="1001" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;fontSize=15;" value="*        1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

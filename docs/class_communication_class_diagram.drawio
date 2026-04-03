@@ -1,0 +1,224 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0">
+  <diagram name="Class Communication" id="d1">
+    <mxGraphModel dx="1303" dy="703" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="4500" pageHeight="4500" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="101" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#dae8fc;strokeColor=#6c8ebf;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;RestController&amp;gt;&amp;gt;&#xa;ChatGroupController" vertex="1">
+          <mxGeometry height="220" width="560" x="200" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="111" parent="101" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- chatGroupService : ChatGroupService" vertex="1">
+          <mxGeometry height="30" width="560" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="112" parent="101" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=inherit;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="560" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="113" parent="101" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ createGroupForClass(String className) : ChatGroupResponse&#xa;+ getMyGroups() : List&amp;lt;ChatGroupResponse&amp;gt;&#xa;+ getGroupById(Long groupId) : ChatGroupResponse&#xa;+ checkGroupExists(String className) : Map&amp;lt;String, Boolean&amp;gt;&#xa;+ getMessages(Long groupId, Pageable pageable) : Page&amp;lt;ChatMessageResponse&amp;gt;" vertex="1">
+          <mxGeometry height="140" width="560" y="68" as="geometry" />
+        </mxCell>
+        <mxCell id="102" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#dae8fc;strokeColor=#6c8ebf;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;RestController&amp;gt;&amp;gt;&#xa;ChatMessageController" vertex="1">
+          <mxGeometry height="320" width="700" x="850" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="121" parent="102" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- chatGroupService : ChatGroupService&#xa;- uploadService : UploadService&#xa;- messagingTemplate : SimpMessagingTemplate&#xa;- fcmService : FcmService&#xa;- chatGroupRepository : ChatGroupRepository&#xa;- chatGroupMemberRepository : ChatGroupMemberRepository&#xa;- userRepository : UserRepository" vertex="1">
+          <mxGeometry height="150" width="700" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="122" parent="102" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=inherit;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="700" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="123" parent="102" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ sendMessage(Long, SendMessageRequest) : ChatMessageResponse&#xa;+ uploadAndSendFile(Long, MultipartFile, Long) : ChatMessageResponse&#xa;+ deleteMessage(Long, Long) : ChatMessageResponse&#xa;+ toggleReaction(Long, Long, String) : ChatMessageResponse&#xa;+ handleSendMessage(Long, SendMessageRequest) : void (WebSocket)&#xa;+ handleTyping(Long, Map) : void (WebSocket)&#xa;+ handleMarkAsRead(Long, Principal) : void (WebSocket)" vertex="1">
+          <mxGeometry height="130" width="700" y="188" as="geometry" />
+        </mxCell>
+        <mxCell id="301" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#fff2cc;strokeColor=#d6b656;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&#xa;ChatMessageResponse" vertex="1">
+          <mxGeometry height="320" width="340" x="40" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="311" parent="301" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- id : Long&#xa;- senderName : String&#xa;- senderAvatar : String&#xa;- content : String&#xa;- type : String&#xa;- attachmentUrl : String&#xa;- replyToId : Long&#xa;- replyToContent : String&#xa;- isOwn : Boolean&#xa;- readers : List&amp;lt;ReadReceiptDTO&amp;gt;&#xa;- reactions : List&amp;lt;MessageReactionDTO&amp;gt;&#xa;- sentAt : LocalDateTime" vertex="1">
+          <mxGeometry height="280" width="340" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="302" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#fff2cc;strokeColor=#d6b656;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&#xa;ChatGroupResponse" vertex="1">
+          <mxGeometry height="100" width="320" x="430" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="321" parent="302" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- id : Long&#xa;- name : String&#xa;- type : String" vertex="1">
+          <mxGeometry height="60" width="320" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="201" parent="1" style="swimlane;fontStyle=3;align=center;startSize=30;html=1;collapsible=0;fillColor=#e1d5e7;strokeColor=#9673a6;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&#xa;ChatGroupService" vertex="1">
+          <mxGeometry height="260" width="640" x="850" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="211" parent="201" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ createGroupForClass(String) : ChatGroupResponse&#xa;+ getMyGroups() : List&amp;lt;ChatGroupResponse&amp;gt;&#xa;+ getGroupById(Long) : ChatGroupResponse&#xa;+ existsByClassName(String) : boolean&#xa;+ getMessages(Long, Pageable) : Page&amp;lt;ChatMessageResponse&amp;gt;&#xa;+ sendMessage(...) : ChatMessageResponse&#xa;+ deleteMessage(Long, Long) : ChatMessageResponse&#xa;+ toggleReaction(Long, String) : ChatMessageResponse&#xa;+ markAsRead(Long, String) : List&amp;lt;Long&amp;gt;" vertex="1">
+          <mxGeometry height="220" width="640" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="402" parent="1" style="swimlane;fontStyle=3;align=center;startSize=30;html=1;collapsible=0;fillColor=#d0e8f2;strokeColor=#5b9bd5;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&#xa;ChatGroupRepository" vertex="1">
+          <mxGeometry height="100" width="480" x="80" y="800" as="geometry" />
+        </mxCell>
+        <mxCell id="421" parent="402" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ existsByClassSectionClassName(className) : boolean&#xa;+ findByMemberId(userId) : List&amp;lt;ChatGroup&amp;gt;&#xa;+ findByIdWithClassSection(groupId) : Optional&amp;lt;ChatGroup&amp;gt;" vertex="1">
+          <mxGeometry height="60" width="480" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="403" parent="1" style="swimlane;fontStyle=3;align=center;startSize=30;html=1;collapsible=0;fillColor=#d0e8f2;strokeColor=#5b9bd5;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&#xa;ChatGroupMemberRepository" vertex="1">
+          <mxGeometry height="100" width="460" x="580" y="800" as="geometry" />
+        </mxCell>
+        <mxCell id="431" parent="403" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ findActiveMembersWithUser(groupId) : List&amp;lt;ChatGroupMember&amp;gt;&#xa;+ existsByChatGroupIdAndUserIdAndLeftAtIsNull(...) : boolean" vertex="1">
+          <mxGeometry height="60" width="480" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="401" parent="1" style="swimlane;fontStyle=3;align=center;startSize=30;html=1;collapsible=0;fillColor=#d0e8f2;strokeColor=#5b9bd5;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&#xa;ChatMessageRepository" vertex="1">
+          <mxGeometry height="120" width="560" x="1120" y="750" as="geometry" />
+        </mxCell>
+        <mxCell id="411" parent="401" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ findByChatGroupIdOrderBySentAtDesc(groupId, pageable) : Page&#xa;+ findTopByChatGroupIdAndIsDeletedFalseOrderBySentAtDesc(groupId) : Optional&#xa;+ findUnreadMessagesByGroupIdAndUserId(groupId, userId) : List" vertex="1">
+          <mxGeometry height="80" width="580" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="404" parent="1" style="swimlane;fontStyle=3;align=center;startSize=30;html=1;collapsible=0;fillColor=#d0e8f2;strokeColor=#5b9bd5;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&#xa;ChatMessageReadRepository" vertex="1">
+          <mxGeometry height="100" width="580" x="1100" y="900" as="geometry" />
+        </mxCell>
+        <mxCell id="441" parent="404" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ countUnreadMessages(groupId, userId) : long&#xa;+ findFirstUnreadMessageId(groupId, userId) : Optional&amp;lt;Long&amp;gt;&#xa;+ findReadMessageIds(userId, groupId) : List&amp;lt;Long&amp;gt;" vertex="1">
+          <mxGeometry height="60" width="580" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="405" parent="1" style="swimlane;fontStyle=3;align=center;startSize=30;html=1;collapsible=0;fillColor=#d0e8f2;strokeColor=#5b9bd5;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&#xa;ChatMessageReactionRepository" vertex="1">
+          <mxGeometry height="100" width="580" x="1800" y="810" as="geometry" />
+        </mxCell>
+        <mxCell id="451" parent="405" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ findByMessageAndUserAndEmoji(message, user, emoji) : Optional&#xa;+ deleteByMessageAndUserAndEmoji(message, user, emoji) : void" vertex="1">
+          <mxGeometry height="60" width="580" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="501" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#f8cecc;strokeColor=#b85450;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&#xa;ChatGroup" vertex="1">
+          <mxGeometry height="200" width="320" x="160" y="970" as="geometry" />
+        </mxCell>
+        <mxCell id="511" parent="501" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- id : Long&#xa;- name : String&#xa;- classSection : ClassSection&#xa;- createdBy : User&#xa;- type : ChatGroupType&#xa;- joinedAt : LocalDateTime" vertex="1">
+          <mxGeometry height="160" width="320" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="503" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#f8cecc;strokeColor=#b85450;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&#xa;ChatGroupMember" vertex="1">
+          <mxGeometry height="180" width="320" x="660" y="950" as="geometry" />
+        </mxCell>
+        <mxCell id="531" parent="503" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- id : Long&#xa;- chatGroup : ChatGroup&#xa;- user : User&#xa;- role : MemberRole&#xa;- joinedAt : LocalDateTime&#xa;- leftAt : LocalDateTime" vertex="1">
+          <mxGeometry height="140" width="320" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="502" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#f8cecc;strokeColor=#b85450;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&#xa;ChatMessage" vertex="1">
+          <mxGeometry height="280" width="340" x="1020" y="1120" as="geometry" />
+        </mxCell>
+        <mxCell id="521" parent="502" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- id : Long&#xa;- chatGroup : ChatGroup&#xa;- sender : User&#xa;- content : String&#xa;- type : MessageType&#xa;- attachmentUrl : String&#xa;- attachmentName : String&#xa;- replyTo : ChatMessage&#xa;- isDeleted : Boolean&#xa;- sentAt : LocalDateTime" vertex="1">
+          <mxGeometry height="240" width="340" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="944" edge="1" parent="502" source="521" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;fontSize=15;exitX=1.002;exitY=0.289;exitDx=0;exitDy=0;entryX=0.998;entryY=0.81;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;exitPerimeter=0;entryPerimeter=0;" target="521" value="replyTo">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="410" y="99" />
+              <mxPoint x="410" y="220" />
+              <mxPoint x="339" y="220" />
+            </Array>
+            <mxPoint x="360" y="80" as="sourcePoint" />
+            <mxPoint x="360" y="220" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="505" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#f8cecc;strokeColor=#b85450;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&#xa;ChatMessageRead" vertex="1">
+          <mxGeometry height="120" width="300" x="1420" y="1050" as="geometry" />
+        </mxCell>
+        <mxCell id="551" parent="505" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- id : Long&#xa;- message : ChatMessage&#xa;- user : User&#xa;- readAt : LocalDateTime" vertex="1">
+          <mxGeometry height="80" width="300" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="504" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#f8cecc;strokeColor=#b85450;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&#xa;ChatMessageReaction" vertex="1">
+          <mxGeometry height="140" width="300" x="1460" y="1360" as="geometry" />
+        </mxCell>
+        <mxCell id="541" parent="504" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- id : Long&#xa;- message : ChatMessage&#xa;- user : User&#xa;- emoji : String&#xa;- reactedAt : LocalDateTime" vertex="1">
+          <mxGeometry height="100" width="300" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="1002" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#f5f5f5;strokeColor=#666666;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;External Entity&amp;gt;&amp;gt;&#xa;ClassSection" vertex="1">
+          <mxGeometry height="80" width="200" x="60" y="1310" as="geometry" />
+        </mxCell>
+        <mxCell id="1001" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#d5e8d4;strokeColor=#82b366;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;External Entity&amp;gt;&amp;gt;&#xa;User" vertex="1">
+          <mxGeometry height="80" width="200" x="450" y="1420" as="geometry" />
+        </mxCell>
+        <mxCell id="901" edge="1" parent="1" source="101" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;fontSize=15;" target="201" value="&amp;lt;&amp;lt;use&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="902" edge="1" parent="1" source="102" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;fontSize=15;" target="201" value="&amp;lt;&amp;lt;use&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="911" edge="1" parent="1" source="101" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;dashed=1;endArrow=open;endFill=0;fontSize=15;" target="301" value="&amp;lt;&amp;lt;use&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="912" edge="1" parent="1" source="101" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;dashed=1;endArrow=open;endFill=0;fontSize=15;" target="302" value="&amp;lt;&amp;lt;use&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="913" edge="1" parent="1" source="102" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;dashed=1;endArrow=open;endFill=0;fontSize=15;entryX=1;entryY=0;entryDx=0;entryDy=0;" target="301" value="&amp;lt;&amp;lt;use&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="921" edge="1" parent="1" source="201" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;dashed=1;endArrow=open;endFill=0;fontSize=15;" target="301" value="&amp;lt;&amp;lt;use&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="922" edge="1" parent="1" source="201" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;dashed=1;endArrow=open;endFill=0;fontSize=15;" target="302" value="&amp;lt;&amp;lt;use&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="925" edge="1" parent="1" source="201" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;dashed=1;endArrow=open;endFill=0;fontSize=15;" target="402" value="&amp;lt;&amp;lt;use&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="926" edge="1" parent="1" source="201" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;dashed=1;endArrow=open;endFill=0;fontSize=15;" target="403" value="&amp;lt;&amp;lt;use&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="927" edge="1" parent="1" source="201" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;dashed=1;endArrow=open;endFill=0;fontSize=15;" target="401" value="&amp;lt;&amp;lt;use&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="928" edge="1" parent="1" source="201" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=1;dashed=1;endArrow=open;endFill=0;fontSize=15;" target="404" value="&amp;lt;&amp;lt;use&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" x="-0.3333" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="1070" y="900" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="929" edge="1" parent="1" source="201" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;dashed=1;endArrow=open;endFill=0;fontSize=15;" target="405" value="&amp;lt;&amp;lt;use&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="930" edge="1" parent="1" source="402" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;fontSize=15;" target="501" value="&amp;lt;&amp;lt;manages&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="931" edge="1" parent="1" source="403" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;fontSize=15;" target="503" value="&amp;lt;&amp;lt;manages&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="932" edge="1" parent="1" source="401" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;fontSize=15;" target="502" value="&amp;lt;&amp;lt;manages&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1080" y="810" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="933" edge="1" parent="1" source="404" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;fontSize=15;" target="505" value="&amp;lt;&amp;lt;manages&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="934" edge="1" parent="1" source="405" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;fontSize=15;" target="504" value="&amp;lt;&amp;lt;manages&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="940" edge="1" parent="1" source="502" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=diamond;endFill=1;fontSize=15;entryX=1;entryY=1;entryDx=0;entryDy=0;" target="501" value="*               1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="941" edge="1" parent="1" source="503" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=diamond;endFill=1;fontSize=15;" target="501" value="*               1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="942" edge="1" parent="1" source="505" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=diamond;endFill=1;fontSize=15;" target="502" value="*               1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="943" edge="1" parent="1" source="504" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=diamond;endFill=1;fontSize=15;entryX=0.991;entryY=0.934;entryDx=0;entryDy=0;entryPerimeter=0;" target="521" value="*               1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="950" edge="1" parent="1" source="501" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;fontSize=15;" target="1002" value="1               1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="951" edge="1" parent="1" source="501" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;fontSize=15;" target="1001" value="*               1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="952" edge="1" parent="1" source="503" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;fontSize=15;" target="1001" value="*               1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="953" edge="1" parent="1" source="502" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;fontSize=15;" target="1001" value="*               1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="954" edge="1" parent="1" source="504" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;fontSize=15;" target="1001" value="*               1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="955" edge="1" parent="1" source="505" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;fontSize=15;" target="1001" value="*               1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1810" y="1110" />
+              <mxPoint x="1820" y="1540" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
