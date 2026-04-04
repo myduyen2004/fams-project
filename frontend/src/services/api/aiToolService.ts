@@ -10,6 +10,7 @@ export interface AITool {
   isActive: boolean;
   allowedRoles?: string;
   requiredFields?: string;
+  requiredRespFields?: string;
   createdAt?: string;
   updatedAt?: string;
 }

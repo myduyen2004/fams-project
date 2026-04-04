@@ -40,7 +40,7 @@ public class AIToolServiceImpl implements AIToolService {
 
     @Override
     public List<AITool> getAllTools() {
-        return aiToolRepository.findAll();
+        return aiToolRepository.findAllByOrderByNameAsc();
     }
 
     @Override
@@ -69,6 +69,7 @@ public class AIToolServiceImpl implements AIToolService {
         tool.setIsActive(toolDetails.getIsActive());
         tool.setAllowedRoles(toolDetails.getAllowedRoles());
         tool.setRequiredFields(toolDetails.getRequiredFields());
+        tool.setRequiredRespFields(toolDetails.getRequiredRespFields());
         AITool savedTool = aiToolRepository.save(tool);
         reloadAiToolRegistry();
         return savedTool;
@@ -107,6 +108,7 @@ public class AIToolServiceImpl implements AIToolService {
                 .toolType(tool.getType())
                 .sqlTemplate(tool.getSqlTemplate())
                 .requiredFields(tool.getRequiredFields())
+                .requiredRespFields(tool.getRequiredRespFields())
                 .params(params)
                 .build();
                 

@@ -34,6 +34,7 @@ class EvaluatorService:
         tool_type = str(tool_data.get("toolType", "SQL_TEMPLATE"))
         sql_template = tool_data.get("sqlTemplate")
         required_fields = tool_data.get("requiredFields")
+        required_resp_fields = tool_data.get("requiredRespFields")
         provided_params = tool_data.get("params")
 
         logs.append(f"[REQUEST] Testing tool: {tool_name} ({tool_type})")
@@ -114,6 +115,24 @@ class EvaluatorService:
             sample_preview = json.dumps(sample[:2], ensure_ascii=False, default=str)
             logs.append(f"[PROCESS] Query executed successfully. rows={row_count}")
             logs.append(f"[PROCESS] Sample rows: {sample_preview}")
+
+            # Contract Validation (Output Schema)
+            if required_resp_fields and row_count > 0:
+                expected = [f.strip() for f in str(required_resp_fields).split(",") if f.strip()]
+                actual_keys = list(sample[0].keys())
+                missing_resp = [f for f in expected if f not in actual_keys]
+                
+                if missing_resp:
+                    logs.append(f"[ERROR] Contract validation failed. Missing fields: {missing_resp}")
+                    return self._finalize(
+                        {
+                            "passed": False, 
+                            "message": f"Dữ liệu trả về thiếu các trường bắt buộc theo giao kèo: {', '.join(missing_resp)}"
+                        }, 
+                        logs, 
+                        start_time
+                    )
+                logs.append("[PROCESS] Contract validation passed.")
 
             message = f"SQL chạy thành công. Trả về {row_count} dòng."
             if row_count == 0:

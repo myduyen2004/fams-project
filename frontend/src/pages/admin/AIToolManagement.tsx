@@ -40,7 +40,8 @@ export const AIToolManagement: React.FC = () => {
     accuracyPercentage: 100,
     isActive: true,
     allowedRoles: 'ADMIN,STUDENT,LECTURER,ACADEMIC_STAFF',
-    requiredFields: ''
+    requiredFields: '',
+    requiredRespFields: ''
   });
   const [isTestModalOpen, setIsTestModalOpen] = useState(false);
   const [testingTool, setTestingTool] = useState<AITool | null>(null);
@@ -112,7 +113,8 @@ export const AIToolManagement: React.FC = () => {
     setEditingTool(tool);
     setFormData({
       ...tool,
-      requiredFields: tool.requiredFields || ''
+      requiredFields: tool.requiredFields || '',
+      requiredRespFields: tool.requiredRespFields || ''
     });
     setIsModalOpen(true);
   };
@@ -186,6 +188,19 @@ export const AIToolManagement: React.FC = () => {
     sql: tools.filter(t => t.type === 'SQL_TEMPLATE').length,
     backend: tools.filter(t => t.type === 'BACKEND_ACTION').length,
     nav: tools.filter(t => t.type === 'NAVIGATE_ONLY').length
+  };
+
+  const getToolTypeLabel = (type?: string) => {
+    switch (type) {
+      case 'SQL_TEMPLATE':
+        return 'SQL Template';
+      case 'BACKEND_ACTION':
+        return 'Backend Action';
+      case 'NAVIGATE_ONLY':
+        return 'Navigation Path';
+      default:
+        return type || 'Không xác định';
+    }
   };
 
   return (
@@ -451,17 +466,8 @@ export const AIToolManagement: React.FC = () => {
 
                     <div className="space-y-2">
                       <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">Loại vận hành <span className="text-red-500">*</span></label>
-                      <div className="relative">
-                        <select
-                          value={formData.type}
-                          onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-                          className="w-full bg-white border border-gray-200 rounded-[14px] px-4 py-3.5 focus:border-[#F47021] focus:ring-4 focus:ring-orange-500/10 outline-none transition-all font-semibold text-[14px] text-slate-800 appearance-none cursor-pointer"
-                        >
-                          <option value="SQL_TEMPLATE">SQL Template</option>
-                          <option value="BACKEND_ACTION">Backend Action</option>
-                          <option value="NAVIGATE_ONLY">Navigation Path</option>
-                        </select>
-                        <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 rotate-90 pointer-events-none" size={16} />
+                      <div className="w-full bg-slate-50 border border-slate-200 rounded-[14px] px-4 py-3.5 font-semibold text-[14px] text-slate-700">
+                        {getToolTypeLabel(formData.type)}
                       </div>
                     </div>
                   </div>
@@ -478,47 +484,32 @@ export const AIToolManagement: React.FC = () => {
                     />
                   </div>
 
-                  {formData.type === 'SQL_TEMPLATE' && (
-                    <div className="space-y-2">
-                      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">SQL Template</label>
-                      <textarea
-                        required
-                        rows={5}
-                        value={formData.sqlTemplate}
-                        onChange={(e) => setFormData({ ...formData, sqlTemplate: e.target.value })}
-                        placeholder="SELECT * FROM table..."
-                        className="w-full bg-slate-900 border border-slate-800 rounded-[14px] px-4 py-4 font-mono text-[13px] text-blue-300 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all"
-                      />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1 flex justify-between">
+                          Tham số bắt buộc
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.requiredFields}
+                          onChange={(e) => setFormData({ ...formData, requiredFields: e.target.value })}
+                          placeholder="vd: student_code, class_name"
+                          className="w-full bg-white border border-gray-200 rounded-[14px] px-4 py-3.5 focus:border-[#F47021] focus:ring-4 focus:ring-orange-500/10 outline-none transition-all font-semibold text-[14px] text-slate-800"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1 flex justify-between">
+                          Tham số đầu ra bắt buộc
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.requiredRespFields}
+                          onChange={(e) => setFormData({ ...formData, requiredRespFields: e.target.value })}
+                          placeholder="vd: student_name, status"
+                          className="w-full bg-white border border-gray-200 rounded-[14px] px-4 py-3.5 focus:border-[#F47021] focus:ring-4 focus:ring-orange-500/10 outline-none transition-all font-semibold text-[14px] text-slate-800"
+                        />
+                      </div>
                     </div>
-                  )}
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1 flex justify-between">
-                        Quyền truy cập
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.allowedRoles}
-                        onChange={(e) => setFormData({ ...formData, allowedRoles: e.target.value.toUpperCase() })}
-                        placeholder="ADMIN, STUDENT..."
-                        className="w-full bg-white border border-gray-200 rounded-[14px] px-4 py-3.5 focus:border-[#F47021] focus:ring-4 focus:ring-orange-500/10 outline-none transition-all font-semibold text-[14px] text-slate-800 uppercase"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1 flex justify-between">
-                        Tham số bắt buộc
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.requiredFields}
-                        onChange={(e) => setFormData({ ...formData, requiredFields: e.target.value })}
-                        placeholder="vd: student_code, class_name"
-                        className="w-full bg-white border border-gray-200 rounded-[14px] px-4 py-3.5 focus:border-[#F47021] focus:ring-4 focus:ring-orange-500/10 outline-none transition-all font-semibold text-[14px] text-slate-800"
-                      />
-                    </div>
-                  </div>
 
                   <div className="flex items-center justify-between bg-slate-50 rounded-[16px] p-5 border border-slate-100">
                     <div className="flex-1 w-full max-w-[200px] space-y-3">
@@ -532,8 +523,9 @@ export const AIToolManagement: React.FC = () => {
                         max="100"
                         step="5"
                         value={formData.accuracyPercentage}
-                        onChange={(e) => setFormData({ ...formData, accuracyPercentage: parseInt(e.target.value) })}
-                        className="w-full accent-[#F47021] h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+                        readOnly
+                        disabled
+                        className="w-full accent-[#F47021] h-1.5 bg-slate-200 rounded-lg appearance-none cursor-default opacity-70"
                       />
                     </div>
 
@@ -626,6 +618,12 @@ export const AIToolManagement: React.FC = () => {
                   <div className="text-[10px] uppercase tracking-widest font-black text-slate-400">Tham số bắt buộc</div>
                   <div className="mt-1 text-[13px] font-bold text-slate-700">
                     {testingTool.requiredFields ? testingTool.requiredFields.split(',').length : 0}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-gray-100 bg-slate-50/60 px-4 py-3">
+                  <div className="text-[10px] uppercase tracking-widest font-black text-slate-400">Tham số ra (Contract)</div>
+                  <div className="mt-1 text-[13px] font-bold text-slate-700">
+                    {testingTool.requiredRespFields ? testingTool.requiredRespFields.split(',').length : 0}
                   </div>
                 </div>
                 <div className="rounded-2xl border border-gray-100 bg-slate-50/60 px-4 py-3">

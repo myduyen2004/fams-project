@@ -14,5 +14,6 @@ public class AIToolTestRequestDto {
     private String toolType;
     private String sqlTemplate;
     private String requiredFields;
+    private String requiredRespFields;
     private java.util.Map<String, Object> params;
 }

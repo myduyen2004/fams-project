@@ -13,13 +13,8 @@ from dotenv import load_dotenv
 import logging
 import json
 from loguru import logger
-# Add chatbot submodules to path
-import sys
-chat_dir = os.path.join(os.path.dirname(__file__), "services/chat")
-if chat_dir not in sys.path:
-    sys.path.append(chat_dir)
-
 from app.services.chat.services.chatbot_service import ChatbotService
+from app.services.chat.services.evaluator_service import evaluator_service
 
 load_dotenv()
 
@@ -66,6 +61,12 @@ def log_request_info():
     print(f"REQUEST: {request.method} {request.path} from {request.remote_addr}")
     sys.stdout.flush()
 
+from app.services.chat.db.tools_loader import tools_loader
+try:
+    tools_loader.reload()
+except Exception as e:
+    logger.error(f"Failed to load AI tools on startup: {e}")
+
 chatbot_service = ChatbotService()
 
 @app.route('/health', methods=['GET'])
@@ -109,6 +110,11 @@ def chat_full_flow():
     history = data.get('history', [])
     routing_model = data.get('routingModel')
     answer_model = data.get('answerModel')
+    extra_entities = data.get('extraEntities')
+    pending_tool = data.get('pendingTool')
+    original_message = data.get('originalMessage')
+    pending_entities = data.get('pendingEntities')
+    continuation = data.get('continuation')
     
     if not message:
         return jsonify({'error': 'Message is required'}), 400
@@ -123,7 +129,12 @@ def chat_full_flow():
             message=message,
             history=history,
             routing_model=routing_model,
-            answer_model=answer_model
+            answer_model=answer_model,
+            extra_entities=extra_entities,
+            pending_tool=pending_tool,
+            original_message=original_message,
+            pending_entities=pending_entities,
+            continuation=continuation
         )
         return jsonify(result)
     except Exception as e:
@@ -144,6 +155,9 @@ def chat_stream():
     history = data.get('history', [])
     routing_model = data.get('routingModel')
     answer_model = data.get('answerModel')
+    extra_entities = data.get('extraEntities')
+    pending_tool = data.get('pendingTool')
+    original_message = data.get('originalMessage')
 
     if not message or user_id is None:
         return jsonify({'error': 'Message and userId are required'}), 400
@@ -157,7 +171,10 @@ def chat_stream():
                 message=message,
                 history=history,
                 routing_model=routing_model,
-                answer_model=answer_model
+                answer_model=answer_model,
+                extra_entities=extra_entities,
+                pending_tool=pending_tool,
+                original_message=original_message
             ):
                 # Format as SSE: data: <json>\n\n
                 yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
@@ -243,6 +260,42 @@ def analyze_excel():
     except Exception as e:
         logger.error(f"Error analyzing Excel: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/chat/admin/test-tool', methods=['POST'])
+def test_tool():
+    """
+    Endpoint to test AI tools by simulating DB interaction and validating schema.
+    Payload: { "toolName": str, "toolType": str, "sqlTemplate": str, "requiredFields": str }
+    """
+    data = request.json
+    if not data:
+        return jsonify({'error': 'Payload is required'}), 400
+        
+    try:
+        result = evaluator_service.test_tool(data)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error testing tool: {e}")
+        return jsonify({'passed': False, 'message': str(e)}), 500
+
+
+@app.route('/api/chat/admin/reload-tools', methods=['POST'])
+def reload_tools():
+    """Reload tool registry from ai_tools table so runtime matches is_active immediately."""
+    try:
+        tools_loader.reload()
+        return jsonify({
+            'success': True,
+            'activeTools': len(tools_loader.active_tools),
+            'inactiveTools': len(tools_loader.inactive_tools),
+            'sqlTools': len(tools_loader.templates),
+            'backendActions': len(tools_loader.backend_actions),
+            'navigateOnly': len(tools_loader.navigate_only),
+        })
+    except Exception as e:
+        logger.error(f"Error reloading tools: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 @app.errorhandler(404)

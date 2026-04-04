@@ -26,6 +26,7 @@ const ActivatedUsersPage = lazy(() => import('./pages/admin/ActivatedUsersPage')
 const LockedUsersPage = lazy(() => import('./pages/admin/LockedUsersPage').then(m => ({ default: m.LockedUsersPage })));
 const ProfilePage = lazy(() => import('./pages/admin/ProfilePage').then(m => ({ default: m.ProfilePage })));
 const PermissionsPage = lazy(() => import('./pages/admin/PermissionsPage').then(m => ({ default: m.PermissionsPage })));
+const AIToolManagementPage = lazy(() => import('./pages/admin/AIToolManagement').then(m => ({ default: m.AIToolManagement })));
 const AcademicStaffDashboard = lazy(() => import('./pages/academic-staff/AcademicStaffDashboard').then(m => ({ default: m.AcademicStaffDashboard })));
 const AcademicStaffProfilePage = lazy(() => import('./pages/academic-staff/ProfilePage').then(m => ({ default: m.ProfilePage })));
 const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
@@ -84,6 +85,8 @@ const LecturerSemestersPage = lazy(() => import('./pages/lecturer/SemestersPage'
 const AcademicStaffSystemLogsPage = lazy(() => import('./pages/academic-staff/SystemLogsPage').then(m => ({ default: m.SystemLogsPage })));
 const NotificationManagementPage = lazy(() => import('./pages/admin/NotificationManagementPage').then(m => ({ default: m.NotificationManagementPage })));
 const NotificationDetailPage = lazy(() => import('./pages/admin/NotificationDetailPage').then(m => ({ default: m.NotificationDetailPage })));
+const CreateNotificationPage = lazy(() => import('./pages/admin/CreateNotificationPage').then(m => ({ default: m.CreateNotificationPage })));
+const EditNotificationPage = lazy(() => import('./pages/admin/EditNotificationPage').then(m => ({ default: m.EditNotificationPage })));
 const ChatPage = lazy(() => import('./pages/chatbot/ChatPage').then(m => ({ default: m.ChatPage })));
 const StudentClassMembersPage = lazy(() => import('./pages/student/StudentClassMembersPage').then(m => ({ default: m.StudentClassMembersPage })));
 const StudentProfilePage = lazy(() => import('./pages/student/StudentProfilePage').then(m => ({ default: m.StudentProfilePage })));
@@ -322,6 +325,46 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
                 <PermissionsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/notification-management"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <NotificationManagementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/notification-management/create"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <CreateNotificationPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/notification-management/edit/:id"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <EditNotificationPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/notification-management/:id"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <NotificationDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/ai-tools"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AIToolManagementPage />
               </ProtectedRoute>
             }
           />
@@ -594,6 +637,39 @@ function App() {
           />
           <Route path="/academic-staff/academic-results" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Kết quả học tập" /></ProtectedRoute>} />
           <Route path="/academic-staff/announcements" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Cài đặt thông báo" /></ProtectedRoute>} />
+
+          <Route
+            path="/academic-staff/notification-management"
+            element={
+              <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
+                <NotificationManagementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/academic-staff/notification-management/create"
+            element={
+              <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
+                <CreateNotificationPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/academic-staff/notification-management/edit/:id"
+            element={
+              <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
+                <EditNotificationPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/academic-staff/notification-management/:id"
+            element={
+              <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
+                <NotificationDetailPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/academic-staff/attendance" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><AttendanceConfigPage /></ProtectedRoute>} />
           <Route path="/academic-staff/attendance/realtime/:slotId" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><RealTimeAttendancePage /></ProtectedRoute>} />
           <Route

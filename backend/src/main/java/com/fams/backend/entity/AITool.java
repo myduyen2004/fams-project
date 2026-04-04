@@ -56,6 +56,10 @@ public class AITool {
     @Column(name = "required_fields", columnDefinition = "TEXT")
     private String requiredFields;
 
+    // Các trường kết quả trả về bắt buộc (ví dụ: student_name, status)
+    @Column(name = "required_resp_fields", columnDefinition = "TEXT")
+    private String requiredRespFields;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

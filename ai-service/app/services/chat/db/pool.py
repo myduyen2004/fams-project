@@ -7,14 +7,19 @@ from __future__ import annotations
 
 import threading
 from contextlib import contextmanager
-from typing import Generator
+from typing import Any, Generator
 
-import psycopg2
-import psycopg2.pool
-from psycopg2.extras import RealDictCursor
+try:
+    import psycopg2.pool as psycopg2_pool
+    from psycopg2.extras import RealDictCursor
+    _PSYCOPG_IMPORT_ERROR: ModuleNotFoundError | None = None
+except ModuleNotFoundError as exc:
+    psycopg2_pool = None
+    RealDictCursor = None
+    _PSYCOPG_IMPORT_ERROR = exc
 from loguru import logger # type: ignore
 
-from config.settings import DB_CONFIG
+from app.services.chat.config.settings import DB_CONFIG
 
 
 class DatabasePool:
@@ -35,13 +40,20 @@ class DatabasePool:
                 cls._instance._pool = None
         return cls._instance
 
+    def _ensure_driver(self) -> None:
+        if psycopg2_pool is None:
+            raise RuntimeError(
+                "PostgreSQL driver chưa sẵn sàng. Hãy cài 'psycopg2-binary' trước khi dùng chat DB."
+            ) from _PSYCOPG_IMPORT_ERROR
+
     def _ensure_pool(self) -> None:
+        self._ensure_driver()
         if self._pool is None:
             logger.info(
                 f"Initializing DB pool → {DB_CONFIG.host}:{DB_CONFIG.port}/{DB_CONFIG.name} "
                 f"(min={DB_CONFIG.min_connections}, max={DB_CONFIG.max_connections})"
             )
-            self._pool = psycopg2.pool.ThreadedConnectionPool(
+            self._pool = psycopg2_pool.ThreadedConnectionPool(
                 minconn=DB_CONFIG.min_connections,
                 maxconn=DB_CONFIG.max_connections,
                 dsn=DB_CONFIG.dsn(),
@@ -73,7 +85,7 @@ class DatabasePool:
             logger.warning(f"DB: Pool init helper failed: {e}")
 
     @contextmanager
-    def get_connection(self) -> Generator:
+    def get_connection(self) -> Generator[Any, None, None]:
         """Yield a raw connection from the pool."""
         self._ensure_pool()
         conn = self._pool.getconn()
@@ -88,9 +100,9 @@ class DatabasePool:
             self._pool.putconn(conn)
 
     @contextmanager
-    def get_cursor(self, dict_cursor: bool = True) -> Generator:
+    def get_cursor(self, dict_cursor: bool = True) -> Generator[Any, None, None]:
         """Yield a cursor; commits/rolls back automatically."""
-        factory = RealDictCursor if dict_cursor else None
+        factory = RealDictCursor if dict_cursor and RealDictCursor is not None else None
         with self.get_connection() as conn:
             cur = conn.cursor(cursor_factory=factory)
             try:

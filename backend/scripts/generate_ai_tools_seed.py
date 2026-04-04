@@ -153,7 +153,7 @@ EXPLICIT_REQUIRED_FIELDS: Dict[str, List[str]] = {
     "get_courses_by_spec": ["specialization_name", "specialization_code", "major_name"],
     "get_courses_by_sub_spec": ["sub_specialization_name", "sub_specialization_code", "specialization_name"],
     "get_detail_course_grade": ["course_name", "course_code"],
-    "get_empty_rooms": ["date", "slot_number"],
+    "get_empty_rooms": ["date"],
     "get_enrollments_by_class": ["class_name"],
     "get_full_grade_sheet": ["class_name"],
     "get_grade_components_by_course": ["course_name", "course_code"],

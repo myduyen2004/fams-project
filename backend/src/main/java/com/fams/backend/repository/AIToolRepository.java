@@ -11,4 +11,5 @@ import java.util.Optional;
 public interface AIToolRepository extends JpaRepository<AITool, Long> {
     Optional<AITool> findByName(String name);
     List<AITool> findAllByIsActiveTrue();
+    List<AITool> findAllByOrderByNameAsc();
 }

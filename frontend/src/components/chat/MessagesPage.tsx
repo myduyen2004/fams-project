@@ -1672,7 +1672,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                             </div>{/* end relative wrapper */}
 
                             {/* Input Area */}
-                            <div className="p-3 bg-white border-t">
+                            <div className="p-3 bg-white border-t pr-16">
                                 {/* File Preview Area */}
                                 {filePreviews.length > 0 && (
                                     <div className="mb-3 flex flex-wrap gap-3 p-2 bg-gray-50 rounded-2xl border border-dashed border-gray-300">
