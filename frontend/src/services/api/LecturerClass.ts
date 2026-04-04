@@ -1,4 +1,4 @@
-import apiClient from './authService';
+import apiClient from './apiClient';
 import { PageResponse } from './userService';
 
 export interface ClassSectionResponse {

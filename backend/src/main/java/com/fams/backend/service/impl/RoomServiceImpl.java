@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -128,6 +129,12 @@ public class RoomServiceImpl implements RoomService {
                 .filter(room -> room.getStatus() == Room.RoomStatus.ACTIVE)
                 .map(room -> convertToAvailabilityResponse(room, !busyRoomIdSet.contains(room.getId())))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public Set<Long> getInUseRoomIds(LocalDate date, LocalTime time) {
+        List<Long> occupiedIds = timetableSlotRepository.findCurrentlyOccupiedRoomIds(date, time);
+        return new HashSet<>(occupiedIds);
     }
 
     private RoomResponse convertToResponse(Room room) {

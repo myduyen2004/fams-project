@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@SuppressWarnings("null")
 public class SemesterServiceImpl implements SemesterService {
 
     private final SemesterRepository semesterRepository;
@@ -31,6 +32,14 @@ public class SemesterServiceImpl implements SemesterService {
     @Override
     public List<SemesterResponse> getAllSemesters() {
         return semesterRepository.findAllOrderByStartDateDesc()
+                .stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<SemesterResponse> getUpcomingSemesters() {
+        return semesterRepository.findUpcomingSemesters()
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());

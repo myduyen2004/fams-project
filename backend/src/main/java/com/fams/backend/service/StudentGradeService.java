@@ -30,6 +30,9 @@ public class StudentGradeService {
     private final EnrollmentRepository enrollmentRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final SpecializationCourseRepository specializationCourseRepository;
+    private final SubSpecializationCourseRepository subSpecializationCourseRepository;
+    private final StudentAttendanceRepository studentAttendanceRepository;
 
     /**
      * Get grade overview for a class section
@@ -42,16 +45,7 @@ public class StudentGradeService {
         Course course = classSection.getCourse();
         Semester semester = classSection.getSemester();
 
-        // Get all grade components - sorted by weight ascending, then by numeric suffix
-        // Get all grade components - sorted by Total Weight of Grade Type
-        List<GradeComponent> rawComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId());
-        Map<GradeComponent.GradeType, Double> typeTotalWeights = rawComponents.stream()
-                .collect(Collectors.groupingBy(GradeComponent::getType,
-                        Collectors.summingDouble(GradeComponent::getWeight)));
-
-        List<GradeComponent> gradeComponents = rawComponents.stream()
-                .sorted(gradeComponentComparator(typeTotalWeights))
-                .collect(Collectors.toList());
+        List<GradeComponent> gradeComponents = getSortedGradeComponents(course.getId());
         List<GradeOverviewResponse.GradeComponentInfo> componentInfos = gradeComponents.stream()
                 .map(gc -> GradeOverviewResponse.GradeComponentInfo.builder()
                         .id(gc.getId())
@@ -129,10 +123,12 @@ public class StudentGradeService {
 
             Double finalGrade = GradeCalculator.calculateAverage(scoresForCalc, weightsForCalc);
 
-            // Updated pass logic: must have all required, no 0/null values, no failed exam,
-            // and average >= 5.0
-            boolean isPassing = !hasMissingOrZero && !hasFailedExam && finalGrade != null
-                    && finalGrade >= 5.0;
+            // Check attendance failure
+            boolean hasFailedAttendance = checkAttendanceFailure(enrollment.getStudent().getId(), className,
+                    course.getNumberOfSlots());
+
+            // Updated pass logic using helper
+            boolean isPassing = calculatePassStatus(finalGrade, hasMissingOrZero, hasFailedExam, hasFailedAttendance);
 
             return StudentGradeRowDTO.builder()
                     .enrollmentId(enrollment.getId())
@@ -301,14 +297,7 @@ public class StudentGradeService {
         // Điền 0.0 cho các cột điểm trống (do GV phụ trách) trước khi chốt
         Course course = classSection.getCourse();
         List<Enrollment> enrollments = enrollmentRepository.findByClassSectionClassName(className);
-        List<GradeComponent> editableComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId())
-                .stream()
-                .filter(gc -> !gc.getIsResit())
-                .filter(gc -> gc.getType() != GradeComponent.GradeType.FINAL_EXAM)
-                .filter(gc -> gc.getType() != GradeComponent.GradeType.RESIT)
-                .filter(gc -> gc.getType() != GradeComponent.GradeType.MID_TERM)
-                .filter(gc -> gc.getType() != GradeComponent.GradeType.PRACTICAL_EXAM)
-                .collect(Collectors.toList());
+        List<GradeComponent> editableComponents = getEditableGradeComponents(course.getId());
 
         List<Long> enrollmentIds = enrollments.stream().map(Enrollment::getId).collect(Collectors.toList());
         List<StudentGrade> existingGrades = studentGradeRepository.findByEnrollmentIdIn(enrollmentIds);
@@ -369,25 +358,7 @@ public class StudentGradeService {
         Course course = classSection.getCourse();
         Semester semester = classSection.getSemester();
 
-        // Get only editable components (exclude PE, MidTerm, Final, Resit)
-        // Sort by weight ascending (lowest first), then by name for same weight
-        // Get only editable components (exclude PE, MidTerm, Final, Resit)
-        List<GradeComponent> rawEditableComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId())
-                .stream()
-                .filter(gc -> !gc.getIsResit())
-                .filter(gc -> gc.getType() != GradeComponent.GradeType.FINAL_EXAM)
-                .filter(gc -> gc.getType() != GradeComponent.GradeType.RESIT)
-                .filter(gc -> gc.getType() != GradeComponent.GradeType.MID_TERM)
-                .filter(gc -> gc.getType() != GradeComponent.GradeType.PRACTICAL_EXAM)
-                .collect(Collectors.toList());
-
-        Map<GradeComponent.GradeType, Double> typeTotalWeights = rawEditableComponents.stream()
-                .collect(Collectors.groupingBy(GradeComponent::getType,
-                        Collectors.summingDouble(GradeComponent::getWeight)));
-
-        List<GradeComponent> editableComponents = rawEditableComponents.stream()
-                .sorted(gradeComponentComparator(typeTotalWeights))
-                .collect(Collectors.toList());
+        List<GradeComponent> editableComponents = getEditableGradeComponents(course.getId());
 
         // Get enrollments and grades
         List<Enrollment> enrollments = enrollmentRepository.findByClassSectionClassName(className);
@@ -508,23 +479,7 @@ public class StudentGradeService {
         Course course = classSection.getCourse();
         // Exclude FINAL_EXAM, RESIT, MID_TERM, PRACTICAL_EXAM from import
         // Sort by weight ascending, then by name
-        // Exclude FINAL_EXAM, RESIT, MID_TERM, PRACTICAL_EXAM from import
-        List<GradeComponent> rawComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId())
-                .stream()
-                .filter(gc -> !gc.getIsResit())
-                .filter(gc -> gc.getType() != GradeComponent.GradeType.FINAL_EXAM)
-                .filter(gc -> gc.getType() != GradeComponent.GradeType.RESIT)
-                .filter(gc -> gc.getType() != GradeComponent.GradeType.MID_TERM)
-                .filter(gc -> gc.getType() != GradeComponent.GradeType.PRACTICAL_EXAM)
-                .collect(Collectors.toList());
-
-        Map<GradeComponent.GradeType, Double> typeTotalWeights = rawComponents.stream()
-                .collect(Collectors.groupingBy(GradeComponent::getType,
-                        Collectors.summingDouble(GradeComponent::getWeight)));
-
-        List<GradeComponent> gradeComponents = rawComponents.stream()
-                .sorted(gradeComponentComparator(typeTotalWeights))
-                .collect(Collectors.toList());
+        List<GradeComponent> gradeComponents = getEditableGradeComponents(course.getId());
 
         // Get enrollments map by student code
         List<Enrollment> enrollments = enrollmentRepository.findByClassSectionClassName(className);
@@ -679,24 +634,8 @@ public class StudentGradeService {
 
         Course course = classSection.getCourse();
         // Exclude FINAL_EXAM, RESIT, MID_TERM, PRACTICAL_EXAM from preview
-        // Sort by weight ascending (lowest first), then by name
-        // Exclude FINAL_EXAM, RESIT, MID_TERM, PRACTICAL_EXAM from preview
-        List<GradeComponent> rawComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId())
-                .stream()
-                .filter(gc -> !gc.getIsResit())
-                .filter(gc -> gc.getType() != GradeComponent.GradeType.FINAL_EXAM)
-                .filter(gc -> gc.getType() != GradeComponent.GradeType.RESIT)
-                .filter(gc -> gc.getType() != GradeComponent.GradeType.MID_TERM)
-                .filter(gc -> gc.getType() != GradeComponent.GradeType.PRACTICAL_EXAM)
-                .collect(Collectors.toList());
-
-        Map<GradeComponent.GradeType, Double> typeTotalWeights = rawComponents.stream()
-                .collect(Collectors.groupingBy(GradeComponent::getType,
-                        Collectors.summingDouble(GradeComponent::getWeight)));
-
-        List<GradeComponent> gradeComponents = rawComponents.stream()
-                .sorted(gradeComponentComparator(typeTotalWeights))
-                .collect(Collectors.toList());
+        // Sort by specific rules
+        List<GradeComponent> gradeComponents = getEditableGradeComponents(course.getId());
 
         // Build list of component names for frontend column headers
         List<String> componentNames = gradeComponents.stream()
@@ -1015,6 +954,76 @@ public class StudentGradeService {
         }
     }
 
+    /**
+     * Determines the pass/fail status based on standard rules:
+     * 1. No missing or zero grades in required components
+     * 2. No failed final exam (score < 4.0)
+     * 3. Final average >= 5.0
+     * 4. Absent < 20%
+     */
+    private boolean calculatePassStatus(Double finalGrade, boolean hasMissingOrZero, boolean hasFailedExam,
+            boolean hasFailedAttendance) {
+        return !hasMissingOrZero && !hasFailedExam && !hasFailedAttendance && finalGrade != null && finalGrade >= 5.0;
+    }
+
+    /**
+     * Checks if a student has failed due to excessive absence (> 20% of total
+     * slots).
+     */
+    private boolean checkAttendanceFailure(Long studentId, String className, Integer totalSlots) {
+        if (totalSlots == null || totalSlots <= 0)
+            return false;
+
+        List<StudentAttendance> attendances = studentAttendanceRepository.findByStudentIdAndClassName(studentId,
+                className);
+        if (attendances == null || attendances.isEmpty())
+            return false;
+
+        long absentCount = attendances.stream()
+                .filter(a -> a.getStatus() == StudentAttendance.AttendanceStatus.ABSENT)
+                .count();
+
+        // Failed if absent more than 20%
+        return ((double) absentCount / totalSlots) > 0.20;
+    }
+
+    /**
+     * Gets all grade components for a course, sorted by their appropriate rules.
+     */
+    private List<GradeComponent> getSortedGradeComponents(Long courseId) {
+        List<GradeComponent> rawComponents = gradeComponentRepository.findByCourseIdOrderById(courseId);
+        Map<GradeComponent.GradeType, Double> typeTotalWeights = rawComponents.stream()
+                .collect(Collectors.groupingBy(GradeComponent::getType,
+                        Collectors.summingDouble(GradeComponent::getWeight)));
+
+        return rawComponents.stream()
+                .sorted(gradeComponentComparator(typeTotalWeights))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Gets only the editable grade components (excludes PE, MidTerm, Final, Resit),
+     * sorted by their appropriate rules.
+     */
+    private List<GradeComponent> getEditableGradeComponents(Long courseId) {
+        List<GradeComponent> rawEditableComponents = gradeComponentRepository.findByCourseIdOrderById(courseId)
+                .stream()
+                .filter(gc -> !gc.getIsResit())
+                .filter(gc -> gc.getType() != GradeComponent.GradeType.FINAL_EXAM)
+                .filter(gc -> gc.getType() != GradeComponent.GradeType.RESIT)
+                .filter(gc -> gc.getType() != GradeComponent.GradeType.MID_TERM)
+                .filter(gc -> gc.getType() != GradeComponent.GradeType.PRACTICAL_EXAM)
+                .collect(Collectors.toList());
+
+        Map<GradeComponent.GradeType, Double> typeTotalWeights = rawEditableComponents.stream()
+                .collect(Collectors.groupingBy(GradeComponent::getType,
+                        Collectors.summingDouble(GradeComponent::getWeight)));
+
+        return rawEditableComponents.stream()
+                .sorted(gradeComponentComparator(typeTotalWeights))
+                .collect(Collectors.toList());
+    }
+
     // ==================== STUDENT SELF-VIEW GRADE METHODS ====================
 
     /**
@@ -1061,15 +1070,8 @@ public class StudentGradeService {
         Course course = classSection.getCourse();
         Semester semester = classSection.getSemester();
 
-        // Get all grade components - sorted by Total Weight of Grade Type
-        List<GradeComponent> rawComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId());
-        Map<GradeComponent.GradeType, Double> typeTotalWeights = rawComponents.stream()
-                .collect(Collectors.groupingBy(GradeComponent::getType,
-                        Collectors.summingDouble(GradeComponent::getWeight)));
-
-        List<GradeComponent> gradeComponents = rawComponents.stream()
-                .sorted(gradeComponentComparator(typeTotalWeights))
-                .collect(Collectors.toList());
+        // Get all grade components - sorted by specific rules
+        List<GradeComponent> gradeComponents = getSortedGradeComponents(course.getId());
 
         // Get student's grades
         List<StudentGrade> studentGrades = studentGradeRepository.findByEnrollmentIdIn(
@@ -1219,7 +1221,10 @@ public class StudentGradeService {
                 }
             }
 
-            if (hasMissingOrZero || hasFailedExam || (courseAverage != null && courseAverage < 5.0)) {
+            boolean hasFailedAttendance = checkAttendanceFailure(studentId, className, course.getNumberOfSlots());
+
+            if (hasMissingOrZero || hasFailedExam || hasFailedAttendance
+                    || (courseAverage != null && courseAverage < 5.0)) {
                 status = "FAILED";
             } else if (courseAverage != null && courseAverage >= 5.0) {
                 status = "PASSED";
@@ -1292,62 +1297,172 @@ public class StudentGradeService {
     }
 
     /**
-     * Get a comprehensive summary of all grades for a student across all semesters
+     * Get a comprehensive summary of all grades for a student across all semesters.
+     * Shows ALL courses in the student's specialization curriculum (not just
+     * enrolled ones).
+     * Courses not yet enrolled show PENDING status with no grade.
      */
     @Transactional(readOnly = true)
     public StudentAllGradesSummaryResponse getAllGradesSummary(Long studentId) {
+        // Load student profile to get specialization
+        User student = userRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Student not found: " + studentId));
+        StudentProfile profile = student.getStudentProfile();
+        Specialization specialization = profile != null ? profile.getSpecialization() : null;
+        SubSpecialization subSpecialization = profile != null ? profile.getSubSpecialization() : null;
+
+        String specializationName = specialization != null ? specialization.getName() : null;
+        String majorName = (specialization != null && specialization.getMajor() != null)
+                ? specialization.getMajor().getName()
+                : null;
+
+        // Load all enrollments of the student (for looking up grades)
         List<Enrollment> enrollments = enrollmentRepository.findByStudentId(studentId);
-
-        // Sort enrollments by semester order (from earliest semester to latest)
-        enrollments.sort(Comparator.comparing(
-                e -> e.getClassSection().getSemester().getStartDate() != null
-                        ? e.getClassSection().getSemester().getStartDate()
-                        : java.time.LocalDate.now()));
-
-        // Assign term number per semester (Sem 1st, Sem 2nd...)
-        java.util.Map<Long, Integer> semesterToTermMap = new java.util.LinkedHashMap<>();
-        int termCounter = 0;
+        // Map from courseId -> enrollment (latest enrollment if multiple, keyed by
+        // courseId)
+        Map<Long, Enrollment> enrollmentByCourseId = new LinkedHashMap<>();
         for (Enrollment e : enrollments) {
-            Long semId = e.getClassSection().getSemester().getId();
-            if (!semesterToTermMap.containsKey(semId)) {
-                semesterToTermMap.put(semId, termCounter);
-                termCounter++;
+            Long cid = e.getClassSection().getCourse().getId();
+            // If student retook the course, keep the enrollment with the later semester
+            Enrollment existing = enrollmentByCourseId.get(cid);
+            if (existing == null) {
+                enrollmentByCourseId.put(cid, e);
+            } else {
+                // Keep the one with the newer semester start date
+                java.time.LocalDate newDate = e.getClassSection().getSemester().getStartDate() != null
+                        ? e.getClassSection().getSemester().getStartDate()
+                        : java.time.LocalDate.MIN;
+                java.time.LocalDate oldDate = existing.getClassSection().getSemester().getStartDate() != null
+                        ? existing.getClassSection().getSemester().getStartDate()
+                        : java.time.LocalDate.MIN;
+                if (newDate.isAfter(oldDate)) {
+                    enrollmentByCourseId.put(cid, e);
+                }
             }
         }
 
+        // --- Build curriculum course list ---
+        // Structure: each entry has (term=semester in specialization, orderIndex,
+        // course)
+        // Use a helper class to hold the structured list
+        record CurriculumEntry(int term, int orderIndex, Course course) {
+        }
+        List<CurriculumEntry> curriculum = new ArrayList<>();
+
+        if (specialization != null) {
+            // Get all courses in the student's specialization, ordered by semester then
+            // orderIndex
+            List<SpecializationCourse> specCourses = specializationCourseRepository
+                    .findBySpecializationIdOrderByOrderIndexAsc(specialization.getId());
+            // Sort by semester (term) first, then by orderIndex
+            specCourses.sort(Comparator
+                    .comparingInt((SpecializationCourse sc) -> sc.getSemester() != null ? sc.getSemester() : 0)
+                    .thenComparingInt(sc -> sc.getOrderIndex() != null ? sc.getOrderIndex() : 0));
+
+            // Track which courses are already added (to avoid duplicates)
+            Set<Long> addedCourseIds = new LinkedHashSet<>();
+            for (SpecializationCourse sc : specCourses) {
+                if (!addedCourseIds.contains(sc.getCourse().getId())) {
+                    curriculum.add(new CurriculumEntry(
+                            sc.getSemester() != null ? sc.getSemester() : 0,
+                            sc.getOrderIndex() != null ? sc.getOrderIndex() : 0,
+                            sc.getCourse()));
+                    addedCourseIds.add(sc.getCourse().getId());
+                }
+            }
+
+            // If student has a sub-specialization, append its courses (that aren't already
+            // in spec)
+            if (subSpecialization != null) {
+                List<SubSpecializationCourse> subSpecCourses = subSpecializationCourseRepository
+                        .findBySubSpecializationIdOrderByOrderIndexAsc(subSpecialization.getId());
+                subSpecCourses.sort(Comparator
+                        .comparingInt(
+                                (SubSpecializationCourse ssc) -> ssc.getSemester() != null ? ssc.getSemester() : 0)
+                        .thenComparingInt(ssc -> ssc.getOrderIndex() != null ? ssc.getOrderIndex() : 0));
+                for (SubSpecializationCourse ssc : subSpecCourses) {
+                    if (!addedCourseIds.contains(ssc.getCourse().getId())) {
+                        curriculum.add(new CurriculumEntry(
+                                ssc.getSemester() != null ? ssc.getSemester() : 0,
+                                ssc.getOrderIndex() != null ? ssc.getOrderIndex() : 0,
+                                ssc.getCourse()));
+                        addedCourseIds.add(ssc.getCourse().getId());
+                    }
+                }
+            }
+        } else {
+            // Fallback: student has no specialization assigned → use enrolled courses only
+            // (old behavior)
+            enrollments.sort(Comparator.comparing(
+                    e -> e.getClassSection().getSemester().getStartDate() != null
+                            ? e.getClassSection().getSemester().getStartDate()
+                            : java.time.LocalDate.now()));
+            int termFallback = 1;
+            Map<Long, Integer> semesterToTermFallback = new LinkedHashMap<>();
+            for (Enrollment e : enrollments) {
+                Long semId = e.getClassSection().getSemester().getId();
+                if (!semesterToTermFallback.containsKey(semId)) {
+                    semesterToTermFallback.put(semId, termFallback++);
+                }
+            }
+            for (Enrollment e : enrollments) {
+                Long semId = e.getClassSection().getSemester().getId();
+                int term = semesterToTermFallback.getOrDefault(semId, 1);
+                curriculum.add(new CurriculumEntry(term, 0, e.getClassSection().getCourse()));
+            }
+        }
+
+        // --- Build grade summary for each curriculum course ---
         List<StudentAllGradesSummaryResponse.CourseGradeSummary> courses = new ArrayList<>();
         int no = 1;
         int passed = 0, failed = 0, pending = 0;
-        double totalWeightedScore = 0;
-        int totalCreditsForGPA = 0;
 
-        for (Enrollment enrollment : enrollments) {
-            ClassSection cs = enrollment.getClassSection();
-            Course course = cs.getCourse();
-            Semester semester = cs.getSemester();
-
-            int term = semesterToTermMap.getOrDefault(semester.getId(), 0);
+        for (CurriculumEntry entry : curriculum) {
+            Course course = entry.course();
+            int term = entry.term();
 
             // Prerequisite codes
             String prerequisiteCodes = course.getPrerequisites() != null && !course.getPrerequisites().isEmpty()
                     ? course.getPrerequisites().stream()
                             .map(Course::getCode)
-                            .collect(java.util.stream.Collectors.joining(", "))
+                            .collect(Collectors.joining(", "))
                     : "";
 
-            // Load all student grades for this enrollment
-            List<StudentGrade> grades = studentGradeRepository.findByEnrollmentIdIn(
-                    java.util.Collections.singletonList(enrollment.getId()));
+            Enrollment enrollment = enrollmentByCourseId.get(course.getId());
 
+            if (enrollment == null) {
+                // Student hasn't enrolled in this course yet
+                courses.add(StudentAllGradesSummaryResponse.CourseGradeSummary.builder()
+                        .no(no++)
+                        .term(term)
+                        .semesterCode(null)
+                        .semesterName(null)
+                        .courseCode(course.getCode())
+                        .courseName(course.getName())
+                        .credits(course.getCredits())
+                        .prerequisiteCodes(prerequisiteCodes)
+                        .className(null)
+                        .grade(null)
+                        .status("PENDING")
+                        .gradesPublished(false)
+                        .isCalculatedInGpa(course.getIsCalculatedInGpa())
+                        .build());
+                pending++;
+                continue;
+            }
+
+            // Student enrolled → calculate grade
+            ClassSection cs = enrollment.getClassSection();
+            Semester semester = cs.getSemester();
+
+            List<StudentGrade> grades = studentGradeRepository.findByEnrollmentIdIn(
+                    Collections.singletonList(enrollment.getId()));
             List<GradeComponent> allComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId());
 
-            // Build scores and weights maps like in getStudentGrades
             Map<Long, Double> scoresMap = grades.stream()
                     .collect(Collectors.toMap(g -> g.getGradeComponent().getId(), StudentGrade::getScore, (a, b) -> a));
 
             boolean resitPublished = Boolean.TRUE.equals(cs.getResitGradesPublished());
-
-            // Find components replaced by resit
             Set<Long> replacedByResitIds = new HashSet<>();
             if (resitPublished) {
                 for (GradeComponent gc : allComponents) {
@@ -1360,48 +1475,44 @@ public class StudentGradeService {
 
             Map<Long, Double> weightsMap = new HashMap<>();
             boolean hasFailedExam = false;
-
             for (GradeComponent gc : allComponents) {
                 if (replacedByResitIds.contains(gc.getId()))
                     continue;
-
                 boolean isResitGc = Boolean.TRUE.equals(gc.getIsResit())
                         || gc.getType() == GradeComponent.GradeType.RESIT;
                 if (isResitGc && !resitPublished)
                     continue;
-
                 weightsMap.put(gc.getId(), gc.getWeight());
-
                 Double score = scoresMap.get(gc.getId());
                 if (score != null) {
                     boolean isExamType = gc.getType() == GradeComponent.GradeType.FINAL_EXAM
                             || gc.getType() == GradeComponent.GradeType.RESIT;
-                    if (isExamType && score < 4.0) {
+                    if (isExamType && score < 4.0)
                         hasFailedExam = true;
-                    }
                 }
             }
 
             Double courseAverage = GradeCalculator.calculateAverage(scoresMap, weightsMap);
-
-            // Determine status
-            String status = "PENDING";
+            String status = "STUDYING"; // Changed from PENDING to STUDYING for enrolled courses
             boolean isPublished = Boolean.TRUE.equals(cs.getGradesPublished());
 
             if (isPublished) {
                 boolean hasMissingOrZero = false;
-                for (Map.Entry<Long, Double> entry : weightsMap.entrySet()) {
-                    Double score = scoresMap.get(entry.getKey());
+                for (Map.Entry<Long, Double> e : weightsMap.entrySet()) {
+                    Double score = scoresMap.get(e.getKey());
                     if (score == null || score <= 0.0) {
                         hasMissingOrZero = true;
                         break;
                     }
                 }
-
-                if (hasMissingOrZero || hasFailedExam || (courseAverage != null && courseAverage < 5.0)) {
-                    status = "FAILED";
-                } else if (courseAverage != null && courseAverage >= 5.0) {
+                boolean hasFailedAttendance = checkAttendanceFailure(enrollment.getStudent().getId(), cs.getClassName(),
+                        course.getNumberOfSlots());
+                boolean isPassing = calculatePassStatus(courseAverage, hasMissingOrZero, hasFailedExam,
+                        hasFailedAttendance);
+                if (isPassing) {
                     status = "PASSED";
+                } else {
+                    status = "FAILED";
                 }
             }
 
@@ -1415,7 +1526,7 @@ public class StudentGradeService {
                     .credits(course.getCredits())
                     .prerequisiteCodes(prerequisiteCodes)
                     .className(cs.getClassName())
-                    .grade(isPublished && courseAverage != null ? Math.round(courseAverage * 10.0) / 10.0 : null)
+                    .grade(isPublished ? courseAverage : null)
                     .status(status)
                     .gradesPublished(isPublished)
                     .isCalculatedInGpa(course.getIsCalculatedInGpa())
@@ -1423,11 +1534,6 @@ public class StudentGradeService {
 
             if ("PASSED".equals(status)) {
                 passed++;
-                if (Boolean.TRUE.equals(course.getIsCalculatedInGpa()) && courseAverage != null
-                        && course.getCredits() != null) {
-                    totalWeightedScore += courseAverage * course.getCredits();
-                    totalCreditsForGPA += course.getCredits();
-                }
             } else if ("FAILED".equals(status)) {
                 failed++;
             } else {
@@ -1435,8 +1541,9 @@ public class StudentGradeService {
             }
         }
 
-        Double gpa = totalCreditsForGPA > 0 ? Math.round(totalWeightedScore / totalCreditsForGPA * 100.0) / 100.0
-                : null;
+        double[] gpaResult = calculateStudentGPA(courses);
+        Double gpa10 = gpaResult[0] < 0 ? null : gpaResult[0];
+        Double gpa4 = gpaResult[1] < 0 ? null : gpaResult[1];
 
         return StudentAllGradesSummaryResponse.builder()
                 .courses(courses)
@@ -1444,7 +1551,88 @@ public class StudentGradeService {
                 .passedCourses(passed)
                 .failedCourses(failed)
                 .pendingCourses(pending)
-                .gpa(gpa)
+                .gpa(gpa10)
+                .gpa4(gpa4)
+                .specializationName(specializationName)
+                .majorName(majorName)
                 .build();
+    }
+
+    /**
+     * Tính GPA tích lũy theo đúng quy chế FPT:
+     * - Chỉ tính các môn đã PASSED (các môn rớt không tính vào CGPA tích lũy)
+     * - Điểm phải được công bố (gradesPublished = true)
+     * - Môn phải được đánh dấu tính GPA (isCalculatedInGpa = true)
+     * 
+     * Trả về mảng double 2 phần tử: [0] = GPA hệ 10, [1] = GPA hệ 4
+     * Giá trị -1 biểu thị không có dữ liệu (null)
+     */
+    private double[] calculateStudentGPA(List<StudentAllGradesSummaryResponse.CourseGradeSummary> courses) {
+        if (courses == null || courses.isEmpty()) {
+            return new double[] { -1, -1 };
+        }
+
+        double totalWeightedScore10 = 0;
+        double totalWeightedScore4 = 0;
+        int totalCredits = 0;
+
+        for (StudentAllGradesSummaryResponse.CourseGradeSummary course : courses) {
+            boolean isIncluded = "PASSED".equalsIgnoreCase(course.getStatus());
+            boolean isCalculated = Boolean.TRUE.equals(course.getIsCalculatedInGpa());
+            boolean isPublished = Boolean.TRUE.equals(course.getGradesPublished());
+            boolean hasValidData = course.getGrade() != null && course.getCredits() != null;
+
+            if (isIncluded && isCalculated && isPublished && hasValidData) {
+                int credits = course.getCredits();
+                double grade10 = course.getGrade();
+                double grade4 = convertTo4PointScale(grade10);
+
+                totalWeightedScore10 += grade10 * credits;
+                totalWeightedScore4 += grade4 * credits;
+                totalCredits += credits;
+            }
+        }
+
+        if (totalCredits == 0) {
+            return new double[] { -1, -1 };
+        }
+
+        double gpa10 = Math.round((totalWeightedScore10 / totalCredits) * 100.0) / 100.0;
+        double gpa4 = Math.round((totalWeightedScore4 / totalCredits) * 100.0) / 100.0;
+        return new double[] { gpa10, gpa4 };
+    }
+
+    /**
+     * Quy đổi điểm hệ 10 sang hệ 4 theo thang điểm chữ của FPT University.
+     * Chỉ áp dụng cho các môn đã PASSED (>= 5.0).
+     * A : 9.0+ → 4.0
+     * B+ : 8.5+ → 3.5
+     * B : 8.0+ → 3.0
+     * C+ : 7.5+ → 2.5
+     * C : 7.0+ → 2.0
+     * D+ : 6.5+ → 1.5
+     * D : 6.0+ → 1.0
+     * F : < 5.0 → 0.0 (không gặp vì đã lọc PASSED)
+     */
+    private double convertTo4PointScale(double grade10) {
+        if (grade10 >= 9.0)
+            return 4.0;
+        if (grade10 >= 8.5)
+            return 3.75;
+        if (grade10 >= 8.0)
+            return 3.5;
+        if (grade10 >= 7.5)
+            return 3.25;
+        if (grade10 >= 7.0)
+            return 3.0;
+        if (grade10 >= 6.5)
+            return 2.75;
+        if (grade10 >= 6.0)
+            return 2.5;
+        if (grade10 >= 5.5)
+            return 2.25;
+        if (grade10 >= 5.0)
+            return 2.0;
+        return 0.0;
     }
 }

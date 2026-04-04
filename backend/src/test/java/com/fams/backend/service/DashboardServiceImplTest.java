@@ -8,8 +8,8 @@ import com.fams.backend.entity.Notification;
 import com.fams.backend.entity.SystemLog;
 import com.fams.backend.entity.User;
 import com.fams.backend.repository.*;
+import com.fams.backend.service.UserNotificationService;
 import com.fams.backend.service.impl.DashboardServiceImpl;
-import com.fams.backend.service.impl.SystemLogService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -35,11 +35,9 @@ class DashboardServiceImplTest {
     @Mock
     private NotificationRepository notificationRepository;
     @Mock
-    private NotificationRecipientRepository notificationRecipientRepository;
+    private UserNotificationService notificationService;
     @Mock
     private SystemLogRepository systemLogRepository;
-    @Mock
-    private SystemLogService systemLogService;
 
     @InjectMocks
     private DashboardServiceImpl dashboardService;
@@ -98,41 +96,16 @@ class DashboardServiceImplTest {
 
     @Test
     void whenGetNotifications_thenReturnMappedList() {
-        // Arrange
-        String username = "testuser";
-        User user = new User();
-        user.setUsername(username);
-
-        // Mock Security Context
-        org.springframework.security.core.Authentication authentication = mock(
-                org.springframework.security.core.Authentication.class);
-        org.springframework.security.core.context.SecurityContext securityContext = mock(
-                org.springframework.security.core.context.SecurityContext.class);
-        org.springframework.security.core.context.SecurityContextHolder.setContext(securityContext);
-
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-        when(authentication.isAuthenticated()).thenReturn(true);
-        when(authentication.getName()).thenReturn(username);
-        when(userRepository.findByUsername(username)).thenReturn(java.util.Optional.of(user));
-
-        Notification notification = new Notification();
-        notification.setTitle("New Message");
-        notification.setContent("Hello");
-        notification.setType(Notification.NotificationType.SYSTEM);
-        notification.setStatus(Notification.NotificationStatus.SENT);
-        notification.setCreatedAt(LocalDateTime.now());
-
-        com.fams.backend.entity.NotificationRecipient recipient = com.fams.backend.entity.NotificationRecipient
-                .builder()
-                .notification(notification)
-                .recipient(user)
-                .isRead(false)
-                .createdAt(LocalDateTime.now())
-                .build();
-
-        // Use findByRecipientOrderByCreatedAtDesc as per Service implementation
-        when(notificationRecipientRepository.findByRecipientOrderByCreatedAtDesc(user))
-                .thenReturn(Collections.singletonList(recipient));
+        NotificationResponse response = NotificationResponse.builder()
+            .id(100L)
+            .title("New Message")
+            .content("Hello")
+            .type(Notification.NotificationType.SYSTEM.name())
+            .status("SENT")
+            .createdAt(LocalDateTime.now())
+            .isRead(false)
+            .build();
+        when(notificationService.getMyNotifications()).thenReturn(Collections.singletonList(response));
 
         // Act
         List<DashboardNotificationResponse> results = dashboardService.getNotifications();
@@ -151,7 +124,7 @@ class DashboardServiceImplTest {
         log.setCreatedAt(LocalDateTime.now());
         log.setType(SystemLog.LogType.INFO);
 
-        when(systemLogRepository.findTop10ByOrderByCreatedAtDesc()).thenReturn(Collections.singletonList(log));
+        when(systemLogRepository.findTop5ByOrderByCreatedAtDesc()).thenReturn(Collections.singletonList(log));
 
         List<SystemLogResponse> results = dashboardService.getSystemLogs();
 

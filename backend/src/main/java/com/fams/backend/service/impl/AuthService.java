@@ -16,7 +16,6 @@ import com.fams.backend.dto.request.ResetPasswordRequest;
 import com.fams.backend.dto.request.VerifyOtpRequest;
 import com.fams.backend.service.EmailService;
 import com.fams.backend.service.GeoLocationService;
-import com.fams.backend.service.UserActivityService;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,8 +27,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
+import org.springframework.security.core.GrantedAuthority;
 
 /**
  * @author MyDuyen
@@ -49,8 +49,8 @@ public class AuthService implements UserDetailsService {
     private final DashboardBroadcastService dashboardBroadcastService;
     private final EmailService emailService;
     private final StringRedisTemplate redisTemplate;
-    private final UserActivityService userActivityService;
     private final SystemLogService systemLogService;
+    private final com.fams.backend.repository.UserPermissionRepository userPermissionRepository;
 
     private static final String OTP_PREFIX = "otp:";
     private static final long OTP_EXPIRY_MINUTES = 10;
@@ -283,10 +283,18 @@ public class AuthService implements UserDetailsService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
 
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        authorities.add(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
+
+        // Add granted permissions as authorities
+        userPermissionRepository.findPermissionsByUserId(user.getId()).stream()
+                .map(p -> new SimpleGrantedAuthority(p.name()))
+                .forEach(authorities::add);
+
         return new org.springframework.security.core.userdetails.User(
                 user.getUsername(),
                 user.getPassword(),
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())));
+                authorities);
     }
 
     /**

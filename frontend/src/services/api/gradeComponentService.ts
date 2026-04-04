@@ -1,5 +1,4 @@
-import axios from 'axios';
-import { API_URL } from './config';
+import apiClient from './apiClient';
 
 // Types
 export interface GradeComponent {
@@ -51,19 +50,12 @@ export interface GradeConfigSummary {
     isValidConfig: boolean;
 }
 
-const getAuthHeader = () => {
-    const token = localStorage.getItem('token');
-    return token ? { Authorization: `Bearer ${token}` } : {};
-};
-
 export const gradeComponentService = {
     /**
      * Get all grade components for a course
      */
     getGradeComponents: async (courseId: number): Promise<GradeComponent[]> => {
-        const response = await axios.get(`${API_URL}/courses/${courseId}/grade-components`, {
-            headers: getAuthHeader()
-        });
+        const response = await apiClient.get(`/courses/${courseId}/grade-components`);
         return response.data;
     },
 
@@ -71,9 +63,7 @@ export const gradeComponentService = {
      * Get grade configuration summary for a course
      */
     getGradeConfigSummary: async (courseId: number): Promise<GradeConfigSummary> => {
-        const response = await axios.get(`${API_URL}/courses/${courseId}/grade-config`, {
-            headers: getAuthHeader()
-        });
+        const response = await apiClient.get(`/courses/${courseId}/grade-config`);
         return response.data;
     },
 
@@ -81,9 +71,7 @@ export const gradeComponentService = {
      * Get main (non-resit) grade components for a course
      */
     getMainComponents: async (courseId: number): Promise<GradeComponent[]> => {
-        const response = await axios.get(`${API_URL}/courses/${courseId}/grade-components/main`, {
-            headers: getAuthHeader()
-        });
+        const response = await apiClient.get(`/courses/${courseId}/grade-components/main`);
         return response.data;
     },
 
@@ -91,9 +79,7 @@ export const gradeComponentService = {
      * Get resit grade components for a course
      */
     getResitComponents: async (courseId: number): Promise<GradeComponent[]> => {
-        const response = await axios.get(`${API_URL}/courses/${courseId}/grade-components/resit`, {
-            headers: getAuthHeader()
-        });
+        const response = await apiClient.get(`/courses/${courseId}/grade-components/resit`);
         return response.data;
     },
 
@@ -101,9 +87,7 @@ export const gradeComponentService = {
      * Get total weight of main components
      */
     getTotalWeight: async (courseId: number): Promise<{ courseId: number; totalWeight: number; isValid: boolean }> => {
-        const response = await axios.get(`${API_URL}/courses/${courseId}/grade-components/total-weight`, {
-            headers: getAuthHeader()
-        });
+        const response = await apiClient.get(`/courses/${courseId}/grade-components/total-weight`);
         return response.data;
     },
 
@@ -111,9 +95,7 @@ export const gradeComponentService = {
      * Create a new grade component
      */
     createGradeComponent: async (courseId: number, data: GradeComponentRequest): Promise<GradeComponent> => {
-        const response = await axios.post(`${API_URL}/courses/${courseId}/grade-components`, data, {
-            headers: getAuthHeader()
-        });
+        const response = await apiClient.post(`/courses/${courseId}/grade-components`, data);
         return response.data;
     },
 
@@ -121,9 +103,7 @@ export const gradeComponentService = {
      * Update a grade component
      */
     updateGradeComponent: async (id: number, data: GradeComponentRequest): Promise<GradeComponent> => {
-        const response = await axios.put(`${API_URL}/grade-components/${id}`, data, {
-            headers: getAuthHeader()
-        });
+        const response = await apiClient.put(`/grade-components/${id}`, data);
         return response.data;
     },
 
@@ -131,18 +111,14 @@ export const gradeComponentService = {
      * Delete a grade component
      */
     deleteGradeComponent: async (id: number): Promise<void> => {
-        await axios.delete(`${API_URL}/grade-components/${id}`, {
-            headers: getAuthHeader()
-        });
+        await apiClient.delete(`/grade-components/${id}`);
     },
 
     /**
      * Duplicate a grade component
      */
     duplicateGradeComponent: async (id: number): Promise<GradeComponent> => {
-        const response = await axios.post(`${API_URL}/grade-components/${id}/duplicate`, null, {
-            headers: getAuthHeader()
-        });
+        const response = await apiClient.post(`/grade-components/${id}/duplicate`);
         return response.data;
     },
 
@@ -155,9 +131,7 @@ export const gradeComponentService = {
         failed: number;
         errors: string[];
     }> => {
-        const response = await axios.post(`${API_URL}/grade-components/import`, rows, {
-            headers: getAuthHeader()
-        });
+        const response = await apiClient.post(`/grade-components/import`, rows);
         return response.data;
     }
 };

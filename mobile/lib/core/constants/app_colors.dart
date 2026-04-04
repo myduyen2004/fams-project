@@ -16,6 +16,11 @@ class AppColors {
   static const Color primaryOrange = orange400;
   static const Color orangeGradientStart = orange400;
   static const Color orangeGradientEnd = orange200;
+  
+  // New Brand Colors
+  static const Color brandOrangePrimary = Color(0xFFF26F21);
+  static const Color brandOrangeSecondary = Color(0xFFEA5C36);
+  
   static const Color orangeLight = orange50;
   static const Color glassWhite = Color(0x66FFFFFF); 
 

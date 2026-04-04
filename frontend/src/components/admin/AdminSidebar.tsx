@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home,
   Settings,
-  Bell,
+  Newspaper,
   AlertTriangle,
   Clock,
   LogOut,
@@ -53,9 +53,9 @@ export const AdminSidebar: React.FC = () => {
     },
     {
       id: 'notifications-settings',
-      label: 'Quản lý thông báo',
-      icon: <Bell size={20} />,
-      path: '/admin/notification-management'
+      label: 'Quản lý tin tức',
+      icon: <Newspaper size={20} />,
+      path: '/admin/news-management'
     },
     {
       id: 'alerts',
@@ -96,8 +96,8 @@ export const AdminSidebar: React.FC = () => {
   const isActive = (path?: string) => {
     if (!path) return false;
 
-    // Special case for notification management to be active on sub-routes
-    if (path === '/admin/notification-management' && location.pathname.startsWith('/admin/notifications/')) {
+    // Special case for news management to be active on sub-routes
+    if (path === '/admin/news-management' && location.pathname.startsWith('/admin/news/')) {
       return true;
     }
 

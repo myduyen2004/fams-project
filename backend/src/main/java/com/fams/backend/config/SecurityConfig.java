@@ -26,9 +26,7 @@ import java.util.List;
 public class SecurityConfig {
 
         private final JwtAuthenticationFilter jwtAuthenticationFilter;
-
-        @org.springframework.beans.factory.annotation.Value("${app.cors.allowed-origins}")
-        private String allowedOrigins;
+        private final CorsConfigurationSource corsConfigurationSource;
 
         // Cấu hình security chính
         @Bean
@@ -38,7 +36,7 @@ public class SecurityConfig {
                                 .csrf(AbstractHttpConfigurer::disable)
 
                                 // Enable CORS
-                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                                .cors(cors -> cors.configurationSource(corsConfigurationSource))
 
                                 // Session management
                                 .sessionManagement(session -> session
@@ -64,6 +62,7 @@ public class SecurityConfig {
                                                                 "/v3/api-docs/**",
                                                                 "/actuator/health",
                                                                 "/ws/**", // WebSocket endpoint
+                                                                "/ws-native/**", // Native WebSocket endpoint
                                                                 "/api/files/**",
                                                                 "/api/courses/**")
                                                 .permitAll()
@@ -89,34 +88,5 @@ public class SecurityConfig {
                 return http.build();
         }
 
-        // CORS configuration
-        @Bean
-        public CorsConfigurationSource corsConfigurationSource() {
-                CorsConfiguration configuration = new CorsConfiguration();
-
-                // Split comma-separated origins from properties
-                List<String> origins = Arrays.asList(allowedOrigins.split(","));
-                configuration.setAllowedOriginPatterns(origins);
-
-                // Allow HTTP methods
-                configuration.setAllowedMethods(List.of(
-                                "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-
-                // Allow all headers
-                configuration.setAllowedHeaders(List.of("*"));
-
-                // Allow cookies / credentials
-                configuration.setAllowCredentials(true);
-
-                // Max age preflight
-                configuration.setMaxAge(3600L);
-
-                // Exposed headers
-                configuration.setExposedHeaders(List.of("Content-Disposition"));
-
-                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-                source.registerCorsConfiguration("/**", configuration);
-
-                return source;
-        }
+        // CORS configuration defined in CorsConfig.java
 }

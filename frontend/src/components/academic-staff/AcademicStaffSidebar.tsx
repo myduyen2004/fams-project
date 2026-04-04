@@ -4,9 +4,8 @@ import {
   Calendar,
   FolderOpen,
   FileText,
-  Bell,
+  Newspaper,
   CheckSquare,
-  AlertTriangle,
   Settings,
   Clock,
   LogOut,
@@ -69,11 +68,11 @@ export const AcademicStaffSidebar: React.FC = () => {
         { label: 'Ngành', path: '/academic-staff/majors' },
         { label: 'Môn học', path: '/academic-staff/courses' },
         { label: 'Lớp học', path: '/academic-staff/classes' },
-        { label: 'Tài khoản', path: '/academic-staff/accounts' },
         { label: 'Giảng viên', path: '/academic-staff/lecturers' },
         { label: 'Sinh viên', path: '/academic-staff/students' },
         { label: 'Điểm thi', path: '/academic-staff/exam-grades' },
-        { label: 'Thi lại', path: '/academic-staff/resit-grades' }
+        { label: 'Thi lại', path: '/academic-staff/resit-grades' },
+        { label: 'Phân quyền', path: '/academic-staff/permissions' }
       ]
     },
     {
@@ -84,9 +83,9 @@ export const AcademicStaffSidebar: React.FC = () => {
     },
     {
       id: 'announcements',
-      label: 'Quản lý thông báo',
-      icon: <Bell size={20} />,
-      path: '/academic-staff/notification-management'
+      label: 'Quản lý tin tức',
+      icon: <Newspaper size={20} />,
+      path: '/academic-staff/news-management'
     },
     {
       id: 'attendance',
@@ -105,10 +104,10 @@ export const AcademicStaffSidebar: React.FC = () => {
       ]
     },
     {
-      id: 'alerts',
-      label: 'Cảnh báo',
-      icon: <AlertTriangle size={20} />,
-      path: '/academic-staff/alerts'
+      id: 'logs',
+      label: 'Nhật ký hệ thống',
+      icon: <Clock size={20} />,
+      path: '/academic-staff/logs'
     }
   ];
 
@@ -124,8 +123,8 @@ export const AcademicStaffSidebar: React.FC = () => {
 
   const isActive = (path?: string) => {
     if (!path) return false;
-    // Special case for notification management to be active on sub-routes keys like 'edit' or 'create' which differ in path structure
-    if (path === '/academic-staff/notification-management' && location.pathname.startsWith('/academic-staff/notifications/')) {
+    // Special case for news management to be active on sub-routes keys like 'edit' or 'create'
+    if (path === '/academic-staff/news-management' && location.pathname.startsWith('/academic-staff/news/')) {
       return true;
     }
     return location.pathname === path || (path !== '/academic-staff/dashboard' && location.pathname.startsWith(path + '/'));
@@ -250,22 +249,7 @@ export const AcademicStaffSidebar: React.FC = () => {
             {isExpanded && <span className={`text-sm font-medium whitespace-nowrap ${location.pathname === '/academic-staff/profile' ? 'text-white' : ''}`}>Hồ sơ cá nhân</span>}
           </button>
 
-          <button
-            onClick={() => navigate('/academic-staff/logs')}
-            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group ${location.pathname.startsWith('/academic-staff/logs') 
-              ? 'bg-fpt-orange text-white' 
-              : 'text-fpt-orange hover:bg-fpt-orange hover:text-white'}`}
-            title={!isExpanded ? 'Nhật ký hệ thống' : ''}
-          >
-            <div className={`flex-shrink-0 transition-colors duration-200 ${location.pathname.startsWith('/academic-staff/logs') ? 'text-white' : 'text-fpt-orange group-hover:text-white'}`}>
-              <Clock size={20} />
-            </div>
-            {isExpanded && (
-              <span className={`text-sm whitespace-nowrap transition-colors duration-200 ${location.pathname.startsWith('/academic-staff/logs') ? 'text-white font-bold' : 'font-medium group-hover:text-white'}`}>
-                Nhật ký hệ thống
-              </span>
-            )}
-          </button>
+
 
           <button
             onClick={() => setShowLogoutModal(true)}

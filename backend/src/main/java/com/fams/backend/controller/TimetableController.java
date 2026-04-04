@@ -63,7 +63,7 @@ public class TimetableController {
         // ==================== GENERATION APIs ====================
 
         @PostMapping("/generate")
-        @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
+        @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_SCHEDULE') or hasAuthority('MANAGE_SEMESTERS')")
         @Operation(summary = "Generate timetable", description = "Start GA-based timetable generation for a semester")
         public ResponseEntity<TimetableDTO.GenerateResponse> generateTimetable(
                         @RequestBody TimetableDTO.GenerateRequest request) {
@@ -102,7 +102,7 @@ public class TimetableController {
         }
 
         @PostMapping("/generate/async")
-        @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
+        @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_SCHEDULE') or hasAuthority('MANAGE_SEMESTERS')")
         @Operation(summary = "Start async generation", description = "Start timetable generation and return job ID immediately")
         public ResponseEntity<Map<String, String>> startAsyncGeneration(
                         @RequestBody TimetableDTO.GenerateRequest request) {
@@ -121,7 +121,7 @@ public class TimetableController {
         }
 
         @GetMapping("/generate/status/{jobId}")
-        @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
+        @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS') or hasAuthority('MANAGE_COURSES') or hasAuthority('MANAGE_USERS') or hasAuthority('MANAGE_SEMESTERS') or hasAuthority('VIEW_SYSTEM_LOGS') or hasAuthority('MANAGE_SCHEDULE')")
         @Operation(summary = "Get generation job status")
         public ResponseEntity<TimetableDTO.JobStatusResponse> getJobStatus(@PathVariable String jobId) {
                 TimetableGenerationService.GenerationJob job = generationService.getJobStatus(jobId);
@@ -145,7 +145,7 @@ public class TimetableController {
         }
 
         @PostMapping("/generate/cancel/{jobId}")
-        @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
+        @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_SCHEDULE') or hasAuthority('MANAGE_SEMESTERS')")
         @Operation(summary = "Cancel running job")
         public ResponseEntity<Map<String, Object>> cancelJob(@PathVariable String jobId) {
                 boolean cancelled = generationService.cancelJob(jobId);
@@ -171,14 +171,15 @@ public class TimetableController {
                 boolean isPublished = config != null && Boolean.TRUE.equals(config.getIsPublished());
 
                 if (!isPublished) {
-                        // Allow if User has ROLE_ADMIN or ROLE_ACADEMIC_STAFF
+                        // Allow if User has ROLE_ACADEMIC_STAFF or appropriate permissions
                         org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
                                         .getContext().getAuthentication();
-                        boolean isAdminOrStaff = auth != null && auth.getAuthorities().stream()
-                                        .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")
-                                                        || a.getAuthority().equals("ROLE_ACADEMIC_STAFF"));
+                        boolean hasPermission = auth != null && auth.getAuthorities().stream()
+                                        .anyMatch(a -> a.getAuthority().equals("ROLE_ACADEMIC_STAFF")
+                                                        || a.getAuthority().equals("MANAGE_SEMESTERS")
+                                                        || a.getAuthority().equals("MANAGE_SCHEDULE"));
 
-                        if (!isAdminOrStaff) {
+                        if (!hasPermission) {
                                 log.warn("Semester {} is not published. Access denied.", semesterCode);
                                 return ResponseEntity.status(403).build();
                         }
@@ -304,7 +305,7 @@ public class TimetableController {
         }
 
         @RequestMapping(value = "/slot/{id}", method = { RequestMethod.PATCH, RequestMethod.PUT })
-        @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
+        @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_SCHEDULE')")
         @Operation(summary = "Update a timetable slot", description = "Reschedule a session to a different date, slot, or room")
         public ResponseEntity<TimetableDTO.TimetableSlotDTO> updateSlot(
                         @PathVariable Long id,
@@ -315,7 +316,7 @@ public class TimetableController {
         }
 
         @GetMapping("/availability")
-        @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
+        @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_SCHEDULE')")
         @Operation(summary = "Get available slots and rooms for a date")
         public ResponseEntity<TimetableDTO.AvailabilityResponse> getAvailability(
                         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
@@ -380,8 +381,8 @@ public class TimetableController {
                                                 targetDate);
                         }
 
-                        List<TimetableSlot> slots = timetableSlotRepository.findByStudentCodeAndDateBetween(
-                                        student.getCode(), weekStart, weekEnd);
+                        List<TimetableSlot> slots = timetableSlotRepository.findByStudentIdAndDateBetween(
+                                        studentId, weekStart, weekEnd);
 
                         // Fallback: If semester wasn't found by date, check the semester of the found
                         // slots
@@ -501,8 +502,8 @@ public class TimetableController {
                 }
 
                 // Fetch ALL slots for this student in this semester
-                List<TimetableSlot> slots = timetableSlotRepository.findByStudentCodeAndDateBetween(
-                                student.getCode(), semester.getStartDate(), semester.getEndDate());
+                List<TimetableSlot> slots = timetableSlotRepository.findByStudentIdAndDateBetween(
+                                studentId, semester.getStartDate(), semester.getEndDate());
 
                 // Map to DTOs and sort
                 List<TimetableDTO.TimetableSlotDTO> slotDTOs = slots.stream()
@@ -589,8 +590,8 @@ public class TimetableController {
                 }
 
                 // 1. Fetch ALL slots for this student in this semester
-                List<TimetableSlot> slots = timetableSlotRepository.findByStudentCodeAndDateBetween(
-                                student.getCode(), semester.getStartDate(), semester.getEndDate());
+                List<TimetableSlot> slots = timetableSlotRepository.findByStudentIdAndDateBetween(
+                                studentId, semester.getStartDate(), semester.getEndDate());
 
                 // 2. Map to DTOs
                 List<TimetableDTO.TimetableSlotDTO> slotDTOs = slots.stream()
@@ -655,14 +656,15 @@ public class TimetableController {
                         boolean isPublished = config != null && Boolean.TRUE.equals(config.getIsPublished());
 
                         if (!isPublished) {
-                                // Allow if User has ROLE_ADMIN or ROLE_ACADEMIC_STAFF
+                                // Allow if User has ROLE_ACADEMIC_STAFF
                                 org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
                                                 .getContext().getAuthentication();
-                                boolean isAdminOrStaff = auth != null && auth.getAuthorities().stream()
-                                                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")
-                                                                || a.getAuthority().equals("ROLE_ACADEMIC_STAFF"));
+                                boolean hasPermission = auth != null && auth.getAuthorities().stream()
+                                                .anyMatch(a -> a.getAuthority().equals("ROLE_ACADEMIC_STAFF")
+                                                                || a.getAuthority().equals("MANAGE_SEMESTERS")
+                                                                || a.getAuthority().equals("MANAGE_SCHEDULE"));
 
-                                if (!isAdminOrStaff) {
+                                if (!hasPermission) {
                                         log.warn("Semester {} is not published. Access denied for lecturer {}.",
                                                         semester.getCode(), lecturerId);
                                         return ResponseEntity.status(403).body(Map.of(
@@ -693,12 +695,14 @@ public class TimetableController {
                                         if (!isPublished) {
                                                 org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
                                                                 .getContext().getAuthentication();
-                                                boolean isAdminOrStaff = auth != null && auth.getAuthorities().stream()
-                                                                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")
+                                                boolean hasPermission = auth != null && auth.getAuthorities().stream()
+                                                                .anyMatch(a -> a.getAuthority().equals("ROLE_ACADEMIC_STAFF")
                                                                                 || a.getAuthority().equals(
-                                                                                                "ROLE_ACADEMIC_STAFF"));
+                                                                                                "ROLE_ACADEMIC_STAFF")
+                                                                                || a.getAuthority().equals("MANAGE_SEMESTERS")
+                                                                                || a.getAuthority().equals("MANAGE_SCHEDULE"));
 
-                                                if (!isAdminOrStaff) {
+                                                if (!hasPermission) {
                                                         log.warn("Semester {} (from slots) is not published. Access denied for lecturer {}.",
                                                                         semester.getCode(), lecturerId);
                                                         return ResponseEntity.status(403).body(Map.of(
@@ -813,7 +817,7 @@ public class TimetableController {
         }
 
         @GetMapping("/stats/{semesterCode}")
-        @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
+        @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_SCHEDULE') or hasAuthority('MANAGE_SEMESTERS')")
         @Operation(summary = "Get timetable statistics")
         public ResponseEntity<TimetableDTO.TimetableStatsDTO> getTimetableStats(
                         @PathVariable String semesterCode) {
@@ -917,6 +921,8 @@ public class TimetableController {
                                 .courseName(course != null ? course.getName() : null)
                                 .lecturerId(lecturer != null ? lecturer.getId() : null)
                                 .lecturerName(lecturer != null ? lecturer.getFullName() : null)
+                                .lecturerEmail(lecturer != null ? lecturer.getEmail() : null)
+                                .lecturerAvatar(lecturer != null ? lecturer.getAvatar() : null)
                                 .roomCode(room != null ? room.getCode() : null)
                                 .roomName(room != null ? room.getName() : null)
                                 .date(slot.getDate())

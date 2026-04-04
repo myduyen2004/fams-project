@@ -8,6 +8,7 @@ import com.fams.backend.entity.User;
 import com.fams.backend.repository.UserRepository;
 import com.fams.backend.scheduler.AssignmentReminderScheduler;
 import com.fams.backend.service.AssignmentSubmissionService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,9 +21,9 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/lecturer/assignments")
+@RequestMapping("/api/v1/lecturer/assignments")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+@Tag(name = "Lecturer Assignment")
 @PreAuthorize("hasRole('LECTURER')")
 public class LecturerAssignmentController {
 

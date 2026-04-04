@@ -1,4 +1,4 @@
-import apiClient from './authService';
+import apiClient from './apiClient';
 import { Room, RoomRequest } from '../../types/room';
 
 // Room with availability status
@@ -25,6 +25,17 @@ export const roomService = {
         return response.data;
     },
 
+    // Get IDs of rooms currently in use based on actual slot times from database
+    getCurrentlyInUseRoomIds: async (): Promise<Set<number>> => {
+        const now = new Date();
+        const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        const response = await apiClient.get<number[]>('/v1/rooms/currently-in-use', {
+            params: { date, time }
+        });
+        return new Set(response.data);
+    },
+
     createRoom: async (data: RoomRequest) => {
         const response = await apiClient.post<Room>('/v1/rooms', data);
         return response.data;
@@ -39,3 +50,4 @@ export const roomService = {
         await apiClient.delete(`/v1/rooms/${id}`);
     }
 };
+

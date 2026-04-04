@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { PublicRoute } from './components/common/PublicRoute';
+import { PermissionProtectedRoute } from './components/common/PermissionProtectedRoute';
 import { FloatingChatWidget } from './components/common/FloatingChatWidget';
 // Lazy load pages
 const Login = lazy(() => import('./pages/auth/Login').then(m => ({ default: m.Login })));
@@ -11,11 +12,12 @@ const ChangePasswordPage = lazy(() => import('./pages/auth/ChangePasswordPage').
 const Dashboard = lazy(() => import('./pages/admin/Dashboard').then(m => ({ default: m.Dashboard })));
 const RecentAccessPage = lazy(() => import('./pages/admin/RecentAccessPage').then(m => ({ default: m.RecentAccessPage })));
 const AlertsPage = lazy(() => import('./pages/admin/AlertsPage').then(m => ({ default: m.AlertsPage })));
-const NotificationsPage = lazy(() => import('./pages/admin/NotificationsPage').then(m => ({ default: m.NotificationsPage })));
-const NotificationManagementPage = lazy(() => import('./pages/admin/NotificationManagementPage').then(m => ({ default: m.NotificationManagementPage })));
-const CreateNotificationPage = lazy(() => import('./pages/admin/CreateNotificationPage').then(m => ({ default: m.CreateNotificationPage })));
-const EditNotificationPage = lazy(() => import('./pages/admin/EditNotificationPage').then(m => ({ default: m.EditNotificationPage })));
-const NotificationDetailPage = lazy(() => import('./pages/admin/NotificationDetailPage').then(m => ({ default: m.NotificationDetailPage })));
+const NewsManagementPage = lazy(() => import('./pages/admin/NewsManagementPage').then(m => ({ default: m.NewsManagementPage })));
+const CreateNewsPage = lazy(() => import('./pages/admin/CreateNewsPage').then(m => ({ default: m.CreateNewsPage })));
+const EditNewsPage = lazy(() => import('./pages/admin/EditNewsPage').then(m => ({ default: m.EditNewsPage })));
+const NewsDetailPage = lazy(() => import('./pages/admin/NewsDetailPage').then(m => ({ default: m.NewsDetailPage })));
+const NewsListPage = lazy(() => import('./pages/NewsListPage').then(m => ({ default: m.NewsListPage })));
+const NewsDetailUserPage = lazy(() => import('./pages/NewsDetailUserPage').then(m => ({ default: m.NewsDetailUserPage })));
 const UserNotificationDetailPage = lazy(() => import('./pages/UserNotificationDetailPage').then(m => ({ default: m.UserNotificationDetailPage })));
 const NotificationListPage = lazy(() => import('./pages/NotificationListPage').then(m => ({ default: m.NotificationListPage })));
 const SystemLogsPage = lazy(() => import('./pages/admin/SystemLogsPage').then(m => ({ default: m.SystemLogsPage })));
@@ -23,6 +25,7 @@ const UsersPage = lazy(() => import('./pages/admin/UsersPage').then(m => ({ defa
 const ActivatedUsersPage = lazy(() => import('./pages/admin/ActivatedUsersPage').then(m => ({ default: m.ActivatedUsersPage })));
 const LockedUsersPage = lazy(() => import('./pages/admin/LockedUsersPage').then(m => ({ default: m.LockedUsersPage })));
 const ProfilePage = lazy(() => import('./pages/admin/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const PermissionsPage = lazy(() => import('./pages/admin/PermissionsPage').then(m => ({ default: m.PermissionsPage })));
 const AcademicStaffDashboard = lazy(() => import('./pages/academic-staff/AcademicStaffDashboard').then(m => ({ default: m.AcademicStaffDashboard })));
 const AcademicStaffProfilePage = lazy(() => import('./pages/academic-staff/ProfilePage').then(m => ({ default: m.ProfilePage })));
 const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
@@ -79,12 +82,17 @@ const LecturerRoomList = lazy(() => import('./pages/lecturer/RoomList').then(m =
 const LecturerRoomDetail = lazy(() => import('./pages/lecturer/RoomDetail').then(m => ({ default: m.RoomDetail })));
 const LecturerSemestersPage = lazy(() => import('./pages/lecturer/SemestersPage').then(m => ({ default: m.SemestersPage })));
 const AcademicStaffSystemLogsPage = lazy(() => import('./pages/academic-staff/SystemLogsPage').then(m => ({ default: m.SystemLogsPage })));
+const NotificationManagementPage = lazy(() => import('./pages/admin/NotificationManagementPage').then(m => ({ default: m.NotificationManagementPage })));
+const NotificationDetailPage = lazy(() => import('./pages/admin/NotificationDetailPage').then(m => ({ default: m.NotificationDetailPage })));
 const ChatPage = lazy(() => import('./pages/chatbot/ChatPage').then(m => ({ default: m.ChatPage })));
+const StudentClassMembersPage = lazy(() => import('./pages/student/StudentClassMembersPage').then(m => ({ default: m.StudentClassMembersPage })));
+const StudentProfilePage = lazy(() => import('./pages/student/StudentProfilePage').then(m => ({ default: m.StudentProfilePage })));
+const LecturerProfilePage = lazy(() => import('./pages/lecturer/LecturerProfilePage').then(m => ({ default: m.LecturerProfilePage })));
 
 const PageLoader = () => (
   <div className="flex h-screen w-full items-center justify-center bg-gray-50 dark:bg-zinc-950">
     <div className="flex flex-col items-center gap-2">
-      <Loader2 className="h-8 w-8 animate-spin text-fpt-orange" />
+      <Loader2 className="h-8 w-8 animate-spin text-[#F26F21]" />
       <span className="text-sm font-medium text-gray-500 dark:text-zinc-400">Loading FAMS components...</span>
     </div>
   </div>
@@ -174,74 +182,82 @@ function App() {
             }
           />
           <Route
-            path="/admin/notifications"
-            element={
-              <ProtectedRoute allowedRoles={['ADMIN']}>
-                <NotificationsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/notification-management"
+            path="/admin/news-management"
             element={
               <ProtectedRoute allowedRoles={['ADMIN', 'ACADEMIC_STAFF']}>
-                <NotificationManagementPage />
+                <NewsManagementPage />
               </ProtectedRoute>
             }
           />
           <Route
-            path="/academic-staff/notification-management"
+            path="/academic-staff/news-management"
             element={
               <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
-                <NotificationManagementPage />
+                <NewsManagementPage />
               </ProtectedRoute>
             }
           />
           <Route
-            path="/admin/notifications/create"
+            path="/admin/news/create"
             element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
-                <CreateNotificationPage />
+                <CreateNewsPage />
               </ProtectedRoute>
             }
           />
           <Route
-            path="/academic-staff/notifications/create"
+            path="/academic-staff/news/create"
             element={
               <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
-                <CreateNotificationPage />
+                <CreateNewsPage />
               </ProtectedRoute>
             }
           />
           <Route
-            path="/admin/notifications/edit/:id"
+            path="/admin/news/edit/:id"
             element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
-                <EditNotificationPage />
+                <EditNewsPage />
               </ProtectedRoute>
             }
           />
           <Route
-            path="/academic-staff/notifications/edit/:id"
+            path="/academic-staff/news/edit/:id"
             element={
               <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
-                <EditNotificationPage />
+                <EditNewsPage />
               </ProtectedRoute>
             }
           />
           <Route
-            path="/admin/notifications/:id"
+            path="/admin/news/:id"
             element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
-                <NotificationDetailPage />
+                <NewsDetailPage />
               </ProtectedRoute>
             }
           />
           <Route
-            path="/academic-staff/notifications/:id"
+            path="/academic-staff/news/:id"
             element={
               <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
-                <NotificationDetailPage />
+                <NewsDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/news"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN', 'STUDENT', 'LECTURER', 'ACADEMIC_STAFF']}>
+                <NewsListPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/news/:id"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN', 'STUDENT', 'LECTURER', 'ACADEMIC_STAFF']}>
+                <NewsDetailUserPage />
               </ProtectedRoute>
             }
           />
@@ -302,6 +318,14 @@ function App() {
             }
           />
           <Route
+            path="/admin/permissions"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <PermissionsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/chatbot"
             element={
               <ProtectedRoute>
@@ -341,6 +365,44 @@ function App() {
           <Route path="/lecturer/rooms" element={<ProtectedRoute allowedRoles={['LECTURER']}><LecturerRoomList /></ProtectedRoute>} />
           <Route path="/lecturer/rooms/:id" element={<ProtectedRoute allowedRoles={['LECTURER']}><LecturerRoomDetail /></ProtectedRoute>} />
           <Route path="/lecturer/semesters" element={<ProtectedRoute allowedRoles={['LECTURER']}><LecturerSemestersPage /></ProtectedRoute>} />
+          <Route path="/lecturer/profile" element={<ProtectedRoute allowedRoles={['LECTURER']}><LecturerProfilePage /></ProtectedRoute>} />
+
+          {/* Lecturer Granted Permission Routes */}
+          <Route path="/lecturer/granted/majors" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="MANAGE_MAJORS"><MajorManagement /></PermissionProtectedRoute></ProtectedRoute>} />
+          <Route path="/lecturer/granted/majors/:id" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="MANAGE_MAJORS"><MajorDetail /></PermissionProtectedRoute></ProtectedRoute>} />
+          <Route path="/lecturer/granted/specializations/:id" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="MANAGE_MAJORS"><SpecializationDetail /></PermissionProtectedRoute></ProtectedRoute>} />
+          <Route path="/lecturer/granted/courses" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="MANAGE_COURSES"><CourseManagement /></PermissionProtectedRoute></ProtectedRoute>} />
+          <Route path="/lecturer/granted/courses/:courseId/grades" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="MANAGE_COURSES"><GradeConfigurationPage /></PermissionProtectedRoute></ProtectedRoute>} />
+          <Route path="/lecturer/granted/users" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="MANAGE_USERS"><ManagerStudentsPage /></PermissionProtectedRoute></ProtectedRoute>} />
+          <Route path="/lecturer/granted/lecturers" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="MANAGE_USERS"><ManagerLecturersPage /></PermissionProtectedRoute></ProtectedRoute>} />
+          <Route path="/lecturer/granted/semesters" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="MANAGE_SEMESTERS"><SemestersPage /></PermissionProtectedRoute></ProtectedRoute>} />
+          <Route path="/lecturer/granted/semesters/:semesterCode/config" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="MANAGE_SEMESTERS"><SlotTypePage /></PermissionProtectedRoute></ProtectedRoute>} />
+          <Route path="/lecturer/granted/semesters/:semesterCode/class-sections" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="MANAGE_SEMESTERS"><ClassSectionManagement /></PermissionProtectedRoute></ProtectedRoute>} />
+          <Route path="/lecturer/granted/class-sections/:className" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="MANAGE_SEMESTERS"><AcademicStaffClassDetailPage /></PermissionProtectedRoute></ProtectedRoute>} />
+          <Route path="/lecturer/granted/logs" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="VIEW_SYSTEM_LOGS"><AcademicStaffSystemLogsPage /></PermissionProtectedRoute></ProtectedRoute>} />
+          <Route path="/lecturer/granted/schedule" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="MANAGE_SCHEDULE"><SchedulePage /></PermissionProtectedRoute></ProtectedRoute>} />
+          <Route path="/lecturer/granted/notifications" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="MANAGE_NOTIFICATIONS"><NotificationManagementPage /></PermissionProtectedRoute></ProtectedRoute>} />
+          <Route
+            path="/lecturer/granted/notifications"
+            element={
+              <ProtectedRoute allowedRoles={['LECTURER']}>
+                <PermissionProtectedRoute requiredPermission="MANAGE_NOTIFICATIONS">
+                  <NotificationManagementPage />
+                </PermissionProtectedRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/lecturer/granted/notifications/:id"
+            element={
+              <ProtectedRoute allowedRoles={['LECTURER']}>
+                <PermissionProtectedRoute requiredPermission="MANAGE_NOTIFICATIONS">
+                  <NotificationDetailPage />
+                </PermissionProtectedRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/lecturer/granted/notifications/:id" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="MANAGE_NOTIFICATIONS"><NotificationDetailPage /></PermissionProtectedRoute></ProtectedRoute>} />
 
           {/* Student Routes */}
           <Route
@@ -382,10 +444,11 @@ function App() {
           <Route path="/student/messages" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentMessagesPage /></ProtectedRoute>} />
           <Route path="/student/requests" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentAcademicRequestPage /></ProtectedRoute>} />
           <Route path="/student/settings" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Cài đặt" /></ProtectedRoute>} />
-          <Route path="/student/profile" element={<ProtectedRoute allowedRoles={['STUDENT']}><ComingSoon title="Hồ sơ cá nhân" /></ProtectedRoute>} />
+          <Route path="/student/profile" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentProfilePage /></ProtectedRoute>} />
           <Route path="/student/rooms" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentRoomList /></ProtectedRoute>} />
           <Route path="/student/rooms/:id" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentRoomDetail /></ProtectedRoute>} />
           <Route path="/student/semesters" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentSemestersPage /></ProtectedRoute>} />
+          <Route path="/student/classes/:className/members" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentClassMembersPage /></ProtectedRoute>} />
           <Route
             path="/academic-staff/dashboard"
             element={
@@ -459,6 +522,14 @@ function App() {
             }
           />
           <Route
+            path="/academic-staff/classes/:className/attendance-report"
+            element={
+              <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
+                <ClassAttendanceReportPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/academic-staff/specializations/:id"
             element={
               <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
@@ -525,6 +596,14 @@ function App() {
           <Route path="/academic-staff/announcements" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Cài đặt thông báo" /></ProtectedRoute>} />
           <Route path="/academic-staff/attendance" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><AttendanceConfigPage /></ProtectedRoute>} />
           <Route path="/academic-staff/attendance/realtime/:slotId" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><RealTimeAttendancePage /></ProtectedRoute>} />
+          <Route
+            path="/academic-staff/permissions"
+            element={
+              <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
+                <PermissionsPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/academic-staff/wifi-aps"
             element={

@@ -1,24 +1,35 @@
 package com.fams.backend.service.impl;
 
-import com.fams.backend.dto.response.*;
+import com.fams.backend.dto.response.AlertResponse;
+import com.fams.backend.dto.response.DashboardNotificationResponse;
+import com.fams.backend.dto.response.DashboardStatsResponse;
+import com.fams.backend.dto.response.RecentAccessResponse;
+import com.fams.backend.dto.response.SystemLogResponse;
 import com.fams.backend.entity.AccessLog;
 import com.fams.backend.entity.Alert;
 import com.fams.backend.entity.Notification;
-import com.fams.backend.entity.NotificationRecipient;
 import com.fams.backend.entity.SystemLog;
 import com.fams.backend.entity.User;
 import com.fams.backend.exception.NotFoundException;
-import com.fams.backend.repository.*;
+import com.fams.backend.repository.AccessLogRepository;
+import com.fams.backend.repository.AlertRepository;
+import com.fams.backend.repository.NotificationRepository;
+import com.fams.backend.repository.SystemLogRepository;
+import com.fams.backend.repository.UserRepository;
 import com.fams.backend.service.DashboardService;
+import com.fams.backend.service.UserNotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -31,21 +42,18 @@ public class DashboardServiceImpl implements DashboardService {
         private final AccessLogRepository accessLogRepository;
         private final AlertRepository alertRepository;
         private final NotificationRepository notificationRepository;
-        private final NotificationRecipientRepository notificationRecipientRepository;
         private final SystemLogRepository systemLogRepository;
+        private final UserNotificationService notificationService;
 
         private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
         @Override
         @org.springframework.cache.annotation.Cacheable(value = "dashboard_stats", key = "'global'")
         public DashboardStatsResponse getStatistics() {
-                // Count users by role
                 long totalStudents = userRepository.countByRole(User.UserRole.STUDENT);
                 long totalLecturers = userRepository.countByRole(User.UserRole.LECTURER);
                 long totalUsers = userRepository.count();
 
-                // TODO: Count accounts, applications, and behaviors from respective tables
-                // For now, returning 0 instead of mock data
                 int totalAccounts = (int) totalUsers;
                 int totalApplications = 0;
                 int totalBehaviors = 0;
@@ -92,56 +100,12 @@ public class DashboardServiceImpl implements DashboardService {
 
         @Override
         public List<DashboardNotificationResponse> getNotifications() {
-                var authentication = SecurityContextHolder.getContext().getAuthentication();
-                if (authentication == null || !authentication.isAuthenticated()
-                                || "anonymousUser".equals(authentication.getPrincipal())) {
-                        log.debug("No authenticated user found (likely scheduled task), returning empty notifications");
-                        return Collections.emptyList();
-                }
+                List<com.fams.backend.dto.response.NotificationResponse> notifications = notificationService
+                                .getMyNotifications();
 
-                String username = authentication.getName();
-                User user = userRepository.findByUsername(username).orElse(null);
-
-                if (user == null) {
-                        return Collections.emptyList();
-                }
-
-                // Lấy 10 notification recipients gần nhất của user hiện tại để tối ưu dashboard
-                List<NotificationRecipient> recipients = notificationRecipientRepository
-                                .findByRecipientOrderByCreatedAtDesc(user)
-                                .stream()
+                return notifications.stream()
                                 .limit(10)
-                                .collect(Collectors.toList());
-
-                return recipients.stream()
-                                .map(recipient -> {
-                                        Notification notification = recipient.getNotification();
-                                        User sender = notification.getSender();
-
-                                        log.debug("Processing notification ID: {}, Sender: {}, FullName: {}",
-                                                        notification.getId(),
-                                                        sender != null ? sender.getUsername() : "NULL",
-                                                        sender != null ? sender.getFullName() : "NULL");
-
-                                        return DashboardNotificationResponse.builder()
-                                                        .id(recipient.getId())
-                                                        .title(notification.getTitle())
-                                                        .description(notification.getContent())
-                                                        .timestamp(recipient.getCreatedAt().format(DATE_TIME_FORMATTER))
-                                                        .isRead(recipient.getIsRead())
-                                                        .type(notification.getType() != null
-                                                                        ? notification.getType().name()
-                                                                        : null)
-                                                        .targetUrl(notification.getTargetUrl())
-                                                        .senderName(sender != null ? sender.getUsername() : null)
-                                                        .senderFullName(sender != null ? sender.getFullName() : null)
-                                                        .senderAvatar(sender != null ? sender.getAvatar() : null)
-                                                        .attachmentUrls(notification.getAttachmentUrls() != null
-                                                                        ? new java.util.ArrayList<>(notification
-                                                                                        .getAttachmentUrls())
-                                                                        : new java.util.ArrayList<>())
-                                                        .build();
-                                })
+                                .map(this::toDashboardNotification)
                                 .collect(Collectors.toList());
         }
 
@@ -157,73 +121,27 @@ public class DashboardServiceImpl implements DashboardService {
                 User user = userRepository.findByUsername(username)
                                 .orElseThrow(() -> new NotFoundException("Người dùng không tìm thấy"));
 
-                // 1) Thử tìm theo recipient ID trực tiếp (id trả về từ NotificationServiceImpl
-                // là nr.getId())
-                java.util.Optional<NotificationRecipient> byRecipientId = notificationRecipientRepository.findById(id);
-                if (byRecipientId.isPresent() && byRecipientId.get().getRecipient().getId().equals(user.getId())) {
-                        NotificationRecipient recipient = byRecipientId.get();
-                        Notification notification = recipient.getNotification();
-                        User sender = notification.getSender();
-                        return DashboardNotificationResponse.builder()
-                                        .id(notification.getId())
-                                        .title(notification.getTitle())
-                                        .description(notification.getContent())
-                                        .timestamp(recipient.getCreatedAt().format(DATE_TIME_FORMATTER))
-                                        .isRead(recipient.getIsRead())
-                                        .type(notification.getType() != null ? notification.getType().name() : null)
-                                        .targetUrl(notification.getTargetUrl())
-                                        .senderName(sender != null ? sender.getUsername() : null)
-                                        .senderFullName(sender != null ? sender.getFullName() : null)
-                                        .senderAvatar(sender != null ? sender.getAvatar() : null)
-                                        .attachmentUrls(notification.getAttachmentUrls() != null
-                                                        ? new java.util.ArrayList<>(notification.getAttachmentUrls())
-                                                        : new java.util.ArrayList<>())
-                                        .build();
+                Optional<com.fams.backend.dto.response.NotificationResponse> mine = notificationService
+                                .getMyNotificationById(id);
+                if (mine.isPresent()) {
+                        return toDashboardNotification(mine.get());
                 }
 
-                // 2) Thử tìm theo notification_id (fallback)
-                java.util.Optional<NotificationRecipient> byNotifId = notificationRecipientRepository
-                                .findByNotificationIdAndRecipient(id, user);
-                if (byNotifId.isPresent()) {
-                        NotificationRecipient recipient = byNotifId.get();
-                        Notification notification = recipient.getNotification();
-                        User sender = notification.getSender();
-                        return DashboardNotificationResponse.builder()
-                                        .id(notification.getId())
-                                        .title(notification.getTitle())
-                                        .description(notification.getContent())
-                                        .timestamp(recipient.getCreatedAt().format(DATE_TIME_FORMATTER))
-                                        .isRead(recipient.getIsRead())
-                                        .type(notification.getType() != null ? notification.getType().name() : null)
-                                        .targetUrl(notification.getTargetUrl())
-                                        .senderName(sender != null ? sender.getUsername() : null)
-                                        .senderFullName(sender != null ? sender.getFullName() : null)
-                                        .senderAvatar(sender != null ? sender.getAvatar() : null)
-                                        .attachmentUrls(notification.getAttachmentUrls() != null
-                                                        ? new java.util.ArrayList<>(notification.getAttachmentUrls())
-                                                        : new java.util.ArrayList<>())
-                                        .build();
-                }
-
-                // 3) Admin/Academic staff có thể xem trực tiếp theo notification ID
                 if (user.getRole() == User.UserRole.ADMIN || user.getRole() == User.UserRole.ACADEMIC_STAFF) {
                         Notification notification = notificationRepository.findById(id)
                                         .orElseThrow(() -> new NotFoundException("Không tìm thấy thông báo"));
-                        User sender = notification.getSender();
                         return DashboardNotificationResponse.builder()
                                         .id(notification.getId())
                                         .title(notification.getTitle())
                                         .description(notification.getContent())
-                                        .timestamp(notification.getCreatedAt().format(DATE_TIME_FORMATTER))
+                                        .timestamp(formatTime(notification.getSentAt(), notification.getCreatedAt()))
                                         .isRead(true)
                                         .type(notification.getType() != null ? notification.getType().name() : null)
                                         .targetUrl(notification.getTargetUrl())
-                                        .senderName(sender != null ? sender.getUsername() : null)
-                                        .senderFullName(sender != null ? sender.getFullName() : null)
-                                        .senderAvatar(sender != null ? sender.getAvatar() : null)
-                                        .attachmentUrls(notification.getAttachmentUrls() != null
-                                                        ? new java.util.ArrayList<>(notification.getAttachmentUrls())
-                                                        : new java.util.ArrayList<>())
+                                        .senderName("System")
+                                        .senderFullName("Hệ thống")
+                                        .senderAvatar(null)
+                                        .attachmentUrls(new ArrayList<>())
                                         .build();
                 }
 
@@ -232,21 +150,15 @@ public class DashboardServiceImpl implements DashboardService {
 
         @Override
         public List<SystemLogResponse> getSystemLogs() {
-                List<SystemLog> logs = systemLogRepository.findTop10ByOrderByCreatedAtDesc();
+                List<SystemLog> logs = systemLogRepository.findTop5ByOrderByCreatedAtDesc();
 
                 return logs.stream()
-                                .map(logEntry -> SystemLogResponse.builder()
-                                                .id(logEntry.getId())
-                                                .title(logEntry.getTitle())
-                                                .description(logEntry.getDescription())
-                                                .timestamp(logEntry.getCreatedAt().format(DATE_TIME_FORMATTER))
-                                                .type(logEntry.getType().name().toLowerCase())
-                                                .performerName(logEntry.getPerformer() != null ? logEntry.getPerformer().getFullName() : "Hệ thống")
-                                                .performerAvatar(logEntry.getPerformer() != null ? logEntry.getPerformer().getAvatar() : null)
-                                                .ipAddress(logEntry.getIpAddress())
-                                                .userAgent(logEntry.getUserAgent())
-                                                .oldValue(logEntry.getOldValue())
-                                                .newValue(logEntry.getNewValue())
+                                .map(log -> SystemLogResponse.builder()
+                                                .id(log.getId())
+                                                .title(log.getTitle())
+                                                .description(log.getDescription())
+                                                .timestamp(log.getCreatedAt().format(DATE_TIME_FORMATTER))
+                                                .type(log.getType().name().toLowerCase())
                                                 .build())
                                 .collect(Collectors.toList());
         }
@@ -259,14 +171,31 @@ public class DashboardServiceImpl implements DashboardService {
                         return 0;
                 }
 
-                String username = authentication.getName();
-                User user = userRepository.findByUsername(username).orElse(null);
+                return notificationService.getUnreadNotificationCount();
+        }
 
-                if (user == null) {
-                        return 0;
-                }
+        private DashboardNotificationResponse toDashboardNotification(
+                        com.fams.backend.dto.response.NotificationResponse notification) {
+                return DashboardNotificationResponse.builder()
+                                .id(notification.getId())
+                                .title(notification.getTitle())
+                                .description(notification.getContent())
+                                .timestamp(formatTime(notification.getSentAt(), notification.getCreatedAt()))
+                                .isRead(Boolean.TRUE.equals(notification.getIsRead()))
+                                .type(notification.getType())
+                                .targetUrl(notification.getTargetUrl())
+                                .senderName(notification.getSender() != null ? notification.getSender().getUsername() : null)
+                                .senderFullName(notification.getSender() != null ? notification.getSender().getFullName() : null)
+                                .senderAvatar(notification.getSender() != null ? notification.getSender().getAvatarUrl() : null)
+                                .attachmentUrls(notification.getAttachmentUrls() != null
+                                                ? new ArrayList<>(notification.getAttachmentUrls())
+                                                : new ArrayList<>())
+                                .build();
+        }
 
-                return (int) notificationRecipientRepository.countByRecipientAndIsReadFalse(user);
+        private String formatTime(LocalDateTime sentAt, LocalDateTime createdAt) {
+                LocalDateTime ts = sentAt != null ? sentAt : createdAt;
+                return ts != null ? ts.format(DATE_TIME_FORMATTER) : "";
         }
 
         private String getRoleDisplayName(User.UserRole role) {
@@ -284,3 +213,4 @@ public class DashboardServiceImpl implements DashboardService {
                 }
         }
 }
+

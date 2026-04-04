@@ -12,6 +12,7 @@ import com.fams.backend.repository.SlotTypeRepository;
 import com.fams.backend.repository.TimetableSlotRepository;
 import com.fams.backend.repository.UserRepository;
 import com.fams.backend.service.ScheduleRequestService;
+import com.fams.backend.service.UserNotificationService;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
@@ -39,15 +40,11 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
 
     private final ScheduleRequestRepository scheduleRequestRepository;
     private final UserRepository userRepository;
-    private final com.fams.backend.service.NotificationService notificationService;
+    private final UserNotificationService notificationService;
     private final TimetableSlotRepository timetableSlotRepository;
     private final RoomRepository roomRepository;
     private final SlotTypeRepository slotTypeRepository;
     private final com.fams.backend.repository.EnrollmentRepository enrollmentRepository;
-    private final com.fams.backend.repository.NotificationRepository notificationRepository;
-    private final com.fams.backend.repository.NotificationRecipientRepository notificationRecipientRepository;
-    private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
-    private final SystemLogService systemLogService;
 
     @Override
     public ScheduleRequestResponse createRequest(CreateScheduleRequest request, Long requesterId) {
@@ -282,14 +279,6 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
 
         ScheduleRequest savedRequest = scheduleRequestRepository.saveAndFlush(request);
 
-        // Log system activity
-        String className = savedRequest.getClassSection() != null ? savedRequest.getClassSection().getClassName() : "N/A";
-        if (status == ScheduleRequest.RequestStatus.APPROVED) {
-            systemLogService.logScheduleRequestApproved(savedRequest.getId(), approver.getFullName(), className);
-        } else if (status == ScheduleRequest.RequestStatus.REJECTED) {
-            systemLogService.logScheduleRequestRejected(savedRequest.getId(), approver.getFullName(), className);
-        }
-
         // Gửi thông báo đến người yêu cầu sau khi cập nhật trạng thái
         sendNotificationAsync(savedRequest, status, note);
 
@@ -382,18 +371,16 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
                             "Thân mến,<br>Phòng đào tạo",
                     originalDateFormatted, requestedDateFormatted, slotNumber != null ? slotNumber : 0, roomName);
 
-            for (Long studentId : studentIds) {
-                com.fams.backend.dto.request.NotificationRequest notifRequest = com.fams.backend.dto.request.NotificationRequest
-                        .builder()
-                        .title(title)
-                        .content(content)
-                        .type(com.fams.backend.entity.Notification.NotificationType.SCHEDULE)
-                        .targetType(com.fams.backend.entity.Notification.TargetType.USER)
-                        .status(com.fams.backend.entity.Notification.NotificationStatus.SENT)
-                        .recipientId(studentId)
-                        .build();
-                notificationService.createNotification(notifRequest);
-            }
+            List<User> students = userRepository.findAllById(studentIds).stream()
+                    .filter(user -> user.getStatus() == User.UserStatus.ACTIVE)
+                    .toList();
+
+            notificationService.createBatchNotification(
+                    students,
+                    title,
+                    content,
+                    com.fams.backend.entity.Notification.NotificationType.SCHEDULE_CHANGE,
+                    "/student/schedule");
 
             log.info("Sent schedule change notification to {} students in class {}", studentIds.size(), className);
         } catch (Exception e) {
@@ -422,21 +409,17 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
             String content = String.format("Giảng viên %s đã gửi yêu cầu %s cho lớp %s. Vui lòng kiểm tra và xử lý.",
                     requesterName, typeLabel, className);
 
-            int count = 0;
-            for (User staff : academicStaffs) {
-                com.fams.backend.dto.request.NotificationRequest notifRequest = com.fams.backend.dto.request.NotificationRequest
-                        .builder()
-                        .title(title)
-                        .content(content)
-                        .type(com.fams.backend.entity.Notification.NotificationType.SYSTEM)
-                        .targetType(com.fams.backend.entity.Notification.TargetType.USER)
-                        .status(com.fams.backend.entity.Notification.NotificationStatus.SENT)
-                        .recipientId(staff.getId())
-                        .build();
-                notificationService.createNotification(notifRequest);
-                count++;
-            }
-            log.info("Sent notification to {} Academic Staff members", count);
+                List<User> activeStaffs = academicStaffs.stream()
+                    .filter(staff -> staff.getStatus() == User.UserStatus.ACTIVE)
+                    .toList();
+
+                notificationService.createBatchNotification(
+                    activeStaffs,
+                    title,
+                    content,
+                    com.fams.backend.entity.Notification.NotificationType.ACADEMIC,
+                    "/academic-staff/requests");
+                log.info("Sent notification to {} Academic Staff members", activeStaffs.size());
         } catch (Exception e) {
             log.error("Error sending notification to Academic Staff: {}", e.getMessage(), e);
         }
@@ -481,43 +464,18 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
                     "Hệ thống ghi nhận Giảng viên %s đã thu hồi đơn yêu cầu %s cho lớp %s.",
                     requesterName, getTypeLabel(request.getType()), className);
 
-            // Tạo notification trực tiếp với sender = null để hiển thị "Người gửi: Hệ
-            // thống"
-            User recipient = academicStaffs.get(0);
-            com.fams.backend.entity.Notification notification = com.fams.backend.entity.Notification.builder()
-                    .title(title)
-                    .content(content)
-                    .type(com.fams.backend.entity.Notification.NotificationType.SYSTEM)
-                    .status(com.fams.backend.entity.Notification.NotificationStatus.SENT)
-                    .sentAt(java.time.LocalDateTime.now())
-                    .targetType(com.fams.backend.entity.Notification.TargetType.USER)
-                    .sender(null)
-                    .build();
-            com.fams.backend.entity.Notification savedNotification = notificationRepository.save(notification);
+            List<User> activeStaffs = academicStaffs.stream()
+                    .filter(staff -> staff.getStatus() == User.UserStatus.ACTIVE)
+                    .toList();
 
-            com.fams.backend.entity.NotificationRecipient nr = com.fams.backend.entity.NotificationRecipient.builder()
-                    .notification(savedNotification)
-                    .recipient(recipient)
-                    .isRead(false)
-                    .build();
-            notificationRecipientRepository.save(nr);
+            notificationService.createBatchNotification(
+                    activeStaffs,
+                    title,
+                    content,
+                    com.fams.backend.entity.Notification.NotificationType.ACADEMIC,
+                    "/academic-staff/requests");
 
-            // Broadcast qua WebSocket
-            com.fams.backend.dto.response.NotificationResponse response = com.fams.backend.dto.response.NotificationResponse
-                    .builder()
-                    .id(nr.getId())
-                    .title(title)
-                    .content(content)
-                    .type(com.fams.backend.entity.Notification.NotificationType.SYSTEM.name())
-                    .status(com.fams.backend.entity.Notification.NotificationStatus.SENT.name())
-                    .sentAt(java.time.LocalDateTime.now())
-                    .createdAt(java.time.LocalDateTime.now())
-                    .sender(null)
-                    .build();
-            messagingTemplate.convertAndSendToUser(recipient.getUsername(), "/queue/notifications",
-                    java.util.Collections.singletonList(response));
-
-            log.info("Sent revocation notification to Academic Staff (sender=null for Hệ thống)");
+            log.info("Sent revocation notification to {} Academic Staff members", activeStaffs.size());
         } catch (Exception e) {
             log.error("Error sending revocation notification to Academic Staff: {}", e.getMessage(), e);
         }
@@ -556,17 +514,13 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
                 }
             }
 
-            com.fams.backend.dto.request.NotificationRequest notifRequest = com.fams.backend.dto.request.NotificationRequest
-                    .builder()
-                    .title(title)
-                    .content(content)
-                    .type(com.fams.backend.entity.Notification.NotificationType.SCHEDULE)
-                    .targetType(com.fams.backend.entity.Notification.TargetType.USER)
-                    .status(com.fams.backend.entity.Notification.NotificationStatus.SENT)
-                    .recipientId(savedRequest.getRequester().getId())
-                    .build();
-
-            notificationService.createNotification(notifRequest);
+                notificationService.createNotification(
+                    savedRequest.getRequester(),
+                    title,
+                    content,
+                    com.fams.backend.entity.Notification.NotificationType.SCHEDULE_CHANGE,
+                    "/lecturer/requests",
+                    savedRequest.getApprover());
             log.info("Notification sent to requester {}", savedRequest.getRequester().getId());
         } catch (Exception e) {
             log.error("Failed to send notification for request {}, but status was updated successfully",

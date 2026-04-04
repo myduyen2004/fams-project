@@ -1,5 +1,6 @@
 package com.fams.backend.controller;
 
+import com.fams.backend.dto.request.BulkCourseAssignmentRequest;
 import com.fams.backend.dto.request.ReorderCoursesRequest;
 import com.fams.backend.dto.request.SubSpecializationRequest;
 import com.fams.backend.dto.response.CourseResponse;
@@ -10,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,6 +20,8 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/sub-specializations")
 @RequiredArgsConstructor
+@Tag(name = "Sub-Specialization", description = "API cho quản lý chuyên ngành hẹp")
+@PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
 public class SubSpecializationController {
 
     private final SubSpecializationService subSpecializationService;
@@ -75,6 +80,12 @@ public class SubSpecializationController {
     public ResponseEntity<CourseResponse> addCourse(@PathVariable Long id, @PathVariable Long courseId,
             @RequestParam(required = false, defaultValue = "1") Integer semester) {
         return ResponseEntity.ok(subSpecializationService.addCourse(id, courseId, semester));
+    }
+
+    @PostMapping("/{id}/courses/bulk")
+    public ResponseEntity<List<CourseResponse>> addCoursesBulk(@PathVariable Long id,
+            @RequestBody BulkCourseAssignmentRequest request) {
+        return ResponseEntity.ok(subSpecializationService.addCoursesBulk(id, request));
     }
 
     @DeleteMapping("/{id}/courses/{courseId}")

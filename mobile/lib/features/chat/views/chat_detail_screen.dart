@@ -10,6 +10,8 @@ import '../controllers/chat_controller.dart';
 import '../models/chat_models.dart';
 import 'chat_info_screen.dart';
 import 'image_preview_screen.dart';
+import 'package:solar_icons/solar_icons.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 /// Chat detail / conversation screen — matches web chat area
 class ChatDetailScreen extends StatefulWidget {
@@ -23,6 +25,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final _textController = TextEditingController();
   final _scrollController = ScrollController();
   final _focusNode = FocusNode();
+  ChatController get controller => Get.find<ChatController>();
 
   @override
   void initState() {
@@ -76,22 +79,22 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     ),
                   );
                 }
+                final List<ChatMessage> processedMessages = _groupMessages(controller.messages);
                 return ListView.builder(
                   controller: _scrollController,
                   reverse: true,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 8.h,
                   ),
-                  itemCount: controller.messages.length,
+                  itemCount: processedMessages.length,
                   itemBuilder: (context, index) {
-                    final msg = controller.messages[index];
+                    final msg = processedMessages[index];
 
-                    // index 0 is newest (bottom), last index is oldest (top)
-                    final isOldest = index == controller.messages.length - 1;
+                    final isOldest = index == processedMessages.length - 1;
                     final chronologicalPrev = isOldest
                         ? null
-                        : controller.messages[index + 1];
+                        : processedMessages[index + 1];
 
                     final showDate =
                         isOldest ||
@@ -126,19 +129,19 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 return const SizedBox.shrink();
               }
               return Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 6,
+                padding: EdgeInsets.symmetric(
+                  horizontal: 20.w,
+                  vertical: 6.h,
                 ),
                 alignment: Alignment.centerLeft,
                 child: Row(
                   children: [
-                    SizedBox(width: 24, height: 16, child: _TypingDots()),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 24.w, height: 16.h, child: _TypingDots()),
+                    SizedBox(width: 8.w),
                     Text(
                       '${controller.typingUsers.join(", ")} đang nhập...',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 12.sp,
                         fontStyle: FontStyle.italic,
                         color: Colors.grey[500],
                       ),
@@ -153,9 +156,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               final replyMsg = controller.replyingTo.value;
               if (replyMsg == null) return const SizedBox.shrink();
               return Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
+                padding: EdgeInsets.symmetric(
+                  horizontal: 16.w,
+                  vertical: 8.h,
                 ),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -164,11 +167,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 child: Row(
                   children: [
                     Container(
-                      width: 4,
-                      height: 40,
+                      width: 4.w,
+                      height: 40.h,
                       decoration: BoxDecoration(
                         color: AppColors.primaryOrange,
-                        borderRadius: BorderRadius.circular(2),
+                        borderRadius: BorderRadius.circular(2.r),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -180,7 +183,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                           Text(
                             'Trả lời ${replyMsg.senderName}',
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 12.sp,
                               fontWeight: FontWeight.w600,
                               color: AppColors.primaryOrange,
                             ),
@@ -190,7 +193,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 12.sp,
                               color: Colors.grey[600],
                             ),
                           ),
@@ -198,7 +201,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close, size: 20),
+                      icon: Icon(SolarIconsOutline.closeCircle, size: 20.sp),
                       onPressed: controller.cancelReply,
                     ),
                   ],
@@ -220,7 +223,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       surfaceTintColor: Colors.white,
       elevation: 1,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF2D3436)),
+        icon: Icon(SolarIconsOutline.altArrowLeft, color: const Color(0xFF2D3436), size: 20.sp),
         onPressed: () {
           controller.clearSelectedGroup();
           Get.back();
@@ -240,17 +243,17 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
                 if (avatarsToDisplay.isEmpty) {
                   return Container(
-                    width: 38,
-                    height: 38,
+                    width: 38.r,
+                    height: 38.r,
                     decoration: const BoxDecoration(
                       color: Color(0xFFFFF1E7),
                       shape: BoxShape.circle,
                     ),
-                    child: const Center(
+                    child: Center(
                       child: Icon(
                         Icons.people_rounded,
-                        color: Color(0xFFFF8C33),
-                        size: 20,
+                        color: const Color(0xFFFF8C33),
+                        size: 20.sp,
                       ),
                     ),
                   );
@@ -258,9 +261,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
                 return SizedBox(
                   width: avatarsToDisplay.length > 1
-                      ? 54.0
-                      : 38.0, // 38 + 16 = 54
-                  height: 38,
+                      ? 54.0.w
+                      : 38.0.w, // 38 + 16 = 54
+                  height: 38.h,
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: avatarsToDisplay
@@ -271,15 +274,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                           final member = entry.value;
 
                           return Positioned(
-                            left: idx * 16.0, // Adjust overlap distance
+                            left: idx * 16.0.w, // Adjust overlap distance
                             child: Container(
-                              width: 38,
-                              height: 38,
+                              width: 38.r,
+                              height: 38.r,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                   color: Colors.white,
-                                  width: 2,
+                                  width: 2.w,
                                 ),
                                 color: idx == 0
                                     ? Colors.white
@@ -320,7 +323,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 );
               },
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12.w),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -328,16 +331,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 children: [
                   Text(
                     group.name,
-                    style: const TextStyle(
-                      fontSize: 16,
+                    style: TextStyle(
+                      fontSize: 16.sp,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF2D3436),
+                      color: const Color(0xFF2D3436),
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
                     '${group.memberCount} thành viên',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    style: TextStyle(fontSize: 12.sp, color: Colors.grey[500]),
                   ),
                 ],
               ),
@@ -347,9 +350,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       }),
       actions: [
         IconButton(
-          icon: const Icon(
+          icon: Icon(
             Icons.info_outline_rounded,
             color: AppColors.primaryOrange,
+            size: 24.sp,
           ),
           onPressed: () {
             Get.to(
@@ -379,17 +383,17 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         text = '${date.day}/${date.month}/${date.year}';
       }
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: EdgeInsets.symmetric(vertical: 12.h),
         child: Center(
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+            padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 5.h),
             decoration: BoxDecoration(
               color: Colors.grey[200],
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(12.r),
             ),
             child: Text(
               text,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              style: TextStyle(fontSize: 12.sp, color: Colors.grey[600]),
             ),
           ),
         ),
@@ -415,7 +419,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           ? null
           : () => _showMessageOptions(context, msg, controller),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 4),
+        margin: EdgeInsets.only(bottom: 4.h),
         child: Row(
           mainAxisAlignment: isOwn
               ? MainAxisAlignment.end
@@ -426,12 +430,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             if (!isOwn)
               showSender
                   ? Container(
-                      width: 32,
-                      height: 32,
-                      margin: const EdgeInsets.only(right: 8),
+                      width: 32.r,
+                      height: 32.r,
+                      margin: EdgeInsets.only(right: 8.w),
                       decoration: BoxDecoration(
                         color: _getRoleColor(msg.senderRole).withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(10.r),
                       ),
                       clipBehavior: Clip.antiAlias,
                       child:
@@ -464,12 +468,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                           : Center(
                               child: Icon(
                                 Icons.person_rounded,
-                                size: 20,
+                                size: 20.sp,
                                 color: _getRoleColor(msg.senderRole),
                               ),
                             ),
                     )
-                  : const SizedBox(width: 40),
+                  : SizedBox(width: 40.w),
 
             // Bubble
             Flexible(
@@ -480,14 +484,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 children: [
                   if (showSender && !isOwn)
                     Padding(
-                      padding: const EdgeInsets.only(left: 4, bottom: 2),
+                      padding: EdgeInsets.only(left: 4.w, bottom: 2.h),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             msg.senderName,
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 12.sp,
                               fontWeight: FontWeight.w600,
                               color: _getRoleColor(msg.senderRole),
                             ),
@@ -507,7 +511,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                             child: Text(
                               msg.senderRole == 'LECTURER' ? 'GV' : 'SV',
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 10.sp,
                                 fontWeight: FontWeight.w600,
                                 color: _getRoleColor(msg.senderRole),
                               ),
@@ -522,9 +526,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     ),
                     padding: msg.type == 'IMAGE' && !msg.deleted
                         ? EdgeInsets.zero
-                        : const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
+                        : EdgeInsets.symmetric(
+                            horizontal: 14.w,
+                            vertical: 10.h,
                           ),
                     decoration: BoxDecoration(
                       color: msg.deleted
@@ -533,10 +537,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                           ? AppColors.primaryOrange
                           : Colors.white,
                       borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(18),
-                        topRight: const Radius.circular(18),
-                        bottomLeft: Radius.circular(isOwn ? 18 : 0),
-                        bottomRight: Radius.circular(isOwn ? 0 : 18),
+                        topLeft: Radius.circular(18.r),
+                        topRight: Radius.circular(18.r),
+                        bottomLeft: Radius.circular(isOwn ? 18.r : 0),
+                        bottomRight: Radius.circular(isOwn ? 0 : 18.r),
                       ),
                       boxShadow: [
                         BoxShadow(
@@ -555,9 +559,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                         if (msg.replyToId != null && !msg.deleted)
                           Container(
                             margin: msg.type == 'IMAGE'
-                                ? const EdgeInsets.all(8)
-                                : const EdgeInsets.only(bottom: 6),
-                            padding: const EdgeInsets.all(8),
+                                ? EdgeInsets.all(8.r)
+                                : EdgeInsets.only(bottom: 6.h),
+                            padding: EdgeInsets.all(8.r),
                             decoration: BoxDecoration(
                               color: isOwn
                                   ? Colors.white.withOpacity(0.2)
@@ -658,6 +662,43 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     }
 
     switch (msg.type) {
+      case 'IMAGE_GROUP':
+        final images = msg.imageMessages ?? [];
+        return SizedBox(
+          width: 240,
+          child: GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: images.length,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: images.length == 1 ? 1 : (images.length <= 4 ? 2 : 3),
+              crossAxisSpacing: 2,
+              mainAxisSpacing: 2,
+            ),
+            itemBuilder: (context, idx) {
+              final img = images[idx];
+              return GestureDetector(
+                onTap: () {
+                  Get.to(
+                    () => ImagePreviewScreen(
+                      imageUrl: img.attachmentUrl ?? '',
+                      senderName: img.senderName,
+                    ),
+                  );
+                },
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: CachedNetworkImage(
+                    imageUrl: img.attachmentUrl ?? '',
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Container(color: Colors.grey[200]),
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+
       case 'IMAGE':
         return GestureDetector(
           onTap: () {
@@ -798,8 +839,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
-                    blurRadius: 2,
-                    offset: const Offset(0, 1),
+                    blurRadius: 2.r,
+                    offset: Offset(0, 1.h),
                   ),
                 ],
               ),
@@ -826,8 +867,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   Widget _buildInitialsAvatar(ReadReceipt receipt) {
     return Container(
       color: AppColors.primaryOrange.withOpacity(0.6),
-      child: const Center(
-        child: Icon(Icons.person_rounded, size: 12, color: Colors.white),
+      child: Center(
+        child: Icon(Icons.person_rounded, size: 12.sp, color: Colors.white),
       ),
     );
   }
@@ -835,18 +876,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   Widget _buildInputArea(ChatController controller) {
     return Container(
       padding: EdgeInsets.fromLTRB(
-        8,
-        8,
-        8,
-        MediaQuery.of(context).padding.bottom + 8,
+        8.w,
+        8.h,
+        8.w,
+        MediaQuery.of(context).padding.bottom + 8.h,
       ),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.06),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
+            blurRadius: 8.r,
+            offset: Offset(0, -2.h),
           ),
         ],
       ),
@@ -874,10 +915,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               // Text field
               Expanded(
                 child: Container(
-                  constraints: const BoxConstraints(maxHeight: 120),
+                  constraints: BoxConstraints(maxHeight: 120.h),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF5F5F5),
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(24.r),
                   ),
                   child: TextField(
                     controller: _textController,
@@ -887,27 +928,27 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     onChanged: (v) {
                       if (v.isNotEmpty) controller.sendTypingIndicator();
                     },
-                    style: const TextStyle(fontSize: 15),
+                    style: TextStyle(fontSize: 15.sp),
                     decoration: InputDecoration(
                       hintText: 'Nhập tin nhắn...',
                       hintStyle: TextStyle(
-                        fontSize: 15,
+                        fontSize: 15.sp,
                         color: Colors.grey[400],
                       ),
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 10,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 18.w,
+                        vertical: 10.h,
                       ),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 4),
+              SizedBox(width: 4.w),
               // Send button
               Container(
-                width: 44,
-                height: 44,
+                width: 44.r,
+                height: 44.r,
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     colors: [Color(0xFFFF9F43), Color(0xFFFF6B00)],
@@ -917,18 +958,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 child: Obx(
                   () => IconButton(
                     icon: controller.isSending.value
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
+                        ? SizedBox(
+                            width: 20.r,
+                            height: 20.r,
+                            child: const CircularProgressIndicator(
                               color: Colors.white,
                               strokeWidth: 2,
                             ),
                           )
-                        : const Icon(
+                        : Icon(
                             Icons.send_rounded,
                             color: Colors.white,
-                            size: 22,
+                            size: 22.sp,
                           ),
                     onPressed: controller.isSending.value
                         ? null
@@ -962,38 +1003,39 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final isImage = ['png', 'jpg', 'jpeg', 'gif', 'heic'].contains(ext);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8, left: 44, right: 44),
-      padding: const EdgeInsets.all(8),
+      margin: EdgeInsets.only(bottom: 8.h, left: 44.w, right: 44.w),
+      padding: EdgeInsets.all(8.r),
       decoration: BoxDecoration(
         color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12.r),
         border: Border.all(color: Colors.grey[300]!),
       ),
       child: Row(
         children: [
           // Preview
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(8.r),
             child: isImage
-                ? Image.file(file, width: 40, height: 40, fit: BoxFit.cover)
+                ? Image.file(file, width: 40.r, height: 40.r, fit: BoxFit.cover)
                 : Container(
-                    width: 40,
-                    height: 40,
+                    width: 40.r,
+                    height: 40.r,
                     color: Colors.grey[200],
                     child: Icon(
                       _getFileIcon(fileName),
                       color: AppColors.primaryOrange,
+                      size: 20.sp,
                     ),
                   ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12.w),
           // Name
           Expanded(
             child: Text(
               fileName,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+              style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w500),
             ),
           ),
           // Remove button
@@ -1037,7 +1079,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 ),
                 ListTile(
                   leading: const Icon(
-                    Icons.reply_rounded,
+                    SolarIconsOutline.reply,
                     color: AppColors.primaryOrange,
                   ),
                   title: const Text('Trả lời'),
@@ -1049,7 +1091,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 ),
                 if (msg.readBy.isNotEmpty)
                   ListTile(
-                    leading: const Icon(Icons.remove_red_eye_outlined),
+                    leading: const Icon(SolarIconsOutline.eye),
                     title: const Text('Thông tin lượt xem'),
                     onTap: () {
                       Get.back();
@@ -1059,7 +1101,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 if (msg.isOwn && !msg.deleted)
                   ListTile(
                     leading: const Icon(
-                      Icons.delete_outline,
+                      SolarIconsOutline.trashBinMinimalistic,
                       color: Colors.redAccent,
                     ),
                     title: const Text(
@@ -1074,7 +1116,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 if (msg.type == 'FILE' || msg.type == 'IMAGE')
                   ListTile(
                     leading: const Icon(
-                      Icons.download_rounded,
+                      SolarIconsOutline.download,
                       color: AppColors.primaryOrange,
                     ),
                     title: const Text('Tải xuống'),
@@ -1171,14 +1213,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       ),
       builder: (ctx) {
         return Container(
-          padding: const EdgeInsets.symmetric(vertical: 20),
+          padding: EdgeInsets.symmetric(vertical: 20.h),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 'Đã xem bởi (${msg.readBy.length})',
-                style: const TextStyle(
-                  fontSize: 16,
+                style: TextStyle(
+                  fontSize: 16.sp,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -1300,6 +1342,67 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         ),
       ),
     );
+  }
+
+  List<ChatMessage> _groupMessages(List<ChatMessage> messages) {
+    if (messages.isEmpty) return [];
+
+    final List<ChatMessage> processed = [];
+    int i = 0;
+
+    // Messages are in reverse order: newest at index 0
+    // So "chronologically previous" is at index i + 1
+    while (i < messages.length) {
+      final current = messages[i];
+
+      if (current.type == 'IMAGE' && !current.deleted) {
+        final List<ChatMessage> group = [current];
+        int j = i + 1;
+
+        while (j < messages.length) {
+          final next = messages[j];
+          final currentAt = DateTime.parse(messages[j - 1].sentAt);
+          final nextAt = DateTime.parse(next.sentAt);
+          final timeDiff = currentAt.difference(nextAt).inMinutes.abs();
+
+          if (next.type == 'IMAGE' &&
+              !next.deleted &&
+              next.senderId == current.senderId &&
+              timeDiff < 1) {
+            group.add(next);
+            j++;
+          } else {
+            break;
+          }
+        }
+
+        if (group.length > 1) {
+          processed.add(ChatMessage(
+            id: current.id,
+            groupId: current.groupId,
+            senderId: current.senderId,
+            senderName: current.senderName,
+            senderRole: current.senderRole,
+            senderAvatarUrl: current.senderAvatarUrl,
+            content: '',
+            type: 'IMAGE_GROUP',
+            isOwn: current.isOwn,
+            sentAt: current.sentAt,
+            imageMessages: group.reversed.toList(), // Maintain chronological order in grid
+            readBy: current.readBy,
+          ));
+          i = j;
+        } else {
+          processed.add(current);
+          i++;
+        }
+      } else {
+        processed.add(current);
+        i++;
+      }
+    }
+
+    return processed;
   }
 }
 

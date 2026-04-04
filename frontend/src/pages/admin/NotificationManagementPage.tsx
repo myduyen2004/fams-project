@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import type { AxiosError } from 'axios';
 import { Loader2 } from 'lucide-react';
 import { Pagination } from '../../components/academic-staff/Pagination';
@@ -16,19 +16,20 @@ import { ConfirmModal } from '../../components/common/ConfirmModal';
 import {
   NotificationFilters,
   NotificationBulkActions,
-  NotificationTableRow,
-  NotificationFormModal
+  NotificationTableRow
 } from '../../components/admin/notifications';
 import { usePagination } from '../../hooks/usePagination';
 
 export const NotificationManagementPage = () => {
-  const navigate = useNavigate();
+  const location = useLocation();
   const [userRole, setUserRole] = useState<string>('');
+  const isLecturerGranted = location.pathname.startsWith('/lecturer/granted');
 
-  // Determine base path based on user role
+  // Determine base path based on user role and current path
   const basePath = useMemo(() => {
+    if (isLecturerGranted) return '/lecturer/granted';
     return userRole === 'ACADEMIC_STAFF' ? '/academic-staff' : '/admin';
-  }, [userRole]);
+  }, [userRole, isLecturerGranted]);
 
   // Get user role on mount
   useEffect(() => {
@@ -57,8 +58,6 @@ export const NotificationManagementPage = () => {
   // Selection states
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
-  // Modal states
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   // Action states
@@ -139,18 +138,6 @@ export const NotificationManagementPage = () => {
     );
   }, []);
 
-  const handleEditFromBulk = useCallback(() => {
-    const notification = notifications.find(n => n.id === selectedIds[0]);
-    if (notification) {
-      if (notification.status === NotificationStatus.SENT) {
-        toast.error('Không thể chỉnh sửa thông báo đã gửi');
-        return;
-      }
-      navigate(`${basePath}/notifications/edit/${notification.id}`);
-      setSelectedIds([]);
-    }
-  }, [notifications, selectedIds, navigate, basePath]);
-
 
   const handleDelete = useCallback(async () => {
     try {
@@ -175,13 +162,7 @@ export const NotificationManagementPage = () => {
     return notification && notification.status === NotificationStatus.SENT;
   });
 
-  const handleModalSuccess = useCallback(() => {
-    setIsCreateModalOpen(false);
-    setSelectedIds([]);
-    fetchNotifications();
-  }, [fetchNotifications]);
-
-  const Layout = userRole === 'ACADEMIC_STAFF' ? AcademicStaffLayout : AdminLayout;
+  const Layout = (userRole === 'ACADEMIC_STAFF' || isLecturerGranted) ? AcademicStaffLayout : AdminLayout;
 
   return (
     <Layout pageTitle="Quản lý thông báo">
@@ -195,14 +176,11 @@ export const NotificationManagementPage = () => {
           onTargetTypeFilterChange={setTargetTypeFilter}
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
-          basePath={basePath}
         />
 
         {/* Bulk Actions */}
         <NotificationBulkActions
           selectedCount={selectedIds.length}
-
-          onEdit={handleEditFromBulk}
           onDelete={() => setIsDeleteConfirmOpen(true)}
           isDeleting={isDeleting}
           canDelete={!hasSentNotification}
@@ -270,13 +248,6 @@ export const NotificationManagementPage = () => {
         />
       </div>
 
-      {/* Modals */}
-      {isCreateModalOpen && (
-        <NotificationFormModal
-          onClose={() => setIsCreateModalOpen(false)}
-          onSuccess={handleModalSuccess}
-        />
-      )}
 
       <ConfirmModal
         isOpen={isDeleteConfirmOpen}

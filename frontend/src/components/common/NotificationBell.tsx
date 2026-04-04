@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Bell, Check, Trash2, Clock, CheckCircle2, AlertCircle, Loader2, Settings } from 'lucide-react';
+import { Bell, Check, Trash2, Clock, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { userService } from '../../services/api/userService';
 import { authService } from '../../services/api/authService';
 import { dashboardService } from '../../services/api/dashboardService';
@@ -181,6 +181,20 @@ export const NotificationBell: React.FC = () => {
     }
   }, []);
 
+  // Sync read state when the tab regains focus (handles reads done on mobile)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadNotifications();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const loadNotifications = async () => {
     try {
       console.log('[NotificationBell] Loading notifications from API...');
@@ -193,6 +207,7 @@ export const NotificationBell: React.FC = () => {
       console.error('[NotificationBell] Error loading notifications:', error);
     }
   };
+
 
   const addJob = (job: ImportJobNotification) => {
     setJobs(prev => {
@@ -340,18 +355,6 @@ export const NotificationBell: React.FC = () => {
                   title="Đánh dấu tất cả đã đọc"
                 >
                   <Check size={18} />
-                </button>
-              )}
-              {(role === 'admin' || role === 'academic_staff') && (
-                <button
-                  onClick={() => {
-                    navigate('/admin/notification-management');
-                    setShowDropdown(false);
-                  }}
-                  className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-gray-500"
-                  title="Quản lý thông báo"
-                >
-                  <Settings size={18} />
                 </button>
               )}
             </div>

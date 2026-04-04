@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, Edit2 } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import {
   AdminNotification,
   getStatusLabel,
@@ -138,17 +138,6 @@ export const NotificationTableRow: React.FC<NotificationTableRowProps> = React.m
             title="Xem chi tiết"
           >
             <Eye size={18} />
-          </button>
-          <button
-            onClick={() => navigate(`${basePath}/notifications/edit/${notification.id}`)}
-            disabled={notification.status === NotificationStatus.SENT}
-            className={`p-1.5 rounded-lg transition-colors ${notification.status === NotificationStatus.SENT
-              ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
-              : 'text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20'
-              }`}
-            title={notification.status === NotificationStatus.SENT ? 'Không thể sửa thông báo đã gửi' : 'Chỉnh sửa'}
-          >
-            <Edit2 size={18} />
           </button>
         </div>
       </td>

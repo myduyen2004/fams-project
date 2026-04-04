@@ -7,6 +7,7 @@ import com.fams.backend.dto.response.AssignmentSubmissionResponse;
 import com.fams.backend.entity.*;
 import com.fams.backend.repository.*;
 import com.fams.backend.service.AssignmentSubmissionService;
+import com.fams.backend.service.UserNotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -41,7 +42,7 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
     private final UserRepository userRepository;
     private final ClassSectionRepository classSectionRepository;
     private final TimetableSlotRepository timetableSlotRepository;
-    private final NotificationServiceImpl notificationService;
+    private final UserNotificationService notificationService;
 
     @Override
     public AssignmentResponse createAssignment(CreateAssignmentRequest request, Long lecturerId) {
@@ -258,6 +259,20 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
         submission = submissionRepository.save(submission);
         log.info("Assignment submitted: assignment={}, student={}", assignmentId, studentId);
 
+        User lecturer = assignment.getCreatedBy();
+        if (lecturer != null) {
+            String title = "Sinh viên đã nộp bài: " + assignment.getTitle();
+            String content = student.getFullName() + " đã nộp bài cho bài tập \""
+                + assignment.getTitle() + "\" (lớp " + className + ").";
+            notificationService.createNotification(
+                lecturer,
+                title,
+                content,
+                Notification.NotificationType.SUBMISSION,
+                "/lecturer/assignments",
+                student);
+        }
+
         return toSubmissionResponse(submission);
     }
 
@@ -357,15 +372,17 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
             // Chi lay sinh vien dang ky dung lop nay
             List<Enrollment> enrollments = enrollmentRepository.findByClassSectionClassName(cs.getClassName());
 
-            for (Enrollment e : enrollments) {
-                notificationService.createNotification(
-                        e.getStudent(),
-                        title,
-                        content,
-                        Notification.NotificationType.ACADEMIC,
-                        "/student/assignments",
-                        lecturer);
-            }
+                List<User> recipients = enrollments.stream()
+                    .map(Enrollment::getStudent)
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+
+                notificationService.createBatchNotification(
+                    recipients,
+                    title,
+                    content,
+                    Notification.NotificationType.NEW_ASSIGNMENT,
+                    "/student/assignments");
             log.info("Sent assignment notification to {} students in class {}",
                     enrollments.size(), cs.getClassName());
         } catch (Exception ex) {
@@ -378,7 +395,6 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
     public void sendDueDateReminderNotifications(Assignment a) {
         try {
             ClassSection cs = a.getClassSection();
-            User lecturer = a.getCreatedBy();
             String courseCode = cs.getCourse().getCode();
             String due = a.getDueDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
 
@@ -389,15 +405,17 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
 
             List<Enrollment> enrollments = enrollmentRepository.findByClassSectionClassName(cs.getClassName());
 
-            for (Enrollment e : enrollments) {
-                notificationService.createNotification(
-                        e.getStudent(),
-                        title,
-                        content,
-                        Notification.NotificationType.ACADEMIC,
-                        "/student/assignments",
-                        lecturer);
-            }
+                List<User> recipients = enrollments.stream()
+                    .map(Enrollment::getStudent)
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+
+                notificationService.createBatchNotification(
+                    recipients,
+                    title,
+                    content,
+                    Notification.NotificationType.ASSIGNMENT_DEADLINE,
+                    "/student/assignments");
             log.info("Sent due-date reminder to {} students for assignment {} (class {})",
                     enrollments.size(), a.getId(), cs.getClassName());
         } catch (Exception ex) {
@@ -457,10 +475,6 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
         Assignment assignment = submission.getAssignment();
         if (!assignment.getCreatedBy().getId().equals(lecturerId)) {
             throw new RuntimeException("Bạn không phải người tạo bài tập này");
-        }
-
-        if (assignment.getStatus() != Assignment.AssignmentStatus.CLOSED) {
-            throw new RuntimeException("Chỉ được nhận xét khi bài tập đã đóng");
         }
 
         submission.setLecturerComment(comment);

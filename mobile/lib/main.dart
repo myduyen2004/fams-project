@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
+import 'firebase_options.dart';
 import 'core/constants/app_colors.dart';
 import 'core/constants/app_routes.dart';
 import 'features/auth/controllers/auth_controller.dart';
@@ -25,9 +26,6 @@ import 'features/academic_request/views/academic_request_list_screen.dart';
 import 'features/academic_request/views/academic_request_create_screen.dart';
 import 'features/academic_request/bindings/academic_request_bindings.dart';
 
-import 'features/ai_chatbot/views/ai_chat_screen.dart';
-import 'features/ai_chatbot/bindings/ai_chat_binding.dart';
-
 import 'features/chat/controllers/chat_controller.dart';
 import 'features/schedule/controllers/schedule_controller.dart';
 import 'features/notification/services/fcm_service.dart';
@@ -36,7 +34,7 @@ import 'core/services/websocket_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   print("Handling a background message: ${message.messageId}");
 }
 
@@ -46,7 +44,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
     isFirebaseInitialized = true;
     print('Firebase initialized successfully');
@@ -111,8 +109,8 @@ class MyApp extends StatelessWidget {
               seedColor: AppColors.primaryOrange,
               primary: AppColors.primaryOrange,
             ),
-            textTheme: GoogleFonts.interTextTheme(),
-            fontFamily: GoogleFonts.inter().fontFamily,
+            textTheme: GoogleFonts.beVietnamProTextTheme(),
+            fontFamily: GoogleFonts.beVietnamPro().fontFamily,
             useMaterial3: true,
           ),
           initialRoute: AppRoutes.splash,
@@ -135,11 +133,6 @@ class MyApp extends StatelessWidget {
             GetPage(
               name: AppRoutes.changePasswordRequired,
               page: () => const ChangePasswordRequiredScreen(),
-            ),
-            GetPage(
-              name: AppRoutes.aiChat,
-              page: () => const AiChatScreen(),
-              binding: AiChatBinding(),
             ),
             GetPage(
               name: AppRoutes.home,

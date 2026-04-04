@@ -1,4 +1,4 @@
-import apiClient from './authService';
+import apiClient from './apiClient';
 import axios from 'axios';
 
 export interface ChatGroupResponse {
@@ -35,6 +35,12 @@ export interface ReadReceiptDTO {
     avatar: string;
 }
 
+export interface MessageReactionDTO {
+    emoji: string;
+    count: number;
+    reactedByMe: boolean;
+}
+
 export interface ChatMessageResponse {
     id: number;
     senderId: number;
@@ -55,6 +61,7 @@ export interface ChatMessageResponse {
     isDeleted?: boolean;
     isRead?: boolean;
     readers?: ReadReceiptDTO[];
+    reactions?: MessageReactionDTO[];
     isSending?: boolean; // For Optimistic UI
 }
 
@@ -106,10 +113,15 @@ export const chatGroupService = {
     },
 
     getUploadSignature: async (): Promise<{ signature: string; timestamp: number; apiKey: string; cloudName: string; folder: string }> => {
-        const response = await apiClient.get('/cloudinary/signature');
+        const response = await apiClient.get('/v1/cloudinary/signature');
         return response.data;
     },
 
+    /**
+     * Upload to Cloudinary directly.
+     * Note: We keep direct axios here because it's a 3rd party API (Cloudinary),
+     * NOT our own backend, so it doesn't need the ngrok header or auth interceptors.
+     */
     uploadToCloudinaryDirect: async (file: File, signature: string, timestamp: number, apiKey: string, cloudName: string, folder: string): Promise<{ secure_url: string; original_filename: string }> => {
         const formData = new FormData();
         formData.append('file', file);
@@ -143,5 +155,12 @@ export const chatGroupService = {
 
     markAsRead: async (groupId: number): Promise<void> => {
         await apiClient.post(`/v1/chat-messages/groups/${groupId}/read`);
+    },
+
+    toggleReaction: async (groupId: number, messageId: number, emoji: string): Promise<ChatMessageResponse> => {
+        const response = await apiClient.post<ChatMessageResponse>(`/v1/chat-messages/${groupId}/${messageId}/toggle-reaction`, null, {
+            params: { emoji }
+        });
+        return response.data;
     },
 };

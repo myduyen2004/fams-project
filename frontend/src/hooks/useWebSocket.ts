@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { Client } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
 import { WS_URL } from '../services/api/config';
 
 export const useWebSocket = (topic: string, onMessage: (data: any) => void) => {
@@ -15,7 +14,7 @@ export const useWebSocket = (topic: string, onMessage: (data: any) => void) => {
     useEffect(() => {
         const token = localStorage.getItem('token');
         const stompClient = new Client({
-            webSocketFactory: () => new SockJS(WS_URL),
+            brokerURL: WS_URL,
             connectHeaders: token ? {
                 Authorization: `Bearer ${token}`
             } : {},

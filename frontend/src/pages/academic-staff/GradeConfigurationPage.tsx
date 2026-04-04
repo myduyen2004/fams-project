@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    Plus, Download, Edit2, Copy, Trash2, ChevronLeft,
+    Plus, Download, Edit2, Trash2, ChevronLeft,
     Info, CheckCircle2, AlertCircle, Loader2, Upload, BookOpen
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -47,6 +47,7 @@ const gradeTypeOptions: { value: GradeType; label: string }[] = [
 ];
 
 import { GradeTypeSelector } from '../../components/academic-staff/GradeTypeSelector';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 
 export const GradeConfigurationPage: React.FC = () => {
     const { courseId } = useParams<{ courseId: string }>();
@@ -75,6 +76,18 @@ export const GradeConfigurationPage: React.FC = () => {
         weight: '',
         isResit: false,
     });
+
+    // Confirm Modal
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'danger' as 'danger' | 'warning' | 'info' | 'success',
+        onConfirm: () => { },
+        confirmLabel: 'Xác nhận'
+    });
+
+    const closeConfirmModal = () => setConfirmModal(prev => ({ ...prev, isOpen: false }));
 
     // Load data
     const loadData = useCallback(async () => {
@@ -252,28 +265,26 @@ export const GradeConfigurationPage: React.FC = () => {
         }
     };
 
-    const handleDuplicateComponent = async (component: GradeComponent) => {
-        try {
-            await gradeComponentService.duplicateGradeComponent(component.id);
-            toast.success('Đã nhân đôi thành phần điểm');
-            loadData();
-        } catch (error) {
-            console.error('Failed to duplicate:', error);
-            toast.error('Không thể nhân đôi thành phần điểm');
-        }
-    };
-
-    const handleDeleteComponent = async (component: GradeComponent) => {
-        if (!confirm(`Bạn có chắc muốn xóa "${component.name}"?`)) return;
-
-        try {
-            await gradeComponentService.deleteGradeComponent(component.id);
-            toast.success('Đã xóa thành phần điểm');
-            loadData();
-        } catch (error) {
-            console.error('Failed to delete:', error);
-            toast.error('Không thể xóa thành phần điểm');
-        }
+    const handleDeleteComponent = (component: GradeComponent) => {
+        setConfirmModal({
+            isOpen: true,
+            title: 'Xóa thành phần điểm',
+            message: `Bạn có chắc chắn muốn xóa "${component.name}"?\nHành động này không thể hoàn tác.`,
+            type: 'danger',
+            confirmLabel: 'Xóa',
+            onConfirm: async () => {
+                try {
+                    await gradeComponentService.deleteGradeComponent(component.id);
+                    toast.success('Đã xóa thành phần điểm');
+                    loadData();
+                    closeConfirmModal();
+                } catch (error) {
+                    console.error('Failed to delete:', error);
+                    toast.error('Không thể xóa thành phần điểm');
+                    closeConfirmModal();
+                }
+            }
+        });
     };
 
 
@@ -567,13 +578,6 @@ export const GradeConfigurationPage: React.FC = () => {
                                                                     <Edit2 className="w-4 h-4" />
                                                                 </button>
                                                                 <button
-                                                                    onClick={() => handleDuplicateComponent(component)}
-                                                                    className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                                                                    title="Nhân bản"
-                                                                >
-                                                                    <Copy className="w-4 h-4" />
-                                                                </button>
-                                                                <button
                                                                     onClick={() => handleDeleteComponent(component)}
                                                                     className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                                                                     title="Xóa"
@@ -816,6 +820,16 @@ export const GradeConfigurationPage: React.FC = () => {
                     loading={prereqAdding}
                 />
             )}
+
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                onClose={closeConfirmModal}
+                onConfirm={confirmModal.onConfirm}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                type={confirmModal.type}
+                confirmLabel={confirmModal.confirmLabel}
+            />
         </AcademicStaffLayout >
     );
 };

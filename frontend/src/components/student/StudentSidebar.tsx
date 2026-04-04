@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Home,
+    Newspaper,
     Calendar,
     ScanFace,
     FileText,
@@ -11,7 +12,8 @@ import {
     LogOut,
     GraduationCap,
     TrendingUp,
-    ChevronDown
+    ChevronDown,
+    List
 } from 'lucide-react';
 import { authService } from '../../services/api/authService';
 import { ConfirmModal } from '../common/ConfirmModal';
@@ -74,6 +76,15 @@ export const StudentSidebar: React.FC = () => {
             path: '/student/assignments'
         },
         {
+            id: 'lists',
+            label: 'Danh sách',
+            icon: <List size={20} />,
+            submenu: [
+                { label: 'Phòng học', path: '/student/rooms' },
+                { label: 'Học kỳ', path: '/student/semesters' }
+            ]
+        },
+        {
             id: 'messages',
             label: 'Tin nhắn',
             icon: <MessageCircle size={20} />,
@@ -84,6 +95,12 @@ export const StudentSidebar: React.FC = () => {
             label: 'Gửi đơn yêu cầu',
             icon: <Send size={20} />,
             path: '/student/requests'
+        },
+        {
+            id: 'news',
+            label: 'Tin tức',
+            icon: <Newspaper size={20} />,
+            path: '/news'
         }
     ];
 

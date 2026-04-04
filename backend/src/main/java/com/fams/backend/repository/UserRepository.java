@@ -7,8 +7,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -21,24 +21,18 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     @Query("SELECT u.code FROM User u WHERE u.code IS NOT NULL")
     Set<String> findAllCodes();
 
-    // Batch fetch users by usernames (for import optimization)
     @Query("SELECT u FROM User u WHERE LOWER(u.username) IN :usernames")
-    List<User> findByUsernameInIgnoreCase(@Param("usernames") java.util.Collection<String> usernames);
+    List<User> findByUsernameInIgnoreCase(@Param("usernames") Collection<String> usernames);
 
-    // Batch fetch users by codes (for import optimization)
     @Query("SELECT u FROM User u WHERE LOWER(u.code) IN :codes")
-    List<User> findByCodeInIgnoreCase(@Param("codes") java.util.Collection<String> codes);
+    List<User> findByCodeInIgnoreCase(@Param("codes") Collection<String> codes);
 
-    // Batch fetch users by emails (for import optimization)
     @Query("SELECT u FROM User u WHERE LOWER(u.email) IN :emails")
-    List<User> findByEmailInIgnoreCase(@Param("emails") java.util.Collection<String> emails);
+    List<User> findByEmailInIgnoreCase(@Param("emails") Collection<String> emails);
 
     @Query("SELECT u.email FROM User u")
     Set<String> findAllEmails();
 
-    /**
-     * Tìm user theo username kèm theo thông tin profiles
-     */
     @Query("SELECT u FROM User u " +
             "LEFT JOIN FETCH u.studentProfile sp " +
             "LEFT JOIN FETCH sp.major " +
@@ -46,18 +40,12 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
             "LEFT JOIN FETCH sp.subSpecialization " +
             "LEFT JOIN FETCH u.lecturerProfile " +
             "WHERE u.username = :username")
-    Optional<User> findByUsernameWithProfiles(String username);
+    Optional<User> findByUsernameWithProfiles(@Param("username") String username);
 
-    /**
-     * Tìm user theo username
-     */
     Optional<User> findByUsername(String username);
 
-    /**
-     * Tìm user theo username - case insensitive
-     */
     @Query("SELECT u FROM User u WHERE LOWER(u.username) = LOWER(:username)")
-    Optional<User> findByUsernameIgnoreCase(String username);
+    Optional<User> findByUsernameIgnoreCase(@Param("username") String username);
 
     Optional<List<User>> findByRole(User.UserRole role);
 
@@ -65,67 +53,31 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     List<User> findByStatusOrderByIdDesc(User.UserStatus status);
 
-    /**
-     * Tìm user theo email
-     */
     Optional<User> findByEmail(String email);
 
-    /**
-     * Tìm user theo mã số (MSSV/MSGV/MSNV)
-     */
     Optional<User> findByCode(String code);
 
-    /**
-     * Tìm user theo mã số (MSSV/MSGV/MSNV) - case insensitive
-     */
     @Query("SELECT u FROM User u WHERE LOWER(u.code) = LOWER(:code)")
-    Optional<User> findByCodeIgnoreCase(String code);
+    Optional<User> findByCodeIgnoreCase(@Param("code") String code);
 
-    /**
-     * Kiểm tra username đã tồn tại
-     */
     boolean existsByUsername(String username);
 
-    /**
-     * Kiểm tra email đã tồn tại
-     */
     boolean existsByEmail(String email);
 
-    /**
-     * Kiểm tra mã số đã tồn tại
-     */
     boolean existsByCode(String code);
 
-    /**
-     * Đếm số lượng user theo role
-     */
     long countByRole(User.UserRole role);
 
     Optional<User> findByIdAndRole(Long id, User.UserRole role);
 
-    /**
-     * Xóa tất cả user ngoại trừ role chỉ định
-     */
     void deleteAllByRoleNot(User.UserRole role);
 
-    /**
-     * Xóa tất cả user có role nằm trong danh sách
-     */
     long deleteAllByRoleIn(Collection<User.UserRole> roles);
-
-    /**
-     * Xóa tất cả user có role nằm trong danh sách và trạng thái chỉ định
-     */
 
     @Transactional
     @Modifying
     long deleteAllByRoleInAndStatus(Collection<User.UserRole> roles, User.UserStatus status);
 
-    /**
-     * Find student IDs not enrolled in a specific class section
-     * Only returns students whose specialization or sub-specialization contains the
-     * course
-     */
     @Query(value = """
                 SELECT DISTINCT u.id FROM users u
                 LEFT JOIN student_profiles sp ON sp.user_id = u.id
@@ -149,17 +101,27 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
             """, nativeQuery = true)
     List<Long> findStudentIdsNotEnrolledInClassSection(@Param("className") String className);
 
-    /**
-     * Find students by IDs with profiles loaded
-     * Uses JOIN FETCH to avoid N+1 problem
-     */
-    @Query("""
-                SELECT u FROM User u
-                LEFT JOIN FETCH u.studentProfile sp
-                LEFT JOIN FETCH sp.major
-                LEFT JOIN FETCH sp.specialization
-                WHERE u.id IN :ids
-                ORDER BY u.code ASC
-            """)
+    @Query("SELECT u FROM User u " +
+           "LEFT JOIN FETCH u.studentProfile sp " +
+           "LEFT JOIN FETCH sp.major " +
+           "LEFT JOIN FETCH sp.specialization " +
+           "LEFT JOIN FETCH sp.subSpecialization " +
+           "WHERE u.id IN :ids " +
+           "ORDER BY u.code ASC")
     List<User> findStudentsWithProfilesByIds(@Param("ids") List<Long> ids);
+
+    @Query("SELECT u FROM User u " +
+           "LEFT JOIN FETCH u.studentProfile sp " +
+           "LEFT JOIN FETCH sp.major " +
+           "LEFT JOIN FETCH sp.specialization " +
+           "LEFT JOIN FETCH sp.subSpecialization " +
+           "WHERE u.role = 'STUDENT'")
+    List<User> findAllStudentsWithProfiles();
+
+    @Query("SELECT u FROM User u " +
+           "LEFT JOIN FETCH u.lecturerProfile lp " +
+           "WHERE u.role = 'LECTURER'")
+    List<User> findAllLecturersWithProfiles();
+
+    List<User> findByRoleAndStatus(User.UserRole role, User.UserStatus status);
 }

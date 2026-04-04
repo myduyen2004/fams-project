@@ -10,6 +10,7 @@ import '../../../core/widgets/app_background.dart';
 import '../../face_recognition/views/face_registration_view.dart';
 import '../../face_recognition/views/face_registration_guide_screen.dart';
 import '../../face_recognition/views/view_face_info_screen.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -55,7 +56,7 @@ class ProfileScreen extends StatelessWidget {
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: const Color(0xFFFFB74D), // Orange border
-                              width: 3,
+                              width: 3.w,
                             ),
                           ),
                           child: ClipOval(
@@ -119,7 +120,7 @@ class ProfileScreen extends StatelessWidget {
                         // 5. Details (Major & Email)
                         if (user != null) ...[
                           _buildInfoRow(
-                            icon: Icons.school_outlined, // Outlined looks cleaner
+                            icon: SolarIconsOutline.courseUp, 
                             text: user.isLecturer 
                                 ? (user.department ?? 'Khoa/Bộ môn') 
                                 : 'Chuyên ngành: ${user.major ?? "Kỹ thuật phần mềm"}',
@@ -127,7 +128,7 @@ class ProfileScreen extends StatelessWidget {
                           ),
                           12.verticalSpace,
                           _buildInfoRow(
-                            icon: Icons.email_outlined,
+                            icon: SolarIconsOutline.letter,
                             text: 'Email: ${user.email}',
                             iconColor: const Color(0xFFFF6B00),
                           ),
@@ -149,13 +150,13 @@ class ProfileScreen extends StatelessWidget {
                                 decoration: BoxDecoration(
                                   color: Colors.green.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(16.r),
-                                  border: Border.all(color: Colors.green.withOpacity(0.3)),
+                                  border: Border.all(color: Colors.green.withOpacity(0.3), width: 1.w),
                                 ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Icon(Icons.check_circle, color: Colors.green, size: 24),
-                                    const SizedBox(width: 10),
+                                    Icon(SolarIconsBold.checkCircle, color: Colors.green, size: 24.sp),
+                                    SizedBox(width: 10.w),
                                     Text(
                                       'Đã đăng ký khuôn mặt',
                                       style: GoogleFonts.inter(
@@ -165,7 +166,7 @@ class ProfileScreen extends StatelessWidget {
                                       ),
                                     ),
                                     8.horizontalSpace,
-                                    Icon(Icons.arrow_forward_ios, color: Colors.green, size: 16.r),
+                                    Icon(SolarIconsOutline.altArrowRight, color: Colors.green, size: 16.r),
                                   ],
                                 ),
                               ),
@@ -177,7 +178,7 @@ class ProfileScreen extends StatelessWidget {
                               height: 54.h,
                               child: OutlinedButton.icon(
                                 onPressed: () => Get.to(() => const FaceRegistrationGuideScreen()),
-                                icon: Icon(Icons.face, color: AppColors.primaryOrange, size: 24.r),
+                                icon: Icon(SolarIconsOutline.userId, color: AppColors.primaryOrange, size: 24.r),
                                 label: Text(
                                   'Đăng ký khuôn mặt',
                                   style: GoogleFonts.inter(
@@ -187,7 +188,7 @@ class ProfileScreen extends StatelessWidget {
                                   ),
                                 ),
                                 style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: AppColors.primaryOrange, width: 2),
+                                  side: BorderSide(color: AppColors.primaryOrange, width: 2.w),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16.r),
                                   ),
@@ -206,7 +207,7 @@ class ProfileScreen extends StatelessWidget {
                           height: 54.h,
                           child: ElevatedButton.icon(
                             onPressed: () => authController.logout(),
-                            icon: Icon(Icons.logout_rounded, color: Colors.white, size: 24.r),
+                            icon: Icon(SolarIconsBold.logout, color: Colors.white, size: 24.r),
                             label: Text(
                               'Đăng xuất',
                               style: GoogleFonts.inter(
@@ -234,8 +235,8 @@ class ProfileScreen extends StatelessWidget {
                 
                  // Edit Button
                 Positioned(
-                  top: 10,
-                  right: 10,
+                  top: 10.h,
+                  right: 10.w,
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -245,7 +246,7 @@ class ProfileScreen extends StatelessWidget {
                       ]
                     ),
                     child: IconButton(
-                      icon: Icon(Icons.edit, color: const Color(0xFFFF6B00), size: 24.r),
+                      icon: Icon(SolarIconsOutline.pen, color: const Color(0xFFFF6B00), size: 24.r),
                       onPressed: () => Get.to(() => const EditProfileScreen()),
                     ),
                   ),
@@ -287,10 +288,10 @@ class ProfileScreen extends StatelessWidget {
     // Default fallback avatar with person icon
     Widget fallbackAvatar = Container(
       color: const Color(0xFFFFE0B2),
-      child: const Icon(
-        Icons.person,
-        size: 80,
-        color: Color(0xFFFF6B00),
+      child: Icon(
+        SolarIconsBold.user,
+        size: 80.sp,
+        color: const Color(0xFFFF6B00),
       ),
     );
     

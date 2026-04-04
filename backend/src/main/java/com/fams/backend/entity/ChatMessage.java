@@ -74,6 +74,10 @@ public class ChatMessage {
     @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private List<ChatMessageRead> readReceipts;
 
+    // Danh sách cảm xúc
+    @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<ChatMessageReaction> reactions;
+
     public enum MessageType {
         TEXT, // Văn bản
         IMAGE, // Hình ảnh

@@ -3,21 +3,15 @@ package com.fams.backend.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
- * Notification (Thông báo)
- * Enhanced notification entity with targeting and scheduling
+ * Automatic system notification.
  */
 @Entity
 @Table(name = "notifications", indexes = {
-        @Index(name = "idx_notification_sender", columnList = "sender_id"),
         @Index(name = "idx_notification_type", columnList = "type"),
-        @Index(name = "idx_notification_status", columnList = "status"),
         @Index(name = "idx_notification_sent_at", columnList = "sentAt")
 })
 @Data
@@ -38,101 +32,46 @@ public class Notification {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    // Loại thông báo
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 30)
     @Builder.Default
     private NotificationType type = NotificationType.SYSTEM;
 
-    // Độ ưu tiên
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    @Builder.Default
-    private NotificationPriority priority = NotificationPriority.MEDIUM;
-
-    // Người gửi
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "sender_id")
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
-    private User sender;
-
-    // URL để redirect khi nhấn vào thông báo
     @Column(length = 255)
     private String targetUrl;
 
-    // === Target filtering ===
-    // Loại đối tượng nhận
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
-    private TargetType targetType = TargetType.ALL;
+    private TargetType targetType = TargetType.USER;
 
-    // ✅ NEW: Tên lớp cụ thể (khi targetType=CLASS)
-    @Column(length = 100)
-    private String targetClassName;
-
-    // === Scheduling ===
-    // Thời gian lên lịch gửi
-    private LocalDateTime scheduledAt;
-
-    // Thời gian gửi thực tế
+    @Column(nullable = false)
     private LocalDateTime sentAt;
-
-    // Trạng thái thông báo
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    @Builder.Default
-    private NotificationStatus status = NotificationStatus.DRAFT;
-
-    // Danh sách người nhận
-    @OneToMany(mappedBy = "notification", cascade = CascadeType.ALL)
-    @Builder.Default
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
-    private List<NotificationRecipient> recipients = new ArrayList<>();
-
-    @ElementCollection
-    @CollectionTable(name = "notification_attachments", joinColumns = @JoinColumn(name = "notification_id"))
-    @Column(name = "url", columnDefinition = "TEXT")
-    @Builder.Default
-    private List<String> attachmentUrls = new ArrayList<>();
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
-    @Column(nullable = false)
-    private LocalDateTime updatedAt;
-
     public enum NotificationType {
-        SYSTEM, // Thông báo hệ thống
-        ACADEMIC, // Thông báo học vụ
-        ATTENDANCE, // Thông báo điểm danh
-        GRADE, // Thông báo điểm
-        CHAT, // Thông báo chat
-        SCHEDULE // Thông báo lịch học
-    }
-
-    public enum NotificationPriority {
-        LOW,
-        MEDIUM,
-        HIGH,
-        URGENT
+        ASSIGNMENT_DEADLINE,
+        NEW_ASSIGNMENT,
+        SUBMISSION,
+        GRADE_PUBLISHED,
+        SCHEDULE_CHANGE,
+        ATTENDANCE_WARNING,
+        SYSTEM,
+        ACADEMIC,
+        CHAT,
+        NEWS
     }
 
     public enum TargetType {
-        ALL, // Tất cả
-        STUDENT, // Tất cả sinh viên
-        LECTURER, // Tất cả giảng viên
-        CLASS, // Lớp cụ thể
-        USER, // Cá nhân người dùng
-    }
-
-    public enum NotificationStatus {
-        DRAFT, // Bản nháp
-        SCHEDULED, // Đã lên lịch
-        SENT // Đã gửi
+        USER,
+        CLASS,
+        ALL,
+        STUDENT,
+        LECTURER,
+        ACADEMIC_STAFF,
+        ADMIN
     }
 }

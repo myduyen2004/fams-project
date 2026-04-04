@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, Loader2, ArrowLeft, GripVertical, Trash2, BookOpen, Edit2 } from 'lucide-react';
+import { Plus, Loader2, ArrowLeft, GripVertical, Trash2, BookOpen, Edit2, Play, CircleOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { specializationService } from '../../services/api/specializationService';
@@ -251,16 +251,16 @@ export const SpecializationDetail: React.FC = () => {
 
     // Handle add course selection
     const handleConfirmSelection = async (selection: { courseId: number; semester: number }[]) => {
-        if (!courseModalTarget) return;
+        if (!courseModalTarget || selection.length === 0) return;
         try {
-            const promises = selection.map(item =>
-                courseModalTarget.type === 'specialization'
-                    ? specializationService.addCourse(courseModalTarget.id, item.courseId, item.semester)
-                    : subSpecializationService.addCourse(courseModalTarget.id, item.courseId, item.semester)
-            );
+            const courseIds = selection.map(item => item.courseId);
+            const semester = selection[0].semester;
 
-            // Wait for all additions
-            await Promise.all(promises);
+            if (courseModalTarget.type === 'specialization') {
+                await specializationService.addCoursesBulk(courseModalTarget.id, courseIds, semester);
+            } else {
+                await subSpecializationService.addCoursesBulk(courseModalTarget.id, courseIds, semester);
+            }
 
             // Fetch data again to ensure correctness and order
             if (courseModalTarget.type === 'specialization') {
@@ -398,6 +398,35 @@ export const SpecializationDetail: React.FC = () => {
                 fetchData();
             }
         }
+    };
+
+    const handleStatusChange = (subSpec: SubSpecialization, newStatus: 'ACTIVE' | 'INACTIVE') => {
+        const confirmTitle = newStatus === 'ACTIVE' ? 'Mở lại chuyên ngành hẹp' : 'Ngừng đào tạo chuyên ngành hẹp';
+        const type = newStatus === 'ACTIVE' ? 'success' : 'warning';
+        const confirmLabel = newStatus === 'ACTIVE' ? 'Mở lại' : 'Ngừng đào tạo';
+        const confirmMsg = newStatus === 'ACTIVE'
+            ? `Bạn có chắc chắn muốn mở lại chuyên ngành hẹp "${subSpec.name}"?`
+            : `Bạn có chắc chắn muốn ngừng đào tạo chuyên ngành hẹp "${subSpec.name}"?`;
+
+        setConfirmModal({
+            isOpen: true,
+            title: confirmTitle,
+            message: confirmMsg,
+            type: type as any,
+            confirmLabel: confirmLabel,
+            onConfirm: async () => {
+                try {
+                    await subSpecializationService.updateStatus(subSpec.id, newStatus);
+                    toast.success('Cập nhật trạng thái thành công');
+                    fetchData();
+                    closeConfirmModal();
+                } catch (error) {
+                    console.error('Status update error:', error);
+                    toast.error('Có lỗi xảy ra khi cập nhật trạng thái');
+                    closeConfirmModal();
+                }
+            }
+        });
     };
 
     // Calculate totals
@@ -624,7 +653,30 @@ export const SpecializationDetail: React.FC = () => {
 
                                     {/* Action Buttons - Hidden by default, shown on hover */}
                                     <div className="absolute inset-x-0 bottom-0 px-3 py-2 bg-gradient-to-t from-white via-white to-transparent dark:from-zinc-900 dark:via-zinc-900 rounded-b-xl opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0">
-                                        <div className="flex items-center justify-end gap-2">
+                                        <div className="flex items-center justify-end gap-2 text-zinc-900">
+                                            {subSpec.status === 'INACTIVE' ? (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleStatusChange(subSpec, 'ACTIVE');
+                                                    }}
+                                                    className="p-1.5 rounded-lg bg-green-50 hover:bg-green-100 text-green-600 hover:text-green-700 transition-colors dark:bg-green-900/30 dark:hover:bg-green-900/50 dark:text-green-400"
+                                                    title="Mở lại"
+                                                >
+                                                    <Play className="h-4 w-4" />
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleStatusChange(subSpec, 'INACTIVE');
+                                                    }}
+                                                    className="p-1.5 rounded-lg bg-yellow-50 hover:bg-yellow-100 text-yellow-600 hover:text-yellow-700 transition-colors dark:bg-yellow-900/30 dark:hover:bg-yellow-900/50 dark:text-yellow-400"
+                                                    title="Ngừng đào tạo"
+                                                >
+                                                    <CircleOff className="h-4 w-4" />
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
@@ -646,7 +698,7 @@ export const SpecializationDetail: React.FC = () => {
                                                     setConfirmModal({
                                                         isOpen: true,
                                                         title: 'Xóa chuyên ngành hẹp',
-                                                        message: `Bạn có chắc chắn muốn xóa "${subSpec.name}"?`,
+                                                        message: `Bạn có chắc chắn muốn xóa chuyên ngành hẹp "${subSpec.name}"?\nHành động này không thể hoàn tác.`,
                                                         type: 'danger',
                                                         confirmLabel: 'Xóa',
                                                         onConfirm: async () => {

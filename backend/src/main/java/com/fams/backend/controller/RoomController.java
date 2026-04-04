@@ -10,7 +10,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/v1/rooms")
@@ -29,6 +31,21 @@ public class RoomController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam Integer slotNumber) {
         return ResponseEntity.ok(roomService.getRoomAvailability(date, slotNumber));
+    }
+
+    /**
+     * Get IDs of rooms that are currently in use, based on the actual slot times
+     * from the database (SlotType.startTime / endTime).
+     *
+     * @param date The date to check (ISO format: YYYY-MM-DD)
+     * @param time The time to check (HH:mm)
+     * @return Set of room IDs that are currently occupied
+     */
+    @GetMapping("/currently-in-use")
+    public ResponseEntity<Set<Long>> getCurrentlyInUseRooms(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime time) {
+        return ResponseEntity.ok(roomService.getInUseRoomIds(date, time));
     }
 
     @GetMapping("/{id}")

@@ -30,7 +30,7 @@ public class EmailQueueService {
 
     private static final String EMAIL_QUEUE_KEY = "fams:email:queue";
     private static final String CANCELLED_JOBS_KEY = "fams:jobs:cancelled";
-    private static final int WORKER_COUNT = 10; // 10 parallel workers
+    private static final int WORKER_COUNT = 1; // Reduced from 10 to 1 for Gmail compatibility (security/rate limits)
 
     private ExecutorService workerPool;
     private volatile boolean running = true;
@@ -144,8 +144,8 @@ public class EmailQueueService {
                         log.info("Email queue progress: {}/{} processed", count, totalQueued.get());
                     }
 
-                    // Small delay to avoid overloading SMTP
-                    Thread.sleep(200);
+                    // Moderate delay to avoid overloading SMTP and Gmail anti-spam filters
+                    Thread.sleep(1000);
                 }
             } catch (Exception e) {
                 if (!running)

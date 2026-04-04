@@ -1,4 +1,4 @@
-import apiClient from './authService';
+import apiClient from './apiClient';
 
 // Types for Exam Grade Overview (ME, FE, PE, Resit)
 export interface ExamGradeComponentInfo {
@@ -36,9 +36,12 @@ export interface ExamGradeOverviewResponse {
     gradesPublished?: boolean;
     gradesPublishedAt?: string;
     gradesPublishedBy?: string;
-    // Explicit statuses for both exam types
     examGradesPublished?: boolean;
     resitGradesPublished?: boolean;
+    // Check if at least one class has submitted grades
+    anyGradesSubmitted?: boolean;
+    // List of class names that have submitted their grades
+    submittedClasses?: string[];
 }
 
 export interface ExamGradePreviewRow {

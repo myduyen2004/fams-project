@@ -1,10 +1,4 @@
-import axios from 'axios';
-import { API_URL } from './config';
-
-const getAuthHeader = () => {
-    const token = localStorage.getItem('token');
-    return token ? { Authorization: `Bearer ${token}` } : {};
-};
+import apiClient from './apiClient';
 
 export interface StartSessionRequest {
     slotId: number;
@@ -107,58 +101,45 @@ export interface IndividualAttendanceDetail {
 
 const attendanceService = {
     startSession: async (request: StartSessionRequest): Promise<SessionDetailResponse> => {
-        const response = await axios.post(`${API_URL}/v1/attendance/session/start`, request, {
-            headers: getAuthHeader()
-        });
+        const response = await apiClient.post(`/v1/attendance/session/start`, request);
         return response.data;
     },
 
     getSession: async (sessionId: number): Promise<SessionDetailResponse> => {
-        const response = await axios.get(`${API_URL}/v1/attendance/session/${sessionId}`, {
-            headers: getAuthHeader()
-        });
+        const response = await apiClient.get(`/v1/attendance/session/${sessionId}`);
         return response.data;
     },
 
     getSessionBySlot: async (slotId: number): Promise<SessionDetailResponse> => {
-        const response = await axios.get(`${API_URL}/v1/attendance/session/slot/${slotId}`, {
-            headers: getAuthHeader()
-        });
+        const response = await apiClient.get(`/v1/attendance/session/slot/${slotId}`);
         return response.data;
     },
 
     updateManualAttendance: async (sessionId: number, studentId: number, status: string, slotId?: number, note?: string): Promise<SessionDetailResponse> => {
-        const response = await axios.post(`${API_URL}/v1/attendance/session/manual`, {
+        const response = await apiClient.post(`/v1/attendance/session/manual`, {
             sessionId,
             slotId,
             studentId,
             status,
             note
-        }, {
-            headers: getAuthHeader()
         });
         return response.data;
     },
 
     getClassAttendanceReport: async (className: string): Promise<ClassAttendanceReportResponse> => {
-        const response = await axios.get(`${API_URL}/v1/attendance/class/${className}/report`, {
-            headers: getAuthHeader()
-        });
+        const response = await apiClient.get(`/v1/attendance/class/${className}/report`);
         return response.data;
     },
 
     getStudentReport: async (semesterCode?: string): Promise<StudentAttendanceSummaryResponse> => {
-        const response = await axios.get(`${API_URL}/v1/attendance/student/report`, {
-            params: { semesterCode },
-            headers: getAuthHeader()
+        const response = await apiClient.get(`/v1/attendance/student/report`, {
+            params: { semesterCode }
         });
         return response.data;
     },
 
     getStudentClassAttendanceDetail: async (className: string): Promise<IndividualAttendanceDetail> => {
-        const response = await axios.get(`${API_URL}/v1/attendance/student/class/${className}/detail`, {
-            headers: getAuthHeader()
-        });
+        const response = await apiClient.get(`/v1/attendance/student/class/${className}/detail`);
         return response.data;
     }
 };

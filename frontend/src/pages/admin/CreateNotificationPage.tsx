@@ -35,8 +35,13 @@ export const CreateNotificationPage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isAcademicStaff = location.pathname.startsWith('/academic-staff');
-  const Layout = isAcademicStaff ? AcademicStaffLayout : AdminLayout;
-  const backUrl = isAcademicStaff ? '/academic-staff/notification-management' : '/admin/notification-management';
+  const isLecturerGranted = location.pathname.startsWith('/lecturer/granted');
+  const Layout = (isAcademicStaff || isLecturerGranted) ? AcademicStaffLayout : AdminLayout;
+  const backUrl = isAcademicStaff 
+    ? '/academic-staff/notification-management' 
+    : isLecturerGranted 
+      ? '/lecturer/granted/notifications' 
+      : '/admin/notification-management';
 
   const [formData, setFormData] = useState<NotificationForm>({
     title: '',

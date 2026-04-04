@@ -1,10 +1,4 @@
-import axios from 'axios';
-import { API_URL } from './config';
-
-const getAuthHeader = () => {
-    const token = localStorage.getItem('token');
-    return token ? { Authorization: `Bearer ${token}` } : {};
-};
+import apiClient from './apiClient';
 
 // === Assignment (bài tập) ===
 
@@ -70,127 +64,91 @@ export const assignmentService = {
     // === Lecturer APIs ===
 
     // Tạo bài tập mới
-    createAssignment: async (request: CreateAssignmentRequest): Promise<AssignmentDTO> => {
-        const resp = await axios.post<AssignmentDTO>(`${API_URL}/lecturer/assignments`, request, {
-            headers: getAuthHeader()
-        });
-        return resp.data;
+    createAssignment: async (data: CreateAssignmentRequest): Promise<AssignmentDTO> => {
+        const response = await apiClient.post<AssignmentDTO>('/v1/lecturer/assignments', data);
+        return response.data;
     },
 
     // Đóng bài tập
-    closeAssignment: async (assignmentId: number): Promise<void> => {
-        await axios.post(`${API_URL}/lecturer/assignments/${assignmentId}/close`, {}, {
-            headers: getAuthHeader()
-        });
+    closeAssignment: async (id: number): Promise<void> => {
+        await apiClient.post(`/v1/lecturer/assignments/${id}/close`, {});
+    },
+
+    // Cập nhật hạn nộp bài tập
+    updateDueDate: async (id: number, dueDate: string): Promise<AssignmentDTO> => {
+        const response = await apiClient.put<AssignmentDTO>(`/v1/lecturer/assignments/${id}/due-date`, { dueDate });
+        return response.data;
+    },
+
+    // Cập nhật bài tập
+    updateAssignment: async (id: number, data: any): Promise<AssignmentDTO> => {
+        const response = await apiClient.put<AssignmentDTO>(`/v1/lecturer/assignments/${id}`, data);
+        return response.data;
     },
 
     // Lấy danh sách bài tập theo lớp
     getAssignmentsByClass: async (className: string): Promise<AssignmentDTO[]> => {
-        const resp = await axios.get<AssignmentDTO[]>(`${API_URL}/lecturer/assignments`, {
-            headers: getAuthHeader(),
+        const response = await apiClient.get<AssignmentDTO[]>('/v1/lecturer/assignments', {
             params: { className }
         });
-        return resp.data || [];
+        return response.data;
     },
 
     // Xem bài nộp của bài tập
     getAssignmentSubmissions: async (assignmentId: number): Promise<AssignmentSubmissionDTO[]> => {
-        const resp = await axios.get<AssignmentSubmissionDTO[]>(
-            `${API_URL}/lecturer/assignments/${assignmentId}/submissions`, {
-            headers: getAuthHeader()
-        });
-        return resp.data || [];
-    },
-
-    // Cập nhật hạn nộp bài tập
-    updateDueDate: async (assignmentId: number, dueDate: string): Promise<AssignmentDTO> => {
-        const resp = await axios.put<AssignmentDTO>(`${API_URL}/lecturer/assignments/${assignmentId}/due-date`, { dueDate }, {
-            headers: getAuthHeader()
-        });
-        return resp.data;
-    },
-
-    // Cập nhật bài tập
-    updateAssignment: async (assignmentId: number, data: {
-        title?: string;
-        description?: string;
-        dueDate?: string;
-        referenceUrl?: string;
-        referenceName?: string;
-    }): Promise<AssignmentDTO> => {
-        const resp = await axios.put<AssignmentDTO>(`${API_URL}/lecturer/assignments/${assignmentId}`, data, {
-            headers: getAuthHeader()
-        });
-        return resp.data;
+        const response = await apiClient.get<AssignmentSubmissionDTO[]>(`/v1/lecturer/assignments/${assignmentId}/submissions`);
+        return response.data;
     },
 
     // Lấy trạng thái nộp bài của tất cả sinh viên trong lớp
     getAllSubmissionStatus: async (assignmentId: number): Promise<AssignmentSubmissionDTO[]> => {
-        const resp = await axios.get<AssignmentSubmissionDTO[]>(
-            `${API_URL}/lecturer/assignments/${assignmentId}/all-submissions`, {
-            headers: getAuthHeader()
-        });
-        return resp.data || [];
+        const response = await apiClient.get<AssignmentSubmissionDTO[]>(`/v1/lecturer/assignments/${assignmentId}/all-submissions`);
+        return response.data;
     },
 
     // Giảng viên nhận xét bài nộp
     updateLecturerComment: async (submissionId: number, comment: string): Promise<AssignmentSubmissionDTO> => {
-        const resp = await axios.put<AssignmentSubmissionDTO>(
-            `${API_URL}/lecturer/assignments/submissions/${submissionId}/comment`, { comment }, {
-            headers: getAuthHeader()
-        });
-        return resp.data;
-    },
-
-    // Xóa bài tập
-    deleteAssignment: async (assignmentId: number): Promise<void> => {
-        await axios.delete(`${API_URL}/lecturer/assignments/${assignmentId}`, {
-            headers: getAuthHeader()
-        });
+        const response = await apiClient.put<AssignmentSubmissionDTO>(`/v1/lecturer/assignments/submissions/${submissionId}/comment`, { comment });
+        return response.data;
     },
 
     // Tải tất cả bài nộp dưới dạng ZIP
-    downloadAllSubmissions: async (assignmentId: number) => {
-        const resp = await axios.get(`${API_URL}/lecturer/assignments/${assignmentId}/download-all-submissions`, {
-            headers: getAuthHeader(),
+    downloadAllSubmissions: async (assignmentId: number): Promise<Blob> => {
+        const response = await apiClient.get<Blob>(`/v1/lecturer/assignments/${assignmentId}/download-all-submissions`, {
             responseType: 'blob'
         });
-        return resp;
+        return response.data;
     },
 
-    // === Student APIs ===
+    // Xóa bài tập
+    deleteAssignment: async (id: number): Promise<void> => {
+        await apiClient.delete(`/v1/lecturer/assignments/${id}`);
+    },
+
+    // === Student Student Methods ===
 
     // Lấy danh sách bài tập cần nộp
     getMyAssignments: async (): Promise<AssignmentSubmissionDTO[]> => {
-        const resp = await axios.get<AssignmentSubmissionDTO[]>(`${API_URL}/student/assignments`, {
-            headers: getAuthHeader()
-        });
-        return resp.data || [];
+        const response = await apiClient.get<AssignmentSubmissionDTO[]>('/v1/student/assignments');
+        return response.data;
     },
 
     // Lấy danh sách tất cả lớp mà sinh viên đang đăng ký
     getEnrolledClasses: async (): Promise<string[]> => {
-        const resp = await axios.get<string[]>(`${API_URL}/student/assignments/enrolled-classes`, {
-            headers: getAuthHeader()
-        });
-        return resp.data || [];
+        const response = await apiClient.get<string[]>('/v1/student/assignments/enrolled-classes');
+        return response.data;
     },
 
     // Nộp bài tập
-    submitAssignment: async (request: SubmitAssignmentRequest): Promise<AssignmentSubmissionDTO> => {
-        const resp = await axios.post<AssignmentSubmissionDTO>(`${API_URL}/student/assignments/submit`, request, {
-            headers: getAuthHeader()
-        });
-        return resp.data;
+    submitAssignment: async (data: SubmitAssignmentRequest): Promise<AssignmentSubmissionDTO> => {
+        const response = await apiClient.post<AssignmentSubmissionDTO>('/v1/student/assignments/submit', data);
+        return response.data;
     },
 
     // Xem bài đã nộp
     getMySubmission: async (assignmentId: number): Promise<AssignmentSubmissionDTO> => {
-        const resp = await axios.get<AssignmentSubmissionDTO>(
-            `${API_URL}/student/assignments/${assignmentId}/submission`, {
-            headers: getAuthHeader()
-        });
-        return resp.data;
+        const response = await apiClient.get<AssignmentSubmissionDTO>(`/v1/student/assignments/${assignmentId}/submission`);
+        return response.data;
     }
 };
 

@@ -1,16 +1,30 @@
+import 'dart:io';
+
 /// API Constants and Configuration
 class ApiConstants {
   ApiConstants._();
 
   // Base URLs
+  static const String baseUrlNgrok = 'https://nonprotrusive-crimpier-eula.ngrok-free.dev';
   static const String baseUrlLocal = 'http://10.0.2.2:8080'; // Android Emulator
   static const String baseUrlUsb =
-      'http://127.0.0.1:8080'; // Real device via USB (adb reverse)
+      'http://127.0.0.1:8080'; // Real device via USB (adb reverse - dùng fams-connect)
   static const String baseUrlLocalDevice =
       'http://10.0.14.210:8080'; // Real device via WiFi
 
-  // Current Environment
-  static const String baseUrl = baseUrlUsb; // Use USB (adb reverse)
+  // --- THIET LAP KET NOI (Team FAMS) ---
+  // Bat TRUE neu dung fams-connect (USB), bat FALSE neu dung Ngrok
+  static const bool useUsbMode = true; 
+
+  // Current Backend URL
+  static String get baseUrl {
+    if (Platform.isIOS) {
+      return baseUrlNgrok; // iOS luon dung ngrok
+    }
+    
+    // Android: Dung USB (Localhost) neu bat useUsbMode, nguoc lai dung Ngrok
+    return useUsbMode ? baseUrlUsb : baseUrlNgrok;
+  }
 
   // Auth Endpoints
   static const String login = '/api/auth/login';
@@ -58,6 +72,9 @@ class ApiConstants {
   static const String academicRequests = '/api/v1/academic-requests';
   static const String academicRequestTypes = '/api/v1/academic-requests/types';
   static const String academicRequestMyRequests = '/api/v1/academic-requests/my-requests';
+
+  // News Endpoints
+  static const String publishedNews = '/api/news';
 
   // AI Chat Endpoints
   static const String aiChatSessions = '/api/chat/sessions';

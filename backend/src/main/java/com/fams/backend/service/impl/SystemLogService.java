@@ -1,13 +1,9 @@
 package com.fams.backend.service.impl;
 
 import com.fams.backend.entity.SystemLog;
-import com.fams.backend.entity.User;
-import com.fams.backend.repository.SystemLogRepository;
-import com.fams.backend.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -17,8 +13,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 @Slf4j
 public class SystemLogService {
 
-    private final SystemLogRepository systemLogRepository;
-    private final UserRepository userRepository;
+    private final SystemLogPersistenceService persistenceService;
 
     public void logInfo(String title, String description, String source) {
         log(title, description, SystemLog.LogType.INFO, source, null, null, null);
@@ -52,40 +47,17 @@ public class SystemLogService {
         log(title, description, SystemLog.LogType.ERROR, source, performerUsername, null, null);
     }
 
-    public void log(String title, String description, SystemLog.LogType type, String source, String performerUsername, String oldValue, String newValue) {
+    public void log(String title, String description, SystemLog.LogType type, String source, String performerUsername,
+            String oldValue, String newValue) {
         RequestMetadata meta = getRequestMetadata();
-        saveLogEntry(title, description, type, source, performerUsername, meta.ip(), meta.ua(), oldValue, newValue);
-    }
-
-    @Async
-    protected void saveLogEntry(String title, String description, SystemLog.LogType type, String source, String performerUsername, String ip, String ua, String oldValue, String newValue) {
-        try {
-            User performer = null;
-            if (performerUsername != null) {
-                performer = userRepository.findByUsername(performerUsername).orElse(null);
-            }
-
-            SystemLog logEntry = SystemLog.builder()
-                    .title(title)
-                    .description(description)
-                    .type(type)
-                    .source(source)
-                    .performer(performer)
-                    .ipAddress(ip)
-                    .userAgent(ua)
-                    .oldValue(oldValue)
-                    .newValue(newValue)
-                    .build();
-            systemLogRepository.save(logEntry);
-            log.debug("System log saved: {} - {} | Performer: {}", title, type, performerUsername);
-        } catch (Exception e) {
-            log.error("Failed to save system log: {}", e.getMessage(), e);
-        }
+        persistenceService.saveLogEntry(title, description, type, source, performerUsername, meta.ip(), meta.ua(),
+                oldValue, newValue);
     }
 
     private RequestMetadata getRequestMetadata() {
         try {
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder
+                    .getRequestAttributes();
             if (attributes != null) {
                 HttpServletRequest request = attributes.getRequest();
                 String ip = request.getHeader("X-Forwarded-For");
@@ -101,12 +73,13 @@ public class SystemLogService {
         return new RequestMetadata(null, null);
     }
 
-    private record RequestMetadata(String ip, String ua) {}
+    private record RequestMetadata(String ip, String ua) {
+    }
 
     private String getCurrentUsername() {
         try {
-            org.springframework.security.core.Authentication auth = 
-                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
+                    .getContext().getAuthentication();
             if (auth != null && auth.isAuthenticated()) {
                 return auth.getName();
             }
@@ -232,7 +205,8 @@ public class SystemLogService {
     }
 
     public void logLecturerExported() {
-        logInfo("Xuất danh sách giảng viên", "Đã xuất danh sách giảng viên ra file Excel", "LecturerManagement", getCurrentUsername());
+        logInfo("Xuất danh sách giảng viên", "Đã xuất danh sách giảng viên ra file Excel", "LecturerManagement",
+                getCurrentUsername());
     }
 
     // ==================== STUDENT MANAGEMENT ====================
@@ -276,7 +250,8 @@ public class SystemLogService {
     }
 
     public void logStudentExported() {
-        logInfo("Xuất danh sách sinh viên", "Đã xuất danh sách sinh viên ra file Excel", "StudentManagement", getCurrentUsername());
+        logInfo("Xuất danh sách sinh viên", "Đã xuất danh sách sinh viên ra file Excel", "StudentManagement",
+                getCurrentUsername());
     }
 
     // ==================== COURSE MANAGEMENT ====================
@@ -324,7 +299,8 @@ public class SystemLogService {
     }
 
     public void logCourseExported() {
-        logInfo("Xuất danh sách khóa học", "Đã xuất danh sách khóa học ra file Excel", "CourseManagement", getCurrentUsername());
+        logInfo("Xuất danh sách khóa học", "Đã xuất danh sách khóa học ra file Excel", "CourseManagement",
+                getCurrentUsername());
     }
 
     // ==================== CLASS SECTION MANAGEMENT ====================
@@ -475,12 +451,14 @@ public class SystemLogService {
     // ==================== SENSITIVE DATA ====================
     public void logRoleChanged(String adminUsername, String targetUsername, String oldRole, String newRole) {
         logWarning("Thay đổi quyền hạn",
-                String.format("Admin %s đã thay đổi vai trò của %s từ %s sang %s", adminUsername, targetUsername, oldRole, newRole),
+                String.format("Admin %s đã thay đổi vai trò của %s từ %s sang %s", adminUsername, targetUsername,
+                        oldRole, newRole),
                 "UserManagement",
                 adminUsername);
     }
 
-    public void logSensitiveDataChange(String performer, String target, String field, String oldValue, String newValue) {
+    public void logSensitiveDataChange(String performer, String target, String field, String oldValue,
+            String newValue) {
         logWarning("Thay đổi dữ liệu nhạy cảm",
                 String.format("%s đã thay đổi %s cho %s", performer, field, target),
                 "DataIntegrity",

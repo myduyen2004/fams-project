@@ -12,6 +12,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -19,14 +21,15 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/majors")
+@RequestMapping("/api/v1/majors")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+@Tag(name = "Major", description = "API cho quản lý Ngành học")
 public class MajorController {
 
     private final MajorService majorService;
 
     @GetMapping
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS') or hasRole('STUDENT') or hasRole('LECTURER')")
     public ResponseEntity<Page<MajorResponse>> getMajors(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Major.MajorStatus status,
@@ -45,47 +48,56 @@ public class MajorController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
     public ResponseEntity<Major> createMajor(@RequestBody MajorRequest request) {
         return ResponseEntity.ok(majorService.createMajor(request));
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS') or hasRole('STUDENT') or hasRole('LECTURER')")
     public ResponseEntity<MajorResponse> getMajor(@PathVariable Long id) {
         return ResponseEntity.ok(majorService.getMajor(id));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
     public ResponseEntity<Major> updateMajor(@PathVariable Long id, @RequestBody MajorRequest request) {
         return ResponseEntity.ok(majorService.updateMajor(id, request));
     }
 
     @GetMapping("/{id}/courses")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS') or hasRole('STUDENT') or hasRole('LECTURER')")
     public ResponseEntity<List<CourseResponse>> getCourses(@PathVariable Long id) {
         return ResponseEntity.ok(majorService.getCourses(id));
     }
 
     @PutMapping("/{id}/status")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
     public ResponseEntity<Major> updateStatus(@PathVariable Long id, @RequestParam Major.MajorStatus status) {
         return ResponseEntity.ok(majorService.updateStatus(id, status));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
     public ResponseEntity<Void> deleteMajor(@PathVariable Long id) {
         majorService.deleteMajor(id);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/import/preview")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
     public ResponseEntity<List<MajorImportDTO>> previewImportMajors(@RequestParam("file") MultipartFile file) {
         return ResponseEntity.ok(majorService.previewImportMajors(file));
     }
 
     @PostMapping("/import/save")
+    @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_MAJORS')")
     public ResponseEntity<Map<String, Object>> saveImportedMajors(@RequestBody List<MajorImportDTO> dtos) {
         return ResponseEntity.ok(majorService.saveImportedMajors(dtos));
     }
 
     @GetMapping("/import/template")
+    @PreAuthorize("hasAnyAuthority('ROLE_ACADEMIC_STAFF', 'MANAGE_MAJORS')")
     public ResponseEntity<byte[]> downloadImportTemplate() {
         byte[] data = majorService.exportMajorTemplate();
         return ResponseEntity.ok()

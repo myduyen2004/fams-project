@@ -1,7 +1,7 @@
-import apiClient from './authService';
+import apiClient from './apiClient';
 
 export interface UserRequest {
-    code: string;
+    code?: string;
     fullName: string;
     email: string;
     dob: string; // YYYY-MM-DD
@@ -75,6 +75,20 @@ export const userService = {
             formData.append('avatar', avatar);
         }
         const response = await apiClient.put<UserResponse>(`/users/${id}`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+        return response.data;
+    },
+
+    updateProfile: async (data: { phone?: string; dob?: string }, avatar?: File) => {
+        const formData = new FormData();
+        formData.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }));
+        if (avatar) {
+            formData.append('avatar', avatar);
+        }
+        const response = await apiClient.put<UserResponse>('/auth/profile', formData, {
             headers: {
                 'Content-Type': 'multipart/form-data'
             }

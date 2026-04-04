@@ -38,6 +38,9 @@ spring:
       host: ${SPRING_DATA_REDIS_HOST:redis}
       port: 6379
 
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/fams_notifications?authSource=admin}
+
 management:
   health:
     redis:
@@ -50,7 +53,7 @@ server:
 app:
   environment: staging
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://staging.fams-edu.online,https://fams-staging.vercel.app}
+    allowed-origins: ${ALLOWED_ORIGINS:https://staging.fams-edu.online,https://fams-staging.vercel.app,https://*.vercel.app,https://*.ngrok-free.app,https://*.ngrok-free.dev}
   
 logging:
   level:

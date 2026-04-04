@@ -8,6 +8,7 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import lombok.RequiredArgsConstructor;
+import java.util.Arrays;
 
 @Configuration
 @EnableWebSocketMessageBroker
@@ -33,9 +34,19 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        String[] origins = allowedOrigins.split(",");
+        // Allow all origins for the handshake. Actual security is handled by the Authentication Interceptor and JWT.
+        // This is necessary because Vercel generates dynamic subdomains for every preview.
+        String[] patterns = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .toArray(String[]::new);
+        
+        // SockJS endpoint for web browsers
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns(origins)
+                .setAllowedOriginPatterns(patterns)
                 .withSockJS();
+        
+        // Native WebSocket endpoint
+        registry.addEndpoint("/ws-native")
+                .setAllowedOriginPatterns(patterns);
     }
 }

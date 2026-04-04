@@ -178,13 +178,13 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
                         "JOIN FETCH ts.slotType st " +
                         "JOIN cs.enrollments e " +
                         "JOIN e.student s " +
-                        "WHERE s.code = :studentCode " +
+                        "WHERE s.id = :studentId " +
                         "AND e.status != com.fams.backend.entity.Enrollment.EnrollmentStatus.DROPPED " +
                         "AND ts.date BETWEEN :startDate AND :endDate " +
-                        "AND ts.status = com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.SCHEDULED " +
+                        "AND ts.status != com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.CANCELLED " +
                         "ORDER BY ts.date, ts.slotNumber")
-        List<TimetableSlot> findByStudentCodeAndDateBetween(
-                        @Param("studentCode") String studentCode,
+        List<TimetableSlot> findByStudentIdAndDateBetween(
+                        @Param("studentId") Long studentId,
                         @Param("startDate") LocalDate startDate,
                         @Param("endDate") LocalDate endDate);
 
@@ -199,7 +199,7 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
                         "JOIN FETCH ts.slotType st " +
                         "WHERE cs.lecturer.id = :lecturerId " +
                         "AND ts.date BETWEEN :startDate AND :endDate " +
-                        "AND ts.status = com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.SCHEDULED " +
+                        "AND ts.status != com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.CANCELLED " +
                         "ORDER BY ts.date, ts.slotNumber")
         List<TimetableSlot> findByLecturerIdAndDateBetween(
                         @Param("lecturerId") Long lecturerId,
@@ -369,5 +369,31 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
                         "AND st.endTime > :time " +
                         "AND NOT EXISTS (SELECT asess FROM AttendanceSession asess WHERE asess.timetableSlot.id = ts.id)")
         List<TimetableSlot> findSlotsNeedingSession(@Param("date") LocalDate date, @Param("time") LocalTime time);
+
+        /**
+         * Find room IDs that are currently occupied at a specific date and time
+         * Cross-references timetable slots with SlotType start/end times
+         */
+        @Query("SELECT DISTINCT ts.room.id FROM TimetableSlot ts " +
+                        "JOIN ts.slotType st " +
+                        "WHERE ts.date = :date " +
+                        "AND ts.status = com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.SCHEDULED " +
+                        "AND st.startTime <= :time " +
+                        "AND st.endTime > :time")
+        List<Long> findCurrentlyOccupiedRoomIds(@Param("date") LocalDate date, @Param("time") LocalTime time);
+        /**
+         * Find full TimetableSlot entities that are currently occupied at a specific date and time
+         * Cross-references timetable slots with SlotType start/end times
+         */
+        @Query("SELECT ts FROM TimetableSlot ts " +
+                        "JOIN FETCH ts.room " +
+                        "JOIN FETCH ts.classSection cs " +
+                        "LEFT JOIN FETCH cs.lecturer " +
+                        "JOIN ts.slotType st " +
+                        "WHERE ts.date = :date " +
+                        "AND ts.status = com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.SCHEDULED " +
+                        "AND st.startTime <= :time " +
+                        "AND st.endTime > :time")
+        List<TimetableSlot> findCurrentlyOccupiedSlots(@Param("date") LocalDate date, @Param("time") LocalTime time);
 
 }

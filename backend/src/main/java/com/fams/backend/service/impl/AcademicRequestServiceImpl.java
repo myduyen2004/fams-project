@@ -567,11 +567,6 @@ public class AcademicRequestServiceImpl implements AcademicRequestService {
         if (!upcomingSemesters.isEmpty()) {
             return upcomingSemesters.get(0);
         }
-        // Fallback: if no upcoming, get active semester
-        List<Semester> activeSemesters = semesterRepository.findActiveSemesters();
-        if (!activeSemesters.isEmpty()) {
-            return activeSemesters.get(0);
-        }
         return null;
     }
 

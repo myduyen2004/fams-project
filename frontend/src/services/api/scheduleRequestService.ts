@@ -1,4 +1,4 @@
-import apiClient from './authService';
+import apiClient from './apiClient';
 
 export interface ScheduleRequest {
     id: number;
@@ -43,23 +43,23 @@ export interface CreateScheduleRequestPayload {
 
 export const scheduleRequestService = {
     getMyRequests: async (page = 0, size = 10): Promise<PageResponse<ScheduleRequest>> => {
-        const response = await apiClient.get(`/lecturer/requests?page=${page}&size=${size}`);
+        const response = await apiClient.get(`/v1/lecturer/requests?page=${page}&size=${size}`);
         return response.data;
     },
     getRequestById: async (id: number): Promise<ScheduleRequest> => {
-        const response = await apiClient.get(`/lecturer/requests/${id}`);
+        const response = await apiClient.get(`/v1/lecturer/requests/${id}`);
         return response.data;
     },
     createRequest: async (payload: CreateScheduleRequestPayload): Promise<ScheduleRequest> => {
-        const response = await apiClient.post('/lecturer/requests', payload);
+        const response = await apiClient.post('/v1/lecturer/requests', payload);
         return response.data;
     },
     getSlotsForClass: async (className: string): Promise<ClassSlotResponse[]> => {
-        const response = await apiClient.get(`/lecturer/classes/${className}/slots`);
+        const response = await apiClient.get(`/v1/lecturer/classes/${className}/slots`);
         return response.data;
     },
     getClasses: async (): Promise<string[]> => {
-        const response = await apiClient.get(`/lecturer/classes`);
+        const response = await apiClient.get(`/v1/lecturer/classes`);
         return response.data;
     },
 
@@ -69,14 +69,14 @@ export const scheduleRequestService = {
     },
 
     checkConflicts: async (className: string, date: string, slotNumber: number, originalSlotId: number): Promise<ConflictCheckResponse> => {
-        const response = await apiClient.get(`/lecturer/check-conflicts`, {
+        const response = await apiClient.get(`/v1/lecturer/check-conflicts`, {
             params: { className, date, slotNumber, originalSlotId }
         });
         return response.data;
     },
 
     revokeRequest: async (id: number): Promise<{ message: string }> => {
-        const response = await apiClient.post(`/lecturer/requests/${id}/revoke`);
+        const response = await apiClient.post(`/v1/lecturer/requests/${id}/revoke`);
         return response.data;
     }
 };

@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useRef, useMemo, Fragment } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRoleAwareNavigate } from '../../hooks/useRoleAwareNavigate';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import axios from 'axios';
+import apiClient from '../../services/api/authService';
 import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
 import { toast } from 'react-hot-toast';
-import { Calendar, BookOpen, ChevronLeft, ChevronRight, X, Clock, MapPin, User, GraduationCap, AlertTriangle, Check, ChevronsUpDown, Eye, EyeOff, Loader2, Play, Users, School, Download, MoreVertical, Home, RefreshCw, Save, List } from 'lucide-react';
+import { Calendar, BookOpen, ChevronLeft, ChevronRight, X, MapPin, AlertTriangle, Check, ChevronsUpDown, Eye, EyeOff, Loader2, Play, Users, School, Download, MoreVertical, Home, RefreshCw, Save } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Combobox, Transition, Listbox } from '@headlessui/react';
 
@@ -105,6 +106,8 @@ const FilterCombobox: React.FC<FilterComboboxProps> = ({ value, onChange, option
 interface Semester {
   code: string;
   name: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 interface SlotTime {
@@ -216,7 +219,7 @@ const ErrorSuggestionsPanel: React.FC<{ error: string; onClose: () => void }> = 
 };
 
 export const SchedulePage: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useRoleAwareNavigate();
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [slotTimes, setSlotTimes] = useState<SlotTime[]>(DEFAULT_SLOT_TIMES);
@@ -270,10 +273,24 @@ export const SchedulePage: React.FC = () => {
 
   const fetchSemesters = async () => {
     try {
-      const resp = await axios.get('/api/v1/semesters/active');
+      const resp = await apiClient.get('/v1/semesters/active');
       const data = Array.isArray(resp.data) ? resp.data : [];
       setSemesters(data);
-      if (data.length > 0 && !selected) setSelected(data[0].code);
+
+      if (data.length > 0 && !selected) {
+        // Try to find the current active semester based on today's date
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        const currentSem = data.find(s =>
+          s.startDate && s.endDate && todayStr >= s.startDate && todayStr <= s.endDate
+        );
+
+        if (currentSem) {
+          setSelected(currentSem.code);
+        } else {
+          // If no semester covers today, default to the first one (most recent)
+          setSelected(data[0].code);
+        }
+      }
     } catch (err) {
       console.error('Failed to load semesters', err);
       toast.error('Không thể tải danh sách học kỳ');
@@ -283,16 +300,28 @@ export const SchedulePage: React.FC = () => {
 
   const fetchSemesterDetails = async (semesterCode: string) => {
     try {
-      const resp = await axios.get(`/api/v1/semesters/get-by-code/${semesterCode}`);
+      const resp = await apiClient.get(`/v1/semesters/get-by-code/${semesterCode}`);
       const semesterData = resp.data;
 
       // Extract start and end dates from semester
       if (semesterData.startDate) {
         setSemesterStartDate(semesterData.startDate);
-        setSelectedDate(semesterData.startDate); // Auto-select first day of semester
       }
       if (semesterData.endDate) {
         setSemesterEndDate(semesterData.endDate);
+      }
+
+      // Auto-select today if it falls within the semester, otherwise default to start date
+      if (semesterData.startDate) {
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        const isPastStart = todayStr >= semesterData.startDate;
+        const isBeforeEnd = !semesterData.endDate || todayStr <= semesterData.endDate;
+
+        if (isPastStart && isBeforeEnd) {
+          setSelectedDate(todayStr);
+        } else {
+          setSelectedDate(semesterData.startDate);
+        }
       }
 
       // Set published status from semester config
@@ -605,7 +634,7 @@ export const SchedulePage: React.FC = () => {
     if (!selected) return;
     const newValue = !showLockedSchedule;
     try {
-      await axios.patch(`/api/v1/semesters/${selected}/publish`, { isPublished: newValue });
+      await apiClient.patch(`/v1/semesters/${selected}/publish`, { isPublished: newValue });
       setShowLockedSchedule(newValue);
       toast.success(newValue ? 'Đã công khai thời khóa biểu cho sinh viên' : 'Đã ẩn thời khóa biểu');
     } catch (err) {
@@ -1240,20 +1269,20 @@ export const SchedulePage: React.FC = () => {
       {/* Slot Detail Popup */}
       {selectedSlot && (
         <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-[100] animate-in fade-in duration-300"
           onClick={() => setSelectedSlot(null)}
         >
           <div
-            className="bg-white rounded-2xl p-6 max-w-lg w-full mx-4 shadow-2xl"
+            className="bg-white rounded-[28px] p-7 md:p-8 max-w-md w-full mx-4 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] relative animate-in zoom-in-95 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-start justify-between mb-6">
+            <div className="flex items-start justify-between mb-5">
               <div>
-                <h3 className="text-xl font-bold text-gray-900">
+                <h3 className="text-xl font-bold text-slate-900 tracking-tight">
                   Chi tiết tiết học
                 </h3>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-[12px] font-medium text-slate-400 mt-0.5 uppercase tracking-wider">
                   {selectedSlot.date && new Date(selectedSlot.date).toLocaleDateString('vi-VN', {
                     weekday: 'long',
                     day: '2-digit',
@@ -1264,97 +1293,75 @@ export const SchedulePage: React.FC = () => {
               </div>
               <button
                 onClick={() => setSelectedSlot(null)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-2 hover:bg-slate-50 rounded-full transition-all group"
               >
-                <X size={20} className="text-gray-500" />
+                <X size={20} className="text-slate-300 group-hover:text-slate-500 transition-colors" />
               </button>
             </div>
 
-            {/* Course Info Card */}
-            <div className="bg-gradient-to-r from-fpt-orange/10 to-orange-50 rounded-xl p-4 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-fpt-orange/20 rounded-xl flex items-center justify-center">
-                  <BookOpen size={24} className="text-fpt-orange" />
-                </div>
-                <div>
-                  <div className="text-lg font-bold text-fpt-orange">
-                    {selectedSlot.courseCode || 'N/A'}
-                  </div>
-                  <div className="text-sm text-gray-700">
-                    {selectedSlot.courseName || 'Chưa có tên môn học'}
-                  </div>
-                </div>
-              </div>
+            {/* Course Information Section */}
+            <div className="mb-5 pl-1 border-l-4 border-fpt-orange/20">
+              <span className="text-[9px] font-extrabold text-fpt-orange uppercase tracking-[0.15em] mb-1 block">
+                Môn học
+              </span>
+              <h4 className="text-lg font-bold text-slate-800 leading-snug">
+                {selectedSlot.courseCode} — {selectedSlot.courseName}
+              </h4>
             </div>
 
-            {/* Details Grid */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="h-px bg-slate-100 w-full mb-6"></div>
+
+            {/* Details Grid (2x2) */}
+            <div className="grid grid-cols-2 gap-y-5 gap-x-4 mb-8">
               {/* Class */}
-              <div className="bg-gray-50 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <GraduationCap size={16} className="text-fpt-orange" />
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Lớp</span>
-                </div>
+              <div>
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-1 block">Lớp</span>
                 <button
                   onClick={() => navigate(`/academic-staff/class-sections/${selectedSlot.className}`)}
-                  className="text-sm font-semibold text-fpt-orange hover:underline text-left block w-full"
+                  className="text-sm font-bold text-slate-800 hover:text-fpt-orange transition-colors text-left"
                 >
-                  {selectedSlot.className || 'N/A'}
+                  {selectedSlot.className}
                 </button>
               </div>
 
               {/* Lecturer */}
-              <div className="bg-gray-50 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <User size={16} className="text-fpt-orange" />
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Giảng viên</span>
-                </div>
-                <div className="text-sm font-semibold text-gray-800">
+              <div>
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-1 block">Giảng viên</span>
+                <p className="text-sm font-bold text-slate-800 truncate">
                   {selectedSlot.lecturerName || 'Chưa phân công'}
-                </div>
+                </p>
               </div>
 
               {/* Room */}
-              <div className="bg-gray-50 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <MapPin size={16} className="text-fpt-orange" />
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Phòng</span>
-                </div>
-                <div className="text-sm font-semibold text-gray-800">
+              <div>
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-1 block">Phòng</span>
+                <p className="text-sm font-bold text-slate-800">
                   {selectedSlot.roomCode || selectedSlot.roomName || 'N/A'}
-                </div>
+                </p>
               </div>
 
-              {/* Time Slot */}
-              <div className="bg-gray-50 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Clock size={16} className="text-fpt-orange" />
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Tiết</span>
-                </div>
-                <div className="text-sm font-semibold text-gray-800">
-                  Slot {selectedSlot.slotNumber || 'N/A'}
-                  {selectedSlot.startTime && selectedSlot.endTime && (
-                    <span className="text-xs text-gray-500 ml-2">
-                      ({selectedSlot.startTime} - {selectedSlot.endTime})
-                    </span>
-                  )}
-                </div>
+              {/* Time */}
+              <div>
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-1 block">Thời gian</span>
+                <p className="text-sm font-bold text-slate-800">
+                  Slot {selectedSlot.slotNumber} <span className="font-medium text-slate-400 ml-1">
+                    {(selectedSlot.startTime || '').substring(0, 5)} - {(selectedSlot.endTime || '').substring(0, 5)}
+                  </span>
+                </p>
               </div>
             </div>
 
-
-            {/* Rescheduling Form */}
+            {/* Rescheduling Form - Adjusted style */}
             {isRescheduling && (
-              <div className="border-t border-gray-100 pt-4 mt-4 space-y-4">
-                <h4 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <RefreshCw size={16} className="text-fpt-orange" />
+              <div className="bg-orange-50/50 rounded-2xl p-4 mb-6 border border-orange-100/50 animate-in slide-in-from-top-4 duration-300">
+                <h4 className="text-[11px] font-bold text-fpt-orange uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <RefreshCw size={13} />
                   Thay đổi lịch học
                 </h4>
 
-                <div className="grid grid-cols-1 gap-4">
-                  {/* Date Input */}
+                <div className="space-y-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Ngày đổi</label>
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Ngày đổi</label>
                     <input
                       type="date"
                       value={rescheduleDate}
@@ -1365,57 +1372,63 @@ export const SchedulePage: React.FC = () => {
                         setRescheduleSlot(null);
                         setRescheduleRoom(null);
                       }}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-fpt-orange focus:border-fpt-orange outline-none"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all"
                     />
                   </div>
 
-                  {/* Slot Selection */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Tiết đổi</label>
-                    <select
-                      value={rescheduleSlot || ''}
-                      onChange={(e) => setRescheduleSlot(Number(e.target.value))}
-                      disabled={!rescheduleDate || loadingAvailability}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-fpt-orange focus:border-fpt-orange outline-none disabled:bg-gray-50"
-                    >
-                      <option value="">Chọn tiết học</option>
-                      {availableSlots.map(num => (
-                        <option key={num} value={num}>Slot {num}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Room Selection */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Phòng đổi</label>
-                    <select
-                      value={rescheduleRoom || ''}
-                      onChange={(e) => setRescheduleRoom(Number(e.target.value))}
-                      disabled={!rescheduleSlot}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-fpt-orange focus:border-fpt-orange outline-none disabled:bg-gray-50"
-                    >
-                      <option value="">Chọn phòng học</option>
-                      {availableRooms.map(r => (
-                        <option key={r.id} value={r.id}>{r.name} ({r.capacity} chỗ)</option>
-                      ))}
-                    </select>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Tiết đổi</label>
+                      <select
+                        value={rescheduleSlot || ''}
+                        onChange={(e) => setRescheduleSlot(Number(e.target.value))}
+                        disabled={!rescheduleDate || loadingAvailability}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all disabled:opacity-50"
+                      >
+                        <option value="">Chọn tiết</option>
+                        {availableSlots.map(num => (
+                          <option key={num} value={num}>Slot {num}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Phòng đổi</label>
+                      <select
+                        value={rescheduleRoom || ''}
+                        onChange={(e) => setRescheduleRoom(Number(e.target.value))}
+                        disabled={!rescheduleSlot}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all disabled:opacity-50"
+                      >
+                        <option value="">Chọn phòng</option>
+                        {availableRooms.map(r => (
+                          <option key={r.id} value={r.id}>{r.name}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
               </div>
             )}
 
             {/* Actions */}
-            <div className="mt-6 flex justify-end gap-3">
+            <div className="space-y-3">
               {!isRescheduling ? (
-                <div className="w-full flex justify-between items-center sm:w-auto sm:justify-end gap-3">
+                <>
                   <button
-                    onClick={() => window.open(`/academic-staff/attendance/realtime/${selectedSlot.id}`, '_blank')}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl font-medium transition-colors"
+                    onClick={() => {
+                      const path = `/academic-staff/attendance/realtime/${selectedSlot.id}`;
+                      const userStr = localStorage.getItem('user');
+                      const user = userStr ? JSON.parse(userStr) : null;
+                      const mappedPath = (user?.role === 'LECTURER') 
+                        ? path.replace('/academic-staff/', '/lecturer/granted/') 
+                        : path;
+                      window.open(mappedPath, '_blank');
+                    }}
+                    className="w-full py-3.5 bg-fpt-orange hover:bg-orange-600 text-white rounded-[20px] font-bold transition-all shadow-lg shadow-orange-100 active:scale-[0.98]"
                   >
-                    <List size={18} />
                     Xem điểm danh
                   </button>
-                  <div className="flex gap-3">
+                  <div className="flex items-center justify-between pt-1">
                     <button
                       onClick={() => {
                         setIsRescheduling(true);
@@ -1423,24 +1436,25 @@ export const SchedulePage: React.FC = () => {
                         setRescheduleSlot(selectedSlot.slotNumber || null);
                         setRescheduleRoom(null);
                       }}
-                      className="flex items-center gap-2 px-6 py-2.5 bg-fpt-orange hover:bg-orange-600 text-white rounded-xl font-medium transition-colors"
+                      className="px-8 py-3 border border-fpt-orange/10 text-fpt-orange rounded-[18px] text-xs font-bold hover:bg-orange-50 hover:border-fpt-orange/30 transition-all active:scale-[0.98] shadow-sm shadow-orange-50"
                     >
-                      <RefreshCw size={18} />
                       Cập nhật
                     </button>
                     <button
                       onClick={() => setSelectedSlot(null)}
-                      className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
+                      className="px-4 py-3 text-slate-400 text-xs font-bold hover:text-slate-600 transition-colors"
                     >
                       Đóng
                     </button>
                   </div>
-                </div>
+                </>
+
+
               ) : (
-                <>
+                <div className="flex gap-4">
                   <button
                     onClick={() => setIsRescheduling(false)}
-                    className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
+                    className="flex-1 py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-bold transition-all"
                   >
                     Hủy
                   </button>
@@ -1460,7 +1474,6 @@ export const SchedulePage: React.FC = () => {
                         toast.success('Đã cập nhật lịch học');
                         setIsRescheduling(false);
                         setSelectedSlot(null);
-                        // Refresh timetable
                         if (selected && selectedDate) {
                           fetchTimetable(selected, selectedDate);
                         }
@@ -1471,17 +1484,18 @@ export const SchedulePage: React.FC = () => {
                       }
                     }}
                     disabled={isSubmittingReschedule}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
+                    className="flex-[2] py-4 bg-green-500 hover:bg-green-600 text-white rounded-2xl font-bold transition-all shadow-lg shadow-green-100 disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {isSubmittingReschedule ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
                     Xác nhận đổi
                   </button>
-                </>
+                </div>
               )}
             </div>
           </div>
         </div>
       )}
+
     </AcademicStaffLayout>
   );
 };

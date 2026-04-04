@@ -4,11 +4,11 @@ import com.fams.backend.dto.response.ScheduleRequestResponse;
 import com.fams.backend.entity.ScheduleRequest;
 import com.fams.backend.entity.User;
 import com.fams.backend.service.ScheduleRequestService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,9 +20,9 @@ import java.time.LocalDate;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/academic-staff/schedule-requests")
+@RequestMapping("/api/v1/academic-staff/schedule-requests")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*", exposedHeaders = { "Content-Disposition" })
+@Tag(name = "Schedule Request", description = "API quản lý yêu cầu thay đổi lịch học")
 @PreAuthorize("hasRole('ACADEMIC_STAFF')")
 @Slf4j
 public class ScheduleRequestController {
@@ -35,16 +35,42 @@ public class ScheduleRequestController {
                         @RequestParam(required = false) String search,
                         @RequestParam(required = false) String role,
                         @RequestParam(required = false) String reason,
-                        @RequestParam(required = false) ScheduleRequest.RequestStatus status,
-                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+                        @RequestParam(required = false) String status,
+                        @RequestParam(required = false) String startDate,
+                        @RequestParam(required = false) String endDate,
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "10") int size,
                         @RequestParam(defaultValue = "createdAt,desc") String sort) {
+                
+                // Chuyển đổi an toàn cho Enum Status
+                ScheduleRequest.RequestStatus statusEnum = null;
+                if (status != null && !status.trim().isEmpty()) {
+                    try {
+                        statusEnum = ScheduleRequest.RequestStatus.valueOf(status.trim().toUpperCase());
+                    } catch (IllegalArgumentException e) {
+                        log.warn("Invalid status value received: {}", status);
+                    }
+                }
+
+                // Chuyển đổi an toàn cho Date
+                LocalDate start = null;
+                LocalDate end = null;
+                try {
+                    if (startDate != null && !startDate.trim().isEmpty()) {
+                        start = LocalDate.parse(startDate);
+                    }
+                    if (endDate != null && !endDate.trim().isEmpty()) {
+                        end = LocalDate.parse(endDate);
+                    }
+                } catch (Exception e) {
+                    log.warn("Invalid date format received: startDate={}, endDate={}", startDate, endDate);
+                }
+
                 String[] sortParts = sort.split(",");
                 Sort sortObj = Sort.by(Sort.Direction.fromString(sortParts[1]), sortParts[0]);
+                
                 return ResponseEntity.ok(scheduleRequestService.getRequests(
-                                search, role, reason, status, startDate, endDate, PageRequest.of(page, size, sortObj)));
+                                search, role, reason, statusEnum, start, end, PageRequest.of(page, size, sortObj)));
         }
 
         @GetMapping("/stats")
@@ -77,11 +103,37 @@ public class ScheduleRequestController {
                         @RequestParam(required = false) String search,
                         @RequestParam(required = false) String role,
                         @RequestParam(required = false) String reason,
-                        @RequestParam(required = false) ScheduleRequest.RequestStatus status,
-                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+                        @RequestParam(required = false) String status,
+                        @RequestParam(required = false) String startDate,
+                        @RequestParam(required = false) String endDate) {
+                
                 log.info("Received export request: search={}, role={}, status={}", search, role, status);
-                byte[] data = scheduleRequestService.exportRequests(search, role, reason, status, startDate, endDate);
+
+                // Chuyển đổi an toàn cho Enum Status
+                ScheduleRequest.RequestStatus statusEnum = null;
+                if (status != null && !status.trim().isEmpty()) {
+                    try {
+                        statusEnum = ScheduleRequest.RequestStatus.valueOf(status.trim().toUpperCase());
+                    } catch (IllegalArgumentException e) {
+                        log.warn("Invalid export status value received: {}", status);
+                    }
+                }
+
+                // Chuyển đổi an toàn cho Date
+                LocalDate start = null;
+                LocalDate end = null;
+                try {
+                    if (startDate != null && !startDate.trim().isEmpty()) {
+                        start = LocalDate.parse(startDate);
+                    }
+                    if (endDate != null && !endDate.trim().isEmpty()) {
+                        end = LocalDate.parse(endDate);
+                    }
+                } catch (Exception e) {
+                    log.warn("Invalid export date format received: startDate={}, endDate={}", startDate, endDate);
+                }
+
+                byte[] data = scheduleRequestService.exportRequests(search, role, reason, statusEnum, start, end);
                 log.info("Export data generated, size: {}", data != null ? data.length : 0);
                 return ResponseEntity.ok()
                                 .header("Content-Disposition", "attachment; filename=\"schedule_requests.xlsx\"")

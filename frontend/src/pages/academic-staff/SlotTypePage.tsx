@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Calendar, Plus, ArrowLeft, Trash2, Clock, Check, AlertCircle, ChevronRight, AlertTriangle } from 'lucide-react';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { useRoleAwareNavigate } from '../../hooks/useRoleAwareNavigate';
 import toast from 'react-hot-toast';
-import axios from 'axios';
+import apiClient from '../../services/api/authService';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { timetableService } from '../../services/api/timetableService';
 
@@ -52,7 +53,7 @@ const VIETNAMESE_HOLIDAYS_PRESETS = [
 ];
 
 export const SlotTypePage: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useRoleAwareNavigate();
   const { semesterCode } = useParams<{ semesterCode: string }>();
   
   const [config, setConfig] = useState<SemesterConfig>({
@@ -139,7 +140,7 @@ export const SlotTypePage: React.FC = () => {
   // Fetch semester data
   useEffect(() => {
     if (semesterCode) {
-      axios.get(`/api/v1/semesters/get-by-code/${semesterCode}`)
+      apiClient.get(`/v1/semesters/get-by-code/${semesterCode}`)
         .then(response => {
           const data = response.data;
           const loadedConfig: SemesterConfig = {
@@ -358,22 +359,23 @@ export const SlotTypePage: React.FC = () => {
     const validSlots = config.slots.filter(s => s.startTime && s.endTime);
     const validHolidays = config.holidays.filter(h => h.holidayDate);
 
-    try {
-      const payload = {
-        selectedDays: config.selectedDays,
-        maxSlotsPerDay: config.maxSlotsPerDay,
-        slotsPerSubjectPerWeek: config.slotsPerSubjectPerWeek,
-        slotDuration: parseInt(config.slotType),
-        isPublished: config.isPublished,
-        slots: validSlots,
-        holidays: validHolidays
-      };
+    const payload = {
+      selectedDays: config.selectedDays,
+      maxSlotsPerDay: config.maxSlotsPerDay,
+      slotsPerSubjectPerWeek: config.slotsPerSubjectPerWeek,
+      slotDuration: parseInt(config.slotType),
+      isPublished: config.isPublished,
+      slots: validSlots,
+      holidays: validHolidays
+    };
 
-      await axios.post(`/api/v1/semesters/${semesterCode}/config`, payload);
-      toast.success('Lưu cấu hình thành công!');
+    const toastId = toast.loading('Đang lưu cấu hình...');
+    try {
+      await apiClient.post(`/v1/semesters/${semesterCode}/config`, payload);
+      toast.success('Lưu cấu hình thành công', { id: toastId });
       
       // Refresh data to get newest state
-      const response = await axios.get(`/api/v1/semesters/get-by-code/${semesterCode}`);
+      const response = await apiClient.get(`/v1/semesters/get-by-code/${semesterCode}`);
       const data = response.data;
       const updatedConfig: SemesterConfig = {
         ...config,
@@ -392,8 +394,13 @@ export const SlotTypePage: React.FC = () => {
       setIsReadOnly(true);
     } catch (error: any) {
       console.error('Error saving configuration:', error);
-      const errorMsg = error.response?.data?.message || error.response?.data || error.message || 'Lỗi không xác định';
-      toast.error(`Không thể lưu cấu hình: ${error.response?.status === 403 ? 'Bạn không có quyền hoặc kỳ học đang diễn ra' : (typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg))}`);
+      let errorMessage = 'Lỗi không xác định khi lưu cấu hình';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      toast.error(errorMessage, { id: toastId });
     }
   };
 
