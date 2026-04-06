@@ -502,7 +502,7 @@ public class StagingImportService {
         // Mark rows with missing course_code
         jdbcTemplate.update("""
                 UPDATE %s SET error_message = COALESCE(error_message || '; ', '') || 'Mã môn học không được để trống'
-                WHERE TRIM(COALESCE(course_code, '')) = '' AND error_message IS NULL
+                WHERE TRIM(COALESCE(course_code, '')) = ''
                 """.formatted(stagingTable));
 
         // Mark rows with invalid course_code
@@ -511,7 +511,6 @@ public class StagingImportService {
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Không tìm thấy môn học: ' || s.course_code
                         WHERE s.course_code != ''
                         AND NOT EXISTS (SELECT 1 FROM courses c WHERE s.course_code = c.code)
-                        AND s.error_message IS NULL
                         """
                         .formatted(stagingTable));
 
@@ -521,29 +520,27 @@ public class StagingImportService {
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Không tìm thấy giảng viên: ' || s.lecturer_code
                         WHERE s.lecturer_code != ''
                         AND NOT EXISTS (SELECT 1 FROM users u WHERE s.lecturer_code = u.username AND u.role = 'LECTURER')
-                        AND s.error_message IS NULL
                         """
                         .formatted(stagingTable));
 
         // Mark duplicate class names in file
         jdbcTemplate.update("""
                 UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Mã lớp bị trùng trong file'
-                WHERE s.row_num NOT IN (
+                WHERE s.class_name != ''
+                AND s.row_num NOT IN (
                     SELECT MIN(row_num) FROM %s GROUP BY class_name
                 )
-                WHERE s.class_name != ''
-                AND s.error_message IS NULL
                 """.formatted(stagingTable, stagingTable));
 
         // Mark rows where class_name already exists in database
         jdbcTemplate
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Lớp học phần đã tồn tại trong hệ thống'
-                        WHERE EXISTS (
+                        WHERE s.class_name != ''
+                        AND EXISTS (
                             SELECT 1 FROM class_sections cs
                             WHERE cs.class_name = s.class_name
                         )
-                        AND s.error_message IS NULL
                         """
                         .formatted(stagingTable));
 
@@ -560,7 +557,7 @@ public class StagingImportService {
         // Mark rows with missing class_name
         jdbcTemplate.update("""
                 UPDATE %s SET error_message = COALESCE(error_message || '; ', '') || 'Mã lớp không được để trống'
-                WHERE TRIM(COALESCE(class_name, '')) = '' AND error_message IS NULL
+                WHERE TRIM(COALESCE(class_name, '')) = ''
                 """.formatted(stagingTable));
 
         // Mark rows with invalid student_code
@@ -569,7 +566,6 @@ public class StagingImportService {
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Không tìm thấy sinh viên: ' || s.student_code
                         WHERE s.student_code != ''
                         AND NOT EXISTS (SELECT 1 FROM users u WHERE s.student_code = u.code AND u.role = 'STUDENT')
-                        AND s.error_message IS NULL
                         """
                         .formatted(stagingTable));
 
@@ -579,7 +575,6 @@ public class StagingImportService {
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Không tìm thấy lớp học phần: ' || s.class_name
                         WHERE s.class_name != ''
                         AND NOT EXISTS (SELECT 1 FROM class_sections cs WHERE s.class_name = cs.class_name AND cs.semester_id = ?)
-                        AND s.error_message IS NULL
                         """
                         .formatted(stagingTable), semesterId);
 
@@ -587,19 +582,20 @@ public class StagingImportService {
         jdbcTemplate
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Sinh viên đã đăng ký lớp này trong file'
-                        WHERE s.row_num NOT IN (
+                        WHERE s.student_code != ''
+                        AND s.class_name != ''
+                        AND s.row_num NOT IN (
                             SELECT MIN(row_num) FROM %s GROUP BY student_code, class_name
                         )
-                        AND s.student_code != ''
-                        AND s.class_name != ''
-                        AND s.error_message IS NULL
                         """
                         .formatted(stagingTable, stagingTable));
 
         jdbcTemplate
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Sinh viên đã đăng ký lớp này rồi'
-                        WHERE EXISTS (
+                        WHERE s.student_code != ''
+                        AND s.class_name != ''
+                        AND EXISTS (
                             SELECT 1 FROM enrollments e
                             JOIN users u ON e.student_id = u.id
                             JOIN class_sections cs ON e.class_name = cs.class_name
@@ -607,7 +603,6 @@ public class StagingImportService {
                             AND s.class_name = cs.class_name
                             AND cs.semester_id = ?
                         )
-                        AND s.error_message IS NULL
                         """
                         .formatted(stagingTable), semesterId);
 
@@ -615,8 +610,7 @@ public class StagingImportService {
         jdbcTemplate
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Sinh viên chưa có hồ sơ (student profile)'
-                        WHERE s.error_message IS NULL
-                        AND NOT EXISTS (
+                        WHERE NOT EXISTS (
                             SELECT 1 FROM users u
                             JOIN student_profiles sp ON u.id = sp.user_id
                             WHERE s.student_code = u.code
@@ -629,8 +623,7 @@ public class StagingImportService {
         jdbcTemplate
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Sinh viên có hồ sơ nhưng chưa được gán ngành hoặc chuyên ngành'
-                        WHERE s.error_message IS NULL
-                        AND EXISTS (
+                        WHERE EXISTS (
                             SELECT 1 FROM users u
                             JOIN student_profiles sp ON u.id = sp.user_id
                             WHERE s.student_code = u.code
@@ -643,8 +636,7 @@ public class StagingImportService {
         jdbcTemplate
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Môn học không nằm trong chuyên ngành của sinh viên'
-                        WHERE s.error_message IS NULL
-                        AND EXISTS (
+                        WHERE EXISTS (
                             SELECT 1 FROM users u
                             JOIN student_profiles sp ON sp.user_id = u.id
                             JOIN class_sections cs ON s.class_name = cs.class_name AND cs.semester_id = ?
