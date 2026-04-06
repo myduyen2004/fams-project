@@ -75,14 +75,24 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
             }
         }
 
+        // Join reference URLs/names with ||| delimiter
+        String joinedRefUrl = null;
+        String joinedRefName = null;
+        if (request.getReferenceUrls() != null && !request.getReferenceUrls().isEmpty()) {
+            joinedRefUrl = String.join("|||", request.getReferenceUrls());
+            joinedRefName = request.getReferenceNames() != null
+                    ? String.join("|||", request.getReferenceNames())
+                    : String.join("|||", request.getReferenceUrls());
+        }
+
         Assignment assignment = Assignment.builder()
                 .title(request.getTitle())
                 .description(request.getDescription())
                 .classSection(classSection)
                 .createdBy(lecturer)
                 .dueDate(request.getDueDate())
-                .referenceUrl(request.getReferenceUrl())
-                .referenceName(request.getReferenceName())
+                .referenceUrl(joinedRefUrl)
+                .referenceName(joinedRefName)
                 .status(Assignment.AssignmentStatus.OPEN)
                 .timetableSlot(slot)
                 .build();
@@ -316,6 +326,12 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
                             .assignmentDueDate(assignment.getDueDate())
                             .referenceUrl(assignment.getReferenceUrl())
                             .referenceName(assignment.getReferenceName())
+                            .referenceUrls(assignment.getReferenceUrl() != null && !assignment.getReferenceUrl().isEmpty()
+                                ? Arrays.asList(assignment.getReferenceUrl().split("\\|\\|\\|"))
+                                : Collections.emptyList())
+                            .referenceNames(assignment.getReferenceName() != null && !assignment.getReferenceName().isEmpty()
+                                ? Arrays.asList(assignment.getReferenceName().split("\\|\\|\\|"))
+                                : Collections.emptyList())
                             .build());
                 }
             }
@@ -350,6 +366,12 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
                 .timetableSlotId(assignment.getTimetableSlot() != null ? assignment.getTimetableSlot().getId() : null)
                 .referenceUrl(assignment.getReferenceUrl())
                 .referenceName(assignment.getReferenceName())
+                .referenceUrls(assignment.getReferenceUrl() != null && !assignment.getReferenceUrl().isEmpty()
+                    ? Arrays.asList(assignment.getReferenceUrl().split("\\|\\|\\|"))
+                    : Collections.emptyList())
+                .referenceNames(assignment.getReferenceName() != null && !assignment.getReferenceName().isEmpty()
+                    ? Arrays.asList(assignment.getReferenceName().split("\\|\\|\\|"))
+                    : Collections.emptyList())
                 .build();
     }
 
@@ -459,6 +481,12 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
                 .dueDate(assignment.getDueDate())
                 .referenceUrl(assignment.getReferenceUrl())
                 .referenceName(assignment.getReferenceName())
+                .referenceUrls(assignment.getReferenceUrl() != null && !assignment.getReferenceUrl().isEmpty()
+                    ? Arrays.asList(assignment.getReferenceUrl().split("\\|\\|\\|"))
+                    : Collections.emptyList())
+                .referenceNames(assignment.getReferenceName() != null && !assignment.getReferenceName().isEmpty()
+                    ? Arrays.asList(assignment.getReferenceName().split("\\|\\|\\|"))
+                    : Collections.emptyList())
                 .status(assignment.getStatus().name())
                 .totalSubmissions(totalSubmissions)
                 .totalStudents(totalStudents)
@@ -516,6 +544,12 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
                 .timetableSlotId(assignment.getTimetableSlot() != null ? assignment.getTimetableSlot().getId() : null)
                 .referenceUrl(assignment.getReferenceUrl())
                 .referenceName(assignment.getReferenceName())
+                .referenceUrls(assignment.getReferenceUrl() != null && !assignment.getReferenceUrl().isEmpty()
+                    ? Arrays.asList(assignment.getReferenceUrl().split("\\|\\|\\|"))
+                    : Collections.emptyList())
+                .referenceNames(assignment.getReferenceName() != null && !assignment.getReferenceName().isEmpty()
+                    ? Arrays.asList(assignment.getReferenceName().split("\\|\\|\\|"))
+                    : Collections.emptyList())
                 .build();
     }
 
@@ -541,7 +575,7 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
     @Override
     public AssignmentResponse updateAssignment(Long assignmentId, Long lecturerId,
             String title, String description, LocalDateTime dueDate,
-            String referenceUrl, String referenceName) {
+            List<String> referenceUrls, List<String> referenceNames) {
         Assignment assignment = assignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new RuntimeException("Bài tập không tồn tại"));
 
@@ -564,11 +598,11 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
                 log.info("Assignment auto-reopened via update: id={}", assignmentId);
             }
         }
-        if (referenceUrl != null) {
-            assignment.setReferenceUrl(referenceUrl);
+        if (referenceUrls != null) {
+            assignment.setReferenceUrl(referenceUrls.isEmpty() ? null : String.join("|||", referenceUrls));
         }
-        if (referenceName != null) {
-            assignment.setReferenceName(referenceName);
+        if (referenceNames != null) {
+            assignment.setReferenceName(referenceNames.isEmpty() ? null : String.join("|||", referenceNames));
         }
 
         assignmentRepository.save(assignment);

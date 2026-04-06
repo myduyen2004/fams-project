@@ -1,187 +1,10 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { LecturerLayout } from '../../layouts/LecturerLayout';
-import { assignmentService, AssignmentDTO, AssignmentSubmissionDTO } from '../../services/api/assignmentService';
-import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
-import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
-import { Pagination } from '../../components/common/Pagination';
-import {
-    ArrowLeft, Clock, ExternalLink, Search, Loader2, BookOpen, Lock, X, Download, MessageSquare
-} from 'lucide-react';
-import toast from 'react-hot-toast';
+const fs = require('fs');
 
-const PAGE_SIZE = 30;
+const path = "d:\\Studyyyy\\Do_an\\FAMS\\fams-project\\frontend\\src\\pages\\lecturer\\LecturerAssignmentDetailPage.tsx";
+let content = fs.readFileSync(path, 'utf8');
 
-export const LecturerAssignmentDetailPage: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
-    const navigate = useNavigate();
-    const assignmentId = Number(id);
-
-    const [assignment, setAssignment] = useState<AssignmentDTO | null>(null);
-    const [submissions, setSubmissions] = useState<AssignmentSubmissionDTO[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [currentPage, setCurrentPage] = useState(0);
-    const [commentSubmission, setCommentSubmission] = useState<AssignmentSubmissionDTO | null>(null);
-    const [commentDraft, setCommentDraft] = useState('');
-    const [savingComment, setSavingComment] = useState(false);
-    const [closingAssignment, setClosingAssignment] = useState(false);
-    const [downloadingZip, setDownloadingZip] = useState(false);
-    const [slotInfo, setSlotInfo] = useState<TimetableSlotDTO | null>(null);
-
-    useEffect(() => {
-        if (!assignmentId || isNaN(assignmentId)) return;
-        fetchData();
-    }, [assignmentId]);
-
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const subsData = await assignmentService.getAllSubmissionStatus(assignmentId);
-            setSubmissions(subsData);
-
-            if (subsData.length > 0) {
-                const first = subsData[0];
-                const classAssignments = await assignmentService.getAssignmentsByClass(first.className);
-                const found = classAssignments.find(a => a.id === assignmentId);
-                if (found) {
-                    setAssignment(found);
-                    // Fetch slot info
-                    if (found.timetableSlotId) {
-                        try {
-                            const slots = await timetableService.getTimetableByClass(found.className);
-                            const slot = slots.find(s => s.id === found.timetableSlotId);
-                            if (slot) setSlotInfo(slot);
-                        } catch { /* slot info is optional */ }
-                    }
-                }
-            }
-        } catch (err: any) {
-            toast.error('Không thể tải dữ liệu bài tập');
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const formatDateTime = (dateStr?: string) => {
-        if (!dateStr) return '—';
-        const d = new Date(dateStr);
-        return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    };
-
-    const renderNoteWithLinks = (text?: string) => {
-        if (!text) return '—';
-        const urlRegex = /(https?:\/\/[^\s]+)/;
-        const parts = text.split(urlRegex);
-        return parts.filter(Boolean).map((part, i) => {
-            if (urlRegex.test(part)) {
-                return <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-fpt-orange hover:underline break-all">{part}</a>;
-            }
-            return <span key={i}>{part}</span>;
-        });
-    };
-
-    const openCommentDialog = (sub: AssignmentSubmissionDTO) => {
-        setCommentSubmission(sub);
-        setCommentDraft(sub.lecturerComment || '');
-    };
-
-    const handleSaveComment = async () => {
-        if (!commentSubmission?.id) return;
-        setSavingComment(true);
-        try {
-            const updated = await assignmentService.updateLecturerComment(commentSubmission.id, commentDraft);
-            setSubmissions(prev => prev.map(s => s.id === commentSubmission.id ? { ...s, lecturerComment: updated.lecturerComment } : s));
-            setCommentSubmission(null);
-            setCommentDraft('');
-            toast.success('Đã lưu nhận xét');
-        } catch (err: any) {
-            toast.error(err?.response?.data?.message || 'Không thể lưu nhận xét');
-        } finally {
-            setSavingComment(false);
-        }
-    };
-
-    const handleCloseAssignment = async () => {
-        if (!assignment) return;
-        try {
-            setClosingAssignment(true);
-            await assignmentService.closeAssignment(assignment.id);
-            toast.success('Đã đóng bài tập');
-            fetchData();
-        } catch (err: any) {
-            toast.error(err.response?.data?.message || 'Không thể đóng bài tập');
-        } finally {
-            setClosingAssignment(false);
-        }
-    };
-
-    const handleDownloadAll = async () => {
-        if (!assignment) return;
-        try {
-            setDownloadingZip(true);
-            const blob = await assignmentService.downloadAllSubmissions(assignmentId);
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `${assignment.className}_${assignment.title}_submissions.zip`);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            window.URL.revokeObjectURL(url);
-            toast.success('Đã tải bài nộp thành công');
-        } catch (err: any) {
-            let msg = 'Không thể tải bài nộp';
-            if (err.response?.data instanceof Blob) {
-                try {
-                    const text = await err.response.data.text();
-                    const json = JSON.parse(text);
-                    msg = json.message || json.error || msg;
-                } catch { /* ignore parse error */ }
-            } else if (err.response?.data?.message) {
-                msg = err.response.data.message;
-            }
-            toast.error(msg);
-        } finally {
-            setDownloadingZip(false);
-        }
-    };
-
-    // Stats
-    const totalStudents = submissions.length;
-    const submittedCount = submissions.filter(s => s.status === 'SUBMITTED').length;
-    const notSubmittedCount = submissions.filter(s => s.status === 'NOT_SUBMITTED').length;
-
-    // Filter
-    const filteredSubmissions = useMemo(() => {
-        if (!searchTerm) return submissions;
-        const term = searchTerm.toLowerCase();
-        return submissions.filter(s =>
-            (s.studentCode || '').toLowerCase().includes(term) ||
-            (s.studentName || '').toLowerCase().includes(term)
-        );
-    }, [submissions, searchTerm]);
-
-    // Pagination
-    const totalPages = Math.ceil(filteredSubmissions.length / PAGE_SIZE);
-    const paginatedSubmissions = filteredSubmissions.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
-
-    useEffect(() => {
-        setCurrentPage(0);
-    }, [searchTerm]);
-
-    if (loading) {
-        return (
-            <LecturerLayout pageTitle="Chi tiêt bài tâp">
-                <div className="flex items-center justify-center min-h-[400px]">
-                    <Loader2 size={32} className="animate-spin text-fpt-orange" />
-                </div>
-            </LecturerLayout>
-        );
-    }
-
-    return (
+// Replace the render block
+const newRenderBlock = `    return (
         <LecturerLayout pageTitle="Chi tiết bài tập">
             <div className="mt-4 ml-10 mr-10 space-y-6 mb-10">
 
@@ -228,10 +51,10 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                                 <div className="md:col-span-4">
                                     <div className="flex items-center gap-2 mb-1.5">
                                         <p className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">LỚP & BÀI TẬP</p>
-                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${assignment.status === 'OPEN'
+                                        <span className={\`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold \${assignment.status === 'OPEN'
                                             ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                                             : 'bg-gray-100 text-gray-500 dark:bg-zinc-800 dark:text-zinc-400'
-                                            }`}>
+                                            }\`}>
                                             {assignment.status === 'OPEN' ? 'ĐANG MỞ' : 'ĐÃ ĐÓNG'}
                                         </span>
                                     </div>
@@ -251,7 +74,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                                     <p className="font-medium text-[#001D4A] dark:text-gray-300">
                                         {slotInfo ? (
                                             <>
-                                                {formatDateTime(slotInfo.date).split(' ')[0]} - {slotInfo.slotNumber && `Slot ${slotInfo.slotNumber}`}
+                                                {formatDateTime(slotInfo.date).split(' ')[0]} - {slotInfo.slotNumber && \`Slot \${slotInfo.slotNumber}\`}
                                             </>
                                         ) : (
                                             <span className="text-gray-400">Chưa xếp lịch</span>
@@ -324,7 +147,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <p className="font-medium text-sm text-[#001D4A] dark:text-white truncate group-hover:text-fpt-orange transition-colors">
-                                                            {names[idx] || `Tài liệu ${idx + 1}`}
+                                                            {names[idx] || \`Tài liệu \${idx + 1}\`}
                                                         </p>
                                                         <p className="text-[11px] text-gray-400 mt-0.5">Mở tài liệu</p>
                                                     </div>
@@ -461,7 +284,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                                                             <a key={idx} href={getViewableFileUrl(url)} target="_blank" rel="noopener noreferrer"
                                                                 className="inline-flex items-center gap-1.5 pl-2 pr-3 py-1 bg-gray-50 hover:bg-gray-100 dark:bg-zinc-800 dark:hover:bg-zinc-700 border border-gray-100 dark:border-zinc-700 rounded-lg text-fpt-orange hover:text-orange-600 text-xs font-medium transition-colors max-w-[220px] group/link">
                                                                 <ExternalLink className="w-3.5 h-3.5 shrink-0" />
-                                                                <span className="truncate" title={sub.fileNames?.[idx]}>{sub.fileNames?.[idx] || `File ${idx + 1}`}</span>
+                                                                <span className="truncate" title={sub.fileNames?.[idx]}>{sub.fileNames?.[idx] || \`File \${idx + 1}\`}</span>
                                                             </a>
                                                         ))}
                                                     </div>
@@ -470,7 +293,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                                                 )}
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="text-xs text-gray-600 dark:text-zinc-300 max-w-[200px] line-clamp-2" title={sub.note}>
+                                                <div className="text-xs text-gray-600 dark:text-zinc-300 max-w-[200px] line-clamp-2 title={sub.note}">
                                                     {sub.note ? renderNoteWithLinks(sub.note) : <span className="text-gray-300 dark:text-zinc-600 italic">—</span>}
                                                 </div>
                                             </td>
@@ -478,7 +301,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                                                 {sub.status === 'SUBMITTED' && sub.id ? (
                                                     <button
                                                         onClick={() => openCommentDialog(sub)}
-                                                        className={`inline-flex items-center justify-center px-4 py-2 ${sub.lecturerComment ? 'bg-orange-50 text-fpt-orange hover:bg-orange-100 border border-orange-200' : 'bg-gray-50 text-gray-500 hover:text-fpt-orange hover:bg-gray-100 border border-gray-200'} rounded-xl text-xs font-bold transition-colors w-full max-w-[140px]`}
+                                                        className={\`inline-flex items-center justify-center px-4 py-2 \${sub.lecturerComment ? 'bg-orange-50 text-fpt-orange hover:bg-orange-100 border border-orange-200' : 'bg-gray-50 text-gray-500 hover:text-fpt-orange hover:bg-gray-100 border border-gray-200'} rounded-xl text-xs font-bold transition-colors w-full max-w-[140px]\`}
                                                     >
                                                         {sub.lecturerComment ? 'Đã nhận xét' : 'Nhận xét'}
                                                     </button>
@@ -569,7 +392,10 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                 </div>
             )}
         </LecturerLayout>
-    );
-};
+    );`;
 
-export default LecturerAssignmentDetailPage;
+const startIndex = content.indexOf('return (');
+content = content.substring(0, startIndex) + newRenderBlock;
+fs.writeFileSync(path, content, 'utf8');
+
+console.log("Replaced");

@@ -8,6 +8,9 @@ import org.apache.poi.xssf.streaming.SXSSFWorkbook; // For large data handling
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -83,29 +86,17 @@ public class ExcelExportService {
                 // Lecturer
                 createCell(row, 6, slot.getLecturerName(), normalStyle);
 
-                // Status logic matching Frontend & User Constraints
-                String statusText = "";
+                String statusText = getStudentScheduleStatusLabel(slot);
                 CellStyle statusStyle = normalStyle;
 
-                if (slot.getAttendanceStatus() != null) {
-                    if ("PRESENT".equalsIgnoreCase(slot.getAttendanceStatus())) {
-                        statusText = "Có mặt";
-                        statusStyle = statusPresent;
-                    } else if ("ABSENT".equalsIgnoreCase(slot.getAttendanceStatus())) {
-                        statusText = "Vắng mặt";
-                        statusStyle = statusAbsent;
-                    }
-                }
-
-                if (statusText.isEmpty()) {
-                    if ("CANCELLED".equalsIgnoreCase(slot.getStatus())) {
-                        statusText = "Đã hủy";
-                        statusStyle = statusFuture; // Or create a cancelled style
-                    } else {
-                        // Default for SCHEDULED, COMPLETED (without attendance) -> Chưa diễn ra
-                        statusText = "Chưa diễn ra";
-                        statusStyle = statusFuture;
-                    }
+                if ("Đã hủy".equals(statusText)) {
+                    statusStyle = statusAbsent;
+                } else if ("Có mặt".equals(statusText)) {
+                    statusStyle = statusPresent;
+                } else if ("Vắng mặt".equals(statusText)) {
+                    statusStyle = statusAbsent;
+                } else {
+                    statusStyle = statusFuture;
                 }
 
                 createCell(row, 7, statusText, statusStyle);
@@ -137,6 +128,8 @@ public class ExcelExportService {
             CellStyle headerStyle = createHeaderStyle(workbook);
             CellStyle normalStyle = createNormalStyle(workbook);
             CellStyle dateStyle = createDateStyle(workbook);
+            CellStyle statusPresent = createStatusStyle(workbook, IndexedColors.GREEN);
+            CellStyle statusAbsent = createStatusStyle(workbook, IndexedColors.RED);
             CellStyle statusFuture = createStatusStyle(workbook, IndexedColors.GREY_50_PERCENT);
             CellStyle titleStyle = createTitleStyle(workbook);
 
@@ -185,15 +178,14 @@ public class ExcelExportService {
                 // Room
                 createCell(row, 5, slot.getRoomCode(), normalStyle);
 
-                // Status logic
-                String statusText = "";
+                String statusText = getLecturerScheduleStatusLabel(slot);
                 CellStyle statusStyle = normalStyle;
 
-                if ("CANCELLED".equalsIgnoreCase(slot.getStatus())) {
-                    statusText = "Đã hủy";
-                    statusStyle = statusFuture;
+                if ("Đã hủy".equals(statusText)) {
+                    statusStyle = statusAbsent;
+                } else if ("Đang diễn ra".equals(statusText)) {
+                    statusStyle = statusPresent;
                 } else {
-                    statusText = "Chưa diễn ra";
                     statusStyle = statusFuture;
                 }
 
@@ -244,6 +236,71 @@ public class ExcelExportService {
             case 7 -> "Sun";
             default -> "";
         };
+    }
+
+    private String getStudentScheduleStatusLabel(TimetableDTO.TimetableSlotDTO slot) {
+        if (slot == null) {
+            return "Chưa điểm danh";
+        }
+
+        if ("CANCELLED".equalsIgnoreCase(slot.getStatus())) {
+            return "Đã hủy";
+        }
+
+        if ("PRESENT".equalsIgnoreCase(slot.getAttendanceStatus())) {
+            return "Có mặt";
+        }
+        if ("ABSENT".equalsIgnoreCase(slot.getAttendanceStatus())) {
+            return "Vắng mặt";
+        }
+        if ("EXCUSED".equalsIgnoreCase(slot.getAttendanceStatus())) {
+            return "Có phép";
+        }
+
+        LocalDate slotDate = slot.getDate();
+        LocalTime startTime = slot.getStartTime();
+        if (slotDate != null && startTime != null) {
+            int thresholdMinutes = slot.getAbsentThresholdMinutes() != null ? slot.getAbsentThresholdMinutes() : 15;
+            LocalDateTime attendanceDeadline = LocalDateTime.of(slotDate, startTime).plusMinutes(thresholdMinutes);
+            if (LocalDateTime.now().isBefore(attendanceDeadline)) {
+                return "Chưa điểm danh";
+            }
+            return "Vắng mặt";
+        }
+
+        return "Chưa điểm danh";
+    }
+
+    private String getLecturerScheduleStatusLabel(TimetableDTO.TimetableSlotDTO slot) {
+        if (slot == null) {
+            return "Chưa diễn ra";
+        }
+
+        if ("CANCELLED".equalsIgnoreCase(slot.getStatus())) {
+            return "Đã hủy";
+        }
+
+        LocalDate slotDate = slot.getDate();
+        if (slotDate == null) {
+            return "Chưa diễn ra";
+        }
+
+        LocalDate today = LocalDate.now();
+        if (slotDate.isBefore(today)) {
+            return "Đã kết thúc";
+        }
+
+        if (slotDate.isEqual(today) && slot.getStartTime() != null && slot.getEndTime() != null) {
+            LocalTime now = LocalTime.now();
+            if (!now.isBefore(slot.getEndTime())) {
+                return "Đã kết thúc";
+            }
+            if (!now.isBefore(slot.getStartTime())) {
+                return "Đang diễn ra";
+            }
+        }
+
+        return "Chưa diễn ra";
     }
 
     // --- Styling Helpers ---
