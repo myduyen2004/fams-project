@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
-import { FileText, Upload, CheckCircle, AlertCircle, XCircle, ExternalLink, Search, Trash2, RotateCcw, Paperclip } from 'lucide-react';
+import { FileText, Upload, CheckCircle, AlertCircle, XCircle, ExternalLink, Search, Trash2, RotateCcw } from 'lucide-react';
 import { assignmentService, AssignmentSubmissionDTO, SubmitAssignmentRequest } from '../../services/api/assignmentService';
 import { uploadFile } from '../../services/utils/fileUploadService';
 import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
@@ -279,7 +279,7 @@ export const StudentAssignmentPage: React.FC = () => {
                                             <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider whitespace-nowrap">Lớp</th>
                                             <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider whitespace-nowrap">Hạn nộp</th>
                                             <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider whitespace-nowrap">Trạng thái</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">File bài tập</th>
+
                                             <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">File nộp</th>
                                             <th className="text-center px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider whitespace-nowrap">Hành động</th>
                                         </tr>
@@ -308,21 +308,7 @@ export const StudentAssignmentPage: React.FC = () => {
                                                 <td className="px-4 py-3 whitespace-nowrap">
                                                     {getStatusBadge(assignment.status)}
                                                 </td>
-                                                <td className="px-4 py-3 max-w-[200px] break-words">
-                                                    {assignment.referenceUrl ? (
-                                                        <a
-                                                            href={getViewableFileUrl(assignment.referenceUrl)}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="inline-flex items-center gap-1 text-fpt-orange hover:text-orange-600 text-xs transition-colors break-all"
-                                                        >
-                                                            <Paperclip className="w-3.5 h-3.5 flex-shrink-0" />
-                                                            <span>{assignment.referenceName || 'Tài liệu'}</span>
-                                                        </a>
-                                                    ) : (
-                                                        <span className="text-gray-300 dark:text-zinc-600">—</span>
-                                                    )}
-                                                </td>
+
                                                 <td className="px-4 py-3 max-w-[200px] break-words">
                                                     {assignment.fileUrls && assignment.fileUrls.length > 0 ? (
                                                         <div className="flex flex-col gap-1">

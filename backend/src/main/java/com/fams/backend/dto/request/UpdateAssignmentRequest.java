@@ -20,6 +20,6 @@ public class UpdateAssignmentRequest {
     private LocalDateTime dueDate;
 
     // Tài liệu tham khảo
-    private String referenceUrl;
-    private String referenceName;
+    private java.util.List<String> referenceUrls;
+    private java.util.List<String> referenceNames;
 }

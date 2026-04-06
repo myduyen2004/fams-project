@@ -32,6 +32,8 @@ public class AssignmentResponse {
     // Tài liệu tham khảo
     private String referenceUrl;
     private String referenceName;
+    private java.util.List<String> referenceUrls;
+    private java.util.List<String> referenceNames;
 
     // Trạng thái
     private String status;
