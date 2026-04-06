@@ -1,0 +1,22 @@
+{
+  "source_directories": [
+    "ai-service/app"
+  ],
+  "search_path": [
+    "ai-service"
+  ],
+  "exclude": [
+    ".*/__pycache__/.*",
+    ".*/\\.pytest_cache/.*",
+    ".*/node_modules/.*",
+    ".*/dist/.*",
+    ".*/build/.*",
+    ".*/target/.*",
+    ".*/tmp/.*",
+    ".*/private/tmp/.*",
+    ".*/frontend/.*",
+    ".*/backend/.*",
+    ".*/mobile/.*"
+  ],
+  "python_version": "3.10"
+}

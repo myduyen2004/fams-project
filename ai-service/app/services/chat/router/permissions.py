@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Set, Tuple
+from typing import Dict, Set, Tuple
 
 
 class Role(str, Enum):
@@ -41,15 +41,26 @@ class PermissionPolicy:
         return tool in self.allow
 
 
+_TOOL_ALIASES: Dict[str, str] = {
+    "get_student_by_name": "get_student_by_code",
+    "get_lecturer_by_name": "get_lecturer_by_code",
+    "search_student": "get_student_by_code",
+    "search_lecturer": "get_lecturer_by_code",
+    "get_my_grades": "get_own_grades",
+    "get_my_schedule": "get_own_schedule",
+    "get_my_schedule_targeted": "get_own_schedule",
+}
+
+
 # ── ADMIN tools ──────────────────────────────────────────────────────────────
 # Admin chỉ quản trị user + thông báo + xem dữ liệu tổng quan
 _ADMIN_ALLOW: Set[str] = {
     # Profile
-    "view_profile", "update_profile",
+    "view_profile",
     # User management (UC-08~12)
     "view_users", "view_inactive_users",
     "get_user_by_code", "search_user_by_name", "count_users_by_role",
-    "create_user", "update_user", "delete_user", "activate_user",
+    "create_user", "update_user", "activate_user",
     # Notifications (UC-14~15)
     "view_notifications", "list_notifications",
     "get_my_notifications", "count_unread_notifications",
@@ -57,7 +68,21 @@ _ADMIN_ALLOW: Set[str] = {
     # Academic view
     "view_students", "view_lecturers", "view_majors", "view_courses",
     "view_rooms", "view_semesters", "view_classes", "view_schedule",
-    "view_grades", "view_specializations",
+    "view_grades", "view_results", "view_specializations", "view_sub_specializations",
+    "list_majors", "get_courses_by_semester",
+    "get_students_without_class", "get_top_students",
+    "get_lecturer_schedule_by_search", "get_student_schedule_by_search",
+    "get_major_id_by_name", "get_specialization_id_by_name",
+    "create_class", "create_course", "create_major", "create_room",
+    "create_semester", "create_specialization", "create_sub_specialization",
+    "update_course", "update_major", "update_class", "update_room",
+    "update_semester", "update_specialization", "update_sub_specialization",
+    "update_student_info", "update_lecturer_info",
+    "add_student_to_class", "remove_student_from_class",
+    "assign_course_to_specialization", "assign_course_to_sub_specialization",
+    "approve_schedule_request", "reject_schedule_request",
+    # System/Admin screens
+    "view_dashboard", "view_logs", "view_alerts",
     # Excel & Dynamic
     "excel_query", "export_excel", "dynamic_sql",
 }
@@ -68,6 +93,8 @@ _ACADEMIC_STAFF_DENY: Set[str] = {
     # User management → chỉ Admin
     "view_users", "view_inactive_users", "count_users_by_role",
     "create_user", "update_user", "delete_user", "activate_user",
+    "delete_class", "delete_course", "delete_major", "delete_room",
+    "delete_semester", "delete_specialization", "delete_sub_specialization",
     # Personal schedule/grades → không có vai trò giảng dạy
     "get_own_schedule", "get_own_grades",
     "get_my_attendance_status", "get_attendance_report_by_student",
@@ -86,9 +113,11 @@ _ACADEMIC_STAFF_DENY: Set[str] = {
 # ── LECTURER whitelist ────────────────────────────────────────────────────────
 _LECTURER_ALLOW: Set[str] = {
     # Profile (UC-03~04)
-    "view_profile", "update_profile",
+    "view_profile",
     # Schedule - lớp mình dạy (UC-70~72)
     "get_own_schedule", "view_schedule",
+    "view_messages", "view_assignments",
+    "create_group_chat",
     "view_teaching_classes", "get_class_info",
     "get_class_schedule",
     # ✅ REMOVED: get_other_lecturer_schedule, get_other_student_schedule
@@ -116,10 +145,12 @@ _LECTURER_ALLOW: Set[str] = {
     "search_user_by_name",
     "get_students_at_risk",
     # Academic info - read only
-    "get_courses_by_name",
+    "get_courses_by_name", "get_courses_by_semester",
+    "list_majors",
     "list_semesters",
     "get_active_semester",
     "get_classes_by_semester",
+    "get_empty_rooms",
     # Notifications (UC-15)
     "get_my_notifications",
     "count_unread_notifications",
@@ -133,19 +164,24 @@ _LECTURER_ALLOW: Set[str] = {
 # ── STUDENT whitelist ─────────────────────────────────────────────────────────
 _STUDENT_ALLOW: Set[str] = {
     # Profile (UC-03~04)
-    "view_profile", "update_profile",
+    "view_profile",
     # Schedule (UC-73~74)
     "get_own_schedule", "view_schedule",
+    "view_messages", "view_assignments",
     "get_class_schedule",
     # Attendance (UC-66~67)
     "get_my_attendance_status",
     "get_attendance_report_by_student",
+    "get_my_attendance_overview",
+    "get_my_absence_history",
+    "get_my_attendance_risk_courses",
+    "get_my_courses",
     # Grades (UC-80~81)
     "view_grades",
     "get_own_grades",
     "get_detail_course_grade",
     # Academic info - public read only (UC-39)
-    "get_courses_by_name",
+    "get_courses_by_name", "get_courses_by_semester",
     "get_grade_components_by_course",
     "list_majors",
     "get_specializations_by_major",
@@ -157,6 +193,8 @@ _STUDENT_ALLOW: Set[str] = {
     # Notifications (UC-15)
     "get_my_notifications",
     "count_unread_notifications",
+    "send_email",
+    "create_academic_request",
     # Excel
     "excel_query",
 }
@@ -192,13 +230,15 @@ _ROLE_LABELS: dict[str, str] = {
 
 def check_permission(role: str, tool: str) -> Tuple[bool, str]:
     """Returns (allowed, reason). reason='' khi allowed=True."""
+    normalized_tool = _TOOL_ALIASES.get(tool, tool)
+
     try:
         policy = POLICIES[Role(role)]
     except (KeyError, ValueError):
         return False, f"Vai trò '{role}' không được nhận dạng trong hệ thống."
 
-    if policy.can_use(tool):
+    if policy.can_use(normalized_tool):
         return True, ""
 
     label = _ROLE_LABELS.get(role, role)
-    return False, f"{label} không có quyền thực hiện thao tác '{tool}'."
+    return False, f"{label} không có quyền thực hiện thao tác '{normalized_tool}'."

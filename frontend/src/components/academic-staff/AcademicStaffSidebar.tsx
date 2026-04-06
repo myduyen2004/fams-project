@@ -5,6 +5,7 @@ import {
   FolderOpen,
   FileText,
   Newspaper,
+  Bell,
   CheckSquare,
   Settings,
   Clock,
@@ -86,6 +87,12 @@ export const AcademicStaffSidebar: React.FC = () => {
       label: 'Quản lý tin tức',
       icon: <Newspaper size={20} />,
       path: '/academic-staff/news-management'
+    },
+    {
+      id: 'notification-management',
+      label: 'Quản lý thông báo',
+      icon: <Bell size={20} />,
+      path: '/academic-staff/notification-management'
     },
     {
       id: 'attendance',

@@ -238,7 +238,11 @@ export const NewsManagementPage = () => {
                     <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                       {item.targetType === 'ALL' ? 'Toàn trường' : 
                        item.targetType === 'STUDENT' ? 'Sinh viên' : 
-                       item.targetType === 'LECTURER' ? 'Giảng viên' : 'Cá nhân'}
+                       item.targetType === 'LECTURER' ? 'Giảng viên' :
+                       item.targetType === 'CLASS' ? 'Theo lớp' :
+                       item.targetType === 'COURSE' ? 'Theo môn học' :
+                       item.targetType === 'ACADEMIC_STAFF' ? 'Phòng đào tạo' :
+                       item.targetType === 'ADMIN' ? 'Quản trị viên' : 'Cá nhân'}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex flex-shrink-0 items-center px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider ${

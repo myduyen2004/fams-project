@@ -22,6 +22,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "AI Chat", description = "API cho Chatbot AI Learning Assistant")
+@CrossOrigin(origins = "*", maxAge = 3600)
 public class AIChatController {
 
     private final AIChatService aiChatService;
@@ -55,13 +56,46 @@ public class AIChatController {
     @Operation(summary = "Gửi tin nhắn vào một phiên chat")
     public ResponseEntity<Map<String, Object>> sendMessage(
             @PathVariable Long sessionId,
-            @RequestBody Map<String, String> request) {
-        String message = request.get("message");
-        String routingModel = request.get("routingModel");
-        String answerModel = request.get("answerModel");
+            @RequestBody Map<String, Object> request) {
+        String message = (String) request.get("message");
+        String routingModel = (String) request.get("routingModel");
+        String answerModel = (String) request.get("answerModel");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> extraEntities = (Map<String, Object>) request.get("extraEntities");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> continuation = (Map<String, Object>) request.get("continuation");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> pendingEntities = (Map<String, Object>) request.get("pendingEntities");
+        String pendingTool = (String) request.get("pendingTool");
+        String originalMessage = (String) request.get("originalMessage");
+        if (continuation == null && looksLikeContinuation(pendingEntities)) {
+            continuation = pendingEntities;
+            pendingEntities = null;
+        }
+
         log.info("Sending message to session {}: {} (Routing: {}, Answer: {})", sessionId, message, routingModel,
                 answerModel);
-        return ResponseEntity.ok(aiChatService.sendMessage(sessionId, message, routingModel, answerModel));
+        return ResponseEntity.ok(
+                aiChatService.sendMessage(
+                        sessionId,
+                        message,
+                        routingModel,
+                        answerModel,
+                        extraEntities,
+                        pendingTool,
+                        originalMessage,
+                        pendingEntities,
+                        continuation
+                )
+        );
+    }
+
+    private boolean looksLikeContinuation(Map<String, Object> payload) {
+        return payload != null
+                && payload.containsKey("toolName")
+                && payload.containsKey("intent")
+                && payload.containsKey("offset")
+                && payload.containsKey("pageSize");
     }
 
     @PostMapping("/sessions/{sessionId}/upload")

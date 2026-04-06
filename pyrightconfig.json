@@ -1,0 +1,28 @@
+{
+  "include": [
+    "ai-service/app",
+    "ai-service/tests"
+  ],
+  "exclude": [
+    "**/__pycache__",
+    "**/.pytest_cache",
+    "**/node_modules",
+    "**/target",
+    "**/build",
+    "**/dist",
+    "frontend",
+    "backend",
+    "mobile"
+  ],
+  "executionEnvironments": [
+    {
+      "root": "ai-service",
+      "extraPaths": [
+        "ai-service"
+      ]
+    }
+  ],
+  "typeCheckingMode": "basic",
+  "reportMissingImports": "warning",
+  "reportMissingModuleSource": "warning"
+}
