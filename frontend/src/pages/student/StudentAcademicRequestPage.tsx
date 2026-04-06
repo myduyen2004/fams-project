@@ -386,6 +386,14 @@ export const StudentAcademicRequestPage: React.FC = () => {
 
     // Handle type selection
     const handleTypeSelect = (type: AcademicRequestType) => {
+        const isExcluded = type.value === 'GRADE_APPEAL' || type.value === 'OTHERS';
+        const hasNoUpcomingSemester = semesters.length === 0;
+
+        if (!isExcluded && hasNoUpcomingSemester) {
+            toast.error('Chưa đến thời gian nộp loại đơn này (Hệ thống hiện chưa có học kỳ sắp tới)');
+            return;
+        }
+
         if (!type.canSubmit) {
             const isFuture = type.startDate && new Date(type.startDate).setHours(0, 0, 0, 0) > new Date().setHours(0, 0, 0, 0);
             toast.error(isFuture ? 'Chưa đến thời gian tiếp nhận loại đơn này' : 'Đã hết hạn nộp loại đơn này');
@@ -579,8 +587,8 @@ export const StudentAcademicRequestPage: React.FC = () => {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Yêu Cầu Học Thuật</h1>
-                        <p className="text-gray-500 mt-1">Quản lý các yêu cầu học thuật của bạn</p>
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Yêu Cầu Học Thuật</h1>
+                        <p className="text-gray-500 dark:text-gray-400 mt-1">Quản lý các yêu cầu học thuật của bạn</p>
                     </div>
                     <button
                         onClick={() => setShowCreateDialog(true)}
@@ -592,9 +600,9 @@ export const StudentAcademicRequestPage: React.FC = () => {
                 </div>
 
                 {/* Filters */}
-                <div className="flex flex-wrap items-center gap-4 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                <div className="flex flex-wrap items-center gap-4 bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
                     <div className="flex-1 min-w-[200px]">
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">
+                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5 ml-1">
                             Loại yêu cầu
                         </label>
                         <select
@@ -603,7 +611,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                 setTypeFilter(e.target.value);
                                 setCurrentPage(0);
                             }}
-                            className="w-[400px] px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all outline-none"
+                            className="w-[400px] px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all outline-none"
                         >
                             <option value="">Tất cả loại yêu cầu</option>
                             {requestTypes.map(type => (
@@ -613,7 +621,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                     </div>
 
                     <div className="w-[200px]">
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">
+                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5 ml-1">
                             Trạng thái
                         </label>
                         <select
@@ -622,7 +630,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                 setStatusFilter(e.target.value);
                                 setCurrentPage(0);
                             }}
-                            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all outline-none"
+                            className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all outline-none"
                         >
                             <option value="">Tất cả trạng thái</option>
                             <option value="PENDING">Chờ xử lý</option>
@@ -639,7 +647,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                 setStatusFilter('');
                                 setCurrentPage(0);
                             }}
-                            className="text-sm text-gray-500 hover:text-orange-600 font-medium px-2 py-2 transition-colors"
+                            className="text-sm text-gray-500 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 font-medium px-2 py-2 transition-colors"
                         >
                             Xóa lọc
                         </button>
@@ -659,15 +667,15 @@ export const StudentAcademicRequestPage: React.FC = () => {
                 )}
 
                 {/* Request List */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
                     {loading ? (
                         <div className="flex items-center justify-center py-12">
                             <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
                         </div>
                     ) : requests.length === 0 ? (
                         <div className="text-center py-12">
-                            <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                            <p className="text-gray-500">Chưa có yêu cầu nào</p>
+                            <FileText className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                            <p className="text-gray-500 dark:text-gray-400">Chưa có yêu cầu nào</p>
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
@@ -680,7 +688,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                                 checked={requests.length > 0 && requests.filter(r => r.status === 'PENDING').length > 0 && requests.filter(r => r.status === 'PENDING').every(r => selectedIds.includes(r.id))}
                                                 onChange={toggleSelectAll}
                                                 disabled={requests.filter(r => r.status === 'PENDING').length === 0}
-                                                className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                                className="w-4 h-4 text-orange-600 dark:text-orange-500 border-gray-300 dark:border-gray-600 rounded focus:ring-orange-500 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                                             />
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase w-1/5">Loại yêu cầu</th>
@@ -690,11 +698,11 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                         <th className="px-4 py-3 text-center text-xs font-medium text-white uppercase w-1/6">Hạn nộp</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-200">
+                                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                                     {requests.map((request) => (
                                         <tr
                                             key={request.id}
-                                            className="hover:bg-gray-50 cursor-pointer transition-colors"
+                                            className="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors"
                                             onDoubleClick={() => {
                                                 setSelectedRequest(request);
                                                 setShowDetailDialog(true);
@@ -706,24 +714,24 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                                     checked={selectedIds.includes(request.id)}
                                                     onChange={() => toggleSelect(request.id)}
                                                     disabled={request.status !== 'PENDING'}
-                                                    className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                                    className="w-4 h-4 text-orange-600 dark:text-orange-500 border-gray-300 dark:border-gray-600 rounded focus:ring-orange-500 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                                                 />
                                             </td>
                                             <td className="px-4 py-3">
-                                                <span className="text-sm font-medium text-gray-900">
+                                                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                                     {request.requestTypeLabel}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3">
-                                                <span className="text-sm text-gray-600">{request.requestTitle}</span>
+                                                <span className="text-sm text-gray-600 dark:text-gray-300">{request.requestTitle}</span>
                                             </td>
                                             <td className="px-4 py-3 text-center">
                                                 {getStatusBadge(request.status, request.statusLabel)}
                                             </td>
-                                            <td className="px-4 py-3 text-sm text-gray-500 text-center">
+                                            <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
                                                 {formatDate(request.createdAt)}
                                             </td>
-                                            <td className="px-4 py-3 text-sm text-gray-500 text-center">
+                                            <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
                                                 {request.dueDate || '—'}
                                             </td>
                                         </tr>
@@ -756,9 +764,9 @@ export const StudentAcademicRequestPage: React.FC = () => {
                         style={{ width: '100vw', height: '100vh' }}
                         onClick={() => !submitting && setShowCreateDialog(false)}
                     />
-                    <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative z-10 flex flex-col m-4">
-                        <div className="p-6 border-b flex items-center justify-between bg-white sticky top-0 z-20">
-                            <h2 className="text-xl font-bold text-gray-900 leading-none">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative z-10 flex flex-col m-4 border dark:border-gray-700">
+                        <div className="p-6 border-b dark:border-gray-700 flex items-center justify-between bg-white dark:bg-gray-800 sticky top-0 z-20">
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white leading-none">
                                 {selectedType ? selectedType.label : 'Chọn loại yêu cầu'}
                             </h2>
                             <button
@@ -767,7 +775,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                     setSelectedType(null);
                                     setCourseSearch('');
                                 }}
-                                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0"
+                                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors flex-shrink-0"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -781,15 +789,15 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                         <button
                                             key={type.value}
                                             onClick={() => handleTypeSelect(type)}
-                                            disabled={!type.canSubmit}
-                                            className={`p-4 rounded-lg border text-left transition-colors w-full ${type.canSubmit
-                                                ? 'hover:border-blue-500 hover:bg-blue-50 cursor-pointer'
-                                                : 'opacity-50 cursor-not-allowed bg-gray-50'
+                                            disabled={!type.canSubmit || (type.value !== 'GRADE_APPEAL' && type.value !== 'OTHERS' && semesters.length === 0)}
+                                            className={`p-4 rounded-lg border dark:border-gray-700 text-left transition-colors w-full ${(type.canSubmit && (type.value === 'GRADE_APPEAL' || type.value === 'OTHERS' || semesters.length > 0))
+                                                ? 'hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer'
+                                                : 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-900/50'
                                                 }`}
                                         >
                                             <div className="flex items-center justify-between">
                                                 <div>
-                                                    <div className="font-medium text-gray-900 text-base">{type.label}</div>
+                                                    <div className="font-medium text-gray-900 dark:text-gray-100 text-base">{type.label}</div>
                                                     {type.requiresClassSection && (
                                                         <div className="text-sm text-blue-600 mt-1">
                                                             Cần chọn lớp học phần
@@ -809,7 +817,11 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                                         <Info className="w-5 h-5" />
                                                     </div>
                                                     <div className="mt-1">
-                                                        {type.startDate && new Date(type.startDate).setHours(0, 0, 0, 0) > new Date().setHours(0, 0, 0, 0) ? (
+                                                        {(type.value !== 'GRADE_APPEAL' && type.value !== 'OTHERS' && semesters.length === 0) ? (
+                                                            <span className="text-sm text-red-500 font-medium">
+                                                                Chưa đến thời gian nộp đơn
+                                                            </span>
+                                                        ) : (type.startDate && new Date(type.startDate).setHours(0, 0, 0, 0) > new Date().setHours(0, 0, 0, 0)) ? (
                                                             <span className="text-sm text-blue-600 font-medium">
                                                                 Bắt đầu từ: {type.startDate} (Chưa đến thời gian)
                                                             </span>
@@ -831,14 +843,14 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                     {/* Dynamic Fields based on Type */}
                                     {selectedType.value === 'OTHERS' && (
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                                 Tiêu đề yêu cầu <span className="text-red-500">*</span>
                                             </label>
                                             <input
                                                 type="text"
                                                 value={formData.requestTitle || ''}
                                                 onChange={(e) => handleFieldChange('requestTitle', e.target.value)}
-                                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                className="w-full px-3 py-2 bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 placeholder="Nhập tiêu đề yêu cầu"
                                             />
                                         </div>
@@ -851,17 +863,17 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                         selectedType.value === 'OVERLOAD_STUDY' ||
                                         selectedType.value === 'ABSENT_REQUEST') && (
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                                     Học kỳ <span className="text-red-500">*</span>
                                                 </label>
                                                 <select
                                                     value={formData.semesterId || ''}
                                                     onChange={(e) => handleFieldChange('semesterId', Number(e.target.value))}
-                                                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                    className="w-full px-3 py-2 bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 >
                                                     <option value="">Chọn học kỳ</option>
                                                     {semesters.map(s => (
-                                                        <option key={s.id} value={s.id}>{s.code} - {s.name}</option>
+                                                        <option key={s.id} value={s.id} className="bg-white dark:bg-gray-800">{s.code} - {s.name}</option>
                                                     ))}
                                                 </select>
                                             </div>
@@ -870,7 +882,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                     {/* Course Selection (Searchable Combobox) */}
                                     {(selectedType.value === 'RETAKE_COURSE' || selectedType.value === 'OVERLOAD_STUDY') && (
                                         <div className="relative">
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                                 Môn học <span className="text-red-500">*</span>
                                             </label>
                                             <div className="relative">
@@ -883,7 +895,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                                     }}
                                                     onFocus={() => setShowCourseDropdown(true)}
                                                     onBlur={() => setTimeout(() => setShowCourseDropdown(false), 200)}
-                                                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-10"
+                                                    className="w-full px-3 py-2 bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-10"
                                                     placeholder="Tìm kiếm môn học..."
                                                 />
                                                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -892,7 +904,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                             </div>
 
                                             {showCourseDropdown && (
-                                                <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                                                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-xl max-h-60 overflow-y-auto">
                                                     {allCourses
                                                         .filter(c =>
                                                             c.name.toLowerCase().includes(courseSearch.toLowerCase()) ||
@@ -901,7 +913,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                                         .map(c => (
                                                             <div
                                                                 key={c.id}
-                                                                className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                                                                className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b dark:border-gray-700 last:border-b-0"
                                                                 onClick={() => {
                                                                     handleFieldChange('courseId', c.id);
                                                                     setCourseSearch(`${c.name} `);
@@ -928,17 +940,17 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                     {/* Class Section Selection (Current) */}
                                     {(selectedType.value === 'CHANGE_CLASS' || selectedType.value === 'GRADE_APPEAL') && (
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                                 {selectedType.value === 'CHANGE_CLASS' ? 'Lớp học phần hiện tại' : 'Lớp học phần muốn phúc khảo'} <span className="text-red-500">*</span>
                                             </label>
                                             <select
                                                 value={formData.classSectionId || ''}
                                                 onChange={(e) => handleFieldChange('classSectionId', e.target.value)}
-                                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                className="w-full px-3 py-2 bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                             >
                                                 <option value="">Chọn lớp học phần</option>
                                                 {myCourses.map(c => (
-                                                    <option key={c.className} value={c.className}>{c.className} - {c.courseName}</option>
+                                                    <option key={c.className} value={c.className} className="bg-white dark:bg-gray-800">{c.className} - {c.courseName}</option>
                                                 ))}
                                             </select>
 
@@ -951,7 +963,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                                             <span>Đang kiểm tra trạng thái điểm...</span>
                                                         </div>
                                                     ) : gradeDetail ? (
-                                                        <div className={`p-3 rounded-lg border text-sm ${gradeDetail.gradesPublished ? 'bg-blue-50 border-blue-200 text-blue-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+                                                        <div className={`p-3 rounded-lg border text-sm ${gradeDetail.gradesPublished ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-300'}`}>
                                                             {gradeDetail.gradesPublished ? (
                                                                 <div className="flex items-start gap-2">
                                                                     <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" />
@@ -993,7 +1005,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                     {/* Target Class Name for CHANGE_CLASS */}
                                     {selectedType.value === 'CHANGE_CLASS' && (
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                                 Lớp muốn chuyển qua <span className="text-red-500">*</span>
                                             </label>
                                             {loadingTargets ? (
@@ -1006,8 +1018,8 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                                     <select
                                                         value={formData.toClassName || ''}
                                                         onChange={(e) => handleFieldChange('toClassName', e.target.value)}
-                                                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${transferTargets.find(t => t.classSection.className === formData.toClassName)?.hasConflict
-                                                            ? 'border-yellow-500 bg-yellow-50'
+                                                        className={`w-full px-3 py-2 bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${transferTargets.find(t => t.classSection.className === formData.toClassName)?.hasConflict
+                                                            ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20'
                                                             : ''
                                                             }`}
                                                         disabled={!formData.classSectionId}
@@ -1017,7 +1029,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                                             <option
                                                                 key={t.classSection.className}
                                                                 value={t.classSection.className}
-                                                                className={t.hasConflict ? 'text-yellow-700' : ''}
+                                                                className={`${t.hasConflict ? 'text-yellow-700 dark:text-yellow-500' : ''} bg-white dark:bg-gray-800`}
                                                             >
                                                                 {t.classSection.className} {t.hasConflict ? '(⚠️ Có xung đột)' : ''}
                                                             </option>
@@ -1046,27 +1058,27 @@ export const StudentAcademicRequestPage: React.FC = () => {
 
                                     {/* Major/Specialization Info (Readonly) for CHANGE_MAJOR */}
                                     {selectedType?.value === 'CHANGE_MAJOR' && (
-                                        <div className="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-lg border">
+                                        <div className="grid grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border dark:border-gray-700">
                                             <div>
-                                                <div className="text-xs text-gray-500 uppercase font-semibold">Ngành hiện tại</div>
-                                                <div className="text-sm font-medium text-gray-900">{studentProfile?.major || 'N/A'}</div>
+                                                <div className="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Ngành hiện tại</div>
+                                                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{studentProfile?.major || 'N/A'}</div>
                                             </div>
                                             <div>
-                                                <div className="text-xs text-gray-500 uppercase font-semibold">Chuyên ngành hiện tại</div>
-                                                <div className="text-sm font-medium text-gray-900">{studentProfile?.specialization || 'N/A'}</div>
+                                                <div className="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Chuyên ngành hiện tại</div>
+                                                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{studentProfile?.specialization || 'N/A'}</div>
                                             </div>
                                         </div>
                                     )}
 
                                     {/* Sub-Specialization Info (Readonly) for CHANGE_SPECIALIZATION */}
                                     {selectedType?.value === 'CHANGE_SPECIALIZATION' && (
-                                        <div className="bg-gray-50 p-3 rounded-lg border">
-                                            <div className="text-xs text-gray-500 uppercase font-semibold mb-1">Chuyên ngành hẹp hiện tại</div>
-                                            <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                                        <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border dark:border-gray-700">
+                                            <div className="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold mb-1">Chuyên ngành hẹp hiện tại</div>
+                                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
                                                 {studentProfile?.subSpecialization ? (
-                                                    <span className="text-blue-600">{studentProfile.subSpecialization}</span>
+                                                    <span className="text-blue-600 dark:text-blue-400">{studentProfile.subSpecialization}</span>
                                                 ) : (
-                                                    <span className="text-gray-400 italic">Bạn chưa được thêm vào chuyên ngành hẹp</span>
+                                                    <span className="text-gray-400 dark:text-gray-500 italic">Bạn chưa được thêm vào chuyên ngành hẹp</span>
                                                 )}
                                             </div>
                                             <div className="text-xs text-gray-400 mt-1">
@@ -1080,36 +1092,36 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                     {selectedType.value === 'CHANGE_MAJOR' && (
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                                     Ngành muốn chuyển <span className="text-red-500">*</span>
                                                 </label>
                                                 <select
                                                     value={formData.toMajor || ''}
                                                     onChange={(e) => handleFieldChange('toMajor', e.target.value)}
-                                                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 bg-white"
+                                                    className="w-full px-3 py-2 bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 dark:disabled:bg-gray-900/50"
                                                     disabled={fetchingMajors}
                                                 >
                                                     <option value="">
-                                                        {fetchingMajors ? 'Đang tải danh sách...' : majors.length > 0 ? `Chọn ngành (Đã tải ${majors.length})` : 'Chọn ngành (Danh sách trống)'}
+                                                        {fetchingMajors ? 'Đang tải danh sách...' : majors.length > 0 ? `Chọn ngành` : 'Chọn ngành (Danh sách trống)'}
                                                     </option>
                                                     {majors.map(m => (
-                                                        <option key={m.id} value={m.name}>{m.name}</option>
+                                                        <option key={m.id} value={m.name} className="bg-white dark:bg-gray-800">{m.name}</option>
                                                     ))}
                                                 </select>
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                                     Chuyên ngành muốn chuyển <span className="text-red-500">*</span>
                                                 </label>
                                                 <select
                                                     value={formData.toSpecialization || ''}
                                                     onChange={(e) => handleFieldChange('toSpecialization', e.target.value)}
-                                                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50"
+                                                    className="w-full px-3 py-2 bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 dark:disabled:bg-gray-900/50"
                                                     disabled={!formData.toMajor || fetchingMajors}
                                                 >
                                                     <option value="">{fetchingMajors ? 'Đang tải...' : 'Chọn chuyên ngành'}</option>
                                                     {specializations.map(s => (
-                                                        <option key={s.id} value={s.name}>{s.name}</option>
+                                                        <option key={s.id} value={s.name} className="bg-white dark:bg-gray-800">{s.name}</option>
                                                     ))}
                                                 </select>
                                             </div>
@@ -1119,19 +1131,19 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                     {/* Target Sub-Specialization Selection */}
                                     {selectedType.value === 'CHANGE_SPECIALIZATION' && (
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                                 Chuyên ngành hẹp muốn chọn <span className="text-red-500">*</span>
                                             </label>
                                             <select
                                                 value={formData.toSubSpecialization || ''}
                                                 onChange={(e) => handleFieldChange('toSubSpecialization', e.target.value)}
-                                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                className="w-full px-3 py-2 bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                             >
                                                 <option value="">{subSpecializations.length > 0 ? 'Chọn chuyên ngành hẹp' : 'Không có chuyên ngành hẹp phù hợp'}</option>
                                                 {subSpecializations
                                                     .filter(ss => ss.name !== studentProfile?.subSpecialization)
                                                     .map(ss => (
-                                                        <option key={ss.id} value={ss.name}>{ss.name}</option>
+                                                        <option key={ss.id} value={ss.name} className="bg-white dark:bg-gray-800">{ss.name}</option>
                                                     ))}
                                             </select>
                                         </div>
@@ -1139,38 +1151,38 @@ export const StudentAcademicRequestPage: React.FC = () => {
 
                                     {/* Reason */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                             Lý do <span className="text-red-500">*</span>
                                         </label>
                                         <textarea
                                             value={formData.reason}
                                             onChange={(e) => handleFieldChange('reason', e.target.value)}
                                             rows={4}
-                                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            className="w-full px-3 py-2 bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                             placeholder="Nhập lý do chi tiết..."
                                         />
                                     </div>
 
                                     {/* Note */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                             Ghi chú thêm
                                         </label>
                                         <textarea
                                             value={formData.note || ''}
                                             onChange={(e) => handleFieldChange('note', e.target.value)}
                                             rows={2}
-                                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            className="w-full px-3 py-2 bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                             placeholder="Ghi chú thêm (nếu có)..."
                                         />
                                     </div>
 
                                     {/* File upload */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                             File đính kèm
                                         </label>
-                                        <div className="border-2 border-dashed rounded-lg p-4">
+                                        <div className="border-2 border-dashed dark:border-gray-700 rounded-lg p-4">
                                             {selectedFile ? (
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center gap-2">
@@ -1246,12 +1258,12 @@ export const StudentAcademicRequestPage: React.FC = () => {
                         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                         onClick={() => setShowDetailDialog(false)}
                     />
-                    <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full relative z-10">
-                        <div className="p-6 border-b flex items-center justify-between">
-                            <h2 className="text-xl font-bold text-gray-900">Chi tiết yêu cầu</h2>
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full relative z-10 border dark:border-gray-700">
+                        <div className="p-6 border-b dark:border-gray-700 flex items-center justify-between">
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Chi tiết yêu cầu</h2>
                             <button
                                 onClick={() => setShowDetailDialog(false)}
-                                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -1259,31 +1271,31 @@ export const StudentAcademicRequestPage: React.FC = () => {
                         <div className="p-6 space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <span className="text-sm text-gray-500">Loại yêu cầu</span>
-                                    <p className="font-medium">{selectedRequest.requestTypeLabel}</p>
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">Loại yêu cầu</span>
+                                    <p className="font-medium text-gray-900 dark:text-gray-100">{selectedRequest.requestTypeLabel}</p>
                                 </div>
                                 <div>
-                                    <span className="text-sm text-gray-500">Trạng thái</span>
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">Trạng thái</span>
                                     <p>{getStatusBadge(selectedRequest.status, selectedRequest.statusLabel)}</p>
                                 </div>
                             </div>
-
+                            
                             <div>
-                                <span className="text-sm text-gray-500">Tiêu đề</span>
-                                <p className="font-medium">{selectedRequest.requestTitle}</p>
+                                <span className="text-sm text-gray-500 dark:text-gray-400">Tiêu đề</span>
+                                <p className="font-medium text-gray-900 dark:text-gray-100">{selectedRequest.requestTitle}</p>
                             </div>
 
                             {/* Dynamic content based on request type */}
-                            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-4">
+                            <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-100 dark:border-gray-700 space-y-4">
                                 {selectedRequest.requestType === 'CHANGE_CLASS' && (
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-1">
                                             <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Lớp hiện tại</span>
-                                            <p className="font-semibold text-gray-700">{selectedRequest.className || '—'}</p>
+                                            <p className="font-semibold text-gray-700 dark:text-gray-200">{selectedRequest.className || '—'}</p>
                                         </div>
                                         <div className="space-y-1">
                                             <span className="text-[10px] text-blue-400 uppercase tracking-widest font-bold">Lớp muốn chuyển</span>
-                                            <p className="font-semibold text-blue-700">{selectedRequest.toClassName || '—'}</p>
+                                            <p className="font-semibold text-blue-700 dark:text-blue-400">{selectedRequest.toClassName || '—'}</p>
                                         </div>
                                     </div>
                                 )}
@@ -1292,11 +1304,11 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                     <div className="grid grid-cols-1 gap-4">
                                         <div className="space-y-1">
                                             <span className="text-[10px] text-blue-400 uppercase tracking-widest font-bold">Ngành mới</span>
-                                            <p className="font-semibold text-blue-700">{selectedRequest.toMajor || '—'}</p>
+                                            <p className="font-semibold text-blue-700 dark:text-blue-400">{selectedRequest.toMajor || '—'}</p>
                                         </div>
                                         <div className="space-y-1">
                                             <span className="text-[10px] text-blue-400 uppercase tracking-widest font-bold">Chuyên ngành mới</span>
-                                            <p className="font-semibold text-blue-700">{selectedRequest.toSpecialization || '—'}</p>
+                                            <p className="font-semibold text-blue-700 dark:text-blue-400">{selectedRequest.toSpecialization || '—'}</p>
                                         </div>
                                     </div>
                                 )}
@@ -1304,7 +1316,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                 {selectedRequest.requestType === 'CHANGE_SPECIALIZATION' && (
                                     <div className="space-y-1">
                                         <span className="text-[10px] text-blue-400 uppercase tracking-widest font-bold">Chuyên ngành hẹp mới</span>
-                                        <p className="font-semibold text-blue-700">{selectedRequest.toSubSpecialization || '—'}</p>
+                                        <p className="font-semibold text-blue-700 dark:text-blue-400">{selectedRequest.toSubSpecialization || '—'}</p>
                                     </div>
                                 )}
 
@@ -1312,7 +1324,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                 {(['PAUSE_SEMESTER', 'ABSENT_REQUEST'].includes(selectedRequest.requestType)) && (
                                     <div className="space-y-1">
                                         <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Học kỳ</span>
-                                        <p className="font-semibold text-gray-700">{selectedRequest.semesterName || '—'}</p>
+                                        <p className="font-semibold text-gray-700 dark:text-gray-200">{selectedRequest.semesterName || '—'}</p>
                                     </div>
                                 )}
 
@@ -1321,14 +1333,14 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                     <div className="space-y-3">
                                         <div className="space-y-1">
                                             <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Môn học</span>
-                                            <p className="font-semibold text-gray-700">
+                                            <p className="font-semibold text-gray-700 dark:text-gray-200">
                                                 {selectedRequest.courseCode} {selectedRequest.courseName ? `- ${selectedRequest.courseName}` : ''}
                                             </p>
                                         </div>
                                         {selectedRequest.semesterName && (
                                             <div className="space-y-1">
                                                 <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Học kỳ</span>
-                                                <p className="font-semibold text-gray-700">{selectedRequest.semesterName}</p>
+                                                <p className="font-semibold text-gray-700 dark:text-gray-200">{selectedRequest.semesterName}</p>
                                             </div>
                                         )}
                                     </div>
@@ -1340,13 +1352,13 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                         {selectedRequest.className && (
                                             <div className="space-y-1">
                                                 <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Lớp học phần</span>
-                                                <p className="font-semibold text-gray-700">{selectedRequest.className}</p>
+                                                <p className="font-semibold text-gray-700 dark:text-gray-200">{selectedRequest.className}</p>
                                             </div>
                                         )}
                                         {selectedRequest.semesterName && (
                                             <div className="space-y-1">
                                                 <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Học kỳ</span>
-                                                <p className="font-semibold text-gray-700">{selectedRequest.semesterName}</p>
+                                                <p className="font-semibold text-gray-700 dark:text-gray-200">{selectedRequest.semesterName}</p>
                                             </div>
                                         )}
                                     </div>
@@ -1354,25 +1366,25 @@ export const StudentAcademicRequestPage: React.FC = () => {
                             </div>
 
                             <div>
-                                <span className="text-sm text-gray-500">Lý do</span>
-                                <p className="text-gray-700 leading-relaxed">{selectedRequest.reason}</p>
+                                <span className="text-sm text-gray-500 dark:text-gray-400">Lý do</span>
+                                <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{selectedRequest.reason}</p>
                             </div>
 
                             {selectedRequest.note && (
                                 <div>
-                                    <span className="text-sm text-gray-500">Ghi chú</span>
-                                    <p className="text-gray-700">{selectedRequest.note}</p>
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">Ghi chú</span>
+                                    <p className="text-gray-700 dark:text-gray-300">{selectedRequest.note}</p>
                                 </div>
                             )}
 
                             {selectedRequest.fileUrl && (
                                 <div>
-                                    <span className="text-sm text-gray-500">File đính kèm</span>
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">File đính kèm</span>
                                     <a
                                         href={selectedRequest.fileUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="text-blue-600 hover:underline flex items-center gap-1"
+                                        className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
                                     >
                                         <FileText className="w-4 h-4" />
                                         Xem file
@@ -1382,31 +1394,31 @@ export const StudentAcademicRequestPage: React.FC = () => {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <span className="text-sm text-gray-500">Ngày tạo</span>
-                                    <p>{formatDate(selectedRequest.createdAt)}</p>
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">Ngày tạo</span>
+                                    <p className="text-gray-900 dark:text-gray-100">{formatDate(selectedRequest.createdAt)}</p>
                                 </div>
                                 <div>
-                                    <span className="text-sm text-gray-500">Hạn nộp</span>
-                                    <p>{selectedRequest.dueDate || '—'}</p>
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">Hạn nộp</span>
+                                    <p className="text-gray-900 dark:text-gray-100">{selectedRequest.dueDate || '—'}</p>
                                 </div>
                             </div>
 
                             {selectedRequest.approverName && (
-                                <div className="border-t pt-4">
+                                <div className="border-t dark:border-gray-700 pt-4">
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <span className="text-sm text-gray-500">Người xử lý</span>
-                                            <p>{selectedRequest.approverName}</p>
+                                            <span className="text-sm text-gray-500 dark:text-gray-400">Người xử lý</span>
+                                            <p className="text-gray-900 dark:text-gray-100">{selectedRequest.approverName}</p>
                                         </div>
                                         <div>
-                                            <span className="text-sm text-gray-500">Thời gian xử lý</span>
-                                            <p>{formatDate(selectedRequest.approvedAt)}</p>
+                                            <span className="text-sm text-gray-500 dark:text-gray-400">Thời gian xử lý</span>
+                                            <p className="text-gray-900 dark:text-gray-100">{formatDate(selectedRequest.approvedAt)}</p>
                                         </div>
                                     </div>
                                     {selectedRequest.approverNote && (
                                         <div className="mt-3">
-                                            <span className="text-sm text-gray-500">Ghi chú từ phòng đào tạo</span>
-                                            <p className="text-gray-700">{selectedRequest.approverNote}</p>
+                                            <span className="text-sm text-gray-500 dark:text-gray-400">Ghi chú từ phòng đào tạo</span>
+                                            <p className="text-gray-700 dark:text-gray-300">{selectedRequest.approverNote}</p>
                                         </div>
                                     )}
                                 </div>
@@ -1423,30 +1435,30 @@ export const StudentAcademicRequestPage: React.FC = () => {
                         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                         onClick={() => setInfoType(null)}
                     />
-                    <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden relative z-10 transform animate-in zoom-in-95 duration-200">
-                        <div className="p-6 border-b flex items-center justify-between bg-blue-50">
-                            <h3 className="text-lg font-bold text-blue-900 flex items-center gap-2">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full overflow-hidden relative z-10 transform animate-in zoom-in-95 duration-200 border dark:border-gray-700">
+                        <div className="p-6 border-b dark:border-gray-700 flex items-center justify-between bg-blue-50 dark:bg-blue-900/20">
+                            <h3 className="text-lg font-bold text-blue-900 dark:text-blue-300 flex items-center gap-2">
                                 <Info className="w-5 h-5" />
                                 Thông tin loại yêu cầu
                             </h3>
                             <button
                                 onClick={() => setInfoType(null)}
-                                className="text-blue-400 hover:text-blue-600"
+                                className="text-blue-400 hover:text-blue-600 dark:hover:text-blue-300"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
                         <div className="p-6">
-                            <h4 className="font-bold text-gray-900 mb-3">{infoType.label}</h4>
-                            <div className="text-gray-600 text-sm leading-relaxed space-y-2">
+                            <h4 className="font-bold text-gray-900 dark:text-white mb-3">{infoType.label}</h4>
+                            <div className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed space-y-2">
                                 {infoType.description ? (
                                     <p>{infoType.description}</p>
                                 ) : (
-                                    <p className="italic text-gray-400">Không có thông tin chi tiết cho loại yêu cầu này.</p>
+                                    <p className="italic text-gray-400 dark:text-gray-500">Không có thông tin chi tiết cho loại yêu cầu này.</p>
                                 )}
                             </div>
                         </div>
-                        <div className="px-6 py-4 bg-gray-50 border-t flex justify-end">
+                        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 border-t dark:border-gray-700 flex justify-end">
                             <button
                                 onClick={() => setInfoType(null)}
                                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
@@ -1465,13 +1477,13 @@ export const StudentAcademicRequestPage: React.FC = () => {
                         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                         onClick={() => !cancelling && setRequestToCancel([])}
                     />
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden relative z-10 transform animate-in zoom-in-95 duration-200">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden relative z-10 transform animate-in zoom-in-95 duration-200 border dark:border-gray-700">
                         <div className="p-8 text-center">
-                            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <AlertTriangle className="w-8 h-8 text-red-600" />
+                            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-2">Thu hồi yêu cầu?</h3>
-                            <p className="text-gray-500">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Thu hồi yêu cầu?</h3>
+                            <p className="text-gray-500 dark:text-gray-400">
                                 Bạn có chắc chắn muốn thu hồi {requestToCancel.length > 1 ? `${requestToCancel.length} yêu cầu đã chọn` : 'yêu cầu này'} không? Hành động này không thể hoàn tác.
                             </p>
                         </div>
@@ -1479,14 +1491,14 @@ export const StudentAcademicRequestPage: React.FC = () => {
                             <button
                                 onClick={() => setRequestToCancel([])}
                                 disabled={cancelling}
-                                className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors disabled:opacity-50"
+                                className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
                             >
                                 Bỏ qua
                             </button>
                             <button
                                 onClick={performCancel}
                                 disabled={cancelling}
-                                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-all shadow-lg shadow-red-200 flex items-center justify-center gap-2 disabled:opacity-50"
+                                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-all shadow-lg shadow-red-200 dark:shadow-none flex items-center justify-center gap-2 disabled:opacity-50"
                             >
                                 {cancelling ? (
                                     <Loader2 className="w-4 h-4 animate-spin" />
