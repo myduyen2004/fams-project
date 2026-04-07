@@ -23,7 +23,7 @@ public interface UserService {
 
     void activateAllInactiveUsers();
 
-    void changePassword(String username, String newPassword);
+    void changePassword(String username, String currentPassword, String newPassword);
 
     UserResponse updateMyProfile(String username, com.fams.backend.dto.request.UpdateProfileRequest request,
             MultipartFile avatar);

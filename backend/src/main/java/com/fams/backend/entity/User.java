@@ -73,7 +73,7 @@ public class User {
     private FaceDataStatus faceDataStatus;
 
     // link avatar (URL)
-    @Column(length = 255)
+    @Column(length = 1000)
     private String avatar;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
