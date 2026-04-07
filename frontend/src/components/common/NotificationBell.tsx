@@ -462,13 +462,9 @@ export const NotificationBell: React.FC = () => {
                             className={`text-xs line-clamp-1 ${!n.isRead ? 'text-gray-700 dark:text-gray-300' : 'text-gray-500 dark:text-gray-400'}`}
                             dangerouslySetInnerHTML={{ __html: getFirstLineHtml(n.description) }}
                           />
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500">
-                              {n.senderName && n.senderName !== 'System' ? 'Cá nhân' : (n.type === 'SYSTEM' ? 'Hệ thống' : n.type === 'ALERT' ? 'Cảnh báo' : 'Dữ liệu')}
-                            </span>
-                            <span className="text-[11px] text-gray-400">•</span>
-                            <span className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">{n.timestamp}</span>
-                          </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">{n.timestamp}</span>
+                            </div>
                         </div>
                       </div>
                     </div>

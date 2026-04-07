@@ -18,9 +18,10 @@ from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
-from loguru import logger # type: ignore
+from loguru import logger
+from app.services.chat.db.tools_loader import tools_loader # type: ignore
 
-from config.settings import CACHE_CONFIG
+from app.services.chat.config.settings import CACHE_CONFIG
 
 
 # ── Data model ────────────────────────────────────────────────────────────────
@@ -61,6 +62,8 @@ _NAV_PATTERNS: list[tuple[str, str]] = [
     ("view_assignments",       r"(?:trang|mục|màn hình)?\s*(?:bài tập|assignments)"),
     ("view_messages",          r"(?:trang|mục|màn hình)?\s*(?:tin nhắn|messages|chat)"),
     ("view_specializations",   r"(?:trang|mục|màn hình|danh sách)?\s*(?:chuyên ngành|specializations)"),
+    ("view_sub_specializations", r"(?:trang|mục|màn hình|danh sách)?\s*(?:chuyên ngành hẹp|sub-specializations)"),
+    ("view_results",           r"(?:trang|mục|màn hình|kết quả)?\s*(?:kết quả học tập|bảng điểm|results)"),
 ]
 _NAV_COMPILED = [
     (tool, re.compile(rf"^(?:{kws})$", re.I | re.UNICODE))
@@ -78,7 +81,7 @@ for _tool, _pattern_str in _NAV_PATTERNS:
 _ENTITY_KEYWORDS = [
     "hôm nay", "ngày mai", "tuần này", "tuần tới", "kỳ này", "kỳ sau",
     "thứ hai", "thứ ba", "thứ tư", "thứ năm", "thứ sáu", "thứ bảy", "chủ nhật",
-    "tháng", "ngày", "lớp", "môn", "phòng", "sv", "gv", "sinh viên", "giảng viên"
+    "tháng", "ngày", "lớp", "môn", "phòng", "sv", "gv", "sinh viên", "học sinh", "giảng viên"
 ]
 _ENTITY_RE = re.compile(rf"\b({'|'.join(_ENTITY_KEYWORDS)})\b", re.I)
 
@@ -101,9 +104,36 @@ _SHORTCUTS: list[tuple[str, re.Pattern, Optional[str]]] = [
     for tool, pattern, entity in _SHORTCUT_DEFS
 ]
 
+_DATA_SHORTCUTS: list[tuple[str, re.Pattern]] = [
+    ("list_majors", re.compile(r"^(?:danh sách|ds)\s*(?:ngành học|ngành)$", re.I | re.UNICODE)),
+]
+
 # ── Fallback: bare user code ──────────────────────────────────────────────────
 _CODE_RE = re.compile(r"\b(SE\d{3,}|GV\d{3,}|AD\d{3,}|AS\d{3,})\b", re.I)
+_SEMESTER_CODE_RE = re.compile(r"\b(SP|SU|FA|WI)\d{2}\b", re.I)
+_CLASS_NAME_RE = re.compile(r"\b([A-Z]{2,}\d{2,}[A-Z\d]*_[A-Z0-9]+|[A-Z]{2,}\d{2,}[A-Z\d]*-[A-Z]{2,4}\d{3,4})\b", re.I)
+_MAJOR_QUERY_RE = re.compile(
+    r"(?:ngành|nghành|nganh|nhành)\s+([A-Za-zÀ-ỹ][A-Za-zÀ-ỹ0-9\s]+?)(?:$|[,.!?]|\s+(?:tuần|ngày|lớp|slot|tiết|ca|vì|do)\b)",
+    re.I | re.UNICODE,
+)
 
+_FALLBACK_BACKEND_ACTION_TOOLS = {
+    "create_notification", "send_email",
+    "create_user", "update_user",
+    "create_class", "create_course", "create_major", "create_room",
+    "create_semester", "create_specialization", "create_sub_specialization",
+    "update_course", "update_major",
+    "activate_user", "create_schedule_request",
+    "update_attendance_manually", "update_class", "update_lecturer_info",
+    "update_room", "update_semester", "update_specialization",
+    "update_student_info", "update_sub_specialization",
+    "add_student_to_class", "remove_student_from_class",
+    "assign_course_to_specialization", "assign_course_to_sub_specialization",
+    "approve_schedule_request", "reject_schedule_request",
+    "import_component_grades", "export_attendance_stats", "export_excel",
+    "create_group_chat",
+    "create_academic_request",
+}
 # ── Clarification for ambiguous bare terms ───────────────────────────────────
 _CLARIFICATIONS: dict[str, str] = {
     "chuyên ngành":      "Bạn muốn xem chuyên ngành của **ngành học** nào? (Ví dụ: CNTT, Quản trị kinh doanh...)",
@@ -144,12 +174,21 @@ _STRIP_PREFIXES = (
 
 
 def _is_action(tool: str) -> bool:
-    return tool.startswith((
-        "create_", "update_", "delete_", "send_",
-        "approve_", "reject_", "assign_", "activate_",
-        "add_", "remove_", "publish_", "export_",
-        "import_", "update_"
-    ))
+    return tool in tools_loader.backend_actions or tool in _FALLBACK_BACKEND_ACTION_TOOLS
+
+
+def _is_locked(tool: str) -> bool:
+    status = tools_loader.tool_status.get(tool)
+    return status is False or tool in tools_loader.inactive_tools
+
+
+def _locked_result(tool: str) -> IntentResult:
+    return IntentResult(
+        intent="tool_locked",
+        tool_name=tool,
+        entities={"reason": f"Công cụ '{tool}' hiện đang bị khóa."},
+    )
+
 
 
 class HardRouter:
@@ -208,25 +247,157 @@ class HardRouter:
             if clue := _CLARIFICATIONS.get(msg_core):
                 return IntentResult(intent="direct_response", answer=clue)
 
-        # 5. Semantic match (precomputed candidates)
-        if best_nav := self._find_best_match(msg_core, _NAV_CANDIDATES, threshold=0.72):
-            logger.debug(f"[HardRouter] Semantic match: '{message}' → {best_nav}")
-            result = IntentResult(intent="navigation", tool_name=best_nav)
-            self._cache_set(message, result)
-            return result
+        # 5. Exact data shortcuts
+        for tool, pattern in _DATA_SHORTCUTS:
+            if pattern.match(msg_core):
+                if _is_locked(tool):
+                    result = _locked_result(tool)
+                    self._cache_set(message, result)
+                    return result
+                result = IntentResult(intent="data_query", tool_name=tool)
+                self._cache_set(message, result)
+                return result
 
         # 6. Exact navigation regex
         for tool, pattern in _NAV_COMPILED:
             if pattern.match(msg_core):
+                if _is_locked(tool):
+                    result = _locked_result(tool)
+                    self._cache_set(message, result)
+                    return result
                 result = IntentResult(intent="navigation", tool_name=tool)
                 self._cache_set(message, result)
                 return result
 
-        # 7. Clarification cho terms có prefix (rare)
+        # 7. Semantic navigation fallback (chạy sau exact match để tránh cướp tool)
+        if best_nav := self._find_best_match(msg_core, _NAV_CANDIDATES, threshold=0.72):
+            logger.debug(f"[HardRouter] Semantic match: '{message}' → {best_nav}")
+            if _is_locked(best_nav):
+                result = _locked_result(best_nav)
+                self._cache_set(message, result)
+                return result
+            result = IntentResult(intent="navigation", tool_name=best_nav)
+            self._cache_set(message, result)
+            return result
+
+        # 8. Clarification cho terms có prefix (rare)
         if clue := _CLARIFICATIONS.get(msg_core):
             return IntentResult(intent="direct_response", answer=clue)
 
-        # 8. Shortcut patterns
+        # 8.5 Direct action shortcut: create class chat group
+        if re.search(r"(tạo|tao|mở|mo).*(nhóm chat|group chat)", msg_lower):
+            class_match = _CLASS_NAME_RE.search(message)
+            entities = {}
+            if class_match:
+                entities["class_name"] = class_match.group(1).upper()
+            return IntentResult(
+                intent="action",
+                tool_name="create_group_chat",
+                entities=entities,
+                action={"type": "CREATE_GROUP_CHAT", "params": entities},
+            )
+
+        # 8.6 Direct action shortcut: create notification
+        if re.search(r"(gửi|gởi|tao|tạo|đăng).*(thông báo)", msg_lower):
+            entities: Dict[str, Any] = {}
+            class_match = _CLASS_NAME_RE.search(message)
+            if class_match:
+                entities["class_name"] = class_match.group(1).upper()
+                entities["target_type"] = "CLASS"
+            elif "toàn trường" in msg_lower:
+                entities["target_type"] = "ALL"
+            elif re.search(r"(toàn thể|toàn bộ).*(học sinh|sinh viên)|(?:học sinh|sinh viên).*(toàn thể|toàn bộ)", msg_lower):
+                entities["target_type"] = "ROLE"
+                entities["role"] = "STUDENT"
+            elif re.search(r"(toàn thể|toàn bộ).*(giảng viên|giáo viên)|(?:giảng viên|giáo viên).*(toàn thể|toàn bộ)", msg_lower):
+                entities["target_type"] = "ROLE"
+                entities["role"] = "LECTURER"
+            elif re.search(r"(toàn thể|toàn bộ).*(nhân viên đào tạo)|(?:nhân viên đào tạo).*(toàn thể|toàn bộ)", msg_lower):
+                entities["target_type"] = "ROLE"
+                entities["role"] = "ACADEMIC_STAFF"
+
+            content_match = re.search(
+                r"(?:rằng|rang|với nội dung|nội dung là|nội dung|về việc)\s+(.+)$",
+                message,
+                re.IGNORECASE,
+            )
+            if content_match:
+                entities["content"] = content_match.group(1).strip().rstrip(".")
+            else:
+                fallback = re.sub(
+                    r"^\s*(gửi|gởi|tao|tạo|đăng)\s+thông báo\s*",
+                    "",
+                    message,
+                    count=1,
+                    flags=re.IGNORECASE,
+                )
+                fallback = re.sub(r"^\s*(?:đến|cho)\s+", "", fallback, count=1, flags=re.IGNORECASE)
+                fallback = re.sub(
+                    r"^\s*(?:toàn thể|toàn bộ)\s+(?:học sinh|sinh viên|giảng viên|giáo viên|nhân viên đào tạo)\s*",
+                    "",
+                    fallback,
+                    count=1,
+                    flags=re.IGNORECASE,
+                )
+                fallback = re.sub(r"^\s*(?:toàn trường)\s*", "", fallback, count=1, flags=re.IGNORECASE)
+                if class_match:
+                    fallback = re.sub(
+                        rf"^\s*(?:lớp\s+)?{re.escape(class_match.group(1))}\s*",
+                        "",
+                        fallback,
+                        count=1,
+                        flags=re.IGNORECASE,
+                    )
+                fallback = fallback.strip(" .:-")
+                if fallback:
+                    entities["content"] = fallback
+
+            return IntentResult(
+                intent="action",
+                tool_name="create_notification",
+                entities=entities,
+                action={"type": "CREATE_NOTIFICATION", "params": entities},
+            )
+
+        # 8.7 Direct major student list/count routing
+        major_match = _MAJOR_QUERY_RE.search(message)
+        if major_match and re.search(r"(sinh viên|học sinh|sv)", msg_lower):
+            major_name = major_match.group(1).strip()
+            if re.search(r"(bao nhiêu|đếm|tổng số|có mấy)", msg_lower):
+                return IntentResult(
+                    intent="data_query",
+                    tool_name="count_students_by_major",
+                    entities={"major_name": major_name},
+                )
+            if re.search(r"(danh sách|ds|liệt kê|cho xem|xem các|toàn bộ)", msg_lower) or re.search(r"\b(sinh viên|học sinh|sv)\b.*\b(ngành|nghành|nganh|nhành)\b", msg_lower):
+                return IntentResult(
+                    intent="data_query",
+                    tool_name="get_students_by_major",
+                    entities={"major_name": major_name},
+                )
+
+        # 8.8 Direct attendance routing for student-scoped queries
+        student_code_match = re.search(r"\b(SE\d{5,6}|HE\d{5,6}|IA\d{5,6})\b", message, re.IGNORECASE)
+        if student_code_match and re.search(r"(vắng|điểm danh|chuyên cần|cấm thi|rớt môn)", msg_lower):
+            student_code = student_code_match.group(1).upper()
+            semester_match = _SEMESTER_CODE_RE.search(message)
+            entities: Dict[str, Any] = {"student_code": student_code}
+            if semester_match:
+                entities["semester_code"] = semester_match.group(0).upper()
+
+            tool_name = "get_my_absence_history"
+            if re.search(r"(nguy cơ|cấm thi|rớt môn)", msg_lower):
+                tool_name = "get_my_attendance_risk_courses"
+            elif re.search(r"(tổng quan|chuyên cần của|điểm danh của)", msg_lower):
+                tool_name = "get_my_attendance_overview"
+
+            return IntentResult(
+                intent="data_query",
+                tool_name=tool_name,
+                entities=entities,
+            )
+
+        # 9. Shortcut patterns
         for tool, pattern, entity_key in _SHORTCUTS:
             m = pattern.search(msg_lower)
             if not m:
@@ -235,6 +406,8 @@ class HardRouter:
                 logger.debug("[HardRouter] deferred to LLM (action keyword)")
                 return None
             actual_tool, entities = self._resolve(tool, entity_key, m)
+            if _is_locked(actual_tool):
+                return _locked_result(actual_tool)
             intent = "action" if _is_action(actual_tool) else "data_query"
             return IntentResult(
                 intent    = intent,
@@ -247,20 +420,6 @@ class HardRouter:
         if _ENTITY_RE.search(msg_lower) and len(msg_lower.split()) > 1:
             logger.debug(f"[HardRouter] smart defer: '{message}'")
             return None
-
-        # 10. Bare user code (SE/GV)
-        if cm := _CODE_RE.search(msg_lower):
-            code = cm.group(1).upper()
-            if code.startswith("SE"):
-                return IntentResult(
-                    intent="data_query", tool_name="get_student_by_code",
-                    entities={"student_code": code, "code": code},
-                )
-            if code.startswith("GV"):
-                return IntentResult(
-                    intent="data_query", tool_name="get_lecturer_by_code",
-                    entities={"lecturer_code": code, "code": code},
-                )
 
         return None  # → LLM
 

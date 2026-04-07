@@ -12,8 +12,10 @@ export interface AssignmentDTO {
     courseCode: string;
     lecturerName: string;
     dueDate?: string;
-    referenceUrl?: string;
-    referenceName?: string;
+    referenceUrl?: string; // Keep for backward compatibility
+    referenceName?: string; // Keep for backward compatibility
+    referenceUrls?: string[];
+    referenceNames?: string[];
     status: 'OPEN' | 'CLOSED';
     totalSubmissions: number;
     totalStudents: number;
@@ -26,8 +28,8 @@ export interface CreateAssignmentRequest {
     title: string;
     description?: string;
     dueDate?: string;
-    referenceUrl?: string;
-    referenceName?: string;
+    referenceUrls?: string[];
+    referenceNames?: string[];
 }
 
 // === Submission (bài nộp) ===
@@ -50,6 +52,8 @@ export interface AssignmentSubmissionDTO {
     assignmentDueDate?: string;
     referenceUrl?: string;
     referenceName?: string;
+    referenceUrls?: string[];
+    referenceNames?: string[];
     timetableSlotId?: number;
 }
 

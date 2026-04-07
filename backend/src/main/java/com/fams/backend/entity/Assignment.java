@@ -67,12 +67,12 @@ public class Assignment {
     @Builder.Default
     private AssignmentStatus status = AssignmentStatus.OPEN;
 
-    // Tài liệu tham khảo - URL
-    @Column(name = "reference_url", length = 500)
+    // Tài liệu tham khảo - URL (nhiều file nối bằng |||)
+    @Column(name = "reference_url", length = 2000)
     private String referenceUrl;
 
-    // Tài liệu tham khảo - tên hiển thị
-    @Column(name = "reference_name", length = 255)
+    // Tài liệu tham khảo - tên hiển thị (nhiều file nối bằng |||)
+    @Column(name = "reference_name", length = 1000)
     private String referenceName;
 
     // Đã gửi thông báo nhắc nhở trước hạn nộp chưa

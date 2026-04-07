@@ -179,12 +179,16 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
-    @Async
     @Override
     public void sendEmail(String to, String subject, String content) {
+        sendEmail(to, subject, content, "FAMS AI Assistant", fromEmail);
+    }
+
+    @Override
+    public void sendEmail(String to, String subject, String content, String senderName, String senderEmail) {
         if (to == null || to.isEmpty()) {
             log.warn("Cannot send email: Recipient email is empty");
-            return;
+            throw new IllegalArgumentException("Recipient email is empty");
         }
 
         try {
@@ -192,7 +196,17 @@ public class EmailServiceImpl implements EmailService {
             MimeMessage message = javaMailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom(fromEmail, "FAMS AI Assistant");
+            String effectiveSenderName = senderName != null && !senderName.isBlank() ? senderName : "FAMS AI Assistant";
+            String effectiveSenderEmail = senderEmail != null && !senderEmail.isBlank() ? senderEmail : fromEmail;
+            String systemDomain = fromEmail != null && fromEmail.contains("@") ? fromEmail.substring(fromEmail.indexOf('@') + 1) : "";
+            boolean canUseSenderAddress = effectiveSenderEmail.contains("@")
+                    && systemDomain.length() > 0
+                    && effectiveSenderEmail.toLowerCase().endsWith("@" + systemDomain.toLowerCase());
+
+            helper.setFrom(canUseSenderAddress ? effectiveSenderEmail : fromEmail, effectiveSenderName);
+            if (effectiveSenderEmail.contains("@")) {
+                helper.setReplyTo(effectiveSenderEmail);
+            }
             helper.setTo(to);
             helper.setSubject(subject);
 
@@ -214,19 +228,25 @@ public class EmailServiceImpl implements EmailService {
                             <body>
                                 <div class="container">
                                     <div class="header">
-                                        <h1>FAMS Notification</h1>
+                                        <h1>FAMS Communication Center</h1>
                                     </div>
                                     <div class="content">
-                                        %s
+                                        <p>Xin chào,</p>
+                                        <p>Email này được gửi từ <strong>%s</strong>%s thông qua hệ thống FAMS.</p>
+                                        <div style="margin-top: 16px;">%s</div>
+                                        <p style="margin-top: 24px;">Trân trọng,<br><strong>%s</strong></p>
                                     </div>
                                     <div class="footer">
-                                        <p>Đây là email được gửi tự động từ FAMS AI Assistant.</p>
+                                        <p>Đây là email được gửi từ hệ thống FAMS thay mặt cho người tạo yêu cầu.</p>
                                     </div>
                                 </div>
                             </body>
                             </html>
                             """,
-                    content.replace("\n", "<br>"));
+                    effectiveSenderName,
+                    effectiveSenderEmail.contains("@") ? " (" + effectiveSenderEmail + ")" : "",
+                    content.replace("\n", "<br>"),
+                    effectiveSenderName);
 
             helper.setText(htmlContent, true);
 
@@ -235,8 +255,12 @@ public class EmailServiceImpl implements EmailService {
 
         } catch (MessagingException | UnsupportedEncodingException e) {
             log.error("Failed to send generic email to {}: {}", to, e.getMessage());
+            throw new RuntimeException("SMTP error: " + e.getMessage(), e);
         } catch (Exception e) {
             log.error("Unexpected error sending generic email to {}: {}", to, e.getMessage());
+            throw new RuntimeException("Authentication failed".equalsIgnoreCase(e.getMessage())
+                    ? "SMTP authentication failed"
+                    : e.getMessage(), e);
         }
     }
 }

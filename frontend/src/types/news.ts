@@ -21,6 +21,8 @@ export enum NewsTargetType {
   ALL = 'ALL',
   STUDENT = 'STUDENT',
   LECTURER = 'LECTURER',
+  CLASS = 'CLASS',
+  COURSE = 'COURSE',
   ACADEMIC_STAFF = 'ACADEMIC_STAFF',
   ADMIN = 'ADMIN',
   USER = 'USER'

@@ -16,6 +16,12 @@ public interface ChatGroupService {
     ChatGroupResponse createGroupForClass(String className);
 
     /**
+     * Create a chat group for a class section with explicit creator context.
+     * Useful for AI/system actions where SecurityContext may not carry the same user.
+     */
+    ChatGroupResponse createGroupForClass(String className, String creatorUsername);
+
+    /**
      * Get all chat groups for the current user
      */
     List<ChatGroupResponse> getMyGroups();

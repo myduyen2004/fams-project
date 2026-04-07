@@ -1,30 +1,30 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-    Bot, X, Maximize2, Send, Loader2, User, ExternalLink,
+    Bot, Maximize2, Send, Loader2, User, ExternalLink, X,
     Plus
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Link } from 'react-router-dom';
-import { chatService, AIChatMessage, AIChatSession } from '../../services/api/chatService';
+import { chatService, AIChatMessage, AIChatSession, ContinuationRequest, MissingField } from '../../services/api/chatService';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
 
 // ─── Mini Message Item ────────────────────────────────────────────────────────
-const MiniMsg: React.FC<{ msg: AIChatMessage }> = ({ msg }) => (
+const MiniMsg: React.FC<{ msg: AIChatMessage; onContinue: (continuation: ContinuationRequest) => void }> = ({ msg, onContinue }) => (
     <div className={`flex gap-2 ${msg.role === 'USER' ? 'flex-row-reverse' : ''}`}>
         <div
-            className={`w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center ${msg.role === 'USER' ? 'bg-fpt-orange' : 'bg-orange-100'
+            className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center ${msg.role === 'USER' ? 'bg-fpt-orange' : 'bg-orange-100'
                 }`}
         >
             {msg.role === 'USER'
-                ? <User className="w-3.5 h-3.5 text-white" />
-                : <Bot className="w-3.5 h-3.5 text-fpt-orange" />}
+                ? <User className="w-3 h-3 text-white" />
+                : <Bot className="w-3 h-3 text-fpt-orange" />}
         </div>
         <div className={`max-w-[75%] ${msg.role === 'USER' ? 'items-end' : 'items-start'} flex flex-col`}>
             <div
-                className={`px-3 py-2 rounded-2xl text-xs leading-relaxed ${msg.role === 'USER'
+                className={`px-3 py-2 rounded-2xl text-[11px] leading-relaxed ${msg.role === 'USER'
                     ? 'bg-fpt-orange text-white rounded-tr-none'
                     : 'bg-gray-100 text-gray-800 rounded-tl-none'
                     }`}
@@ -41,6 +41,15 @@ const MiniMsg: React.FC<{ msg: AIChatMessage }> = ({ msg }) => (
                         Xem chi tiết
                     </Link>
                 )}
+                {msg.continuation && (
+                    <button
+                        onClick={() => onContinue(msg.continuation!)}
+                        className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-orange-200 px-2 py-0.5 text-[10px] font-bold text-orange-600 transition hover:bg-fpt-orange hover:text-white"
+                    >
+                        <Send className="w-2.5 h-2.5" />
+                        Tiếp
+                    </button>
+                )}
             </div>
             <span className="text-[9px] text-gray-400 mt-0.5 px-1">
                 {format(new Date(msg.createdAt), 'HH:mm')}
@@ -48,6 +57,15 @@ const MiniMsg: React.FC<{ msg: AIChatMessage }> = ({ msg }) => (
         </div>
     </div>
 );
+
+interface PendingFieldRequest {
+    fields: MissingField[];
+    pendingTool: string;
+    originalMessage: string;
+    pendingEntities?: Record<string, string>;
+    agentLabel?: string;
+    actionReview?: boolean;
+}
 
 // ─── Main Widget ──────────────────────────────────────────────────────────────
 export const FloatingChatWidget: React.FC = () => {
@@ -63,6 +81,8 @@ export const FloatingChatWidget: React.FC = () => {
     const [hasNewMsg, setHasNewMsg] = useState(false);
     const [userRole, setUserRole] = useState('');
     const [userId, setUserId] = useState<string | null>(null);
+    const [pendingFieldRequest, setPendingFieldRequest] = useState<PendingFieldRequest | null>(null);
+    const [missingFieldValues, setMissingFieldValues] = useState<Record<string, string>>({});
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -121,6 +141,7 @@ export const FloatingChatWidget: React.FC = () => {
                 setCurrentSession(session);
                 const msgs = await chatService.getMessages(session.id);
                 setMessages(msgs);
+                setPendingFieldRequest(null);
             } else {
                 await handleNewSession();
             }
@@ -135,6 +156,7 @@ export const FloatingChatWidget: React.FC = () => {
             setSessions(prev => [newSession, ...prev]);
             setCurrentSession(newSession);
             setMessages([]);
+            setPendingFieldRequest(null);
         } catch {
             toast.error('Không thể tạo phiên chat mới');
         }
@@ -145,6 +167,7 @@ export const FloatingChatWidget: React.FC = () => {
         const content = inputValue.trim();
         setInputValue('');
         setIsLoading(true);
+        setPendingFieldRequest(null);
 
         const optimistic: AIChatMessage = {
             id: Date.now(),
@@ -167,8 +190,24 @@ export const FloatingChatWidget: React.FC = () => {
                 role: 'ASSISTANT',
                 createdAt: new Date().toISOString(),
                 redirectPath: response.redirectPath,
+                continuation: response.continuation,
             };
             setMessages(prev => [...prev, aiMsg]);
+            if (response.missingFields?.length && response.pendingTool && response.originalMessage) {
+                setPendingFieldRequest({
+                    fields: response.missingFields,
+                    pendingTool: response.pendingTool,
+                    originalMessage: response.originalMessage,
+                    pendingEntities: response.pendingEntities,
+                    agentLabel: response.agentLabel,
+                    actionReview: response.actionReview,
+                });
+                const initialValues: Record<string, string> = {};
+                response.missingFields.forEach((field) => {
+                    initialValues[field.id] = response.pendingEntities?.[field.id] ?? field.value ?? '';
+                });
+                setMissingFieldValues(initialValues);
+            }
 
             if (!isOpen) setHasNewMsg(true);
 
@@ -182,6 +221,109 @@ export const FloatingChatWidget: React.FC = () => {
             setIsLoading(false);
         }
     }, [inputValue, currentSession, isLoading, isOpen, messages.length]);
+
+    const handleSubmitMissingFields = useCallback(async () => {
+        if (!currentSession || !pendingFieldRequest || isLoading) return;
+        setIsLoading(true);
+        const mergedEntities = {
+            ...(pendingFieldRequest.pendingEntities || {}),
+            ...missingFieldValues,
+        };
+        if (pendingFieldRequest.actionReview) {
+            mergedEntities.__action_confirmed__ = 'true';
+        }
+
+        try {
+            const response = await chatService.sendMessage(
+                currentSession.id,
+                'Bổ sung thông tin cho yêu cầu trước',
+                'llama-3.1-8b-instant',
+                'llama-3.3-70b-versatile',
+                mergedEntities,
+                pendingFieldRequest.pendingTool,
+                pendingFieldRequest.originalMessage,
+                mergedEntities
+            );
+
+            const summary = Object.entries(missingFieldValues)
+                .filter(([, value]) => value?.trim())
+                .map(([key, value]) => `- ${key}: ${value}`)
+                .join('\n');
+
+            if (summary) {
+                setMessages(prev => [...prev, {
+                    id: Date.now(),
+                    content: `Bổ sung thông tin:\n${summary}`,
+                    role: 'USER',
+                    createdAt: new Date().toISOString(),
+                }]);
+            }
+
+            setMessages(prev => [...prev, {
+                id: Date.now() + 1,
+                content: response.answer,
+                role: 'ASSISTANT',
+                createdAt: new Date().toISOString(),
+                redirectPath: response.redirectPath,
+                continuation: response.continuation,
+            }]);
+
+            if (response.missingFields?.length && response.pendingTool && response.originalMessage) {
+                setPendingFieldRequest({
+                    fields: response.missingFields,
+                    pendingTool: response.pendingTool,
+                    originalMessage: response.originalMessage,
+                    pendingEntities: response.pendingEntities || mergedEntities,
+                    agentLabel: response.agentLabel,
+                    actionReview: response.actionReview,
+                });
+                const initialValues: Record<string, string> = {};
+                response.missingFields.forEach((field) => {
+                    initialValues[field.id] = (response.pendingEntities || mergedEntities)?.[field.id] ?? field.value ?? '';
+                });
+                setMissingFieldValues(initialValues);
+            } else {
+                setPendingFieldRequest(null);
+                setMissingFieldValues({});
+            }
+        } catch {
+            toast.error('Không thể gửi thông tin bổ sung');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [currentSession, pendingFieldRequest, isLoading, missingFieldValues]);
+
+    const handleContinue = useCallback(async (continuation: ContinuationRequest) => {
+        if (!currentSession || isLoading) return;
+        setIsLoading(true);
+
+        try {
+            const response = await chatService.sendMessage(
+                currentSession.id,
+                'Tiếp',
+                'llama-3.1-8b-instant',
+                'llama-3.3-70b-versatile',
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                continuation
+            );
+
+            setMessages(prev => [...prev, {
+                id: Date.now() + 1,
+                content: response.answer,
+                role: 'ASSISTANT',
+                createdAt: new Date().toISOString(),
+                redirectPath: response.redirectPath,
+                continuation: response.continuation,
+            }]);
+        } catch {
+            toast.error('Không thể tải thêm kết quả');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [currentSession, isLoading]);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -204,20 +346,31 @@ export const FloatingChatWidget: React.FC = () => {
         return null;
     }
 
+    const widgetRight = 'max(16px, env(safe-area-inset-right, 0px))';
+    const widgetBottom = 'calc(88px + env(safe-area-inset-bottom, 0px))';
+    const fabBottom = 'calc(24px + env(safe-area-inset-bottom, 0px))';
+
     return (
         <>
             {/* ── Popup Widget ─────────────────────────────────────────────────── */}
             <div
-                className={`fixed bottom-24 right-6 z-[9998] transition-all duration-300 ease-out ${isOpen
+                className={`fixed z-[9998] transition-all duration-300 ease-out ${isOpen
                     ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto'
                     : 'opacity-0 translate-y-4 scale-95 pointer-events-none'
                     }`}
-                style={{ width: 360 }}
+                style={{
+                    width: 'min(380px, calc(100vw - 32px))',
+                    right: widgetRight,
+                    bottom: widgetBottom,
+                }}
             >
-                <div className="bg-white rounded-2xl shadow-2xl shadow-black/20 overflow-hidden border border-gray-100">
+                <div
+                    className="bg-white rounded-[26px] shadow-2xl shadow-black/20 overflow-hidden border border-gray-100"
+                    style={{ maxHeight: 'min(720px, calc(100vh - 120px))' }}
+                >
 
                     {/* Header */}
-                    <div className="bg-fpt-orange px-4 py-3 flex items-center gap-3">
+                    <div className="bg-fpt-orange px-4 py-3.5 flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
                             <Bot className="w-5 h-5 text-white" />
                         </div>
@@ -247,6 +400,7 @@ export const FloatingChatWidget: React.FC = () => {
                             </button>
                             <button
                                 onClick={() => setIsOpen(false)}
+                                title="Đóng"
                                 className="p-1.5 hover:bg-white/20 rounded-lg transition-colors text-white/80 hover:text-white"
                             >
                                 <X className="w-4 h-4" />
@@ -256,15 +410,18 @@ export const FloatingChatWidget: React.FC = () => {
 
                     {/* Messages */}
                     {/* Messages */}
-                    <div className="h-[550px] overflow-y-auto p-3 space-y-3 bg-gray-50">
+                    <div
+                        className="overflow-y-auto px-3 py-2.5 space-y-2.5 bg-gray-50"
+                        style={{ height: 'min(520px, calc(100vh - 248px))' }}
+                    >
                         {messages.length === 0 && !isLoading && (
                             <div className="h-full flex flex-col items-center justify-center text-center space-y-3 py-6">
-                                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-fpt-orange to-orange-600 flex items-center justify-center shadow-lg">
-                                    <Bot className="w-7 h-7 text-white" />
+                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-fpt-orange to-orange-600 flex items-center justify-center shadow-lg">
+                                    <Bot className="w-6 h-6 text-white" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-bold text-gray-800">Xin chào! 👋</p>
-                                    <p className="text-xs text-gray-500 mt-1">Tôi có thể giúp gì cho bạn hôm nay?</p>
+                                    <p className="text-[13px] font-bold text-gray-800">Xin chào! 👋</p>
+                                    <p className="text-[11px] text-gray-500 mt-1">Tôi có thể giúp gì cho bạn hôm nay?</p>
                                 </div>
                                 <div className="grid grid-cols-1 gap-1.5 w-full px-2">
                                     {(userRole === 'LECTURER'
@@ -278,7 +435,7 @@ export const FloatingChatWidget: React.FC = () => {
                                         <button
                                             key={s}
                                             onClick={() => { setInputValue(s); inputRef.current?.focus(); }}
-                                            className="text-left text-xs px-3 py-2 rounded-xl border border-orange-100 hover:border-fpt-orange hover:bg-orange-50 text-gray-600 hover:text-fpt-orange transition-all"
+                                            className="text-left text-[11px] px-3 py-2 rounded-xl border border-orange-100 hover:border-fpt-orange hover:bg-orange-50 text-gray-600 hover:text-fpt-orange transition-all"
                                         >
                                             {s}
                                         </button>
@@ -288,13 +445,57 @@ export const FloatingChatWidget: React.FC = () => {
                         )}
 
                         {messages.map(msg => (
-                            <MiniMsg key={msg.id} msg={msg} />
+                            <MiniMsg key={msg.id} msg={msg} onContinue={handleContinue} />
                         ))}
+
+                        {pendingFieldRequest && (
+                            <div className="rounded-2xl border border-orange-200 bg-white p-3 shadow-sm">
+                                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-fpt-orange">
+                                    {pendingFieldRequest.agentLabel || 'Agent hỗ trợ'}
+                                </p>
+                                <p className="mt-1 text-[11px] font-semibold text-gray-800">
+                                    {pendingFieldRequest.actionReview ? 'Xác nhận thông tin trước khi thực hiện thao tác' : 'Cần thêm thông tin để trả lời chính xác'}
+                                </p>
+                                <div className="mt-3 space-y-2">
+                                    {pendingFieldRequest.fields.map((field) => (
+                                        <div key={field.id} className="space-y-1">
+                                            <label className="text-[10px] font-semibold text-gray-600">{field.label}</label>
+                                            <input
+                                                type={field.inputType === 'number' ? 'number' : field.inputType === 'date' ? 'date' : 'text'}
+                                                value={missingFieldValues[field.id] || ''}
+                                                onChange={(e) => setMissingFieldValues(prev => ({ ...prev, [field.id]: e.target.value }))}
+                                                placeholder={field.placeholder}
+                                                className="w-full rounded-xl border border-orange-100 bg-orange-50/40 px-3 py-2 text-[11px] text-gray-800 outline-none focus:border-fpt-orange"
+                                            />
+                                        </div>
+                                    ))}
+                                    <div className="flex gap-2 pt-1">
+                                        <button
+                                            onClick={handleSubmitMissingFields}
+                                            disabled={isLoading}
+                                            className="flex-1 rounded-xl bg-fpt-orange px-3 py-2 text-[11px] font-bold text-white transition hover:bg-fpt-orange/90 disabled:opacity-60"
+                                        >
+                                            {pendingFieldRequest.actionReview ? 'Xác nhận và thực hiện' : 'Tiếp tục'}
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setPendingFieldRequest(null);
+                                                setMissingFieldValues({});
+                                            }}
+                                            disabled={isLoading}
+                                            className="rounded-xl border border-gray-200 px-3 py-2 text-[11px] font-semibold text-gray-500 transition hover:text-red-500"
+                                        >
+                                            Bỏ qua
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {isLoading && (
                             <div className="flex gap-2">
-                                <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center bg-orange-100">
-                                    <Bot className="w-3.5 h-3.5 text-fpt-orange" />
+                                <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center bg-orange-100">
+                                    <Bot className="w-3 h-3 text-fpt-orange" />
                                 </div>
                                 <div className="px-3 py-2 bg-gray-100 rounded-2xl rounded-tl-none">
                                     <div className="flex gap-1 items-center h-4">
@@ -308,55 +509,59 @@ export const FloatingChatWidget: React.FC = () => {
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Input */}
-                    <div className="p-3 bg-white border-t border-gray-100">
-                        <div className="flex items-center gap-2 bg-gray-100 rounded-full px-4 pr-2 py-1.5">
-                            <input
-                                ref={inputRef}
-                                type="text"
-                                value={inputValue}
-                                onChange={e => setInputValue(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                placeholder="Nhập câu hỏi..."
-                                disabled={isLoading || !currentSession}
-                                className="flex-1 bg-transparent text-sm text-gray-800 placeholder:text-gray-400 outline-none min-w-0"
-                            />
+                    {/* Input Area */}
+                    <div className="bg-white border-t border-gray-100 px-3.5 pb-6 pt-2.5 relative">
+                        <div className="flex items-center gap-2 rounded-full bg-gray-50/80 px-2 py-1.5 transition-all duration-200 focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-100">
+                            <div className="min-w-0 flex-1 rounded-full bg-white px-3 shadow-sm ring-1 ring-gray-200/60 transition-all focus-within:ring-gray-400">
+                                <input
+                                    ref={inputRef}
+                                    type="text"
+                                    value={inputValue}
+                                    onChange={e => setInputValue(e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    placeholder="Nhập câu hỏi..."
+                                    disabled={isLoading || !currentSession}
+                                    className="h-8 w-full bg-transparent text-[11px] text-gray-700 placeholder:text-gray-400 outline-none border-none focus:ring-0"
+                                />
+                            </div>
                             <button
                                 onClick={handleSend}
                                 disabled={isLoading || !inputValue.trim() || !currentSession}
-                                className="w-8 h-8 rounded-full bg-fpt-orange hover:bg-fpt-orange/90 text-white flex items-center justify-center transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-90 flex-shrink-0"
+                                className="h-8 w-8 rounded-full bg-fpt-orange hover:bg-fpt-orange/90 text-white flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-90 flex-shrink-0 shadow-sm"
                             >
                                 {isLoading
-                                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                    : <Send className="w-3.5 h-3.5" />}
+                                    ? <Loader2 className="w-3 h-3 animate-spin" />
+                                    : <Send className="w-3 h-3" />}
                             </button>
                         </div>
-                        <p className="text-center text-[9px] text-gray-300 mt-1.5 font-medium tracking-wide">
-                            Powered by FAMS AI
-                        </p>
+                        <div className="absolute bottom-1.5 left-0 right-0">
+                            <p className="text-center text-[7px] text-gray-300 font-medium tracking-[0.2em] uppercase opacity-70">
+                                Powered by FAMS AI
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* ── FAB Button ───────────────────────────────────────────────────── */}
-            <button
-                onClick={() => setIsOpen(prev => !prev)}
-                className={`fixed bottom-6 right-6 z-[9999] w-14 h-14 rounded-full bg-fpt-orange shadow-lg shadow-orange-500/40 flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 ${isOpen ? 'rotate-0' : ''
-                    }`}
-                style={{
-                    background: 'linear-gradient(135deg, #f97316, #ea580c)',
-                }}
-                title="FAMS AI Assistant"
-            >
-                {isOpen
-                    ? <X className="w-6 h-6 text-white" />
-                    : <Bot className="w-6 h-6 text-white" />}
+            {!isOpen && (
+                <button
+                    onClick={() => setIsOpen(true)}
+                    className="fixed z-[9999] w-14 h-14 rounded-full bg-fpt-orange shadow-lg shadow-orange-500/40 flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
+                    style={{
+                        background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                        right: widgetRight,
+                        bottom: fabBottom,
+                    }}
+                    title="FAMS AI Assistant"
+                >
+                    <Bot className="w-6 h-6 text-white" />
 
-                {/* Unread badge */}
-                {hasNewMsg && !isOpen && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 border-2 border-white animate-pulse" />
-                )}
-            </button>
+                    {hasNewMsg && (
+                        <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 border-2 border-white animate-pulse" />
+                    )}
+                </button>
+            )}
 
             <style>{`
         .prose-xs p { margin: 0; }

@@ -31,7 +31,7 @@ export interface AppNotification {
     description: string;
     isRead: boolean;
     timestamp: string;
-    type?: 'SYSTEM' | 'ALERT' | 'IMPORT' | 'CHAT' | 'SCHEDULE' | 'ACADEMIC';
+    type?: 'SYSTEM' | 'ALERT' | 'IMPORT' | 'CHAT' | 'SCHEDULE' | 'ACADEMIC' | 'SUBMISSION' | 'NEWS' | 'NEW_ASSIGNMENT';
     targetUrl?: string;
     senderName?: string;
     senderFullName?: string;

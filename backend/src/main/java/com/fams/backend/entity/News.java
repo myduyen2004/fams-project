@@ -127,6 +127,8 @@ public class News {
         ALL,
         STUDENT,
         LECTURER,
+        CLASS,
+        COURSE,
         ACADEMIC_STAFF,
         ADMIN,
         USER

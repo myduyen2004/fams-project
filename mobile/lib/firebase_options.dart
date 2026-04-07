@@ -2,6 +2,8 @@ import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
+/// Placeholder config only.
+/// Replace by running `flutterfire configure` locally and do not commit real secrets.
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
@@ -26,10 +28,10 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDW4JfzbAINNovwL1HqPPppFuOB55n_LlQ',
-    appId: '1:305133803982:android:38838bde4c0df8e0d6339f',
-    messagingSenderId: '305133803982',
-    projectId: 'fams-f225e',
-    storageBucket: 'fams-f225e.firebasestorage.app',
+    apiKey: 'REPLACE_WITH_FIREBASE_API_KEY',
+    appId: 'REPLACE_WITH_FIREBASE_APP_ID',
+    messagingSenderId: 'REPLACE_WITH_FIREBASE_MESSAGING_SENDER_ID',
+    projectId: 'REPLACE_WITH_FIREBASE_PROJECT_ID',
+    storageBucket: 'REPLACE_WITH_FIREBASE_STORAGE_BUCKET',
   );
 }
