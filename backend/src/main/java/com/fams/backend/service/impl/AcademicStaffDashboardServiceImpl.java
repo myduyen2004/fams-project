@@ -1,12 +1,11 @@
 package com.fams.backend.service.impl;
 
 import com.fams.backend.dto.response.AcademicStaffDashboardResponse;
-import com.fams.backend.dto.response.DashboardNotificationResponse;
-import com.fams.backend.entity.Notification;
-import com.fams.backend.entity.ScheduleRequest;
+import com.fams.backend.dto.response.NewsResponse;
 import com.fams.backend.entity.User;
 import com.fams.backend.repository.*;
 import com.fams.backend.service.AcademicStaffDashboardService;
+import com.fams.backend.service.NewsService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -22,8 +21,6 @@ import java.util.stream.Collectors;
 public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboardService {
 
         private final UserRepository userRepository;
-        private final NotificationRepository notificationRepository;
-        private final NotificationReadStatusRepository notificationReadStatusRepository;
         private final StudentProfileRepository studentProfileRepository;
         private final TimetableSlotRepository timetableSlotRepository;
         private final AttendanceSessionRepository attendanceSessionRepository;
@@ -31,6 +28,8 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
         private final StudentAttendanceRepository studentAttendanceRepository;
         private final LecturerProfileRepository lecturerProfileRepository;
         private final ScheduleRequestRepository scheduleRequestRepository;
+        private final AcademicRequestRepository academicRequestRepository;
+        private final NewsService newsService;
         private final java.util.concurrent.Executor dashboardExecutor;
 
         @org.springframework.beans.factory.annotation.Autowired
@@ -39,8 +38,6 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
 
         public AcademicStaffDashboardServiceImpl(
                         UserRepository userRepository,
-                        NotificationRepository notificationRepository,
-                        NotificationReadStatusRepository notificationReadStatusRepository,
                         StudentProfileRepository studentProfileRepository,
                         TimetableSlotRepository timetableSlotRepository,
                         AttendanceSessionRepository attendanceSessionRepository,
@@ -48,10 +45,10 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
                         StudentAttendanceRepository studentAttendanceRepository,
                         LecturerProfileRepository lecturerProfileRepository,
                         ScheduleRequestRepository scheduleRequestRepository,
+                        AcademicRequestRepository academicRequestRepository,
+                        NewsService newsService,
                         @org.springframework.beans.factory.annotation.Qualifier("dashboardExecutor") java.util.concurrent.Executor dashboardExecutor) {
                 this.userRepository = userRepository;
-                this.notificationRepository = notificationRepository;
-                this.notificationReadStatusRepository = notificationReadStatusRepository;
                 this.studentProfileRepository = studentProfileRepository;
                 this.timetableSlotRepository = timetableSlotRepository;
                 this.attendanceSessionRepository = attendanceSessionRepository;
@@ -59,19 +56,20 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
                 this.studentAttendanceRepository = studentAttendanceRepository;
                 this.lecturerProfileRepository = lecturerProfileRepository;
                 this.scheduleRequestRepository = scheduleRequestRepository;
+                this.academicRequestRepository = academicRequestRepository;
+                this.newsService = newsService;
                 this.dashboardExecutor = dashboardExecutor;
         }
 
-        private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
         @Override
         public AcademicStaffDashboardResponse getDashboardData(java.time.LocalDate startDate) {
                 log.info("Starting optimized parallel dashboard fetch...");
                 long startTime = System.currentTimeMillis();
 
-                // Get current user for context propagation
-                String username = org.springframework.security.core.context.SecurityContextHolder.getContext()
-                                .getAuthentication().getName();
+                // Get current user for news fetching (since SecurityContext won't be in async threads)
+                String username = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+                User currentUser = userRepository.findByUsername(username).orElse(null);
 
                 // 1. Initiate parallel data fetching tasks
                 java.util.concurrent.CompletableFuture<List<AcademicStaffDashboardResponse.RunningRoomDTO>> runningRoomsFuture = java.util.concurrent.CompletableFuture
@@ -83,8 +81,8 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
                 java.util.concurrent.CompletableFuture<List<AcademicStaffDashboardResponse.TopStudentDTO>> topStudentsFuture = java.util.concurrent.CompletableFuture
                                 .supplyAsync(() -> self.getTopStudents(), dashboardExecutor);
 
-                java.util.concurrent.CompletableFuture<List<DashboardNotificationResponse>> notificationsFuture = java.util.concurrent.CompletableFuture
-                                .supplyAsync(() -> self.getNotifications(username), dashboardExecutor);
+                java.util.concurrent.CompletableFuture<List<NewsResponse>> newsFuture = java.util.concurrent.CompletableFuture
+                                .supplyAsync(() -> newsService.getPublishedNews(currentUser, 0, 3).getContent(), dashboardExecutor);
 
                 java.util.concurrent.CompletableFuture<AcademicStaffDashboardResponse.AttendanceStatsDTO> attendanceStatsFuture = java.util.concurrent.CompletableFuture
                                 .supplyAsync(() -> self.getAttendanceStatsForDate(java.time.LocalDate.now()),
@@ -93,52 +91,23 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
                 java.util.concurrent.CompletableFuture<List<AcademicStaffDashboardResponse.WeeklyAttendanceDTO>> weeklyAttendanceFuture = java.util.concurrent.CompletableFuture
                                 .supplyAsync(() -> self.getWeeklyAttendanceData(startDate), dashboardExecutor);
 
-                java.util.concurrent.CompletableFuture<Integer> unreadCountFuture = java.util.concurrent.CompletableFuture
-                                .supplyAsync(() -> {
-                                        User user = userRepository.findByUsername(username).orElse(null);
-                                        if (user != null) {
-                                                List<Notification.TargetType> targetTypes = java.util.Arrays.asList(
-                                                        Notification.TargetType.ALL,
-                                                        Notification.TargetType.ACADEMIC_STAFF
-                                                );
-                                                List<Notification> systemNotifications = notificationRepository.findByTargetTypeInOrderBySentAtDesc(
-                                                                targetTypes)
-                                                        .stream()
-                                                        .filter(n -> n.getType() == Notification.NotificationType.SYSTEM)
-                                                        .collect(Collectors.toList());
-                                                List<Long> notificationIds = systemNotifications.stream().map(Notification::getId).collect(Collectors.toList());
-                                                java.util.Map<Long, com.fams.backend.document.NotificationReadStatus> statusMap = notificationReadStatusRepository
-                                                                .findByNotificationIdIn(notificationIds)
-                                                                .stream()
-                                                                .collect(Collectors.toMap(com.fams.backend.document.NotificationReadStatus::getNotificationId, s -> s,
-                                                                                (left, right) -> left));
-                                                String userIdStr = user.getId().toString();
-                                                int unread = 0;
-                                                for (Notification n : systemNotifications) {
-                                                        com.fams.backend.document.NotificationReadStatus status = statusMap.get(n.getId());
-                                                        if (status != null && status.getDeletedBy().contains(userIdStr)) continue;
-                                                        boolean isRead = status != null && status.getReadBy().containsKey(userIdStr);
-                                                        if (!isRead) unread++;
-                                                }
-                                                return unread;
-                                        }
-                                        return 0;
-                                }, dashboardExecutor);
+                java.util.concurrent.CompletableFuture<Integer> unreadNewsCountFuture = java.util.concurrent.CompletableFuture
+                                .supplyAsync(() -> (int) newsService.getUnreadCount(currentUser), dashboardExecutor);
 
                 try {
                         // 2. Wait for all to complete
                         java.util.concurrent.CompletableFuture.allOf(
                                         runningRoomsFuture, statsFuture, topStudentsFuture,
-                                        notificationsFuture, attendanceStatsFuture,
-                                        weeklyAttendanceFuture, unreadCountFuture).join();
+                                        newsFuture, attendanceStatsFuture,
+                                        weeklyAttendanceFuture, unreadNewsCountFuture).join();
 
                         List<AcademicStaffDashboardResponse.RunningRoomDTO> runningRooms = runningRoomsFuture.get();
 
                         AcademicStaffDashboardResponse response = AcademicStaffDashboardResponse.builder()
                                         .stats(statsFuture.get())
                                         .topStudents(topStudentsFuture.get())
-                                        .notifications(notificationsFuture.get())
-                                        .unreadNotificationsCount(unreadCountFuture.get())
+                                        .news(newsFuture.get())
+                                        .unreadNotificationsCount(unreadNewsCountFuture.get())
                                         .attendanceStats(attendanceStatsFuture.get())
                                         .runningRooms(runningRooms.stream().limit(4).collect(Collectors.toList()))
                                         .totalRunningRooms(runningRooms.size())
@@ -265,11 +234,15 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
         @org.springframework.cache.annotation.Cacheable(value = "dashboardStats")
         public AcademicStaffDashboardResponse.DashboardStats getStats() {
                 log.debug("Retrieving dashboard stats: students, lecturers, and requests counts");
+                long scheduleCount = scheduleRequestRepository.countByStatus(com.fams.backend.entity.ScheduleRequest.RequestStatus.PENDING);
+                long academicCount = academicRequestRepository.countByStatus(com.fams.backend.entity.AcademicRequest.RequestStatus.PENDING);
+                
                 return AcademicStaffDashboardResponse.DashboardStats.builder()
                                 .totalStudents(userRepository.countByRole(User.UserRole.STUDENT))
                                 .totalLecturers(userRepository.countByRole(User.UserRole.LECTURER))
-                                .totalRequests(scheduleRequestRepository
-                                                .countByStatus(ScheduleRequest.RequestStatus.PENDING))
+                                .totalRequests(scheduleCount + academicCount)
+                                .totalScheduleRequests(scheduleCount)
+                                .totalAcademicRequests(academicCount)
                                 .studentStats(studentProfileRepository.countByMajor())
                                 .lecturerStats(lecturerProfileRepository.countByDepartment())
                                 .build();
@@ -294,59 +267,6 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
 
         private Integer calculateAttendance(Long studentId) {
                 return 90 + (int) (Math.random() * 10);
-        }
-
-        public List<DashboardNotificationResponse> getNotifications(String username) {
-                log.debug("Fetching user-specific notifications for academic staff: {}", username);
-                User user = userRepository.findByUsername(username).orElse(null);
-
-                if (user == null) {
-                        log.warn("Dashboard data requested for null user: {}", username);
-                        return List.of();
-                }
-
-                List<Notification.TargetType> targetTypes = java.util.Arrays.asList(
-                        Notification.TargetType.ALL,
-                        Notification.TargetType.ACADEMIC_STAFF
-                );
-
-                List<Notification> systemNotifications = notificationRepository.findByTargetTypeInOrderBySentAtDesc(
-                                targetTypes)
-                        .stream()
-                        .filter(n -> n.getType() == Notification.NotificationType.SYSTEM)
-                        .collect(Collectors.toList());
-
-                List<Long> notificationIds = systemNotifications.stream().map(Notification::getId).collect(Collectors.toList());
-                java.util.Map<Long, com.fams.backend.document.NotificationReadStatus> statusMap = notificationReadStatusRepository
-                                .findByNotificationIdIn(notificationIds)
-                                .stream()
-                                .collect(Collectors.toMap(com.fams.backend.document.NotificationReadStatus::getNotificationId, s -> s,
-                                                (left, right) -> left));
-
-                String userIdStr = user.getId().toString();
-
-                return systemNotifications.stream()
-                                .filter(n -> {
-                                        com.fams.backend.document.NotificationReadStatus status = statusMap.get(n.getId());
-                                        return status == null || !status.getDeletedBy().contains(userIdStr);
-                                })
-                                .limit(5)
-                                .map(n -> {
-                                        com.fams.backend.document.NotificationReadStatus status = statusMap.get(n.getId());
-                                        boolean isRead = status != null && status.getReadBy().containsKey(userIdStr);
-                                        return DashboardNotificationResponse.builder()
-                                                        .id(n.getId())
-                                                        .title(n.getTitle())
-                                                        .description(n.getContent())
-                                                        .timestamp(n.getCreatedAt().format(FORMATTER))
-                                                        .type(n.getType().name())
-                                                        .senderName("System")
-                                                        .senderFullName("Hệ thống")
-                                                        .isRead(isRead)
-                                                        .attachmentUrls(new java.util.ArrayList<>())
-                                                        .build();
-                                })
-                                .collect(Collectors.toList());
         }
 
         @Override

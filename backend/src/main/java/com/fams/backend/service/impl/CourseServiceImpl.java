@@ -57,6 +57,9 @@ public class CourseServiceImpl implements CourseService {
         if (courseRepository.existsByCode(code)) {
             throw new IllegalArgumentException("Mã môn học đã tồn tại: " + code);
         }
+        if (courseRepository.existsByName(request.getName())) {
+            throw new IllegalArgumentException("Tên môn học đã tồn tại: " + request.getName());
+        }
 
         Course course = Course.builder()
                 .code(code)
@@ -84,6 +87,13 @@ public class CourseServiceImpl implements CourseService {
         courseRepository.findByCode(code).ifPresent(existing -> {
             if (!existing.getId().equals(id)) {
                 throw new IllegalArgumentException("Mã môn học đã tồn tại: " + code);
+            }
+        });
+
+        // Check name uniqueness
+        courseRepository.findByName(request.getName()).ifPresent(existing -> {
+            if (!existing.getId().equals(id)) {
+                throw new IllegalArgumentException("Tên môn học đã tồn tại: " + request.getName());
             }
         });
 

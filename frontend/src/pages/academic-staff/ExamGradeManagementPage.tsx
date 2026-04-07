@@ -8,7 +8,7 @@ import { studentGradeService } from '../../services/api/studentGradeService';
 import {
     ChevronDown, Download, FileSpreadsheet, Users, TrendingUp, Award,
     Loader2, Search, Check, BookOpen, Send, AlertCircle, X, ShieldCheck,
-    Save, Edit3
+    Save, Edit3, Info
 } from 'lucide-react';
 import { ImportExamGradeModal } from '../../components/academic-staff/ImportExamGradeModal';
 import { StudentInfoModal } from '../../components/common/StudentInfoModal';
@@ -151,13 +151,13 @@ export const ExamGradeManagementPage: React.FC = () => {
         try {
             await examGradeService.publishGrades(selectedCourse, selectedSemester, 'EXAM');
             toast.success('Công bố điểm thành công!');
-            setShowPublishConfirm(false);
             fetchGrades(); // Reload to get updated status
         } catch (error) {
             console.error(error);
             toast.error('Lỗi khi công bố điểm');
         } finally {
             setPublishing(false);
+            setShowPublishConfirm(false);
         }
     };
 
@@ -454,10 +454,15 @@ export const ExamGradeManagementPage: React.FC = () => {
                                                 {!selectedCourse && <Check size={16} />}
                                             </button>
                                             {courses
-                                                .filter(c =>
-                                                    c.code.toLowerCase().includes(courseSearchTerm.toLowerCase()) ||
-                                                    c.name.toLowerCase().includes(courseSearchTerm.toLowerCase())
-                                                )
+                                                .filter(c => {
+                                                    const searchTerm = courseSearchTerm.toLowerCase();
+                                                    const combinedLabel = `${c.code} - ${c.name}`.toLowerCase();
+                                                    return (
+                                                        c.code.toLowerCase().includes(searchTerm) ||
+                                                        c.name.toLowerCase().includes(searchTerm) ||
+                                                        combinedLabel.includes(searchTerm)
+                                                    );
+                                                })
                                                 .map((course) => (
                                                     <button
                                                         key={course.code}
@@ -535,24 +540,40 @@ export const ExamGradeManagementPage: React.FC = () => {
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="flex items-end gap-2">
-                            <button
-                                onClick={handleExport}
-                                className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-zinc-700 transition-all disabled:opacity-50"
-                                disabled={!gradeOverview || exporting || !gradeOverview.anyGradesSubmitted}
-                            >
-                                {exporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-                                Xuất Excel
-                            </button>
-                            <button
-                                onClick={() => setShowImportModal(true)}
-                                className="flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-all disabled:opacity-50"
-                                disabled={!selectedCourse || !selectedSemester || !!gradeOverview?.gradesPublished || (gradeOverview ? !gradeOverview.anyGradesSubmitted : false)}
-                                title={gradeOverview?.gradesPublished ? "Điểm đã được công bố, không thể nhập thêm" : (!gradeOverview?.anyGradesSubmitted ? "Giảng viên chưa gửi điểm, không thể nhập thêm" : "Nhập điểm từ Excel")}
-                            >
-                                <FileSpreadsheet size={16} />
-                                Nhập điểm
-                            </button>
+                        <div className="flex flex-col items-end gap-1.5">
+                            <div className="flex items-end gap-2">
+                                <button
+                                    onClick={handleExport}
+                                    className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-zinc-700 transition-all disabled:opacity-50"
+                                    disabled={!gradeOverview || exporting || !gradeOverview.anyGradesSubmitted}
+                                >
+                                    {exporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                                    Xuất Excel
+                                </button>
+                                <button
+                                    onClick={() => setShowImportModal(true)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-all disabled:opacity-50"
+                                    disabled={!selectedCourse || !selectedSemester || !!gradeOverview?.gradesPublished || (gradeOverview ? !gradeOverview.anyGradesSubmitted : false)}
+                                    title={gradeOverview?.gradesPublished ? "Điểm đã được công bố, không thể nhập thêm" : (!gradeOverview?.anyGradesSubmitted ? "Giảng viên chưa gửi điểm, không thể nhập thêm" : "Nhập điểm từ Excel")}
+                                >
+                                    <FileSpreadsheet size={16} />
+                                    Nhập điểm
+                                </button>
+                            </div>
+
+                            {/* Top Reason Bar */}
+                            {(!selectedCourse || !selectedSemester || gradeOverview?.gradesPublished || (gradeOverview && !gradeOverview.anyGradesSubmitted)) && (
+                                <div className="animate-in fade-in slide-in-from-top-2 duration-300 flex items-center gap-2 px-3 py-1.5 bg-orange-50/80 dark:bg-orange-900/10 border border-orange-100/50 dark:border-orange-900/20 rounded-lg text-[10px] text-orange-700 dark:text-orange-400 font-medium backdrop-blur-sm">
+                                    <AlertCircle size={12} className="flex-shrink-0" />
+                                    <span>
+                                        {!selectedCourse || !selectedSemester
+                                            ? "Vui lòng chọn kỳ học và môn học để tiếp tục."
+                                            : gradeOverview?.gradesPublished
+                                                ? "Dữ liệu điểm này đã được công bố chính thức và bị khóa."
+                                                : "Hệ thống đang đợi giảng viên nộp điểm thành phần."}
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -635,58 +656,74 @@ export const ExamGradeManagementPage: React.FC = () => {
                         </div>
 
                         {/* Edit/Publish Buttons */}
-                        <div className="flex items-center gap-2">
-                            {isEditMode ? (
-                                <>
-                                    <button
-                                        onClick={handleCancelEdit}
-                                        className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-zinc-700 border border-gray-200 dark:border-zinc-600 rounded-lg text-sm text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-zinc-600 transition-all"
-                                        disabled={saving}
-                                    >
-                                        <X size={18} />
-                                        Hủy
-                                    </button>
-                                    <button
-                                        onClick={handleSaveGrades}
-                                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-all disabled:opacity-50"
-                                        disabled={saving}
-                                    >
-                                        {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                                        Lưu thay đổi
-                                    </button>
-                                </>
-                            ) : (
-                                <>
-                                    <button
-                                        onClick={handleStartEdit}
-                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all disabled:opacity-50"
-                                        disabled={gradeOverview.gradesPublished || !gradeOverview.anyGradesSubmitted}
-                                        title={gradeOverview.gradesPublished 
-                                            ? 'Điểm đã được công bố, không thể chỉnh sửa' 
-                                            : !gradeOverview.anyGradesSubmitted 
-                                                ? 'Giảng viên chưa nộp điểm thành phần, chưa thể chỉnh sửa'
-                                                : 'Chỉnh sửa điểm trực tiếp'}
-                                    >
-                                        <Edit3 size={18} />
-                                        Chỉnh sửa
-                                    </button>
-
-                                    {gradeOverview.gradesPublished ? (
-                                        <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-400">
-                                            <ShieldCheck size={18} />
-                                            <span>Đã công bố điểm</span>
-                                        </div>
-                                    ) : (
+                        <div className="flex flex-col items-end gap-1.5">
+                            <div className="flex items-center gap-2">
+                                {isEditMode ? (
+                                    <>
                                         <button
-                                            onClick={() => setShowPublishConfirm(true)}
-                                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-all disabled:opacity-50"
-                                            disabled={publishing || gradeOverview.totalStudents === 0}
+                                            onClick={handleCancelEdit}
+                                            className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-zinc-700 border border-gray-200 dark:border-zinc-600 rounded-lg text-sm text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-zinc-600 transition-all"
+                                            disabled={saving}
                                         >
-                                            {publishing ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-                                            Công bố điểm
+                                            <X size={18} />
+                                            Hủy
                                         </button>
-                                    )}
-                                </>
+                                        <button
+                                            onClick={handleSaveGrades}
+                                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-all disabled:opacity-50"
+                                            disabled={saving}
+                                        >
+                                            {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                                            Lưu thay đổi
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={handleStartEdit}
+                                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all disabled:opacity-50"
+                                            disabled={gradeOverview.gradesPublished || !gradeOverview.anyGradesSubmitted}
+                                            title={gradeOverview.gradesPublished
+                                                ? 'Điểm đã được công bố, không thể chỉnh sửa'
+                                                : !gradeOverview.anyGradesSubmitted
+                                                    ? 'Giảng viên chưa nộp điểm thành phần, chưa thể chỉnh sửa'
+                                                    : 'Chỉnh sửa điểm trực tiếp'}
+                                        >
+                                            <Edit3 size={18} />
+                                            Chỉnh sửa
+                                        </button>
+
+                                        {gradeOverview.gradesPublished ? (
+                                            <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-400">
+                                                <ShieldCheck size={18} />
+                                                <span>Đã công bố điểm</span>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={() => setShowPublishConfirm(true)}
+                                                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-all disabled:opacity-50"
+                                                disabled={publishing || gradeOverview.totalStudents === 0}
+                                            >
+                                                {publishing ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                                                Công bố điểm
+                                            </button>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+
+                            {/* Reason Bar */}
+                            {!isEditMode && (gradeOverview.gradesPublished || !gradeOverview.anyGradesSubmitted) && (
+                                <div className="animate-in fade-in slide-in-from-right-4 duration-500 flex items-center gap-2 px-3 py-2 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/50 rounded-xl text-[11px] font-medium text-zinc-600 dark:text-zinc-400 shadow-sm">
+                                    <div className="p-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-500 flex-shrink-0">
+                                        <Info size={12} />
+                                    </div>
+                                    <span>
+                                        {gradeOverview.gradesPublished
+                                            ? "Điểm đã công bố. Vui lòng liên hệ quản trị viên nếu cần thay đổi dữ liệu."
+                                            : "Chức năng chỉnh sửa sẽ khả dụng sau khi giảng viên nộp đủ các cấu phần điểm."}
+                                    </span>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -851,12 +888,13 @@ export const ExamGradeManagementPage: React.FC = () => {
                                     Bạn đang công bố điểm cho môn <strong>{gradeOverview?.courseName}</strong> - <strong>{gradeOverview?.semesterName}</strong>.
                                 </p>
 
-                                <div className="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-900/30 rounded-lg p-3 text-sm text-yellow-700 dark:text-yellow-400 text-left flex gap-2">
-                                    <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                                    <div>
-                                        Sau khi công bố, sinh viên sẽ xem được điểm thi ngay lập tức.\nHành động này không thể hoàn tác.
+                                    <div className="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-900/30 rounded-lg p-3 text-sm text-yellow-700 dark:text-yellow-400 text-left flex gap-2">
+                                        <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                                        <div className="flex flex-col gap-1">
+                                            <p>Sau khi công bố, sinh viên sẽ xem được điểm thi ngay lập tức.</p>
+                                            <p className="font-semibold text-red-600 dark:text-red-400">Hành động này không thể hoàn tác.</p>
+                                        </div>
                                     </div>
-                                </div>
                             </div>
 
                             <div className="flex gap-3">
@@ -869,7 +907,7 @@ export const ExamGradeManagementPage: React.FC = () => {
                                 </button>
                                 <button
                                     onClick={handleConfirmPublish}
-                                    className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                    className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50 whitespace-nowrap"
                                     disabled={publishing}
                                 >
                                     {publishing ? (

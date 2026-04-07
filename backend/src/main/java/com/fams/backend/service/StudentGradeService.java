@@ -97,6 +97,9 @@ public class StudentGradeService {
             Map<Long, Double> scoresForCalc = new HashMap<>();
             Map<Long, Double> weightsForCalc = new HashMap<>();
 
+            Map<GradeComponent.GradeType, Double> typeTotalScores = new HashMap<>();
+            Map<GradeComponent.GradeType, Boolean> typeHasComponent = new HashMap<>();
+
             boolean hasMissingOrZero = false;
             boolean hasFailedExam = false;
 
@@ -107,18 +110,28 @@ public class StudentGradeService {
                 Double score = studentGrades.get(gc.getId());
                 gradesForDto.put(gc.getId(), score);
 
+                typeHasComponent.put(gc.getType(), true);
                 if (score != null) {
                     scoresForCalc.put(gc.getId(), score);
-                    if (score <= 0.0) {
-                        hasMissingOrZero = true;
-                    }
+                    typeTotalScores.put(gc.getType(), typeTotalScores.getOrDefault(gc.getType(), 0.0) + score);
+                    
                     if (gc.getType() == GradeComponent.GradeType.FINAL_EXAM && score < 4.0) {
                         hasFailedExam = true;
                     }
                 } else {
-                    hasMissingOrZero = true;
+                    typeTotalScores.put(gc.getType(), typeTotalScores.getOrDefault(gc.getType(), 0.0));
                 }
                 weightsForCalc.put(gc.getId(), gc.getWeight());
+            }
+
+            for (Map.Entry<GradeComponent.GradeType, Boolean> typeEntry : typeHasComponent.entrySet()) {
+                if (typeEntry.getValue()) {
+                    Double total = typeTotalScores.getOrDefault(typeEntry.getKey(), 0.0);
+                    if (total <= 0.0) {
+                        hasMissingOrZero = true;
+                        break;
+                    }
+                }
             }
 
             Double finalGrade = GradeCalculator.calculateAverage(scoresForCalc, weightsForCalc);
@@ -309,27 +322,18 @@ public class StudentGradeService {
                     .put(grade.getGradeComponent().getId(), grade);
         }
 
-        List<StudentGrade> newGrades = new ArrayList<>();
+        List<String> missingGradesMessages = new ArrayList<>();
         for (Enrollment en : enrollments) {
             Map<Long, StudentGrade> studentGrades = gradesMap.getOrDefault(en.getId(), new HashMap<>());
             for (GradeComponent gc : editableComponents) {
                 if (!studentGrades.containsKey(gc.getId())) {
-                    // Chưa có điểm -> Tạo mới với điểm 0.0
-                    StudentGrade newGrade = new StudentGrade();
-                    newGrade.setEnrollment(en);
-                    newGrade.setGradeComponent(gc);
-                    newGrade.setScore(0.0);
-                    newGrade.setNote("Tự động gán 0 điểm do chưa nhập khi gửi điểm");
-                    newGrade.setGradedBy(submittedBy);
-                    newGrade.setGradedAt(LocalDateTime.now());
-                    newGrades.add(newGrade);
+                    missingGradesMessages.add(en.getStudent().getCode() + " thiếu " + gc.getName());
                 }
             }
         }
 
-        if (!newGrades.isEmpty()) {
-            studentGradeRepository.saveAll(newGrades);
-            log.info("Auto-filled {} zero grades for class {}", newGrades.size(), className);
+        if (!missingGradesMessages.isEmpty()) {
+            throw new RuntimeException("Vui lòng nhập đầy đủ điểm thành phần cho tất cả sinh viên trước khi nộp. Còn thiếu " + missingGradesMessages.size() + " trường hợp (ví dụ: " + missingGradesMessages.get(0) + ").");
         }
 
         classSection.setGradesSubmitted(true);
@@ -1213,9 +1217,19 @@ public class StudentGradeService {
 
         if (isPublished) {
             boolean hasMissingOrZero = false;
-            for (Map.Entry<Long, Double> entry : finalWeightsMap.entrySet()) {
-                Double score = finalScoresMap.get(entry.getKey());
-                if (score == null || score <= 0.0) {
+            for (Map.Entry<GradeComponent.GradeType, List<GradeComponent>> typeEntry : componentsByType.entrySet()) {
+                double typeTotalScore = 0.0;
+                boolean hasIncludedComponent = false;
+                for (GradeComponent gc : typeEntry.getValue()) {
+                    if (finalWeightsMap.containsKey(gc.getId())) {
+                        hasIncludedComponent = true;
+                        Double score = finalScoresMap.get(gc.getId());
+                        if (score != null) {
+                            typeTotalScore += score;
+                        }
+                    }
+                }
+                if (hasIncludedComponent && typeTotalScore <= 0.0) {
                     hasMissingOrZero = true;
                     break;
                 }
@@ -1497,14 +1511,32 @@ public class StudentGradeService {
             boolean isPublished = Boolean.TRUE.equals(cs.getGradesPublished());
 
             if (isPublished) {
-                boolean hasMissingOrZero = false;
-                for (Map.Entry<Long, Double> e : weightsMap.entrySet()) {
-                    Double score = scoresMap.get(e.getKey());
-                    if (score == null || score <= 0.0) {
-                        hasMissingOrZero = true;
-                        break;
+                Map<GradeComponent.GradeType, Double> typeTotalScores = new HashMap<>();
+                Map<GradeComponent.GradeType, Boolean> typeHasComponent = new HashMap<>();
+
+                for (GradeComponent gc : allComponents) {
+                    if (weightsMap.containsKey(gc.getId())) {
+                        typeHasComponent.put(gc.getType(), true);
+                        Double score = scoresMap.get(gc.getId());
+                        if (score != null) {
+                            typeTotalScores.put(gc.getType(), typeTotalScores.getOrDefault(gc.getType(), 0.0) + score);
+                        } else {
+                            typeTotalScores.put(gc.getType(), typeTotalScores.getOrDefault(gc.getType(), 0.0));
+                        }
                     }
                 }
+
+                boolean hasMissingOrZero = false;
+                for (Map.Entry<GradeComponent.GradeType, Boolean> typeEntry : typeHasComponent.entrySet()) {
+                    if (typeEntry.getValue()) {
+                        Double total = typeTotalScores.getOrDefault(typeEntry.getKey(), 0.0);
+                        if (total <= 0.0) {
+                            hasMissingOrZero = true;
+                            break;
+                        }
+                    }
+                }
+
                 boolean hasFailedAttendance = checkAttendanceFailure(enrollment.getStudent().getId(), cs.getClassName(),
                         course.getNumberOfSlots());
                 boolean isPassing = calculatePassStatus(courseAverage, hasMissingOrZero, hasFailedExam,

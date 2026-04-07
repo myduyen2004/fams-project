@@ -87,8 +87,7 @@ public interface AcademicRequestRepository extends JpaRepository<AcademicRequest
          * Find all pending requests with pagination and filters
          */
         @Query("SELECT ar FROM AcademicRequest ar " +
-                        "JOIN FETCH ar.student s " +
-                        "LEFT JOIN FETCH s.studentProfile sp " +
+                        "JOIN ar.student s " +
                         "WHERE (:status IS NULL OR ar.status = :status) " +
                         "AND (:requestType IS NULL OR ar.requestType = :requestType) " +
                         "AND (:search IS NULL OR :search = '' OR " +

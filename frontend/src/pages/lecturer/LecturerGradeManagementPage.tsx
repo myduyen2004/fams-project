@@ -341,12 +341,12 @@ export const LecturerGradeManagementPage: React.FC = () => {
         try {
             await studentGradeService.submitGrades(gradeOverview.className);
             toast.success('Đã gửi điểm cho phòng đào tạo thành công!');
-            setShowSubmitConfirm(false);
             fetchGrades(); // Refresh to update submission status
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Không thể gửi điểm');
         } finally {
             setSubmitting(false);
+            setShowSubmitConfirm(false);
         }
     };
 

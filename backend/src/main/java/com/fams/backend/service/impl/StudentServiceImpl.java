@@ -19,7 +19,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -301,7 +300,8 @@ public class StudentServiceImpl implements StudentService {
             log.info("Updated student with ID: {} and its profile", id);
             // Detailed logging for sensitive changes
             if (profileChanged && !java.util.Objects.equals(oldGpa, profile.getGpa())) {
-                String adminUsername = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+                String adminUsername = org.springframework.security.core.context.SecurityContextHolder.getContext()
+                        .getAuthentication().getName();
                 systemLogService.logSensitiveDataChange(adminUsername, user.getUsername(), "GPA",
                         String.valueOf(oldGpa), String.valueOf(profile.getGpa()));
             } else {

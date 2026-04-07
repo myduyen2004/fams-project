@@ -1,11 +1,9 @@
 package com.fams.backend.service;
 
-import com.fams.backend.dto.response.NotificationResponse;
 import com.fams.backend.document.NotificationReadStatus;
 import com.fams.backend.entity.News;
 import com.fams.backend.entity.Notification;
 import com.fams.backend.entity.User;
-import com.fams.backend.exception.NotFoundException;
 import com.fams.backend.repository.NotificationReadStatusRepository;
 import com.fams.backend.repository.NotificationRepository;
 import com.fams.backend.repository.UserRepository;
@@ -53,13 +51,14 @@ public class NotificationService {
      */
     private void createSingleRecipient(Notification notification, User recipient) {
         NotificationReadStatus readStatus = NotificationReadStatus.builder()
-            .notificationId(notification.getId())
-            .targetType(Notification.TargetType.USER.name())
-            .recipientId(recipient.getId())
-            .createdAt(LocalDateTime.now())
+                .notificationId(notification.getId())
+                .targetType(Notification.TargetType.USER.name())
+                .recipientId(recipient.getId())
+                .createdAt(LocalDateTime.now())
                 .build();
         notificationReadStatusRepository.save(readStatus);
-        log.info("Created MongoDB read-status for user: {} on notification: {}", recipient.getId(), notification.getId());
+        log.info("Created MongoDB read-status for user: {} on notification: {}", recipient.getId(),
+                notification.getId());
 
         // Send FCM push notification
         fcmService.sendPushNotification(
@@ -68,9 +67,7 @@ public class NotificationService {
                 notification.getContent(),
                 java.util.Map.of(
                         "notificationId", String.valueOf(notification.getId()),
-                        "type", notification.getType() != null ? notification.getType().name() : "SYSTEM"
-                )
-        );
+                        "type", notification.getType() != null ? notification.getType().name() : "SYSTEM"));
     }
 
     /**
@@ -84,7 +81,7 @@ public class NotificationService {
         List<User> recipients = new ArrayList<>();
 
         log.info("Resolving recipients for notificationId={}, type={}, targetType={}",
-            notification.getId(), notification.getType(), notification.getTargetType());
+                notification.getId(), notification.getType(), notification.getTargetType());
 
         switch (notification.getTargetType()) {
             case ALL:
@@ -141,14 +138,15 @@ public class NotificationService {
                 if (extraData != null && !extraData.isEmpty()) {
                     fcmData.putAll(extraData);
                 }
-                List<Long> recipientIds = recipients.stream().map(User::getId).collect(java.util.stream.Collectors.toList());
-                log.info("Dispatching FCM for notificationId={} to {} user(s)", notification.getId(), recipientIds.size());
+                List<Long> recipientIds = recipients.stream().map(User::getId)
+                        .collect(java.util.stream.Collectors.toList());
+                log.info("Dispatching FCM for notificationId={} to {} user(s)", notification.getId(),
+                        recipientIds.size());
                 fcmService.sendPushNotificationsForUsers(
                         recipientIds,
                         notification.getTitle(),
                         notification.getContent(),
-                        fcmData
-                );
+                        fcmData);
             } catch (Exception e) {
                 log.error("Error saving notification recipients: ", e);
                 throw e;
@@ -164,7 +162,7 @@ public class NotificationService {
         String body = fcmService.formatPushBody(news.getContent(), 200);
 
         log.info("notifyNewsPublished called for newsId={}, targetType={}, mappedTargetType={}",
-            news.getId(), news.getTargetType(), mappedTargetType);
+                news.getId(), news.getTargetType(), mappedTargetType);
 
         Notification notification = Notification.builder()
                 .title(news.getTitle())
@@ -212,7 +210,7 @@ public class NotificationService {
                 .content(content)
                 .type(Notification.NotificationType.ACADEMIC)
                 .targetType(Notification.TargetType.USER)
-            .sentAt(LocalDateTime.now())
+                .sentAt(LocalDateTime.now())
                 .build();
 
         notification = notificationRepository.save(notification);
@@ -234,9 +232,7 @@ public class NotificationService {
                     notification.getContent(),
                     java.util.Map.of(
                             "notificationId", String.valueOf(notification.getId()),
-                            "type", "ACADEMIC"
-                    )
-            );
+                            "type", "ACADEMIC"));
         }
 
         log.info("Sent notification to {} academic staff for new academic request {}",
@@ -271,7 +267,7 @@ public class NotificationService {
                 .content(content)
                 .type(Notification.NotificationType.ACADEMIC)
                 .targetType(Notification.TargetType.USER)
-            .sentAt(LocalDateTime.now())
+                .sentAt(LocalDateTime.now())
                 .build();
 
         notification = notificationRepository.save(notification);
@@ -286,9 +282,7 @@ public class NotificationService {
                 notification.getContent(),
                 java.util.Map.of(
                         "notificationId", String.valueOf(notification.getId()),
-                        "type", "ACADEMIC"
-                )
-        );
+                        "type", "ACADEMIC"));
 
         log.info("Sent notification to student {} for academic request {} status change to {}",
                 academicRequest.getStudent().getId(), academicRequest.getId(), academicRequest.getStatus());
@@ -321,7 +315,7 @@ public class NotificationService {
         Notification notification = Notification.builder()
                 .title(title)
                 .content(content)
-            .type(Notification.NotificationType.GRADE_PUBLISHED)
+                .type(Notification.NotificationType.GRADE_PUBLISHED)
                 .targetType(Notification.TargetType.USER)
                 .sentAt(LocalDateTime.now())
                 .build();
@@ -329,27 +323,25 @@ public class NotificationService {
         notification = notificationRepository.save(notification);
 
         List<Long> activeStudentIds = students.stream()
-            .filter(s -> s.getStatus() == User.UserStatus.ACTIVE)
-            .map(User::getId)
-            .collect(java.util.stream.Collectors.toList());
+                .filter(s -> s.getStatus() == User.UserStatus.ACTIVE)
+                .map(User::getId)
+                .collect(java.util.stream.Collectors.toList());
 
         if (!activeStudentIds.isEmpty()) {
             createUserTargetReadStatus(notification, new HashSet<>(activeStudentIds));
             log.info("Sent notifications to {} students for published {} of course {}",
-                activeStudentIds.size(), gradeTypeName, course.getCode());
+                    activeStudentIds.size(), gradeTypeName, course.getCode());
 
             // Send FCM push notification to all active students
             java.util.Map<String, String> fcmData = java.util.Map.of(
                     "notificationId", String.valueOf(notification.getId()),
-                    "type", Notification.NotificationType.GRADE_PUBLISHED.name()
-            );
+                    "type", Notification.NotificationType.GRADE_PUBLISHED.name());
             if (!activeStudentIds.isEmpty()) {
                 fcmService.sendPushNotificationsForUsers(
                         activeStudentIds,
                         notification.getTitle(),
                         notification.getContent(),
-                        fcmData
-                );
+                        fcmData);
             }
         }
     }
