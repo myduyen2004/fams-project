@@ -60,7 +60,7 @@ public class UserServiceImpl implements UserService {
     private final com.fams.backend.service.impl.AsyncImportService asyncImportService;
     private final com.fams.backend.service.impl.EmailQueueService emailQueueService;
     private final StringRedisTemplate redisTemplate;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     private static final String CACHE_USERS = "users";
     private static final String CACHE_USER_DETAILS = "user_details";
@@ -74,7 +74,6 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = CACHE_USERS, key = "#search + '-' + #role + '-' + #status + '-' + #pageable.pageNumber + '-' + #pageable.pageSize")
     public Page<UserResponse> getAllUsers(String search, String role, String status, Pageable pageable) {
         Specification<User> spec = (root, query, cb) -> {
             // Eager loading for UserResponse mapping - ONLY on data query, not count query
@@ -243,9 +242,15 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     @CacheEvict(value = CACHE_USER_DETAILS, key = "#username")
-    public void changePassword(String username, String newPassword) {
+    public void changePassword(String username, String currentPassword, String newPassword) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new NotFoundException("User not found: " + username));
+
+        // Verify current password
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new BadRequestException("Mật khẩu hiện tại không chính xác");
+        }
+
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setIsPasswordChanged(true);
         log.info("Password changed successfully for user: {}", username);

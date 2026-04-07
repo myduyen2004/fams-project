@@ -32,6 +32,7 @@ export const ProfilePage: React.FC = () => {
     newPassword: '',
     confirmPassword: ''
   });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [showPasswords, setShowPasswords] = useState({
     current: false,
     new: false,
@@ -165,8 +166,8 @@ export const ProfilePage: React.FC = () => {
     }
 
     try {
-      // TODO: Call backend API to change password
-      // await changePassword(passwordData);
+      setIsChangingPassword(true);
+      await userService.changePassword(passwordData.currentPassword, passwordData.newPassword);
 
       toast.success('Đổi mật khẩu thành công!');
       setPasswordData({
@@ -174,9 +175,11 @@ export const ProfilePage: React.FC = () => {
         newPassword: '',
         confirmPassword: ''
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Password change failed:', error);
-      toast.error('Không thể đổi mật khẩu. Vui lòng kiểm tra lại mật khẩu hiện tại!');
+      toast.error(error.response?.data?.message || 'Không thể đổi mật khẩu. Vui lòng kiểm tra lại mật khẩu hiện tại!');
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -322,7 +325,11 @@ export const ProfilePage: React.FC = () => {
                     <input
                       type="text"
                       value={displayProfile.phone || ''}
-                      onChange={(e) => handleChange('phone', e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9+]/g, '');
+                        if (val.length <= 11) handleChange('phone', val);
+                      }}
+                      placeholder="Ví dụ: 0912345678"
                       className="w-full px-4 py-2 border border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-fpt-orange focus:border-transparent"
                     />
                   ) : (
@@ -475,10 +482,15 @@ export const ProfilePage: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-fpt-orange text-white rounded-lg hover:bg-orange-600 transition-colors font-medium"
+              disabled={isChangingPassword}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-fpt-orange text-white rounded-lg hover:bg-orange-600 transition-colors font-medium disabled:opacity-50"
             >
-              <Lock size={18} />
-              Đổi mật khẩu
+              {isChangingPassword ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <Lock size={18} />
+              )}
+              {isChangingPassword ? 'Đang cập nhật...' : 'Đổi mật khẩu'}
             </button>
           </form>
         </div>

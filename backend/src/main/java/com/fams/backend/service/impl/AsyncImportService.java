@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.cache.CacheManager;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -51,7 +52,8 @@ public class AsyncImportService {
     private final Executor importExecutor;
     private final EmailQueueService emailQueueService;
     private final StringRedisTemplate redisTemplate;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final CacheManager cacheManager;
+    private final ObjectMapper objectMapper;
     private final Set<String> cancelledJobIds = ConcurrentHashMap.newKeySet();
 
     public static final String ACTIVATION_PROGRESS_PREFIX = "fams:activation:progress:";
@@ -248,6 +250,10 @@ public class AsyncImportService {
 
             long phase1Elapsed = System.currentTimeMillis() - phase1Start;
             log.info("⚡ Phase 1 DONE: {} users in {}ms", totalValidRecords, phase1Elapsed);
+
+            // CRITICAL: Evict stale users cache immediately after DB insert
+            // so F5 will hit the DB and show new users
+            evictUsersCache();
 
             job.setSuccessCount(totalValidRecords);
             job.setProcessedRecords(totalValidRecords);
@@ -488,17 +494,16 @@ public class AsyncImportService {
             return;
         }
 
-        // PHASE 3: Final Flush
+        // Phase 3: Final Flush & Sync
         log.info("Final Phase: Cache eviction and completion notification.");
         try {
-            java.util.Set<String> keys = redisTemplate.keys("users*");
-            if (keys != null && !keys.isEmpty())
-                redisTemplate.delete(keys);
-        } catch (Exception ignored) {
-        }
+            evictUsersCache();
+            // Small pause ensures DB commits are visible to all readers
+            Thread.sleep(100);
+        } catch (Exception ignored) {}
 
         sendActivationProgressWithPercentage(topic, "COMPLETED", total, total,
-                "Đã kích hoạt toàn bộ " + total + " tài khoản thành công!", null, 100);
+                String.format("Kích hoạt thành công toàn bộ %d tài khoản!", total), null, 100);
     }
 
     private void sendActivationProgress(String topic, String status, int current, int total, String message,
@@ -549,8 +554,29 @@ public class AsyncImportService {
         job.setStatusMessage("Import hoàn tất thành công! Đã cập nhật đầy đủ dữ liệu và ảnh.");
         job.setCompletedAt(LocalDateTime.now());
         importJobRepository.save(job);
+
+        // Evict cache again after image enrichment phase
+        evictUsersCache();
+
         sendJobNotification(username, job, null);
         log.info("Async import job {} fully completed including enrichment", job.getJobId());
+    }
+
+    /**
+     * Definitive Wildcard Eviction: Clears all 'users*' keys in Redis.
+     * This ensures all variations of the user list (different roles, pages, search terms)
+     * are wiped at once, hitting the DB fresh even without a server restart.
+     */
+    private void evictUsersCache() {
+        try {
+            java.util.Set<String> keys = redisTemplate.keys("users*");
+            if (keys != null && !keys.isEmpty()) {
+                redisTemplate.delete(keys);
+                log.info("✅ DEFENITIVE: Evicted all Redis 'users*' cache keys (count: {})", keys.size());
+            }
+        } catch (Exception e) {
+            log.warn("Failed to evict Redis users cache: {}", e.getMessage());
+        }
     }
 
     public void stopJob(String jobId) {

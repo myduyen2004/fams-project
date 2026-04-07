@@ -65,7 +65,7 @@ export const Dashboard: React.FC = () => {
       setRecentAccess(recentAccessData);
       setAlerts(alertsData);
       setNotifications(notificationsData);
-      setSystemLogs(logsData);
+      setSystemLogs(logsData.content);
       setNews(newsData.content || []);
     } catch (error: any) {
       console.error('Failed to load dashboard data:', error);

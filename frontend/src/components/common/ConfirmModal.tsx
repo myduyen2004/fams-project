@@ -55,7 +55,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       />
 
       {/* Modal Content */}
-      <div className="relative bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-md transform transition-all duration-300 scale-100 animate-in fade-in zoom-in-95">
+      <div className="relative bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-lg transform transition-all duration-300 scale-100 animate-in fade-in zoom-in-95">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800">
           <div className="flex items-center gap-3">
