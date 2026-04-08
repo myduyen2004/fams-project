@@ -3,6 +3,7 @@ package com.fams.backend.service;
 import com.fams.backend.dto.response.SemesterResponse;
 import com.fams.backend.entity.Semester;
 import com.fams.backend.repository.SemesterRepository;
+import com.fams.backend.repository.ClassSectionRepository;
 import com.fams.backend.service.impl.SemesterServiceImpl;
 import com.fams.backend.service.impl.SystemLogService;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +32,9 @@ class SemesterServiceTest {
 
     @Mock
     private SystemLogService systemLogService;
+
+    @Mock
+    private ClassSectionRepository classSectionRepository;
 
     @InjectMocks
     private SemesterServiceImpl semesterService;
@@ -208,6 +212,7 @@ class SemesterServiceTest {
     void deleteSemester_Success() {
         // Arrange - Condition: semester exists with status = UPCOMING
         when(semesterRepository.findByCode("SP26")).thenReturn(Optional.of(activeSemester));
+        when(classSectionRepository.findBySemesterCode("SP26")).thenReturn(Collections.emptyList());
         doNothing().when(semesterRepository).delete(any(Semester.class));
 
         // Act
