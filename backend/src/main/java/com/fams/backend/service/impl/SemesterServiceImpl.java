@@ -27,6 +27,7 @@ public class SemesterServiceImpl implements SemesterService {
     private final HolidayRepository holidayRepository;
     private final SemesterWeekdayRepository semesterWeekdayRepository;
     private final TimetableSlotRepository timetableSlotRepository;
+    private final ClassSectionRepository classSectionRepository;
     private final SystemLogService systemLogService;
 
     @Override
@@ -165,6 +166,13 @@ public class SemesterServiceImpl implements SemesterService {
         // Only allow deleting UPCOMING semesters
         if (semester.getStatus() != Semester.SemesterStatus.UPCOMING) {
             throw new RuntimeException("Chỉ có thể xóa các học kỳ sắp diễn ra (chưa bắt đầu)");
+        }
+
+        // Check if class sections exist for this semester
+        List<ClassSection> classSections = classSectionRepository.findBySemesterCode(code);
+        if (!classSections.isEmpty()) {
+            throw new RuntimeException(
+                "Không thể xóa học kỳ này vì đã có " + classSections.size() + " lớp học phần được tạo. Vui lòng xóa tất cả lớp học phần trước.");
         }
 
         // Delete the semester

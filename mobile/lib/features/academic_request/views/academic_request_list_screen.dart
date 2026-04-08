@@ -301,13 +301,11 @@ class _DetailSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.6,
-      maxChildSize: 0.92,
-      minChildSize: 0.4,
-      builder: (_, scrollController) => Container(
+    return SafeArea(
+      child: Padding(
         padding: EdgeInsets.all(20.w),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Handle
@@ -341,53 +339,54 @@ class _DetailSheet extends StatelessWidget {
             Text(request.requestTypeLabel,
                 style: TextStyle(fontSize: 13.sp, color: Colors.grey[600])),
             Divider(height: 24.h),
-            Expanded(
-              child: ListView(
-                controller: scrollController,
-                children: [
-                  if (request.semesterName != null)
-                    _DetailRow('Học kỳ', request.semesterName!),
-                  if (request.courseName != null)
-                    _DetailRow('Môn học', '${request.courseCode ?? ''} - ${request.courseName}'),
-                  if (request.className != null)
-                    _DetailRow('Lớp học phần', request.className!),
-                  if (request.toClassName != null)
-                    _DetailRow('Lớp muốn chuyển', request.toClassName!),
-                  if (request.toMajor != null)
-                    _DetailRow('Ngành muốn chuyển', request.toMajor!),
-                  if (request.toSpecialization != null)
-                    _DetailRow('Chuyên ngành', request.toSpecialization!),
-                  if (request.toSubSpecialization != null)
-                    _DetailRow('Chuyên ngành hẹp', request.toSubSpecialization!),
-                  if (request.reason != null)
-                    _DetailRow('Lý do', request.reason!),
-                  if (request.note != null && request.note!.isNotEmpty)
-                    _DetailRow('Ghi chú', request.note!),
-                  if (request.dueDate != null)
-                    _DetailRow('Hạn nộp', request.dueDate!),
-                  _DetailRow('Ngày tạo', request.createdAt.split('T').first),
-                  if (request.approverName != null)
-                    _DetailRow('Người xét duyệt', request.approverName!),
-                  if (request.approvedAt != null)
-                    _DetailRow('Ngày xét duyệt', request.approvedAt!.split('T').first),
-                  if (request.approverNote != null && request.approverNote!.isNotEmpty)
-                    _DetailRow('Ghi chú người duyệt', request.approverNote!),
-                  if (request.fileUrl != null && request.fileUrl!.isNotEmpty)
-                    Padding(
-                      padding: EdgeInsets.symmetric(vertical: 6.h),
-                      child: Row(
-                        children: [
-                          Icon(SolarIconsOutline.paperclip, size: 16.sp, color: AppColors.primaryOrange),
-                          SizedBox(width: 8.w),
-                          Text('File đính kèm: ', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.sp)),
-                          Expanded(
-                            child: Text('Có file đính kèm',
-                                style: TextStyle(color: AppColors.primaryOrange, fontSize: 13.sp)),
-                          ),
-                        ],
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    if (request.semesterName != null)
+                      _DetailRow('Học kỳ', request.semesterName!),
+                    if (request.courseName != null)
+                      _DetailRow('Môn học', '${request.courseCode ?? ''} - ${request.courseName}'),
+                    if (request.className != null)
+                      _DetailRow('Lớp học phần', request.className!),
+                    if (request.toClassName != null)
+                      _DetailRow('Lớp muốn chuyển', request.toClassName!),
+                    if (request.toMajor != null)
+                      _DetailRow('Ngành muốn chuyển', request.toMajor!),
+                    if (request.toSpecialization != null)
+                      _DetailRow('Chuyên ngành', request.toSpecialization!),
+                    if (request.toSubSpecialization != null)
+                      _DetailRow('Chuyên ngành hẹp', request.toSubSpecialization!),
+                    if (request.reason != null)
+                      _DetailRow('Lý do', request.reason!),
+                    if (request.note != null && request.note!.isNotEmpty)
+                      _DetailRow('Ghi chú', request.note!),
+                    if (request.dueDate != null)
+                      _DetailRow('Hạn nộp', request.dueDate!),
+                    _DetailRow('Ngày tạo', request.createdAt.split('T').first),
+                    if (request.approverName != null)
+                      _DetailRow('Người xét duyệt', request.approverName!),
+                    if (request.approvedAt != null)
+                      _DetailRow('Ngày xét duyệt', request.approvedAt!.split('T').first),
+                    if (request.approverNote != null && request.approverNote!.isNotEmpty)
+                      _DetailRow('Ghi chú người duyệt', request.approverNote!),
+                    if (request.fileUrl != null && request.fileUrl!.isNotEmpty)
+                      Padding(
+                        padding: EdgeInsets.symmetric(vertical: 6.h),
+                        child: Row(
+                          children: [
+                            Icon(SolarIconsOutline.paperclip, size: 16.sp, color: AppColors.primaryOrange),
+                            SizedBox(width: 8.w),
+                            Text('File đính kèm: ', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.sp)),
+                            Expanded(
+                              child: Text('Có file đính kèm',
+                                  style: TextStyle(color: AppColors.primaryOrange, fontSize: 13.sp)),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
             // Cancel button if PENDING

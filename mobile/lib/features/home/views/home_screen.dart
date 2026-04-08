@@ -82,7 +82,18 @@ class HomeScreen extends StatelessWidget {
     final List<Map<String, dynamic>> features = [
       {"icon": SolarIconsBold.verifiedCheck, "title": "Điểm danh"},
       {"icon": SolarIconsBold.graphUp, "title": "Bảng điểm"},
-      {"icon": SolarIconsBold.documentText, "title": "Đơn từ"},
+      {
+        "icon": SolarIconsBold.documentText, 
+        "title": "Đơn từ",
+        "onTap": () {
+          final user = authController.currentUser.value;
+          if (user?.isLecturer == true) {
+            Get.toNamed(AppRoutes.lecturerRequests);
+          } else {
+            Get.toNamed(AppRoutes.studentAcademicRequests);
+          }
+        }
+      },
       {"icon": SolarIconsBold.walletMoney, "title": "Học phí"},
       {"icon": SolarIconsBold.pen2, "title": "BTVN"},
       {"icon": SolarIconsBold.ticket, "title": "Sự kiện"},
@@ -410,7 +421,8 @@ class HomeScreen extends StatelessWidget {
                 return _buildMinimalFeatureItem(
                   features[index]["icon"], 
                   features[index]["title"], 
-                  orangePrimary
+                  orangePrimary,
+                  onTap: features[index]["onTap"],
                 );
               },
             ),
@@ -484,10 +496,12 @@ class HomeScreen extends StatelessWidget {
   }
 
   // ✨ MINIMALIST FEATURE ITEM ✨
-  Widget _buildMinimalFeatureItem(IconData icon, String title, Color brandColor) {
-    return Container(
-      margin: EdgeInsets.only(right: 18.w),
-      child: Column(
+  Widget _buildMinimalFeatureItem(IconData icon, String title, Color brandColor, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: EdgeInsets.only(right: 18.w),
+        child: Column(
         children: [
           Container(
             width: 60.w,
@@ -517,6 +531,7 @@ class HomeScreen extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
         ],
+      ),
       ),
     );
   }
