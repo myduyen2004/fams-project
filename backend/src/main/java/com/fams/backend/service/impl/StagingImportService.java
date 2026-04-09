@@ -289,7 +289,7 @@ public class StagingImportService {
                     FROM %s s
                     JOIN users u ON UPPER(TRIM(s.student_code)) = UPPER(u.code) AND u.role = 'STUDENT'
                     JOIN student_profiles sp ON u.id = sp.user_id
-                    JOIN class_sections cs ON TRIM(s.class_name) = cs.class_name AND cs.semester_id = ?
+                    JOIN class_sections cs ON s.class_name = cs.class_name AND cs.semester_id = ?
                     WHERE s.error_message IS NULL
                     AND sp.major_id IS NOT NULL
                     AND sp.specialization_id IS NOT NULL
@@ -574,7 +574,7 @@ public class StagingImportService {
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Không tìm thấy lớp học phần: ' || s.class_name
                         WHERE s.class_name != ''
-                        AND NOT EXISTS (SELECT 1 FROM class_sections cs WHERE s.class_name = cs.class_name AND cs.semester_id = ?)
+                        AND NOT EXISTS (SELECT 1 FROM class_sections cs WHERE cs.class_name = cs.class_name AND cs.semester_id = ?)
                         """
                         .formatted(stagingTable), semesterId);
 
@@ -758,10 +758,7 @@ public class StagingImportService {
             int col = cellReferenceToColumn(cellReference);
             if (col >= 0 && col < 4) {
                 String val = formattedValue != null ? formattedValue.trim() : "";
-                // Uppercase course_code and lecturer_code, keep class_name case-sensitive
-                if (col == 1 || col == 2) {
-                    val = val.toUpperCase();
-                }
+                // Keep original case from file for staging, but comparisons will be case-insensitive
                 currentRow[col] = val;
             }
         }
@@ -846,10 +843,7 @@ public class StagingImportService {
             int col = cellReferenceToColumn(cellReference);
             if (col >= 0 && col < 2) {
                 String val = formattedValue != null ? formattedValue.trim() : "";
-                // Uppercase student_code, keep class_name case-sensitive
-                if (col == 0) {
-                    val = val.toUpperCase();
-                }
+                // Keep original case from file for staging, but comparisons will be case-insensitive
                 currentRow[col] = val;
             }
         }

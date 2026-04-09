@@ -4,6 +4,7 @@ import com.fams.backend.dto.request.SemesterConfigRequest;
 import com.fams.backend.dto.response.SemesterResponse;
 import com.fams.backend.entity.*;
 import com.fams.backend.repository.*;
+import com.fams.backend.service.NotificationService;
 import com.fams.backend.service.SemesterService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +29,7 @@ public class SemesterServiceImpl implements SemesterService {
     private final SemesterWeekdayRepository semesterWeekdayRepository;
     private final TimetableSlotRepository timetableSlotRepository;
     private final SystemLogService systemLogService;
+    private final NotificationService notificationService;
 
     @Override
     public List<SemesterResponse> getAllSemesters() {
@@ -312,8 +314,16 @@ public class SemesterServiceImpl implements SemesterService {
         config.setMaxSlotPerDay(configRequest.getMaxSlotsPerDay());
         config.setSlotPerSubjectPerWeek(configRequest.getSlotsPerSubjectPerWeek());
         config.setSlotDuration(configRequest.getSlotDuration());
+        
+        boolean wasPublished = Boolean.TRUE.equals(config.getIsPublished());
         config.setIsPublished(configRequest.getIsPublished());
         semesterConfigRepository.save(config);
+
+        if (Boolean.TRUE.equals(configRequest.getIsPublished()) && !wasPublished) {
+            notificationService.notifyTimetablePublished(semester);
+        } else if (!Boolean.TRUE.equals(configRequest.getIsPublished()) && wasPublished) {
+            notificationService.notifyTimetableUnpublished(semester);
+        }
 
         // 2. Update Weekdays (Delete current and re-add using direct query)
         semesterWeekdayRepository.deleteBySemesterId(semester.getId());
@@ -430,8 +440,17 @@ public class SemesterServiceImpl implements SemesterService {
             config.setSlotDuration(90);
             semester.setConfig(config);
         }
+        
+        boolean wasPublished = Boolean.TRUE.equals(config.getIsPublished());
         config.setIsPublished(isPublished);
         semesterConfigRepository.save(config);
+        
+        if (isPublished && !wasPublished) {
+            notificationService.notifyTimetablePublished(semester);
+        } else if (!isPublished && wasPublished) {
+            notificationService.notifyTimetableUnpublished(semester);
+        }
+        
         log.info("Set isPublished={} for semester {}", isPublished, code);
     }
 

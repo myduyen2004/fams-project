@@ -143,7 +143,16 @@ export const AcademicStaffDashboard: React.FC = () => {
               <div className="space-y-2 flex-grow">
                 {data?.notifications && data.notifications.length > 0 ? (
                   data.notifications.slice(0, 3).map((notif, idx) => (
-                    <div key={notif.id || idx} className={`p-3 rounded-xl border transition-all ${idx === 0 ? 'bg-zinc-50/50 dark:bg-zinc-800/30 border-gray-100 dark:border-zinc-800' : 'border-transparent hover:border-gray-100 dark:hover:border-zinc-800'}`}>
+                    <div 
+                      key={notif.id || idx} 
+                      onClick={(e) => {
+                        if (notif.targetUrl) {
+                          e.stopPropagation();
+                          navigate(notif.targetUrl);
+                        }
+                      }}
+                      className={`p-3 rounded-xl border transition-all cursor-pointer ${idx === 0 ? 'bg-zinc-50/50 dark:bg-zinc-800/30 border-gray-100 dark:border-zinc-800' : 'border-transparent hover:border-gray-100 dark:hover:border-zinc-800'}`}
+                    >
                       <h5 className="text-sm font-medium text-gray-900 dark:text-white line-clamp-1">{notif.title}</h5>
                       <p className="text-xs text-gray-500 mt-1">
                         {(() => {
