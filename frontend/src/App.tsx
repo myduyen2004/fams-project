@@ -424,28 +424,7 @@ function App() {
           <Route path="/lecturer/granted/class-sections/:className" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="MANAGE_SEMESTERS"><AcademicStaffClassDetailPage /></PermissionProtectedRoute></ProtectedRoute>} />
           <Route path="/lecturer/granted/logs" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="VIEW_SYSTEM_LOGS"><AcademicStaffSystemLogsPage /></PermissionProtectedRoute></ProtectedRoute>} />
           <Route path="/lecturer/granted/schedule" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="MANAGE_SCHEDULE"><SchedulePage /></PermissionProtectedRoute></ProtectedRoute>} />
-          <Route path="/lecturer/granted/notifications" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="MANAGE_NOTIFICATIONS"><NotificationManagementPage /></PermissionProtectedRoute></ProtectedRoute>} />
-          <Route
-            path="/lecturer/granted/notifications"
-            element={
-              <ProtectedRoute allowedRoles={['LECTURER']}>
-                <PermissionProtectedRoute requiredPermission="MANAGE_NOTIFICATIONS">
-                  <NotificationManagementPage />
-                </PermissionProtectedRoute>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/lecturer/granted/notifications/:id"
-            element={
-              <ProtectedRoute allowedRoles={['LECTURER']}>
-                <PermissionProtectedRoute requiredPermission="MANAGE_NOTIFICATIONS">
-                  <NotificationDetailPage />
-                </PermissionProtectedRoute>
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/lecturer/granted/notifications/:id" element={<ProtectedRoute allowedRoles={['LECTURER']}><PermissionProtectedRoute requiredPermission="MANAGE_NOTIFICATIONS"><NotificationDetailPage /></PermissionProtectedRoute></ProtectedRoute>} />
+
 
           {/* Student Routes */}
           <Route
@@ -638,38 +617,7 @@ function App() {
           <Route path="/academic-staff/academic-results" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Kết quả học tập" /></ProtectedRoute>} />
           <Route path="/academic-staff/announcements" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><ComingSoon title="Cài đặt thông báo" /></ProtectedRoute>} />
 
-          <Route
-            path="/academic-staff/notification-management"
-            element={
-              <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
-                <NotificationManagementPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/academic-staff/notification-management/create"
-            element={
-              <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
-                <CreateNotificationPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/academic-staff/notification-management/edit/:id"
-            element={
-              <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
-                <EditNotificationPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/academic-staff/notification-management/:id"
-            element={
-              <ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}>
-                <NotificationDetailPage />
-              </ProtectedRoute>
-            }
-          />
+
           <Route path="/academic-staff/attendance" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><AttendanceConfigPage /></ProtectedRoute>} />
           <Route path="/academic-staff/attendance/realtime/:slotId" element={<ProtectedRoute allowedRoles={['ACADEMIC_STAFF']}><RealTimeAttendancePage /></ProtectedRoute>} />
           <Route

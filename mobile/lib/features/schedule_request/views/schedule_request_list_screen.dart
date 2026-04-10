@@ -68,58 +68,11 @@ class ScheduleRequestListScreen extends StatelessWidget {
         ),
       ),
       
-      // Bottom Navigation Bar
-      floatingActionButton: Container(
-        height: 70,
-        width: 70,
-        margin: const EdgeInsets.only(top: 40),
-        child: FloatingActionButton(
-          backgroundColor: Colors.white,
-          elevation: 4,
-          onPressed: () {},
-          shape: const CircleBorder(),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: const BoxDecoration(
-              color: Color(0xFFFFF0E0),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.qr_code_scanner_rounded, color: AppColors.primaryOrange, size: 32),
-          ),
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: BottomAppBar(
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 12,
-        color: Colors.white,
-        elevation: 20,
-        surfaceTintColor: Colors.white,
-        shadowColor: Colors.black,
-        height: 80,
-        padding: EdgeInsets.zero,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(icon: Icons.home_rounded, label: 'Trang chủ', isActive: false, onTap: () {
-              homeController.changeTab(0);
-              Get.back();
-            }),
-            _buildNavItem(icon: Icons.calendar_month_rounded, label: 'Lịch học', isActive: false, onTap: () {
-              homeController.changeTab(1);
-              Get.back();
-            }),
-            const SizedBox(width: 48),
-            _buildNavItem(icon: Icons.chat_bubble_rounded, label: 'Tin nhắn', isActive: false, onTap: () {
-              homeController.changeTab(3);
-              Get.back();
-            }),
-            _buildNavItem(icon: Icons.account_circle_rounded, label: 'Tài khoản', isActive: false, onTap: () {
-              homeController.changeTab(4);
-              Get.back();
-            }),
-          ],
-        ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.primaryOrange,
+        onPressed: () => Get.toNamed('/lecturer/requests/create'),
+        icon: const Icon(Icons.add_circle_outline_rounded, color: Colors.white, size: 24),
+        label: const Text('Tạo yêu cầu', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
       ),
     );
   }

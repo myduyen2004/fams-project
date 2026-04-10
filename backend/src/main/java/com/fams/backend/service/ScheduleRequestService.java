@@ -8,9 +8,7 @@ import org.springframework.data.domain.Pageable;
 import java.time.LocalDate;
 import java.util.Map;
 
-import com.fams.backend.dto.request.CreateScheduleRequest; // Need to create this
-import com.fams.backend.dto.response.ScheduleRequestResponse;
-import com.fams.backend.entity.ScheduleRequest; // ...
+import com.fams.backend.dto.request.CreateScheduleRequest;
 
 public interface ScheduleRequestService {
         ScheduleRequestResponse createRequest(CreateScheduleRequest request, Long requesterId);

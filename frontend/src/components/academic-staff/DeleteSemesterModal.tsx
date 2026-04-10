@@ -17,6 +17,7 @@ export const DeleteSemesterModal: React.FC<DeleteSemesterModalProps> = ({
   semesterStatus,
 }) => {
   const [loading, setLoading] = React.useState(false);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
   const canDelete = semesterStatus === 'upcoming';
 
@@ -24,14 +25,27 @@ export const DeleteSemesterModal: React.FC<DeleteSemesterModalProps> = ({
     if (!canDelete) return;
     try {
       setLoading(true);
+      setErrorMessage(null);
       await onConfirm();
       onClose();
-    } catch (error) {
-      console.error('Error deleting semester:', error);
+    } catch (error: any) {
+      let msg = error?.response?.data?.message || error?.message || 'Không thể xóa học kỳ. Vui lòng thử lại sau.';
+      
+      // Friendly message for DB foreign key constraint violation
+      if (msg.includes('class_sections_semester_id_fkey') || msg.includes('vi phạm ràng buộc')) {
+        msg = 'Không thể xóa học kỳ này vì đã có lớp học phần được tạo trong học kỳ. Vui lòng xóa các lớp học phần trước.';
+      }
+      
+      setErrorMessage(msg);
     } finally {
       setLoading(false);
     }
   };
+
+  // Reset error when modal opens/closes
+  React.useEffect(() => {
+    if (!isOpen) setErrorMessage(null);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -85,6 +99,16 @@ export const DeleteSemesterModal: React.FC<DeleteSemesterModalProps> = ({
               <AlertCircle className="text-amber-500 w-5 h-5 flex-shrink-0" />
               <p className="text-xs text-amber-700 font-medium">
                 Chỉ có thể xóa học kỳ có trạng thái "Sắp diễn ra"
+              </p>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {errorMessage && (
+            <div className="mt-4 w-full py-3 px-4 bg-red-50 border-l-4 border-red-600 rounded-r-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+              <XCircle className="text-red-600 w-5 h-5 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-700 font-medium">
+                {errorMessage}
               </p>
             </div>
           )}

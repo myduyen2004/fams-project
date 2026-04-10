@@ -435,8 +435,12 @@ public class ExamGradeService {
             createCell(headerRow, colIdx++, "Họ tên", headerStyle);
             createCell(headerRow, colIdx++, "Lớp", headerStyle);
 
-            // Grade component headers
-            for (ExamGradeComponentInfo comp : overview.getGradeComponents()) {
+            // Grade component headers - ONLY EDITABLE ONES
+            List<ExamGradeComponentInfo> editableComponents = overview.getGradeComponents().stream()
+                    .filter(comp -> Boolean.TRUE.equals(comp.getIsEditable()))
+                    .collect(Collectors.toList());
+
+            for (ExamGradeComponentInfo comp : editableComponents) {
                 createCell(headerRow, colIdx++, comp.getName(), headerStyle);
             }
 
@@ -450,7 +454,7 @@ public class ExamGradeService {
                 createCell(row, colIdx++, student.getStudentName(), dataStyle);
                 createCell(row, colIdx++, student.getClassName(), dataStyle);
 
-                for (ExamGradeComponentInfo comp : overview.getGradeComponents()) {
+                for (ExamGradeComponentInfo comp : editableComponents) {
                     Double score = student.getGrades().get(comp.getId());
                     createCell(row, colIdx++, score != null ? String.format("%.1f", score) : "", dataStyle);
                 }
@@ -931,8 +935,6 @@ public class ExamGradeService {
                     .put(grade.getGradeComponent().getId(), grade);
         }
 
-        List<StudentGrade> newGrades = new ArrayList<>();
-
         for (ClassSection classSection : classSections) {
             boolean shouldPublish = false;
             if (isResit) {
@@ -968,16 +970,14 @@ public class ExamGradeService {
 
                 // Components already fetched earlier as allCourseComponents
 
-                // Create missing grades (0.0)
+                // Validate missing grades
+                List<String> missingGradesMessages = new ArrayList<>();
                 for (Enrollment en : classEnrollments) {
                     Map<Long, StudentGrade> studentGrades = gradesMap.getOrDefault(en.getId(), new HashMap<>());
                     for (GradeComponent gc : gradeComponents) {
                         if (!studentGrades.containsKey(gc.getId())) {
                             if (isResit) {
-                                // For RESIT publish: only auto-fill 0 for students who are actually
-                                // eligible for resit (average < 5.0). Students who already passed
-                                // should NOT get a 0 RESIT score, otherwise they will show up in the
-                                // resit list after publishing.
+                                // For RESIT publish: only throw error if eligible for resit (average < 5.0)
                                 List<StudentGrade> studentAllGrades = existingGrades.stream()
                                         .filter(sg -> sg.getEnrollment().getId().equals(en.getId()))
                                         .collect(Collectors.toList());
@@ -992,41 +992,23 @@ public class ExamGradeService {
                                         .collect(Collectors.toMap(GradeComponent::getId, GradeComponent::getWeight));
                                 Double currentAverage = GradeCalculator.calculateAverage(studentScoresMap,
                                         studentWeightsMap);
-                                // Only add a 0 resit score if the student was failing (eligible for resit)
                                 if (currentAverage == null || currentAverage < 5.0) {
-                                    StudentGrade newGrade = new StudentGrade();
-                                    newGrade.setEnrollment(en);
-                                    newGrade.setGradeComponent(gc);
-                                    newGrade.setScore(0.0);
-                                    newGrade.setNote("Tự động gán 0 điểm do vắng thi lại khi công bố điểm Thi Lại");
-                                    newGrade.setGradedBy(publisher);
-                                    newGrade.setGradedAt(LocalDateTime.now());
-                                    newGrades.add(newGrade);
+                                    missingGradesMessages.add(en.getStudent().getCode());
                                 }
-                                // If student already passed → do NOT create a 0 resit score
                             } else {
-                                StudentGrade newGrade = new StudentGrade();
-                                newGrade.setEnrollment(en);
-                                newGrade.setGradeComponent(gc);
-                                newGrade.setScore(0.0);
-                                newGrade.setNote(
-                                        "Tự động gán 0 điểm do báo vắng (hoặc không tham gia) khi công bố điểm Cuối Kỳ");
-                                newGrade.setGradedBy(publisher);
-                                newGrade.setGradedAt(LocalDateTime.now());
-                                newGrades.add(newGrade);
+                                missingGradesMessages.add(en.getStudent().getCode());
                             }
                         }
                     }
+                }
+                
+                if (!missingGradesMessages.isEmpty()) {
+                    throw new RuntimeException("Vui lòng nhập đầy đủ điểm cho tất cả sinh viên trước khi công bố. Còn thiếu " + missingGradesMessages.size() + " trường hợp (ví dụ: " + missingGradesMessages.get(0) + ").");
                 }
 
                 classSectionRepository.save(classSection);
                 publishedCount++;
             }
-        }
-
-        if (!newGrades.isEmpty()) {
-            studentGradeRepository.saveAll(newGrades);
-            log.info("Auto-filled {} zero grades for course {} when publishing {}", newGrades.size(), courseCode, type);
         }
 
         log.info("Published {} grades for course {} semester {} by user {}: {} classes updated",

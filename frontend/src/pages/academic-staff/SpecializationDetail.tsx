@@ -619,35 +619,40 @@ export const SpecializationDetail: React.FC = () => {
                                         }`}
                                     onClick={() => setActiveTab(subSpec.id)}
                                 >
-                                    {/* Card Header */}
+                                    {/* Card Header & Status */}
                                     <div className="p-4 pb-2">
-                                        <div className="flex items-start justify-between gap-2">
+                                        <div className="flex items-start justify-between gap-4">
                                             <div className="flex-1 min-w-0">
                                                 <h3 className={`font-semibold truncate transition-colors ${activeTab === subSpec.id
                                                     ? 'text-fpt-orange'
                                                     : 'text-gray-900 dark:text-white group-hover:text-fpt-orange'
-                                                    }`}>
+                                                    }`}
+                                                    title={subSpec.name}
+                                                >
                                                     {subSpec.name}
                                                 </h3>
                                                 <p className="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">
                                                     {subSpec.code}
                                                 </p>
                                             </div>
+                                            
                                             {activeTab === subSpec.id && (
-                                                <div className="flex-shrink-0 w-2 h-2 rounded-full bg-fpt-orange animate-pulse" />
+                                                <div className="flex-shrink-0 w-2 h-2 rounded-full bg-fpt-orange animate-pulse shadow-[0_0_8px_rgba(234,88,12,0.6)] mt-2" />
                                             )}
                                         </div>
                                     </div>
 
                                     {/* Card Stats */}
                                     <div className="px-4 pb-2">
-                                        <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-zinc-400">
-                                            <span className="inline-flex items-center gap-1">
-                                                <BookOpen className="h-3.5 w-3.5" />
+                                        <div className="flex items-center gap-2.5 text-[10px] text-gray-500 dark:text-zinc-400 font-medium">
+                                            <span className="inline-flex items-center gap-1 bg-gray-50 dark:bg-zinc-800 px-1.5 py-0.5 rounded border border-gray-100 dark:border-zinc-700">
+                                                <BookOpen className="h-3 w-3" />
                                                 {subSpec.courseCount || 0} môn
                                             </span>
                                             <span>·</span>
-                                            <span>{subSpec.totalCredits || 0} TC</span>
+                                            <span className="bg-gray-50 dark:bg-zinc-800 px-1.5 py-0.5 rounded border border-gray-100 dark:border-zinc-700">{subSpec.totalCredits || 0} TC</span>
+                                            <span>·</span>
+                                            <StatusBadge status={subSpec.status} variant="compact" />
                                         </div>
                                     </div>
 

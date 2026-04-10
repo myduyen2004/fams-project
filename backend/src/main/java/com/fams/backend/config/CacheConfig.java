@@ -28,7 +28,8 @@ public class CacheConfig {
             throw new IllegalArgumentException("RedisConnectionFactory must not be null");
         }
 
-        // Configure a dedicated ObjectMapper for Redis to handle Spring Data complex objects
+        // Configure a dedicated ObjectMapper for Redis to handle Spring Data complex
+        // objects
         ObjectMapper redisMapper = new ObjectMapper();
         redisMapper.registerModule(new JavaTimeModule());
         redisMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -40,8 +41,7 @@ public class CacheConfig {
         redisMapper.activateDefaultTyping(
                 LaissezFaireSubTypeValidator.instance,
                 ObjectMapper.DefaultTyping.NON_FINAL,
-                JsonTypeInfo.As.PROPERTY
-        );
+                JsonTypeInfo.As.PROPERTY);
 
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofMinutes(10))

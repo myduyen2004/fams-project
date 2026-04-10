@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ChevronRight, Clock, MapPin, Loader2,
   Info, CheckCircle2, AlertCircle, XCircle,
-  ExternalLink
+  ExternalLink, User, GraduationCap
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { academicStaffService, ScheduleRequestResponse, SystemLogItem } from '../../../services/api/academicStaffService';
@@ -69,72 +69,136 @@ const RequestItem: React.FC<RequestItemProps> = ({ name, role, avatar, descripti
   );
 };
 
-export const PendingRequests: React.FC = () => {
+export const PendingRequests: React.FC<{ stats?: any }> = ({ stats }) => {
   const navigate = useNavigate();
-  const [requests, setRequests] = useState<ScheduleRequestResponse[]>([]);
+  const [activeTab, setActiveTab] = useState<'lecturer' | 'student'>('lecturer');
+  const [scheduleRequests, setScheduleRequests] = useState<ScheduleRequestResponse[]>([]);
+  const [academicRequests, setAcademicRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPendingRequests = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const data = await academicStaffService.getScheduleRequests({
-          status: 'PENDING',
-          page: 0,
-          size: 20,
-          sort: 'createdAt,desc',
-        });
-        setRequests(data.content || []);
+        if (activeTab === 'lecturer') {
+          const data = await academicStaffService.getScheduleRequests({
+            status: 'PENDING',
+            page: 0,
+            size: 20,
+            sort: 'createdAt,desc',
+          });
+          setScheduleRequests(data.content || []);
+        } else {
+          const data = await academicStaffService.getAcademicRequests({
+            status: 'PENDING',
+            page: 0,
+            size: 20,
+            sort: 'createdAt,desc',
+          });
+          setAcademicRequests(data.content || []);
+        }
       } catch (error) {
-        console.error('Failed to fetch pending requests:', error);
+        console.error('Failed to fetch requests:', error);
       } finally {
         setLoading(false);
       }
     };
-    fetchPendingRequests();
-  }, []);
+    fetchData();
+  }, [activeTab]);
+
+  const scheduleCount = stats?.totalScheduleRequests || 0;
+  const academicCount = stats?.totalAcademicRequests || 0;
 
   return (
     <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-zinc-800 h-full flex flex-col">
-      <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100 dark:border-zinc-800">
-        <div className="flex items-center gap-3">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Yêu cầu chờ xử lý
-          </h3>
-          {requests.length > 0 && (
-            <span className="w-5 h-5 bg-orange-500 text-white text-[10px] flex items-center justify-center rounded-full font-bold">
-              {requests.length}
-            </span>
-          )}
-        </div>
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          Yêu cầu chờ xử lý
+        </h3>
         <button
-          onClick={() => navigate('/academic-staff/requests')}
+          onClick={() => navigate(activeTab === 'lecturer' ? '/academic-staff/requests' : '/academic-staff/requests?tab=STUDENT')}
           className="text-[11px] font-semibold text-orange-500 hover:text-orange-600 transition-colors uppercase tracking-wider"
         >
           Chi tiết
         </button>
       </div>
 
-      <div className="flex-1 max-h-[315px] overflow-y-auto pr-1 custom-scrollbar">
+      {/* Tabs */}
+      <div className="flex p-1 bg-gray-100 dark:bg-zinc-800/50 rounded-xl mb-4">
+        <button
+          onClick={() => setActiveTab('lecturer')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
+            activeTab === 'lecturer' 
+              ? 'bg-white dark:bg-zinc-800 text-orange-500 shadow-sm' 
+              : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+          }`}
+        >
+          <User size={14} />
+          GIẢNG VIÊN
+          {scheduleCount > 0 && (
+            <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-black ${
+              activeTab === 'lecturer' ? 'bg-orange-500 text-white' : 'bg-gray-200 dark:bg-zinc-700 text-gray-500'
+            }`}>
+              {scheduleCount}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('student')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
+            activeTab === 'student' 
+              ? 'bg-white dark:bg-zinc-800 text-orange-500 shadow-sm' 
+              : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+          }`}
+        >
+          <GraduationCap size={14} />
+          SINH VIÊN
+          {academicCount > 0 && (
+            <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-black ${
+              activeTab === 'student' ? 'bg-orange-500 text-white' : 'bg-gray-200 dark:bg-zinc-700 text-gray-500'
+            }`}>
+              {academicCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      <div className="flex-1 max-h-[260px] overflow-y-auto pr-1 custom-scrollbar">
         {loading ? (
           <div className="flex items-center justify-center py-10">
             <Loader2 className="w-6 h-6 text-gray-300 animate-spin" />
           </div>
-        ) : requests.length > 0 ? (
+        ) : (activeTab === 'lecturer' ? scheduleRequests : academicRequests).length > 0 ? (
           <div className="space-y-1">
-            {requests.map((req) => (
-              <RequestItem
-                key={req.id}
-                name={req.requesterName}
-                role={req.requesterRole}
-                avatar={req.requesterAvatar}
-                description={req.reason || req.typeLabel || 'Yêu cầu mới'}
-                status={req.status}
-                statusLabel={req.statusLabel || 'Chờ duyệt'}
-                createdAt={req.createdAt}
-                onClick={() => navigate('/academic-staff/requests')}
-              />
-            ))}
+            {activeTab === 'lecturer' ? (
+              scheduleRequests.map((req) => (
+                <RequestItem
+                  key={req.id}
+                  name={req.requesterName}
+                  role={req.requesterRole}
+                  avatar={req.requesterAvatar}
+                  description={req.reason || req.typeLabel || 'Yêu cầu mới'}
+                  status={req.status}
+                  statusLabel={req.statusLabel || 'Chờ duyệt'}
+                  createdAt={req.createdAt}
+                  onClick={() => navigate(`/academic-staff/requests/${req.id}`)}
+                />
+              ))
+            ) : (
+              academicRequests.map((req) => (
+                <RequestItem
+                  key={req.id}
+                  name={req.studentName}
+                  role="STUDENT"
+                  avatar={req.studentAvatar}
+                  description={req.requestTitle}
+                  status={req.status}
+                  statusLabel={req.statusLabel || 'Chờ duyệt'}
+                  createdAt={req.createdAt}
+                  onClick={() => navigate(`/academic-staff/student-requests/${req.id}`)}
+                />
+              ))
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-10 text-gray-400">

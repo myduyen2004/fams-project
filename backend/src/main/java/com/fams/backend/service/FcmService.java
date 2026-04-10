@@ -2,7 +2,6 @@ package com.fams.backend.service;
 
 import com.fams.backend.entity.UserDeviceToken;
 import com.fams.backend.repository.UserDeviceTokenRepository;
-import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
@@ -20,7 +19,6 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
@@ -50,10 +48,10 @@ public class FcmService {
                 return;
             }
 
-                firebaseCredentials = GoogleCredentials.fromStream(serviceAccount)
+            firebaseCredentials = GoogleCredentials.fromStream(serviceAccount)
                     .createScoped(Collections.singletonList(FIREBASE_MESSAGING_SCOPE));
 
-                FirebaseOptions options = FirebaseOptions.builder()
+            FirebaseOptions options = FirebaseOptions.builder()
                     .setCredentials(firebaseCredentials)
                     .build();
 
@@ -69,7 +67,6 @@ public class FcmService {
             log.error("Failed to initialize Firebase Admin SDK (unexpected): {}", e.getMessage(), e);
         }
     }
-
 
     private InputStream openServiceAccountStream() throws IOException {
         if (configPath != null && !configPath.isBlank()) {
@@ -107,8 +104,6 @@ public class FcmService {
             log.warn("Cannot send push notification to user {}: Firebase not initialized", userId);
             return;
         }
-
-
 
         List<UserDeviceToken> tokens = tokenRepository.findByUserId(userId);
         if (tokens.isEmpty()) {
@@ -157,10 +152,10 @@ public class FcmService {
                             errorCode,
                             errorMsg);
 
-                        if (ex != null) {
+                    if (ex != null) {
                         log.debug("FCM token failure stack for user {} tokenPrefix={}...", userId,
-                            failedToken.substring(0, Math.min(24, failedToken.length())), ex);
-                        }
+                                failedToken.substring(0, Math.min(24, failedToken.length())), ex);
+                    }
 
                     // Remove dead tokens to avoid repeated failures on next sends.
                     if (ex != null && ex.getMessagingErrorCode() != null &&
@@ -186,7 +181,8 @@ public class FcmService {
             return;
         }
 
-        if (userIds == null || userIds.isEmpty()) return;
+        if (userIds == null || userIds.isEmpty())
+            return;
 
         List<UserDeviceToken> tokens = tokenRepository.findByUserIdIn(userIds);
         if (tokens.isEmpty()) {
@@ -260,10 +256,12 @@ public class FcmService {
     }
 
     /**
-     * Strip HTML tags from a string so push notification body displays as plain text.
+     * Strip HTML tags from a string so push notification body displays as plain
+     * text.
      */
     private String stripHtml(String html) {
-        if (html == null || html.isBlank()) return html;
+        if (html == null || html.isBlank())
+            return html;
         // Remove hidden spans
         String text = html.replaceAll("(?is)<span[^>]*display:\\s*none[^>]*>.*?</span>", "");
         // Convert <br> and </p> to newlines
@@ -273,11 +271,11 @@ public class FcmService {
         text = text.replaceAll("<[^>]*>", "");
         // Decode common HTML entities
         text = text.replace("&nbsp;", " ")
-                   .replace("&amp;", "&")
-                   .replace("&lt;", "<")
-                   .replace("&gt;", ">")
-                   .replace("&quot;", "\"")
-                   .replace("&apos;", "'");
+                .replace("&amp;", "&")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&quot;", "\"")
+                .replace("&apos;", "'");
         return text.trim();
     }
 }

@@ -42,6 +42,23 @@ export interface ScheduleRequestResponse {
     file?: string;
 }
 
+export interface AcademicRequestResponse {
+    id: number;
+    studentId: number;
+    studentName: string;
+    studentCode: string;
+    studentAvatar: string;
+    studentMajor: string;
+    requestType: string;
+    requestTypeLabel: string;
+    requestTitle: string;
+    status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+    statusLabel: string;
+    createdAt: string;
+    reason?: string;
+    fileUrl?: string;
+}
+
 export interface LecturerRequest extends Omit<UserRequest, 'role'> {
     department?: string;
     expertise?: string;
@@ -324,6 +341,18 @@ export const academicStaffService = {
 
     getScheduleRequestById: async (id: number): Promise<ScheduleRequestResponse> => {
         const response = await apiClient.get<ScheduleRequestResponse>(`/v1/academic-staff/schedule-requests/${id}`);
+        return response.data;
+    },
+
+    getAcademicRequests: async (params: {
+        search?: string;
+        status?: string;
+        requestType?: string;
+        page?: number;
+        size?: number;
+        sort?: string
+    }) => {
+        const response = await apiClient.get<PageResponse<AcademicRequestResponse>>('/v1/academic-requests', { params });
         return response.data;
     },
 };

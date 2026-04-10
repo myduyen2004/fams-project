@@ -69,6 +69,9 @@ public class SubSpecializationServiceImpl implements SubSpecializationService {
         if (subSpecializationRepository.existsByCode(code)) {
             throw new IllegalArgumentException("Mã chuyên ngành hẹp đã tồn tại: " + code);
         }
+        if (subSpecializationRepository.existsByName(request.getName())) {
+            throw new IllegalArgumentException("Tên chuyên ngành hẹp đã tồn tại: " + request.getName());
+        }
 
         Specialization specialization = specializationRepository.findById(request.getSpecializationId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chuyên ngành"));
@@ -94,6 +97,12 @@ public class SubSpecializationServiceImpl implements SubSpecializationService {
         subSpecializationRepository.findByCode(code).ifPresent(existing -> {
             if (!existing.getId().equals(id)) {
                 throw new IllegalArgumentException("Mã chuyên ngành hẹp đã tồn tại: " + code);
+            }
+        });
+
+        subSpecializationRepository.findByName(request.getName()).ifPresent(existing -> {
+            if (!existing.getId().equals(id)) {
+                throw new IllegalArgumentException("Tên chuyên ngành hẹp đã tồn tại: " + request.getName());
             }
         });
 

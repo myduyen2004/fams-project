@@ -182,23 +182,15 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
                 Ngày bắt đầu <span className="text-red-500">*</span>
                 {isActive && <Lock className="w-3 h-3 inline ml-1 text-gray-400" />}
               </label>
-              <div className="relative">
-                <input
-                  type="date"
-                  name="startDate"
-                  value={formData.startDate}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-orange-500 transition shadow-sm text-transparent caret-transparent ${isActive ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
-                    }`}
-                  disabled={loading || isActive}
-                  style={{ colorScheme: 'light' }}
-                />
-                <div className={`absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-sm ${isActive ? 'text-gray-500' : 'text-gray-700'}`}>
-                  {formData.startDate
-                    ? formData.startDate.split('-').reverse().join('/')
-                    : <span className="text-gray-400">dd/mm/yyyy</span>}
-                </div>
-              </div>
+              <input
+                type="date"
+                name="startDate"
+                value={formData.startDate}
+                onChange={handleChange}
+                className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-orange-500 transition shadow-sm ${isActive ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-white text-gray-700'
+                  }`}
+                disabled={loading || isActive}
+              />
             </div>
 
             <div>
@@ -206,23 +198,15 @@ export const UpdateSemesterModal: React.FC<UpdateSemesterModalProps> = ({
                 Ngày kết thúc <span className="text-red-500">*</span>
                 {isActive && <Lock className="w-3 h-3 inline ml-1 text-gray-400" />}
               </label>
-              <div className="relative">
-                <input
-                  type="date"
-                  name="endDate"
-                  value={formData.endDate}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-orange-500 transition shadow-sm text-transparent caret-transparent ${isActive ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
-                    }`}
-                  disabled={loading || isActive}
-                  style={{ colorScheme: 'light' }}
-                />
-                <div className={`absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-sm ${isActive ? 'text-gray-500' : 'text-gray-700'}`}>
-                  {formData.endDate
-                    ? formData.endDate.split('-').reverse().join('/')
-                    : <span className="text-gray-400">dd/mm/yyyy</span>}
-                </div>
-              </div>
+              <input
+                type="date"
+                name="endDate"
+                value={formData.endDate}
+                onChange={handleChange}
+                className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-orange-500 transition shadow-sm ${isActive ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-white text-gray-700'
+                  }`}
+                disabled={loading || isActive}
+              />
             </div>
           </div>
 

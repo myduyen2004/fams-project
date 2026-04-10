@@ -48,8 +48,8 @@ class ApiConstants {
   static const String checkIn = '/api/v1/attendance/check-in';
 
   // Schedule Request Endpoints
-  static const String lecturerRequests = '/api/lecturer/requests';
-  static const String lecturerClasses = '/api/lecturer/classes';
+  static const String lecturerRequests = '/api/v1/lecturer/requests';
+  static const String lecturerClasses = '/api/v1/lecturer/classes';
   static const String roomsAvailability = '/api/v1/rooms/availability';
 
   // Timeouts
@@ -76,7 +76,7 @@ class ApiConstants {
       '/api/v1/academic-requests/my-requests';
 
   // News Endpoints
-  static const String publishedNews = '/api/news';
+  static const String publishedNews = '/api/v1/news';
 
   // AI Chat Endpoints
   static const String aiChatSessions = '/api/chat/sessions';

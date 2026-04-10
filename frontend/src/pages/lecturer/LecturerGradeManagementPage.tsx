@@ -9,6 +9,7 @@ import { ImportGradeModal } from '../../components/lecturer/ImportGradeModal';
 import { StudentInfoModal } from '../../components/common/StudentInfoModal';
 import { OtpSetupModal } from '../../components/lecturer/OtpSetupModal';
 import { OtpVerificationModal } from '../../components/lecturer/OtpVerificationModal';
+import { sortGradeComponents } from '../../utils/gradeSortUtils';
 import toast from 'react-hot-toast';
 import { useLocation } from 'react-router-dom';
 
@@ -341,12 +342,12 @@ export const LecturerGradeManagementPage: React.FC = () => {
         try {
             await studentGradeService.submitGrades(gradeOverview.className);
             toast.success('Đã gửi điểm cho phòng đào tạo thành công!');
-            setShowSubmitConfirm(false);
             fetchGrades(); // Refresh to update submission status
         } catch (error: any) {
             toast.error(error.response?.data?.message || 'Không thể gửi điểm');
         } finally {
             setSubmitting(false);
+            setShowSubmitConfirm(false);
         }
     };
 
@@ -410,66 +411,9 @@ export const LecturerGradeManagementPage: React.FC = () => {
         }
     };
 
-    // Định nghĩa thứ tự ưu tiên cho các loại (khi cùng trọng số)
-    const TYPE_PRIORITY: Record<string, number> = {
-        'PARTICIPATION': 1,
-        'QUIZ': 2,
-        'PROGRESS_TEST': 3,
-        'WORKSHOP': 4,
-        'PROJECT': 5,
-        'PRESENTATION': 6,
-        'ASSIGNMENT': 7,
-        'MID_TERM': 8,
-        'PRACTICAL_EXAM': 9,
-        // Các loại khác sẽ tự động có priority thấp hơn
-    };
-
     const sortedGradeComponents = React.useMemo(() => {
         if (!gradeOverview?.gradeComponents) return [];
-
-        // 1. Tính tổng trọng số cho từng loại (Grade Type)
-        const typeTotalWeight: Record<string, number> = {};
-        gradeOverview.gradeComponents.forEach(gc => {
-            const currentTotal = typeTotalWeight[gc.type] || 0;
-            typeTotalWeight[gc.type] = currentTotal + gc.weight;
-        });
-
-        return [...gradeOverview.gradeComponents].sort((a, b) => {
-            const BOTTOM_TYPES = ['FINAL_EXAM', 'RESIT'];
-            const isABottom = BOTTOM_TYPES.includes(a.type);
-            const isBBottom = BOTTOM_TYPES.includes(b.type);
-
-            // 1. Xử lý nhóm ĐÁY (FE/RESIT)
-            if (isABottom && !isBBottom) return 1;
-            if (!isABottom && isBBottom) return -1;
-
-            if (isABottom && isBBottom) {
-                // Final Exam luôn đứng trước Resit
-                const pMap: Record<string, number> = { 'FINAL_EXAM': 1, 'RESIT': 2 };
-                return (pMap[a.type] || 99) - (pMap[b.type] || 99);
-            }
-
-            // 2. Xử lý nhóm THƯỜNG
-
-            // Ưu tiên A: Theo TỔNG TRỌNG SỐ của Loại (Type Total Weight) tăng dần
-            const totalWeightA = typeTotalWeight[a.type] || 0;
-            const totalWeightB = typeTotalWeight[b.type] || 0;
-
-            if (Math.abs(totalWeightA - totalWeightB) > 0.001) {
-                return totalWeightA - totalWeightB;
-            }
-
-            // Ưu tiên B: Theo Loại (Type Priority) - Nếu tổng trọng số bằng nhau
-            const typePriorityA = TYPE_PRIORITY[a.type] || 99;
-            const typePriorityB = TYPE_PRIORITY[b.type] || 99;
-
-            if (typePriorityA !== typePriorityB) {
-                return typePriorityA - typePriorityB;
-            }
-
-            // Ưu tiên C: Theo Tên (Name)
-            return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
-        });
+        return sortGradeComponents(gradeOverview.gradeComponents as any);
     }, [gradeOverview]);
     const dynamicPassRate = React.useMemo(() => {
         if (!gradeOverview || !gradeOverview.studentGrades || gradeOverview.studentGrades.length === 0) return null;

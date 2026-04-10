@@ -232,5 +232,34 @@ class CourseServiceImplTest {
         // Assert
         assertNotNull(result);
         verify(courseRepository).save(any(Course.class));
+    @DisplayName("UTCID01 - Get Course: Success with valid ID")
+    void getCourse_Success() {
+        // Arrange
+        when(courseRepository.findById(1L)).thenReturn(Optional.of(activeCourse));
+        when(subSpecializationCourseRepository.existsByCourseId(1L)).thenReturn(false);
+
+        // Act
+        CourseResponse result = courseService.getCourse(1L);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1L, result.getId());
+        assertEquals("PRF192", result.getCode());
+        verify(courseRepository).findById(1L);
+    }
+
+    @Test
+    @DisplayName("UTCID02 - Get Course: Throws IllegalArgumentException when ID not found")
+    void getCourse_NotFound() {
+        // Arrange
+        when(courseRepository.findById(999L)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            courseService.getCourse(999L);
+        });
+
+        assertEquals("Không tìm thấy môn học", exception.getMessage());
+        verify(courseRepository).findById(999L);
     }
 }
