@@ -19,13 +19,48 @@ type FilterType = 'all' | 'unread' | 'system';
 const getNotificationColor = (type?: string) => {
   switch (type) {
     case 'SYSTEM':
-      return 'bg-fpt-orange/15 text-fpt-orange';
+      return 'bg-orange-100/50 text-fpt-orange dark:bg-orange-900/20';
     case 'ALERT':
       return 'bg-red-100/50 text-red-600 dark:bg-red-900/20 dark:text-red-400';
     case 'IMPORT':
       return 'bg-green-100/50 text-green-600 dark:bg-green-900/20 dark:text-green-400';
-    default:
+    case 'SUBMISSION':
       return 'bg-blue-100/50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400';
+    case 'NEWS':
+      return 'bg-purple-100/50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400';
+    case 'NEW_ASSIGNMENT':
+      return 'bg-orange-100/50 text-fpt-orange dark:bg-orange-900/20';
+    default:
+      return 'bg-gray-100/50 text-gray-600 dark:bg-zinc-800 dark:text-gray-400';
+  }
+};
+
+const getNotificationLabel = (notif: AppNotification) => {
+  if (notif.senderName && notif.senderName !== 'System') {
+    return notif.senderName;
+  }
+  
+  switch (notif.type) {
+    case 'SYSTEM':
+      return 'Hệ thống';
+    case 'ALERT':
+      return 'Cảnh báo';
+    case 'IMPORT':
+      return 'Nhập dữ liệu';
+    case 'SUBMISSION':
+      return 'Bài nộp';
+    case 'NEWS':
+      return 'Tin tức';
+    case 'CHAT':
+      return 'Trò chuyện';
+    case 'SCHEDULE':
+      return 'Lịch học';
+    case 'ACADEMIC':
+      return 'Học tập';
+    case 'NEW_ASSIGNMENT':
+      return 'Bài tập mới';
+    default:
+      return (notif.type || 'Thông báo').replace(/_/g, ' ');
   }
 };
 
@@ -431,16 +466,8 @@ export const NotificationListPage: React.FC = () => {
 
                     {/* Type Badge */}
                     {notification.type && (
-                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-400">
-                        {notification.senderName && notification.senderName !== 'System'
-                          ? notification.senderName
-                          : notification.type === 'SYSTEM'
-                            ? 'Hệ thống'
-                            : notification.type === 'ALERT'
-                              ? 'Cảnh báo'
-                              : notification.type === 'IMPORT'
-                                ? 'Nhập'
-                                : notification.type}
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${getNotificationColor(notification.type)}`}>
+                        {getNotificationLabel(notification)}
                       </span>
                     )}
                   </div>

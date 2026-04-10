@@ -50,9 +50,8 @@ export const LecturerAssignmentPage: React.FC = () => {
     const [editTitle, setEditTitle] = useState('');
     const [editDescription, setEditDescription] = useState('');
     const [editDueDate, setEditDueDate] = useState('');
-    const [editRefUrl, setEditRefUrl] = useState('');
-    const [editRefName, setEditRefName] = useState('');
-    const [editRefFile, setEditRefFile] = useState<File | null>(null);
+    const [editRefUrls, setEditRefUrls] = useState<string[]>([]);
+    const [editRefNames, setEditRefNames] = useState<string[]>([]);
     const [uploadingEditFile, setUploadingEditFile] = useState(false);
     const editFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -62,9 +61,8 @@ export const LecturerAssignmentPage: React.FC = () => {
     const [newTitle, setNewTitle] = useState('');
     const [newDescription, setNewDescription] = useState('');
     const [newDueDate, setNewDueDate] = useState('');
-    const [newRefUrl, setNewRefUrl] = useState('');
-    const [newRefName, setNewRefName] = useState('');
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [newRefUrls, setNewRefUrls] = useState<string[]>([]);
+    const [newRefNames, setNewRefNames] = useState<string[]>([]);
     const [uploadingFile, setUploadingFile] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -260,8 +258,8 @@ export const LecturerAssignmentPage: React.FC = () => {
                 title: newTitle.trim(),
                 description: newDescription.trim() || undefined,
                 dueDate: newDueDate || undefined,
-                referenceUrl: newRefUrl.trim() || undefined,
-                referenceName: newRefName.trim() || undefined
+                referenceUrls: newRefUrls,
+                referenceNames: newRefNames
             });
             toast.success('Đã tạo bài tập');
             setShowCreateDialog(false);
@@ -280,9 +278,8 @@ export const LecturerAssignmentPage: React.FC = () => {
         setNewTitle('');
         setNewDescription('');
         setNewDueDate('');
-        setNewRefUrl('');
-        setNewRefName('');
-        setSelectedFile(null);
+        setNewRefUrls([]);
+        setNewRefNames([]);
         setCreateClassName('');
         setCreateClassSlots([]);
         setSelectedSessionNumber(null);
@@ -290,27 +287,39 @@ export const LecturerAssignmentPage: React.FC = () => {
     };
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        if (file.size > 10 * 1024 * 1024) {
-            toast.error('File quá lớn. Tối đa 10MB.');
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
+        const oversizedFile = files.find(f => f.size > 10 * 1024 * 1024);
+        if (oversizedFile) {
+            toast.error(`File ${oversizedFile.name} quá lớn. Tối đa 10MB.`);
             if (fileInputRef.current) fileInputRef.current.value = '';
             return;
         }
+
         try {
             setUploadingFile(true);
-            setSelectedFile(file);
-            const result = await uploadFile(file);
-            setNewRefUrl(result.secure_url || result.url);
-            setNewRefName(file.name);
-            toast.success('Upload tài liệu thành công');
+            const uploadPromises = files.map(file => uploadFile(file));
+            const results = await Promise.all(uploadPromises);
+
+            const urls = results.map(r => r.secure_url || r.url);
+            const names = files.map(f => f.name);
+
+            setNewRefUrls(prev => [...prev, ...urls]);
+            setNewRefNames(prev => [...prev, ...names]);
+
+            toast.success(`Đã upload ${files.length} tài liệu`);
         } catch (err: any) {
             toast.error(err.message || 'Upload thất bại');
-            setSelectedFile(null);
-            if (fileInputRef.current) fileInputRef.current.value = '';
         } finally {
             setUploadingFile(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
         }
+    };
+
+    const removeNewFile = (index: number) => {
+        setNewRefUrls(prev => prev.filter((_, i) => i !== index));
+        setNewRefNames(prev => prev.filter((_, i) => i !== index));
     };
 
     const getSelectedSemesterName = () => {
@@ -423,34 +432,45 @@ export const LecturerAssignmentPage: React.FC = () => {
         setEditTitle(assignment.title);
         setEditDescription(assignment.description || '');
         setEditDueDate(assignment.dueDate || '');
-        setEditRefUrl(assignment.referenceUrl || '');
-        setEditRefName(assignment.referenceName || '');
-        setEditRefFile(null);
+        setEditRefUrls(assignment.referenceUrls?.length ? assignment.referenceUrls : (assignment.referenceUrl ? assignment.referenceUrl.split('|||') : []));
+        setEditRefNames(assignment.referenceNames?.length ? assignment.referenceNames : (assignment.referenceName ? assignment.referenceName.split('|||') : []));
         setShowBatchEditDialog(true);
     };
 
     const handleEditFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        if (file.size > 10 * 1024 * 1024) {
-            toast.error('File quá lớn. Tối đa 10MB.');
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
+        const oversizedFile = files.find(f => f.size > 10 * 1024 * 1024);
+        if (oversizedFile) {
+            toast.error(`File ${oversizedFile.name} quá lớn. Tối đa 10MB.`);
             if (editFileInputRef.current) editFileInputRef.current.value = '';
             return;
         }
+
         try {
             setUploadingEditFile(true);
-            setEditRefFile(file);
-            const result = await uploadFile(file);
-            setEditRefUrl(result.secure_url || result.url);
-            setEditRefName(file.name);
-            toast.success('Upload tài liệu thành công');
+            const uploadPromises = files.map(file => uploadFile(file));
+            const results = await Promise.all(uploadPromises);
+
+            const urls = results.map(r => r.secure_url || r.url);
+            const names = files.map(f => f.name);
+
+            setEditRefUrls(prev => [...prev, ...urls]);
+            setEditRefNames(prev => [...prev, ...names]);
+
+            toast.success(`Đã upload ${files.length} tài liệu`);
         } catch (err: any) {
             toast.error(err.message || 'Upload thất bại');
-            setEditRefFile(null);
-            if (editFileInputRef.current) editFileInputRef.current.value = '';
         } finally {
             setUploadingEditFile(false);
+            if (editFileInputRef.current) editFileInputRef.current.value = '';
         }
+    };
+
+    const removeEditFile = (index: number) => {
+        setEditRefUrls(prev => prev.filter((_, i) => i !== index));
+        setEditRefNames(prev => prev.filter((_, i) => i !== index));
     };
 
     const handleBatchEditSubmit = async () => {
@@ -467,8 +487,8 @@ export const LecturerAssignmentPage: React.FC = () => {
                 title: editTitle.trim(),
                 description: editDescription.trim() || undefined,
                 dueDate: editDueDate || undefined,
-                referenceUrl: editRefUrl || undefined,
-                referenceName: editRefName || undefined,
+                referenceUrls: editRefUrls,
+                referenceNames: editRefNames,
             });
             toast.success('Đã cập nhật bài tập');
             setShowBatchEditDialog(false);
@@ -802,13 +822,21 @@ export const LecturerAssignmentPage: React.FC = () => {
                                                                     <Clock className="w-3 h-3 inline mr-1" />Hạn: {formatDate(assignment.dueDate)}
                                                                 </div>
                                                             )}
-                                                            {assignment.referenceUrl && (
-                                                                <a href={getViewableFileUrl(assignment.referenceUrl)} target="_blank" rel="noopener noreferrer"
-                                                                    onClick={e => e.stopPropagation()}
-                                                                    className="inline-flex items-center gap-1 text-xs text-fpt-orange hover:text-orange-600 mt-0.5">
-                                                                    <BookOpen className="w-3 h-3" /> {assignment.referenceName || 'Tài liệu'}
-                                                                </a>
-                                                            )}
+                                                            {(() => {
+                                                                const urls = assignment.referenceUrls?.length ? assignment.referenceUrls : (assignment.referenceUrl ? assignment.referenceUrl.split('|||') : []);
+                                                                const names = assignment.referenceNames?.length ? assignment.referenceNames : (assignment.referenceName ? assignment.referenceName.split('|||') : []);
+                                                                return urls.length > 0 && (
+                                                                    <div className="flex flex-col gap-0.5 mt-0.5">
+                                                                        {urls.map((url, idx) => (
+                                                                            <a key={idx} href={getViewableFileUrl(url)} target="_blank" rel="noopener noreferrer"
+                                                                                onClick={e => e.stopPropagation()}
+                                                                                className="inline-flex items-center gap-1 text-xs text-fpt-orange hover:text-orange-600 truncate break-all max-w-[200px]" title={names[idx] || `Tài liệu ${idx + 1}`}>
+                                                                                <BookOpen className="w-3 h-3 flex-shrink-0" /> <span className="truncate">{names[idx] || `Tài liệu ${idx + 1}`}</span>
+                                                                            </a>
+                                                                        ))}
+                                                                    </div>
+                                                                );
+                                                            })()}
                                                         </div>
                                                     </td>
                                                     <td className="px-4 py-3">
@@ -883,15 +911,27 @@ export const LecturerAssignmentPage: React.FC = () => {
                                     <BookOpen className="w-3.5 h-3.5 inline mr-1" /> Tài liệu tham khảo
                                 </label>
                                 <input type="file" ref={editFileInputRef} onChange={handleEditFileSelect} accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.jpg,.png"
-                                    className="hidden" />
+                                    multiple className="hidden" />
                                 <button type="button" onClick={() => editFileInputRef.current?.click()} disabled={uploadingEditFile}
                                     className="w-full px-3 py-2.5 rounded-lg border border-dashed border-gray-300 dark:border-zinc-600 bg-gray-50 dark:bg-zinc-800 text-sm text-gray-500 hover:border-fpt-orange hover:text-fpt-orange transition-colors flex items-center justify-center gap-2">
-                                    {uploadingEditFile ? <><Loader2 size={14} className="animate-spin" /> Đang upload...</> : editRefFile ? <><FileText size={14} /> {editRefFile.name}</> : editRefName ? <><FileText size={14} /> {editRefName}</> : 'Chọn file (tối đa 10MB)'}
+                                    {uploadingEditFile ? <><Loader2 size={14} className="animate-spin" /> Đang upload...</> : <><Plus size={14} /> Thêm tài liệu (tối đa 10MB)</>}
                                 </button>
-                                {editRefUrl && (
-                                    <div className="mt-2 flex items-center gap-2 text-xs text-green-600">
-                                        <FileText size={12} />
-                                        <a href={editRefUrl} target="_blank" rel="noopener noreferrer" className="underline truncate max-w-[300px]">{editRefName || 'Xem file'}</a>
+
+                                {editRefUrls.length > 0 && (
+                                    <div className="mt-3 space-y-2">
+                                        {editRefUrls.map((url, idx) => (
+                                            <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <FileText size={14} className="text-blue-500 flex-shrink-0" />
+                                                    <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-700 dark:text-zinc-300 hover:text-fpt-orange underline truncate">
+                                                        {editRefNames[idx] || `Tài liệu ${idx + 1}`}
+                                                    </a>
+                                                </div>
+                                                <button type="button" onClick={() => removeEditFile(idx)} className="p-1 hover:bg-red-50 dark:hover:bg-red-900/10 text-gray-400 hover:text-red-500 transition-colors rounded">
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
                             </div>
@@ -1047,15 +1087,27 @@ export const LecturerAssignmentPage: React.FC = () => {
                                     <BookOpen className="w-3.5 h-3.5 inline mr-1" /> Tài liệu tham khảo
                                 </label>
                                 <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.jpg,.png"
-                                    className="hidden" />
+                                    multiple className="hidden" />
                                 <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingFile}
                                     className="w-full px-3 py-2.5 rounded-lg border border-dashed border-gray-300 dark:border-zinc-600 bg-gray-50 dark:bg-zinc-800 text-sm text-gray-500 hover:border-fpt-orange hover:text-fpt-orange transition-colors flex items-center justify-center gap-2">
-                                    {uploadingFile ? <><Loader2 size={14} className="animate-spin" /> Đang upload...</> : selectedFile ? <><FileText size={14} /> {selectedFile.name}</> : 'Chọn file (tối đa 10MB)'}
+                                    {uploadingFile ? <><Loader2 size={14} className="animate-spin" /> Đang upload...</> : <><Plus size={14} /> Thêm tài liệu (tối đa 10MB)</>}
                                 </button>
-                                {newRefUrl && (
-                                    <div className="mt-2 flex items-center gap-2 text-xs text-green-600">
-                                        <FileText size={12} />
-                                        <a href={newRefUrl} target="_blank" rel="noopener noreferrer" className="underline truncate max-w-[300px]">{newRefName || 'Xem file'}</a>
+
+                                {newRefUrls.length > 0 && (
+                                    <div className="mt-3 space-y-2">
+                                        {newRefUrls.map((url, idx) => (
+                                            <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <FileText size={14} className="text-blue-500 flex-shrink-0" />
+                                                    <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-700 dark:text-zinc-300 hover:text-fpt-orange underline truncate">
+                                                        {newRefNames[idx] || `Tài liệu ${idx + 1}`}
+                                                    </a>
+                                                </div>
+                                                <button type="button" onClick={() => removeNewFile(idx)} className="p-1 hover:bg-red-50 dark:hover:bg-red-900/10 text-gray-400 hover:text-red-500 transition-colors rounded">
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
                             </div>

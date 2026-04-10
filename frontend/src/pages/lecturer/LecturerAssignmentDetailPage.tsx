@@ -6,7 +6,7 @@ import { timetableService, TimetableSlotDTO } from '../../services/api/timetable
 import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
 import { Pagination } from '../../components/common/Pagination';
 import {
-    ArrowLeft, Clock, ExternalLink, Search, Loader2, BookOpen, Lock, X, Download
+    ArrowLeft, Clock, ExternalLink, Search, Loader2, BookOpen, Lock, X, Download, MessageSquare
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -173,7 +173,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
 
     if (loading) {
         return (
-            <LecturerLayout pageTitle="Chi tiết bài tập">
+            <LecturerLayout pageTitle="Chi tiêt bài tâp">
                 <div className="flex items-center justify-center min-h-[400px]">
                     <Loader2 size={32} className="animate-spin text-fpt-orange" />
                 </div>
@@ -183,9 +183,9 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
 
     return (
         <LecturerLayout pageTitle="Chi tiết bài tập">
-            <div className="mt-4 ml-10 mr-10 space-y-3">
+            <div className="mt-4 ml-10 mr-10 space-y-6 mb-10">
 
-                {/* Top bar: Back + Close */}
+                {/* Top bar: Back + Action Buttons */}
                 <div className="flex items-center justify-between">
                     <button
                         onClick={() => navigate('/lecturer/assignments')}
@@ -194,12 +194,12 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                         <ArrowLeft className="w-4 h-4" />
                         Quay lại danh sách bài tập
                     </button>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                         {submittedCount > 0 && (
                             <button
                                 onClick={handleDownloadAll}
                                 disabled={downloadingZip}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl text-sm font-bold transition-colors disabled:opacity-50 shadow-sm"
                             >
                                 {downloadingZip ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                                 {downloadingZip ? 'Đang tải...' : 'Tải bài nộp'}
@@ -209,7 +209,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                             <button
                                 onClick={handleCloseAssignment}
                                 disabled={closingAssignment}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl text-sm font-bold transition-colors disabled:opacity-50 shadow-sm"
                             >
                                 <Lock className="w-4 h-4" />
                                 {closingAssignment ? 'Đang đóng...' : 'Đóng bài tập'}
@@ -218,191 +218,272 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Assignment Header Card */}
                 {assignment && (
-                    <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden">
-                        {/* Title bar */}
-                        <div className="bg-orange-500 dark:bg-orange-600 px-5 py-2">
-                            <h2 className="text-base font-bold text-white">{assignment.title}</h2>
-                            {assignment.description && (
-                                <p className="text-orange-100 text-xs mt-0.5">{assignment.description}</p>
-                            )}
+                    <>
+                        {/* Top Header Card */}
+                        <div className="bg-white dark:bg-zinc-900 rounded-3xl overflow-hidden p-6 sm:px-8 sm:py-6 shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-gray-200 dark:border-zinc-700">
+                            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center text-sm">
+
+                                {/* Class & Subject */}
+                                <div className="md:col-span-4">
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                        <p className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">LỚP & BÀI TẬP</p>
+                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${assignment.status === 'OPEN'
+                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                            : 'bg-gray-100 text-gray-500 dark:bg-zinc-800 dark:text-zinc-400'
+                                            }`}>
+                                            {assignment.status === 'OPEN' ? 'ĐANG MỞ' : 'ĐÃ ĐÓNG'}
+                                        </span>
+                                    </div>
+                                    <h2 className="font-extrabold text-[#001D4A] dark:text-white leading-tight text-lg">
+                                        {assignment.className} - {assignment.title}
+                                    </h2>
+                                    {assignment.description && (
+                                        <p className="text-gray-500 dark:text-zinc-400 mt-1.5 text-xs line-clamp-2">
+                                            {assignment.description}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Time */}
+                                <div className="md:col-span-3">
+                                    <p className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5">THỜI GIAN</p>
+                                    <p className="font-medium text-[#001D4A] dark:text-gray-300">
+                                        {slotInfo ? (
+                                            <>
+                                                {formatDateTime(slotInfo.date).split(' ')[0]} - {slotInfo.slotNumber && `Slot ${slotInfo.slotNumber}`}
+                                            </>
+                                        ) : (
+                                            <span className="text-gray-400">Chưa xếp lịch</span>
+                                        )}
+                                    </p>
+                                </div>
+
+                                {/* Room */}
+                                <div className="md:col-span-2">
+                                    <p className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5">PHÒNG HỌC</p>
+                                    <p className="font-medium text-[#001D4A] dark:text-gray-300">
+                                        {slotInfo?.roomName || slotInfo?.roomCode || <span className="text-gray-400">Chưa xếp phòng</span>}
+                                    </p>
+                                </div>
+
+                                {/* Right Deadline Box */}
+                                <div className="md:col-span-3 md:justify-self-end w-full md:w-auto">
+                                    <div className="bg-orange-50/50 dark:bg-orange-900/10 rounded-2xl border border-orange-100 dark:border-orange-900/30 px-4 py-3 inline-block w-full">
+                                        <p className="text-[10px] font-bold text-fpt-orange uppercase tracking-widest mb-1.5">HẠN TRÓT NHẬN BÀI</p>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-xl bg-orange-500 text-white flex items-center justify-center shrink-0 shadow-sm shadow-orange-500/20">
+                                                <Clock className="w-4 h-4" />
+                                            </div>
+                                            <div className="flex flex-col justify-center">
+                                                <p className="text-base font-bold text-[#001D4A] dark:text-white leading-none mb-1">
+                                                    {formatDateTime(assignment.dueDate).split(' ')[1]}
+                                                </p>
+                                                <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400 leading-none">
+                                                    {formatDateTime(assignment.dueDate).split(' ')[0]}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        {/* Info row with dividers */}
-                        <div className="px-5 py-2.5 grid grid-cols-3 md:grid-cols-6 divide-x divide-gray-200 dark:divide-zinc-700 text-sm">
-                            <div className="flex items-center gap-2 px-2 justify-center">
-                                <span className="text-[11px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider">Lớp</span>
-                                <span className="font-semibold text-gray-900 dark:text-white text-sm">{assignment.className}</span>
+                        {/* Middle Content Grid */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                            {/* Left Column - Materials */}
+                            <div className="lg:col-span-1 space-y-6">
+                                <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-200 dark:border-zinc-700 shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-6">
+                                    <h3 className="text-base font-bold text-[#001D4A] dark:text-white mb-6 flex items-center gap-3">
+                                        <div className="text-fpt-orange">
+                                            <BookOpen className="fill-current w-5 h-5" />
+                                        </div>
+                                        Tài liệu học tập
+                                    </h3>
+
+                                    <div className="space-y-4">
+                                        {(() => {
+                                            const urls = assignment.referenceUrls?.length ? assignment.referenceUrls : (assignment.referenceUrl ? assignment.referenceUrl.split('|||') : []);
+                                            const names = assignment.referenceNames?.length ? assignment.referenceNames : (assignment.referenceName ? assignment.referenceName.split('|||') : []);
+                                            
+                                            if (urls.length === 0) {
+                                                return <p className="text-sm text-gray-400 px-2 italic">Không có tài liệu đính kèm.</p>;
+                                            }
+
+                                            return urls.map((url, idx) => (
+                                                <a
+                                                    key={idx}
+                                                    href={getViewableFileUrl(url)}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-4 p-3 rounded-2xl hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors group border border-transparent hover:border-gray-100 dark:hover:border-zinc-700"
+                                                >
+                                                    <div className="w-12 h-12 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center shrink-0 text-fpt-orange">
+                                                        <BookOpen size={20} />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-medium text-sm text-[#001D4A] dark:text-white truncate group-hover:text-fpt-orange transition-colors">
+                                                            {names[idx] || `Tài liệu ${idx + 1}`}
+                                                        </p>
+                                                        <p className="text-[11px] text-gray-400 mt-0.5">Mở tài liệu</p>
+                                                    </div>
+                                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-gray-300 group-hover:text-fpt-orange transition-colors shrink-0">
+                                                        <ExternalLink size={16} />
+                                                    </div>
+                                                </a>
+                                            ));
+                                        })()}
+                                    </div>
+                                </div>
                             </div>
-                            {slotInfo?.date && (
-                                <div className="flex items-center gap-2 px-2 justify-center">
-                                    <span className="text-[11px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider text-nowrap">Ngày học</span>
-                                    <span className="font-semibold text-gray-900 dark:text-white text-sm">
-                                        {new Date(slotInfo.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                                    </span>
+
+                            {/* Right Column - Stats */}
+                            <div className="lg:col-span-2">
+                                <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-200 dark:border-zinc-700 shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-6 sm:p-8 h-full">
+                                    <h3 className="text-base font-bold text-[#001D4A] dark:text-white mb-6 flex items-center gap-3">
+                                        <div className="w-6 h-6 rounded bg-fpt-orange flex items-center justify-center text-white shrink-0">
+                                            <Search size={14} />
+                                        </div>
+                                        Tổng quan nộp bài
+                                    </h3>
+                                    
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 h-[calc(100%-3rem)] min-h-[120px]">
+                                        <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-2xl border border-gray-100 dark:border-zinc-800 p-5 flex flex-col justify-center items-center text-center">
+                                            <span className="text-xs font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider mb-2">Tổng sinh viên</span>
+                                            <span className="text-4xl font-black text-[#001D4A] dark:text-white">{totalStudents}</span>
+                                        </div>
+                                        <div className="bg-green-50/50 dark:bg-green-900/10 rounded-2xl border border-green-100 dark:border-green-900/30 p-5 flex flex-col justify-center items-center text-center">
+                                            <span className="text-xs font-bold text-green-600 dark:text-green-500 uppercase tracking-wider mb-2">Đã nộp</span>
+                                            <div className="flex items-baseline gap-2">
+                                                <span className="text-4xl font-black text-green-700 dark:text-green-400">{submittedCount}</span>
+                                                <span className="text-sm font-bold text-green-600/60 dark:text-green-500/60">
+                                                    ({totalStudents > 0 ? Math.round(submittedCount / totalStudents * 100) : 0}%)
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="bg-red-50/50 dark:bg-red-900/10 rounded-2xl border border-red-100 dark:border-red-900/30 p-5 flex flex-col justify-center items-center text-center">
+                                            <span className="text-xs font-bold text-red-600 dark:text-red-500 uppercase tracking-wider mb-2">Chưa nộp</span>
+                                            <div className="flex items-baseline gap-2">
+                                                <span className="text-4xl font-black text-red-700 dark:text-red-400">{notSubmittedCount}</span>
+                                                <span className="text-sm font-bold text-red-600/60 dark:text-red-500/60">
+                                                    ({totalStudents > 0 ? Math.round(notSubmittedCount / totalStudents * 100) : 0}%)
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                            )}
-                            {slotInfo?.slotNumber && (
-                                <div className="flex items-center gap-2 px-2 justify-center">
-                                    <span className="text-[11px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider">Slot</span>
-                                    <span className="font-semibold text-gray-900 dark:text-white text-sm">Slot {slotInfo.slotNumber}</span>
-                                </div>
-                            )}
-                            {(slotInfo?.roomCode || slotInfo?.roomName) && (
-                                <div className="flex items-center gap-2 px-2 justify-center">
-                                    <span className="text-[11px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider">Phòng</span>
-                                    <span className="font-semibold text-gray-900 dark:text-white text-sm">{slotInfo.roomCode || slotInfo.roomName}</span>
-                                </div>
-                            )}
-                            <div className="flex items-center gap-2 px-2 justify-center">
-                                <span className="text-[11px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider text-nowrap">Hạn nộp</span>
-                                <span className="font-semibold text-gray-900 dark:text-white text-sm inline-flex items-center gap-1">
-                                    <Clock className="w-3.5 h-3.5 text-gray-400" />
-                                    {formatDateTime(assignment.dueDate)}
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-2 px-2 justify-center">
-                                <span className="text-[11px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider">Trạng thái</span>
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${assignment.status === 'OPEN'
-                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                    : 'bg-gray-100 text-gray-500 dark:bg-zinc-800 dark:text-zinc-400'
-                                    }`}>
-                                    {assignment.status === 'OPEN' ? 'Đang mở' : 'Đã đóng'}
-                                </span>
                             </div>
                         </div>
-                        {assignment.referenceUrl && (
-                            <div className="px-5 pb-2.5 -mt-0.5">
-                                <a href={getViewableFileUrl(assignment.referenceUrl)} target="_blank" rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1.5 text-xs text-fpt-orange hover:text-orange-600 transition-colors">
-                                    <BookOpen className="w-3.5 h-3.5" />
-                                    {assignment.referenceName || 'Tài liệu tham khảo'}
-                                </a>
-                            </div>
-                        )}
-                    </div>
+                    </>
                 )}
 
-                {/* Stats Cards */}
-                <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-white dark:bg-zinc-900 rounded-lg border border-gray-100 dark:border-zinc-800 px-4 py-2 shadow-sm flex items-center justify-between">
-                        <span className="text-xs text-gray-500 dark:text-zinc-400">Tổng sinh viên</span>
-                        <span className="text-base font-bold text-gray-900 dark:text-white">{totalStudents}</span>
+                {/* Submissions Section */}
+                <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-200 dark:border-zinc-700 shadow-[0_8px_30px_rgb(0,0,0,0.08)] overflow-hidden flex flex-col">
+                    <div className="p-6 border-b border-gray-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <h3 className="text-base font-bold text-[#001D4A] dark:text-white flex items-center gap-3">
+                            <span className="w-2 h-6 bg-fpt-orange rounded-full"></span>
+                            Danh sách bài làm sinh viên
+                        </h3>
+                        <div className="relative w-full sm:w-72">
+                            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Tìm theo MSSV, họ tên..."
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange focus:border-transparent outline-none transition-all"
+                            />
+                        </div>
                     </div>
-                    <div className="bg-white dark:bg-zinc-900 rounded-lg border border-gray-100 dark:border-zinc-800 px-4 py-2 shadow-sm flex items-center justify-between">
-                        <span className="text-xs text-gray-500 dark:text-zinc-400">Đã nộp</span>
-                        <span className="text-base font-bold text-gray-900 dark:text-white">
-                            {submittedCount}
-                            <span className="text-[11px] font-normal text-gray-400 ml-1">
-                                ({totalStudents > 0 ? Math.round(submittedCount / totalStudents * 100) : 0}%)
-                            </span>
-                        </span>
-                    </div>
-                    <div className="bg-white dark:bg-zinc-900 rounded-lg border border-gray-100 dark:border-zinc-800 px-4 py-2 shadow-sm flex items-center justify-between">
-                        <span className="text-xs text-gray-500 dark:text-zinc-400">Chưa nộp</span>
-                        <span className="text-base font-bold text-gray-900 dark:text-white">
-                            {notSubmittedCount}
-                            <span className="text-[11px] font-normal text-gray-400 ml-1">
-                                ({totalStudents > 0 ? Math.round(notSubmittedCount / totalStudents * 100) : 0}%)
-                            </span>
-                        </span>
-                    </div>
-                </div>
 
-                {/* Search */}
-                <div className="relative">
-                    <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                        type="text"
-                        placeholder="Tìm kiếm theo MSSV, họ tên..."
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange focus:border-transparent outline-none"
-                    />
-                </div>
-
-                {/* Student Submission Table */}
-                <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 overflow-hidden shadow-sm">
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="bg-orange-500 dark:bg-orange-600">
-                                    <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider w-16">STT</th>
-                                    <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">MSSV</th>
-                                    <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Họ tên</th>
-                                    <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Trạng thái</th>
-                                    <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Thời gian nộp</th>
-                                    <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">File</th>
-                                    <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Nội dung</th>
-                                    <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Nhận xét</th>
+                                <tr className="bg-orange-50/50 dark:bg-orange-900/10 border-b border-gray-200 dark:border-zinc-700 text-[#001D4A] dark:text-zinc-300">
+                                    <th className="text-left px-6 py-4 font-bold text-xs uppercase tracking-wider w-16">STT</th>
+                                    <th className="text-left px-6 py-4 font-bold text-xs uppercase tracking-wider">Học viên</th>
+                                    <th className="text-left px-6 py-4 font-bold text-xs uppercase tracking-wider">Trạng thái</th>
+                                    <th className="text-left px-6 py-4 font-bold text-xs uppercase tracking-wider">File đính kèm</th>
+                                    <th className="text-left px-6 py-4 font-bold text-xs uppercase tracking-wider">Bài làm / Ghi chú</th>
+                                    <th className="text-center px-6 py-4 font-bold text-xs uppercase tracking-wider">Nhận xét</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
                                 {paginatedSubmissions.length === 0 ? (
                                     <tr>
-                                        <td colSpan={8} className="text-center py-8 text-gray-400 dark:text-zinc-500">
-                                            {searchTerm ? 'Không tìm thấy sinh viên phù hợp' : 'Chưa có dữ liệu sinh viên'}
+                                        <td colSpan={6} className="text-center py-12">
+                                            <div className="flex flex-col items-center justify-center text-gray-400 dark:text-zinc-500">
+                                                <Search size={32} className="mb-3 opacity-50" />
+                                                <p className="text-sm font-medium">{searchTerm ? 'Không tìm thấy sinh viên nào phù hợp' : 'Chưa có dữ liệu sinh viên'}</p>
+                                            </div>
                                         </td>
                                     </tr>
                                 ) : (
                                     paginatedSubmissions.map((sub, index) => (
-                                        <tr key={sub.studentCode || index} className="hover:bg-gray-50 dark:hover:bg-zinc-800/30 transition-colors">
-                                            <td className="px-4 py-3 text-gray-500 dark:text-zinc-400">
+                                        <tr key={sub.studentCode || index} className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/30 transition-colors group">
+                                            <td className="px-6 py-4 text-gray-500 dark:text-zinc-400 font-medium whitespace-nowrap">
                                                 {currentPage * PAGE_SIZE + index + 1}
                                             </td>
-                                            <td className="px-4 py-3 font-medium text-gray-900 dark:text-white whitespace-nowrap">
-                                                {sub.studentCode || '—'}
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs shrink-0">
+                                                        {(sub.studentName?.charAt(0) || 'S').toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-[#001D4A] dark:text-white leading-tight">{sub.studentName || '—'}</p>
+                                                        <p className="text-xs text-gray-500 dark:text-zinc-400 mt-0.5 font-mono">{sub.studentCode || '—'}</p>
+                                                    </div>
+                                                </div>
                                             </td>
-                                            <td className="px-4 py-3 text-gray-700 dark:text-zinc-300">
-                                                {sub.studentName || '—'}
-                                            </td>
-                                            <td className="px-4 py-3">
+                                            <td className="px-6 py-4 whitespace-nowrap">
                                                 {sub.status === 'SUBMITTED' ? (
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                                                        Đã nộp
-                                                    </span>
+                                                    <div>
+                                                        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 mb-1">
+                                                            ĐÃ NỘP
+                                                        </span>
+                                                        {sub.submittedAt && (
+                                                            <p className="text-[11px] text-gray-500 dark:text-zinc-400 font-medium">
+                                                                {formatDateTime(sub.submittedAt).split(' ')[1]} {formatDateTime(sub.submittedAt).split(' ')[0]}
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                 ) : (
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                                                        Chưa nộp
+                                                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                                                        CHƯA NỘP
                                                     </span>
                                                 )}
                                             </td>
-                                            <td className="px-4 py-3 text-gray-700 dark:text-zinc-300 whitespace-nowrap">
-                                                {sub.submittedAt ? formatDateTime(sub.submittedAt) : '—'}
-                                            </td>
-                                            <td className="px-4 py-3">
+                                            <td className="px-6 py-4">
                                                 {sub.fileUrls && sub.fileUrls.length > 0 ? (
-                                                    <div className="flex flex-col gap-1">
+                                                    <div className="flex flex-col gap-1.5">
                                                         {sub.fileUrls.map((url, idx) => (
                                                             <a key={idx} href={getViewableFileUrl(url)} target="_blank" rel="noopener noreferrer"
-                                                                className="inline-flex items-center gap-1 text-fpt-orange hover:text-orange-600 text-xs transition-colors">
-                                                                <ExternalLink className="w-3.5 h-3.5" />
-                                                                {sub.fileNames?.[idx] || `File ${idx + 1}`}
+                                                                className="inline-flex items-center gap-1.5 pl-2 pr-3 py-1 bg-gray-50 hover:bg-gray-100 dark:bg-zinc-800 dark:hover:bg-zinc-700 border border-gray-100 dark:border-zinc-700 rounded-lg text-fpt-orange hover:text-orange-600 text-xs font-medium transition-colors max-w-[220px] group/link">
+                                                                <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                                                                <span className="truncate" title={sub.fileNames?.[idx]}>{sub.fileNames?.[idx] || `File ${idx + 1}`}</span>
                                                             </a>
                                                         ))}
                                                     </div>
                                                 ) : (
-                                                    <span className="text-gray-300 dark:text-zinc-600">—</span>
+                                                    <span className="text-gray-300 dark:text-zinc-600 italic text-xs">— Không có file —</span>
                                                 )}
                                             </td>
-                                            {/* Nội dung (từ sinh viên) */}
-                                            <td className="px-4 py-3 text-gray-500 dark:text-zinc-400 text-xs max-w-[200px]">
-                                                {renderNoteWithLinks(sub.note)}
+                                            <td className="px-6 py-4">
+                                                <div className="text-xs text-gray-600 dark:text-zinc-300 max-w-[200px] line-clamp-2" title={sub.note}>
+                                                    {sub.note ? renderNoteWithLinks(sub.note) : <span className="text-gray-300 dark:text-zinc-600 italic">—</span>}
+                                                </div>
                                             </td>
-                                            {/* Nhận xét */}
-                                            <td className="px-4 py-3 max-w-[200px]">
+                                            <td className="px-6 py-4 text-center">
                                                 {sub.status === 'SUBMITTED' && sub.id ? (
                                                     <button
                                                         onClick={() => openCommentDialog(sub)}
-                                                        className="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-zinc-400 hover:text-fpt-orange transition-colors cursor-pointer"
+                                                        className={`inline-flex items-center justify-center px-4 py-2 ${sub.lecturerComment ? 'bg-orange-50 text-fpt-orange hover:bg-orange-100 border border-orange-200' : 'bg-gray-50 text-gray-500 hover:text-fpt-orange hover:bg-gray-100 border border-gray-200'} rounded-xl text-xs font-bold transition-colors w-full max-w-[140px]`}
                                                     >
-                                                        {sub.lecturerComment || <span className="italic text-gray-300 dark:text-zinc-600">Nhấn để nhận xét</span>}
+                                                        {sub.lecturerComment ? 'Đã nhận xét' : 'Nhận xét'}
                                                     </button>
                                                 ) : (
-                                                    <span className="text-xs text-gray-400 dark:text-zinc-500">
-                                                        {sub.lecturerComment || '—'}
-                                                    </span>
+                                                    <span className="text-gray-300 dark:text-zinc-600 italic text-xs">—</span>
                                                 )}
                                             </td>
                                         </tr>
@@ -411,56 +492,76 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                             </tbody>
                         </table>
                     </div>
-                    <div className="px-4 pb-4">
-                        <Pagination
-                            currentPage={currentPage}
-                            totalPages={totalPages}
-                            totalElements={filteredSubmissions.length}
-                            pageSize={PAGE_SIZE}
-                            onPageChange={setCurrentPage}
-                        />
-                    </div>
+                    
+                    {filteredSubmissions.length > 0 && (
+                        <div className="px-6 py-4 border-t border-gray-100 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/10">
+                            <Pagination
+                                currentPage={currentPage}
+                                totalPages={totalPages}
+                                totalElements={filteredSubmissions.length}
+                                pageSize={PAGE_SIZE}
+                                onPageChange={setCurrentPage}
+                            />
+                        </div>
+                    )}
                 </div>
             </div>
 
             {/* Comment Dialog */}
             {commentSubmission && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-zinc-800">
-                        <div className="flex items-center justify-between px-6 pt-5 pb-3">
-                            <h3 className="text-base font-bold text-gray-900 dark:text-white">Nhận xét bài làm</h3>
+                    <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-zinc-800 overflow-hidden transform transition-all">
+                        <div className="bg-orange-500 px-6 py-4 flex items-center justify-between">
+                            <h3 className="text-base font-bold text-white flex items-center gap-2">
+                                <MessageSquare className="w-4 h-4" />
+                                Nhận xét bài làm
+                            </h3>
                             <button onClick={() => { setCommentSubmission(null); setCommentDraft(''); }}
-                                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300 transition-colors">
+                                className="text-orange-100 hover:text-white transition-colors bg-white/10 hover:bg-white/20 p-1.5 rounded-lg">
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
-                        <div className="px-6 pb-2">
-                            <div className="text-sm text-gray-500 dark:text-zinc-400 space-y-0.5">
-                                <p><span className="font-medium text-gray-700 dark:text-zinc-300">{commentSubmission.studentCode}</span> — {commentSubmission.studentName}</p>
+                        
+                        <div className="p-6">
+                            <div className="bg-orange-50 dark:bg-orange-900/10 rounded-xl p-4 mb-6 border border-orange-100 dark:border-orange-900/30 flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-orange-200 dark:bg-orange-800 flex items-center justify-center font-bold text-orange-700 dark:text-orange-300 text-sm shrink-0">
+                                    {(commentSubmission.studentName?.charAt(0) || 'S').toUpperCase()}
+                                </div>
+                                <div>
+                                    <p className="font-bold text-[#001D4A] dark:text-white leading-tight">{commentSubmission.studentName}</p>
+                                    <p className="text-xs font-mono text-gray-500 dark:text-zinc-400 mt-0.5">{commentSubmission.studentCode}</p>
+                                </div>
                                 {commentSubmission.submittedAt && (
-                                    <p className="text-xs">Nộp lúc: {formatDateTime(commentSubmission.submittedAt)}</p>
+                                    <div className="ml-auto text-right">
+                                        <p className="text-[10px] font-bold text-orange-600/60 uppercase tracking-wider mb-0.5">Thời gian nộp</p>
+                                        <p className="text-xs font-medium text-orange-800 dark:text-orange-300">
+                                            {formatDateTime(commentSubmission.submittedAt)}
+                                        </p>
+                                    </div>
                                 )}
                             </div>
-                        </div>
-                        <div className="px-6 pb-5">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1.5 mt-3">Nhận xét</label>
-                            <textarea
-                                value={commentDraft}
-                                onChange={e => setCommentDraft(e.target.value)}
-                                rows={3}
-                                className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-orange-500 outline-none resize-none"
-                                placeholder="Nhập nhận xét cho bài làm của sinh viên..."
-                                autoFocus
-                                disabled={savingComment}
-                            />
-                            <div className="flex gap-3 mt-4">
+                            
+                            <div>
+                                <label className="block text-xs font-bold text-gray-700 dark:text-zinc-300 mb-2 uppercase tracking-wider">Nội dung nhận xét</label>
+                                <textarea
+                                    value={commentDraft}
+                                    onChange={e => setCommentDraft(e.target.value)}
+                                    rows={4}
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800/50 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange focus:bg-white outline-none resize-none transition-all"
+                                    placeholder="Nhập nhận xét cho sinh viên..."
+                                    autoFocus
+                                    disabled={savingComment}
+                                />
+                            </div>
+                            
+                            <div className="flex gap-3 mt-6">
                                 <button onClick={() => { setCommentSubmission(null); setCommentDraft(''); }}
-                                    className="flex-1 px-4 py-2 border border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-zinc-300 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+                                    className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 rounded-xl text-sm font-bold transition-colors">
                                     Hủy
                                 </button>
                                 <button onClick={handleSaveComment} disabled={savingComment}
-                                    className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
-                                    {savingComment ? 'Đang lưu...' : 'Lưu nhận xét'}
+                                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-fpt-orange hover:bg-orange-600 text-white rounded-xl text-sm font-bold transition-colors disabled:opacity-50 shadow-sm shadow-orange-500/30">
+                                    {savingComment ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Lưu nhận xét'}
                                 </button>
                             </div>
                         </div>

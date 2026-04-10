@@ -59,9 +59,12 @@ export const RecentAccessTable: React.FC<RecentAccessTableProps> = ({ data, isDa
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <img
-                      src={`https://ui-avatars.com/api/?name=${encodeURIComponent(item.email)}&background=F37021&color=fff`}
+                      src={item.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.email)}&background=F37021&color=fff`}
                       alt=""
-                      className="w-8 h-8 rounded-full mr-3"
+                      className="w-8 h-8 rounded-full mr-3 object-cover shadow-sm ring-1 ring-gray-100 dark:ring-zinc-800"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(item.email)}&background=F37021&color=fff`;
+                      }}
                     />
                     <span className="text-sm text-gray-900 dark:text-white">
                       {item.email}

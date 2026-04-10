@@ -42,6 +42,8 @@ public class AssignmentSubmissionResponse {
     // Lecturer reference file
     private String referenceUrl;
     private String referenceName;
+    private List<String> referenceUrls;
+    private List<String> referenceNames;
 
     private Long timetableSlotId;
 }

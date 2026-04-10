@@ -133,7 +133,7 @@ export const NotificationTableRow: React.FC<NotificationTableRowProps> = React.m
       <td className="px-4 py-4">
         <div className="flex items-center justify-center gap-2">
           <button
-            onClick={() => navigate(`${basePath}/notifications/${notification.id}`)}
+            onClick={() => navigate(`${basePath}/notification-management/${notification.id}`)}
             className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
             title="Xem chi tiết"
           >

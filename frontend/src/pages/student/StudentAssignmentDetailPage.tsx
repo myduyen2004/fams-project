@@ -211,7 +211,7 @@ export const StudentAssignmentDetailPage: React.FC = () => {
                 {/* Top Header Card */}
                 <div className="bg-white dark:bg-zinc-900 rounded-3xl overflow-hidden p-6 sm:px-8 sm:py-6 shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-gray-200 dark:border-zinc-700">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-center text-sm">
-                        
+
                         {/* Class & Subject */}
                         <div className="md:col-span-1">
                             <p className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5">MÃ LỚP & MÔN HỌC</p>
@@ -276,9 +276,32 @@ export const StudentAssignmentDetailPage: React.FC = () => {
                                 </div>
                                 Tài liệu
                             </h3>
-                            
+
                             <div className="space-y-4">
-                                {submission.referenceUrl ? (
+                                {(submission.referenceUrls && submission.referenceUrls.length > 0) ? (
+                                    submission.referenceUrls.map((url, idx) => (
+                                        <a
+                                            key={idx}
+                                            href={getViewableFileUrl(url)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-4 p-3 rounded-2xl hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors group"
+                                        >
+                                            <div className="w-12 h-12 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center shrink-0 text-fpt-orange">
+                                                <Paperclip size={20} />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-medium text-sm text-[#001D4A] dark:text-white truncate group-hover:text-fpt-orange transition-colors">
+                                                    {submission.referenceNames?.[idx] || `Tài liệu ${idx + 1}`}
+                                                </p>
+                                                <p className="text-[11px] text-gray-400 mt-0.5">Tài liệu đính kèm</p>
+                                            </div>
+                                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-gray-300 group-hover:text-fpt-orange transition-colors shrink-0">
+                                                <Download size={16} />
+                                            </div>
+                                        </a>
+                                    ))
+                                ) : submission.referenceUrl ? (
                                     <a
                                         href={getViewableFileUrl(submission.referenceUrl)}
                                         target="_blank"
@@ -307,7 +330,7 @@ export const StudentAssignmentDetailPage: React.FC = () => {
 
                     {/* Right Column - Submission & Feedback */}
                     <div className="lg:col-span-2 space-y-6">
-                        
+
                         {/* Submission Info Card */}
                         <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-200 dark:border-zinc-700 shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-6 sm:p-8">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -317,7 +340,7 @@ export const StudentAssignmentDetailPage: React.FC = () => {
                                     </div>
                                     Thông tin bài nộp
                                 </h3>
-                                
+
                                 {(canSubmit || canResubmit) && (
                                     <button
                                         onClick={openUploadDialog}
@@ -357,13 +380,13 @@ export const StudentAssignmentDetailPage: React.FC = () => {
                                     ) : (
                                         <p className="text-sm text-gray-500 italic p-4 bg-gray-50 dark:bg-zinc-800/50 rounded-2xl">Không có file đính kèm, chỉ có ghi chú.</p>
                                     )}
-                                    
+
                                     {submission.note && (
                                         <div className="mt-4 p-4 rounded-2xl bg-gray-50/50 dark:bg-zinc-800/30 border border-gray-100 dark:border-zinc-800">
-                                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">GHI CHÚ</p>
-                                             <div className="text-sm text-gray-700 dark:text-zinc-300">
-                                                 {renderNoteWithLinks(submission.note)}
-                                             </div>
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">GHI CHÚ</p>
+                                            <div className="text-sm text-gray-700 dark:text-zinc-300">
+                                                {renderNoteWithLinks(submission.note)}
+                                            </div>
                                         </div>
                                     )}
                                 </div>

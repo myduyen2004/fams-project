@@ -68,7 +68,7 @@ public class AuthController {
             // Get username directly from Authentication object
             String username = authentication.getName();
 
-            userService.changePassword(username, request.getNewPassword());
+            userService.changePassword(username, request.getCurrentPassword(), request.getNewPassword());
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             log.error("Change password error", e);

@@ -6,8 +6,6 @@ import com.fams.backend.dto.response.ReadReceiptDTO;
 import com.fams.backend.entity.*;
 import com.fams.backend.repository.*;
 import com.fams.backend.service.ChatGroupService;
-import com.fams.backend.dto.response.MessageReactionDTO;
-import com.fams.backend.service.ContentFilterService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -18,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,21 +32,37 @@ public class ChatGroupServiceImpl implements ChatGroupService {
     private final UserRepository userRepository;
     private final ChatMessageReadRepository chatMessageReadRepository;
     private final ChatMessageReactionRepository chatMessageReactionRepository;
-    private final ContentFilterService contentFilterService;
 
     @Override
     @Transactional
     public ChatGroupResponse createGroupForClass(String className) {
+        return createGroupForClass(className, null);
+    }
+
+    @Override
+    @Transactional
+    public ChatGroupResponse createGroupForClass(String className, String creatorUsername) {
+        if (className == null || className.isBlank()) {
+            throw new RuntimeException("Thiếu mã lớp để tạo nhóm chat");
+        }
+        className = className.trim().toUpperCase();
+        final String normalizedClassName = className;
+
         // Check if group already exists
-        if (chatGroupRepository.existsByClassSectionClassName(className)) {
-            throw new RuntimeException("Nhóm chat cho lớp này đã tồn tại");
+        var existingGroup = chatGroupRepository.findByClassSectionClassName(normalizedClassName);
+        if (existingGroup.isPresent()) {
+            log.info("Chat group for class {} already exists. Returning existing group.", normalizedClassName);
+            return convertToResponse(existingGroup.get());
         }
 
         // Get class section with lecturer
-        ClassSection classSection = classSectionRepository.findByClassName(className)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy lớp học: " + className));
+        ClassSection classSection = classSectionRepository.findByClassName(normalizedClassName)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy lớp học: " + normalizedClassName));
 
-        User currentUser = getCurrentUser();
+        User currentUser = creatorUsername != null && !creatorUsername.isBlank()
+                ? userRepository.findByUsername(creatorUsername)
+                        .orElseThrow(() -> new RuntimeException("Không tìm thấy người tạo nhóm chat"))
+                : getCurrentUser();
 
         // Format group name: [ClassCode]-[CourseCode] (e.g. SE18B01-PRF192)
         String classCode = classSection.getClassName();
@@ -82,8 +96,8 @@ public class ChatGroupServiceImpl implements ChatGroupService {
         }
 
         // Add all enrolled students as MEMBER
-        List<Enrollment> enrollments = enrollmentRepository.findByClassSectionClassName(className);
-        log.info("Found {} total enrollments for class {} in database", enrollments.size(), className);
+        List<Enrollment> enrollments = enrollmentRepository.findByClassSectionClassName(normalizedClassName);
+        log.info("Found {} total enrollments for class {} in database", enrollments.size(), normalizedClassName);
 
         int studentCount = 0;
         for (Enrollment enrollment : enrollments) {
@@ -104,7 +118,7 @@ public class ChatGroupServiceImpl implements ChatGroupService {
         }
 
         log.info("Finished creating chat group for class {}. Added {} students as members.",
-                className, studentCount);
+                normalizedClassName, studentCount);
 
         return convertToResponse(chatGroup);
     }
@@ -160,18 +174,13 @@ public class ChatGroupServiceImpl implements ChatGroupService {
     @Transactional(readOnly = true)
     public Page<ChatMessageResponse> getMessages(Long groupId, Pageable pageable) {
         User currentUser = getCurrentUser();
-        log.info("Getting messages for group {} | User: {} | Page: {} | Size: {}", 
-                groupId, currentUser.getUsername(), pageable.getPageNumber(), pageable.getPageSize());
 
         // Check membership
         if (!chatGroupMemberRepository.existsByChatGroupIdAndUserIdAndLeftAtIsNull(groupId, currentUser.getId())) {
-            log.warn("User {} is not an active member of group {}", currentUser.getUsername(), groupId);
             throw new RuntimeException("Bạn không phải thành viên của nhóm này");
         }
 
-        Page<ChatMessage> messages = chatMessageRepository.findByChatGroupIdOrderBySentAtDesc(groupId, pageable);
-        log.info("Found {} messages for group {}", messages.getTotalElements(), groupId);
-        
+        Page<ChatMessage> messages = chatMessageRepository.findByChatGroupIdOrderBySentAtAsc(groupId, pageable);
         List<Long> readMessageIds = chatMessageReadRepository.findReadMessageIds(currentUser.getId(), groupId);
 
         return messages.map(msg -> {
@@ -185,8 +194,6 @@ public class ChatGroupServiceImpl implements ChatGroupService {
     @Transactional
     public ChatMessageResponse sendMessage(Long groupId, String content, String type, Long replyToId,
             String attachmentUrl, String attachmentName) {
-        // CONTENT FILTER
-        contentFilterService.validate(content);
         User currentUser = getCurrentUser();
 
         // Check membership
@@ -249,37 +256,6 @@ public class ChatGroupServiceImpl implements ChatGroupService {
 
         log.info("User {} deleted message {} in group {}", currentUser.getUsername(), messageId, groupId);
 
-        return convertToMessageResponse(message, currentUser.getId(), true);
-    }
-
-    @Override
-    @Transactional
-    public ChatMessageResponse toggleReaction(Long messageId, String emoji) {
-        User currentUser = getCurrentUser();
-        ChatMessage message = chatMessageRepository.findById(messageId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy tin nhắn"));
-
-        // Check membership
-        if (!chatGroupMemberRepository.existsByChatGroupIdAndUserIdAndLeftAtIsNull(message.getChatGroup().getId(), currentUser.getId())) {
-            throw new RuntimeException("Bạn không phải thành viên của nhóm này");
-        }
-
-        var existingReaction = chatMessageReactionRepository.findByMessageAndUserAndEmoji(message, currentUser, emoji);
-
-        if (existingReaction.isPresent()) {
-            chatMessageReactionRepository.deleteByMessageAndUserAndEmoji(message, currentUser, emoji);
-            log.info("User {} removed reaction {} from message {}", currentUser.getUsername(), emoji, messageId);
-        } else {
-            ChatMessageReaction reaction = ChatMessageReaction.builder()
-                    .message(message)
-                    .user(currentUser)
-                    .emoji(emoji)
-                    .build();
-            chatMessageReactionRepository.save(reaction);
-            log.info("User {} added reaction {} to message {}", currentUser.getUsername(), emoji, messageId);
-        }
-
-        // Return updated message response
         return convertToMessageResponse(message, currentUser.getId(), true);
     }
 
@@ -385,7 +361,6 @@ public class ChatGroupServiceImpl implements ChatGroupService {
                                 .avatar(r.getUser().getAvatar())
                                 .build())
                         .collect(Collectors.toList()) : new ArrayList<>())
-                .reactions(mapReactions(message.getReactions(), currentUserId))
                 .build();
 
         if (message.getReplyTo() != null) {
@@ -436,19 +411,28 @@ public class ChatGroupServiceImpl implements ChatGroupService {
                 })
                 .collect(Collectors.toList());
     }
+    @Override
+    @Transactional
+    public ChatMessageResponse toggleReaction(Long messageId, String emoji) {
+        User currentUser = getCurrentUser();
+        ChatMessage message = chatMessageRepository.findById(messageId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy tin nhắn"));
 
-    private List<MessageReactionDTO> mapReactions(List<ChatMessageReaction> reactions, Long currentUserId) {
-        if (reactions == null) return new ArrayList<>();
+        Optional<ChatMessageReaction> existing = chatMessageReactionRepository
+                .findByMessageAndUserAndEmoji(message, currentUser, emoji);
 
-        Map<String, List<ChatMessageReaction>> groupedByEmoji = reactions.stream()
-                .collect(Collectors.groupingBy(ChatMessageReaction::getEmoji));
+        if (existing.isPresent()) {
+            chatMessageReactionRepository.delete(existing.get());
+        } else {
+            ChatMessageReaction reaction = ChatMessageReaction.builder()
+                    .message(message)
+                    .user(currentUser)
+                    .emoji(emoji)
+                    .build();
+            chatMessageReactionRepository.save(reaction);
+        }
 
-        return groupedByEmoji.entrySet().stream()
-                .map(entry -> MessageReactionDTO.builder()
-                        .emoji(entry.getKey())
-                        .count(entry.getValue().size())
-                        .reactedByMe(entry.getValue().stream().anyMatch(r -> r.getUser().getId().equals(currentUserId)))
-                        .build())
-                .collect(Collectors.toList());
+        // Return updated message response
+        return convertToMessageResponse(message, currentUser.getId(), true);
     }
 }

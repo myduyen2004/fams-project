@@ -86,7 +86,7 @@ public class LecturerAssignmentController {
         AssignmentResponse response = assignmentSubmissionService.updateAssignment(
                 id, lecturerId,
                 request.getTitle(), request.getDescription(), dueDate,
-                request.getReferenceUrl(), request.getReferenceName());
+                request.getReferenceUrls(), request.getReferenceNames());
         return ResponseEntity.ok(response);
     }
 
