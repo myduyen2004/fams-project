@@ -171,7 +171,6 @@ class ChatGroupServiceImplTest {
         @Test
         @DisplayName("UTCID02 - Normal: Group already exists, return existing")
         void createGroup_alreadyExists() {
-            mockSecurityContext(lecturerUser);
             when(chatGroupRepository.findByClassSectionClassName("SE18B01-PRF192")).thenReturn(Optional.of(chatGroup));
             when(chatMessageRepository.findTopByChatGroupIdAndIsDeletedFalseOrderBySentAtDesc(1L)).thenReturn(Optional.empty());
             when(chatGroupMemberRepository.findActiveMembersWithUser(1L)).thenReturn(List.of(lecturerMember));
@@ -197,7 +196,6 @@ class ChatGroupServiceImplTest {
         @Test
         @DisplayName("UTCID05 - Abnormal: Class not found throws RuntimeException")
         void createGroup_classNotFound() {
-            mockSecurityContext(lecturerUser);
             when(chatGroupRepository.findByClassSectionClassName("UNKNOWN")).thenReturn(Optional.empty());
             when(classSectionRepository.findByClassName("UNKNOWN")).thenReturn(Optional.empty());
 
@@ -354,7 +352,6 @@ class ChatGroupServiceImplTest {
         @Test
         @DisplayName("UTCID02 - Abnormal: Group not found throws RuntimeException")
         void getGroupById_notFound() {
-            mockSecurityContext(studentUser);
             when(chatGroupRepository.findByIdWithClassSection(999L)).thenReturn(Optional.empty());
 
             assertThrows(RuntimeException.class, () -> chatGroupService.getGroupById(999L));

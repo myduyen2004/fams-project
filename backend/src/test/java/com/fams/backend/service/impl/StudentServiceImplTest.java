@@ -323,6 +323,11 @@ class StudentServiceImplTest {
         @Test
         @DisplayName("UTCID02 - Normal: Update major/specialization/subSpecialization successfully")
         void updateStudent_success_academicFields() {
+            // Clear existing academic fields to ensure change is detected
+            studentProfile.setMajor(null);
+            studentProfile.setSpecialization(null);
+            studentProfile.setSubSpecialization(null);
+
             StudentUpdateRequest request = StudentUpdateRequest.builder()
                     .major("Software Engineering")
                     .specialization("Web Development")
