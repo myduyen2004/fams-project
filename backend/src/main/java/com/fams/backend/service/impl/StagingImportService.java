@@ -289,7 +289,7 @@ public class StagingImportService {
                     FROM %s s
                     JOIN users u ON UPPER(TRIM(s.student_code)) = UPPER(TRIM(u.code)) AND u.role = 'STUDENT'
                     JOIN student_profiles sp ON u.id = sp.user_id
-                    JOIN class_sections cs ON UPPER(TRIM(s.class_name)) = UPPER(TRIM(cs.class_name)) AND cs.semester_id = ?
+                    JOIN class_sections cs ON s.class_name = cs.class_name AND cs.semester_id = ?
                     WHERE s.error_message IS NULL
                     AND sp.major_id IS NOT NULL
                     AND sp.specialization_id IS NOT NULL
@@ -515,16 +515,15 @@ public class StagingImportService {
         // Mark rows with missing course_code
         jdbcTemplate.update("""
                 UPDATE %s SET error_message = COALESCE(error_message || '; ', '') || 'Mã môn học không được để trống'
-                WHERE TRIM(COALESCE(course_code, '')) = '' AND error_message IS NULL
+                WHERE TRIM(COALESCE(course_code, '')) = ''
                 """.formatted(stagingTable));
 
         // Mark rows with invalid course_code
         jdbcTemplate
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Không tìm thấy môn học: ' || s.course_code
-                        WHERE TRIM(COALESCE(s.course_code, '')) != ''
-                        AND NOT EXISTS (SELECT 1 FROM courses c WHERE UPPER(TRIM(s.course_code)) = UPPER(TRIM(c.code)))
-                        AND s.error_message IS NULL
+                        WHERE s.course_code != ''
+                        AND NOT EXISTS (SELECT 1 FROM courses c WHERE s.course_code = c.code)
                         """
                         .formatted(stagingTable));
 
@@ -532,31 +531,29 @@ public class StagingImportService {
         jdbcTemplate
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Không tìm thấy giảng viên: ' || s.lecturer_code
-                        WHERE TRIM(COALESCE(s.lecturer_code, '')) != ''
-                        AND NOT EXISTS (SELECT 1 FROM users u WHERE UPPER(TRIM(s.lecturer_code)) = UPPER(TRIM(u.username)) AND u.role = 'LECTURER')
-                        AND s.error_message IS NULL
+                        WHERE s.lecturer_code != ''
+                        AND NOT EXISTS (SELECT 1 FROM users u WHERE s.lecturer_code = u.username AND u.role = 'LECTURER')
                         """
                         .formatted(stagingTable));
 
         // Mark duplicate class names in file
         jdbcTemplate.update("""
                 UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Mã lớp bị trùng trong file'
-                WHERE s.row_num NOT IN (
-                    SELECT MIN(row_num) FROM %s GROUP BY UPPER(TRIM(class_name))
+                WHERE s.class_name != ''
+                AND s.row_num NOT IN (
+                    SELECT MIN(row_num) FROM %s GROUP BY class_name
                 )
-                AND TRIM(COALESCE(s.class_name, '')) != ''
-                AND s.error_message IS NULL
                 """.formatted(stagingTable, stagingTable));
 
         // Mark rows where class_name already exists in database
         jdbcTemplate
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Lớp học phần đã tồn tại trong hệ thống'
-                        WHERE EXISTS (
+                        WHERE s.class_name != ''
+                        AND EXISTS (
                             SELECT 1 FROM class_sections cs
                             WHERE UPPER(TRIM(cs.class_name)) = UPPER(TRIM(s.class_name))
                         )
-                        AND s.error_message IS NULL
                         """
                         .formatted(stagingTable));
 
@@ -573,7 +570,7 @@ public class StagingImportService {
         // Mark rows with missing class_name
         jdbcTemplate.update("""
                 UPDATE %s SET error_message = COALESCE(error_message || '; ', '') || 'Mã lớp không được để trống'
-                WHERE COALESCE(class_name, '') = '' AND error_message IS NULL
+                WHERE TRIM(COALESCE(class_name, '')) = ''
                 """.formatted(stagingTable));
 
         // Mark rows with invalid student_code
@@ -581,8 +578,7 @@ public class StagingImportService {
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Không tìm thấy sinh viên: ' || s.student_code
                         WHERE s.student_code != ''
-                        AND NOT EXISTS (SELECT 1 FROM users u WHERE UPPER(TRIM(u.code)) = s.student_code AND u.role = 'STUDENT')
-                        AND s.error_message IS NULL
+                        AND NOT EXISTS (SELECT 1 FROM users u WHERE s.student_code = u.code AND u.role = 'STUDENT')
                         """
                         .formatted(stagingTable));
 
@@ -591,8 +587,7 @@ public class StagingImportService {
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Không tìm thấy lớp học phần: ' || s.class_name
                         WHERE s.class_name != ''
-                        AND NOT EXISTS (SELECT 1 FROM class_sections cs WHERE UPPER(TRIM(cs.class_name)) = s.class_name AND cs.semester_id = ?)
-                        AND s.error_message IS NULL
+                        AND NOT EXISTS (SELECT 1 FROM class_sections cs WHERE cs.class_name = cs.class_name AND cs.semester_id = ?)
                         """
                         .formatted(stagingTable), semesterId);
 
@@ -600,19 +595,20 @@ public class StagingImportService {
         jdbcTemplate
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Sinh viên đã đăng ký lớp này trong file'
-                        WHERE s.row_num NOT IN (
+                        WHERE s.student_code != ''
+                        AND s.class_name != ''
+                        AND s.row_num NOT IN (
                             SELECT MIN(row_num) FROM %s GROUP BY student_code, class_name
                         )
-                        AND s.student_code != ''
-                        AND s.class_name != ''
-                        AND s.error_message IS NULL
                         """
                         .formatted(stagingTable, stagingTable));
 
         jdbcTemplate
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Sinh viên đã đăng ký lớp này rồi'
-                        WHERE EXISTS (
+                        WHERE s.student_code != ''
+                        AND s.class_name != ''
+                        AND EXISTS (
                             SELECT 1 FROM enrollments e
                             JOIN users u ON e.student_id = u.id
                             JOIN class_sections cs ON e.class_name = cs.class_name
@@ -620,7 +616,6 @@ public class StagingImportService {
                             AND UPPER(TRIM(cs.class_name)) = s.class_name
                             AND cs.semester_id = ?
                         )
-                        AND s.error_message IS NULL
                         """
                         .formatted(stagingTable), semesterId);
 
@@ -628,8 +623,7 @@ public class StagingImportService {
         jdbcTemplate
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Sinh viên chưa có hồ sơ (student profile)'
-                        WHERE s.error_message IS NULL
-                        AND EXISTS (
+                        WHERE NOT EXISTS (
                             SELECT 1 FROM users u
                             WHERE UPPER(TRIM(u.code)) = s.student_code
                             AND u.role = 'STUDENT'
@@ -642,8 +636,7 @@ public class StagingImportService {
         jdbcTemplate
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Sinh viên có hồ sơ nhưng chưa được gán ngành hoặc chuyên ngành'
-                        WHERE s.error_message IS NULL
-                        AND EXISTS (
+                        WHERE EXISTS (
                             SELECT 1 FROM users u
                             JOIN student_profiles sp ON u.id = sp.user_id
                             WHERE UPPER(TRIM(u.code)) = s.student_code
@@ -656,8 +649,7 @@ public class StagingImportService {
         jdbcTemplate
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Môn học không nằm trong chuyên ngành của sinh viên'
-                        WHERE s.error_message IS NULL
-                        AND EXISTS (
+                        WHERE EXISTS (
                             SELECT 1 FROM users u
                             JOIN student_profiles sp ON sp.user_id = u.id
                             JOIN class_sections cs ON s.class_name = UPPER(TRIM(cs.class_name)) AND cs.semester_id = ?
@@ -779,10 +771,7 @@ public class StagingImportService {
             int col = cellReferenceToColumn(cellReference);
             if (col >= 0 && col < 4) {
                 String val = formattedValue != null ? formattedValue.trim() : "";
-                // Uppercase course_code and lecturer_code, keep class_name case-sensitive
-                if (col == 1 || col == 2) {
-                    val = val.toUpperCase();
-                }
+                // Keep original case from file for staging, but comparisons will be case-insensitive
                 currentRow[col] = val;
             }
         }
@@ -867,10 +856,7 @@ public class StagingImportService {
             int col = cellReferenceToColumn(cellReference);
             if (col >= 0 && col < 2) {
                 String val = formattedValue != null ? formattedValue.trim() : "";
-                // Uppercase student_code, keep class_name case-sensitive
-                if (col == 0) {
-                    val = val.toUpperCase();
-                }
+                // Keep original case from file for staging, but comparisons will be case-insensitive
                 currentRow[col] = val;
             }
         }

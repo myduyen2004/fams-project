@@ -459,7 +459,7 @@ export const NotificationBell: React.FC = () => {
                           </p>
                           {/* Nội dung thông báo - bình thường */}
                           <div
-                            className={`text-xs line-clamp-1 ${!n.isRead ? 'text-gray-700 dark:text-gray-300' : 'text-gray-500 dark:text-gray-400'}`}
+                            className={`text-xs line-clamp-2 ${!n.isRead ? 'text-gray-700 dark:text-gray-300' : 'text-gray-500 dark:text-gray-400'}`}
                             dangerouslySetInnerHTML={{ __html: getFirstLineHtml(n.description) }}
                           />
                             <div className="flex items-center gap-2 mt-1">
