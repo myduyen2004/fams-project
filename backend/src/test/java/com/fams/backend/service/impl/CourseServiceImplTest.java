@@ -232,6 +232,9 @@ class CourseServiceImplTest {
         // Assert
         assertNotNull(result);
         verify(courseRepository).save(any(Course.class));
+    }
+
+    @Test
     @DisplayName("UTCID01 - Get Course: Success with valid ID")
     void getCourse_Success() {
         // Arrange
