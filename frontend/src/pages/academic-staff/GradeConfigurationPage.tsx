@@ -11,6 +11,7 @@ import { courseService } from '../../services/api/courseService';
 import { Course, CoursePrerequisite } from '../../types/course';
 import { ImportGradeComponentModal } from '../../components/academic-staff/ImportGradeComponentModal';
 import { PrerequisiteSelectionModal } from '../../components/academic-staff/PrerequisiteSelectionModal';
+import { sortGradeComponents } from '../../utils/gradeSortUtils';
 
 // Type colors mapping
 const typeColors: Record<string, { bg: string; text: string; label: string; bar: string }> = {
@@ -118,44 +119,16 @@ export const GradeConfigurationPage: React.FC = () => {
     const totalWeight = mainComponents.reduce((sum, c) => sum + c.weight, 0);
     const isValidConfig = Math.abs(totalWeight - 100) < 0.01;
 
-    // Calculate total weight for each type
+    // Ordered list for display using centralized sorting utility
+    const sortedComponents = sortGradeComponents(allComponents);
+
+    // Calculate total weight for each type for visualization (progress bar and legend)
     const weightByType = allComponents.reduce((acc, curr) => {
-        acc[curr.type] = (acc[curr.type] || 0) + curr.weight;
+        if (!curr.isResit) {
+            acc[curr.type] = (acc[curr.type] || 0) + curr.weight;
+        }
         return acc;
     }, {} as Record<string, number>);
-
-    // Ordered list for display: 
-    // 1. Sort types by total weight (ascending)
-    // 2. Final Exam at bottom (before Resit)
-    // 3. Resit at very bottom
-    const sortedComponents = [...allComponents].sort((a, b) => {
-        // Priority 1: Resit is always last
-        if (a.isResit !== b.isResit) return a.isResit ? 1 : -1;
-        if (a.isResit && b.isResit) return a.id - b.id; // Both are resit (shouldn't happen for 1 course usually), sort by ID
-
-        // Priority 2: Final Exam is second to last
-        const isAFinal = a.type === 'FINAL_EXAM';
-        const isBFinal = b.type === 'FINAL_EXAM';
-        if (isAFinal !== isBFinal) return isAFinal ? 1 : -1;
-        if (isAFinal && isBFinal) return a.id - b.id;
-
-        // Priority 3: Sort by Total Weight of the Type
-        const weightTotalA = weightByType[a.type] || 0;
-        const weightTotalB = weightByType[b.type] || 0;
-
-        // If weights are significantly different, sort by weight
-        if (Math.abs(weightTotalA - weightTotalB) > 0.01) {
-            return weightTotalA - weightTotalB;
-        }
-
-        // Priority 4: Group by Type (if weights are same)
-        if (a.type !== b.type) {
-            return a.type.localeCompare(b.type);
-        }
-
-        // Priority 5: Sort by ID within same type
-        return a.id - b.id;
-    });
 
     // Better sort: All components sorted by ID, but maybe keep Final Exam and Resit together?
     // User requested "Resit linked to FE". 

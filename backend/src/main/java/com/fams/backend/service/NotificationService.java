@@ -156,6 +156,36 @@ public class NotificationService {
         }
     }
 
+    /**
+     * Notify academic staff when grades are submitted for a class
+     */
+    @Transactional
+    public void notifyAcademicStaffGradesSubmitted(String className, User lecturer, com.fams.backend.entity.Course course) {
+        String title = "Điểm lớp " + className + " đã được nộp";
+        String content = String.format(
+                "Giảng viên %s đã nộp điểm cho môn %s (%s) lớp %s. Vui lòng xem xét và phê duyệt.",
+                lecturer.getFullName(),
+                course.getName(),
+                course.getCode(),
+                className);
+
+        Notification notification = Notification.builder()
+                .title(title)
+                .content(content)
+                .type(Notification.NotificationType.GRADE_PUBLISHED)
+                .targetType(Notification.TargetType.ACADEMIC_STAFF)
+                .targetUrl("/academic-staff/grades?class=" + className)
+                .sentAt(LocalDateTime.now())
+                .build();
+
+        notification = notificationRepository.save(notification);
+        
+        // Resolve and create read status for all ACADEMIC_STAFF
+        createNotificationRecipients(notification);
+        
+        log.info("Sent notification to all Academic Staff for grade submission of class {}", className);
+    }
+
     @Transactional
     public void notifyNewsPublished(News news) {
         Notification.TargetType mappedTargetType = Notification.TargetType.valueOf(news.getTargetType().name());

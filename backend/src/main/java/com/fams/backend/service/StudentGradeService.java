@@ -307,7 +307,7 @@ public class StudentGradeService {
         User submittedBy = userRepository.findById(submittedById)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Điền 0.0 cho các cột điểm trống (do GV phụ trách) trước khi chốt
+        // Check if all students have all required grades before submitting
         Course course = classSection.getCourse();
         List<Enrollment> enrollments = enrollmentRepository.findByClassSectionClassName(className);
         List<GradeComponent> editableComponents = getEditableGradeComponents(course.getId());
@@ -348,6 +348,9 @@ public class StudentGradeService {
                 .map(Enrollment::getStudent)
                 .collect(Collectors.toList());
         notificationService.notifyStudentsGradesPublished(studentsToNotify, course, "COMPONENT", submittedBy);
+
+        // --- ADDED: Send Notification to Academic Staff ---
+        notificationService.notifyAcademicStaffGradesSubmitted(className, submittedBy, course);
     }
 
     /**

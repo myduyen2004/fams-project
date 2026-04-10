@@ -12,6 +12,7 @@ import {
 import { ImportExamGradeModal } from '../../components/academic-staff/ImportExamGradeModal';
 import { StudentInfoModal } from '../../components/common/StudentInfoModal';
 import { studentGradeService } from '../../services/api/studentGradeService';
+import { sortGradeComponents } from '../../utils/gradeSortUtils';
 import toast from 'react-hot-toast';
 
 export const ResitGradeManagementPage: React.FC = () => {
@@ -283,57 +284,9 @@ export const ResitGradeManagementPage: React.FC = () => {
         return score.toFixed(1);
     };
 
-    // Định nghĩa thứ tự ưu tiên cho các loại
-    const TYPE_PRIORITY: Record<string, number> = {
-        'PARTICIPATION': 1,
-        'QUIZ': 2,
-        'PROGRESS_TEST': 3,
-        'WORKSHOP': 4,
-        'PROJECT': 5,
-        'PRESENTATION': 6,
-        'ASSIGNMENT': 7,
-        'MID_TERM': 8,
-        'PRACTICAL_EXAM': 9,
-    };
-
     const sortedGradeComponents = React.useMemo(() => {
         if (!gradeOverview?.gradeComponents) return [];
-
-        const typeTotalWeight: Record<string, number> = {};
-        gradeOverview.gradeComponents.forEach(gc => {
-            const currentTotal = typeTotalWeight[gc.type] || 0;
-            typeTotalWeight[gc.type] = currentTotal + gc.weight;
-        });
-
-        return [...gradeOverview.gradeComponents].sort((a, b) => {
-            const BOTTOM_TYPES = ['FINAL_EXAM', 'RESIT'];
-            const isABottom = BOTTOM_TYPES.includes(a.type);
-            const isBBottom = BOTTOM_TYPES.includes(b.type);
-
-            if (isABottom && !isBBottom) return 1;
-            if (!isABottom && isBBottom) return -1;
-
-            if (isABottom && isBBottom) {
-                const pMap: Record<string, number> = { 'FINAL_EXAM': 1, 'RESIT': 2 };
-                return (pMap[a.type] || 99) - (pMap[b.type] || 99);
-            }
-
-            const totalWeightA = typeTotalWeight[a.type] || 0;
-            const totalWeightB = typeTotalWeight[b.type] || 0;
-
-            if (Math.abs(totalWeightA - totalWeightB) > 0.001) {
-                return totalWeightA - totalWeightB;
-            }
-
-            const typePriorityA = TYPE_PRIORITY[a.type] || 99;
-            const typePriorityB = TYPE_PRIORITY[b.type] || 99;
-
-            if (typePriorityA !== typePriorityB) {
-                return typePriorityA - typePriorityB;
-            }
-
-            return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
-        });
+        return sortGradeComponents(gradeOverview.gradeComponents);
     }, [gradeOverview]);
 
     // Get component abbreviation
@@ -565,7 +518,7 @@ export const ResitGradeManagementPage: React.FC = () => {
                                 <button
                                     onClick={handleExport}
                                     className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-zinc-700 transition-all disabled:opacity-50"
-                                    disabled={!gradeOverview || exporting || !gradeOverview.anyGradesSubmitted}
+                                    disabled={!gradeOverview || exporting}
                                 >
                                     {exporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
                                     Xuất Excel
@@ -735,7 +688,7 @@ export const ResitGradeManagementPage: React.FC = () => {
                                                 <ShieldCheck size={18} />
                                                 <span>Đã công bố điểm</span>
                                             </div>
-                                        ) : (
+                                        ) : gradeOverview.anyGradesSubmitted && (
                                             <button
                                                 onClick={() => setShowPublishConfirm(true)}
                                                 className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-all disabled:opacity-50"

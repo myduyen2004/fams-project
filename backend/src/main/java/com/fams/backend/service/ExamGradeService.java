@@ -435,8 +435,12 @@ public class ExamGradeService {
             createCell(headerRow, colIdx++, "Họ tên", headerStyle);
             createCell(headerRow, colIdx++, "Lớp", headerStyle);
 
-            // Grade component headers
-            for (ExamGradeComponentInfo comp : overview.getGradeComponents()) {
+            // Grade component headers - ONLY EDITABLE ONES
+            List<ExamGradeComponentInfo> editableComponents = overview.getGradeComponents().stream()
+                    .filter(comp -> Boolean.TRUE.equals(comp.getIsEditable()))
+                    .collect(Collectors.toList());
+
+            for (ExamGradeComponentInfo comp : editableComponents) {
                 createCell(headerRow, colIdx++, comp.getName(), headerStyle);
             }
 
@@ -450,7 +454,7 @@ public class ExamGradeService {
                 createCell(row, colIdx++, student.getStudentName(), dataStyle);
                 createCell(row, colIdx++, student.getClassName(), dataStyle);
 
-                for (ExamGradeComponentInfo comp : overview.getGradeComponents()) {
+                for (ExamGradeComponentInfo comp : editableComponents) {
                     Double score = student.getGrades().get(comp.getId());
                     createCell(row, colIdx++, score != null ? String.format("%.1f", score) : "", dataStyle);
                 }

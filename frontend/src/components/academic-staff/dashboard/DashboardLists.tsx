@@ -116,7 +116,7 @@ export const PendingRequests: React.FC<{ stats?: any }> = ({ stats }) => {
           Yêu cầu chờ xử lý
         </h3>
         <button
-          onClick={() => navigate(activeTab === 'lecturer' ? '/academic-staff/requests' : '/academic-staff/academic-requests')}
+          onClick={() => navigate(activeTab === 'lecturer' ? '/academic-staff/requests' : '/academic-staff/requests?tab=STUDENT')}
           className="text-[11px] font-semibold text-orange-500 hover:text-orange-600 transition-colors uppercase tracking-wider"
         >
           Chi tiết
@@ -181,7 +181,7 @@ export const PendingRequests: React.FC<{ stats?: any }> = ({ stats }) => {
                   status={req.status}
                   statusLabel={req.statusLabel || 'Chờ duyệt'}
                   createdAt={req.createdAt}
-                  onClick={() => navigate('/academic-staff/requests')}
+                  onClick={() => navigate(`/academic-staff/requests/${req.id}`)}
                 />
               ))
             ) : (
@@ -195,7 +195,7 @@ export const PendingRequests: React.FC<{ stats?: any }> = ({ stats }) => {
                   status={req.status}
                   statusLabel={req.statusLabel || 'Chờ duyệt'}
                   createdAt={req.createdAt}
-                  onClick={() => navigate('/academic-staff/academic-requests')}
+                  onClick={() => navigate(`/academic-staff/student-requests/${req.id}`)}
                 />
               ))
             )}

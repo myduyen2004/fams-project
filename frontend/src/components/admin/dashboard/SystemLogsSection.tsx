@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { SystemLog } from '../../../types/dashboard';
-import { CheckCircle, Info, AlertTriangle, XCircle } from 'lucide-react';
+import { CheckCircle2, Info, AlertCircle, XCircle, ArrowRight, History } from 'lucide-react';
 
 interface SystemLogsSectionProps {
   logs: SystemLog[];
@@ -9,61 +9,89 @@ interface SystemLogsSectionProps {
 }
 
 export const SystemLogsSection: React.FC<SystemLogsSectionProps> = ({ logs, isDashboard = false }) => {
-  const getLogIcon = (type: string) => {
+  const getLogStyle = (type: string) => {
     switch (type) {
       case 'success':
-        return <CheckCircle size={16} className="text-green-500" />;
+        return {
+          icon: <CheckCircle2 size={18} className="text-emerald-500" />,
+          bg: 'bg-emerald-50/50 dark:bg-emerald-900/10',
+          border: 'border-emerald-100 dark:border-emerald-900/20'
+        };
       case 'error':
-        return <XCircle size={16} className="text-red-500" />;
+        return {
+          icon: <XCircle size={18} className="text-red-500" />,
+          bg: 'bg-red-50/50 dark:bg-red-900/10',
+          border: 'border-red-100 dark:border-red-900/20'
+        };
       case 'warning':
-        return <AlertTriangle size={16} className="text-yellow-500" />;
+        return {
+          icon: <AlertCircle size={18} className="text-amber-500" />,
+          bg: 'bg-amber-50/50 dark:bg-amber-900/10',
+          border: 'border-amber-100 dark:border-amber-900/20'
+        };
       default:
-        return <Info size={16} className="text-blue-500" />;
+        return {
+          icon: <Info size={18} className="text-blue-500" />,
+          bg: 'bg-blue-50/50 dark:bg-blue-900/10',
+          border: 'border-blue-100 dark:border-blue-900/20'
+        };
     }
   };
 
   return (
-    <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-800 h-full">
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-zinc-800 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+    <div className="bg-white dark:bg-zinc-900 rounded-[24px] shadow-sm border border-gray-100 dark:border-zinc-800 flex flex-col h-full overflow-hidden">
+      <div className="px-6 py-5 border-b border-gray-50 dark:border-zinc-800 flex items-center justify-between bg-white/50 dark:bg-zinc-900/50 backdrop-blur-xl sticky top-0 z-10">
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white tracking-tight">
           Nhật ký hệ thống
         </h3>
-        <Link to="/admin/system-logs" className="text-sm text-fpt-orange hover:text-orange-600 font-medium">
-          Xem tất cả →
+        <Link to="/admin/system-logs" className="group flex items-center gap-1.5 text-xs font-bold text-fpt-orange hover:text-orange-600 transition-colors uppercase tracking-wider">
+          Xem tất cả
+          <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
         </Link>
       </div>
 
-      <div className="p-4 space-y-3 max-h-[400px] overflow-y-auto">
+      <div className="flex-1 p-5 space-y-4 overflow-y-auto custom-scrollbar">
         {logs.length === 0 ? (
-          <p className="text-center text-gray-500 dark:text-gray-400 py-8">
-            Không có nhật ký nào
-          </p>
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-gray-50 dark:bg-zinc-800 flex items-center justify-center mb-4">
+              <History size={32} className="text-gray-300 dark:text-zinc-700" />
+            </div>
+            <p className="text-sm font-medium text-gray-500 dark:text-zinc-500">
+              Không có nhật ký nào
+            </p>
+          </div>
         ) : (
-          (isDashboard ? logs.slice(0, 6) : logs).map((log) => (
-            <div
-              key={log.id}
-              className="p-4 rounded-lg border border-gray-200 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors"
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 mt-0.5">
-                  {getLogIcon(log.type)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {log.title}
-                  </p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                    {log.description}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-                    {log.timestamp}
-                  </p>
+          (isDashboard ? logs.slice(0, 6) : logs).map((log) => {
+            const style = getLogStyle(log.type);
+            return (
+              <div
+                key={log.id}
+                className={`group p-4 rounded-2xl border ${style.border} ${style.bg} hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5`}
+              >
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 mt-0.5">
+                    {style.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight">
+                      {log.title}
+                    </p>
+                    <p className="text-xs text-gray-600 dark:text-zinc-400 mt-1.5 leading-relaxed">
+                      {log.description}
+                    </p>
+                    <div className="flex items-center gap-2 mt-3">
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest tabular-nums">
+                        {log.timestamp}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>
   );
 };
+

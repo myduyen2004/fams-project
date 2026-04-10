@@ -33,7 +33,6 @@ export const PERMISSION_ROUTE_MAP: Record<string, { path: string; label: string 
   MANAGE_SEMESTERS: { path: '/lecturer/granted/semesters', label: 'Quản lý kỳ học' },
   VIEW_SYSTEM_LOGS: { path: '/lecturer/granted/logs', label: 'Xem nhật ký hệ thống' },
   MANAGE_SCHEDULE: { path: '/lecturer/granted/schedule', label: 'Quản lý thời khóa biểu' },
-  MANAGE_NOTIFICATIONS: { path: '/lecturer/granted/notifications', label: 'Quản lý thông báo' },
 };
 
 // Academic staff path mapping (what page to actually reuse)
@@ -44,7 +43,6 @@ export const PERMISSION_ACADEMIC_PATH_MAP: Record<string, string> = {
   MANAGE_SEMESTERS: '/academic-staff/semesters',
   VIEW_SYSTEM_LOGS: '/academic-staff/logs',
   MANAGE_SCHEDULE: '/academic-staff/schedule',
-  MANAGE_NOTIFICATIONS: '/academic-staff/notification-management',
 };
 
 export const permissionService = {

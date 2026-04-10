@@ -3,6 +3,7 @@ import { StudentLayout } from '../../layouts/StudentLayout';
 import { Card } from '../../components/common/Card';
 import { BookOpen, GraduationCap, AlertCircle, Loader2, ChevronDown, Check } from 'lucide-react';
 import { studentMyGradeService, StudentCourseOption, StudentGradeDetailResponse, GradeCategory } from '../../services/api/studentMyGradeService';
+import { sortGradeCategories } from '../../utils/gradeSortUtils';
 
 interface SemesterOption {
     id: number;
@@ -155,84 +156,10 @@ export const StudentGradesPage: React.FC = () => {
         return 'FAILED';
     };
 
-    // Extract number from item name (e.g., "Assignment 1" -> 1, "Progress Test 2" -> 2)
-    const extractNumber = (name: string): number => {
-        const match = name.match(/(\d+)$/);
-        return match ? parseInt(match[1], 10) : 0;
-    };
-
-    // Sort and prepare grade categories (same logic as GradeConfigurationPage)
+    // Sort and prepare grade categories using centralized utility
     const sortedGradeCategories = useMemo(() => {
         if (!gradeData) return [];
-
-        // Calculate total weight for each category
-        const weightByCategory = gradeData.gradeCategories.reduce((acc, curr) => {
-            acc[curr.categoryName] = curr.totalWeight || 0;
-            return acc;
-        }, {} as Record<string, number>);
-
-        return [...gradeData.gradeCategories]
-            .sort((a, b) => {
-                // Priority 1: Resit is always last
-                const isAResit = a.categoryName.toLowerCase() === 'resit';
-                const isBResit = b.categoryName.toLowerCase() === 'resit';
-                if (isAResit !== isBResit) return isAResit ? 1 : -1;
-                if (isAResit && isBResit) return 0;
-
-                // Priority 2: Final Exam is second to last
-                const isAFinal = a.categoryName.toLowerCase().includes('final');
-                const isBFinal = b.categoryName.toLowerCase().includes('final');
-                if (isAFinal !== isBFinal) return isAFinal ? 1 : -1;
-                if (isAFinal && isBFinal) return 0;
-
-                // Priority 3: Sort by Total Weight of the Category (ascending)
-                const weightTotalA = weightByCategory[a.categoryName] || 0;
-                const weightTotalB = weightByCategory[b.categoryName] || 0;
-
-                if (Math.abs(weightTotalA - weightTotalB) > 0.01) {
-                    return weightTotalA - weightTotalB;
-                }
-
-                // Priority 4: Sort by Type Priority (if total weights are equal)
-                const CATEGORY_PRIORITY: Record<string, number> = {
-                    'participation': 1,
-                    'quiz': 2,
-                    'progress test': 3,
-                    'workshop': 4,
-                    'project': 5,
-                    'presentation': 6,
-                    'assignment': 7,
-                    'midterm test': 8, // Frontend mapping name
-                    'practical exam': 9,
-                };
-
-                const priorityA = CATEGORY_PRIORITY[a.categoryName.toLowerCase()] || 99;
-                const priorityB = CATEGORY_PRIORITY[b.categoryName.toLowerCase()] || 99;
-
-                if (priorityA !== priorityB) {
-                    return priorityA - priorityB;
-                }
-
-                // Priority 5: Sort alphabetically by category name
-                return a.categoryName.localeCompare(b.categoryName);
-            })
-            .map(category => ({
-                ...category,
-                items: [...category.items].sort((a, b) => {
-                    // "Total" always at the end
-                    if (a.itemName === 'Total') return 1;
-                    if (b.itemName === 'Total') return -1;
-
-                    // Sort by number in name (1, 2, 3...)
-                    const numA = extractNumber(a.itemName);
-                    const numB = extractNumber(b.itemName);
-
-                    if (numA !== numB) return numA - numB;
-
-                    // If no numbers, sort alphabetically
-                    return a.itemName.localeCompare(b.itemName);
-                })
-            }));
+        return sortGradeCategories(gradeData.gradeCategories);
     }, [gradeData]);
 
     const getSelectedSemesterName = () => {

@@ -83,24 +83,38 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({ isOpen, onClos
     });
 
     useEffect(() => {
-        if (course) {
-            formik.setValues({
-                code: course.code,
-                name: course.name,
-                description: course.description || '',
-                credits: course.credits,
-                numberOfSlots: course.numberOfSlots,
-                isCalculatedInGpa: course.isCalculatedInGpa ?? true
-            });
-            setPrerequisites(course.prerequisites || []);
-        } else {
-            formik.resetForm();
-            setPrerequisites([]);
+        const loadPrerequisites = async () => {
+            if (course?.id && isOpen) {
+                try {
+                    const data = await courseService.getPrerequisites(course.id);
+                    setPrerequisites(data);
+                } catch (error) {
+                    console.error('Failed to load prerequisites:', error);
+                    setPrerequisites(course.prerequisites || []);
+                }
+            }
+        };
+
+        if (isOpen) {
+            if (course) {
+                formik.setValues({
+                    code: course.code,
+                    name: course.name,
+                    description: course.description || '',
+                    credits: course.credits,
+                    numberOfSlots: course.numberOfSlots,
+                    isCalculatedInGpa: course.isCalculatedInGpa ?? true
+                });
+                loadPrerequisites();
+            } else {
+                formik.resetForm();
+                setPrerequisites([]);
+            }
+            setActiveTab('info');
+            setSearchQuery('');
+            setSearchResults([]);
+            setShowDropdown(false);
         }
-        setActiveTab('info');
-        setSearchQuery('');
-        setSearchResults([]);
-        setShowDropdown(false);
     }, [course, isOpen]);
 
     // Close dropdown when clicking outside
@@ -181,7 +195,7 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({ isOpen, onClos
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-lg rounded-xl bg-white shadow-xl dark:bg-zinc-900 flex flex-col max-h-[90vh]">
+            <div className="w-full max-w-lg rounded-xl bg-white shadow-xl dark:bg-zinc-900 flex flex-col min-h-[580px] max-h-[90vh]">
                 {/* Header */}
                 <div className="flex items-center justify-between border-b border-gray-100 p-4 dark:border-zinc-800 flex-shrink-0">
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -217,10 +231,10 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({ isOpen, onClos
                 )}
 
                 {/* Content */}
-                <div className="overflow-y-auto flex-1">
+                <div className="overflow-y-auto flex-1 min-h-[450px]">
                     {/* Info Tab */}
                     {activeTab === 'info' && (
-                        <form onSubmit={formik.handleSubmit} className="p-4 space-y-4">
+                        <div className="p-4 space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">Mã môn *</label>
                                 <input type="text" name="code" value={formik.values.code} onChange={formik.handleChange} onBlur={formik.handleBlur}
@@ -272,26 +286,18 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({ isOpen, onClos
                                     />
                                 </button>
                             </div>
-                            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-zinc-800">
-                                <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg dark:text-zinc-300 dark:hover:bg-zinc-800">Hủy</button>
-                                <button type="submit" disabled={loading} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-fpt-orange rounded-lg hover:bg-orange-600 disabled:opacity-50">
-                                    {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                                    {course ? 'Cập nhật' : 'Tạo mới'}
-                                </button>
-                            </div>
-                        </form>
+                        </div>
                     )}
 
-                    {/* Prerequisites Tab */}
                     {activeTab === 'prerequisites' && (
-                        <div className="p-4 space-y-4">
+                        <div className="p-4 space-y-4 flex flex-col h-full min-h-[450px]">
                             {/* Info banner */}
-                            <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-sm text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300">
+                            <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-sm text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300 flex-shrink-0">
                                 Sinh viên phải hoàn thành (pass) các môn tiên quyết trước khi đăng ký môn này.
                             </div>
 
                             {/* Search */}
-                            <div ref={searchRef} className="relative">
+                            <div ref={searchRef} className="relative flex-shrink-0">
                                 <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
                                     Tìm và thêm môn tiên quyết
                                 </label>
@@ -343,17 +349,17 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({ isOpen, onClos
                             </div>
 
                             {/* Current prerequisites list */}
-                            <div>
+                            <div className="flex-1 flex flex-col">
                                 <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-2">
                                     Danh sách môn tiên quyết ({prerequisites.length})
                                 </label>
                                 {prerequisites.length === 0 ? (
-                                    <div className="rounded-lg border-2 border-dashed border-gray-200 dark:border-zinc-700 p-6 text-center text-sm text-gray-400 dark:text-zinc-500">
-                                        <BookOpen className="mx-auto mb-2 h-8 w-8 opacity-40" />
+                                    <div className="flex-1 rounded-lg border-2 border-dashed border-gray-200 dark:border-zinc-700 p-6 flex flex-col items-center justify-center text-sm text-gray-400 dark:text-zinc-500">
+                                        <BookOpen className="mb-2 h-10 w-10 opacity-30" />
                                         Chưa có môn tiên quyết nào
                                     </div>
                                 ) : (
-                                    <div className="rounded-lg border border-gray-200 dark:border-zinc-700 overflow-hidden">
+                                    <div className="rounded-lg border border-gray-200 dark:border-zinc-700 overflow-hidden bg-white dark:bg-zinc-800/20">
                                         {prerequisites.map((prereq, index) => (
                                             <div
                                                 key={prereq.id}
@@ -382,16 +388,26 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({ isOpen, onClos
                                     </div>
                                 )}
                             </div>
-
-                            <div className="flex justify-end pt-2 border-t border-gray-100 dark:border-zinc-800">
-                                <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-white bg-fpt-orange rounded-lg hover:bg-orange-600">
-                                    Xong
-                                </button>
-                            </div>
                         </div>
                     )}
                 </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-end gap-3 border-t border-gray-100 p-4 dark:border-zinc-800 flex-shrink-0">
+                    <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg dark:text-zinc-300 dark:hover:bg-zinc-800">
+                        Hủy
+                    </button>
+                    <button
+                        type="button"
+                        onClick={activeTab === 'info' ? () => formik.handleSubmit() : onClose}
+                        disabled={loading && activeTab === 'info'}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-fpt-orange rounded-lg hover:bg-orange-600 disabled:opacity-50"
+                    >
+                        {loading && activeTab === 'info' && <Loader2 className="h-4 w-4 animate-spin" />}
+                        {activeTab === 'info' ? (course ? 'Cập nhật' : 'Tạo mới') : 'Cập nhật'}
+                    </button>
+                </div>
+                </div>
             </div>
-        </div>
     );
 };

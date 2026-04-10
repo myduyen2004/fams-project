@@ -131,11 +131,11 @@ export const AcademicStaffDashboard: React.FC = () => {
 
               <div className="space-y-4 flex-grow">
                 {data?.news && data.news.length > 0 ? (
-                  data.news.map((item, idx) => (
+                  data.news.map((item) => (
                     <div key={item.id} className="relative group/item flex gap-3">
                       <div className="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-800">
-                        <img 
-                          src={item.thumbnailImage || 'https://res.cloudinary.com/dhp7p8c8t/image/upload/v1712411514/news-placeholder_tqjz6z.png'} 
+                        <img
+                          src={item.thumbnailImage || 'https://res.cloudinary.com/dhp7p8c8t/image/upload/v1712411514/news-placeholder_tqjz6z.png'}
                           alt={item.title}
                           className="w-full h-full object-cover group-hover/item:scale-110 transition-transform duration-500"
                         />
