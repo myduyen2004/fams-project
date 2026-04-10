@@ -449,7 +449,7 @@ export const NotificationListPage: React.FC = () => {
 
                   {/* Description */}
                   <div
-                    className={`text-sm leading-relaxed line-clamp-1 ${!notification.isRead
+                    className={`text-sm leading-relaxed line-clamp-2 ${!notification.isRead
                       ? 'text-gray-700 dark:text-gray-300'
                       : 'text-gray-500 dark:text-gray-400'
                       }`}
