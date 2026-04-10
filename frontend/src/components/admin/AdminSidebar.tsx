@@ -239,7 +239,7 @@ export const AdminSidebar: React.FC = () => {
         <div className="border-t border-gray-200 dark:border-zinc-800 p-2 space-y-1">
           <button
             onClick={() => navigate('/admin/settings')}
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-fpt-orange hover:text-white transition-all duration-200 group"
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-fpt-orange dark:text-fpt-orange hover:bg-fpt-orange hover:text-white transition-all duration-200 group"
             title={!isExpanded ? 'Cài đặt' : ''}
           >
             <div className={`flex-shrink-0 transition-colors duration-200 ${location.pathname.startsWith('/admin/settings') ? 'text-white' : 'text-fpt-orange group-hover:text-white'}`}>

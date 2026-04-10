@@ -165,7 +165,9 @@ const SpecializationUpdateModal: React.FC<SpecializationUpdateModalProps> = ({ i
         initialValues: {
             code: specialization?.code || '',
             name: specialization?.name || '',
-            description: specialization?.description || ''
+            description: specialization?.description || '',
+            status: specialization?.status || 'ACTIVE',
+            majorId: specialization?.majorId
         },
         enableReinitialize: true,
         validationSchema: Yup.object({
@@ -185,11 +187,7 @@ const SpecializationUpdateModal: React.FC<SpecializationUpdateModalProps> = ({ i
         onSubmit: async (values) => {
             setIsLoading(true);
             try {
-                await specializationService.updateSpecialization(specialization.id, {
-                    ...values,
-                    majorId: specialization.majorId,
-                    status: specialization.status
-                });
+                await specializationService.updateSpecialization(specialization.id, values);
                 toast.success('Cập nhật chuyên ngành thành công');
                 onSuccess();
                 onClose();
@@ -255,6 +253,19 @@ const SpecializationUpdateModal: React.FC<SpecializationUpdateModalProps> = ({ i
                             onChange={formik.handleChange}
                             onBlur={formik.handleBlur}
                         ></textarea>
+                    </div>
+
+                    <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-zinc-300">Trạng thái <span className="text-red-500">*</span></label>
+                        <select
+                            name="status"
+                            className="w-full rounded-lg border border-gray-300 p-2.5 text-sm focus:border-fpt-orange focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                            value={formik.values.status}
+                            onChange={formik.handleChange}
+                        >
+                            <option value="ACTIVE">Đang hoạt động</option>
+                            <option value="INACTIVE">Ngừng hoạt động</option>
+                        </select>
                     </div>
 
                     <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100 dark:border-zinc-800">

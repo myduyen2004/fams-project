@@ -17,7 +17,7 @@ import {
   SystemLog
 } from '../../types/dashboard';
 import { NewsItem } from '../../types/news';
-import { Users, UserCog, CreditCard, FileText, Activity } from 'lucide-react';
+import { Users, UserCog, CreditCard, FileText, Activity, Newspaper, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useWebSocket } from '../../hooks/useWebSocket';
 
@@ -129,14 +129,14 @@ export const Dashboard: React.FC = () => {
   return (
     <AdminLayout pageTitle="Admin - Dashboard">
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
         <StatCard
           icon={Users}
           iconColor="text-blue-600"
           iconBgColor="bg-blue-100 dark:bg-blue-900/30"
           value={stats.totalStudents}
           label="Sinh viên"
-          variant="orange"
+          variant="blue"
         />
         <StatCard
           icon={UserCog}
@@ -152,7 +152,7 @@ export const Dashboard: React.FC = () => {
           iconBgColor="bg-purple-100 dark:bg-purple-900/30"
           value={stats.totalAccounts}
           label="Tài khoản"
-          variant="orange"
+          variant="purple"
         />
         <StatCard
           icon={FileText}
@@ -160,7 +160,7 @@ export const Dashboard: React.FC = () => {
           iconBgColor="bg-orange-100 dark:bg-orange-900/30"
           value={stats.totalApplications}
           label="Đơn yêu cầu"
-          variant="green"
+          variant="orange"
         />
         <StatCard
           icon={Activity}
@@ -168,12 +168,12 @@ export const Dashboard: React.FC = () => {
           iconBgColor="bg-red-100 dark:bg-red-900/30"
           value={stats.totalBehaviors}
           label="Cảnh báo"
-          variant="orange"
+          variant="red"
         />
       </div>
 
       {/* Map and Recent Access */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         {/* Vietnam Map */}
         <div className="lg:col-span-1">
           <VietnamMap />
@@ -186,19 +186,71 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Bottom Three Columns */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
         <AlertsSection alerts={alerts} isDashboard={true} />
         <NotificationsSection notifications={notifications} isDashboard={true} />
         <SystemLogsSection logs={systemLogs} isDashboard={true} />
-        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 p-4">
-          <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Tin tức</h3>
-          <div className="space-y-3">
-            {news.slice(0, 3).map(item => (
-              <button key={item.id} className="w-full text-left" onClick={() => navigate(`/news/${item.id}`)}>
-                <p className="text-sm font-medium text-gray-800 dark:text-gray-100 line-clamp-1">{item.title}</p>
-              </button>
-            ))}
-            <button className="text-sm text-fpt-orange" onClick={() => navigate('/news')}>Xem thêm</button>
+        
+        {/* News Section */}
+        <div className="bg-white dark:bg-zinc-900 rounded-[24px] shadow-sm border border-gray-100 dark:border-zinc-800 flex flex-col h-full overflow-hidden">
+          <div className="px-6 py-5 border-b border-gray-50 dark:border-zinc-800 flex items-center justify-between bg-white/50 dark:bg-zinc-900/50 backdrop-blur-xl sticky top-0 z-10">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white tracking-tight">
+              Tin tức
+            </h3>
+            <button 
+              onClick={() => navigate('/news')}
+              className="group flex items-center gap-1.5 text-xs font-bold text-fpt-orange hover:text-orange-600 transition-colors uppercase tracking-wider"
+            >
+              Xem tất cả
+              <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+            </button>
+          </div>
+
+          <div className="flex-1 p-5 space-y-5 overflow-y-auto custom-scrollbar">
+            {news.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-gray-50 dark:bg-zinc-800 flex items-center justify-center mb-4">
+                   <Newspaper size={32} className="text-gray-300 dark:text-zinc-700" />
+                </div>
+                <p className="text-sm font-medium text-gray-500 dark:text-zinc-500">
+                  Không có tin tức nào
+                </p>
+              </div>
+            ) : (
+              news.slice(0, 5).map(item => (
+                <button 
+                  key={item.id} 
+                  className="w-full text-left group" 
+                  onClick={() => navigate(`/news/${item.id}`)}
+                >
+                  <div className="rounded-[20px] overflow-hidden border border-gray-50 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:shadow-xl transition-all duration-500 transform hover:-translate-y-1">
+                    {/* News Image */}
+                    <div className="aspect-[16/9] overflow-hidden relative">
+                      <img 
+                        src={item.thumbnailImage || `https://picsum.photos/seed/${item.id}/800/450`} 
+                        alt={item.title}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                      <div className="absolute top-3 left-3 px-2 py-1 bg-white/90 dark:bg-zinc-900/90 backdrop-blur shadow-sm rounded-lg text-[10px] font-bold text-fpt-orange uppercase tracking-wider">
+                         {item.type || 'Tin tức'}
+                      </div>
+                    </div>
+                    
+                    <div className="p-4">
+                      <p className="text-sm font-bold text-gray-900 dark:text-white line-clamp-2 leading-relaxed group-hover:text-fpt-orange transition-colors">
+                        {item.title}
+                      </p>
+                      <div className="flex items-center gap-2 mt-3 text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest tabular-nums">
+                        <span>{item.publishedAt ? new Date(item.publishedAt).toLocaleDateString('vi-VN') : 'Gần đây'}</span>
+                        <span className="text-gray-200 dark:text-zinc-800">•</span>
+                        <span>{item.senderName || 'Admin'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              ))
+            )}
           </div>
         </div>
       </div>

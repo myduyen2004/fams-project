@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
-import { Video, ChevronRight, Loader2, Box, Grid3X3 } from 'lucide-react';
+import { ChevronRight, Loader2, Box, Grid3X3 } from 'lucide-react';
 import { roomService } from '../../services/api/roomService';
 import { Room } from '../../types/room';
 import toast from 'react-hot-toast';
@@ -331,9 +331,6 @@ export const RoomDetail: React.FC = () => {
                             >
                                 {is3DMode ? <Grid3X3 size={16} /> : <Box size={16} />}
                                 {is3DMode ? 'Chế độ 2D' : 'Chế độ 3D'}
-                            </button>
-                            <button className="px-4 py-2 bg-fpt-orange hover:bg-orange-600 text-white rounded-lg shadow-lg shadow-orange-500/20 text-sm font-medium transition-all flex items-center gap-2">
-                                <Video size={16} /> Phát trực tiếp
                             </button>
                         </div>
                     </div>

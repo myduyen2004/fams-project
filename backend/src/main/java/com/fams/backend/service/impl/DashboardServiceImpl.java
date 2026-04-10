@@ -27,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -184,9 +183,13 @@ public class DashboardServiceImpl implements DashboardService {
                                 .isRead(Boolean.TRUE.equals(notification.getIsRead()))
                                 .type(notification.getType())
                                 .targetUrl(notification.getTargetUrl())
-                                .senderName(notification.getSender() != null ? notification.getSender().getUsername() : null)
-                                .senderFullName(notification.getSender() != null ? notification.getSender().getFullName() : null)
-                                .senderAvatar(notification.getSender() != null ? notification.getSender().getAvatarUrl() : null)
+                                .senderName(notification.getSender() != null ? notification.getSender().getUsername()
+                                                : null)
+                                .senderFullName(notification.getSender() != null
+                                                ? notification.getSender().getFullName()
+                                                : null)
+                                .senderAvatar(notification.getSender() != null ? notification.getSender().getAvatarUrl()
+                                                : null)
                                 .attachmentUrls(notification.getAttachmentUrls() != null
                                                 ? new ArrayList<>(notification.getAttachmentUrls())
                                                 : new ArrayList<>())
@@ -213,4 +216,3 @@ public class DashboardServiceImpl implements DashboardService {
                 }
         }
 }
-

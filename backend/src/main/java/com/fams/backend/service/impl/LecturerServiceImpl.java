@@ -20,7 +20,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -46,7 +45,8 @@ public class LecturerServiceImpl implements LecturerService {
     private final SystemLogService systemLogService;
 
     private String normalizeDepartment(String dept) {
-        if (dept == null) return "";
+        if (dept == null)
+            return "";
         String normalized = dept.trim().toLowerCase();
         if (normalized.startsWith("khoa ")) {
             normalized = normalized.substring(5).trim();
@@ -60,19 +60,23 @@ public class LecturerServiceImpl implements LecturerService {
 
     private Set<String> getNormalizedValidDepartments() {
         Set<String> validNames = new HashSet<>();
-        
+
         // Add all Major names and codes
         majorRepository.findAll().forEach(m -> {
-            if (m.getName() != null) validNames.add(normalizeDepartment(m.getName()));
-            if (m.getCode() != null) validNames.add(normalizeDepartment(m.getCode()));
+            if (m.getName() != null)
+                validNames.add(normalizeDepartment(m.getName()));
+            if (m.getCode() != null)
+                validNames.add(normalizeDepartment(m.getCode()));
         });
-        
+
         // Add all Specialization names and codes
         specializationRepository.findAll().forEach(s -> {
-            if (s.getName() != null) validNames.add(normalizeDepartment(s.getName()));
-            if (s.getCode() != null) validNames.add(normalizeDepartment(s.getCode()));
+            if (s.getName() != null)
+                validNames.add(normalizeDepartment(s.getName()));
+            if (s.getCode() != null)
+                validNames.add(normalizeDepartment(s.getCode()));
         });
-        
+
         return validNames;
     }
 
@@ -690,7 +694,8 @@ public class LecturerServiceImpl implements LecturerService {
         }
         Collection<LecturerImportDTO> uniqueDtos = uniqueDtosMap.values();
 
-        log.info("Starting robust lecturer import processing for {} records (Unique: {})", dtos.size(), uniqueDtos.size());
+        log.info("Starting robust lecturer import processing for {} records (Unique: {})", dtos.size(),
+                uniqueDtos.size());
 
         // Phase 1: Pre-fetch & Cache
         List<String> codes = uniqueDtos.stream()
@@ -777,7 +782,8 @@ public class LecturerServiceImpl implements LecturerService {
                     try {
                         lecturerProfileRepository.save(profile);
                     } catch (Exception ex) {
-                        log.error("Failed to save profile for user {}: {}", profile.getUser().getCode(), ex.getMessage());
+                        log.error("Failed to save profile for user {}: {}", profile.getUser().getCode(),
+                                ex.getMessage());
                         failedCount++;
                         errors.add("Lỗi lưu dữ liệu GV " + profile.getUser().getCode() + ": " + ex.getMessage());
                     }

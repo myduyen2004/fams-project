@@ -112,88 +112,59 @@ export const AcademicStaffDashboard: React.FC = () => {
             <AnalyticalCards stats={data?.stats} />
           </div>
 
-          {/* Notifications (3/12) */}
+          {/* News (3/12) */}
           <div className="lg:col-span-3 h-full">
             <div
-              className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-zinc-800 h-full cursor-pointer hover:shadow-md transition-all duration-300 group/notif flex flex-col"
-              onClick={() => navigate('/notifications')}
+              className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-zinc-800 h-full cursor-pointer hover:shadow-md transition-all duration-300 group/news flex flex-col"
+              onClick={() => navigate('/news')}
             >
-              <div className="flex justify-between items-center mb-2">
+              <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Thông báo tự động
+                  Tin tức mới nhất
                 </h3>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate('/news');
-                    }}
-                    className="text-xs font-semibold text-fpt-orange hover:text-orange-600"
-                  >
-                    Tin tức
-                  </button>
-                  {data?.unreadNotificationsCount !== undefined && data.unreadNotificationsCount > 0 && (
-                    <span className="w-5 h-5 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full font-bold">
-                      {data.unreadNotificationsCount}
-                    </span>
-                  )}
-                </div>
+                {data?.unreadNotificationsCount !== undefined && data.unreadNotificationsCount > 0 && (
+                  <span className="px-2 h-5 bg-orange-100 text-orange-600 text-[10px] flex items-center justify-center rounded-full font-bold">
+                    {data.unreadNotificationsCount} mới
+                  </span>
+                )}
               </div>
 
-              <div className="space-y-2 flex-grow">
-                {data?.notifications && data.notifications.length > 0 ? (
-                  data.notifications.slice(0, 3).map((notif, idx) => (
-                    <div 
-                      key={notif.id || idx} 
-                      onClick={(e) => {
-                        if (notif.targetUrl) {
-                          e.stopPropagation();
-                          navigate(notif.targetUrl);
-                        }
-                      }}
-                      className={`p-3 rounded-xl border transition-all cursor-pointer ${idx === 0 ? 'bg-zinc-50/50 dark:bg-zinc-800/30 border-gray-100 dark:border-zinc-800' : 'border-transparent hover:border-gray-100 dark:hover:border-zinc-800'}`}
-                    >
-                      <h5 className="text-sm font-medium text-gray-900 dark:text-white line-clamp-1">{notif.title}</h5>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {(() => {
-                          if (!notif.timestamp) return 'Vừa xong';
-
-                          const match = notif.timestamp.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})$/);
-                          let date: Date | null = null;
-
-                          if (match) {
-                            const [_, day, month, year, hours, minutes] = match;
-                            date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes));
-                          } else {
-                            date = new Date(notif.timestamp);
-                          }
-
-                          return date && !isNaN(date.getTime())
-                            ? date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-                            : 'Vừa xong';
-                        })()}
-                      </p>
+              <div className="space-y-4 flex-grow">
+                {data?.news && data.news.length > 0 ? (
+                  data.news.map((item) => (
+                    <div key={item.id} className="relative group/item flex gap-3">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-800">
+                        <img
+                          src={item.thumbnailImage || 'https://res.cloudinary.com/dhp7p8c8t/image/upload/v1712411514/news-placeholder_tqjz6z.png'}
+                          alt={item.title}
+                          className="w-full h-full object-cover group-hover/item:scale-110 transition-transform duration-500"
+                        />
+                      </div>
+                      <div className="flex-grow min-w-0">
+                        <h5 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1 group-hover/item:text-orange-600 transition-colors">
+                          {item.title}
+                        </h5>
+                        <p className="text-[11px] text-gray-500 mt-1">
+                          {item.publishedAt ? new Date(item.publishedAt).toLocaleDateString('vi-VN') : 'Vừa xong'}
+                        </p>
+                      </div>
                     </div>
                   ))
                 ) : (
-                  <div
-                    className="py-12 text-center cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/20 rounded-xl transition-all border border-dashed border-gray-200 dark:border-zinc-800 h-full flex flex-col justify-center"
-                    onClick={() => navigate('/notifications')}
-                  >
-                    <p className="text-sm text-gray-500 font-medium">Không có thông báo mới</p>
-                    <p className="text-xs text-gray-400 mt-2">Nhấp để xem lịch sử</p>
+                  <div className="py-12 text-center rounded-xl border border-dashed border-gray-200 dark:border-zinc-800 h-full flex flex-col justify-center bg-zinc-50/50 dark:bg-zinc-800/10">
+                    <p className="text-xs text-gray-500 font-medium">Chưa có tin tức mới</p>
                   </div>
                 )}
               </div>
 
               <button
-                className="w-full mt-2 text-xs font-semibold text-gray-500 hover:text-orange-600 transition-colors"
+                className="w-full mt-4 pt-4 border-t border-gray-100 dark:border-zinc-800 text-xs font-bold text-gray-400 hover:text-orange-600 transition-colors uppercase tracking-wider"
                 onClick={(e) => {
                   e.stopPropagation();
-                  navigate('/notifications');
+                  navigate('/news');
                 }}
               >
-                Xem tất cả thông báo
+                Xem tất cả tin tức
               </button>
             </div>
           </div>
@@ -223,7 +194,7 @@ export const AcademicStaffDashboard: React.FC = () => {
         {/* Row 3: Pending Requests & System Log */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
           <div className="lg:col-span-5">
-            <PendingRequests />
+            <PendingRequests stats={data?.stats} />
           </div>
           <div className="lg:col-span-7">
             <SystemActivityLog />

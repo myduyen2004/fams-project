@@ -1,3 +1,5 @@
+import { NewsItem } from './news';
+
 export interface DashboardStats {
     totalStudents: number;
     totalUsers: number;
@@ -66,6 +68,8 @@ export interface AcademicStaffDashboardResponse {
         totalStudents: number;
         totalLecturers: number;
         totalRequests: number;
+        totalScheduleRequests?: number;
+        totalAcademicRequests?: number;
         studentStats: { name: string; value: number }[];
         lecturerStats: { name: string; value: number }[];
     };
@@ -85,6 +89,7 @@ export interface AcademicStaffDashboardResponse {
         date: string;
         status: string;
     }[];
+    news?: NewsItem[];
     notifications: AppNotification[];
     attendanceStats: {
         present: number;

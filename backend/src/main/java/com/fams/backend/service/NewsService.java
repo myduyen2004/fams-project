@@ -246,8 +246,12 @@ public class NewsService {
 
     @Transactional(readOnly = true)
     public Page<NewsResponse> getPublishedNews(int page, int size) {
+        return getPublishedNews(getCurrentUser(), page, size);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<NewsResponse> getPublishedNews(User currentUser, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "sentAt"));
-        User currentUser = getCurrentUser();
         List<News.TargetType> visibleTargets = getVisibleTargetTypes(currentUser);
 
         Specification<News> spec = (root, query, cb) -> {
@@ -300,7 +304,11 @@ public class NewsService {
 
     @Transactional(readOnly = true)
     public long getUnreadCount() {
-        User currentUser = getCurrentUser();
+        return getUnreadCount(getCurrentUser());
+    }
+
+    @Transactional(readOnly = true)
+    public long getUnreadCount(User currentUser) {
         List<News.TargetType> visibleTargets = getVisibleTargetTypes(currentUser);
 
         List<Long> visibleSentNewsIds = newsRepository.findIdsByStatusAndTargetTypeIn(News.NewsStatus.SENT, visibleTargets);

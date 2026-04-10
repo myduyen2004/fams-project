@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Bell, Check, Trash2, Clock, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { userService } from '../../services/api/userService';
 import { authService } from '../../services/api/authService';
@@ -24,6 +24,7 @@ export const NotificationBell: React.FC = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [activeTab, setActiveTab] = useState<'notifications' | 'jobs'>('notifications');
   const navigate = useNavigate();
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const user = authService.getUser();
   const role = user?.role?.toLowerCase() || 'student';
 
@@ -181,6 +182,18 @@ export const NotificationBell: React.FC = () => {
     }
   }, []);
 
+  // Click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // Sync read state when the tab regains focus (handles reads done on mobile)
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -327,7 +340,7 @@ export const NotificationBell: React.FC = () => {
   }, [notifications, unreadCount]);
 
   return (
-    <div className="relative">
+    <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setShowDropdown(!showDropdown)}
         className="relative p-2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
@@ -341,7 +354,7 @@ export const NotificationBell: React.FC = () => {
       </button>
 
       {showDropdown && (
-        <div className="absolute right-0 mt-3 w-[400px] bg-white dark:bg-zinc-900 rounded-[24px] shadow-2xl border border-gray-100 dark:border-zinc-800 z-40 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute right-0 mt-3 w-[400px] bg-white dark:bg-zinc-900 rounded-[24px] shadow-2xl border border-gray-100 dark:border-zinc-800 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
           {/* Header */}
           <div className="p-5 flex justify-between items-center bg-white dark:bg-zinc-900 border-b border-gray-100 dark:border-zinc-800">
             <h3 className="text-[20px] font-bold text-gray-900 dark:text-white">

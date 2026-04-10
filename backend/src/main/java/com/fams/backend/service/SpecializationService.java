@@ -217,9 +217,12 @@ public class SpecializationService {
                     }
                 });
 
-        if (excludeId == null && specializationRepository.existsByName(request.getName())) {
-            throw new IllegalArgumentException("Tên chuyên ngành đã tồn tại: " + request.getName());
-        }
+        specializationRepository.findByName(request.getName())
+                .ifPresent(existing -> {
+                    if (excludeId == null || !existing.getId().equals(excludeId)) {
+                        throw new IllegalArgumentException("Tên chuyên ngành đã tồn tại: " + request.getName());
+                    }
+                });
     }
 
     private SpecializationResponse convertToResponse(Specialization specialization) {

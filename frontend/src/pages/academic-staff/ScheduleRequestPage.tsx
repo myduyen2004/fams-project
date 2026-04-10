@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Loader2, Clock, CheckCircle, FileText, User } from 'lucide-react';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { academicStaffService, ScheduleRequestResponse } from '../../services/api/academicStaffService';
@@ -14,7 +14,11 @@ type RequestTab = 'LECTURER' | 'STUDENT';
 
 export const ScheduleRequestPage = () => {
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState<RequestTab>('LECTURER');
+    const location = useLocation();
+    const [activeTab, setActiveTab] = useState<RequestTab>(() => {
+        const params = new URLSearchParams(window.location.search);
+        return (params.get('tab') === 'STUDENT') ? 'STUDENT' : 'LECTURER';
+    });
     const [lecturerRequests, setLecturerRequests] = useState<ScheduleRequestResponse[]>([]);
     const [studentRequests, setStudentRequests] = useState<AcademicRequest[]>([]);
     const [loading, setLoading] = useState(true);
@@ -99,6 +103,16 @@ export const ScheduleRequestPage = () => {
     useEffect(() => {
         fetchRequests();
     }, [fetchRequests]);
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const tab = params.get('tab');
+        if (tab === 'STUDENT') {
+            setActiveTab('STUDENT');
+        } else if (tab === 'LECTURER') {
+            setActiveTab('LECTURER');
+        }
+    }, [location.search]);
 
     const handleFilterChange = (newFilters: Partial<typeof filters>) => {
         setFilters(prev => ({ ...prev, ...newFilters }));

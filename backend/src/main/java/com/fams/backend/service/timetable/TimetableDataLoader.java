@@ -2,20 +2,14 @@ package com.fams.backend.service.timetable;
 
 import com.fams.backend.entity.*;
 import com.fams.backend.repository.*;
-import com.fams.backend.service.timetable.ga.core.GeneticAlgorithm;
-import com.fams.backend.service.timetable.ga.model.Chromosome;
-import com.fams.backend.service.timetable.ga.model.GAConfig;
 import com.fams.backend.service.timetable.ga.model.TimetableData;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**

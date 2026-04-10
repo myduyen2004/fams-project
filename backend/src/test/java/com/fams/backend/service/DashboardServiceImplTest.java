@@ -8,7 +8,6 @@ import com.fams.backend.entity.Notification;
 import com.fams.backend.entity.SystemLog;
 import com.fams.backend.entity.User;
 import com.fams.backend.repository.*;
-import com.fams.backend.service.UserNotificationService;
 import com.fams.backend.service.impl.DashboardServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -97,14 +96,14 @@ class DashboardServiceImplTest {
     @Test
     void whenGetNotifications_thenReturnMappedList() {
         NotificationResponse response = NotificationResponse.builder()
-            .id(100L)
-            .title("New Message")
-            .content("Hello")
-            .type(Notification.NotificationType.SYSTEM.name())
-            .status("SENT")
-            .createdAt(LocalDateTime.now())
-            .isRead(false)
-            .build();
+                .id(100L)
+                .title("New Message")
+                .content("Hello")
+                .type(Notification.NotificationType.SYSTEM.name())
+                .status("SENT")
+                .createdAt(LocalDateTime.now())
+                .isRead(false)
+                .build();
         when(notificationService.getMyNotifications()).thenReturn(Collections.singletonList(response));
 
         // Act
