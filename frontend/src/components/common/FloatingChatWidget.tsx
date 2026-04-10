@@ -337,12 +337,13 @@ export const FloatingChatWidget: React.FC = () => {
         setIsOpen(false);
     };
 
-    // Hide chatbot on login page or if not logged in
+    // Hide chatbot on auth pages, full chatbot page, or if not logged in
     const isAuthPage = ['/login', '/forgot-password', '/change-password'].includes(location.pathname);
+    const isFullChatPage = location.pathname.startsWith('/chatbot');
     const userJson = localStorage.getItem('user');
     const isAuthenticated = !!userJson;
 
-    if (isAuthPage || !isAuthenticated) {
+    if (isAuthPage || isFullChatPage || !isAuthenticated) {
         return null;
     }
 

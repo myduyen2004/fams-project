@@ -158,6 +158,80 @@ class CourseServiceImplTest {
     }
 
     @Test
+    @DisplayName("Update Status: Course not found throws IllegalArgumentException")
+    void updateStatus_NotFound() {
+        // Arrange
+        when(courseRepository.findById(999L)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class,
+                () -> courseService.updateStatus(999L, Course.CourseStatus.INACTIVE));
+        verify(courseRepository, never()).save(any(Course.class));
+    }
+
+    @Test
+    @DisplayName("Update Status: ACTIVE to INACTIVE")
+    void updateStatus_ActiveToInactive() {
+        // Arrange
+        when(courseRepository.findById(1L)).thenReturn(Optional.of(activeCourse));
+        when(courseRepository.save(any(Course.class))).thenAnswer(i -> {
+            Course c = (Course) i.getArguments()[0];
+            assertEquals(Course.CourseStatus.INACTIVE, c.getStatus());
+            return c;
+        });
+        when(subSpecializationCourseRepository.existsByCourseId(1L)).thenReturn(false);
+
+        // Act
+        CourseResponse result = courseService.updateStatus(1L, Course.CourseStatus.INACTIVE);
+
+        // Assert
+        assertNotNull(result);
+        verify(systemLogService).logCourseStatusChanged("PRF192", "INACTIVE");
+    }
+
+    @Test
+    @DisplayName("Update Status: INACTIVE to ACTIVE")
+    void updateStatus_InactiveToActive() {
+        // Arrange
+        Course inactiveCourse = Course.builder()
+                .id(2L)
+                .code("MAE101")
+                .name("Mathematics")
+                .credits(3)
+                .numberOfSlots(30)
+                .status(Course.CourseStatus.INACTIVE)
+                .build();
+
+        when(courseRepository.findById(2L)).thenReturn(Optional.of(inactiveCourse));
+        when(courseRepository.save(any(Course.class))).thenAnswer(i -> {
+            Course c = (Course) i.getArguments()[0];
+            assertEquals(Course.CourseStatus.ACTIVE, c.getStatus());
+            return c;
+        });
+        when(subSpecializationCourseRepository.existsByCourseId(2L)).thenReturn(false);
+
+        // Act
+        CourseResponse result = courseService.updateStatus(2L, Course.CourseStatus.ACTIVE);
+
+        // Assert
+        assertNotNull(result);
+        verify(systemLogService).logCourseStatusChanged("MAE101", "ACTIVE");
+    }
+
+    @Test
+    @DisplayName("Update Status: Same status (no-op save)")
+    void updateStatus_SameStatus() {
+        // Arrange
+        when(courseRepository.findById(1L)).thenReturn(Optional.of(activeCourse));
+        when(courseRepository.save(any(Course.class))).thenReturn(activeCourse);
+        when(subSpecializationCourseRepository.existsByCourseId(1L)).thenReturn(false);
+
+        // Act
+        CourseResponse result = courseService.updateStatus(1L, Course.CourseStatus.ACTIVE);
+
+        // Assert
+        assertNotNull(result);
+        verify(courseRepository).save(any(Course.class));
     @DisplayName("UTCID01 - Get Course: Success with valid ID")
     void getCourse_Success() {
         // Arrange

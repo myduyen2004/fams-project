@@ -1,32 +1,56 @@
 package com.fams.backend.service.impl;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fams.backend.dto.request.CreateAssignmentRequest;
 import com.fams.backend.dto.request.SubmitAssignmentRequest;
+import com.fams.backend.dto.response.AssignmentPlagiarismMatchResponse;
+import com.fams.backend.dto.response.AssignmentPlagiarismResponse;
 import com.fams.backend.dto.response.AssignmentResponse;
 import com.fams.backend.dto.response.AssignmentSubmissionResponse;
+import com.fams.backend.entity.AssignmentPlagiarismCheck;
 import com.fams.backend.entity.*;
 import com.fams.backend.repository.*;
 import com.fams.backend.service.AssignmentSubmissionService;
 import com.fams.backend.service.UserNotificationService;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -36,13 +60,27 @@ import java.util.zip.ZipOutputStream;
 @Slf4j
 public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionService {
 
+    private static final String INTERNAL_PLAGIARISM_MODEL = "logistic-regression-v1";
+    private static final String PLAGIARISM_MODEL_RESOURCE = "ml/assignment-plagiarism-model.json";
+    private static final int MIN_TEXT_ANALYSIS_LENGTH = 40;
+    private static final int IMAGE_HASH_SIZE = 8;
+
     private final AssignmentRepository assignmentRepository;
+    private final AssignmentPlagiarismCheckRepository plagiarismCheckRepository;
     private final AssignmentSubmissionRepository submissionRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final UserRepository userRepository;
     private final ClassSectionRepository classSectionRepository;
     private final TimetableSlotRepository timetableSlotRepository;
     private final UserNotificationService notificationService;
+    private final ObjectMapper objectMapper;
+
+    private volatile PlagiarismModelConfig plagiarismModelConfig;
+
+    @PostConstruct
+    void loadPlagiarismModelOnStartup() {
+        this.plagiarismModelConfig = loadPlagiarismModelConfig();
+    }
 
     @Override
     public AssignmentResponse createAssignment(CreateAssignmentRequest request, Long lecturerId) {
@@ -702,9 +740,731 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
         }
     }
 
+    @Override
+    @Transactional
+    public AssignmentPlagiarismResponse checkSubmissionPlagiarism(Long assignmentId, Long submissionId, Long lecturerId) {
+        Assignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new RuntimeException("Bài tập không tồn tại: " + assignmentId));
+
+        ClassSection classSection = assignment.getClassSection();
+        if (!classSection.getLecturer().getId().equals(lecturerId)) {
+            throw new RuntimeException("Bạn không phải giảng viên của lớp này");
+        }
+
+        AssignmentSubmission targetSubmission = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new RuntimeException("Bài nộp không tồn tại: " + submissionId));
+
+        if (!targetSubmission.getAssignment().getId().equals(assignmentId)) {
+            throw new RuntimeException("Bài nộp không thuộc bài tập này");
+        }
+
+        if (targetSubmission.getStatus() != AssignmentSubmission.SubmissionStatus.SUBMITTED) {
+            throw new RuntimeException("Chỉ có thể kiểm tra đạo văn cho bài đã nộp");
+        }
+
+        Long courseId = classSection.getCourse().getId();
+        String courseCode = classSection.getCourse().getCode();
+
+        List<AssignmentSubmission> candidates = submissionRepository.findSubmittedByCourseId(courseId).stream()
+                .filter(sub -> !sub.getId().equals(submissionId))
+                .toList();
+
+        HttpClient httpClient = HttpClient.newHttpClient();
+        Map<Long, SubmissionArtifactFeatures> artifactCache = new HashMap<>();
+
+        List<AssignmentPlagiarismMatchResponse> topMatches = candidates.stream()
+                .map(candidate -> toPlagiarismMatch(targetSubmission, candidate, httpClient, artifactCache))
+                .sorted(Comparator.comparing(AssignmentPlagiarismMatchResponse::getPlagiarismPercent).reversed())
+                .limit(5)
+                .toList();
+
+        SubmissionArtifactFeatures targetArtifacts = getSubmissionArtifacts(targetSubmission, httpClient, artifactCache);
+
+        AssignmentPlagiarismMatchResponse strongest = topMatches.isEmpty() ? null : topMatches.get(0);
+        int plagiarismPercent = strongest != null ? strongest.getPlagiarismPercent() : 0;
+        int originalityPercent = Math.max(0, 100 - plagiarismPercent);
+        double probability = strongest != null ? safeDouble(strongest.getProbability()) : 0.0d;
+
+        AssignmentPlagiarismResponse response = AssignmentPlagiarismResponse.builder()
+                .assignmentId(assignment.getId())
+                .submissionId(targetSubmission.getId())
+                .assignmentTitle(assignment.getTitle())
+                .className(classSection.getClassName())
+                .courseCode(classSection.getCourse().getCode())
+                .courseName(classSection.getCourse().getName())
+                .studentCode(targetSubmission.getStudent().getCode())
+                .studentName(targetSubmission.getStudent().getFullName())
+                .scope("internal-course:" + courseCode)
+                .model(getPlagiarismModelConfig().getModelName())
+                .strategy("text + image + metadata features -> logistic regression decision (course scope)")
+                .plagiarismPercent(plagiarismPercent)
+                .originalityPercent(originalityPercent)
+                .probability(round4(probability))
+                .plagiarized(probability >= getPlagiarismModelConfig().getThreshold())
+                .comparedSubmissionCount(candidates.size())
+                .textScore(strongest != null ? safeDouble(strongest.getTextScore()) : 0.0d)
+                .imageScore(strongest != null ? safeDouble(strongest.getImageScore()) : 0.0d)
+                .metadataScore(strongest != null ? safeDouble(strongest.getMetadataScore()) : 0.0d)
+                .fileNameScore(strongest != null ? safeDouble(strongest.getFileNameScore()) : 0.0d)
+                .keySignals(strongest != null
+                        ? strongest.getSharedSignals()
+                        : List.of("Không tìm thấy bài tương tự trong cùng môn học"))
+                .topMatches(topMatches)
+                .build();
+
+        persistPlagiarismCheckLogs(
+                assignmentId,
+                lecturerId,
+                response,
+                targetArtifacts,
+                topMatches,
+                artifactCache
+        );
+
+        return response;
+    }
+
     private String sanitizeFileName(String name) {
         if (name == null)
             return "unknown";
         return name.replaceAll("[\\\\/:*?\"<>|]", "_").trim();
+    }
+
+    private AssignmentPlagiarismMatchResponse toPlagiarismMatch(
+            AssignmentSubmission target,
+            AssignmentSubmission candidate,
+            HttpClient httpClient,
+            Map<Long, SubmissionArtifactFeatures> artifactCache) {
+        SubmissionArtifactFeatures targetArtifacts = getSubmissionArtifacts(target, httpClient, artifactCache);
+        SubmissionArtifactFeatures candidateArtifacts = getSubmissionArtifacts(candidate, httpClient, artifactCache);
+
+        double textScore = computeTextScore(targetArtifacts.analysisText(), candidateArtifacts.analysisText());
+        double fileNameScore = computeFileNameScore(targetArtifacts.fileNames(), candidateArtifacts.fileNames());
+        double imageScore = computeImageScore(targetArtifacts.imageHashes(), candidateArtifacts.imageHashes());
+        double metadataScore = computeMetadataScore(target, candidate, targetArtifacts.fileNames(), candidateArtifacts.fileNames());
+
+        PlagiarismModelConfig config = getPlagiarismModelConfig();
+        double probability = sigmoid(
+                config.getBias()
+                        + config.weight("textScore", 3.05d) * textScore
+                        + config.weight("fileNameScore", 1.35d) * fileNameScore
+                        + config.weight("imageScore", 1.10d) * imageScore
+                        + config.weight("metadataScore", 1.40d) * metadataScore
+        );
+
+        return AssignmentPlagiarismMatchResponse.builder()
+                .submissionId(candidate.getId())
+                .studentCode(candidate.getStudent().getCode())
+                .studentName(candidate.getStudent().getFullName())
+                .plagiarismPercent(clampPercent(probability * 100d))
+                .probability(round4(probability))
+                .textScore(round4(textScore))
+                .imageScore(round4(imageScore))
+                .metadataScore(round4(metadataScore))
+                .fileNameScore(round4(fileNameScore))
+                .submittedAt(candidate.getSubmittedAt())
+                .notePreview(trimPreview(candidateArtifacts.previewText()))
+                .fileNames(candidateArtifacts.fileNames())
+                .sharedSignals(buildSharedSignals(target, candidate, textScore, imageScore, metadataScore, fileNameScore))
+                .build();
+    }
+
+    private double computeTextScore(String left, String right) {
+        if (left.isBlank() || right.isBlank()) {
+            return 0.0d;
+        }
+
+        String normalizedLeft = normalizeText(left);
+        String normalizedRight = normalizeText(right);
+        if (normalizedLeft.isBlank() || normalizedRight.isBlank()) {
+            return 0.0d;
+        }
+        if (normalizedLeft.equals(normalizedRight)) {
+            return 1.0d;
+        }
+
+        double chunkScore = computeChunkOverlapScore(normalizedLeft, normalizedRight);
+        double tokenScore = jaccardSimilarity(tokenize(normalizedLeft), tokenize(normalizedRight));
+        double sequenceScore = sequenceSimilarity(normalizedLeft, normalizedRight);
+        double containmentScore = containmentSimilarity(normalizedLeft, normalizedRight);
+        return round4(Math.max(chunkScore, Math.max(sequenceScore, Math.max(tokenScore, containmentScore))));
+    }
+
+    private double computeFileNameScore(List<String> leftFiles, List<String> rightFiles) {
+        if (leftFiles.isEmpty() || rightFiles.isEmpty()) {
+            return 0.0d;
+        }
+
+        Set<String> left = leftFiles.stream()
+                .map(this::normalizeText)
+                .filter(value -> !value.isBlank())
+                .collect(java.util.stream.Collectors.toSet());
+        Set<String> right = rightFiles.stream()
+                .map(this::normalizeText)
+                .filter(value -> !value.isBlank())
+                .collect(java.util.stream.Collectors.toSet());
+
+        return round4(jaccardSimilarity(left, right));
+    }
+
+    private double computeImageScore(List<ImageHashSignature> leftHashes, List<ImageHashSignature> rightHashes) {
+        if (leftHashes.isEmpty() || rightHashes.isEmpty()) {
+            return 0.0d;
+        }
+
+        double best = 0.0d;
+        for (ImageHashSignature left : leftHashes) {
+            for (ImageHashSignature right : rightHashes) {
+                int maxDistance = IMAGE_HASH_SIZE * IMAGE_HASH_SIZE;
+                int distance = Long.bitCount(left.hash() ^ right.hash());
+                double similarity = 1.0d - ((double) distance / (double) maxDistance);
+                best = Math.max(best, similarity);
+            }
+        }
+
+        return round4(Math.max(0.0d, best));
+    }
+
+    private double computeMetadataScore(
+            AssignmentSubmission target,
+            AssignmentSubmission candidate,
+            List<String> targetFiles,
+            List<String> candidateFiles) {
+        double score = 0.0d;
+
+        if (!targetFiles.isEmpty() && !candidateFiles.isEmpty() && targetFiles.size() == candidateFiles.size()) {
+            score += 0.35d;
+        }
+
+        if (target.getSubmittedAt() != null && candidate.getSubmittedAt() != null) {
+            long minuteGap = Math.abs(ChronoUnit.MINUTES.between(target.getSubmittedAt(), candidate.getSubmittedAt()));
+            if (minuteGap <= 10) {
+                score += 0.40d;
+            } else if (minuteGap <= 30) {
+                score += 0.22d;
+            } else if (minuteGap <= 120) {
+                score += 0.10d;
+            }
+        }
+
+        if (!safeText(target.getNote()).isBlank()
+                && safeText(target.getNote()).equalsIgnoreCase(safeText(candidate.getNote()))) {
+            score += 0.25d;
+        }
+
+        return round4(Math.min(1.0d, score));
+    }
+
+    private List<String> buildSharedSignals(
+            AssignmentSubmission target,
+            AssignmentSubmission candidate,
+            double textScore,
+            double imageScore,
+            double metadataScore,
+            double fileNameScore) {
+        Set<String> signals = new LinkedHashSet<>();
+
+        if (textScore >= 0.85d) {
+            signals.add("Ghi chú bài làm gần như trùng khớp");
+        } else if (textScore >= 0.60d) {
+            signals.add("Ghi chú bài làm có mức tương đồng cao");
+        }
+
+        if (fileNameScore >= 0.80d) {
+            signals.add("Tên file đính kèm trùng hoặc rất giống");
+        }
+
+        if (imageScore >= 0.80d) {
+            signals.add("File hình ảnh đính kèm có tín hiệu trùng");
+        }
+
+        if (metadataScore >= 0.55d) {
+            signals.add("Metadata nộp bài gần nhau bất thường");
+        }
+
+        if (target.getSubmittedAt() != null && candidate.getSubmittedAt() != null) {
+            long minuteGap = Math.abs(ChronoUnit.MINUTES.between(target.getSubmittedAt(), candidate.getSubmittedAt()));
+            if (minuteGap <= 10) {
+                signals.add("Thời điểm nộp cách nhau dưới 10 phút");
+            }
+        }
+
+        if (signals.isEmpty()) {
+            signals.add("Phát hiện tín hiệu tương đồng nhẹ trong cùng môn học");
+        }
+
+        return new ArrayList<>(signals);
+    }
+
+    private List<String> splitTriplePipe(String value) {
+        if (value == null || value.isBlank()) {
+            return List.of();
+        }
+        return Arrays.stream(value.split("\\|\\|\\|"))
+                .map(String::trim)
+                .filter(part -> !part.isBlank())
+                .toList();
+    }
+
+    private String safeText(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private double safeDouble(Double value) {
+        return value == null ? 0.0d : value;
+    }
+
+    private String normalizeText(String value) {
+        return safeText(value)
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("https?://\\S+", " ")
+                .replaceAll("[^\\p{L}\\p{Nd}\\s]", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
+    private double computeChunkOverlapScore(String left, String right) {
+        List<String> leftChunks = chunkText(left, 80, 20);
+        List<String> rightChunks = chunkText(right, 80, 20);
+        if (leftChunks.isEmpty() || rightChunks.isEmpty()) {
+            return 0.0d;
+        }
+
+        double total = 0.0d;
+        for (String leftChunk : leftChunks) {
+            double best = 0.0d;
+            Set<String> leftTokens = tokenize(leftChunk);
+            for (String rightChunk : rightChunks) {
+                best = Math.max(best, jaccardSimilarity(leftTokens, tokenize(rightChunk)));
+            }
+            total += best;
+        }
+
+        return total / (double) leftChunks.size();
+    }
+
+    private List<String> chunkText(String text, int chunkWords, int overlapWords) {
+        String[] words = text.split("\\s+");
+        if (words.length == 0 || text.isBlank()) {
+            return List.of();
+        }
+
+        List<String> chunks = new ArrayList<>();
+        int start = 0;
+        while (start < words.length) {
+            int end = Math.min(words.length, start + chunkWords);
+            chunks.add(String.join(" ", Arrays.copyOfRange(words, start, end)));
+            if (end == words.length) {
+                break;
+            }
+            start = Math.max(start + 1, end - overlapWords);
+        }
+        return chunks;
+    }
+
+    private Set<String> tokenize(String value) {
+        if (value.isBlank()) {
+            return Set.of();
+        }
+        return Arrays.stream(value.split("\\s+"))
+                .filter(token -> token.length() > 1)
+                .collect(java.util.stream.Collectors.toSet());
+    }
+
+    private double jaccardSimilarity(Set<String> left, Set<String> right) {
+        if (left.isEmpty() || right.isEmpty()) {
+            return 0.0d;
+        }
+
+        Set<String> intersection = new java.util.HashSet<>(left);
+        intersection.retainAll(right);
+        Set<String> union = new java.util.HashSet<>(left);
+        union.addAll(right);
+
+        if (union.isEmpty()) {
+            return 0.0d;
+        }
+
+        return (double) intersection.size() / (double) union.size();
+    }
+
+    private double containmentSimilarity(String left, String right) {
+        if (left.isBlank() || right.isBlank()) {
+            return 0.0d;
+        }
+
+        if (left.contains(right) || right.contains(left)) {
+            int shorter = Math.min(left.length(), right.length());
+            int longer = Math.max(left.length(), right.length());
+            return longer == 0 ? 0.0d : (double) shorter / (double) longer;
+        }
+
+        return 0.0d;
+    }
+
+    private double sequenceSimilarity(String left, String right) {
+        if (left.isBlank() || right.isBlank()) {
+            return 0.0d;
+        }
+
+        int longest = longestCommonSubstring(left, right);
+        int denominator = Math.max(left.length(), right.length());
+        return denominator == 0 ? 0.0d : (double) longest / (double) denominator;
+    }
+
+    private int longestCommonSubstring(String left, String right) {
+        int[][] table = new int[left.length() + 1][right.length() + 1];
+        int best = 0;
+
+        for (int i = 1; i <= left.length(); i++) {
+            for (int j = 1; j <= right.length(); j++) {
+                if (left.charAt(i - 1) == right.charAt(j - 1)) {
+                    table[i][j] = table[i - 1][j - 1] + 1;
+                    best = Math.max(best, table[i][j]);
+                }
+            }
+        }
+
+        return best;
+    }
+
+    private double sigmoid(double value) {
+        return 1.0d / (1.0d + Math.exp(-value));
+    }
+
+    private int clampPercent(double value) {
+        return Math.max(0, Math.min(100, (int) Math.round(value)));
+    }
+
+    private double round4(double value) {
+        return Math.round(value * 10000.0d) / 10000.0d;
+    }
+
+    private String trimPreview(String value) {
+        String compact = safeText(value).replaceAll("\\s+", " ");
+        if (compact.length() <= 180) {
+            return compact;
+        }
+        return compact.substring(0, 180) + "...";
+    }
+
+    private void persistPlagiarismCheckLogs(
+            Long assignmentId,
+            Long lecturerId,
+            AssignmentPlagiarismResponse response,
+            SubmissionArtifactFeatures targetArtifacts,
+            List<AssignmentPlagiarismMatchResponse> topMatches,
+            Map<Long, SubmissionArtifactFeatures> artifactCache) {
+        try {
+            List<AssignmentPlagiarismCheck> logs = new ArrayList<>();
+
+            if (topMatches.isEmpty()) {
+                logs.add(AssignmentPlagiarismCheck.builder()
+                        .assignmentId(assignmentId)
+                        .targetSubmissionId(response.getSubmissionId())
+                        .checkerLecturerId(lecturerId)
+                        .scope(response.getScope())
+                        .modelName(response.getModel())
+                        .strategy(response.getStrategy())
+                        .textScore(response.getTextScore())
+                        .imageScore(response.getImageScore())
+                        .metadataScore(response.getMetadataScore())
+                        .fileNameScore(response.getFileNameScore())
+                        .probability(response.getProbability())
+                        .plagiarismPercent(response.getPlagiarismPercent())
+                        .plagiarized(response.getPlagiarized())
+                        .targetTextLength(targetArtifacts.analysisText().length())
+                        .comparedTextLength(0)
+                        .contentBased(true)
+                        .build());
+            } else {
+                for (AssignmentPlagiarismMatchResponse match : topMatches) {
+                    SubmissionArtifactFeatures comparedArtifacts = artifactCache.get(match.getSubmissionId());
+                    logs.add(AssignmentPlagiarismCheck.builder()
+                            .assignmentId(assignmentId)
+                            .targetSubmissionId(response.getSubmissionId())
+                            .comparedSubmissionId(match.getSubmissionId())
+                            .checkerLecturerId(lecturerId)
+                            .scope(response.getScope())
+                            .modelName(response.getModel())
+                            .strategy(response.getStrategy())
+                            .textScore(match.getTextScore())
+                            .imageScore(match.getImageScore())
+                            .metadataScore(match.getMetadataScore())
+                            .fileNameScore(match.getFileNameScore())
+                            .probability(match.getProbability())
+                            .plagiarismPercent(match.getPlagiarismPercent())
+                            .plagiarized(match.getProbability() != null && match.getProbability() >= getPlagiarismModelConfig().getThreshold())
+                            .targetTextLength(targetArtifacts.analysisText().length())
+                            .comparedTextLength(comparedArtifacts != null ? comparedArtifacts.analysisText().length() : 0)
+                            .contentBased(true)
+                            .build());
+                }
+            }
+
+            plagiarismCheckRepository.saveAll(logs);
+        } catch (Exception e) {
+            log.warn("Failed to persist plagiarism audit logs for submission {}: {}", response.getSubmissionId(), e.getMessage());
+        }
+    }
+
+    private SubmissionArtifactFeatures getSubmissionArtifacts(
+            AssignmentSubmission submission,
+            HttpClient httpClient,
+            Map<Long, SubmissionArtifactFeatures> cache) {
+        return cache.computeIfAbsent(submission.getId(), ignored -> extractSubmissionArtifacts(submission, httpClient));
+    }
+
+    private SubmissionArtifactFeatures extractSubmissionArtifacts(AssignmentSubmission submission, HttpClient httpClient) {
+        List<String> fileUrls = splitTriplePipe(submission.getFileUrl());
+        List<String> fileNames = splitTriplePipe(submission.getFileName());
+        List<String> textParts = new ArrayList<>();
+        List<ImageHashSignature> imageHashes = new ArrayList<>();
+
+        if (!safeText(submission.getNote()).isBlank()) {
+            textParts.add(safeText(submission.getNote()));
+        }
+
+        for (int index = 0; index < fileUrls.size(); index++) {
+            String url = fileUrls.get(index);
+            String fileName = index < fileNames.size() ? fileNames.get(index) : "file_" + (index + 1);
+
+            try {
+                byte[] bytes = downloadFileBytes(httpClient, url);
+                String extractedText = extractTextFromFile(fileName, bytes);
+                if (!extractedText.isBlank()) {
+                    textParts.add(extractedText);
+                }
+
+                ImageHashSignature imageHash = extractImageHash(fileName, bytes);
+                if (imageHash != null) {
+                    imageHashes.add(imageHash);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to extract plagiarism artifacts from file {} of submission {}: {}",
+                        fileName, submission.getId(), e.getMessage());
+            }
+        }
+
+        String analysisText = textParts.stream()
+                .map(this::safeText)
+                .filter(part -> !part.isBlank())
+                .collect(java.util.stream.Collectors.joining("\n"));
+
+        return new SubmissionArtifactFeatures(
+                analysisText,
+                trimPreview(analysisText.isBlank() ? safeText(submission.getNote()) : analysisText),
+                fileNames,
+                imageHashes
+        );
+    }
+
+    private byte[] downloadFileBytes(HttpClient httpClient, String url) throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .GET()
+                .build();
+        HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new IOException("Download failed with status " + response.statusCode());
+        }
+        return response.body();
+    }
+
+    private String extractTextFromFile(String fileName, byte[] bytes) {
+        String lower = fileName.toLowerCase(Locale.ROOT);
+
+        if (lower.endsWith(".txt") || lower.endsWith(".md") || lower.endsWith(".csv") || lower.endsWith(".json")) {
+            return new String(bytes, StandardCharsets.UTF_8);
+        }
+
+        if (lower.endsWith(".pdf")) {
+            return extractPdfText(bytes);
+        }
+
+        if (lower.endsWith(".docx")) {
+            return extractDocxText(bytes);
+        }
+
+        return "";
+    }
+
+    private String extractPdfText(byte[] bytes) {
+        try (PDDocument document = Loader.loadPDF(bytes)) {
+            PDFTextStripper stripper = new PDFTextStripper();
+            return stripper.getText(document);
+        } catch (IOException e) {
+            log.warn("Failed to extract PDF text: {}", e.getMessage());
+            return "";
+        }
+    }
+
+    private String extractDocxText(byte[] bytes) {
+        try (XWPFDocument document = new XWPFDocument(new ByteArrayInputStream(bytes))) {
+            StringBuilder builder = new StringBuilder();
+            document.getParagraphs().forEach(paragraph -> {
+                if (paragraph != null && paragraph.getText() != null) {
+                    builder.append(paragraph.getText()).append('\n');
+                }
+            });
+            return builder.toString();
+        } catch (IOException e) {
+            log.warn("Failed to extract DOCX text: {}", e.getMessage());
+            return "";
+        }
+    }
+
+    private ImageHashSignature extractImageHash(String fileName, byte[] bytes) {
+        String lower = fileName.toLowerCase(Locale.ROOT);
+        if (!(lower.endsWith(".png")
+                || lower.endsWith(".jpg")
+                || lower.endsWith(".jpeg")
+                || lower.endsWith(".webp")
+                || lower.endsWith(".gif"))) {
+            return null;
+        }
+
+        try {
+            BufferedImage image = ImageIO.read(new ByteArrayInputStream(bytes));
+            if (image == null) {
+                return null;
+            }
+
+            BufferedImage resized = new BufferedImage(IMAGE_HASH_SIZE, IMAGE_HASH_SIZE, BufferedImage.TYPE_BYTE_GRAY);
+            resized.getGraphics().drawImage(image, 0, 0, IMAGE_HASH_SIZE, IMAGE_HASH_SIZE, null);
+
+            int[] pixels = new int[IMAGE_HASH_SIZE * IMAGE_HASH_SIZE];
+            long total = 0L;
+            int index = 0;
+            for (int y = 0; y < IMAGE_HASH_SIZE; y++) {
+                for (int x = 0; x < IMAGE_HASH_SIZE; x++) {
+                    int pixel = resized.getRGB(x, y) & 0xFF;
+                    pixels[index++] = pixel;
+                    total += pixel;
+                }
+            }
+
+            double average = total / (double) pixels.length;
+            long hash = 0L;
+            for (int i = 0; i < pixels.length; i++) {
+                if (pixels[i] >= average) {
+                    hash |= (1L << i);
+                }
+            }
+
+            return new ImageHashSignature(fileName, hash);
+        } catch (IOException e) {
+            log.warn("Failed to compute image hash for {}: {}", fileName, e.getMessage());
+            return null;
+        }
+    }
+
+    private PlagiarismModelConfig getPlagiarismModelConfig() {
+        if (plagiarismModelConfig == null) {
+            plagiarismModelConfig = loadPlagiarismModelConfig();
+        }
+        return plagiarismModelConfig;
+    }
+
+    private record SubmissionArtifactFeatures(
+            String analysisText,
+            String previewText,
+            List<String> fileNames,
+            List<ImageHashSignature> imageHashes) {
+    }
+
+    private record ImageHashSignature(String fileName, long hash) {
+    }
+
+    private PlagiarismModelConfig loadPlagiarismModelConfig() {
+        ClassPathResource resource = new ClassPathResource(PLAGIARISM_MODEL_RESOURCE);
+        if (!resource.exists()) {
+            log.warn("Plagiarism model resource not found at {}, using fallback weights", PLAGIARISM_MODEL_RESOURCE);
+            return PlagiarismModelConfig.fallback();
+        }
+
+        try (InputStream inputStream = resource.getInputStream()) {
+            PlagiarismModelConfig loaded = objectMapper.readValue(inputStream, PlagiarismModelConfig.class);
+            loaded.applyDefaults();
+            log.info("Loaded plagiarism model config: {}", loaded.getModelName());
+            return loaded;
+        } catch (IOException e) {
+            log.error("Failed to load plagiarism model config, falling back to defaults", e);
+            return PlagiarismModelConfig.fallback();
+        }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private static class PlagiarismModelConfig {
+        private String modelName;
+        private Double threshold;
+        private Double bias;
+        private java.util.Map<String, Double> weights;
+
+        public static PlagiarismModelConfig fallback() {
+            PlagiarismModelConfig config = new PlagiarismModelConfig();
+            config.modelName = INTERNAL_PLAGIARISM_MODEL;
+            config.threshold = 0.5d;
+            config.bias = -2.85d;
+            config.weights = new java.util.HashMap<>();
+            config.weights.put("textScore", 3.05d);
+            config.weights.put("fileNameScore", 1.35d);
+            config.weights.put("imageScore", 1.10d);
+            config.weights.put("metadataScore", 1.40d);
+            return config;
+        }
+
+        public void applyDefaults() {
+            PlagiarismModelConfig fallback = fallback();
+            if (modelName == null || modelName.isBlank()) {
+                modelName = fallback.modelName;
+            }
+            if (threshold == null) {
+                threshold = fallback.threshold;
+            }
+            if (bias == null) {
+                bias = fallback.bias;
+            }
+            if (weights == null) {
+                weights = fallback.weights;
+            } else {
+                fallback.weights.forEach(weights::putIfAbsent);
+            }
+        }
+
+        public String getModelName() {
+            return modelName;
+        }
+
+        public double getThreshold() {
+            return threshold == null ? 0.5d : threshold;
+        }
+
+        public double getBias() {
+            return bias == null ? -2.85d : bias;
+        }
+
+        public double weight(String key, double fallback) {
+            if (weights == null) {
+                return fallback;
+            }
+            return weights.getOrDefault(key, fallback);
+        }
+
+        public void setModelName(String modelName) {
+            this.modelName = modelName;
+        }
+
+        public void setThreshold(Double threshold) {
+            this.threshold = threshold;
+        }
+
+        public void setBias(Double bias) {
+            this.bias = bias;
+        }
+
+        public void setWeights(java.util.Map<String, Double> weights) {
+            this.weights = weights;
+        }
     }
 }

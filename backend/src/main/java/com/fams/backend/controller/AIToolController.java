@@ -9,6 +9,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin/ai-tools")
@@ -57,5 +58,15 @@ public class AIToolController {
     @PostMapping("/{id}/test")
     public ResponseEntity<AIToolTest> runTest(@PathVariable Long id, @RequestBody(required = false) java.util.Map<String, Object> params) {
         return ResponseEntity.ok(aiToolService.runTest(id, params));
+    }
+
+    @GetMapping("/knowledge-source")
+    public ResponseEntity<Map<String, Object>> getFptuKnowledgeSource() {
+        return ResponseEntity.ok(aiToolService.getFptuKnowledgeSource());
+    }
+
+    @PutMapping("/knowledge-source")
+    public ResponseEntity<Map<String, Object>> updateFptuKnowledgeSource(@RequestBody Map<String, Object> payload) {
+        return ResponseEntity.ok(aiToolService.updateFptuKnowledgeSource(String.valueOf(payload.getOrDefault("content", ""))));
     }
 }

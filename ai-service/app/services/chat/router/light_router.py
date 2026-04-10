@@ -39,13 +39,10 @@ _ROUTE_CACHE_LOCK = threading.Lock()
 
 _CACHEABLE_INTENTS = {"navigation", "general_chat", "permission_denied", "need_clarification", "tool_locked"}
 _TIME_KEYWORDS = {"hôm nay", "ngày mai", "tuần này", "tuần tới", "tuần sau", "tháng này", "hom nay", "tuan nay", "tuan sau"}
-_AI_ONLY_TOOLS = {"general_offtopic_chat"}
+_AI_ONLY_TOOLS = {"general_offtopic_chat", "fpt_tool", "fptu_knowledge_lookup"}
 _RUNTIME_EXTRA_TOOLS = {
     "general_offtopic_chat": "Trả lời câu hỏi ngoài lề bằng AI",
-    "get_absence_rate_by_class": "Thống kê tỉ lệ vắng mặt tổng quan của một lớp",
-    "get_my_attendance_overview": "Tổng quan điểm danh cá nhân của sinh viên",
-    "get_my_absence_history": "Lịch sử vắng học gần đây của sinh viên",
-    "get_my_attendance_risk_courses": "Môn học có nguy cơ rớt do vắng từ 3 buổi trở lên",
+    "fpt_tool": "Tra cứu tri thức FPTU từ file nội bộ cho các nhóm EOS/SEB, OJT, Global Program, học phí, campus, career, guideline và quy định",
 }
 
 _TOOL_GROUP_PRIORITY = [

@@ -6,16 +6,23 @@ import com.fams.backend.entity.AITool;
 import com.fams.backend.entity.AIToolTest;
 import com.fams.backend.repository.AIToolRepository;
 import com.fams.backend.repository.AIToolTestRepository;
+import com.fams.backend.service.AIToolInventory;
 import com.fams.backend.service.AIToolService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -40,18 +47,23 @@ public class AIToolServiceImpl implements AIToolService {
 
     @Override
     public List<AITool> getAllTools() {
-        return aiToolRepository.findAllByOrderByNameAsc();
+        return aiToolRepository.findAllByOrderByNameAsc().stream()
+                .filter(tool -> AIToolInventory.isManagedTool(tool.getName()))
+                .collect(Collectors.toList());
     }
 
     @Override
     public AITool getToolById(Long id) {
-        return aiToolRepository.findById(id)
+        AITool tool = aiToolRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("AI Tool not found with id: " + id));
+        ensureManagedTool(tool);
+        return tool;
     }
 
     @Override
     @Transactional
     public AITool createTool(AITool tool) {
+        validateManagedToolName(tool.getName());
         AITool savedTool = aiToolRepository.save(tool);
         reloadAiToolRegistry();
         return savedTool;
@@ -61,6 +73,7 @@ public class AIToolServiceImpl implements AIToolService {
     @Transactional
     public AITool updateTool(Long id, AITool toolDetails) {
         AITool tool = getToolById(id);
+        validateManagedToolName(toolDetails.getName());
         tool.setName(toolDetails.getName());
         tool.setType(toolDetails.getType());
         tool.setDescription(toolDetails.getDescription());
@@ -78,9 +91,8 @@ public class AIToolServiceImpl implements AIToolService {
     @Override
     @Transactional
     public void deleteTool(Long id) {
-        AITool tool = getToolById(id);
-        aiToolRepository.delete(tool);
-        reloadAiToolRegistry();
+        getToolById(id);
+        throw new RuntimeException("Core AI tools are fixed and cannot be deleted from tool management.");
     }
 
     @Override
@@ -148,5 +160,48 @@ public class AIToolServiceImpl implements AIToolService {
         }
         
         return testResult;
+    }
+
+    @Override
+    public Map<String, Object> getFptuKnowledgeSource() {
+        String knowledgeUrl = aiServiceBaseUrl + "/api/chat/admin/fptu-knowledge";
+        try {
+            Map response = restTemplate.getForObject(knowledgeUrl, Map.class);
+            return response != null ? response : Map.of("success", false, "message", "No response from AI service");
+        } catch (Exception e) {
+            log.warn("Failed to load FPTU knowledge source: {}", e.getMessage());
+            return Map.of("success", false, "message", "Failed to load FPTU knowledge source: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public Map<String, Object> updateFptuKnowledgeSource(String content) {
+        String knowledgeUrl = aiServiceBaseUrl + "/api/chat/admin/fptu-knowledge";
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("content", content);
+
+        try {
+            ResponseEntity<Map> responseEntity = restTemplate.exchange(
+                    knowledgeUrl,
+                    HttpMethod.PUT,
+                    new HttpEntity<>(payload),
+                    Map.class
+            );
+            Map body = responseEntity.getBody();
+            return body != null ? body : Map.of("success", false, "message", "No response from AI service");
+        } catch (Exception e) {
+            log.warn("Failed to update FPTU knowledge source: {}", e.getMessage());
+            return Map.of("success", false, "message", "Failed to update FPTU knowledge source: " + e.getMessage());
+        }
+    }
+
+    private void validateManagedToolName(String toolName) {
+        if (!AIToolInventory.isManagedTool(toolName)) {
+            throw new RuntimeException("Tool is outside the approved core inventory: " + toolName);
+        }
+    }
+
+    private void ensureManagedTool(AITool tool) {
+        validateManagedToolName(tool.getName());
     }
 }

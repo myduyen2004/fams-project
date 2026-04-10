@@ -142,6 +142,9 @@ class ChatController extends GetxController {
     // Update group's last message
     final groupIdx = groups.indexWhere((g) => g.id == groupId);
     if (groupIdx != -1) {
+      final shouldIncreaseUnread =
+          selectedGroup.value?.id != groupId && !msg.isOwn;
+
       groups[groupIdx] = ChatGroup(
         id: groups[groupIdx].id,
         name: groups[groupIdx].name,
@@ -160,7 +163,9 @@ class ChatController extends GetxController {
         members: groups[groupIdx].members,
         unreadCount: selectedGroup.value?.id == groupId
             ? 0
-            : groups[groupIdx].unreadCount + 1,
+            : shouldIncreaseUnread
+            ? groups[groupIdx].unreadCount + 1
+            : groups[groupIdx].unreadCount,
         firstUnreadMessageId: groups[groupIdx].firstUnreadMessageId,
       );
       groups.refresh();
@@ -337,25 +342,32 @@ class ChatController extends GetxController {
     typingUsers.clear();
     replyingTo.value = null;
 
-    // Ensure WebSocket is connected before subscribing
+    await loadMessages(group.id);
+    _triggerMarkAsRead(group.id);
+
     if (!_wsService.isConnected) {
       try {
         await _wsService.connect(
-          onConnected: () => _subscribeToNewGroup(group),
+          onConnected: () {
+            if (selectedGroup.value?.id == group.id) {
+              _subscribeToTyping(group.id);
+            }
+          },
           onError: (err) => debugPrint('Retry connect error: $err'),
         );
       } catch (e) {
         debugPrint('Could not connect to WebSocket: $e');
-        return; // Don't try to subscribe if connect failed
       }
     } else {
-      _subscribeToNewGroup(group);
+      _subscribeToTyping(group.id);
     }
   }
 
-  void _subscribeToNewGroup(ChatGroup group) async {
-    // Subscribe to typing for this group
-    _wsService.subscribeToTyping(group.id, (data) {
+  void _subscribeToTyping(int groupId) {
+    _wsService.unsubscribeFromTyping(groupId);
+
+    // Subscribe to typing for the currently opened group
+    _wsService.subscribeToTyping(groupId, (data) {
       final senderName = data['senderName'] as String? ?? '';
       final senderId = data['senderId'];
       if (senderId != _currentUserId && senderName.isNotEmpty) {
@@ -369,9 +381,6 @@ class ChatController extends GetxController {
         });
       }
     });
-
-    await loadMessages(group.id);
-    _triggerMarkAsRead(group.id);
   }
 
   void clearSelectedGroup() {
@@ -424,8 +433,9 @@ class ChatController extends GetxController {
     isLoadingMessages.value = true;
     try {
       final result = await _chatService.getMessages(groupId);
-      // API returns newest first; maintain this order and set identity
-      messages.assignAll(result.map((m) => _setOwnFlag(m)).toList());
+      // Backend returns oldest -> newest. Mobile UI uses reverse ListView,
+      // so keep the in-memory list newest -> oldest.
+      messages.assignAll(result.reversed.map((m) => _setOwnFlag(m)).toList());
     } catch (e) {
       debugPrint('Failed to load messages: $e');
     } finally {

@@ -304,6 +304,8 @@ class HardRouter:
             if class_match:
                 entities["class_name"] = class_match.group(1).upper()
                 entities["target_type"] = "CLASS"
+            elif re.search(r"(lớp tôi đang giảng dạy|lop toi dang giang day|lớp tôi dạy|lop toi day)", msg_lower):
+                entities["target_type"] = "CLASS"
             elif "toàn trường" in msg_lower:
                 entities["target_type"] = "ALL"
             elif re.search(r"(toàn thể|toàn bộ).*(học sinh|sinh viên)|(?:học sinh|sinh viên).*(toàn thể|toàn bộ)", msg_lower):
@@ -325,7 +327,7 @@ class HardRouter:
                 entities["content"] = content_match.group(1).strip().rstrip(".")
             else:
                 fallback = re.sub(
-                    r"^\s*(gửi|gởi|tao|tạo|đăng)\s+thông báo\s*",
+                    r"^\s*(gửi|gởi|tao|tạo|đăng)\s+(?:một\s+)?thông báo(?:\s+mới)?\s*",
                     "",
                     message,
                     count=1,
@@ -347,9 +349,16 @@ class HardRouter:
                         fallback,
                         count=1,
                         flags=re.IGNORECASE,
-                    )
+                )
                 fallback = fallback.strip(" .:-")
-                if fallback:
+                generic_boilerplate = re.fullmatch(
+                    r"(?:một\s+)?thông báo(?:\s+mới)?(?:\s+cho\s+lớp\s+tôi\s+đang\s+giảng\s+dạy|"
+                    r"\s+cho\s+lop\s+toi\s+dang\s+giang\s+day)?|"
+                    r"(?:lớp\s+tôi\s+đang\s+giảng\s+dạy|lop\s+toi\s+dang\s+giang\s+day)",
+                    fallback,
+                    re.IGNORECASE,
+                )
+                if fallback and not generic_boilerplate:
                     entities["content"] = fallback
 
             return IntentResult(

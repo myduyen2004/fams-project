@@ -2,6 +2,7 @@ import time
 from typing import Dict, List, Set, Tuple
 from loguru import logger # type: ignore
 from app.services.chat.db.pool import db_pool
+from app.services.chat.router.core_tool_inventory import allowed_roles_for_tool, is_kept_tool
 
 _REMOVED_CHATBOT_TOOLS: Set[str] = {
     "delete_user",
@@ -69,6 +70,11 @@ class ToolsLoader:
                         new_inactive_tools.add(name)
                         continue
 
+                    if not is_kept_tool(name):
+                        new_tool_status[name] = False
+                        new_inactive_tools.add(name)
+                        continue
+
                     new_tool_status[name] = is_active
                     if is_active:
                         new_active_tools.add(name)
@@ -103,11 +109,12 @@ class ToolsLoader:
                         
                     new_all_tools_formatted[name] = f"{prefix}{desc}{entities_str}"
                     
-                    if roles:
-                        role_list = [r.strip() for r in roles.split(',')]
-                        for r in role_list:
-                            if r in new_role_tools:
-                                new_role_tools[r].add(name)
+                    role_list = sorted(allowed_roles_for_tool(name))
+                    if not role_list and roles:
+                        role_list = [r.strip() for r in roles.split(',') if r.strip()]
+                    for r in role_list:
+                        if r in new_role_tools:
+                            new_role_tools[r].add(name)
 
                 self.templates.clear()
                 self.templates.update(new_templates)

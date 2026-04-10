@@ -1,0 +1,19 @@
+{
+  "modelName": "logistic-regression-v1",
+  "threshold": 0.5,
+  "bias": -2.85,
+  "weights": {
+    "textScore": 3.05,
+    "fileNameScore": 1.35,
+    "imageScore": 1.1,
+    "metadataScore": 1.4
+  },
+  "featureOrder": [
+    "textScore",
+    "fileNameScore",
+    "imageScore",
+    "metadataScore"
+  ],
+  "trainedAt": "2026-04-09T00:00:00",
+  "source": "bootstrap-default"
+}

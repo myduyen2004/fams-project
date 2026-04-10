@@ -1,0 +1,77 @@
+package com.fams.backend.service;
+
+import java.util.Set;
+
+public final class AIToolInventory {
+
+    private static final Set<String> CORE_TOOLS = Set.of(
+            "activate_user",
+            "count_unread_notifications",
+            "count_users_by_role",
+            "create_notification",
+            "create_schedule_request",
+            "create_user",
+            "excel_query",
+            "fpt_tool",
+            "fptu_knowledge_lookup",
+            "get_active_semester",
+            "get_abnormal_attendance",
+            "get_all_rooms_today",
+            "get_attendance_by_slot",
+            "get_attendance_by_slot_number",
+            "get_attendance_report_by_student",
+            "get_attendance_stats_by_class",
+            "get_available_slots_for_room",
+            "get_class_info",
+            "get_class_schedule",
+            "get_classes_by_semester",
+            "get_classmates",
+            "get_consecutive_absences",
+            "get_courses_by_name",
+            "get_courses_by_spec",
+            "get_courses_by_sub_spec",
+            "get_detail_course_grade",
+            "get_empty_rooms",
+            "get_enrollments_by_class",
+            "get_full_grade_sheet",
+            "get_grade_components_by_course",
+            "get_lecturer_workload",
+            "get_lecturers_by_expertise",
+            "get_lecturers_by_major",
+            "get_major_id_by_name",
+            "get_my_attendance_status",
+            "get_my_notifications",
+            "get_other_lecturer_schedule",
+            "get_other_student_schedule",
+            "get_own_grades",
+            "get_own_schedule",
+            "get_room_usage_weekly",
+            "get_semester_overview",
+            "get_slots_by_date",
+            "get_specializations_by_major",
+            "get_student_academic_standing",
+            "get_student_by_code",
+            "get_students_at_risk",
+            "get_students_by_class",
+            "get_students_by_major",
+            "get_sub_specializations",
+            "get_top_students",
+            "get_user_by_code",
+            "list_majors",
+            "list_notifications",
+            "list_semesters",
+            "send_email",
+            "update_attendance_manually",
+            "update_user"
+    );
+
+    private AIToolInventory() {
+    }
+
+    public static boolean isManagedTool(String toolName) {
+        if (toolName == null || toolName.isBlank()) {
+            return false;
+        }
+        return toolName.startsWith("view_") || CORE_TOOLS.contains(toolName);
+    }
+}
