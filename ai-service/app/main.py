@@ -15,6 +15,10 @@ import json
 from loguru import logger
 from app.services.chat.services.chatbot_service import ChatbotService
 from app.services.chat.services.evaluator_service import evaluator_service
+from app.services.chat.services.fptu_knowledge import (
+    get_knowledge_path,
+    reload_fptu_knowledge_cache,
+)
 
 load_dotenv()
 
@@ -295,6 +299,66 @@ def reload_tools():
         })
     except Exception as e:
         logger.error(f"Error reloading tools: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/chat/admin/fptu-knowledge', methods=['GET'])
+def get_fptu_knowledge():
+    try:
+        knowledge_path = get_knowledge_path()
+        content = knowledge_path.read_text(encoding='utf-8')
+        parsed = json.loads(content)
+        return jsonify({
+            'success': True,
+            'filename': knowledge_path.name,
+            'path': str(knowledge_path),
+            'content': content,
+            'size': len(content.encode('utf-8')),
+            'summary': {
+                'title': parsed.get('title'),
+                'version': parsed.get('version'),
+                'pillarCount': len(parsed.get('pillars') or []),
+            },
+        })
+    except Exception as e:
+        logger.error(f"Error loading FPTU knowledge file: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/chat/admin/fptu-knowledge', methods=['PUT'])
+def update_fptu_knowledge():
+    data = request.json or {}
+    content = data.get('content')
+    if not isinstance(content, str) or not content.strip():
+        return jsonify({'success': False, 'message': 'content is required'}), 400
+
+    try:
+        parsed = json.loads(content)
+    except json.JSONDecodeError as e:
+        return jsonify({
+            'success': False,
+            'message': f'JSON không hợp lệ: {e.msg} tại dòng {e.lineno}, cột {e.colno}',
+        }), 400
+
+    try:
+        knowledge_path = get_knowledge_path()
+        formatted = json.dumps(parsed, ensure_ascii=False, indent=2) + "\n"
+        knowledge_path.write_text(formatted, encoding='utf-8')
+        reload_fptu_knowledge_cache()
+        return jsonify({
+            'success': True,
+            'filename': knowledge_path.name,
+            'path': str(knowledge_path),
+            'content': formatted,
+            'size': len(formatted.encode('utf-8')),
+            'summary': {
+                'title': parsed.get('title'),
+                'version': parsed.get('version'),
+                'pillarCount': len(parsed.get('pillars') or []),
+            },
+        })
+    except Exception as e:
+        logger.error(f"Error updating FPTU knowledge file: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 

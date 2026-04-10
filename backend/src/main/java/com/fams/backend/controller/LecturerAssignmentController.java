@@ -2,6 +2,7 @@ package com.fams.backend.controller;
 
 import com.fams.backend.dto.request.CreateAssignmentRequest;
 import com.fams.backend.dto.request.UpdateAssignmentRequest;
+import com.fams.backend.dto.response.AssignmentPlagiarismResponse;
 import com.fams.backend.dto.response.AssignmentResponse;
 import com.fams.backend.dto.response.AssignmentSubmissionResponse;
 import com.fams.backend.entity.User;
@@ -118,6 +119,17 @@ public class LecturerAssignmentController {
             @PathVariable Long id) {
         List<AssignmentSubmissionResponse> submissions = assignmentSubmissionService.getAllStudentSubmissionStatus(id);
         return ResponseEntity.ok(submissions);
+    }
+
+    @GetMapping("/{assignmentId}/submissions/{submissionId}/plagiarism")
+    public ResponseEntity<AssignmentPlagiarismResponse> checkSubmissionPlagiarism(
+            @PathVariable Long assignmentId,
+            @PathVariable Long submissionId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long lecturerId = getUserId(userDetails);
+        AssignmentPlagiarismResponse response = assignmentSubmissionService
+                .checkSubmissionPlagiarism(assignmentId, submissionId, lecturerId);
+        return ResponseEntity.ok(response);
     }
 
     /**

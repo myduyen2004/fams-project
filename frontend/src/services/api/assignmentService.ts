@@ -64,6 +64,47 @@ export interface SubmitAssignmentRequest {
     note?: string;
 }
 
+export interface AssignmentPlagiarismMatchDTO {
+    submissionId: number;
+    studentCode: string;
+    studentName: string;
+    plagiarismPercent: number;
+    probability: number;
+    textScore: number;
+    imageScore: number;
+    metadataScore: number;
+    fileNameScore: number;
+    submittedAt?: string;
+    notePreview?: string;
+    fileNames?: string[];
+    sharedSignals: string[];
+}
+
+export interface AssignmentPlagiarismDTO {
+    assignmentId: number;
+    submissionId: number;
+    assignmentTitle: string;
+    className: string;
+    courseCode: string;
+    courseName: string;
+    studentCode: string;
+    studentName: string;
+    scope: string;
+    model: string;
+    strategy: string;
+    plagiarismPercent: number;
+    originalityPercent: number;
+    probability: number;
+    plagiarized: boolean;
+    comparedSubmissionCount: number;
+    textScore: number;
+    imageScore: number;
+    metadataScore: number;
+    fileNameScore: number;
+    keySignals: string[];
+    topMatches: AssignmentPlagiarismMatchDTO[];
+}
+
 export const assignmentService = {
     // === Lecturer APIs ===
 
@@ -113,6 +154,13 @@ export const assignmentService = {
     // Giảng viên nhận xét bài nộp
     updateLecturerComment: async (submissionId: number, comment: string): Promise<AssignmentSubmissionDTO> => {
         const response = await apiClient.put<AssignmentSubmissionDTO>(`/v1/lecturer/assignments/submissions/${submissionId}/comment`, { comment });
+        return response.data;
+    },
+
+    checkSubmissionPlagiarism: async (assignmentId: number, submissionId: number): Promise<AssignmentPlagiarismDTO> => {
+        const response = await apiClient.get<AssignmentPlagiarismDTO>(
+            `/v1/lecturer/assignments/${assignmentId}/submissions/${submissionId}/plagiarism`
+        );
         return response.data;
     },
 

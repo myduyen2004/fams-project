@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Search,
   Database,
   CheckCircle2,
   Edit2,
-  Trash2,
   ChevronRight,
   AlertCircle,
   X,
@@ -22,7 +22,7 @@ import {
   Activity
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { aiToolService, AITool, AIToolTest } from '../../services/api/aiToolService';
+import { aiToolService, AITool, AIToolTest, KnowledgeSourcePayload } from '../../services/api/aiToolService';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 
 export const AIToolManagement: React.FC = () => {
@@ -53,9 +53,14 @@ export const AIToolManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'PARAMS' | 'BODY' | 'CONSOLE'>('PARAMS');
   const [testLogs, setTestLogs] = useState<string>('');
   const [latency, setLatency] = useState<number | null>(null);
+  const [knowledgeSource, setKnowledgeSource] = useState<KnowledgeSourcePayload | null>(null);
+  const [knowledgeContent, setKnowledgeContent] = useState('');
+  const [knowledgeLoading, setKnowledgeLoading] = useState(true);
+  const [knowledgeSaving, setKnowledgeSaving] = useState(false);
 
   useEffect(() => {
     fetchTools();
+    fetchKnowledgeSource();
   }, []);
 
   const fetchTools = async () => {
@@ -81,14 +86,34 @@ export const AIToolManagement: React.FC = () => {
     }
   };
 
-  const handleDeleteTool = async (id: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa tool này?')) return;
+  const fetchKnowledgeSource = async () => {
+    setKnowledgeLoading(true);
     try {
-      await aiToolService.deleteTool(id);
-      toast.success('Đã xóa tool thành công');
-      fetchTools();
+      const data = await aiToolService.getKnowledgeSource();
+      setKnowledgeSource(data);
+      setKnowledgeContent(data.content || '');
     } catch (error) {
-      toast.error('Xóa tool thất bại');
+      toast.error('Không thể tải nguồn tri thức FPTU');
+      console.error(error);
+    } finally {
+      setKnowledgeLoading(false);
+    }
+  };
+
+  const handleSaveKnowledgeSource = async () => {
+    setKnowledgeSaving(true);
+    try {
+      const data = await aiToolService.updateKnowledgeSource(knowledgeContent);
+      if (!data.success) {
+        throw new Error(data.message || 'Không thể lưu nguồn tri thức');
+      }
+      setKnowledgeSource(data);
+      setKnowledgeContent(data.content || knowledgeContent);
+      toast.success('Đã cập nhật fptu-information.json');
+    } catch (error: any) {
+      toast.error(error?.message || 'Lưu nguồn tri thức thất bại');
+    } finally {
+      setKnowledgeSaving(false);
     }
   };
 
@@ -290,6 +315,82 @@ export const AIToolManagement: React.FC = () => {
           </div>
         </div>
 
+
+
+        {/* <div className="bg-white rounded-[24px] shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100/80 p-6 space-y-5">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-[11px] font-bold uppercase tracking-widest">
+                <Database size={14} />
+                Nguồn Tri Thức FPTU
+              </div>
+              <h2 className="text-[20px] font-bold text-slate-900">Quản lý `fptu-information.json` cho `fpt_tool`</h2>
+              <p className="text-[13px] text-slate-500 max-w-3xl">
+                Admin có thể cập nhật trực tiếp handbook tri thức mà `fpt_tool` và `fptu_knowledge_lookup` dùng để trả lời cho sinh viên và giảng viên.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={fetchKnowledgeSource}
+                disabled={knowledgeLoading || knowledgeSaving}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-[12px] font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+              >
+                {knowledgeLoading ? 'Đang tải...' : 'Tải lại'}
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveKnowledgeSource}
+                disabled={knowledgeLoading || knowledgeSaving || !knowledgeContent.trim()}
+                className="px-4 py-2 rounded-xl bg-[#F47021] text-white text-[12px] font-bold hover:bg-[#d85f18] disabled:opacity-60"
+              >
+                {knowledgeSaving ? 'Đang lưu...' : 'Lưu JSON'}
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+              <div className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Tệp nguồn</div>
+              <div className="text-[14px] font-bold text-slate-800 mt-2">{knowledgeSource?.filename || 'fptu-information.json'}</div>
+            </div>
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+              <div className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Phiên bản</div>
+              <div className="text-[14px] font-bold text-slate-800 mt-2">{knowledgeSource?.summary?.version || '-'}</div>
+            </div>
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+              <div className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Số Pillar</div>
+              <div className="text-[14px] font-bold text-slate-800 mt-2">{knowledgeSource?.summary?.pillarCount ?? '-'}</div>
+            </div>
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+              <div className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Dung lượng</div>
+              <div className="text-[14px] font-bold text-slate-800 mt-2">{knowledgeSource?.size ? `${knowledgeSource.size.toLocaleString()} bytes` : '-'}</div>
+            </div>
+          </div>
+
+          {knowledgeSource?.path && (
+            <div className="text-[12px] text-slate-500 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3">
+              Đường dẫn nguồn: <span className="font-semibold text-slate-700">{knowledgeSource.path}</span>
+            </div>
+          )}
+
+          <textarea
+            value={knowledgeContent}
+            onChange={(e) => setKnowledgeContent(e.target.value)}
+            rows={18}
+            spellCheck={false}
+            placeholder="JSON handbook cho fpt_tool..."
+            className="w-full rounded-[18px] border border-slate-200 bg-slate-950 text-slate-100 px-4 py-4 font-mono text-[12px] leading-6 outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-[#F47021]"
+          />
+
+          <div className="flex items-start gap-3 rounded-2xl bg-blue-50 border border-blue-100 px-4 py-3 text-[13px] text-blue-900">
+            <Info size={16} className="mt-0.5 shrink-0" />
+            <div>
+              `fpt_tool` và `fptu_knowledge_lookup` sẽ đọc nội dung mới ngay sau khi lưu. Backend quản lý tool giờ cũng cho phép admin nhìn thấy và chỉnh cấu hình các tool tri thức này trong cùng màn hình.
+            </div>
+          </div>
+        </div> */}
+
         {/* Data Table */}
         <div className="bg-white rounded-[24px] shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100/80 overflow-hidden flex flex-col">
           <div className="overflow-x-auto">
@@ -411,13 +512,6 @@ export const AIToolManagement: React.FC = () => {
                           >
                             <Edit2 size={16} />
                           </button>
-                          <button
-                            onClick={() => handleDeleteTool(tool.id!)}
-                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Xóa công cụ"
-                          >
-                            <Trash2 size={16} />
-                          </button>
                         </div>
                       </div>
                     </td>
@@ -427,10 +521,79 @@ export const AIToolManagement: React.FC = () => {
             </table>
           </div>
         </div>
+        <div className="bg-white rounded-[24px] shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100/80 p-6 space-y-5">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-[11px] font-bold uppercase tracking-widest">
+                <Database size={14} />
+                Nguồn Tri Thức FPTU
+              </div>
+              <h2 className="text-[20px] font-bold text-slate-900">Quản lý `fptu-information.json` cho `fpt_tool`</h2>
+              <p className="text-[13px] text-slate-500 max-w-3xl">
+                Admin có thể cập nhật trực tiếp handbook tri thức mà `fpt_tool` và `fptu_knowledge_lookup` dùng để trả lời cho sinh viên và giảng viên.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={fetchKnowledgeSource}
+                disabled={knowledgeLoading || knowledgeSaving}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-[12px] font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+              >
+                {knowledgeLoading ? 'Đang tải...' : 'Tải lại'}
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveKnowledgeSource}
+                disabled={knowledgeLoading || knowledgeSaving || !knowledgeContent.trim()}
+                className="px-4 py-2 rounded-xl bg-[#F47021] text-white text-[12px] font-bold hover:bg-[#d85f18] disabled:opacity-60"
+              >
+                {knowledgeSaving ? 'Đang lưu...' : 'Lưu JSON'}
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+              <div className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Tệp nguồn</div>
+              <div className="text-[14px] font-bold text-slate-800 mt-2">{knowledgeSource?.filename || 'fptu-information.json'}</div>
+            </div>
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+              <div className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Phiên bản</div>
+              <div className="text-[14px] font-bold text-slate-800 mt-2">{knowledgeSource?.summary?.version || '-'}</div>
+            </div>
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+              <div className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Số Pillar</div>
+              <div className="text-[14px] font-bold text-slate-800 mt-2">{knowledgeSource?.summary?.pillarCount ?? '-'}</div>
+            </div>
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+              <div className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Dung lượng</div>
+              <div className="text-[14px] font-bold text-slate-800 mt-2">{knowledgeSource?.size ? `${knowledgeSource.size.toLocaleString()} bytes` : '-'}</div>
+            </div>
+          </div>
+
+
+
+          <textarea
+            value={knowledgeContent}
+            onChange={(e) => setKnowledgeContent(e.target.value)}
+            rows={18}
+            spellCheck={false}
+            placeholder="JSON handbook cho fpt_tool..."
+            className="w-full rounded-[18px] border border-slate-200 bg-slate-950 text-slate-100 px-4 py-4 font-mono text-[12px] leading-6 outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-[#F47021]"
+          />
+
+          <div className="flex items-start gap-3 rounded-2xl bg-blue-50 border border-blue-100 px-4 py-3 text-[13px] text-blue-900">
+            <Info size={16} className="mt-0.5 shrink-0" />
+            <div>
+              `fpt_tool` và `fptu_knowledge_lookup` sẽ đọc nội dung mới ngay sau khi lưu. Backend quản lý tool giờ cũng cho phép admin nhìn thấy và chỉnh cấu hình các tool tri thức này trong cùng màn hình.
+            </div>
+          </div>
+        </div>
 
         {/* Create/Edit Modal */}
         {isModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
             <div className="bg-white w-full max-w-2xl rounded-[24px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
               <form onSubmit={handleSave} className="flex flex-col max-h-[90vh]">
                 <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
@@ -455,13 +618,12 @@ export const AIToolManagement: React.FC = () => {
                     <div className="space-y-2">
                       <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1">Định danh Tool <span className="text-red-500">*</span></label>
                       <input
-                        required
                         type="text"
                         value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        placeholder="vd: get_user_info"
-                        className="w-full bg-white border border-gray-200 rounded-[14px] px-4 py-3.5 focus:border-[#F47021] focus:ring-4 focus:ring-orange-500/10 outline-none transition-all font-semibold text-[14px] text-slate-800"
+                        readOnly
+                        className="w-full bg-slate-50 border border-slate-200 rounded-[14px] px-4 py-3.5 outline-none font-semibold text-[14px] text-slate-700"
                       />
+                      <p className="text-[11px] text-slate-400 pl-1">Tên tool là inventory cố định, không chỉnh sửa tại UI.</p>
                     </div>
 
                     <div className="space-y-2">
@@ -484,32 +646,32 @@ export const AIToolManagement: React.FC = () => {
                     />
                   </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1 flex justify-between">
-                          Tham số bắt buộc
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.requiredFields}
-                          onChange={(e) => setFormData({ ...formData, requiredFields: e.target.value })}
-                          placeholder="vd: student_code, class_name"
-                          className="w-full bg-white border border-gray-200 rounded-[14px] px-4 py-3.5 focus:border-[#F47021] focus:ring-4 focus:ring-orange-500/10 outline-none transition-all font-semibold text-[14px] text-slate-800"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1 flex justify-between">
-                          Tham số đầu ra bắt buộc
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.requiredRespFields}
-                          onChange={(e) => setFormData({ ...formData, requiredRespFields: e.target.value })}
-                          placeholder="vd: student_name, status"
-                          className="w-full bg-white border border-gray-200 rounded-[14px] px-4 py-3.5 focus:border-[#F47021] focus:ring-4 focus:ring-orange-500/10 outline-none transition-all font-semibold text-[14px] text-slate-800"
-                        />
-                      </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1 flex justify-between">
+                        Tham số bắt buộc
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.requiredFields}
+                        onChange={(e) => setFormData({ ...formData, requiredFields: e.target.value })}
+                        placeholder="vd: student_code, class_name"
+                        className="w-full bg-white border border-gray-200 rounded-[14px] px-4 py-3.5 focus:border-[#F47021] focus:ring-4 focus:ring-orange-500/10 outline-none transition-all font-semibold text-[14px] text-slate-800"
+                      />
                     </div>
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest pl-1 flex justify-between">
+                        Tham số đầu ra bắt buộc
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.requiredRespFields}
+                        onChange={(e) => setFormData({ ...formData, requiredRespFields: e.target.value })}
+                        placeholder="vd: student_name, status"
+                        className="w-full bg-white border border-gray-200 rounded-[14px] px-4 py-3.5 focus:border-[#F47021] focus:ring-4 focus:ring-orange-500/10 outline-none transition-all font-semibold text-[14px] text-slate-800"
+                      />
+                    </div>
+                  </div>
 
                   <div className="flex items-center justify-between bg-slate-50 rounded-[16px] p-5 border border-slate-100">
                     <div className="flex-1 w-full max-w-[200px] space-y-3">
@@ -565,8 +727,9 @@ export const AIToolManagement: React.FC = () => {
         )}
 
         {/* Test Module Modal */}
-        {isTestModalOpen && testingTool && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/30 backdrop-blur-sm animate-in fade-in duration-300">
+        {isTestModalOpen && testingTool && createPortal((
+          <div className="fixed inset-0 z-[9999] bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
+            <div className="flex min-h-screen items-center justify-center p-4">
             <div className="bg-white w-full max-w-5xl rounded-[24px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-gray-100 flex flex-col max-h-[90vh]">
 
               <div className="px-6 py-5 bg-white border-b border-gray-100 flex items-center justify-between shrink-0">
@@ -807,8 +970,9 @@ export const AIToolManagement: React.FC = () => {
               </div>
 
             </div>
+            </div>
           </div>
-        )}
+        ), document.body)}
       </div>
     </AdminLayout>
   );

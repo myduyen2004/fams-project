@@ -24,7 +24,11 @@ import pandas as pd # type: ignore
 from loguru import logger # type: ignore
 
 from app.services.chat.router.hard_router import hard_router, IntentResult
+from app.services.chat.router.core_tool_inventory import is_kept_tool
 from app.services.chat.router.light_router import light_router
+from app.services.chat.router.ml_intent_classifier import ml_intent_classifier
+from app.services.chat.router.query_preprocessor import query_preprocessor
+from app.services.chat.router.trend_router import trend_router
 from app.services.chat.router.permissions import check_permission
 from app.services.chat.router.tool_catalog import (
     FIELD_META,
@@ -44,6 +48,9 @@ from app.services.chat.tools.executor import tool_executor
 # ── Timeout budget ────────────────────────────────────────────────────────────
 _MAX_TOTAL_SECONDS = 7.0   # Tối đa 7s cho toàn bộ flow
 _PAGE_SIZE = 100
+_LONG_MESSAGE_TOKEN_THRESHOLD = 32
+_LONG_MESSAGE_CHAR_THRESHOLD = 240
+_LONG_MESSAGE_LINE_THRESHOLD = 3
 
 # ── Route mapping ─────────────────────────────────────────────────────────────
 _ROUTE_MAP: Dict[str, str] = {
@@ -100,7 +107,7 @@ _BACKEND_ACTION_TOOLS = {
     "create_group_chat",
     "create_academic_request",
 }
-_AI_ONLY_TOOLS = {"general_offtopic_chat"}
+_AI_ONLY_TOOLS = {"general_offtopic_chat", "fpt_tool", "fptu_knowledge_lookup"}
 _ACADEMIC_STUDENT_CONTEXT_TOOLS = {
     "get_my_attendance_overview",
     "get_my_absence_history",
@@ -198,6 +205,24 @@ def _resolve_redirect(
             return f"/{role_lower}/assignments"
         if tool_name in ("get_own_schedule", "view_schedule"):
             return f"/{role_lower}/schedule"
+    if tool_name == "view_lecturers":
+        if entities:
+            lecturer_code = entities.get("lecturer_code") or entities.get("code")
+            full_name = entities.get("full_name")
+            if lecturer_code:
+                return f"{path}?code={lecturer_code}"
+            if full_name:
+                return f"{path}?q={full_name}"
+        return path
+    if tool_name == "view_students":
+        if entities:
+            student_code = entities.get("student_code") or entities.get("code")
+            full_name = entities.get("full_name")
+            if student_code:
+                return f"{path}?code={student_code}"
+            if full_name:
+                return f"{path}?q={full_name}"
+        return path
     prefix = _ROLE_PREFIXES.get(user_role)
     if prefix and "/academic-staff/" in path:
         if tool_name not in ("view_students", "view_lecturers"):
@@ -220,6 +245,32 @@ def _intent_result_to_dict(ir: IntentResult) -> Dict[str, Any]:
         "action":       ir.action,
         "redirectPath": ir.redirect_path,
         "dynamicSql":   None,
+    }
+
+
+def _should_use_llm_router(message: str, preprocessed: Optional[Dict[str, Any]] = None) -> bool:
+    raw_message = str(message or "")
+    token_count = int((preprocessed or {}).get("tokenCount") or len(raw_message.split()))
+    line_count = raw_message.count("\n") + 1 if raw_message else 0
+    return (
+        token_count >= _LONG_MESSAGE_TOKEN_THRESHOLD
+        or len(raw_message) >= _LONG_MESSAGE_CHAR_THRESHOLD
+        or line_count >= _LONG_MESSAGE_LINE_THRESHOLD
+    )
+
+
+def _trend_only_fallback(message: str) -> Dict[str, Any]:
+    return {
+        "intent": "need_clarification",
+        "toolName": None,
+        "entities": {
+            "missingInfo": (
+                "Tôi đang ưu tiên Trend Router cho câu hỏi thông thường. "
+                "Bạn hãy nêu ngắn gọn hơn và chỉ rõ mã sinh viên, lớp, môn, phòng hoặc học kỳ cần tra cứu."
+            )
+        },
+        "confidence": "low",
+        "agent": detect_agent(message),
     }
 
 
@@ -484,10 +535,27 @@ class ChatbotService:
         def _remaining() -> float:
             return max(0, _MAX_TOTAL_SECONDS - (time.time() - t_start))
 
-        # ── Stage 1: Hard Router ──────────────────────────────────────────
-        steps.append(_make_step(1, "Hard Router",
-            "Kiểm tra nhanh pattern (regex/cache). Nếu khớp → trả về ngay, không gọi LLM."))
-        hard_result: Optional[IntentResult] = None if (pending_tool or continuation) else hard_router.route(message, user_role)
+        # ── Stage 1: Normalize + Hard Router ──────────────────────────────
+        preprocessed = query_preprocessor.process(message)
+        routing_message = str(preprocessed.get("message") or message)
+        normalize_detail = ""
+        if preprocessed.get("changed"):
+            normalize_detail = (
+                f"Routing message: {routing_message}"
+                + (
+                    f" | Corrections: {', '.join(cast(List[str], preprocessed.get('corrections') or []))}"
+                    if preprocessed.get("corrections")
+                    else ""
+                )
+            )
+        # ── Step 1-4: Input → Normalize → Spell correction → Hard Router ──
+        steps.append(_make_step(
+            1,
+            "Normalize + Spell Correction + Hard Router",
+            "Chuẩn hóa câu hỏi, sửa lỗi chính tả nhẹ/fuzzy và kiểm tra nhanh pattern (regex/cache).",
+            normalize_detail,
+        ))
+        hard_result: Optional[IntentResult] = None if (pending_tool or continuation) else hard_router.route(routing_message, user_role)
 
         if hard_result and hard_result.intent == "direct_response":
             steps[-1]["status"] += " → Khớp mẫu trực tiếp"
@@ -495,9 +563,10 @@ class ChatbotService:
 
         if hard_result and hard_result.intent == "tool_locked":
             steps[-1]["status"] += " → Tool đang bị khóa"
-            steps.append(_make_step(2, "Unified Router", "Bỏ qua (tool đã bị khóa từ Hard Router)."))
-            steps.append(_make_step(3, "Tool Executor", "Bỏ qua (tool bị khóa)."))
-            steps.append(_make_step(4, "Answer Generator", "Thông báo trạng thái khóa tool."))
+            steps.append(_make_step(2, "Trend Model (Intent)", "Bỏ qua (tool đã bị khóa từ Hard Router)."))
+            steps.append(_make_step(3, "LLM local (Fallback + Reasoning)", "Bỏ qua (tool đã bị khóa)."))
+            steps.append(_make_step(4, "Tool (DB)", "Bỏ qua (tool bị khóa)."))
+            steps.append(_make_step(5, "Response (LLM)", "Thông báo trạng thái khóa tool."))
             intent_data = _intent_result_to_dict(hard_result)
             answer = answer_generator.generate(
                 message,
@@ -521,13 +590,14 @@ class ChatbotService:
             intent_data       = _intent_result_to_dict(hard_result)
             corrected_message = message
         else:
-            steps[-1]["status"] += " → Không khớp → LLM path"
+            steps[-1]["status"] += " → Không khớp → Phân tích chuyên sâu"
             intent_data = None
 
-        # ── Stage 2: Light Router ─────────────────────────────────────────
+        # ── Stage 2: Trend / Unified Router ───────────────────────────────
+        # ── Step 5-6: Trend Model → LLM local (Fallback + Reasoning) ──────
         if is_continuation_request:
             steps[-1]["status"] += " → Bỏ qua (đang tải thêm dữ liệu)"
-            steps.append(_make_step(2, "Unified Router", "Tiếp tục phân trang cho kết quả trước đó."))
+            steps.append(_make_step(2, "Trend Model (Intent)", "Tiếp tục phân trang cho kết quả trước đó."))
             continuation_message = str(continuation.get("originalMessage") or original_message or message)
             continuation_entities = self._merge_entities(
                 cast(Optional[Dict[str, Any]], continuation.get("entities")),
@@ -561,7 +631,7 @@ class ChatbotService:
             steps[-1]["status"] += " → Trang kế tiếp"
         elif pending_tool:
             steps[-1]["status"] += " → Bỏ qua (đang tiếp tục tool trước đó)"
-            steps.append(_make_step(2, "Unified Router", "Tiếp tục tool đang chờ bổ sung thông tin."))
+            steps.append(_make_step(2, "Trend Model (Intent)", "Tiếp tục tool đang chờ bổ sung thông tin."))
             merged_entities = self._merge_entities(pending_entities, extra_entities)
             merged_entities = self._normalize_for_debug(pending_tool, merged_entities, user_code)
             intent_data = {
@@ -581,26 +651,59 @@ class ChatbotService:
             steps[-1]["status"] += " → Dùng dữ liệu bổ sung"
         elif intent_data is None:
             active_routing_model = routing_model or "llama-3.1-8b-instant"
-            steps.append(_make_step(2, "Unified Router",
-                "Phân tích intent, trích xuất entities qua LLM."))
-            try:
-                intent_data = light_router.route(
-                    message, user_role, user_code, history, active_routing_model
-                )
-                logger.info(f"[ChatbotService] LightRouter output: {json.dumps(intent_data, ensure_ascii=False, default=str)}")
-            except RuntimeError as exc:
-                # llm_client đã hết retry → không retry thêm
-                err = _ERR_RATE_LIMIT if _is_rate_limit_error(exc) else _ERR_SYSTEM
-                logger.error(f"[ChatbotService] LightRouter exhausted: {exc}")
-                steps[-1]["status"] += " → LLM không khả dụng"
-                return _build_response(err, steps, None, None)
-            except Exception as exc:
-                logger.error(f"[ChatbotService] LightRouter error: {exc}")
-                steps[-1]["status"] += " → Lỗi"
-                return _build_response(_ERR_SYSTEM, steps, None, None)
+            use_llm_router = _should_use_llm_router(routing_message, preprocessed)
+            steps.append(_make_step(2, "Trend Model (Intent)",
+                "Ưu tiên Trend Model cho câu ngắn. Nếu câu quá dài hoặc Trend hụt → fallback sang LLM local."))
+            
+            # ✅ v6.0: Logic routing theo yêu cầu User
+            # Nếu câu ngắn -> ưu tiên Trend
+            # Nếu câu dài -> ưu tiên LLM
+            if use_llm_router:
+                try:
+                    intent_data = light_router.route(
+                        routing_message, user_role, user_code, history, active_routing_model
+                    )
+                    steps[-1]["status"] += " → LLM local (câu dài)"
+                except Exception as exc:
+                    logger.error(f"[ChatbotService] LLM routing failed: {exc}")
+                    steps[-1]["status"] += " → LLM lỗi"
+            
+            if intent_data is None:
+                # Thử Trend Router (Step 5)
+                intent_data = trend_router.route(routing_message, user_role, user_code, history)
+                if intent_data:
+                    steps[-1]["status"] += " → Trend matched"
+                else:
+                    # Thử ML Classifier (nếu có)
+                    intent_data = ml_intent_classifier.classify(routing_message, user_role, user_code, history)
+                    if intent_data:
+                        steps[-1]["status"] += " → ML matched"
+            
+            if intent_data is None and not use_llm_router:
+                # Fallback sang LLM cho câu ngắn nếu Trend/ML hụt (Step 6)
+                try:
+                    intent_data = light_router.route(
+                        routing_message, user_role, user_code, history, active_routing_model
+                    )
+                    steps[-1]["status"] += " → LLM local (fallback)"
+                except Exception as exc:
+                    logger.error(f"[ChatbotService] LLM fallback failed: {exc}")
 
-            confidence        = intent_data.get("confidence", "medium")
-            # KHÔNG dùng corrected_text để tránh ghi đè tên riêng tiếng Việt
+            if intent_data is None:
+                intent_data = _trend_only_fallback(routing_message)
+                steps[-1]["status"] += " → Trend/ML fallback"
+                steps[-1]["detail"] = (
+                    f"TrendRouter và MLIntentClassifier chưa khớp"
+                    + (
+                        ", sau khi đã thử LLM path cho câu dài"
+                        if use_llm_router
+                        else ", câu hỏi cũng chưa vượt ngưỡng dài"
+                    )
+                    + " "
+                    f"({_LONG_MESSAGE_TOKEN_THRESHOLD} tokens / {_LONG_MESSAGE_CHAR_THRESHOLD} chars)."
+                )
+
+            confidence = intent_data.get("confidence", "medium")
             corrected_message = message
             intent_data["entities"] = self._merge_entities(
                 cast(Optional[Dict[str, Any]], intent_data.get("entities")),
@@ -619,10 +722,12 @@ class ChatbotService:
                 f"Confidence: {confidence} | "
                 f"Entities: {json.dumps(intent_data.get('entities', {}), ensure_ascii=False, default=str)}"
             )
-            steps[-1]["detail"]  = "\n".join(detail_parts)
-            steps[-1]["status"] += f" → Phân tích xong ({confidence})"
+            existing_detail = str(steps[-1].get("detail") or "").strip()
+            steps[-1]["detail"] = "\n".join([part for part in [existing_detail, *detail_parts] if part])
+            if "Trend matched" not in steps[-1]["status"]:
+                steps[-1]["status"] += f" → Phân tích xong ({confidence})"
         else:
-            steps.append(_make_step(2, "Unified Router", "Bỏ qua (Hard Router đã khớp)"))
+            steps.append(_make_step(2, "Trend / ML / Unified Router", "Bỏ qua (Hard Router đã khớp)"))
             corrected_message = message
             intent_data["entities"] = self._merge_entities(
                 cast(Optional[Dict[str, Any]], intent_data.get("entities")),
@@ -696,6 +801,16 @@ class ChatbotService:
                 None,
                 agent=cast(Optional[str], intent_data.get("agent")) or detect_agent(message),
             )
+        if current_tool_name and not is_kept_tool(current_tool_name) and current_tool_name not in _AI_ONLY_TOOLS:
+            steps.append(_make_step(3, "Tool Executor", "Bỏ qua (tool đã bị loại khỏi inventory lõi)."))
+            steps.append(_make_step(4, "Answer Generator", "Trả về thông báo chức năng chưa được hệ thống hỗ trợ."))
+            return _build_response(
+                _ERR_UNSUPPORTED,
+                steps,
+                None,
+                None,
+                agent=cast(Optional[str], intent_data.get("agent")) or detect_agent(message),
+            )
 
         # ── Permission check ──────────────────────────────────────────────
         tool_name = (intent_data.get("toolName") or "").strip()
@@ -730,6 +845,28 @@ class ChatbotService:
                 tool_name,
                 cast(Dict[str, Any], intent_data.get("entities") or {}),
             )
+            lecturer_class_notification_missing = (
+                tool_name == "create_notification"
+                and user_role == "LECTURER"
+                and str(validated_entities.get("target_type") or "").strip().upper() == "CLASS"
+                and not str(validated_entities.get("class_name") or "").strip()
+            )
+            if lecturer_class_notification_missing:
+                steps.append(_make_step(3, "Tool Executor", "Dừng trước khi gọi tool vì thiếu lớp mục tiêu cho thông báo."))
+                steps[-1]["detail"] = "Giảng viên gửi thông báo theo lớp cần chỉ rõ mã lớp đang giảng dạy."
+                steps.append(_make_step(4, "Answer Generator", "Yêu cầu người dùng bổ sung mã lớp trước khi gửi thông báo."))
+                pending_entities = {k: v for k, v in validated_entities.items() if not str(k).startswith("__")}
+                return _build_response(
+                    "Tôi cần mã lớp bạn đang giảng dạy để gửi thông báo đúng đối tượng.",
+                    steps,
+                    None,
+                    None,
+                    agent=cast(Optional[str], intent_data.get("agent")),
+                    missing_fields=_build_retry_fields(["class_name"]),
+                    pending_tool=tool_name,
+                    original_message=original_message or corrected_message,
+                    pending_entities=pending_entities,
+                )
             action_confirmed = str(validated_entities.get("__action_confirmed__") or "").strip().lower() in {
                 "1", "true", "yes", "on"
             }
@@ -813,7 +950,7 @@ class ChatbotService:
             validated_entities.pop("__action_confirmed__", None)
             intent_data["entities"] = validated_entities
 
-        # ── Stage 3: Tool Executor ────────────────────────────────────────
+        # ── Step 7: Tool (DB) ───────────────────────────────────────────────
         tool_result = None
         continuation_response = None
         intent      = (intent_data.get("intent") or "").strip().lower()
@@ -824,7 +961,7 @@ class ChatbotService:
             is_backend = False
 
         if is_backend:
-            steps.append(_make_step(3, "Tool Executor", "Chuẩn bị tham số hành động backend."))
+            steps.append(_make_step(3, "Tool (DB)", "Chuẩn bị tham số hành động backend."))
             intent_data = cast(Dict[str, Any], intent_data)
             intent_data["intent"] = "action"
             intent = "action"
@@ -839,7 +976,7 @@ class ChatbotService:
                     action["params"] = intent_data.get("entities", {})
             steps[-1]["detail"]  = f"Action: {json.dumps(action, ensure_ascii=False, default=str)}"
             steps[-1]["status"] += " → Tham số đã sẵn sàng"
-            steps.append(_make_step(4, "Answer Generator", "Bỏ qua sinh câu trả lời mô tả vì đây là action backend."))
+            steps.append(_make_step(4, "Response (LLM)", "Bỏ qua sinh câu trả lời mô tả vì đây là action backend."))
             steps[-1]["status"] += " → Chuyển sang backend"
             return _build_response(
                 "Đang thực hiện thao tác theo yêu cầu của bạn.",
@@ -850,7 +987,7 @@ class ChatbotService:
             )
 
         elif needs_tool and intent not in ("permission_denied", "direct_response"):
-            steps.append(_make_step(3, "Tool Executor", "Truy vấn dữ liệu từ Database."))
+            steps.append(_make_step(3, "Tool (DB)", "Truy vấn dữ liệu từ Database."))
             sub_intents = intent_data.get("sub_intents")
             if sub_intents and isinstance(sub_intents, list):
                 multi = []
@@ -937,7 +1074,7 @@ class ChatbotService:
                             "Không tìm thấy bản ghi phù hợp với mã/ngành/lớp/môn đã nhập. "
                             "Yêu cầu người dùng kiểm tra lại thông tin."
                         )
-                        steps.append(_make_step(4, "Answer Generator", "Yêu cầu người dùng nhập lại thông tin định danh."))
+                        steps.append(_make_step(4, "Response (LLM)", "Yêu cầu người dùng nhập lại thông tin định danh."))
                         return _build_response(
                             "Tôi không tìm thấy dữ liệu khớp chính xác. Vui lòng kiểm tra và nhập lại thông tin bên dưới.",
                             steps,
@@ -955,8 +1092,8 @@ class ChatbotService:
         else:
             steps.append(_make_step(3, "Tool Executor", "Bỏ qua (không cần truy vấn DB)."))
 
-        # ── Stage 4: Answer Generator ─────────────────────────────────────
-        steps.append(_make_step(4, "Answer Generator", "Tổng hợp câu trả lời cuối cùng."))
+        # ── Step 8: Response (LLM) ──────────────────────────────────────────
+        steps.append(_make_step(4, "Response (LLM)", "Tổng hợp câu trả lời cuối cùng."))
         today_str = datetime.now().strftime("%Y-%m-%d")
 
         # ✅ Timeout budget: nếu đã dùng gần hết 7s → fallback answer (không gọi LLM)
@@ -1022,10 +1159,23 @@ class ChatbotService:
             return max(0, _MAX_TOTAL_SECONDS - (time.time() - t_start))
 
         # Stage 1
-        steps.append(_make_step(1, "Hard Router", "Kiểm tra nhanh pattern."))
+        preprocessed = query_preprocessor.process(message)
+        routing_message = str(preprocessed.get("message") or message)
+        normalize_detail = ""
+        if preprocessed.get("changed"):
+            normalize_detail = (
+                f"Routing message: {routing_message}"
+                + (
+                    f" | Corrections: {', '.join(cast(List[str], preprocessed.get('corrections') or []))}"
+                    if preprocessed.get("corrections")
+                    else ""
+                )
+            )
+        # ── Step 1-4: Input → Normalize → Spell correction → Hard Router ──
+        steps.append(_make_step(1, "Normalize + Spell Correction + Hard Router", "Chuẩn hóa câu hỏi và kiểm tra nhanh pattern.", normalize_detail))
         yield {"type": "step", "step": steps[-1]}
 
-        hard_result: Optional[IntentResult] = None if pending_tool else hard_router.route(message, user_role)
+        hard_result: Optional[IntentResult] = None if pending_tool else hard_router.route(routing_message, user_role)
         if hard_result and hard_result.intent == "direct_response":
             steps[-1]["status"] += " → Khớp mẫu trực tiếp"
             yield {"type": "step", "step": steps[-1]}
@@ -1042,13 +1192,13 @@ class ChatbotService:
             steps[-1]["status"] += f" → Pattern matched: {hard_result.tool_name}"
             intent_data, corrected_message = _intent_result_to_dict(hard_result), message
         else:
-            steps[-1]["status"] += " → Không khớp → LLM path"
+            steps[-1]["status"] += " → Không khớp → Trend/LLM path"
             intent_data = None
         yield {"type": "step", "step": steps[-1]}
 
-        # Stage 2
+        # ── Step 5-6: Trend Model → LLM local (Fallback + Reasoning) ──────
         if pending_tool:
-            steps.append(_make_step(2, "Unified Router", "Tiếp tục tool đang chờ bổ sung thông tin."))
+            steps.append(_make_step(2, "Trend Model (Intent)", "Tiếp tục tool đang chờ bổ sung thông tin."))
             merged_entities = self._merge_entities({}, extra_entities)
             intent_data = {
                 "intent": self._infer_intent_for_tool(pending_tool),
@@ -1063,34 +1213,59 @@ class ChatbotService:
             steps[-1]["detail"] = f"Resume tool: {pending_tool}"
             steps[-1]["status"] += " → Dùng dữ liệu bổ sung"
         elif intent_data is None:
-            steps.append(_make_step(2, "Unified Router", "Phân tích intent qua LLM."))
+            use_llm_router = _should_use_llm_router(routing_message, preprocessed)
+            steps.append(_make_step(2, "Trend Model (Intent)", "Câu ngắn: Trend Router rồi LLM local fallback. Câu dài: ưu tiên LLM local router."))
             yield {"type": "step", "step": steps[-1]}
-            try:
-                intent_data = light_router.route(
-                    message, user_role, user_code, history,
-                    routing_model or "llama-3.1-8b-instant"
-                )
-            except Exception as exc:
-                err = _ERR_RATE_LIMIT if _is_rate_limit_error(exc) else _ERR_SYSTEM
-                logger.error(f"[Stream] LightRouter failed: {exc}")
-                steps[-1]["status"] += " → LLM không khả dụng"
-                yield {"type": "step",   "step": steps[-1]}
-                yield {"type": "answer", "chunk": err}
-                return
+            
+            # ✅ v6.0 logic in stream
+            if use_llm_router:
+                try:
+                    intent_data = light_router.route(
+                        routing_message, user_role, user_code, history,
+                        routing_model or "llama-3.1-8b-instant"
+                    )
+                    steps[-1]["status"] += " → LLM local (câu dài)"
+                except Exception as exc:
+                    logger.error(f"[Stream] LLM routing failed: {exc}")
+                    steps[-1]["status"] += " → LLM lỗi"
+
+            if intent_data is None:
+                intent_data = trend_router.route(routing_message, user_role, user_code, history)
+                if intent_data:
+                    steps[-1]["status"] += " → Trend matched"
+                else:
+                    intent_data = ml_intent_classifier.classify(routing_message, user_role, user_code, history)
+                    if intent_data:
+                        steps[-1]["status"] += " → ML matched"
+
+            if intent_data is None and not use_llm_router:
+                # LLM local fallback for short messages
+                try:
+                    intent_data = light_router.route(
+                        routing_message, user_role, user_code, history,
+                        routing_model or "llama-3.1-8b-instant"
+                    )
+                    steps[-1]["status"] += " → LLM local (fallback)"
+                except Exception as exc:
+                    logger.error(f"[Stream] LLM fallback failed: {exc}")
+
+            if intent_data is None:
+                intent_data = _trend_only_fallback(routing_message)
+                steps[-1]["status"] += " → Trend/ML fallback"
 
             confidence        = intent_data.get("confidence", "medium")
-            # KHÔNG dùng corrected_text để tránh ghi đè tên riêng tiếng Việt
             corrected_message = message
             intent_data["entities"] = self._merge_entities(
                 cast(Optional[Dict[str, Any]], intent_data.get("entities")),
                 extra_entities,
             )
-            steps[-1]["detail"] = (
-                f"Intent: {intent_data.get('intent')} | Tool: {intent_data.get('toolName')} | Confidence: {confidence}"
-            )
-            steps[-1]["status"] += f" → Xong ({confidence})"
+            extra_detail = f"Intent: {intent_data.get('intent')} | Tool: {intent_data.get('toolName')} | Confidence: {confidence}"
+            existing_detail = str(steps[-1].get("detail") or "").strip()
+            steps[-1]["detail"] = "\n".join([part for part in [existing_detail, extra_detail] if part])
+            if "Trend matched" not in steps[-1]["status"]:
+                steps[-1]["status"] += f" → Xong ({confidence})"
         else:
-            steps.append(_make_step(2, "Unified Router", "Bỏ qua (Hard Router matched)."))
+            steps.append(_make_step(2, "Trend / ML / Unified Router", "Bỏ qua (Hard Router matched)."))
             corrected_message = message
             intent_data["entities"] = self._merge_entities(
                 cast(Optional[Dict[str, Any]], intent_data.get("entities")),
@@ -1123,7 +1298,7 @@ class ChatbotService:
             yield {"type": "answer", "chunk": _ERR_UNSUPPORTED}
             return
 
-        # Stage 3
+        # ── Step 7: Tool (DB) ───────────────────────────────────────────────
         tool_result = None
         intent    = (intent_data.get("intent") or "").strip().lower()
         tool_name = (intent_data.get("toolName") or "").strip()
@@ -1131,7 +1306,7 @@ class ChatbotService:
         needs_tool = bool((tool_name and tool_name not in _AI_ONLY_TOOLS) or intent_data.get("dynamicSql"))
 
         if tool_name in _BACKEND_ACTION_TOOLS:
-            steps.append(_make_step(3, "Tool Executor", "Chuẩn bị action backend."))
+            steps.append(_make_step(3, "Tool (DB)", "Chuẩn bị action backend."))
             yield {"type": "step", "step": steps[-1]}
             intent_data["intent"] = "action"
             action = intent_data.get("action")
@@ -1147,17 +1322,18 @@ class ChatbotService:
             steps[-1]["status"] += " → Tham số sẵn sàng"
             yield {"type": "action", "action": action}
             yield {"type": "step",   "step": steps[-1]}
-            steps.append(_make_step(4, "Answer Generator", "Bỏ qua sinh câu trả lời mô tả vì đây là action backend."))
+            steps.append(_make_step(4, "Response (LLM)", "Bỏ qua sinh câu trả lời mô tả vì đây là action backend."))
             steps[-1]["status"] += " → Chuyển sang backend"
             yield {"type": "step", "step": steps[-1]}
             yield {"type": "answer", "chunk": "Đang thực hiện thao tác theo yêu cầu của bạn."}
             return
 
         elif needs_tool and intent not in ("permission_denied", "direct_response"):
-            steps.append(_make_step(3, "Tool Executor", "Truy vấn Database."))
+            steps.append(_make_step(3, "Tool (DB)", "Truy vấn Database."))
             yield {"type": "step", "step": steps[-1]}
             sub_intents = intent_data.get("sub_intents")
             if sub_intents and isinstance(sub_intents, list):
+                # ... logic sub_intents ...
                 multi = []
                 for si in sub_intents:
                     res = tool_executor.execute(si, user_id, user_role, user_code)
@@ -1166,7 +1342,6 @@ class ChatbotService:
                 steps[-1]["status"] += f" → {len(sub_intents)} sub-queries xong"
             else:
                 tool_result = tool_executor.execute(intent_data, user_id, user_role, user_code)
-                # ✅ FIX: Ensure tool_result is always a list (even if empty or None from executor)
                 if tool_result is None:
                     tool_result = []
                 count = len(tool_result) if isinstance(tool_result, list) else "-"
@@ -1176,11 +1351,11 @@ class ChatbotService:
                 steps[-1]["detail"] = f"Sample: {json.dumps(sample, ensure_ascii=False, default=str)}"
             yield {"type": "step", "step": steps[-1]}
         else:
-            steps.append(_make_step(3, "Tool Executor", "Bỏ qua (không cần truy vấn DB)."))
+            steps.append(_make_step(3, "Tool (DB)", "Bỏ qua (không cần truy vấn DB)."))
             yield {"type": "step", "step": steps[-1]}
 
-        # Stage 4: Stream answer — ✅ Timeout-aware với fallback
-        steps.append(_make_step(4, "Answer Generator", "Tổng hợp câu trả lời."))
+        # Stage 4: Stream answer
+        steps.append(_make_step(4, "Response (LLM)", "Tổng hợp câu trả lời."))
         yield {"type": "step", "step": steps[-1]}
 
         redirect = _resolve_redirect(tool_name, intent_data.get("redirectPath"), user_role, intent_data.get("entities"))
@@ -1264,7 +1439,7 @@ class ChatbotService:
         except Exception as exc:
             logger.error(f"[Excel] AnswerGenerator failed: {exc}")
             answer = _ERR_SYSTEM
-        steps.append(_make_step(3, "Answer Generator", "Done"))
+        steps.append(_make_step(3, "Response (LLM)", "Done"))
 
         return {
             "answer":        answer,

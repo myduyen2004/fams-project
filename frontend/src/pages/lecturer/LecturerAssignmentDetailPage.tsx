@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
-import { assignmentService, AssignmentDTO, AssignmentSubmissionDTO } from '../../services/api/assignmentService';
+import { assignmentService, AssignmentDTO, AssignmentPlagiarismDTO, AssignmentSubmissionDTO } from '../../services/api/assignmentService';
 import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
 import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
 import { Pagination } from '../../components/common/Pagination';
 import {
-    ArrowLeft, Clock, ExternalLink, Search, Loader2, BookOpen, Lock, X, Download, MessageSquare
+    ArrowLeft, Clock, ExternalLink, Search, Loader2, BookOpen, Lock, X, Download, MessageSquare, ShieldAlert, ScanSearch, Sparkles
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -28,6 +28,9 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
     const [closingAssignment, setClosingAssignment] = useState(false);
     const [downloadingZip, setDownloadingZip] = useState(false);
     const [slotInfo, setSlotInfo] = useState<TimetableSlotDTO | null>(null);
+    const [plagiarismSubmission, setPlagiarismSubmission] = useState<AssignmentSubmissionDTO | null>(null);
+    const [plagiarismResult, setPlagiarismResult] = useState<AssignmentPlagiarismDTO | null>(null);
+    const [checkingPlagiarismId, setCheckingPlagiarismId] = useState<number | null>(null);
 
     useEffect(() => {
         if (!assignmentId || isNaN(assignmentId)) return;
@@ -148,6 +151,35 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
         }
     };
 
+    const handleCheckPlagiarism = async (submission: AssignmentSubmissionDTO) => {
+        if (!submission.id) return;
+
+        setPlagiarismSubmission(submission);
+        setCheckingPlagiarismId(submission.id);
+        setPlagiarismResult(null);
+
+        try {
+            const result = await assignmentService.checkSubmissionPlagiarism(assignmentId, submission.id);
+            setPlagiarismResult(result);
+        } catch (err: any) {
+            setPlagiarismSubmission(null);
+            setPlagiarismResult(null);
+            toast.error(
+                err?.response?.data?.message
+                    ? `Không thể kiểm tra đạo văn trong toàn môn học: ${err.response.data.message}`
+                    : 'Không thể kiểm tra đạo văn trong toàn môn học'
+            );
+        } finally {
+            setCheckingPlagiarismId(null);
+        }
+    };
+
+    const closePlagiarismDialog = () => {
+        if (checkingPlagiarismId) return;
+        setPlagiarismSubmission(null);
+        setPlagiarismResult(null);
+    };
+
     // Stats
     const totalStudents = submissions.length;
     const submittedCount = submissions.filter(s => s.status === 'SUBMITTED').length;
@@ -166,6 +198,13 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
     // Pagination
     const totalPages = Math.ceil(filteredSubmissions.length / PAGE_SIZE);
     const paginatedSubmissions = filteredSubmissions.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+
+    const getPlagiarismTone = (percent?: number) => {
+        const value = percent ?? 0;
+        if (value >= 75) return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+        if (value >= 45) return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
+        return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+    };
 
     useEffect(() => {
         setCurrentPage(0);
@@ -406,13 +445,14 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                                     <th className="text-left px-6 py-4 font-bold text-xs uppercase tracking-wider">Trạng thái</th>
                                     <th className="text-left px-6 py-4 font-bold text-xs uppercase tracking-wider">File đính kèm</th>
                                     <th className="text-left px-6 py-4 font-bold text-xs uppercase tracking-wider">Bài làm / Ghi chú</th>
+                                    <th className="text-center px-6 py-4 font-bold text-xs uppercase tracking-wider">Check đạo văn</th>
                                     <th className="text-center px-6 py-4 font-bold text-xs uppercase tracking-wider">Nhận xét</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
                                 {paginatedSubmissions.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="text-center py-12">
+                                        <td colSpan={7} className="text-center py-12">
                                             <div className="flex flex-col items-center justify-center text-gray-400 dark:text-zinc-500">
                                                 <Search size={32} className="mb-3 opacity-50" />
                                                 <p className="text-sm font-medium">{searchTerm ? 'Không tìm thấy sinh viên nào phù hợp' : 'Chưa có dữ liệu sinh viên'}</p>
@@ -473,6 +513,24 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                                                 <div className="text-xs text-gray-600 dark:text-zinc-300 max-w-[200px] line-clamp-2" title={sub.note}>
                                                     {sub.note ? renderNoteWithLinks(sub.note) : <span className="text-gray-300 dark:text-zinc-600 italic">—</span>}
                                                 </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                {sub.status === 'SUBMITTED' && sub.id ? (
+                                                    <button
+                                                        onClick={() => handleCheckPlagiarism(sub)}
+                                                        disabled={checkingPlagiarismId === sub.id}
+                                                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 py-2 text-xs font-bold text-fpt-orange transition-colors hover:bg-orange-100 disabled:opacity-60 w-full max-w-[160px]"
+                                                    >
+                                                        {checkingPlagiarismId === sub.id ? (
+                                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                                        ) : (
+                                                            <ShieldAlert className="w-4 h-4" />
+                                                        )}
+                                                        {checkingPlagiarismId === sub.id ? 'Đang check...' : 'Check đạo văn'}
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-gray-300 dark:text-zinc-600 italic text-xs">—</span>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 {sub.status === 'SUBMITTED' && sub.id ? (
@@ -564,6 +622,209 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                                     {savingComment ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Lưu nhận xét'}
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {plagiarismSubmission && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="w-full max-w-5xl overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+                        <div className="flex items-start justify-between border-b border-gray-100 px-6 py-5 dark:border-zinc-800">
+                            <div>
+                                <h3 className="flex items-center gap-2 text-lg font-bold text-[#001D4A] dark:text-white">
+                                    <ShieldAlert className="h-5 w-5 text-fpt-orange" />
+                                    Kết quả check đạo văn
+                                </h3>
+                                <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
+                                    {plagiarismSubmission.studentName} - {plagiarismSubmission.studentCode}
+                                </p>
+                            </div>
+                            <button
+                                onClick={closePlagiarismDialog}
+                                className="rounded-xl border border-gray-200 p-2 text-gray-500 transition-colors hover:bg-gray-50 hover:text-fpt-orange dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+
+                        <div className="max-h-[80vh] overflow-y-auto p-6">
+                            {checkingPlagiarismId === plagiarismSubmission.id && !plagiarismResult ? (
+                                <div className="flex min-h-[320px] flex-col items-center justify-center gap-4 text-center">
+                                    <Loader2 className="h-10 w-10 animate-spin text-fpt-orange" />
+                                    <div>
+                                        <p className="text-base font-bold text-[#001D4A] dark:text-white">Đang phân tích bài nộp nội bộ</p>
+                                        <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
+                                            Hệ thống đang so sánh trong toàn bộ môn học để tìm bài tương tự.
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : plagiarismResult ? (
+                                <div className="space-y-6">
+                                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.9fr)]">
+                                        <div className="rounded-3xl border border-orange-100 bg-gradient-to-br from-orange-50 via-white to-amber-50 p-6 dark:border-orange-900/30 dark:from-orange-950/20 dark:via-zinc-900 dark:to-amber-950/10">
+                                            <div className="flex flex-wrap items-start justify-between gap-4">
+                                                <div>
+                                                    <p className="text-xs font-bold uppercase tracking-[0.25em] text-fpt-orange">Decision Layer</p>
+                                                    <h4 className="mt-2 text-2xl font-black text-[#001D4A] dark:text-white">
+                                                        {plagiarismResult.plagiarismPercent}% đạo văn
+                                                    </h4>
+                                                    <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600 dark:text-zinc-300">
+                                                        Kiểm tra nội bộ trong toàn bộ môn học, dùng feature `text + image + metadata`
+                                                        và decision model `{plagiarismResult.model}`.
+                                                    </p>
+                                                </div>
+                                                <div className={`rounded-2xl px-4 py-3 text-sm font-black ${getPlagiarismTone(plagiarismResult.plagiarismPercent)}`}>
+                                                    {plagiarismResult.plagiarized ? 'NGHI NGỜ ĐẠO VĂN' : 'ÍT TÍN HIỆU ĐẠO VĂN'}
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+                                                <div className="rounded-2xl border border-white/80 bg-white/80 p-4 dark:border-zinc-800 dark:bg-zinc-900/70">
+                                                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Originality</p>
+                                                    <p className="mt-2 text-3xl font-black text-green-600 dark:text-green-400">{plagiarismResult.originalityPercent}%</p>
+                                                </div>
+                                                <div className="rounded-2xl border border-white/80 bg-white/80 p-4 dark:border-zinc-800 dark:bg-zinc-900/70">
+                                                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Xác suất</p>
+                                                    <p className="mt-2 text-3xl font-black text-[#001D4A] dark:text-white">{Math.round(plagiarismResult.probability * 100)}%</p>
+                                                </div>
+                                                <div className="rounded-2xl border border-white/80 bg-white/80 p-4 dark:border-zinc-800 dark:bg-zinc-900/70">
+                                                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Phạm vi</p>
+                                                    <p className="mt-2 text-sm font-bold text-[#001D4A] dark:text-white">{plagiarismResult.courseCode}</p>
+                                                    <p className="mt-1 text-xs text-gray-500 dark:text-zinc-400">{plagiarismResult.className}</p>
+                                                </div>
+                                                <div className="rounded-2xl border border-white/80 bg-white/80 p-4 dark:border-zinc-800 dark:bg-zinc-900/70">
+                                                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">So sánh</p>
+                                                    <p className="mt-2 text-3xl font-black text-[#001D4A] dark:text-white">{plagiarismResult.comparedSubmissionCount}</p>
+                                                    <p className="mt-1 text-xs text-gray-500 dark:text-zinc-400">bài nộp trong cùng môn học</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="rounded-3xl border border-gray-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950/60">
+                                            <div className="flex items-center gap-2">
+                                                <Sparkles className="h-4 w-4 text-fpt-orange" />
+                                                <h4 className="text-sm font-black uppercase tracking-[0.18em] text-[#001D4A] dark:text-white">Feature Breakdown</h4>
+                                            </div>
+                                            <div className="mt-5 space-y-4">
+                                                {[
+                                                    { label: 'Text Score', value: plagiarismResult.textScore },
+                                                    { label: 'Image Score', value: plagiarismResult.imageScore },
+                                                    { label: 'Metadata Score', value: plagiarismResult.metadataScore },
+                                                    { label: 'Filename Score', value: plagiarismResult.fileNameScore },
+                                                ].map(item => (
+                                                    <div key={item.label}>
+                                                        <div className="mb-1 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-400">
+                                                            <span>{item.label}</span>
+                                                            <span>{Math.round(item.value * 100)}%</span>
+                                                        </div>
+                                                        <div className="h-2.5 rounded-full bg-gray-100 dark:bg-zinc-800">
+                                                            <div
+                                                                className="h-2.5 rounded-full bg-gradient-to-r from-orange-400 to-fpt-orange"
+                                                                style={{ width: `${Math.max(4, Math.round(item.value * 100))}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            <div className="mt-6 rounded-2xl border border-orange-100 bg-orange-50/70 p-4 dark:border-orange-900/30 dark:bg-orange-900/10">
+                                                <p className="text-xs font-black uppercase tracking-[0.18em] text-fpt-orange">Tín hiệu chính</p>
+                                                <div className="mt-3 flex flex-wrap gap-2">
+                                                    {plagiarismResult.keySignals.map(signal => (
+                                                        <span
+                                                            key={signal}
+                                                            className="rounded-full border border-orange-200 bg-white px-3 py-1 text-xs font-semibold text-orange-700 dark:border-orange-900/40 dark:bg-zinc-900 dark:text-orange-300"
+                                                        >
+                                                            {signal}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-3xl border border-gray-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950/60">
+                                        <div className="flex items-center gap-2">
+                                            <ScanSearch className="h-4 w-4 text-fpt-orange" />
+                                            <h4 className="text-sm font-black uppercase tracking-[0.18em] text-[#001D4A] dark:text-white">Các bài tương tự</h4>
+                                        </div>
+
+                                        {plagiarismResult.topMatches.length === 0 ? (
+                                            <div className="py-12 text-center text-sm text-gray-500 dark:text-zinc-400">
+                                                Không có bài tương tự đáng kể trong cùng môn học.
+                                            </div>
+                                        ) : (
+                                            <div className="mt-5 space-y-4">
+                                                {plagiarismResult.topMatches.map(match => (
+                                                    <div
+                                                        key={match.submissionId}
+                                                        className="rounded-2xl border border-gray-200 p-5 dark:border-zinc-800"
+                                                    >
+                                                        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                                                            <div>
+                                                                <div className="flex items-center gap-3">
+                                                                    <p className="text-base font-bold text-[#001D4A] dark:text-white">
+                                                                        {match.studentName}
+                                                                    </p>
+                                                                    <span className="font-mono text-xs text-gray-500 dark:text-zinc-400">
+                                                                        {match.studentCode}
+                                                                    </span>
+                                                                </div>
+                                                                <p className="mt-2 text-sm leading-6 text-gray-600 dark:text-zinc-300">
+                                                                    {match.notePreview || 'Không có ghi chú văn bản.'}
+                                                                </p>
+                                                            </div>
+                                                            <div className={`rounded-2xl px-4 py-3 text-center ${getPlagiarismTone(match.plagiarismPercent)}`}>
+                                                                <p className="text-2xl font-black">{match.plagiarismPercent}%</p>
+                                                                <p className="text-[11px] font-bold uppercase tracking-[0.18em]">match</p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+                                                            {[
+                                                                { label: 'Text', value: match.textScore },
+                                                                { label: 'Image', value: match.imageScore },
+                                                                { label: 'Metadata', value: match.metadataScore },
+                                                                { label: 'Filename', value: match.fileNameScore },
+                                                            ].map(metric => (
+                                                                <div key={metric.label} className="rounded-xl bg-gray-50 px-3 py-3 dark:bg-zinc-900">
+                                                                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">{metric.label}</p>
+                                                                    <p className="mt-1 text-lg font-black text-[#001D4A] dark:text-white">{Math.round(metric.value * 100)}%</p>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+
+                                                        {match.fileNames && match.fileNames.length > 0 && (
+                                                            <div className="mt-4">
+                                                                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">File đính kèm</p>
+                                                                <div className="mt-2 flex flex-wrap gap-2">
+                                                                    {match.fileNames.map(fileName => (
+                                                                        <span key={fileName} className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 dark:bg-zinc-800 dark:text-zinc-300">
+                                                                            {fileName}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        <div className="mt-4 flex flex-wrap gap-2">
+                                                            {match.sharedSignals.map(signal => (
+                                                                <span
+                                                                    key={signal}
+                                                                    className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 dark:border-orange-900/40 dark:bg-orange-900/10 dark:text-orange-300"
+                                                                >
+                                                                    {signal}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : null}
                         </div>
                     </div>
                 </div>

@@ -23,7 +23,10 @@ from app.services.chat.router.tool_catalog import (
     get_role_guidance,
     get_tool_agent,
 )
-from app.services.chat.services.fptu_knowledge import get_relevant_fptu_context, is_fptu_knowledge_question
+from app.services.chat.services.fptu_knowledge import (
+    get_relevant_fptu_context,
+    is_fptu_knowledge_question,
+)
 from app.services.chat.services.llm_client import llm_client
 
 # ✅ NEW: Mapping từ data_tool → count_tool
@@ -242,6 +245,24 @@ QUY TẮC:
 7. Nếu người dùng hỏi về FPTU nhưng TRI THỨC FPTU CỤC BỘ không có thông tin tương ứng, nói rõ bạn chưa thấy thông tin đó trong file tri thức hiện có; không tự bịa.
 """
 
+_FPTU_KNOWLEDGE_PROMPT = """Bạn là FAMS AI Assistant. Hãy trả lời ngắn gọn, rõ ràng bằng tiếng Việt.
+
+Bạn đang trả lời từ file tri thức nội bộ `fptu-information.json`.
+
+ROLE: {user_role}
+AGENT: {agent_label}
+CÂU HỎI: {message}
+HÔM NAY: {today}
+TRI THỨC FPTU:
+{knowledge_context}
+
+QUY TẮC:
+1. Chỉ dùng thông tin có trong TRI THỨC FPTU.
+2. Nếu câu hỏi đòi dữ liệu cá nhân hoặc trạng thái riêng của người dùng, nói rõ file tri thức này không chứa dữ liệu cá nhân.
+3. Nếu không thấy thông tin phù hợp, nói rõ là chưa có trong file tri thức hiện tại.
+4. Không nhắc đến database, tool executor hay router.
+"""
+
 
 class DateTimeEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -396,6 +417,7 @@ class AnswerGenerator:
         "get_abnormal_attendance": "⚠️ Điểm danh bất thường",
         "get_attendance_rate_by_course": "📋 Tỷ lệ chuyên cần",
         "get_attendance_trends": "📈 Xu hướng vắng mặt",
+        "get_semester_overview": "📚 Tổng quan học kỳ",
         "get_room_usage_weekly": "🏫 Sử dụng phòng trong tuần",
         "get_gpa_stats_by_major": "📊 Thống kê GPA theo ngành",
     }
@@ -457,6 +479,19 @@ class AnswerGenerator:
             if is_fptu_knowledge_question(message) and knowledge_context == "[KHÔNG CÓ TRI THỨC FPTU PHÙ HỢP]":
                 return "Mình chưa thấy thông tin này trong file tri thức FPTU hiện có."
             return response.strip()
+
+        if intent == "knowledge_query" or tool_name in {"fpt_tool", "fptu_knowledge_lookup"}:
+            knowledge_context = get_relevant_fptu_context(message)
+            if knowledge_context == "[KHÔNG CÓ TRI THỨC FPTU PHÙ HỢP]":
+                return "Mình chưa thấy thông tin này trong file tri thức FPTU hiện có."
+            prompt = _FPTU_KNOWLEDGE_PROMPT.format(
+                user_role=user_role,
+                agent_label=get_agent_label(agent_id),
+                message=message,
+                today=today,
+                knowledge_context=knowledge_context,
+            )
+            return llm_client.complete(prompt, model).strip()
 
         # ✅ NEW v5.5: BYPASS LLM cho data_query có bảng lớn (≥10 rows)
         # LLM hay cắt bảng dài → format sẵn rồi trả thẳng, không qua LLM
@@ -579,6 +614,21 @@ class AnswerGenerator:
             if is_fptu_knowledge_question(message) and knowledge_context == "[KHÔNG CÓ TRI THỨC FPTU PHÙ HỢP]":
                 yield "Mình chưa thấy thông tin này trong file tri thức FPTU hiện có."
                 return
+            yield llm_client.complete(prompt, model).strip()
+            return
+
+        if intent == "knowledge_query" or tool_name in {"fpt_tool", "fptu_knowledge_lookup"}:
+            knowledge_context = get_relevant_fptu_context(message)
+            if knowledge_context == "[KHÔNG CÓ TRI THỨC FPTU PHÙ HỢP]":
+                yield "Mình chưa thấy thông tin này trong file tri thức FPTU hiện có."
+                return
+            prompt = _FPTU_KNOWLEDGE_PROMPT.format(
+                user_role=user_role,
+                agent_label=get_agent_label(agent_id),
+                message=message,
+                today=today,
+                knowledge_context=knowledge_context,
+            )
             yield llm_client.complete(prompt, model).strip()
             return
 

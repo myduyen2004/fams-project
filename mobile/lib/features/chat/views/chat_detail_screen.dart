@@ -1,8 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
+import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/constants/app_colors.dart';
@@ -1180,8 +1182,51 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   Future<void> _downloadFile(ChatMessage msg) async {
-    if (msg.attachmentUrl != null) {
-      await _openUrl(msg.attachmentUrl!);
+    final attachmentUrl = msg.attachmentUrl;
+    if (attachmentUrl == null || attachmentUrl.isEmpty) return;
+
+    try {
+      Get.snackbar(
+        'Thông báo',
+        'Đang tải tệp xuống...',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
+      );
+
+      final cleanedUrl = _normalizeAttachmentUrl(attachmentUrl);
+      final fileName = _buildSafeFileName(
+        msg.attachmentName?.trim().isNotEmpty == true
+            ? msg.attachmentName!
+            : 'chat_attachment',
+        cleanedUrl,
+      );
+
+      final directory = await getTemporaryDirectory();
+      final filePath = '${directory.path}/$fileName';
+
+      final dio = Dio();
+      await dio.download(cleanedUrl, filePath);
+
+      final result = await OpenFilex.open(filePath);
+      if (result.type != ResultType.done) {
+        final uri = Uri.tryParse(cleanedUrl);
+        if (uri != null) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          Get.snackbar(
+            'Lỗi',
+            'Không thể mở tệp này.',
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to download/open attachment: $e');
+      Get.snackbar(
+        'Lỗi',
+        'Không thể mở tệp. Vui lòng thử lại.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
     }
   }
 
@@ -1190,6 +1235,31 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     if (uri != null && await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
+  }
+
+  String _normalizeAttachmentUrl(String url) {
+    return url.replaceAll(RegExp(r'/s--[^/]+--/'), '/');
+  }
+
+  String _buildSafeFileName(String fileName, String url) {
+    var safeName = fileName.replaceAll(RegExp(r'[^\w\s\.-]'), '').trim();
+    safeName = safeName.replaceAll(RegExp(r'\s+'), '_');
+
+    final uri = Uri.tryParse(url);
+    final path = uri?.path ?? '';
+    final segments = path
+        .split('/')
+        .where((segment) => segment.isNotEmpty)
+        .toList();
+    final lastSegment = segments.isNotEmpty ? segments.last : null;
+
+    if (!safeName.contains('.') &&
+        lastSegment != null &&
+        lastSegment.contains('.')) {
+      safeName = '$safeName${lastSegment.substring(lastSegment.lastIndexOf('.'))}';
+    }
+
+    return safeName.isEmpty ? 'chat_attachment' : safeName;
   }
 
   bool _shouldShowDate(String prev, String current) {

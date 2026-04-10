@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, Iterable, List, Set
 
+from app.services.chat.router.core_tool_inventory import is_kept_tool
 
 ROLE_GUIDANCE: Dict[str, str] = {
     "ADMIN": (
@@ -723,6 +724,8 @@ AGENT_DEFINITIONS: Dict[str, Dict[str, Any]] = {
 
 TOOL_AGENT_OVERRIDES: Dict[str, str] = {
     "general_offtopic_chat": "general",
+    "fpt_tool": "general",
+    "fptu_knowledge_lookup": "general",
     "view_users": "admin",
     "view_logs": "admin",
     "view_alerts": "admin",
@@ -984,11 +987,12 @@ def build_agent_tool_list(
             "Trả lời bằng trí tuệ AI cho các câu hỏi ngoài lề hệ thống như toán đơn giản, "
             "kiến thức phổ thông, đời sống, giao tiếp thường ngày."
         ),
-        "get_absence_rate_by_class": "Thong ke ti le vang mat tong quan cua mot lop hoc.",
-        "get_my_attendance_overview": "Tổng quan điểm danh cá nhân của sinh viên theo từng môn/lớp.",
-        "get_my_absence_history": "Lịch sử các buổi vắng học gần đây của sinh viên.",
-        "get_my_attendance_risk_courses": "Các môn/lớp sinh viên đang có nguy cơ rớt do vắng từ 3 buổi trở lên.",
     }
+    if role in {"STUDENT", "LECTURER"}:
+        virtual_tools["fpt_tool"] = (
+            "Tra cứu tri thức FPTU từ file nội bộ: EOS/SEB, OJT, Global Program, học phí chung, "
+            "campus, career, guideline và các quy định học tập."
+        )
     for name, desc in virtual_tools.items():
         if get_tool_agent(name) == agent_id:
             lines.append(f"  • {name}: {desc}")
@@ -1005,7 +1009,7 @@ def _build_fallback_formatted_tools() -> Dict[str, str]:
     fallback: Dict[str, str] = {}
     surfaced = set(TEMPLATES.keys()) | set(EXPLICIT_REQUIRED_FIELDS.keys()) | set(_FALLBACK_NAV_TOOLS)
     for name in surfaced:
-        if name.startswith("delete_"):
+        if name.startswith("delete_") or not is_kept_tool(name):
             continue
         prefix = "[NAV] " if name.startswith("view_") else ("[ACTION] " if require_all_required_fields(name) else "[DATA] ")
         req_fields = infer_required_fields(name)

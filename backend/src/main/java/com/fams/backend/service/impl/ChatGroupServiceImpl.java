@@ -2,6 +2,7 @@ package com.fams.backend.service.impl;
 
 import com.fams.backend.dto.response.ChatGroupResponse;
 import com.fams.backend.dto.response.ChatMessageResponse;
+import com.fams.backend.dto.response.MessageReactionDTO;
 import com.fams.backend.dto.response.ReadReceiptDTO;
 import com.fams.backend.entity.*;
 import com.fams.backend.repository.*;
@@ -15,7 +16,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -340,6 +343,8 @@ public class ChatGroupServiceImpl implements ChatGroupService {
     }
 
     private ChatMessageResponse convertToMessageResponse(ChatMessage message, Long currentUserId, boolean isRead) {
+        List<MessageReactionDTO> reactions = buildReactionDtos(message.getId(), currentUserId);
+
         ChatMessageResponse response = ChatMessageResponse.builder()
                 .id(message.getId())
                 .senderId(message.getSender().getId())
@@ -361,6 +366,7 @@ public class ChatGroupServiceImpl implements ChatGroupService {
                                 .avatar(r.getUser().getAvatar())
                                 .build())
                         .collect(Collectors.toList()) : new ArrayList<>())
+                .reactions(reactions)
                 .build();
 
         if (message.getReplyTo() != null) {
@@ -411,9 +417,15 @@ public class ChatGroupServiceImpl implements ChatGroupService {
                 })
                 .collect(Collectors.toList());
     }
+
     @Override
     @Transactional
     public ChatMessageResponse toggleReaction(Long messageId, String emoji) {
+        if (emoji == null || emoji.trim().isEmpty()) {
+            throw new RuntimeException("Thiếu icon cảm xúc");
+        }
+
+        emoji = emoji.trim();
         User currentUser = getCurrentUser();
         ChatMessage message = chatMessageRepository.findById(messageId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy tin nhắn"));
@@ -434,5 +446,28 @@ public class ChatGroupServiceImpl implements ChatGroupService {
 
         // Return updated message response
         return convertToMessageResponse(message, currentUser.getId(), true);
+    }
+
+    private List<MessageReactionDTO> buildReactionDtos(Long messageId, Long currentUserId) {
+        List<ChatMessageReaction> reactions = chatMessageReactionRepository.findByMessageId(messageId);
+        if (reactions.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        Map<String, List<ChatMessageReaction>> grouped = reactions.stream()
+                .collect(Collectors.groupingBy(
+                        ChatMessageReaction::getEmoji,
+                        LinkedHashMap::new,
+                        Collectors.toList()));
+
+        return grouped.entrySet().stream()
+                .map(entry -> MessageReactionDTO.builder()
+                        .emoji(entry.getKey())
+                        .count(entry.getValue().size())
+                        .reactedByMe(entry.getValue().stream()
+                                .anyMatch(reaction -> reaction.getUser() != null
+                                        && reaction.getUser().getId().equals(currentUserId)))
+                        .build())
+                .collect(Collectors.toList());
     }
 }

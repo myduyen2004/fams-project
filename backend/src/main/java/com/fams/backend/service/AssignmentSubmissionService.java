@@ -2,6 +2,7 @@ package com.fams.backend.service;
 
 import com.fams.backend.dto.request.CreateAssignmentRequest;
 import com.fams.backend.dto.request.SubmitAssignmentRequest;
+import com.fams.backend.dto.response.AssignmentPlagiarismResponse;
 import com.fams.backend.dto.response.AssignmentResponse;
 import com.fams.backend.dto.response.AssignmentSubmissionResponse;
 import com.fams.backend.entity.Assignment;
@@ -44,4 +45,6 @@ public interface AssignmentSubmissionService {
     void sendDueDateReminderNotifications(Assignment assignment);
 
     byte[] downloadAllSubmissionsAsZip(Long assignmentId, Long lecturerId);
+
+    AssignmentPlagiarismResponse checkSubmissionPlagiarism(Long assignmentId, Long submissionId, Long lecturerId);
 }

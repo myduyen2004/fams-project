@@ -25,6 +25,22 @@ export interface AIToolTest {
   createdAt: string;
 }
 
+export interface KnowledgeSourceSummary {
+  title?: string;
+  version?: string;
+  pillarCount?: number;
+}
+
+export interface KnowledgeSourcePayload {
+  success: boolean;
+  filename?: string;
+  path?: string;
+  content?: string;
+  size?: number;
+  message?: string;
+  summary?: KnowledgeSourceSummary;
+}
+
 const BASE_PATH = '/admin/ai-tools';
 
 export const aiToolService = {
@@ -64,6 +80,16 @@ export const aiToolService = {
 
   runTest: async (id: number, params?: Record<string, any>): Promise<AIToolTest> => {
     const response = await apiClient.post<AIToolTest>(`${BASE_PATH}/${id}/test`, params || {});
+    return response.data;
+  },
+
+  getKnowledgeSource: async (): Promise<KnowledgeSourcePayload> => {
+    const response = await apiClient.get<KnowledgeSourcePayload>(`${BASE_PATH}/knowledge-source`);
+    return response.data;
+  },
+
+  updateKnowledgeSource: async (content: string): Promise<KnowledgeSourcePayload> => {
+    const response = await apiClient.put<KnowledgeSourcePayload>(`${BASE_PATH}/knowledge-source`, { content });
     return response.data;
   },
 };
