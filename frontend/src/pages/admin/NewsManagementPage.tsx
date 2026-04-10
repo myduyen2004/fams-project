@@ -119,7 +119,7 @@ export const NewsManagementPage = () => {
             <select
               value={targetFilter}
               onChange={(e) => setTargetFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-200 dark:border-zinc-700 rounded-xl bg-gray-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-900 text-sm outline-none text-gray-900 dark:text-gray-100"
+              className="pl-4 pr-10 py-2 border border-gray-200 dark:border-zinc-700 rounded-xl bg-gray-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-900 text-sm outline-none text-gray-900 dark:text-gray-100"
             >
               <option value="ALL">Tất cả đối tượng</option>
               <option value="STUDENT">Sinh viên</option>
@@ -131,7 +131,7 @@ export const NewsManagementPage = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-200 dark:border-zinc-700 rounded-xl bg-gray-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-900 text-sm outline-none text-gray-900 dark:text-gray-100"
+              className="pl-4 pr-10 py-2 border border-gray-200 dark:border-zinc-700 rounded-xl bg-gray-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-900 text-sm outline-none text-gray-900 dark:text-gray-100"
             >
               <option value="ALL">Tất cả trạng thái</option>
               <option value="DRAFT">Bản nháp</option>

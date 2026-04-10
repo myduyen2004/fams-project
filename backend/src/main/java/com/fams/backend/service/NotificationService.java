@@ -186,6 +186,79 @@ public class NotificationService {
         log.info("Sent notification to all Academic Staff for grade submission of class {}", className);
     }
 
+    /**
+     * Notify students and lecturers when timetable is published for a semester
+     */
+    @Transactional
+    public void notifyTimetablePublished(com.fams.backend.entity.Semester semester) {
+        String title = "Thời khóa biểu đã được công khai";
+        String content = String.format("Thời khóa biểu của học kỳ %s đã được công khai. Vui lòng truy cập hệ thống để xem chi tiết.", 
+                semester.getName());
+
+        // Notify Students
+        Notification studentNotif = Notification.builder()
+                .title(title)
+                .content(content)
+                .type(Notification.NotificationType.SCHEDULE_CHANGE)
+                .targetType(Notification.TargetType.STUDENT)
+                .targetUrl("/student/schedule")
+                .sentAt(LocalDateTime.now())
+                .build();
+        studentNotif = notificationRepository.save(studentNotif);
+        createNotificationRecipients(studentNotif);
+
+        // Notify Lecturers
+        Notification lecturerNotif = Notification.builder()
+                .title(title)
+                .content(content)
+                .type(Notification.NotificationType.SCHEDULE_CHANGE)
+                .targetType(Notification.TargetType.LECTURER)
+                .targetUrl("/lecturer/schedule")
+                .sentAt(LocalDateTime.now())
+                .build();
+        lecturerNotif = notificationRepository.save(lecturerNotif);
+        createNotificationRecipients(lecturerNotif);
+        
+        log.info("Sent timetable publish notifications for semester {}", semester.getCode());
+    }
+
+    /**
+     * Notify students and lecturers when timetable is unpublished for a semester
+     */
+    @Transactional
+    public void notifyTimetableUnpublished(com.fams.backend.entity.Semester semester) {
+        String title = "Thời khóa biểu đã bị gỡ bỏ";
+        String content = String.format("Thời khóa biểu của học kỳ %s đã bị gỡ bỏ để cập nhật. Vui lòng quay lại sau.", 
+                semester.getName());
+
+        // Notify Students
+        Notification studentNotif = Notification.builder()
+                .title(title)
+                .content(content)
+                .type(Notification.NotificationType.SCHEDULE_CHANGE)
+                .targetType(Notification.TargetType.STUDENT)
+                .targetUrl("/student/schedule")
+                .sentAt(LocalDateTime.now())
+                .build();
+        notificationRepository.save(studentNotif);
+        createNotificationRecipients(studentNotif);
+
+        // Notify Lecturers
+        Notification lecturerNotif = Notification.builder()
+                .title(title)
+                .content(content)
+                .type(Notification.NotificationType.SCHEDULE_CHANGE)
+                .targetType(Notification.TargetType.LECTURER)
+                .targetUrl("/lecturer/schedule")
+                .sentAt(LocalDateTime.now())
+                .build();
+        notificationRepository.save(lecturerNotif);
+        createNotificationRecipients(lecturerNotif);
+        
+        log.info("Sent timetable unpublish notifications for semester {}", semester.getCode());
+
+    }
+
     @Transactional
     public void notifyNewsPublished(News news) {
         Notification.TargetType mappedTargetType = Notification.TargetType.valueOf(news.getTargetType().name());
@@ -229,7 +302,7 @@ public class NotificationService {
     public void notifyAcademicStaffNewRequest(com.fams.backend.entity.AcademicRequest academicRequest) {
         String title = "Yêu cầu học thuật mới: " + academicRequest.getRequestTitle();
         String content = String.format(
-                "Sinh viên %s (%s) đã gửi yêu cầu: %s. Vui lòng xem xét và xử lý.",
+                "Sinh viên %s (%s) đã gửi yêu cầu: %s. Vui lòng nhấn vào đây để xem xét và xử lý.",
                 academicRequest.getStudent().getFullName(),
                 academicRequest.getStudent().getCode(),
                 academicRequest.getRequestTitle());
@@ -240,6 +313,7 @@ public class NotificationService {
                 .content(content)
                 .type(Notification.NotificationType.ACADEMIC)
                 .targetType(Notification.TargetType.USER)
+                .targetUrl("/academic-staff/student-requests/" + academicRequest.getId())
                 .sentAt(LocalDateTime.now())
                 .build();
 
