@@ -47,7 +47,6 @@ public class DashboardServiceImpl implements DashboardService {
         private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
         @Override
-        @org.springframework.cache.annotation.Cacheable(value = "dashboard_stats", key = "'global'")
         public DashboardStatsResponse getStatistics() {
                 long totalStudents = userRepository.countByRole(User.UserRole.STUDENT);
                 long totalLecturers = userRepository.countByRole(User.UserRole.LECTURER);
@@ -78,6 +77,7 @@ public class DashboardServiceImpl implements DashboardService {
                                                 .accessTime(log.getAccessTime().format(DATE_TIME_FORMATTER))
                                                 .location(log.getLocation())
                                                 .status(log.getStatus())
+                                                .avatar(log.getUser().getAvatar())
                                                 .build())
                                 .collect(Collectors.toList());
         }

@@ -11,6 +11,7 @@ import { AddUserModal, EditUserModal, ViewUserModal, ImportUserModal } from '../
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { authService } from '../../services/api/authService';
 import { usePagination } from '../../hooks/usePagination';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 
 export const UsersPage = () => {
   const [users, setUsers] = useState<UserResponse[]>([]);
@@ -42,6 +43,19 @@ export const UsersPage = () => {
     percentage: number;
   } | null>(null);
 
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type?: 'danger' | 'warning' | 'info' | 'success';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => { },
+  });
+
   // WebSocket for real-time updates during import
 
   useWebSocket(`/topic/import-progress/${authService.getUser()?.username}`, (data) => {
@@ -55,47 +69,72 @@ export const UsersPage = () => {
 
         data.newUsers.forEach((updatedUser: UserResponse) => {
           const index = next.findIndex(u => u.id === updatedUser.id);
+          
+          // Ensure roleName exists so the table column isn't shockingly blank right after import
+          if (!updatedUser.roleName && updatedUser.role) {
+            const roleMap: Record<string, string> = {
+              'ADMIN': 'Quản trị viên',
+              'ACADEMIC_STAFF': 'Phòng đào tạo',
+              'LECTURER': 'Giảng viên',
+              'STUDENT': 'Sinh viên'
+            };
+            updatedUser.roleName = roleMap[updatedUser.role] || updatedUser.role;
+          }
+
           if (index !== -1) {
             // Update existing user (e.g. background avatar upload)
             next[index] = { ...next[index], ...updatedUser };
             hasChanges = true;
           } else {
-            // Prepend new user
-            next.unshift(updatedUser);
-            setTotalElements(total => total + 1);
-            hasChanges = true;
+            // Prepend new user only if it matches current filter
+            if (roleFilter === 'all' || updatedUser.role === roleFilter) {
+              next.unshift(updatedUser);
+              setTotalElements(total => total + 1);
+              hasChanges = true;
+            }
           }
         });
 
         return hasChanges ? next : prev;
       });
     }
+
+    // Definitive Fix: Refresh the whole list when the job is fully completed
+    // This catches any final avatar updates and ensures cache consistency.
+    if (data.status === 'COMPLETED') {
+      console.log('Import job COMPLETED - triggering silent refresh');
+      setTimeout(() => {
+        fetchUsers(true);
+      }, 500); // Small delay to allow DB consistency
+    }
   });
 
   useWebSocket(`/topic/activation-progress/${authService.getUser()?.username}`, (data) => {
     setActivationProgress(data);
 
-    // Real-time remove activated users from the list
+    // 1. Process Batch Removals (Real-time Filter)
     if (data.activatedUserIds && data.activatedUserIds.length > 0) {
       const activatedSet = new Set(data.activatedUserIds.map(Number));
-      setUsers(prev => {
-        const next = prev.filter(u => !activatedSet.has(Number(u.id)));
-        // If the current page becomes empty and there are more users, refetch silently
-        if (next.length === 0 && totalElements > data.activatedUserIds.length) {
-          fetchUsers(true);
-        }
-        return next;
-      });
+      
+      setUsers(prev => prev.filter(u => !activatedSet.has(Number(u.id))));
       setTotalElements(prev => Math.max(0, prev - data.activatedUserIds.length));
     }
 
+    // 2. Handle Completion (Cleanup & Resync)
     if (data.status === 'COMPLETED') {
-      setIsActivating(false);
-      fetchUsers(true);
-      setActivationProgress(prev => prev ? { ...prev, percentage: 100, message: 'Đã hoàn tất kích hoạt!' } : null);
-      setTimeout(() => {
-        setActivationProgress(null);
-      }, 3000);
+        setIsActivating(false);
+        // Force list to empty if this was a total activation
+        if (data.current === data.total && data.total > 0) {
+            setUsers([]);
+            setTotalElements(0);
+        }
+        
+        // Final sync with database (silent) to ensure UI is perfectly clean
+        setTimeout(() => fetchUsers(true), 1000);
+
+        setTimeout(() => {
+            setActivationProgress(null);
+        }, 5000);
     }
   });
 
@@ -165,18 +204,26 @@ export const UsersPage = () => {
   }, []);
 
   const handleBulkDelete = useCallback(async () => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa các tài khoản đã chọn?')) return;
-    try {
-      setIsDeleting(true);
-      await Promise.all(selectedUsers.map(id => userService.deleteUser(id)));
-      toast.success('Đã xóa thành công');
-      setSelectedUsers([]);
-      fetchUsers();
-    } catch (error) {
-      toast.error('Có lỗi xảy ra khi xóa');
-    } finally {
-      setIsDeleting(false);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Xác nhận xóa',
+      message: 'Bạn có chắc chắn muốn xóa các tài khoản đã chọn?',
+      type: 'danger',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          setIsDeleting(true);
+          await Promise.all(selectedUsers.map(id => userService.deleteUser(id)));
+          toast.success('Đã xóa thành công');
+          setSelectedUsers([]);
+          fetchUsers();
+        } catch (error) {
+          toast.error('Có lỗi xảy ra khi xóa');
+        } finally {
+          setIsDeleting(false);
+        }
+      }
+    });
   }, [selectedUsers, fetchUsers]);
 
   const handleBulkActivate = useCallback(async () => {
@@ -188,31 +235,47 @@ export const UsersPage = () => {
       return;
     }
 
-    try {
-      setIsActivating(true);
-      await userService.activateUsers(selectedUsers);
-      toast.success('Đã kích hoạt thành công');
-      setSelectedUsers([]);
-      fetchUsers();
-    } catch (error) {
-      toast.error('Có lỗi xảy ra khi kích hoạt');
-    } finally {
-      setIsActivating(false);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Kích hoạt tài khoản',
+      message: `Bạn có chắc chắn muốn kích hoạt ${selectedUsers.length} tài khoản này? Hệ thống sẽ gửi email thông báo thông tin đăng nhập cho người dùng.`,
+      type: 'success',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          setIsActivating(true);
+          await userService.activateUsers(selectedUsers);
+          toast.success('Đã kích hoạt thành công');
+          setSelectedUsers([]);
+          fetchUsers();
+        } catch (error) {
+          toast.error('Có lỗi xảy ra khi kích hoạt');
+        } finally {
+          setIsActivating(false);
+        }
+      }
+    });
   }, [selectedUsers, users, fetchUsers]);
 
   const handleActivateAll = useCallback(async () => {
-    if (!window.confirm('Bạn có chắc chắn muốn kích hoạt TOÀN BỘ tài khoản chưa kích hoạt? Hệ thống sẽ gửi email thông báo cho từng người dùng.')) return;
-
-    try {
-      setIsActivating(true);
-      setActivationProgress({ status: 'STARTING', current: 0, total: 0, message: 'Đang khởi tạo...', percentage: 0 });
-      await userService.activateAllUsers();
-    } catch (error) {
-      toast.error('Có lỗi xảy ra khi kích hoạt toàn bộ');
-      setIsActivating(false);
-      setActivationProgress(null);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Kích hoạt toàn bộ',
+      message: 'Bạn có chắc chắn muốn kích hoạt TOÀN BỘ tài khoản chưa kích hoạt?\nHệ thống sẽ gửi email thông báo cho từng người dùng.',
+      type: 'success',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          setIsActivating(true);
+          setActivationProgress({ status: 'STARTING', current: 0, total: 0, message: 'Đang khởi tạo...', percentage: 0 });
+          await userService.activateAllUsers();
+        } catch (error) {
+          toast.error('Có lỗi xảy ra khi kích hoạt toàn bộ');
+          setIsActivating(false);
+          setActivationProgress(null);
+        }
+      }
+    });
   }, []);
 
   const handleView = useCallback((user: UserResponse) => {
@@ -225,11 +288,16 @@ export const UsersPage = () => {
     setIsEditModalOpen(true);
   }, []);
 
-  const handleModalSuccess = useCallback(() => {
+  const handleModalSuccess = useCallback((isImport = false) => {
     setIsAddModalOpen(false);
     setIsEditModalOpen(false);
     setIsImportModalOpen(false);
-    fetchUsers();
+    if (isImport === true) {
+      // Delay fetching to allow DB sync while keeping the websocket data visible
+      setTimeout(() => fetchUsers(true), 2500);
+    } else {
+      fetchUsers();
+    }
   }, [fetchUsers]);
 
   // Memoized date formatter to avoid re-creating it
@@ -336,21 +404,20 @@ export const UsersPage = () => {
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Mã số</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Role</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Ngày sinh</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Ngày tạo</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-lg">Hành động</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider rounded-tr-lg">Ngày tạo</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-10 text-center text-gray-400">
+                  <td colSpan={6} className="py-10 text-center text-gray-400">
                     <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
                     Đang tải dữ liệu...
                   </td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-10 text-center text-gray-400">Không có tài khoản nào chờ kích hoạt</td>
+                  <td colSpan={6} className="py-10 text-center text-gray-400">Không có tài khoản nào chờ kích hoạt</td>
                 </tr>
               ) : (
                 users.map((user) => (
@@ -360,7 +427,6 @@ export const UsersPage = () => {
                     isSelected={selectedUsers.includes(user.id)}
                     onSelect={handleSelectUser}
                     onView={handleView}
-                    onEdit={handleEdit}
                     formatDateTime={formatDateTime}
                   />
                 ))
@@ -379,10 +445,27 @@ export const UsersPage = () => {
       </div>
 
       {/* Modals */}
-      {isAddModalOpen && <AddUserModal onClose={() => setIsAddModalOpen(false)} onSuccess={handleModalSuccess} />}
-      {isEditModalOpen && selectedUserData && <EditUserModal user={selectedUserData} onClose={() => setIsEditModalOpen(false)} onSuccess={handleModalSuccess} />}
-      {isViewModalOpen && selectedUserData && <ViewUserModal user={selectedUserData} onClose={() => setIsViewModalOpen(false)} />}
-      {isImportModalOpen && <ImportUserModal onClose={() => setIsImportModalOpen(false)} onSuccess={handleModalSuccess} />}
+      {isAddModalOpen && <AddUserModal onClose={() => setIsAddModalOpen(false)} onSuccess={() => handleModalSuccess(false)} />}
+      {isEditModalOpen && selectedUserData && <EditUserModal user={selectedUserData} onClose={() => setIsEditModalOpen(false)} onSuccess={() => handleModalSuccess(false)} />}
+      {isViewModalOpen && selectedUserData && (
+        <ViewUserModal 
+          user={selectedUserData} 
+          onClose={() => setIsViewModalOpen(false)} 
+          onEdit={() => handleEdit(selectedUserData)}
+        />
+      )}
+      {isImportModalOpen && <ImportUserModal onClose={() => setIsImportModalOpen(false)} onSuccess={() => handleModalSuccess(true)} />}
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmLabel="Xác nhận"
+        cancelLabel="Hủy"
+      />
     </AdminLayout>
   );
 };

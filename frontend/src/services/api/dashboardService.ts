@@ -51,8 +51,18 @@ export const dashboardService = {
     },
 
     // Get system logs
-    getSystemLogs: async (): Promise<SystemLog[]> => {
-        const response = await apiClient.get<SystemLog[]>('/dashboard/system-logs');
+    getSystemLogs: async (params?: {
+        page?: number;
+        size?: number;
+        search?: string;
+        type?: string;
+        role?: string;
+        startDate?: string;
+        endDate?: string;
+    }): Promise<{ content: SystemLog[]; totalPages: number; totalElements: number }> => {
+        const response = await apiClient.get<{ content: SystemLog[]; totalPages: number; totalElements: number }>('/dashboard/system-logs', {
+            params
+        });
         return response.data;
     },
 

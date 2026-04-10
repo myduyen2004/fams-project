@@ -16,4 +16,5 @@ public class RecentAccessResponse {
     private String accessTime;
     private String location;
     private String status;
+    private String avatar;
 }

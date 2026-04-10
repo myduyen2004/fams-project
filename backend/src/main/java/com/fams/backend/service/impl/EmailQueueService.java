@@ -26,7 +26,7 @@ public class EmailQueueService {
 
     private final StringRedisTemplate redisTemplate;
     private final EmailService emailService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     private static final String EMAIL_QUEUE_KEY = "fams:email:queue";
     private static final String CANCELLED_JOBS_KEY = "fams:jobs:cancelled";

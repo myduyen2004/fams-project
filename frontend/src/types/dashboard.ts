@@ -15,6 +15,7 @@ export interface RecentAccess {
     accessTime: string;
     location: string;
     status: string;
+    avatar?: string;
 }
 
 export interface Alert {
@@ -44,8 +45,16 @@ export interface SystemLog {
     id: number;
     title: string;
     description: string;
-    type: string;
     timestamp: string;
+    type: 'info' | 'success' | 'warning' | 'error' | string;
+    source?: string;
+    performerName?: string;
+    performerAvatar?: string;
+    performerRole?: string;
+    ipAddress?: string;
+    userAgent?: string;
+    oldValue?: string;
+    newValue?: string;
 }
 
 export interface NotificationResponse {

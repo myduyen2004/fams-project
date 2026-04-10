@@ -71,25 +71,48 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
                 String username = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
                 User currentUser = userRepository.findByUsername(username).orElse(null);
 
-                // 1. Initiate parallel data fetching tasks
+                // 1. Initiate parallel data fetching tasks with resilient error handling
                 java.util.concurrent.CompletableFuture<List<AcademicStaffDashboardResponse.RunningRoomDTO>> runningRoomsFuture = java.util.concurrent.CompletableFuture
-                                .supplyAsync(self::getRunningRooms, dashboardExecutor);
+                                .supplyAsync(self::getRunningRooms, dashboardExecutor)
+                                .exceptionally(e -> {
+                                        log.error("Dashboard error: Failed to fetch running rooms", e);
+                                        return List.of();
+                                });
 
                 java.util.concurrent.CompletableFuture<AcademicStaffDashboardResponse.DashboardStats> statsFuture = java.util.concurrent.CompletableFuture
-                                .supplyAsync(() -> self.getStats(), dashboardExecutor);
+                                .supplyAsync(() -> self.getStats(), dashboardExecutor)
+                                .exceptionally(e -> {
+                                        log.error("Dashboard error: Failed to fetch general stats", e);
+                                        return AcademicStaffDashboardResponse.DashboardStats.builder()
+                                                        .totalStudents(0L).totalLecturers(0L).totalRequests(0L)
+                                                        .studentStats(List.of()).lecturerStats(List.of()).build();
+                                });
 
                 java.util.concurrent.CompletableFuture<List<AcademicStaffDashboardResponse.TopStudentDTO>> topStudentsFuture = java.util.concurrent.CompletableFuture
-                                .supplyAsync(() -> self.getTopStudents(), dashboardExecutor);
+                                .supplyAsync(() -> self.getTopStudents(), dashboardExecutor)
+                                .exceptionally(e -> {
+                                        log.error("Dashboard error: Failed to fetch top students", e);
+                                        return List.of();
+                                });
 
                 java.util.concurrent.CompletableFuture<List<NewsResponse>> newsFuture = java.util.concurrent.CompletableFuture
                                 .supplyAsync(() -> newsService.getPublishedNews(currentUser, 0, 3).getContent(), dashboardExecutor);
 
                 java.util.concurrent.CompletableFuture<AcademicStaffDashboardResponse.AttendanceStatsDTO> attendanceStatsFuture = java.util.concurrent.CompletableFuture
                                 .supplyAsync(() -> self.getAttendanceStatsForDate(java.time.LocalDate.now()),
-                                                dashboardExecutor);
+                                                dashboardExecutor)
+                                .exceptionally(e -> {
+                                        log.error("Dashboard error: Failed to fetch daily attendance stats", e);
+                                        return AcademicStaffDashboardResponse.AttendanceStatsDTO.builder()
+                                                        .present(0).absent(0).date("N/A").build();
+                                });
 
                 java.util.concurrent.CompletableFuture<List<AcademicStaffDashboardResponse.WeeklyAttendanceDTO>> weeklyAttendanceFuture = java.util.concurrent.CompletableFuture
-                                .supplyAsync(() -> self.getWeeklyAttendanceData(startDate), dashboardExecutor);
+                                .supplyAsync(() -> self.getWeeklyAttendanceData(startDate), dashboardExecutor)
+                                .exceptionally(e -> {
+                                        log.error("Dashboard error: Failed to fetch weekly attendance trend", e);
+                                        return List.of();
+                                });
 
                 java.util.concurrent.CompletableFuture<Integer> unreadNewsCountFuture = java.util.concurrent.CompletableFuture
                                 .supplyAsync(() -> (int) newsService.getUnreadCount(currentUser), dashboardExecutor);
@@ -100,7 +123,6 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
                                         runningRoomsFuture, statsFuture, topStudentsFuture,
                                         newsFuture, attendanceStatsFuture,
                                         weeklyAttendanceFuture, unreadNewsCountFuture).join();
-
                         List<AcademicStaffDashboardResponse.RunningRoomDTO> runningRooms = runningRoomsFuture.get();
 
                         AcademicStaffDashboardResponse response = AcademicStaffDashboardResponse.builder()
@@ -114,12 +136,13 @@ public class AcademicStaffDashboardServiceImpl implements AcademicStaffDashboard
                                         .weeklyAttendance(weeklyAttendanceFuture.get())
                                         .build();
 
-                        log.info("Optimization: Dashboard data generated in {} ms",
+                        log.info("Dashboard fetch completed in {} ms (Parallel Optimization)",
                                         System.currentTimeMillis() - startTime);
                         return response;
                 } catch (Exception e) {
-                        log.error("Fatal error during parallel dashboard data fetch", e);
-                        throw new RuntimeException("Dashboard optimization failure", e);
+                        log.error("Critical error during dashboard object construction", e);
+                        // Deep fallback in case build() fails or get() interrupts
+                        return AcademicStaffDashboardResponse.builder().unreadNotificationsCount(0).build();
                 }
         }
 
