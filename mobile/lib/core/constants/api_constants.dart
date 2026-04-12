@@ -14,29 +14,31 @@ class ApiConstants {
       'http://10.0.14.210:8080'; // Real device via WiFi
 
   // --- THIET LAP KET NOI (Team FAMS) ---
-  // Chọn 1 trong 3 chế độ kết nối bằng cách bật TRUE cho biến tương ứng:
-  static const bool useNgrok = false;   // Dùng Ngrok
-  static const bool useUsb = true;     // Dùng máy thật qua USB (Cần chạy adb reverse)
-  // Nếu cả 2 trên đều FALSE -> Mặc định dùng cho Android Emulator (10.0.2.2)
+  static String _activeBaseUrl = baseUrlUsb;
 
-  // Current Backend URL
+  /// Current Backend URL
   static String get baseUrl {
     if (Platform.isIOS) {
       return baseUrlNgrok; // iOS luôn dùng ngrok (hoặc local IP máy tính)
     }
+    return _activeBaseUrl;
+  }
 
-    // Android:
-    if (useUsb) {
-      // Phải chạy lệnh: adb reverse tcp:8080 tcp:8080
-      return baseUrlUsb; 
+  /// Automatically detect which connection to use: USB (localhost) or Ngrok
+  static Future<void> findBestConnection() async {
+    print('[FAMS] Dang kiem tra ket noi...');
+    try {
+      // Thu ket noi den localhost:8080 (USB / adb reverse)
+      // Thoi gian cho 1 giay de phat hien
+      final socket = await Socket.connect('127.0.0.1', 8080, timeout: const Duration(seconds: 1));
+      socket.destroy();
+      _activeBaseUrl = baseUrlUsb;
+      print('[FAMS] Ket noi USB duoc phat hien! Dung: $_activeBaseUrl');
+    } catch (_) {
+      // Neu khong co ket noi USB, mac dinh dung Ngrok
+      _activeBaseUrl = baseUrlNgrok;
+      print('[FAMS] Khong tim thay USB. Tu dong dung Ngrok: $_activeBaseUrl');
     }
-    
-    if (useNgrok) {
-      return baseUrlNgrok;
-    }
-
-    // Mặc định cho Emulator
-    return baseUrlLocal;
   }
 
   // Auth Endpoints
