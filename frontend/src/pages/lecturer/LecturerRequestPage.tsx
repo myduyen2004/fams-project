@@ -15,16 +15,19 @@ export const LecturerRequestPage: React.FC = () => {
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
     const [revokingRequestId, setRevokingRequestId] = useState<number | null>(null);
+    const [isRevoking, setIsRevoking] = useState(false);
 
     const handleRevokeConfirm = () => {
         if (revokingRequestId) {
+            setIsRevoking(true);
             scheduleRequestService.revokeRequest(revokingRequestId)
                 .then(() => {
                     toast.success('Đã thu hồi đơn yêu cầu thành công');
+                    setRevokingRequestId(null);
                     fetchRequests();
                 })
                 .catch(() => toast.error('Lỗi khi thu hồi đơn yêu cầu'))
-                .finally(() => setRevokingRequestId(null));
+                .finally(() => setIsRevoking(false));
         }
     };
 
@@ -219,6 +222,7 @@ export const LecturerRequestPage: React.FC = () => {
                 confirmLabel="Thu hồi"
                 cancelLabel="Hủy"
                 type="danger"
+                isLoading={isRevoking}
             />
         </LecturerLayout>
     );

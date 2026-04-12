@@ -19,6 +19,7 @@ import '../../face_recognition/views/face_registration_view.dart';
 import '../controllers/schedule_controller.dart';
 import 'lecturer_info_screen.dart';
 import 'assignment_detail_screen.dart';
+import '../../lecturer/views/slot_attendance_screen.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:solar_icons/solar_icons.dart';
 
@@ -223,7 +224,15 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
                         Get.put(ClassListController());
                       }
                       Get.find<ClassListController>().selectClass(classSection);
-                      Get.to(() => StudentListScreen(classSection: classSection));
+                      
+                      final authController = Get.find<AuthController>();
+                      final isLecturer = authController.currentUser.value?.isLecturer ?? false;
+                      
+                      if (isLecturer) {
+                        Get.to(() => SlotAttendanceScreen(slot: widget.slot));
+                      } else {
+                        Get.to(() => StudentListScreen(classSection: classSection));
+                      }
                     }
                   },
                 ),

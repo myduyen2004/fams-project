@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:ui'; // For ImageFilter
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:solar_icons/solar_icons.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../schedule/controllers/schedule_controller.dart';
 import '../controllers/class_list_controller.dart';
@@ -20,7 +22,18 @@ class ClassListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: AppBackground(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              const Color(0xFFFEF3DE),
+              Colors.white,
+            ],
+            stops: const [0.0, 0.3],
+          ),
+        ),
         child: SafeArea(
           child: Column(
             children: [
@@ -34,7 +47,7 @@ class ClassListScreen extends StatelessWidget {
                       controller.classes.isEmpty) {
                     return const Center(
                       child: CircularProgressIndicator(
-                        color: Color(0xFFEF7623),
+                        color: AppColors.primaryOrange,
                       ),
                     );
                   }
@@ -46,7 +59,7 @@ class ClassListScreen extends StatelessWidget {
                         children: [
                           Text(
                             controller.errorMessage.value,
-                            style: GoogleFonts.roboto(color: Colors.red),
+                            style: GoogleFonts.plusJakartaSans(color: Colors.red),
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton(
@@ -60,21 +73,30 @@ class ClassListScreen extends StatelessWidget {
 
                   if (controller.classes.isEmpty) {
                     return Center(
-                      child: Text(
-                        'Không có lớp học',
-                        style: GoogleFonts.roboto(
-                          color: Colors.grey[600],
-                          fontSize: 16,
-                        ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(SolarIconsOutline.box, size: 64.sp, color: Colors.grey.shade300),
+                          SizedBox(height: 16.h),
+                          Text(
+                            'Không có lớp học',
+                            style: GoogleFonts.plusJakartaSans(
+                              color: Colors.grey[600],
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   }
 
                   return RefreshIndicator(
                     onRefresh: controller.fetchClasses,
-                    color: const Color(0xFFEF7623),
+                    color: AppColors.primaryOrange,
                     child: ListView.builder(
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.fromLTRB(20.w, 10.h, 20.w, 40.h),
+                      physics: const BouncingScrollPhysics(),
                       itemCount: controller.classes.length,
                       itemBuilder: (context, index) {
                         return _buildClassCard(
@@ -90,99 +112,12 @@ class ClassListScreen extends StatelessWidget {
           ),
         ),
       ),
-
-      // Floating QR Button and Bottom Bar
-      floatingActionButton: Container(
-        height: 70,
-        width: 70,
-        margin: const EdgeInsets.only(top: 40), // Push FAB down slightly
-        child: FloatingActionButton(
-          backgroundColor: Colors.white,
-          elevation: 4,
-          onPressed: () {},
-          shape: const CircleBorder(),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: const BoxDecoration(
-              color: Color(0xFFFFF0E0),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.qr_code_scanner_rounded,
-              color: AppColors.primaryOrange,
-              size: 32,
-            ),
-          ),
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: BottomAppBar(
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 12,
-        color: Colors.white,
-        elevation: 20,
-        surfaceTintColor: Colors.white,
-        shadowColor: Colors.black,
-        height: 80,
-        padding: EdgeInsets.zero,
-        child: GetBuilder<HomeController>(
-          builder: (controller) {
-            final authController = Get.find<AuthController>();
-            return Obx(() {
-              final isLecturer =
-                  authController.currentUser.value?.isLecturer == true;
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildNavItem(
-                    icon: Icons.home_rounded,
-                    label: 'Trang chủ',
-                    isActive: false,
-                    onTap: () {
-                      Get.find<HomeController>().changeTab(0);
-                      Get.back();
-                    },
-                  ),
-                  _buildNavItem(
-                    icon: Icons.calendar_month_rounded,
-                    label: isLecturer ? 'Lịch dạy' : 'Lịch học',
-                    isActive: false,
-                    onTap: () {
-                      Get.find<HomeController>().changeTab(1);
-                      Get.back();
-                    },
-                  ),
-                  const SizedBox(width: 48), // Space for FAB
-                  _buildNavItem(
-                    icon: Icons.chat_bubble_rounded,
-                    label: 'Tin nhắn',
-                    isActive: false,
-                    onTap: () {
-                      Get.find<HomeController>().changeTab(3);
-                      Get.back();
-                    },
-                  ),
-                  _buildNavItem(
-                    icon: Icons.account_circle_rounded,
-                    label: 'Tài khoản',
-                    isActive: false,
-                    onTap: () {
-                      Get.find<HomeController>().changeTab(4);
-                      Get.back();
-                    },
-                  ),
-                ],
-              );
-            });
-          },
-        ),
-      ),
     );
   }
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+      padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 8.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -195,31 +130,31 @@ class ClassListScreen extends StatelessWidget {
                   Get.back();
                 },
                 child: Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: EdgeInsets.all(10.r),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14.r),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 8,
+                        color: Colors.black.withOpacity(0.06),
+                        blurRadius: 10,
                       ),
                     ],
                   ),
-                  child: const Icon(
-                    Icons.arrow_back_rounded,
-                    color: Colors.black54,
-                    size: 22,
+                  child: Icon(
+                    SolarIconsOutline.altArrowLeft,
+                    color: Colors.black87,
+                    size: 22.sp,
                   ),
                 ),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: 16.w),
               Expanded(
                 child: Text(
                   'Danh sách lớp',
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 22.sp,
+                    fontWeight: FontWeight.w800,
                     color: Colors.black87,
                   ),
                 ),
@@ -227,9 +162,9 @@ class ClassListScreen extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 16),
+          SizedBox(height: 18.h),
 
-          // Semester Pill Selector (rounded, soft)
+          // Semester Pill Selector
           _buildSemesterPill(context),
         ],
       ),
@@ -241,28 +176,26 @@ class ClassListScreen extends StatelessWidget {
     try {
       scheduleController = Get.find<ScheduleController>();
     } catch (_) {
-      // Fallback if ScheduleController is not found
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(30.r),
+          boxShadow: [
+             BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10),
+          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.calendar_today,
-              color: Color(0xFFEF7623),
-              size: 18,
-            ),
-            const SizedBox(width: 10),
+            Icon(SolarIconsOutline.calendar, color: AppColors.primaryOrange, size: 18.sp),
+            SizedBox(width: 10.w),
             Text(
-              'Học kỳ: Spring 2026',
-              style: GoogleFonts.roboto(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFFEF7623),
+              'Học kỳ: SPRING 2026',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primaryOrange,
               ),
             ),
           ],
@@ -273,53 +206,43 @@ class ClassListScreen extends StatelessWidget {
     return GestureDetector(
       onTap: () => _showSemesterPicker(context, scheduleController!),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 12.h),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(30.r),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8),
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 5)),
           ],
+          border: Border.all(color: Colors.white, width: 2),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.calendar_today,
-              color: Color(0xFFEF7623),
-              size: 18,
-            ),
-            const SizedBox(width: 10),
+            Icon(SolarIconsOutline.calendar, color: AppColors.primaryOrange, size: 18.sp),
+            SizedBox(width: 10.w),
             Obx(
               () => Text(
                 'Học kỳ: ${scheduleController?.selectedSemester.value?.name ?? 'Chọn kỳ'}',
-                style: GoogleFonts.roboto(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFFEF7623),
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primaryOrange,
                 ),
               ),
             ),
-            const SizedBox(width: 8),
-            const Icon(
-              Icons.keyboard_arrow_down,
-              color: Color(0xFFEF7623),
-              size: 20,
-            ),
+            SizedBox(width: 8.w),
+            Icon(SolarIconsOutline.altArrowDown, color: AppColors.primaryOrange, size: 18.sp),
           ],
         ),
       ),
     );
   }
 
-  void _showSemesterPicker(
-    BuildContext context,
-    ScheduleController scheduleController,
-  ) {
+  void _showSemesterPicker(BuildContext context, ScheduleController scheduleController) {
     if (scheduleController.semesters.isEmpty) {
       Get.snackbar(
         'Thông báo',
-        'Không tìm thấy danh sách học kỳ. Vui lòng thử lại sau hoặc kiểm tra kết nối mạng.',
+        'Không tìm thấy danh sách học kỳ.',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.orange.withOpacity(0.9),
         colorText: Colors.white,
@@ -330,32 +253,32 @@ class ClassListScreen extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30.r)),
       ),
       builder: (context) {
         return Container(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(24.r),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 40,
-                height: 4,
+                width: 40.w,
+                height: 4.h,
                 decoration: BoxDecoration(
                   color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(2.r),
                 ),
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: 24.h),
               Text(
                 'Chọn học kỳ',
                 style: GoogleFonts.plusJakartaSans(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 20.h),
               Obx(
                 () => Column(
                   mainAxisSize: MainAxisSize.min,
@@ -364,23 +287,18 @@ class ClassListScreen extends StatelessWidget {
                         scheduleController.selectedSemester.value?.code ==
                         semester.code;
                     return ListTile(
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
                       title: Text(
                         semester.name,
-                        style: GoogleFonts.roboto(
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          color: isSelected
-                              ? const Color(0xFFEF7623)
-                              : Colors.black87,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                          color: isSelected ? AppColors.primaryOrange : Colors.black87,
                         ),
                       ),
                       trailing: isSelected
-                          ? const Icon(
-                              Icons.check_circle,
-                              color: Color(0xFFEF7623),
-                            )
+                          ? Icon(SolarIconsBold.verifiedCheck, color: AppColors.primaryOrange, size: 22.sp)
                           : null,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
                       onTap: () {
                         scheduleController.selectedSemester.value = semester;
                         controller.fetchClasses();
@@ -390,7 +308,7 @@ class ClassListScreen extends StatelessWidget {
                   }).toList(),
                 ),
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: 20.h),
             ],
           ),
         );
@@ -405,16 +323,16 @@ class ClassListScreen extends StatelessWidget {
         Get.to(() => StudentListScreen(classSection: classSection));
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
+        margin: EdgeInsets.only(bottom: 14.h),
+        padding: EdgeInsets.all(16.r),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24.r),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 15,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -422,44 +340,45 @@ class ClassListScreen extends StatelessWidget {
           children: [
             // Number Badge
             Container(
-              width: 28,
-              height: 28,
+              width: 32.h,
+              height: 32.h,
               decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(8),
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(10.r),
               ),
               child: Center(
                 child: Text(
                   '$index',
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w800,
                     color: Colors.grey[600],
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 14.w),
 
-            // Class Info - Class code as title, course info below
+            // Class Info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _extractClassCode(classSection.className), // SE18B02
+                    _extractClassCode(classSection.className),
                     style: GoogleFonts.plusJakartaSans(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w800,
                       color: Colors.black87,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4.h),
                   Text(
-                    '${classSection.courseCode} - ${classSection.courseName}', // DBI202 - Cơ sở dữ liệu
+                    '${classSection.courseCode} - ${classSection.courseName}',
                     style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
+                      fontSize: 13.sp,
                       color: Colors.grey[600],
+                      fontWeight: FontWeight.w600,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -471,72 +390,19 @@ class ClassListScreen extends StatelessWidget {
             // Animated Status Badge
             AnimatedStatusBadge(classSection: classSection),
 
-            const SizedBox(width: 8),
-            const Icon(Icons.chevron_right, color: Colors.grey),
+            SizedBox(width: 8.w),
+            Icon(SolarIconsOutline.altArrowRight, color: Colors.grey.shade300, size: 18.sp),
           ],
         ),
       ),
     );
   }
 
-  // ignore: unused_element
-  Widget _getCourseIcon(String courseCode) {
-    IconData icon;
-    if (courseCode.startsWith('DBI') || courseCode.startsWith('SQL')) {
-      icon = Icons.storage;
-    } else if (courseCode.startsWith('MAS') || courseCode.startsWith('MAE')) {
-      icon = Icons.functions;
-    } else if (courseCode.startsWith('PRO') ||
-        courseCode.startsWith('SWR') ||
-        courseCode.startsWith('SWT')) {
-      icon = Icons.code;
-    } else if (courseCode.startsWith('CSI') || courseCode.startsWith('NET')) {
-      icon = Icons.lan;
-    } else if (courseCode.startsWith('IOT')) {
-      icon = Icons.sensors;
-    } else {
-      icon = Icons.school;
-    }
-
-    return Icon(icon, color: const Color(0xFFEF7623), size: 24);
-  }
-
-  /// Extract class code from className (e.g., "SE18B02-IOT102" -> "SE18B02")
   String _extractClassCode(String className) {
     if (className.contains('-')) {
       return className.split('-').first;
     }
     return className;
   }
-
-  Widget _buildNavItem({
-    required IconData icon,
-    required String label,
-    required bool isActive,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            color: isActive ? AppColors.primaryOrange : Colors.grey,
-            size: 26,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 11,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-              color: isActive ? AppColors.primaryOrange : Colors.grey,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
+

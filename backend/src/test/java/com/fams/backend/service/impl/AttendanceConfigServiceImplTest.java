@@ -199,15 +199,26 @@ class AttendanceConfigServiceImplTest {
     }
 
     @Test
-    void testUpdateConfig_NullFieldsThrowExceptionDuringCopy() {
-        AttendanceConfig existingConfig = AttendanceConfig.builder().configKey(DEFAULT_CONFIG_KEY).build();
+    void testUpdateConfig_NullFieldsCopiedSafely() {
+        AttendanceConfig existingConfig = AttendanceConfig.builder().configKey(DEFAULT_CONFIG_KEY)
+                .manualEnabled(true).absentThresholdMinutes(30).minAttendancePercentage(80.0)
+                .faceRecognitionEnabled(true).maxAttempts(5).wifiLocationEnabled(true).build();
         when(configRepository.findByConfigKey(DEFAULT_CONFIG_KEY)).thenReturn(Optional.of(existingConfig));
+        when(configRepository.save(any(AttendanceConfig.class))).thenAnswer(i -> i.getArguments()[0]);
 
-        AttendanceConfig invalidPayload = new AttendanceConfig(); // All null
+        // Manually setting to null because NoArgsConstructor with field initializers 
+        // would provide defaults (e.g., manualEnabled = true)
+        AttendanceConfig nullPayload = new AttendanceConfig();
+        nullPayload.setManualEnabled(null);
+        nullPayload.setAbsentThresholdMinutes(null);
+        nullPayload.setMinAttendancePercentage(null);
+
+        AttendanceConfig result = attendanceConfigService.updateConfig(nullPayload);
         
-        // Expected NullPointerException since primitive double/int unboxing or strict sets shouldn't be null
-        assertThrows(NullPointerException.class, () -> attendanceConfigService.updateConfig(invalidPayload));
-        verify(systemLogService, never()).logAttendanceConfigUpdated();
+        assertNull(result.getManualEnabled());
+        assertNull(result.getAbsentThresholdMinutes());
+        assertNull(result.getMinAttendancePercentage());
+        verify(configRepository).save(any(AttendanceConfig.class));
     }
 
     @Test

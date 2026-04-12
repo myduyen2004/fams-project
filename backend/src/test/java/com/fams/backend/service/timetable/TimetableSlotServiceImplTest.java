@@ -24,9 +24,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -117,6 +115,8 @@ class TimetableSlotServiceImplTest {
         TimetableSlot slot = new TimetableSlot();
         slot.setId(10L);
         slot.setDate(LocalDate.of(2026, 3, 15));
+        slot.setDayOfWeek(7); // Saturday
+        slot.setSlotNumber(1);
         Page<TimetableSlot> mockPage = new PageImpl<>(Collections.singletonList(slot));
         
         when(timetableSlotRepository.findAssignments(eq(1L), eq("SP26"), any(), eq("SE1801"), any()))
@@ -126,6 +126,8 @@ class TimetableSlotServiceImplTest {
         
         assertEquals(1, result.getTotalElements());
         assertEquals(10L, result.getContent().get(0).getId());
+        assertEquals(1, result.getContent().get(0).getSlotNumber());
+        assertEquals(7, result.getContent().get(0).getDayOfWeek());
     }
 
     @Test
@@ -141,7 +143,9 @@ class TimetableSlotServiceImplTest {
     void testSearchAssignments_NullFiltersHandledSafely() {
         TimetableSlot slot = new TimetableSlot();
         slot.setId(11L);
-        when(timetableSlotRepository.findAssignments(null, null, null, null, any()))
+        slot.setDayOfWeek(1); // Monday
+        slot.setSlotNumber(2);
+        when(timetableSlotRepository.findAssignments(isNull(), isNull(), isNull(), isNull(), any()))
                 .thenReturn(new PageImpl<>(Collections.singletonList(slot)));
 
         Page<TimetableDTO.TimetableSlotDTO> result = service.searchAssignments(null, null, null, null, null, PageRequest.of(0, 10));

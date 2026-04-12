@@ -30,11 +30,7 @@ export const LecturerCreateRequestPage: React.FC = () => {
     const [conflictResult, setConflictResult] = useState<ConflictCheckResponse | null>(null);
     const [checkingConflict, setCheckingConflict] = useState(false);
 
-    // Get today's date in YYYY-MM-DD format
-    const getTodayString = () => {
-        const today = new Date();
-        return today.toISOString().split('T')[0];
-    };
+
 
     // Get tomorrow's date in YYYY-MM-DD format
     const getTomorrowString = () => {
@@ -201,6 +197,12 @@ export const LecturerCreateRequestPage: React.FC = () => {
         }
         if (!reason.trim()) {
             toast.error('Vui lòng nhập lý do thay đổi');
+            return;
+        }
+
+        // Strict Conflict Check
+        if (conflictResult?.hasConflict) {
+            toast.error('Không thể tạo yêu cầu khi có xung đột lịch. Vui lòng chọn ngày hoặc slot khác.');
             return;
         }
 
@@ -371,7 +373,7 @@ export const LecturerCreateRequestPage: React.FC = () => {
                                     className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all text-slate-700 dark:text-slate-200 font-bold"
                                     type="date"
                                     value={newDate}
-                                    min={getTodayString()}
+                                    min={getTomorrowString()}
                                     onChange={handleDateChange}
                                 />
                                 {dateError && (
