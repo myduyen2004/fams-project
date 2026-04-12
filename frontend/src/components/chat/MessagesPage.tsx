@@ -675,38 +675,12 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
       console.log("[MessagesPage] Formatted messages list (reversed):", msgList);
       setMessages(msgList);
 
-      // If unread messages <= THRESHOLD, mark as read automatically
-      if (
-        !selectedGroupRef.current?.unreadCount ||
-        selectedGroupRef.current.unreadCount <= UNREAD_THRESHOLD
-      ) {
-        try {
-          console.log(
-            "[MessagesPage] Unread <= threshold, marking group as read automatically",
-            groupId
-          );
-          await chatGroupService.markAsRead(groupId);
-
-          // Reset unread count locally in the main list
-          setGroups((prevGroups) =>
-            prevGroups.map((g) =>
-              g.id === groupId
-                ? { ...g, unreadCount: 0, firstUnreadMessageId: undefined }
-                : g
-            )
-          );
-          setSelectedGroup((prev) =>
-            prev?.id === groupId
-              ? { ...prev, unreadCount: 0, firstUnreadMessageId: undefined }
-              : prev
-          );
-        } catch (err) {
-          console.error("[MessagesPage] Failed to mark as read", err);
-        }
+      // Automatic mark as read logic moved to useEffect/Scroll handling to avoid 
+      // clearing unreadCount before useLayoutEffect can scroll to unread messages.
+      if (!selectedGroupRef.current?.unreadCount || selectedGroupRef.current.unreadCount <= UNREAD_THRESHOLD) {
+        console.log("[MessagesPage] Unread <= threshold, will be marked as read by scroll/effect");
       } else {
-        console.log(
-          "[MessagesPage] Unread > threshold, waiting for user to scroll/click icon"
-        );
+        console.log("[MessagesPage] Unread > threshold, waiting for user interaction");
       }
     } catch (error) {
       console.error("Error loading messages:", error);
@@ -737,6 +711,21 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
     }
   };
 
+  const scrollToFirstUnread = (instant = false) => {
+    const firstUnreadId = selectedGroupRef.current?.firstUnreadMessageId;
+    if (firstUnreadId && messageRefs.current[firstUnreadId]) {
+      const scroll = () => {
+        messageRefs.current[firstUnreadId]?.scrollIntoView({
+          behavior: instant ? "auto" : "smooth",
+          block: "start",
+        });
+      };
+      scroll();
+      // Second pass after a small delay to account for dynamic height
+      setTimeout(scroll, 100);
+    }
+  };
+
   const handleScroll = useCallback(() => {
     if (!scrollContainerRef.current || !selectedGroupRef.current) return;
 
@@ -760,21 +749,23 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
   };
 
   useLayoutEffect(() => {
-    if (messages.length > 0) {
-      // Always scroll to bottom as requested by user
-      scrollToBottom(isInitialLoad.current);
-
-      if (isInitialLoad.current) {
-        isInitialLoad.current = false;
+    if (messages.length > 0 && isInitialLoad.current) {
+      // Logic: If no unread messages OR unread messages <= 3 (trival), scroll to bottom.
+      // Otherwise, scroll to the first unread message.
+      const unreadCount = selectedGroup?.unreadCount || 0;
+      
+      if (unreadCount === 0) {
+        scrollToBottom(true);
+      } else if (selectedGroup?.firstUnreadMessageId) {
+        scrollToFirstUnread(true);
+      } else {
+        // Fallback to bottom if no unread marker is found
+        scrollToBottom(true);
       }
+      isInitialLoad.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    messages.length,
-    selectedGroup?.id,
-    selectedGroup?.firstUnreadMessageId,
-    selectedGroup?.unreadCount,
-  ]);
+  }, [messages.length, selectedGroup?.id]);
 
   // Reset unread button when switching groups
   useEffect(() => {
@@ -1910,6 +1901,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                                 ref={(el) => (messageRefs.current[msg.id] = el)}
                                 className={`flex ${msg.isOwn ? "justify-end" : "justify-start"
                                   } ${isFirstInSequence ? "mt-4" : "mt-0"
+                                  } ${msg.reactions && msg.reactions.length > 0 ? "mb-4" : "mb-0"
                                   } w-full relative z-0`}
                               >
                                 <div
