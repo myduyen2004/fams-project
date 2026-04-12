@@ -1,6 +1,8 @@
 package com.fams.backend.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -34,11 +36,14 @@ public class AttendanceConfig {
     private Boolean manualEnabled = true;
 
     // Sau bao nhiêu phút tính là vắng
+    @Min(value = 0, message = "Thời gian vắng tối thiểu là 0 phút")
     @Column(name = "absent_threshold_minutes", nullable = false)
     @Builder.Default
     private Integer absentThresholdMinutes = 30;
 
     // Phần trăm điểm danh tối thiểu để được thi
+    @Min(value = 0, message = "Tỉ lệ điểm danh không thể âm")
+    @Max(value = 100, message = "Tỉ lệ điểm danh không thể exceed 100%")
     @Column(name = "min_attendance_percentage", nullable = false)
     @Builder.Default
     private Double minAttendancePercentage = 80.0;
@@ -49,6 +54,7 @@ public class AttendanceConfig {
     private Boolean faceRecognitionEnabled = true;
 
     // Giới hạn số lần thử / slot
+    @Min(value = 1, message = "Số lần thử tối thiểu là 1")
     @Column(name = "max_attempts", nullable = false)
     @Builder.Default
     private Integer maxAttempts = 5;
