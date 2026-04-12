@@ -58,7 +58,9 @@ void main() async {
   await ApiConstants.findBestConnection();
 
   try {
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    }
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
     isFirebaseInitialized = true;
     print('Firebase initialized successfully');
