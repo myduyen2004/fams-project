@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import {
   Search, Loader2, User as UserIcon
@@ -13,6 +13,31 @@ import { authService } from '../../services/api/authService';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { toast } from 'react-hot-toast';
 
+// Updated metadata: Removed individual icons, using central orange theme
+const PERMISSION_METADATA: Record<string, { desc: string }> = {
+  MANAGE_MAJORS: { 
+    desc: 'Cho phép thêm, sửa, xóa thông tin các ngành đào tạo trong hệ thống.'
+  },
+  MANAGE_COURSES: { 
+    desc: 'Phê duyệt chương trình học và phân bổ giảng viên cho các môn học cụ thể.'
+  },
+  MANAGE_USERS: { 
+    desc: 'Cấp quyền tạo tài khoản mới cho sinh viên và cán bộ nhân viên.'
+  },
+  MANAGE_SEMESTERS: { 
+    desc: 'Thiết lập thời gian bắt đầu và kết thúc của các học kỳ chính, học kỳ phụ.'
+  },
+  VIEW_SYSTEM_LOGS: { 
+    desc: 'Truy cập lịch sử hoạt động và các thay đổi quan trọng của hệ thống.'
+  },
+  MANAGE_SCHEDULE: { 
+    desc: 'Sắp xếp lịch học, phòng học và xử lý các xung đột về thời gian giảng dạy.'
+  },
+  MANAGE_NOTIFICATIONS: { 
+    desc: 'Gửi thông báo đẩy đến ứng dụng di động và email cho sinh viên, giảng viên.'
+  }
+};
+
 export const PermissionsPage: React.FC = () => {
   const user = authService.getUser();
   const isAdmin = user?.role === 'ADMIN';
@@ -25,30 +50,26 @@ export const PermissionsPage: React.FC = () => {
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Updated metadata: Removed individual icons, using central orange theme
-  const PERMISSION_METADATA: Record<string, { desc: string }> = {
-    MANAGE_MAJORS: { 
-      desc: 'Cho phép thêm, sửa, xóa thông tin các ngành đào tạo trong hệ thống.'
-    },
-    MANAGE_COURSES: { 
-      desc: 'Phê duyệt chương trình học và phân bổ giảng viên cho các môn học cụ thể.'
-    },
-    MANAGE_USERS: { 
-      desc: 'Cấp quyền tạo tài khoản mới cho sinh viên và cán bộ nhân viên.'
-    },
-    MANAGE_SEMESTERS: { 
-      desc: 'Thiết lập thời gian bắt đầu và kết thúc của các học kỳ chính, học kỳ phụ.'
-    },
-    VIEW_SYSTEM_LOGS: { 
-      desc: 'Truy cập lịch sử hoạt động và các thay đổi quan trọng của hệ thống.'
-    },
-    MANAGE_SCHEDULE: { 
-      desc: 'Sắp xếp lịch học, phòng học và xử lý các xung đột về thời gian giảng dạy.'
-    },
-    MANAGE_NOTIFICATIONS: { 
-      desc: 'Gửi thông báo đẩy đến ứng dụng di động và email cho sinh viên, giảng viên.'
-    }
-  };
+  // Optimization: Map for O(1) lecturer lookup
+  const lecturersMap = useMemo(() => {
+    const map = new Map<number, LecturerWithPermissions>();
+    lecturers.forEach(l => map.set(l.userId, l));
+    return map;
+  }, [lecturers]);
+
+  // Optimization: Pre-calculate permission status for selected users
+  const sharedPermissionsStatus = useMemo(() => {
+    if (selectedUserIds.length === 0) return {} as Record<string, boolean>;
+
+    const status: Record<string, boolean> = {};
+    availablePermissions.forEach(perm => {
+      status[perm.key] = selectedUserIds.every(id => {
+        const lecturer = lecturersMap.get(id);
+        return lecturer?.permissions.some((p: any) => p.permission === perm.key);
+      });
+    });
+    return status;
+  }, [selectedUserIds, lecturersMap, availablePermissions]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -184,11 +205,14 @@ export const PermissionsPage: React.FC = () => {
     );
   };
 
-  const filteredLecturers = lecturers.filter(l =>
-    l.fullName.toLowerCase().includes(search.toLowerCase()) ||
-    l.code.toLowerCase().includes(search.toLowerCase()) ||
-    l.email.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredLecturers = useMemo(() => {
+    const s = search.toLowerCase();
+    return lecturers.filter((l: LecturerWithPermissions) =>
+      l.fullName.toLowerCase().includes(s) ||
+      l.code.toLowerCase().includes(s) ||
+      l.email.toLowerCase().includes(s)
+    );
+  }, [lecturers, search]);
 
   return (
     <Layout pageTitle="Quản lý phân quyền">
@@ -343,11 +367,7 @@ export const PermissionsPage: React.FC = () => {
               {availablePermissions.map(perm => {
                 const metadata = PERMISSION_METADATA[perm.key];
                 
-                // Group logic: hasPerm is true ONLY if ALL selected lecturers have this permission
-                const hasPerm = selectedUserIds.length > 0 && selectedUserIds.every(id => {
-                  const lecturer = lecturers.find(l => l.userId === id);
-                  return lecturer?.permissions.some(p => p.permission === perm.key);
-                });
+                const hasPerm = sharedPermissionsStatus[perm.key];
                 
                 return (
                   <div 

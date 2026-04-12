@@ -783,6 +783,17 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
       .replace(/\s+/g, "_");
   };
 
+  /**
+   * Safe Cloudinary optimization
+   * - Don't touch signed URLs (/s--) as it breaks the signature
+   * - Only optimize public URLs
+   */
+  const getOptimizedCloudinaryUrl = (url: string | null | undefined, transformations = "f_auto,q_auto,w_300") => {
+    if (!url || !url.includes("cloudinary.com")) return url || "";
+    if (url.includes("/s--")) return url; // Signed URL: Don't modify
+    return url.replace("/upload/", `/upload/${transformations}/`);
+  };
+
   const downloadFile = async (url: string, fileName: string) => {
     // Check if it's a local file:// URL (optimistic/unsaved upload)
     if (url.startsWith("file://") || url.startsWith("blob:")) {
@@ -1136,15 +1147,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
               }
             >
               <img
-                src={
-                  img.attachmentUrl &&
-                    img.attachmentUrl.includes("cloudinary.com")
-                    ? img.attachmentUrl.replace(
-                      "/upload/",
-                      "/upload/f_auto,q_auto,w_300/"
-                    )
-                    : img.attachmentUrl || ""
-                }
+                src={getOptimizedCloudinaryUrl(img.attachmentUrl)}
                 alt={img.attachmentName || "Image"}
                 className="w-full h-full object-cover"
               />
@@ -1167,15 +1170,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
         >
           <div className="w-[150px] h-[150px] rounded-2xl overflow-hidden bg-gray-100 shadow-sm border border-gray-100">
             <img
-              src={
-                msg.attachmentUrl &&
-                  msg.attachmentUrl.includes("cloudinary.com")
-                  ? msg.attachmentUrl.replace(
-                    "/upload/",
-                    "/upload/f_auto,q_auto,w_300/"
-                  )
-                  : msg.attachmentUrl
-              }
+              src={getOptimizedCloudinaryUrl(msg.attachmentUrl)}
               alt={msg.attachmentName || "Image"}
               className="w-full h-full object-cover block"
               onError={(e) => {
@@ -2000,18 +1995,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                                                   msg.replyToAttachmentUrl && (
                                                     <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 border border-gray-200">
                                                       <img
-                                                        src={
-                                                          msg.replyToAttachmentUrl &&
-                                                            msg.replyToAttachmentUrl.includes(
-                                                              "cloudinary.com"
-                                                            )
-                                                            ? msg.replyToAttachmentUrl.replace(
-                                                              "/upload/",
-                                                              "/upload/c_thumb,w_100,h_100,f_auto/"
-                                                            )
-                                                            : msg.replyToAttachmentUrl ||
-                                                            ""
-                                                        }
+                                                        src={getOptimizedCloudinaryUrl(msg.replyToAttachmentUrl, "c_thumb,w_100,h_100,f_auto")}
                                                         alt=""
                                                         className="w-full h-full object-cover"
                                                       />
