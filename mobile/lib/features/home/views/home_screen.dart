@@ -9,8 +9,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_routes.dart';
 import '../../../core/utils/safe_image_decoder.dart';
+import 'package:flutter/services.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../controllers/home_controller.dart';
+import '../../profile/views/profile_screen.dart';
+import '../../schedule/views/schedule_screen.dart';
+import '../../../core/services/wifi_service.dart';
 import '../../profile/views/profile_screen.dart';
 import '../../schedule/views/schedule_screen.dart';
 import '../../schedule/controllers/schedule_controller.dart';
@@ -115,9 +119,13 @@ class HomeScreen extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  _getGreeting(),
-                  style: GoogleFonts.plusJakartaSans(fontSize: 22.sp, fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.onSurface),
+                GestureDetector(
+                  onTap: () => homeController.handleDiagnosticTap(),
+                  behavior: HitTestBehavior.opaque,
+                  child: Text(
+                    _getGreeting(),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 22.sp, fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.onSurface),
+                  ),
                 ),
                 Row(
                   children: [
