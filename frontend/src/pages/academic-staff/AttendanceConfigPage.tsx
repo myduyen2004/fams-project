@@ -123,7 +123,15 @@ const InputItem = React.memo<{
     setLocalValue(val);
     
     if (type === 'number') {
-      if (val === '' || /^-?\d*\.?\d*$/.test(val)) {
+      const isNegativeAllowed = min === undefined || min < 0;
+      const regex = isNegativeAllowed ? /^-?\d*\.?\d*$/ : /^\d*\.?\d*$/;
+      
+      if (val === '' || regex.test(val)) {
+        const floatVal = parseFloat(val);
+        if (!isNaN(floatVal)) {
+          if (min !== undefined && floatVal < min) return;
+          if (max !== undefined && floatVal > max) return;
+        }
         onChange(val);
       }
     } else {
@@ -320,6 +328,7 @@ export const AttendanceConfigPage: React.FC = () => {
                 description="Tổng thời gian kể từ khi bắt đầu slot để sinh viên có thể tự thực hiện điểm danh."
                 value={config.absentThresholdMinutes}
                 unit="PHÚT"
+                min={0}
                 onChange={(val) => setConfig({ ...config, absentThresholdMinutes: val })}
                 isReadOnly={isReadOnly}
               />
