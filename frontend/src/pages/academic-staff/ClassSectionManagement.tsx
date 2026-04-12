@@ -171,7 +171,16 @@ export const ClassSectionManagement: React.FC = () => {
     };
     const config = statusConfig[status] || { label: status, className: 'bg-gray-100 text-gray-600' };
     return (
-      <span className={`px-3 py-1 rounded-full text-xs font-bold ${config.className}`}>
+      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap inline-flex items-center gap-1.5 ${config.className}`}>
+        {status === 'ONGOING' && (
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+        )}
+        {status === 'UPCOMING' && (
+          <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+        )}
+        {status === 'FINISHED' && (
+          <span className="w-1.5 h-1.5 rounded-full bg-gray-500"></span>
+        )}
         {config.label}
       </span>
     );

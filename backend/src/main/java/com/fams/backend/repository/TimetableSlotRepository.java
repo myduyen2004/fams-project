@@ -181,7 +181,7 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
                         "WHERE s.id = :studentId " +
                         "AND e.status != com.fams.backend.entity.Enrollment.EnrollmentStatus.DROPPED " +
                         "AND ts.date BETWEEN :startDate AND :endDate " +
-                        "AND ts.status != com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.CANCELLED " +
+                        "AND ts.status IN (com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.SCHEDULED, com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.COMPLETED) " +
                         "ORDER BY ts.date, ts.slotNumber")
         List<TimetableSlot> findByStudentIdAndDateBetween(
                         @Param("studentId") Long studentId,
@@ -199,7 +199,7 @@ public interface TimetableSlotRepository extends JpaRepository<TimetableSlot, Lo
                         "JOIN FETCH ts.slotType st " +
                         "WHERE cs.lecturer.id = :lecturerId " +
                         "AND ts.date BETWEEN :startDate AND :endDate " +
-                        "AND ts.status != com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.CANCELLED " +
+                        "AND ts.status IN (com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.SCHEDULED, com.fams.backend.entity.TimetableSlot.TimetableSlotStatus.COMPLETED) " +
                         "ORDER BY ts.date, ts.slotNumber")
         List<TimetableSlot> findByLecturerIdAndDateBetween(
                         @Param("lecturerId") Long lecturerId,
