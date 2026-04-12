@@ -18,14 +18,9 @@ class CloudinaryService {
 
       print('Uploading file via backend: $fileName');
       
-      final response = await _apiService.post(
+      final response = await _apiService.postMultipart(
         '/api/upload',
-        data: formData,
-        options: Options(
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        ),
+        formData: formData,
       );
 
       if (response.statusCode == 200) {
