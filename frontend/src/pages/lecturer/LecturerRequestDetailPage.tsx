@@ -13,16 +13,19 @@ export const LecturerRequestDetailPage: React.FC = () => {
     const [request, setRequest] = useState<ScheduleRequest | null>(null);
     const [loading, setLoading] = useState(true);
     const [isRevokeModalOpen, setIsRevokeModalOpen] = useState(false);
+    const [isRevoking, setIsRevoking] = useState(false);
 
     const handleRevokeConfirm = () => {
-        setIsRevokeModalOpen(false);
         if (request) {
+            setIsRevoking(true);
             scheduleRequestService.revokeRequest(request.id)
                 .then(() => {
                     toast.success('Đã thu hồi đơn yêu cầu thành công');
+                    setIsRevokeModalOpen(false);
                     scheduleRequestService.getRequestById(Number(id)).then(setRequest);
                 })
-                .catch(() => toast.error('Lỗi khi thu hồi đơn yêu cầu'));
+                .catch(() => toast.error('Lỗi khi thu hồi đơn yêu cầu'))
+                .finally(() => setIsRevoking(false));
         }
     };
 
@@ -317,6 +320,7 @@ export const LecturerRequestDetailPage: React.FC = () => {
                 confirmLabel="Thu hồi"
                 cancelLabel="Hủy"
                 type="danger"
+                isLoading={isRevoking}
             />
         </LecturerLayout >
     );

@@ -12,6 +12,7 @@ import {
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { academicStaffService, ScheduleRequestResponse } from '../../services/api/academicStaffService';
 import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 import dayjs from 'dayjs';
 import toast from 'react-hot-toast';
 
@@ -22,6 +23,10 @@ export const RequestDetailPage = () => {
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
     const [note, setNote] = useState('');
+    const [confirmModal, setConfirmModal] = useState<{
+        isOpen: boolean;
+        status: 'APPROVED' | 'REJECTED' | null;
+    }>({ isOpen: false, status: null });
 
     useEffect(() => {
         const fetchRequest = async () => {
@@ -44,6 +49,7 @@ export const RequestDetailPage = () => {
 
     const handleUpdateStatus = async (status: 'APPROVED' | 'REJECTED') => {
         if (!request) return;
+        setConfirmModal({ isOpen: false, status: null });
         try {
             setUpdating(true);
             await academicStaffService.updateScheduleRequestStatus(request.id, status, note);
@@ -309,43 +315,7 @@ export const RequestDetailPage = () => {
                             </div>
                         </div>
 
-                        {/* Xử lý yêu cầu */}
-                        <section className="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-800">
-                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Xử lý yêu cầu</h2>
 
-                            <div className="space-y-4">
-                                <div>
-                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Trạng thái hiện tại</p>
-                                    <div className={`p-3 rounded-xl border flex items-center gap-3 ${statusInfo.color}`}>
-                                        <div className={`w-2 h-2 rounded-full ${statusInfo.dot} animate-pulse`} />
-                                        <span className="font-bold text-sm tracking-wide">{statusInfo.label}</span>
-                                    </div>
-                                </div>
-
-                                {isPending ? (
-                                    <>
-                                        <div>
-                                            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Ghi chú / Phản hồi</p>
-                                            <textarea
-                                                value={note}
-                                                onChange={(e) => setNote(e.target.value)}
-                                                placeholder="Nhập lý do phê duyệt hoặc từ chối..."
-                                                className="w-full h-24 p-4 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl text-sm focus:ring-2 focus:ring-fpt-orange focus:border-transparent outline-none transition-all resize-none"
-                                            />
-                                        </div>
-
-
-                                    </>
-                                ) : (
-                                    <div className="p-4 bg-gray-50 dark:bg-zinc-800/50 rounded-xl border border-gray-100 dark:border-zinc-700">
-                                        <p className="text-xs text-gray-500 mb-2">Ghi chú từ người phê duyệt</p>
-                                        <p className="text-sm font-medium text-gray-700 dark:text-zinc-300">
-                                            {request.approverNote || 'Không có ghi chú.'}
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-                        </section>
 
 
                     </div>
@@ -380,9 +350,9 @@ export const RequestDetailPage = () => {
                                     <span className="text-gray-500">{request.requesterRole === 'STUDENT' ? 'Ngành' : 'Bộ môn'}</span>
                                     <span className="font-semibold text-gray-900 dark:text-white text-right max-w-[150px]">{request.requesterMajor || '---'}</span>
                                 </div>
-                                <div className=" flex-col gap-1 text-sm">
-                                    <span className="text-gray-500">Email: </span>
-                                    <span className="ml-30 font-semibold text-fpt-orange truncate">{request.requesterEmail || '---'}</span>
+                                <div className="flex flex-col gap-1 text-sm bg-gray-50 dark:bg-zinc-800/50 p-2.5 rounded-lg border border-gray-100 dark:border-zinc-800 mt-2">
+                                    <span className="text-gray-400 text-[10px] font-bold uppercase">Email liên hệ</span>
+                                    <span className="font-semibold text-fpt-orange truncate overflow-hidden" title={request.requesterEmail}>{request.requesterEmail || '---'}</span>
                                 </div>
                             </div>
                         </div>
@@ -414,15 +384,15 @@ export const RequestDetailPage = () => {
 
                                         <div className="flex flex-col gap-3 pt-2">
                                             <button
-                                                onClick={() => handleUpdateStatus('APPROVED')}
+                                                onClick={() => setConfirmModal({ isOpen: true, status: 'APPROVED' })}
                                                 disabled={updating}
                                                 className="w-full py-3 bg-fpt-orange hover:bg-orange-600 text-white font-bold rounded-xl shadow-lg border border-orange-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
                                             >
-                                                {updating ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
+                                                <CheckCircle size={18} />
                                                 Duyệt
                                             </button>
                                             <button
-                                                onClick={() => handleUpdateStatus('REJECTED')}
+                                                onClick={() => setConfirmModal({ isOpen: true, status: 'REJECTED' })}
                                                 disabled={updating}
                                                 className="w-full py-3 bg-white dark:bg-zinc-800 text-red-600 font-bold rounded-xl border border-red-200 dark:border-red-900/30 hover:bg-red-50 dark:hover:bg-red-900/10 active:scale-95 transition-all flex items-center justify-center gap-2"
                                             >
@@ -442,6 +412,20 @@ export const RequestDetailPage = () => {
                         </div>
                     </div>
                 </div>
+
+                <ConfirmModal
+                    isOpen={confirmModal.isOpen}
+                    onClose={() => setConfirmModal({ isOpen: false, status: null })}
+                    onConfirm={() => confirmModal.status && handleUpdateStatus(confirmModal.status)}
+                    title={confirmModal.status === 'APPROVED' ? 'Xác nhận duyệt' : 'Xác nhận từ chối'}
+                    message={confirmModal.status === 'APPROVED' 
+                        ? 'Bạn có chắc chắn muốn duyệt đơn yêu cầu thay đổi lịch dạy này không? Lịch dạy chính thức sẽ được cập nhật ngay lập tức.' 
+                        : 'Bạn có chắc chắn muốn từ chối đơn yêu cầu này không?'}
+                    confirmLabel={confirmModal.status === 'APPROVED' ? 'Duyệt yêu cầu' : 'Từ chối yêu cầu'}
+                    cancelLabel="Hủy"
+                    type={confirmModal.status === 'APPROVED' ? 'success' : 'danger'}
+                    isLoading={updating}
+                />
             </div>
 
             {/* Print-only specialized Styles */}

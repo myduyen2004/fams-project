@@ -55,4 +55,16 @@ public class AttendanceConfigServiceImpl implements AttendanceConfigService {
         systemLogService.logAttendanceConfigUpdated();
         return saved;
     }
+
+    @Override
+    @Transactional
+    public AttendanceConfig resetConfig() {
+        AttendanceConfig existing = configRepository.findByConfigKey(DEFAULT_CONFIG_KEY).orElse(null);
+        if (existing != null) {
+            configRepository.delete(existing);
+        }
+        AttendanceConfig fresh = getConfig(); // Recreates with defaults
+        systemLogService.logAttendanceConfigUpdated();
+        return fresh;
+    }
 }

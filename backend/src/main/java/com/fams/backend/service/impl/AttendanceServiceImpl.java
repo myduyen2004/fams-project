@@ -4,11 +4,13 @@ import com.fams.backend.dto.attendance.AttendanceDTO;
 import com.fams.backend.entity.*;
 import com.fams.backend.repository.*;
 import com.fams.backend.service.AttendanceService;
+import com.fams.backend.service.ExcelExportService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -27,6 +29,7 @@ public class AttendanceServiceImpl implements AttendanceService {
         private final SemesterRepository semesterRepository;
         private final ClassSectionRepository classSectionRepository;
         private final SystemLogService systemLogService;
+        private final ExcelExportService excelExportService;
 
         @Override
         @Transactional
@@ -479,10 +482,15 @@ public class AttendanceServiceImpl implements AttendanceService {
                                 }
                         }
 
-                        double attendancePercentage = sessionsHeld > 0
-                                        ? (double) (presentCount + excusedAbsentCount) / sessionsHeld * 100.0
-                                        : 100.0;
+                        double attendancePercentage = totalSlots > 0
+                                        ? (double) (presentCount + excusedAbsentCount) / totalSlots * 100.0
+                                        : 0.0;
                         double absentPercentage = (double) unexcusedAbsentCount / totalSlots * 100.0;
+
+                        LocalDate startDate = slots.isEmpty() ? null : 
+                            slots.stream().map(TimetableSlot::getDate).min(LocalDate::compareTo).orElse(null);
+                        LocalDate endDate = slots.isEmpty() ? null : 
+                            slots.stream().map(TimetableSlot::getDate).max(LocalDate::compareTo).orElse(null);
 
                         summaries.add(AttendanceDTO.ClassAttendanceSummary.builder()
                                         .className(cs.getClassName())
@@ -496,6 +504,8 @@ public class AttendanceServiceImpl implements AttendanceService {
                                         .excusedAbsentCount(excusedAbsentCount)
                                         .attendancePercentage(Math.round(attendancePercentage * 100.0) / 100.0)
                                         .absentPercentage(Math.round(absentPercentage * 100.0) / 100.0)
+                                        .startDate(startDate)
+                                        .endDate(endDate)
                                         .build());
                 }
 
@@ -563,5 +573,13 @@ public class AttendanceServiceImpl implements AttendanceService {
                                 .courseName(cs.getCourse().getName())
                                 .slots(slotAttendanceList)
                                 .build();
+        }
+
+        @Override
+        @Transactional(readOnly = true)
+        public void exportClassAttendanceReport(String className, jakarta.servlet.http.HttpServletResponse response)
+                        throws java.io.IOException {
+                AttendanceDTO.ClassAttendanceReportResponse report = getClassAttendanceReport(className);
+                excelExportService.exportClassAttendanceReportToExcel(response, report);
         }
 }

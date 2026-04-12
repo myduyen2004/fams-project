@@ -1,13 +1,11 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:solar_icons/solar_icons.dart';
 import '../../auth/controllers/auth_controller.dart';
-import '../../auth/models/user_model.dart';
-import '../../../core/constants/app_colors.dart'; // Assuming this exists or hardcode colors
-import '../../../core/widgets/app_background.dart';
+import 'profile_screen.dart'; // For HeaderCurveClipper
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -22,7 +20,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   
   late TextEditingController _phoneController;
   DateTime? _selectedDob;
-  String? _avatarPath;
   bool _isLoading = false;
 
   @override
@@ -31,40 +28,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final user = _authController.currentUser.value;
     _phoneController = TextEditingController(text: user?.phone ?? '');
     _selectedDob = user?.dob;
-    _avatarPath = null; // Reset path on init
-
-    // Listen for updates (e.g. if fetchCurrentUser completes after screen open)
-    ever(_authController.currentUser, (User? user) {
-      if (user != null) {
-        // Only update if the user hasn't edited yet? 
-        // Or just force update since it's "syncing"?
-        // For now, let's update if text is empty or matches old value, 
-        // but simpler is to just update to ensure "Show existing" works if it was missing.
-        // But we must be careful not to overwrite user typing.
-        // Best approach: If the controller text is empty, fill it.
-        if (_phoneController.text.isEmpty && user.phone != null) {
-            _phoneController.text = user.phone!;
-        }
-        if (_selectedDob == null && user.dob != null) {
-            setState(() {
-              _selectedDob = user.dob;
-            });
-        }
-        // If we want to force "latest" from server even if different:
-        // Use a flag or check if values differ from *initial* empty state.
-      }
-    });
-  }
-
-  Future<void> _pickImage() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-    
-    if (image != null) {
-      setState(() {
-        _avatarPath = image.path;
-      });
-    }
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -77,16 +40,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFFFF6B00), // Orange
+              primary: Color(0xFFF26F21),
               onPrimary: Colors.white,
-              onSurface: Colors.black,
+              onSurface: Color(0xFF1E2A3A),
             ),
           ),
           child: child!,
         );
       },
     );
-    if (picked != null && picked != _selectedDob) {
+    if (picked != null) {
       setState(() {
         _selectedDob = picked;
       });
@@ -100,21 +63,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final success = await _authController.updateProfile(
         phone: _phoneController.text.trim(),
         dob: _selectedDob,
-        avatarPath: _avatarPath,
       );
       
       setState(() => _isLoading = false);
       
       if (success) {
-        Get.back(); // Go back to profile screen (Thông tin cá nhân)
-        Get.snackbar(
-          'Thành công',
-          'Thông tin cá nhân đã được cập nhật',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2),
-        );
+        Get.back();
       }
     }
   }
@@ -122,177 +76,210 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final user = _authController.currentUser.value;
-    final isStudent = user?.isStudent ?? true; // Default to student restricted mode
+    final isStudent = user?.isStudent ?? true;
 
-    return GestureDetector(
-      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-      child: Scaffold(
-        resizeToAvoidBottomInset: true, // Ensure screen resizes when keyboard opens
-        appBar: AppBar(
-          title: const Text('Chỉnh sửa hồ sơ'),
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          centerTitle: true,
-        ),
-        body: AppBackground(
-          child: SingleChildScrollView(
-          physics: const ClampingScrollPhysics(), // Better scrolling behavior
-          padding: EdgeInsets.all(20.r),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              // Avatar Section
-              Center(
-                child: Stack(
-                  children: [
-                   Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFFFFB74D),
-                          width: 3,
-                        ),
-                      ),
-                      child: ClipOval(
-                        child: SizedBox(
-                          width: 100.r,
-                          height: 100.r,
-                          child: _avatarPath != null
-                              ? Image.file(File(_avatarPath!), fit: BoxFit.cover)
-                              : (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty)
-                                  ? Image.network(
-                                      _authController.getOptimizedAvatarUrl(user.avatarUrl),
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => Image.asset('assets/images/logo.png', fit: BoxFit.cover),
-                                    )
-                                  : Image.asset('assets/images/logo.png', fit: BoxFit.cover),
-                        ),
-                      ),
-                    ),
-                    if (!isStudent) // Only allow avatar edit for non-students
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: GestureDetector(
-                          onTap: _pickImage,
-                          child: Container(
-                            padding: EdgeInsets.all(8.r),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFFF6B00),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(Icons.camera_alt, color: Colors.white, size: 20.r),
-                          ),
-                        ),
-                      ),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
+      body: Stack(
+        children: [
+          // 1. Curved Background
+          ClipPath(
+            clipper: HeaderCurveClipper(),
+            child: Container(
+              height: 250.h,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    const Color(0xFFE3F2FD),
+                    const Color(0xFFF1F8E9).withOpacity(0.5),
                   ],
                 ),
               ),
-              30.verticalSpace,
+            ),
+          ),
 
-              // Full Name (Read Only)
-              _buildReadOnlyField('Họ và tên', user?.fullName ?? ''),
-              15.verticalSpace,
-
-              // Student Code (Read Only)
-              _buildReadOnlyField(isStudent ? 'MSSV' : 'Mã số', user?.username.toUpperCase() ?? ''),
-               15.verticalSpace,
-
-              // Email (Read Only)
-              _buildReadOnlyField('Email', user?.email ?? ''),
-               15.verticalSpace,
-
-              // Phone Field
-              TextFormField(
-                controller: _phoneController,
-                decoration: _inputDecoration('Số điện thoại'),
-                keyboardType: TextInputType.phone,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Vui lòng nhập số điện thoại';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 15),
-
-              // DOB Field
-              InkWell(
-                onTap: () => _selectDate(context),
-                child: InputDecorator(
-                  decoration: _inputDecoration('Ngày sinh'),
-                  child: Text(
-                    _selectedDob != null
-                        ? DateFormat('dd/MM/yyyy').format(_selectedDob!)
-                        : 'Chọn ngày sinh',
-                    style: TextStyle(fontSize: 16.sp),
+          CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // 2. Standardized Header
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(20.w, 60.h, 20.w, 15.h),
+                sliver: SliverToBoxAdapter(
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => Get.back(),
+                        child: Container(
+                          padding: EdgeInsets.all(8.r),
+                          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                          child: Icon(SolarIconsOutline.altArrowLeft, color: const Color(0xFF1E2A3A), size: 24.sp),
+                        ),
+                      ),
+                      SizedBox(width: 16.w),
+                      Text(
+                        'Chỉnh sửa thông tin',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 22.sp,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF1E2A3A),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
 
-              40.verticalSpace,
-
-              // Save Button
-              SizedBox(
-                width: double.infinity,
-                height: 50.h,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _saveProfile,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF6B00),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15.r),
+              // 3. Centered Name & Role (Matching View Screen)
+              SliverToBoxAdapter(
+                child: Column(
+                  children: [
+                    SizedBox(height: 10.h),
+                    Text(
+                      user?.fullName ?? "N/A",
+                      style: GoogleFonts.plusJakartaSans(fontSize: 22.sp, fontWeight: FontWeight.w800, color: const Color(0xFF1E2A3A)),
                     ),
-                  ),
-                  child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : Text(
-                          'Lưu thay đổi',
-                          style: TextStyle(
-                            fontSize: 18.sp,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                    Text(
+                      isStudent ? "Sinh viên" : "Giảng viên",
+                      style: GoogleFonts.plusJakartaSans(fontSize: 14.sp, fontWeight: FontWeight.w600, color: Colors.grey.shade400),
+                    ),
+                  ],
+                ),
+              ),
+
+              // 4. Edit Form
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(20.w, 30.h, 20.w, 20.h),
+                sliver: SliverToBoxAdapter(
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSectionTitle("THÔNG TIN THAY ĐỔI"),
+                        SizedBox(height: 12.h),
+                        
+                        _buildGroupedCard([
+                          _buildEditableItem(
+                            icon: SolarIconsOutline.phone,
+                            label: "Số điện thoại",
+                            child: TextFormField(
+                              controller: _phoneController,
+                              style: GoogleFonts.plusJakartaSans(fontSize: 15.sp, fontWeight: FontWeight.w700, color: const Color(0xFF1E2A3A)),
+                              decoration: const InputDecoration(
+                                isDense: true,
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                              keyboardType: TextInputType.phone,
+                            ),
+                          ),
+                          _buildEditableItem(
+                            icon: SolarIconsOutline.calendar,
+                            label: "Ngày sinh",
+                            onTap: () => _selectDate(context),
+                            child: Text(
+                              _selectedDob != null ? DateFormat('dd/MM/yyyy').format(_selectedDob!) : 'Chưa chọn',
+                              style: GoogleFonts.plusJakartaSans(fontSize: 15.sp, fontWeight: FontWeight.w700, color: const Color(0xFF1E2A3A)),
+                            ),
+                          ),
+                        ]),
+
+                        SizedBox(height: 40.h),
+
+                        // Save Button
+                        Center(
+                          child: SizedBox(
+                            width: 160.w,
+                            height: 48.h,
+                            child: OutlinedButton(
+                              onPressed: _isLoading ? null : _saveProfile,
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Color(0xFFF26F21), width: 1.5),
+                                backgroundColor: Colors.white,
+                                foregroundColor: const Color(0xFFF26F21),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100.r)),
+                              ),
+                              child: _isLoading
+                                  ? const CircularProgressIndicator(color: Color(0xFFF26F21), strokeWidth: 2)
+                                  : Text(
+                                      'Lưu thay đổi',
+                                      style: GoogleFonts.plusJakartaSans(fontSize: 14.sp, fontWeight: FontWeight.w800),
+                                    ),
+                            ),
                           ),
                         ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
-        ),
-        ),
-      ),
-    ),
-    );
-  }
-
-  Widget _buildReadOnlyField(String label, String value) {
-    return TextFormField(
-      initialValue: value,
-      readOnly: true,
-      enabled: false,
-      decoration: _inputDecoration(label).copyWith(
-        fillColor: Colors.grey[200],
-        filled: true,
+        ],
       ),
     );
   }
 
-  InputDecoration _inputDecoration(String label) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: Colors.grey),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15.r),
-        borderSide: const BorderSide(color: Colors.grey),
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: GoogleFonts.plusJakartaSans(
+        fontSize: 12.sp,
+        fontWeight: FontWeight.w800,
+        color: const Color(0xFF1E2A3A).withOpacity(0.4),
+        letterSpacing: 1.2,
       ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15.r),
-        borderSide: const BorderSide(color: Color(0xFFFF6B00)),
+    );
+  }
+
+  Widget _buildGroupedCard(List<Widget> children) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24.r),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 20, offset: const Offset(0, 8)),
+        ],
       ),
-      filled: true,
-      fillColor: Colors.white,
-      contentPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+      child: Column(children: children),
+    );
+  }
+
+  Widget _buildEditableItem({required IconData icon, required String label, required Widget child, VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24.r),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9), width: 1)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(8.r),
+              decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(12.r)),
+              child: Icon(icon, color: const Color(0xFFF26F21), size: 20.sp),
+            ),
+            SizedBox(width: 16.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: GoogleFonts.plusJakartaSans(fontSize: 11.sp, fontWeight: FontWeight.w600, color: Colors.grey.shade400)),
+                  SizedBox(height: 4.h),
+                  child,
+                ],
+              ),
+            ),
+            if (onTap != null)
+              Icon(SolarIconsOutline.altArrowRight, size: 14.sp, color: Colors.grey.shade300),
+          ],
+        ),
+      ),
     );
   }
 }

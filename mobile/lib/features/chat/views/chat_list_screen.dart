@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../controllers/chat_controller.dart';
@@ -9,7 +9,6 @@ import 'chat_detail_screen.dart';
 import 'package:solar_icons/solar_icons.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-/// Chat group list — matches web sidebar
 class ChatListScreen extends StatelessWidget {
   const ChatListScreen({super.key});
 
@@ -18,400 +17,219 @@ class ChatListScreen extends StatelessWidget {
     final controller = Get.find<ChatController>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF7F0),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // ── Header ──
-            Container(
-              padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 12.h),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark 
+              ? Theme.of(context).scaffoldBackgroundColor 
+              : null,
+          gradient: Theme.of(context).brightness == Brightness.dark 
+              ? null 
+              : const LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Color(0xFFFF9F43), Color(0xFFFF6B00)],
+                  colors: [
+                    Color(0xFFFEF3DE),
+                    Colors.white,
+                  ],
+                  stops: [0.0, 0.3],
                 ),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(24.r),
-                  bottomRight: Radius.circular(24.r),
-                ),
-              ),
-              child: Column(
+        ),
+        child: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // 1. Unified Header (Aligned with Home)
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(20.w, 60.h, 20.w, 15.h),
+            sliver: SliverToBoxAdapter(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        SolarIconsBold.chatLine,
-                        color: Colors.white,
-                        size: 28.sp,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Tin nhắn',
-                        style: TextStyle(
-                          fontSize: 22.sp,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const Spacer(),
-                      Obx(
-                        () => controller.totalUnreadCount.value > 0
-                            ? Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(20.r),
-                                ),
-                                child: Text(
-                                  '${controller.totalUnreadCount.value}',
-                                  style: TextStyle(
-                                    fontSize: 13.sp,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.primaryOrange,
-                                  ),
-                                ),
-                              )
-                            : const SizedBox.shrink(),
-                      ),
-                    ],
+                  Text(
+                    'Tin nhắn',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 22.sp,
+                      fontWeight: FontWeight.w800,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
-                  const SizedBox(height: 14),
-                  // ── Search Bar ──
                   Container(
-                    height: 44,
+                    padding: EdgeInsets.all(10.r),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.25),
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    child: TextField(
-                      onChanged: (v) => controller.searchTerm.value = v,
-                      style: TextStyle(color: Colors.white, fontSize: 15.sp),
-                      decoration: InputDecoration(
-                        hintText: 'Tìm kiếm nhóm chat...',
-                        hintStyle: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
-                        ),
-                        prefixIcon: Icon(
-                          SolarIconsOutline.magnifier,
-                          color: Colors.white.withOpacity(0.8),
-                          size: 20.sp,
-                        ),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(
-                          vertical: 12.h,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  // ── Unread Toggle ──
-                  Obx(
-                    () => Row(
-                      children: [
-                        GestureDetector(
-                          onTap: () => controller.isUnreadOnly.value =
-                              !controller.isUnreadOnly.value,
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 14.w,
-                              vertical: 6.h,
-                            ),
-                            decoration: BoxDecoration(
-                              color: controller.isUnreadOnly.value
-                                  ? Colors.white
-                                  : Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(20.r),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.mark_email_unread_rounded,
-                                  size: 16,
-                                  color: controller.isUnreadOnly.value
-                                      ? AppColors.primaryOrange
-                                      : Colors.white,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Chưa đọc',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: controller.isUnreadOnly.value
-                                        ? AppColors.primaryOrange
-                                        : Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+                      color: Theme.of(context).cardColor,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.05), blurRadius: 10, offset: const Offset(0, 4)),
                       ],
                     ),
+                    child: Icon(SolarIconsOutline.tuning, color: const Color(0xFFF26F21), size: 22.sp),
                   ),
                 ],
               ),
             ),
+          ),
 
-            // ── Group List ──
-            Expanded(
-              child: Obx(() {
-                if (controller.isLoadingGroups.value) {
-                  return const Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.primaryOrange,
+          // 2. Search & Filters
+          SliverPadding(
+            padding: EdgeInsets.symmetric(horizontal: 20.w),
+            sliver: SliverToBoxAdapter(
+              child: Column(
+                children: [
+                  Container(
+                    height: 54.h,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade800 : const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(20.r),
+                      border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? Colors.transparent : Colors.grey.shade100),
                     ),
-                  );
-                }
-                if (controller.filteredGroups.isEmpty) {
-                  return Center(
+                    child: TextField(
+                      onChanged: (v) => controller.searchTerm.value = v,
+                      style: GoogleFonts.plusJakartaSans(fontSize: 15.sp, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
+                      decoration: InputDecoration(
+                        hintText: 'Tìm kiếm nhóm hoặc tin nhắn...',
+                        hintStyle: GoogleFonts.plusJakartaSans(color: Colors.grey.shade400, fontWeight: FontWeight.w500),
+                        prefixIcon: Icon(SolarIconsOutline.magnifier, color: const Color(0xFFF26F21), size: 20.sp),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(vertical: 15.h),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 16.h),
+                  Obx(() => Row(
+                    children: [
+                      _buildFilterChip(
+                        context: context,
+                        label: "Tất cả",
+                        isSelected: !controller.isUnreadOnly.value,
+                        onTap: () => controller.isUnreadOnly.value = false,
+                        icon: SolarIconsBold.chatLine,
+                      ),
+                      SizedBox(width: 12.w),
+                      _buildFilterChip(
+                        context: context,
+                        label: "Chưa đọc",
+                        isSelected: controller.isUnreadOnly.value,
+                        onTap: () => controller.isUnreadOnly.value = true,
+                        icon: SolarIconsBold.letter,
+                      ),
+                    ],
+                  )),
+                  SizedBox(height: 12.h),
+                ],
+              ),
+            ),
+          ),
+
+          // 3. Message List
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(0, 0, 0, 100.h),
+            sliver: Obx(() {
+              if (controller.isLoadingGroups.value) {
+                return const SliverFillRemaining(child: Center(child: CircularProgressIndicator(color: Color(0xFFF26F21))));
+              }
+              
+              if (controller.filteredGroups.isEmpty) {
+                return SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.chat_bubble_outline,
-                          size: 64.sp,
-                          color: Colors.grey[300],
+                        Container(
+                          padding: EdgeInsets.all(32.r),
+                          decoration: BoxDecoration(color: const Color(0xFFF9FAFB), shape: BoxShape.circle),
+                          child: Icon(SolarIconsOutline.chatLine, size: 64.sp, color: Colors.grey.shade300),
                         ),
-                        SizedBox(height: 16.h),
+                        SizedBox(height: 24.h),
                         Text(
-                          controller.searchTerm.value.isNotEmpty
-                              ? 'Không tìm thấy nhóm'
-                              : 'Chưa có nhóm chat nào',
-                          style: TextStyle(
-                            fontSize: 16.sp,
-                            color: Colors.grey[500],
-                          ),
+                          controller.searchTerm.value.isNotEmpty ? 'Không tìm thấy kết quả' : 'Chưa có cuộc trò chuyện nào',
+                          style: GoogleFonts.plusJakartaSans(fontSize: 18.sp, fontWeight: FontWeight.w700, color: const Color(0xFF1E2A3A).withOpacity(0.6)),
                         ),
                       ],
                     ),
-                  );
-                }
-
-                return RefreshIndicator(
-                  color: AppColors.primaryOrange,
-                  onRefresh: controller.loadGroups,
-                  child: ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: controller.filteredGroups.length,
-                    itemBuilder: (context, index) {
-                      final group = controller.filteredGroups[index];
-                      return _buildGroupTile(context, group, controller);
-                    },
                   ),
                 );
-              }),
-            ),
+              }
+
+              return SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final group = controller.filteredGroups[index];
+                    return Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20.w),
+                      child: _buildPremiumGroupTile(context, group, controller),
+                    );
+                  },
+                  childCount: controller.filteredGroups.length,
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
+     ),
+    );
+  }
+
+  Widget _buildFilterChip({required BuildContext context, required String label, required bool isSelected, required VoidCallback onTap, required IconData icon}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFF26F21) : (Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade800 : const Color(0xFFF9FAFB)),
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 16.sp, color: isSelected ? Colors.white : Colors.grey.shade500),
+            SizedBox(width: 8.w),
+            Text(label, style: GoogleFonts.plusJakartaSans(fontSize: 13.sp, fontWeight: FontWeight.w600, color: isSelected ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.grey.shade600))),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildGroupTile(
-    BuildContext context,
-    ChatGroup group,
-    ChatController controller,
-  ) {
+  Widget _buildPremiumGroupTile(BuildContext context, ChatGroup group, ChatController controller) {
     return InkWell(
       onTap: () {
         controller.selectGroup(group);
-        Get.to(
-          () => const ChatDetailScreen(),
-          transition: Transition.cupertino,
-        );
+        Get.to(() => const ChatDetailScreen(), transition: Transition.cupertino);
       },
       child: Container(
-        margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
-        padding: EdgeInsets.all(14.w),
+        margin: EdgeInsets.only(bottom: 12.h),
+        padding: EdgeInsets.all(12.r),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16.r),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8.r,
-              offset: Offset(0, 2.h),
-            ),
-          ],
+          color: Theme.of(context).cardColor, 
+          borderRadius: BorderRadius.circular(20.r),
+          border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? Colors.transparent : const Color(0xFFF9FAFB)),
         ),
         child: Row(
           children: [
-            // Group Avatar
-            Builder(
-              builder: (context) {
-                final studentMembers =
-                    group.members?.where((m) => m.role == 'STUDENT').toList() ??
-                    [];
-                final avatarsToDisplay = studentMembers.take(2).toList();
-
-                if (avatarsToDisplay.isEmpty) {
-                  return Container(
-                    width: 48.r,
-                    height: 48.r,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF1E7),
-                      borderRadius: BorderRadius.circular(20.r),
-                    ),
-                    child: Center(
-                      child: Icon(
-                        Icons.people_rounded,
-                        color: const Color(0xFFFF8C33),
-                        size: 26.sp,
-                      ),
-                    ),
-                  );
-                }
-
-                return SizedBox(
-                  width: avatarsToDisplay.length > 1
-                      ? 70.0.w
-                      : 48.0.w, // 48 + 22 = 70
-                  height: 48.h,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: avatarsToDisplay
-                        .asMap()
-                        .entries
-                        .map((entry) {
-                          final idx = entry.key;
-                          final member = entry.value;
-
-                          return Positioned(
-                            left:
-                                idx * 22.0.w,
-                            child: Container(
-                              width: 48.r,
-                              height: 48.r,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 3.w,
-                                ),
-                                color: idx == 0
-                                    ? Colors.white
-                                    : const Color(0xFFFFD8B2),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.08),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: ClipOval(
-                                child:
-                                    member.avatarUrl != null &&
-                                        member.avatarUrl!.isNotEmpty
-                                    ? CachedNetworkImage(
-                                        imageUrl: member.avatarUrl!,
-                                        fit: BoxFit.cover,
-                                        errorWidget: (context, url, error) =>
-                                            _buildInitialAvatar(
-                                              member.fullName,
-                                            ),
-                                        placeholder: (context, url) =>
-                                            Container(color: Colors.grey[200]),
-                                      )
-                                    : _buildInitialAvatar(member.fullName),
-                              ),
-                            ),
-                          );
-                        })
-                        .toList()
-                        .reversed
-                        .toList(), // Reverse to make first index on top
-                  ),
-                );
-              },
+            Container(
+              width: 56.r, height: 56.r,
+              decoration: BoxDecoration(color: const Color(0xFFFFF1E7), borderRadius: BorderRadius.circular(18.r)),
+              child: Center(child: Icon(SolarIconsBold.chatLine, color: const Color(0xFFF26F21), size: 24.sp)),
             ),
-            const SizedBox(width: 14),
-            // Group Info
+            SizedBox(width: 16.w),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(
-                        child: Text(
-                          group.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF2D3436),
-                          ),
-                        ),
-                      ),
+                      Text(group.name, style: GoogleFonts.plusJakartaSans(fontSize: 15.sp, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface)),
                       if (group.lastMessage != null)
-                        Text(
-                          _formatTime(group.lastMessage!.sentAt),
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            color: group.unreadCount > 0
-                                ? AppColors.primaryOrange
-                                : Colors.grey[500],
-                          ),
-                        ),
+                        Text(_formatTime(group.lastMessage!.sentAt), style: GoogleFonts.plusJakartaSans(fontSize: 11.sp, color: Colors.grey.shade400)),
                     ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    group.lecturerName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12.sp, color: Colors.grey[500]),
                   ),
                   SizedBox(height: 4.h),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          group.lastMessage != null
-                              ? '${group.lastMessage!.senderName}: ${_getLastMsgPreview(group.lastMessage!)}'
-                              : 'Chưa có tin nhắn',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 13.sp,
-                            fontWeight: group.unreadCount > 0
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                            color: group.unreadCount > 0
-                                ? const Color(0xFF2D3436)
-                                : Colors.grey[500],
-                          ),
-                        ),
-                      ),
-                      if (group.unreadCount > 0)
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 8.w,
-                            vertical: 3.h,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryOrange,
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          child: Text(
-                            '${group.unreadCount}',
-                            style: TextStyle(
-                              fontSize: 11.sp,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                    ],
+                  Text(
+                    group.lastMessage != null ? '${group.lastMessage!.senderName}: ${_getLastMsgPreview(group.lastMessage!)}' : 'Chưa có tin nhắn',
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.plusJakartaSans(fontSize: 13.sp, color: Colors.grey.shade500),
                   ),
                 ],
               ),
@@ -424,14 +242,10 @@ class ChatListScreen extends StatelessWidget {
 
   String _getLastMsgPreview(LastMessage msg) {
     switch (msg.type) {
-      case 'IMAGE':
-        return '📷 Hình ảnh';
-      case 'FILE':
-        return '📎 Tệp đính kèm';
-      case 'LINK':
-        return '🔗 Liên kết';
-      default:
-        return msg.content;
+      case 'IMAGE': return '📷 Hình ảnh';
+      case 'FILE': return '📎 Tệp đính kèm';
+      case 'LINK': return '🔗 Liên kết';
+      default: return msg.content;
     }
   }
 
@@ -440,31 +254,10 @@ class ChatListScreen extends StatelessWidget {
       final date = DateTime.parse(isoString);
       final now = DateTime.now();
       final diff = now.difference(date);
-
       if (diff.inMinutes < 1) return 'Vừa xong';
       if (diff.inHours < 1) return '${diff.inMinutes}p';
       if (diff.inDays < 1) return '${diff.inHours}h';
-      if (diff.inDays < 7) return '${diff.inDays}d';
       return '${date.day}/${date.month}';
-    } catch (_) {
-      return '';
-    }
-  }
-
-  Widget _buildInitialAvatar(String fullName) {
-    final initial = fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U';
-    return Container(
-      color: const Color(0xFFFFEEDD),
-      child: Center(
-        child: Text(
-          initial,
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.bold,
-            color: const Color(0xFFFF8C33),
-          ),
-        ),
-      ),
-    );
+    } catch (_) { return ''; }
   }
 }

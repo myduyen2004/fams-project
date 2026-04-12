@@ -15,4 +15,6 @@ public class UpdateProfileRequest {
     @jakarta.validation.constraints.Pattern(regexp = "^(0|\\+84)[3|5|7|8|9][0-9]{8}$", message = "Số điện thoại không hợp lệ (ví dụ: 0912345678)")
     private String phone;
     private LocalDate dob;
+    private String expertise;
+    private String bio;
 }

@@ -6,4 +6,6 @@ public interface AttendanceConfigService {
     AttendanceConfig getConfig();
 
     AttendanceConfig updateConfig(AttendanceConfig config);
+
+    AttendanceConfig resetConfig();
 }

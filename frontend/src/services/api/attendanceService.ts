@@ -141,6 +141,13 @@ const attendanceService = {
     getStudentClassAttendanceDetail: async (className: string): Promise<IndividualAttendanceDetail> => {
         const response = await apiClient.get(`/v1/attendance/student/class/${className}/detail`);
         return response.data;
+    },
+
+    exportClassAttendanceReport: async (className: string): Promise<Blob> => {
+        const response = await apiClient.get(`/v1/attendance/class/${className}/report/export`, {
+            responseType: 'blob'
+        });
+        return response.data;
     }
 };
 

@@ -95,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       if (success) {
         final user = _authController.currentUser.value;
         if (user?.isPasswordChanged == false && !user!.isAdmin) {
-          Get.offAllNamed(AppRoutes.changePasswordRequired);
+          Get.offAllNamed(AppRoutes.changePasswordRequired, arguments: _passwordController.text);
         } else {
           Get.offAllNamed(AppRoutes.home);
         }

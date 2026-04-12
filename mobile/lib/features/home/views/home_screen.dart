@@ -18,6 +18,7 @@ import '../../schedule/controllers/schedule_controller.dart';
 import '../../notification/controllers/notification_controller.dart';
 import '../../notification/views/notification_list_screen.dart';
 import '../../chat/views/chat_list_screen.dart';
+import '../../chat/controllers/chat_controller.dart';
 import '../../news/controllers/news_controller.dart';
 import '../../news/views/news_list_screen.dart';
 import '../../news/models/news_model.dart';
@@ -31,16 +32,18 @@ class HomeScreen extends StatelessWidget {
     final AuthController authController = Get.find<AuthController>();
     final HomeController homeController = Get.find<HomeController>();
     // Integrate ScheduleController for real data
-    final ScheduleController scheduleController = Get.put(ScheduleController());
+    final ScheduleController scheduleController = Get.find<ScheduleController>();
     final NewsController newsController = Get.put(NewsController());
+    final NotificationController notifController = Get.find<NotificationController>();
+    final ChatController chatController = Get.find<ChatController>();
 
     return Scaffold(
       extendBody: true, // Crucial for floating navbar
-      backgroundColor: Colors.white, // Pure white background
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        color: Colors.white,
+        color: Theme.of(context).scaffoldBackgroundColor,
         child: GetBuilder<HomeController>(
           builder: (controller) {
             switch (controller.currentIndex) {
@@ -59,7 +62,7 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
       bottomNavigationBar: GetBuilder<HomeController>(
-        builder: (controller) => _buildBottomNav(controller, authController),
+        builder: (controller) => _buildBottomNav(context, controller, authController),
       ),
     );
   }
@@ -67,6 +70,8 @@ class HomeScreen extends StatelessWidget {
   // 🏛️ MODERN F-SCHOOL LAYOUT (PASSING CONTROLLERS) 🏛️
   Widget _buildModernHome(BuildContext context, AuthController authController, HomeController homeController, ScheduleController scheduleController) {
     final NewsController newsController = Get.find<NewsController>();
+    final NotificationController notifController = Get.find<NotificationController>();
+    final ChatController chatController = Get.find<ChatController>();
     const Color orangePrimary = Color(0xFFF26F21);
     const Color orangeSecondary = Color(0xFFF7941D);
 
@@ -79,29 +84,18 @@ class HomeScreen extends StatelessWidget {
     final List<String> vnDays = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
     // ✨ MODERN LINE-ART ICON SET ✨
-    final List<Map<String, dynamic>> features = [
-      {"icon": SolarIconsBold.verifiedCheck, "title": "Điểm danh"},
-      {"icon": SolarIconsBold.graphUp, "title": "Bảng điểm"},
-      {
-        "icon": SolarIconsBold.documentText, 
-        "title": "Đơn từ",
-        "onTap": () {
-          final user = authController.currentUser.value;
-          if (user?.isLecturer == true) {
-            Get.toNamed(AppRoutes.lecturerRequests);
-          } else {
-            Get.toNamed(AppRoutes.studentAcademicRequests);
-          }
-        }
-      },
-      {"icon": SolarIconsBold.walletMoney, "title": "Học phí"},
-      {"icon": SolarIconsBold.pen2, "title": "BTVN"},
-      {"icon": SolarIconsBold.ticket, "title": "Sự kiện"},
-      {"icon": SolarIconsBold.usersGroupRounded, "title": "Câu lạc bộ"},
-      {"icon": SolarIconsBold.book, "title": "Thư viện"},
-      {"icon": SolarIconsBold.bus, "title": "Gửi xe"},
-      {"icon": SolarIconsBold.chatLine, "title": "Liên lạc"},
-    ];
+    final bool isLecturer = authController.currentUser.value?.isLecturer ?? false;
+    
+    final List<Map<String, dynamic>> features = isLecturer 
+      ? [
+          {"icon": SolarIconsBold.usersGroupRounded, "title": "Lớp học"},
+          {"icon": SolarIconsBold.documentText, "title": "Đơn từ"},
+        ]
+      : [
+          {"icon": SolarIconsBold.verifiedCheck, "title": "Điểm danh"},
+          {"icon": SolarIconsBold.graphUp, "title": "Bảng điểm"},
+          {"icon": SolarIconsBold.documentText, "title": "Đơn từ"},
+        ];
 
     return RefreshIndicator(
       color: orangePrimary,
@@ -123,31 +117,46 @@ class HomeScreen extends StatelessWidget {
               children: [
                 Text(
                   _getGreeting(),
-                  style: GoogleFonts.plusJakartaSans(fontSize: 22.sp, fontWeight: FontWeight.w800, color: const Color(0xFF1E2A3A)),
+                  style: GoogleFonts.plusJakartaSans(fontSize: 22.sp, fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.onSurface),
                 ),
                 Row(
                   children: [
-                    Icon(SolarIconsBold.magnifier, color: const Color(0xFF1E2A3A), size: 26.sp),
+                    Icon(SolarIconsOutline.magnifier, color: Theme.of(context).colorScheme.onSurface, size: 26.sp),
                     SizedBox(width: 15.w),
                     GestureDetector(
                       onTap: () => Get.to(() => const ChatListScreen()),
-                      child: Icon(SolarIconsBold.chatLine, color: const Color(0xFF1E2A3A), size: 25.sp),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Icon(SolarIconsOutline.chatLine, color: Theme.of(context).colorScheme.onSurface, size: 25.sp),
+                          Obx(() => chatController.totalUnreadCount.value > 0 ? Positioned(
+                            right: -2,
+                            top: -2,
+                            child: Container(
+                              height: 8.h,
+                              width: 8.h,
+                              decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                            ),
+                          ) : const SizedBox.shrink()),
+                        ],
+                      ),
                     ),
                     SizedBox(width: 15.w),
                     GestureDetector(
                       onTap: () => Get.to(() => const NotificationListScreen()),
                       child: Stack(
+                        clipBehavior: Clip.none,
                         children: [
-                          Icon(SolarIconsBold.bell, color: const Color(0xFF1E2A3A), size: 26.sp),
-                          Positioned(
+                          Icon(SolarIconsOutline.bell, color: Theme.of(context).colorScheme.onSurface, size: 26.sp),
+                          Obx(() => notifController.unreadCount.value > 0 ? Positioned(
                             right: 2,
                             top: 2,
                             child: Container(
-                              height: 7.h,
-                              width: 7.h,
+                              height: 8.h,
+                              width: 8.h,
                               decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
                             ),
-                          ),
+                          ) : const SizedBox.shrink()),
                         ],
                       ),
                     ),
@@ -240,11 +249,11 @@ class HomeScreen extends StatelessWidget {
                 width: double.infinity,
                 padding: EdgeInsets.all(16.r),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF9FAFB), 
+                  color: Theme.of(context).cardColor, 
                   borderRadius: BorderRadius.circular(24.r),
-                  border: Border.all(color: Colors.grey.shade200, width: 1.0),
+                  border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? Colors.transparent : Colors.grey.shade200, width: 1.0),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+                    BoxShadow(color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.04), blurRadius: 10, offset: const Offset(0, 4)),
                   ],
                 ),
                 child: Column(
@@ -255,13 +264,13 @@ class HomeScreen extends StatelessWidget {
                       children: [
                         Text(
                           DateFormat("d 'Tháng' M, yyyy").format(scheduleController.selectedDate.value), 
-                          style: GoogleFonts.plusJakartaSans(fontSize: 14.sp, fontWeight: FontWeight.w700, color: const Color(0xFF1E2A3A))
+                          style: GoogleFonts.plusJakartaSans(fontSize: 14.sp, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface)
                         ),
                         GestureDetector(
                           onTap: () => homeController.toggleCalendar(),
                           child: Container(
                             padding: EdgeInsets.all(4.r),
-                          child: Icon(SolarIconsOutline.closeCircle, size: 18.sp, color: const Color(0xFF1E2A3A).withOpacity(0.5)),
+                          child: Icon(SolarIconsOutline.closeCircle, size: 18.sp, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
                           ),
                         ),
                       ],
@@ -271,6 +280,7 @@ class HomeScreen extends StatelessWidget {
                       children: List.generate(7, (index) {
                         final dayDate = weekDates[index];
                         final isSelected = scheduleController.selectedDate.value.day == dayDate.day && scheduleController.selectedDate.value.month == dayDate.month;
+                        final isToday = dayDate.day == now.day && dayDate.month == now.month && dayDate.year == now.year;
                         
                         return Expanded(
                           child: GestureDetector(
@@ -292,9 +302,13 @@ class HomeScreen extends StatelessWidget {
                                     height: 38.w,
                                     alignment: Alignment.center,
                                     decoration: BoxDecoration(
-                                      color: isSelected ? const Color(0xFFF26F21) : Colors.white, 
+                                      color: isSelected ? const Color(0xFFF26F21) : (Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade800 : Colors.white), 
                                       shape: BoxShape.circle,
-                                      border: isSelected ? null : Border.all(color: Colors.grey.shade100, width: 1.0),
+                                      border: isSelected 
+                                          ? null 
+                                          : (isToday 
+                                              ? Border.all(color: const Color(0xFFF26F21), width: 1.5) 
+                                              : Border.all(color: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade700 : Colors.grey.shade100, width: 1.0)),
                                       boxShadow: isSelected ? [
                                         BoxShadow(color: const Color(0xFFF26F21).withOpacity(0.35), blurRadius: 10, offset: const Offset(0, 4))
                                       ] : null,
@@ -410,21 +424,34 @@ class HomeScreen extends StatelessWidget {
             child: Text("Chức năng", style: GoogleFonts.plusJakartaSans(fontSize: 18.sp, fontWeight: FontWeight.w800, color: const Color(0xFF1E2A3A))),
           ),
           
-          SizedBox(
-            height: 98.h,
-            child: ListView.builder(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              itemCount: features.length,
-              itemBuilder: (context, index) {
-                return _buildMinimalFeatureItem(
-                  features[index]["icon"], 
-                  features[index]["title"], 
-                  orangePrimary,
-                  onTap: features[index]["onTap"],
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: features.map((feature) {
+                return GestureDetector(
+                  onTap: () {
+                    if (feature["title"] == "Điểm danh") {
+                      Get.toNamed(AppRoutes.studentAttendanceReport);
+                    } else if (feature["title"] == "Bảng điểm") {
+                      Get.toNamed(AppRoutes.studentGradeSemester);
+                    } else if (feature["title"] == "Đơn từ") {
+                      if (isLecturer) {
+                        Get.toNamed(AppRoutes.lecturerRequests);
+                      } else {
+                        Get.toNamed(AppRoutes.studentAcademicRequests);
+                      }
+                    } else if (feature["title"] == "Lớp học") {
+                      Get.toNamed(AppRoutes.lecturerClasses);
+                    }
+                  },
+                  child: _buildMinimalFeatureItem(
+                    feature["icon"], 
+                    feature["title"], 
+                    orangePrimary
+                  ),
                 );
-              },
+              }).toList(),
             ),
           ),
 
@@ -648,7 +675,7 @@ class HomeScreen extends StatelessWidget {
     return "Chào buổi tối";
   }
 
-  Widget _buildBottomNav(HomeController controller, AuthController authController) {
+  Widget _buildBottomNav(BuildContext context, HomeController controller, AuthController authController) {
     final user = authController.currentUser.value;
     final String attendanceLabel = user?.isLecturer == true ? "Lịch dạy" : "Lịch học";
 
@@ -656,15 +683,18 @@ class HomeScreen extends StatelessWidget {
       height: 82.h,
       margin: EdgeInsets.fromLTRB(16.w, 0, 16.w, 20.h), 
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(100.r), 
-        border: Border.all(color: Colors.grey.shade200.withOpacity(0.8), width: 1.0),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark ? Colors.transparent : Colors.grey.shade200.withOpacity(0.8), 
+          width: 1.0
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.18), // Darker and clearer shadow (increased from 0.12)
-            blurRadius: 25, // Increased blur for better depth
-            spreadRadius: 2, // Increased spread
-            offset: const Offset(0, 10), // Lower offset for more floating effect
+            color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.18), 
+            blurRadius: 25, 
+            spreadRadius: 2, 
+            offset: const Offset(0, 10), 
           ),
         ],
       ),
@@ -673,19 +703,19 @@ class HomeScreen extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _buildNavBtn(controller, 0, SolarIconsOutline.home2, SolarIconsBold.home2, "Trang chủ"),
-            _buildNavBtn(controller, 1, SolarIconsOutline.checklist, SolarIconsBold.checklist, attendanceLabel),
-            _buildNavBtn(controller, 3, SolarIconsOutline.bus, SolarIconsBold.bus, "Đưa đón"),
-            _buildNavBtn(controller, 4, SolarIconsOutline.user, SolarIconsBold.user, "Tôi"),
+            _buildNavBtn(context, controller, 0, SolarIconsOutline.home2, SolarIconsBold.home2, "Trang chủ"),
+            _buildNavBtn(context, controller, 1, SolarIconsOutline.checklist, SolarIconsBold.checklist, attendanceLabel),
+            _buildNavBtn(context, controller, 3, SolarIconsOutline.chatLine, SolarIconsBold.chatLine, "Tin nhắn"),
+            _buildNavBtn(context, controller, 4, SolarIconsOutline.user, SolarIconsBold.user, "Tôi"),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildNavBtn(HomeController controller, int index, IconData outlineIcon, IconData filledIcon, String label) {
+  Widget _buildNavBtn(BuildContext context, HomeController controller, int index, IconData outlineIcon, IconData filledIcon, String label) {
     bool isActive = controller.currentIndex == index;
-    final Color inactiveColor = const Color(0xFF9E9E9E);
+    final Color inactiveColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.4);
     final Color activeColor = const Color(0xFFF26F21);
 
     return Expanded(

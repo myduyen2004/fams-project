@@ -1,6 +1,7 @@
 import '../../../core/constants/api_constants.dart';
 import '../../../core/services/api_service.dart';
 import '../models/class_section_model.dart';
+import '../models/attendance_session_model.dart';
 
 class LecturerService {
   final ApiService _apiService = ApiService();
@@ -91,6 +92,23 @@ class LecturerService {
       throw 'Không thể tải thông tin giảng viên';
     } catch (e) {
       print('[LecturerService] Error in getLecturerProfile: $e');
+      rethrow;
+    }
+  }
+
+  /// Get attendance detail for a specific slot
+  Future<SessionDetailResponse> getSlotAttendanceDetail(int slotId) async {
+    try {
+      final response = await _apiService.get(
+        '/api/v1/attendance/session/slot/$slotId',
+      );
+
+      if (response.statusCode == 200) {
+        return SessionDetailResponse.fromJson(response.data);
+      }
+      throw 'Không thể tải dữ liệu điểm danh (Status: ${response.statusCode})';
+    } catch (e) {
+      print('[LecturerService] Error in getSlotAttendanceDetail: $e');
       rethrow;
     }
   }

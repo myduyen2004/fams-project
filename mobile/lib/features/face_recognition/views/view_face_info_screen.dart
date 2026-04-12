@@ -78,11 +78,11 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).scaffoldBackgroundColor : const Color(0xFFF5F5F5),
       appBar: AppBar(
         title: Text(
           'Thông tin khuôn mặt',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             fontWeight: FontWeight.w600,
             color: Colors.white,
           ),
@@ -119,7 +119,7 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
             const SizedBox(height: 16),
             Text(
               _error!,
-              style: GoogleFonts.inter(color: Colors.red, fontSize: 16),
+              style: GoogleFonts.plusJakartaSans(color: Colors.red, fontSize: 16),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -151,7 +151,7 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
           // Status Text
           Text(
             hasFaceData ? 'Đã đăng ký khuôn mặt' : 'Chưa đăng ký',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 24.sp,
               fontWeight: FontWeight.bold,
               color: hasFaceData ? Colors.green : Colors.red,
@@ -165,11 +165,11 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
             width: double.infinity,
             padding: EdgeInsets.all(20.r),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(16.r),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.05),
                   blurRadius: 10.r,
                   offset: Offset(0, 4.h),
                 ),
@@ -183,19 +183,19 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
                   value: hasFaceData ? 'Đã xác minh' : 'Chưa xác minh',
                   valueColor: hasFaceData ? Colors.green : Colors.red,
                 ),
-                Divider(height: 24.h),
+                Divider(height: 24.h, color: Theme.of(context).dividerColor),
                 _buildInfoRow(
                   icon: Icons.calendar_today,
                   label: 'Ngày đăng ký',
                   value: _formatDateTime(registeredAt),
-                  valueColor: Colors.black87,
+                  valueColor: Theme.of(context).colorScheme.onSurface,
                 ),
-                Divider(height: 24.h),
+                Divider(height: 24.h, color: Theme.of(context).dividerColor),
                 _buildInfoRow(
                   icon: Icons.security,
                   label: 'Bảo mật',
                   value: 'Dữ liệu được mã hóa',
-                  valueColor: Colors.black87,
+                  valueColor: Theme.of(context).colorScheme.onSurface,
                 ),
               ],
             ),
@@ -219,7 +219,7 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
                 Expanded(
                   child: Text(
                     'Khuôn mặt của bạn được sử dụng để điểm danh tự động. Dữ liệu được bảo mật và chỉ dùng trong hệ thống FAMS.',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       color: Colors.blue[800],
                       fontSize: 13.sp,
                     ),
@@ -316,7 +316,7 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
             children: [
               Text(
                 label,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   color: Colors.grey[600],
                   fontSize: 13.sp,
                 ),
@@ -324,7 +324,7 @@ class _ViewFaceInfoScreenState extends State<ViewFaceInfoScreen> {
               const SizedBox(height: 4),
               Text(
                 value,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   color: valueColor,
                   fontSize: 15.sp,
                   fontWeight: FontWeight.w500,

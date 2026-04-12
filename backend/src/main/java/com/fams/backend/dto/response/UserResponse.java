@@ -36,6 +36,11 @@ public class UserResponse implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updatedAt;
 
+    // Academic & Profile fields
+    private String department;
+    private String expertise;
+    private String bio;
+
     // Student specific fields (optional)
     private String major;
     private Long majorId;
@@ -81,6 +86,11 @@ public class UserResponse implements Serializable {
                 builder.setSubSpecialization(profile.getSubSpecialization().getName());
                 builder.setSubSpecializationId(profile.getSubSpecialization().getId());
             }
+        } else if (user.getRole() == User.UserRole.LECTURER && user.getLecturerProfile() != null) {
+            var profile = user.getLecturerProfile();
+            builder.setDepartment(profile.getDepartment());
+            builder.setExpertise(profile.getExpertise());
+            builder.setBio(profile.getBio());
         }
         return builder;
     }

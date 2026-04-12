@@ -15,11 +15,11 @@ class GradeDetailScreen extends StatelessWidget {
     final controller = Get.find<StudentGradeController>();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           'Chi tiết điểm',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.plusJakartaSans(
             color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
@@ -48,10 +48,10 @@ class GradeDetailScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildCourseHeader(detail),
-              _buildSummaryHeader(detail),
+              _buildCourseHeader(context, detail),
+              _buildSummaryHeader(context, detail),
               const SizedBox(height: 16),
-              _buildGradeTable(detail, controller),
+              _buildGradeTable(context, detail, controller),
               const SizedBox(height: 40),
             ],
           ),
@@ -60,12 +60,12 @@ class GradeDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCourseHeader(StudentGradeDetailResponse detail) {
+  Widget _buildCourseHeader(BuildContext context, StudentGradeDetailResponse detail) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
       ),
       child: Row(
         children: [
@@ -77,7 +77,7 @@ class GradeDetailScreen extends StatelessWidget {
             ),
             child: Text(
               detail.courseCode,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 color: AppColors.primaryOrange,
                 fontWeight: FontWeight.bold,
                 fontSize: 12,
@@ -87,8 +87,8 @@ class GradeDetailScreen extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             detail.className,
-            style: GoogleFonts.inter(
-              color: Colors.grey.shade800,
+            style: GoogleFonts.plusJakartaSans(
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 15,
               fontWeight: FontWeight.w600,
             ),
@@ -99,14 +99,15 @@ class GradeDetailScreen extends StatelessWidget {
   }
 
   Widget _buildGradeTable(
-      StudentGradeDetailResponse detail, StudentGradeController controller) {
+      BuildContext context, StudentGradeDetailResponse detail, StudentGradeController controller) {
     final sortedCategories =
         controller.sortedCategories(detail.gradeCategories);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade200),
+        color: Theme.of(context).cardColor,
+        border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade800 : Colors.grey.shade200),
         borderRadius: BorderRadius.circular(12),
       ),
       clipBehavior: Clip.antiAlias,
@@ -153,13 +154,13 @@ class GradeDetailScreen extends StatelessWidget {
                   width: double.infinity,
                   padding:
                       const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                  color: Colors.grey.shade50,
+                  color: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade800 : Colors.grey.shade50,
                   child: Text(
                     category.categoryName.toUpperCase(),
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade700,
+                      color: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade400 : Colors.grey.shade700,
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -170,9 +171,9 @@ class GradeDetailScreen extends StatelessWidget {
                   return Container(
                     decoration: BoxDecoration(
                       border: Border(
-                        bottom: BorderSide(color: Colors.grey.shade100),
+                        bottom: BorderSide(color: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade800 : Colors.grey.shade100),
                       ),
-                      color: isTotal ? Colors.orange.shade50.withOpacity(0.3) : null,
+                      color: isTotal ? (Theme.of(context).brightness == Brightness.dark ? Colors.orange.shade900.withOpacity(0.1) : Colors.orange.shade50.withOpacity(0.3)) : null,
                     ),
                     padding:
                         const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
@@ -182,11 +183,11 @@ class GradeDetailScreen extends StatelessWidget {
                           flex: 3,
                           child: Text(
                             isTotal ? 'Tổng' : item.itemName,
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.plusJakartaSans(
                               fontSize: 13,
                               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
                               fontStyle: isTotal ? FontStyle.italic : null,
-                              color: AppColors.textPrimary,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                         ),
@@ -195,7 +196,7 @@ class GradeDetailScreen extends StatelessWidget {
                           child: Text(
                             '${item.weight.toInt()}%',
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.plusJakartaSans(
                               fontSize: 13,
                               color: Colors.grey.shade600,
                             ),
@@ -206,7 +207,7 @@ class GradeDetailScreen extends StatelessWidget {
                           child: Text(
                             controller.formatGrade(item.value, item.isPublished),
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.plusJakartaSans(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
                               color: _getGradeColor(item),
@@ -219,7 +220,7 @@ class GradeDetailScreen extends StatelessWidget {
                             item.comment ?? '-',
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.plusJakartaSans(
                               fontSize: 12,
                               color: Colors.grey.shade500,
                             ),
@@ -241,7 +242,7 @@ class GradeDetailScreen extends StatelessWidget {
     return Text(
       text.toUpperCase(),
       textAlign: align,
-      style: GoogleFonts.inter(
+      style: GoogleFonts.plusJakartaSans(
         color: Colors.white,
         fontSize: 11,
         fontWeight: FontWeight.bold,
@@ -256,7 +257,7 @@ class GradeDetailScreen extends StatelessWidget {
     return AppColors.textPrimary;
   }
 
-  Widget _buildSummaryHeader(StudentGradeDetailResponse detail) {
+  Widget _buildSummaryHeader(BuildContext context, StudentGradeDetailResponse detail) {
     final status = detail.courseStatus;
     final statusColor = status == 'PASSED'
         ? Colors.green.shade600
@@ -268,9 +269,9 @@ class GradeDetailScreen extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? Colors.transparent : Colors.grey.shade200),
       ),
       child: Column(
         children: [
@@ -279,7 +280,7 @@ class GradeDetailScreen extends StatelessWidget {
             children: [
               Text(
                 'TỔNG ĐIỂM MÔN HỌC',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                   color: Colors.grey.shade700,
@@ -297,7 +298,7 @@ class GradeDetailScreen extends StatelessWidget {
                   children: [
                     Text(
                       'TRUNG BÌNH',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                         color: Colors.grey.shade500,
@@ -306,10 +307,10 @@ class GradeDetailScreen extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       detail.courseAverage?.toStringAsFixed(1) ?? '-',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ],
@@ -322,7 +323,7 @@ class GradeDetailScreen extends StatelessWidget {
                   children: [
                     Text(
                       'TRẠNG THÁI',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                         color: Colors.grey.shade500,
@@ -331,7 +332,7 @@ class GradeDetailScreen extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       status,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: statusColor,
@@ -356,7 +357,7 @@ class GradeDetailScreen extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             'Không thể tải dữ liệu điểm',
-            style: GoogleFonts.inter(fontSize: 16, color: Colors.grey),
+            style: GoogleFonts.plusJakartaSans(fontSize: 16, color: Colors.grey),
           ),
           const SizedBox(height: 24),
           ElevatedButton(

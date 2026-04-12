@@ -19,7 +19,7 @@ class FaceRegistrationView extends StatelessWidget {
       init: FaceRegistrationController(),
       builder: (controller) {
         return Scaffold(
-          backgroundColor: bgWhite,
+          backgroundColor: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).scaffoldBackgroundColor : bgWhite,
           body: SafeArea(
             child: Column(
               children: [
@@ -27,7 +27,7 @@ class FaceRegistrationView extends StatelessWidget {
                 _buildHeader(context),
                 
                 // Step Indicator (fixed height)
-                Obx(() => _buildStepIndicator(controller)),
+                Obx(() => _buildStepIndicator(context, controller)),
                 
                 const SizedBox(height: 8),
                 
@@ -35,7 +35,7 @@ class FaceRegistrationView extends StatelessWidget {
                 SizedBox(
                   height: 40,
                   child: Center(
-                    child: Obx(() => _buildCurrentActionBadge(controller)),
+                    child: Obx(() => _buildCurrentActionBadge(context, controller)),
                   ),
                 ),
                 
@@ -46,7 +46,7 @@ class FaceRegistrationView extends StatelessWidget {
                     children: [
                       // Camera frame (always centered)
                       Center(
-                        child: Obx(() => _buildOvalCameraFrame(controller)),
+                        child: Obx(() => _buildOvalCameraFrame(context, controller)),
                       ),
                       // Warning overlay (positioned at top)
                       Positioned(
@@ -63,7 +63,7 @@ class FaceRegistrationView extends StatelessWidget {
                 SizedBox(
                   height: 50,
                   child: Center(
-                    child: Obx(() => _buildStatusMessage(controller)),
+                    child: Obx(() => _buildStatusMessage(context, controller)),
                   ),
                 ),
                 
@@ -84,13 +84,13 @@ class FaceRegistrationView extends StatelessWidget {
         children: [
           IconButton(
             onPressed: () => Get.back(),
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.black87, size: 20),
+            icon: Icon(Icons.arrow_back_ios, color: Theme.of(context).iconTheme.color, size: 20),
           ),
-          const Expanded(
+          Expanded(
             child: Text(
               'Đăng ký khuôn mặt',
               style: TextStyle(
-                color: Colors.black87,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
               ),
@@ -104,7 +104,7 @@ class FaceRegistrationView extends StatelessWidget {
   }
 
   /// Updated step indicator for 6-step flow
-  Widget _buildStepIndicator(FaceRegistrationController controller) {
+  Widget _buildStepIndicator(BuildContext context, FaceRegistrationController controller) {
     final currentPhase = controller.currentPhaseIndex;
     final totalSteps = controller.totalSteps;
     
@@ -120,11 +120,12 @@ class FaceRegistrationView extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               _buildStepDot(
+                context: context,
                 isActive: isActive,
                 isCompleted: isCompleted,
               ),
               if (index < totalSteps - 1)
-                _buildStepLine(isCompleted: isCompleted),
+                _buildStepLine(context: context, isCompleted: isCompleted),
             ],
           );
         }),
@@ -133,6 +134,7 @@ class FaceRegistrationView extends StatelessWidget {
   }
 
   Widget _buildStepDot({
+    required BuildContext context,
     required bool isActive,
     required bool isCompleted,
   }) {
@@ -143,7 +145,7 @@ class FaceRegistrationView extends StatelessWidget {
     } else if (isActive) {
       bgColor = lightPeach;
     } else {
-      bgColor = Colors.grey.shade300;
+      bgColor = Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade800 : Colors.grey.shade300;
     }
 
     return Container(
@@ -162,17 +164,17 @@ class FaceRegistrationView extends StatelessWidget {
     );
   }
 
-  Widget _buildStepLine({required bool isCompleted}) {
+  Widget _buildStepLine({required BuildContext context, required bool isCompleted}) {
     return Container(
       width: 24,
       height: 2,
       margin: const EdgeInsets.symmetric(horizontal: 4),
-      color: isCompleted ? primaryOrange : Colors.grey.shade300,
+      color: isCompleted ? primaryOrange : (Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade800 : Colors.grey.shade300),
     );
   }
 
   /// Display current action being performed
-  Widget _buildCurrentActionBadge(FaceRegistrationController controller) {
+  Widget _buildCurrentActionBadge(BuildContext context, FaceRegistrationController controller) {
     final state = controller.state.value;
     final actionName = controller.currentActionName.value;
     
@@ -207,7 +209,7 @@ class FaceRegistrationView extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: lightPeach,
+        color: Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : lightPeach,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -269,7 +271,7 @@ class FaceRegistrationView extends StatelessWidget {
     );
   }
 
-  Widget _buildOvalCameraFrame(FaceRegistrationController controller) {
+  Widget _buildOvalCameraFrame(BuildContext context, FaceRegistrationController controller) {
     final progress = controller.progress.value;
     final frameStatus = controller.frameStatus.value;
     final state = controller.state.value;
@@ -311,8 +313,8 @@ class FaceRegistrationView extends StatelessWidget {
                 child: Container(
                   width: frameWidth,
                   height: frameHeight,
-                  color: lightPeach,
-                  child: _buildCameraPreview(controller),
+                  color: Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : lightPeach,
+                  child: _buildCameraPreview(context, controller),
                 ),
               ),
               // Success checkmark
@@ -357,7 +359,7 @@ class FaceRegistrationView extends StatelessWidget {
             ? Text(
                 instructionText,
                 style: TextStyle(
-                  color: Colors.grey.shade700,
+                  color: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade400 : Colors.grey.shade700,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
@@ -394,11 +396,11 @@ class FaceRegistrationView extends StatelessWidget {
     return '';
   }
 
-  Widget _buildCameraPreview(FaceRegistrationController controller) {
+  Widget _buildCameraPreview(BuildContext context, FaceRegistrationController controller) {
     if (controller.cameraController == null ||
         !controller.cameraController!.value.isInitialized) {
       return Container(
-        color: lightPeach,
+        color: Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : lightPeach,
         child: const Center(
           child: CircularProgressIndicator(color: primaryOrange),
         ),
@@ -416,7 +418,7 @@ class FaceRegistrationView extends StatelessWidget {
   }
 
   /// Status message displayed in fixed-height area (no layout jumps)
-  Widget _buildStatusMessage(FaceRegistrationController controller) {
+  Widget _buildStatusMessage(BuildContext context, FaceRegistrationController controller) {
     final state = controller.state.value;
     final message = controller.statusMessage.value;
     
@@ -435,7 +437,7 @@ class FaceRegistrationView extends StatelessWidget {
     return Text(
       message,
       style: TextStyle(
-        color: Colors.grey.shade600,
+        color: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade400 : Colors.grey.shade600,
         fontSize: 13,
       ),
       textAlign: TextAlign.center,

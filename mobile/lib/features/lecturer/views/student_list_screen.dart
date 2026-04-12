@@ -38,20 +38,37 @@ class _StudentListScreenState extends State<StudentListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7EDE4),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            _buildHeader(),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark 
+              ? Theme.of(context).scaffoldBackgroundColor 
+              : null,
+          gradient: Theme.of(context).brightness == Brightness.dark 
+              ? null 
+              : const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFFFEF3DE),
+                    Colors.white,
+                  ],
+                  stops: [0.0, 0.3],
+                ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Header
+              _buildHeader(),
 
-            // Student Count
-            _buildStudentCountHeader(),
+              // Student Count
+              _buildStudentCountHeader(),
 
-            // Student List
-            Expanded(
-              child: Obx(() {
-                if (controller.isLoading.value && controller.students.isEmpty) {
+              // Student List
+              Expanded(
+                child: Obx(() {
+                  if (controller.isLoading.value && controller.students.isEmpty) {
                   return const Center(
                     child: CircularProgressIndicator(color: Color(0xFFEF7623)),
                   );
@@ -64,7 +81,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                       children: [
                         Text(
                           controller.errorMessage.value,
-                          style: GoogleFonts.inter(color: Colors.red),
+                          style: GoogleFonts.plusJakartaSans(color: Colors.red),
                         ),
                         const SizedBox(height: 16),
                         ElevatedButton(
@@ -93,7 +110,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                           _isSearching
                               ? 'Không tìm thấy sinh viên nào'
                               : 'Chưa có sinh viên',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                             color: Colors.grey[600],
                             fontSize: 16,
                           ),
@@ -123,6 +140,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
           ],
         ),
       ),
+     ),
     );
   }
 
@@ -169,7 +187,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                       onChanged: (val) => controller.searchStudents(val),
                       decoration: InputDecoration(
                         hintText: 'Tìm tên hoặc mã SV...',
-                        hintStyle: GoogleFonts.inter(
+                        hintStyle: GoogleFonts.plusJakartaSans(
                           color: Colors.grey[400],
                           fontSize: 14,
                         ),
@@ -193,7 +211,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                     children: [
                       Text(
                         _extractClassCode(widget.classSection.className),
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
@@ -353,7 +371,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
           children: [
             Text(
               'TẤT CẢ SINH VIÊN',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: Colors.grey[600],
@@ -361,7 +379,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
             ),
             Text(
               '${controller.filteredStudents.length} Sinh viên',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFFEF7623),
@@ -407,7 +425,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
               child: Center(
                 child: Text(
                   '$index',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                     color: Colors.grey[700],
@@ -446,7 +464,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                 children: [
                   Text(
                     student.studentName,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
@@ -457,7 +475,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                   const SizedBox(height: 4),
                   Text(
                     student.studentCode,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       color: Colors.grey[500],
                     ),
