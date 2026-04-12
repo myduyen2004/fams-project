@@ -167,35 +167,41 @@ export const ScheduleRequestPage = () => {
             <div className="space-y-6">
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center text-amber-600">
-                            <Clock size={24} />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-gray-500 dark:text-zinc-400">Yêu cầu chờ xử lý</p>
-                            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                                {activeTab === 'LECTURER' ? stats.pending : studentStats.pending}
-                            </h3>
-                        </div>
-                    </div>
-                    <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center text-green-600">
-                            <CheckCircle size={24} />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-gray-500 dark:text-zinc-400">Yêu cầu đã xử lý</p>
-                            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                                {activeTab === 'LECTURER' ? stats.processed : (studentStats.approved + studentStats.rejected)}
-                            </h3>
+                    <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 group hover:border-amber-200 transition-all">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center text-amber-600">
+                                <Clock size={24} />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Đang chờ xử lý</p>
+                                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                                    {activeTab === 'LECTURER' ? stats.pending : studentStats.pending}
+                                </h3>
+                            </div>
                         </div>
                     </div>
-                    <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600">
-                            <FileText size={24} />
+                    <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 group hover:border-emerald-200 transition-all">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600">
+                                <CheckCircle size={24} />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Đã xử lý</p>
+                                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                                    {activeTab === 'LECTURER' ? stats.processed : (studentStats.approved + studentStats.rejected)}
+                                </h3>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-sm font-medium text-gray-500 dark:text-zinc-400">Tổng số yêu cầu</p>
-                            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{totalElements}</h3>
+                    </div>
+                    <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 group hover:border-blue-200 transition-all">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600">
+                                <FileText size={24} />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tổng số yêu cầu</p>
+                                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{totalElements}</h3>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -243,23 +249,23 @@ export const ScheduleRequestPage = () => {
                         <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead>
-                                    <tr className="bg-fpt-orange text-white">
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider rounded-tl-lg">
+                                    <tr className="bg-gray-50/50 dark:bg-zinc-800/50">
+                                        <th className="px-6 py-4 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                                             Người gửi
                                         </th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">
+                                        <th className="px-6 py-4 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                                             Vai trò
                                         </th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">
+                                        <th className="px-6 py-4 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                                             {activeTab === 'LECTURER' ? 'Lớp / Nhóm' : 'Tiêu đề'}
                                         </th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">
+                                        <th className="px-6 py-4 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                                             Loại yêu cầu
                                         </th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">
+                                        <th className="px-6 py-4 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                                             Ngày gửi
                                         </th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider rounded-tr-lg">
+                                        <th className="px-6 py-4 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">
                                             Trạng thái
                                         </th>
                                     </tr>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { FileText, Plus, Clock, CheckCircle, XCircle, AlertCircle, Upload, X, Loader2, Info, Trash2, AlertTriangle } from 'lucide-react';
+import { FileText, Plus, Clock, CheckCircle, XCircle, AlertCircle, Upload, X, Loader2, Info, Trash2, AlertTriangle, ExternalLink, Search } from 'lucide-react';
 import { StudentLayout } from '../../layouts/StudentLayout';
 import { Pagination } from '../../components/common/Pagination';
 import { academicRequestService, AcademicRequest, AcademicRequestType, CreateAcademicRequestPayload } from '../../services/api/academicRequestService';
@@ -549,60 +549,88 @@ export const StudentAcademicRequestPage: React.FC = () => {
 
     // Get status badge
     const getStatusBadge = (status: string, statusLabel: string) => {
-        const styles: Record<string, string> = {
-            PENDING: 'bg-yellow-100 text-yellow-800',
-            APPROVED: 'bg-green-100 text-green-800',
-            REJECTED: 'bg-red-100 text-red-800',
-            CANCELLED: 'bg-gray-100 text-gray-800',
+        const styles: Record<string, { bg: string, text: string, dot: string, anim: string }> = {
+            PENDING: {
+                bg: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200/50 dark:border-amber-800/30',
+                text: 'text-amber-600 dark:text-amber-400',
+                dot: 'bg-amber-500',
+                anim: 'animate-pulse'
+            },
+            APPROVED: {
+                bg: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200/50 dark:border-emerald-800/30',
+                text: 'text-emerald-600 dark:text-emerald-400',
+                dot: 'bg-emerald-500',
+                anim: ''
+            },
+            REJECTED: {
+                bg: 'bg-rose-50 dark:bg-rose-900/20 border-rose-200/50 dark:border-rose-800/30',
+                text: 'text-rose-600 dark:text-rose-400',
+                dot: 'bg-rose-500',
+                anim: ''
+            },
+            CANCELLED: {
+                bg: 'bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200/50 dark:border-zinc-700/30',
+                text: 'text-zinc-600 dark:text-zinc-400',
+                dot: 'bg-zinc-500',
+                anim: ''
+            },
         };
-        const icons: Record<string, React.ReactNode> = {
-            PENDING: <Clock className="w-3 h-3" />,
-            APPROVED: <CheckCircle className="w-3 h-3" />,
-            REJECTED: <XCircle className="w-3 h-3" />,
-            CANCELLED: <AlertCircle className="w-3 h-3" />,
-        };
+
+        const currentStyle = styles[status] || styles.CANCELLED;
+
         return (
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${styles[status] || 'bg-gray-100'}`}>
-                {icons[status] || null}
+            <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border shadow-sm ${currentStyle.bg} ${currentStyle.text}`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${currentStyle.dot} ${currentStyle.anim}`} />
                 {statusLabel}
             </span>
         );
     };
 
     // Format date
-    const formatDate = (dateStr?: string) => {
+    const formatDate = (dateStr?: string, showTime: boolean = true) => {
         if (!dateStr) return '—';
-        return new Date(dateStr).toLocaleDateString('vi-VN', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        try {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return '—';
+            
+            return date.toLocaleDateString('vi-VN', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                ...(showTime ? { hour: '2-digit', minute: '2-digit' } : {})
+            });
+        } catch (e) {
+            return '—';
+        }
     };
 
     return (
         <StudentLayout pageTitle="Yêu Cầu Học Thuật">
             <div className="p-6 space-y-6">
                 {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Yêu Cầu Học Thuật</h1>
-                        <p className="text-gray-500 dark:text-gray-400 mt-1">Quản lý các yêu cầu học thuật của bạn</p>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-zinc-800">
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-3">
+                            <div className="w-2 h-8 bg-fpt-orange rounded-full" />
+                            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Yêu Cầu Học Thuật</h1>
+                        </div>
+                        <p className="text-gray-500 dark:text-gray-400 font-medium ml-5">Quản lý và theo dõi các đơn từ học thuật của bạn</p>
                     </div>
                     <button
                         onClick={() => setShowCreateDialog(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                        className="flex items-center gap-2 px-8 py-3.5 bg-fpt-orange text-white rounded-2xl hover:bg-orange-600 shadow-lg shadow-orange-500/20 active:scale-95 transition-all font-bold text-sm"
                     >
-                        <Plus className="w-4 h-4" />
+                        <Plus className="w-5 h-5" />
                         Tạo yêu cầu mới
                     </button>
                 </div>
 
                 {/* Filters */}
-                <div className="flex flex-wrap items-center gap-4 bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                    <div className="flex-1 min-w-[200px]">
-                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5 ml-1">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-zinc-800 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-fpt-orange/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-700" />
+                    
+                    <div className="lg:col-span-6 space-y-2 relative z-10">
+                        <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1">
                             Loại yêu cầu
                         </label>
                         <select
@@ -611,7 +639,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                 setTypeFilter(e.target.value);
                                 setCurrentPage(0);
                             }}
-                            className="w-[400px] px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all outline-none"
+                            className="w-full px-5 py-3 bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800 rounded-2xl text-sm text-gray-900 dark:text-zinc-100 focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange transition-all outline-none font-medium appearance-none"
                         >
                             <option value="">Tất cả loại yêu cầu</option>
                             {requestTypes.map(type => (
@@ -620,9 +648,9 @@ export const StudentAcademicRequestPage: React.FC = () => {
                         </select>
                     </div>
 
-                    <div className="w-[200px]">
-                        <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5 ml-1">
-                            Trạng thái
+                    <div className="lg:col-span-4 space-y-2 relative z-10">
+                        <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1">
+                            Trạng thái đơn
                         </label>
                         <select
                             value={statusFilter}
@@ -630,7 +658,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                 setStatusFilter(e.target.value);
                                 setCurrentPage(0);
                             }}
-                            className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all outline-none"
+                            className="w-full px-5 py-3 bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800 rounded-2xl text-sm text-gray-900 dark:text-zinc-100 focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange transition-all outline-none font-medium appearance-none"
                         >
                             <option value="">Tất cả trạng thái</option>
                             <option value="PENDING">Chờ xử lý</option>
@@ -640,14 +668,14 @@ export const StudentAcademicRequestPage: React.FC = () => {
                         </select>
                     </div>
 
-                    <div className="self-end pb-0.5">
+                    <div className="lg:col-span-2 flex items-end relative z-10">
                         <button
                             onClick={() => {
                                 setTypeFilter('');
                                 setStatusFilter('');
                                 setCurrentPage(0);
                             }}
-                            className="text-sm text-gray-500 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 font-medium px-2 py-2 transition-colors"
+                            className="w-full text-xs text-gray-400 hover:text-fpt-orange font-bold uppercase tracking-widest py-3 border border-transparent hover:border-orange-100 dark:hover:border-orange-900/30 rounded-2xl transition-all"
                         >
                             Xóa lọc
                         </button>
@@ -667,71 +695,74 @@ export const StudentAcademicRequestPage: React.FC = () => {
                 )}
 
                 {/* Request List */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+                <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-sm border border-gray-100 dark:border-zinc-800 overflow-hidden relative">
                     {loading ? (
-                        <div className="flex items-center justify-center py-12">
-                            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                        <div className="flex flex-col items-center justify-center py-24 gap-4">
+                            <div className="w-12 h-12 border-4 border-fpt-orange/20 border-t-fpt-orange rounded-full animate-spin" />
+                            <p className="text-sm font-bold text-gray-400 uppercase tracking-widest animate-pulse">Đang tải dữ liệu...</p>
                         </div>
                     ) : requests.length === 0 ? (
-                        <div className="text-center py-12">
-                            <FileText className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                            <p className="text-gray-500 dark:text-gray-400">Chưa có yêu cầu nào</p>
+                        <div className="text-center py-24 group">
+                            <div className="w-20 h-20 bg-gray-50 dark:bg-zinc-800/50 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-500">
+                                <FileText className="w-10 h-10 text-gray-300 dark:text-zinc-700" />
+                            </div>
+                            <p className="text-gray-400 dark:text-zinc-500 font-bold uppercase tracking-widest text-sm">Chưa có yêu cầu nào được tạo</p>
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full">
-                                <thead className="bg-orange-600 border-b">
-                                    <tr>
-                                        <th className="px-4 py-3 text-center w-12">
+                                <thead>
+                                    <tr className="bg-gray-50/50 dark:bg-zinc-800/50 border-b border-gray-100 dark:border-zinc-800">
+                                        <th className="px-6 py-5 text-center w-16">
                                             <input
                                                 type="checkbox"
                                                 checked={requests.length > 0 && requests.filter(r => r.status === 'PENDING').length > 0 && requests.filter(r => r.status === 'PENDING').every(r => selectedIds.includes(r.id))}
                                                 onChange={toggleSelectAll}
                                                 disabled={requests.filter(r => r.status === 'PENDING').length === 0}
-                                                className="w-4 h-4 text-orange-600 dark:text-orange-500 border-gray-300 dark:border-gray-600 rounded focus:ring-orange-500 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                                className="w-4 h-4 text-fpt-orange dark:text-fpt-orange border-gray-300 dark:border-zinc-700 rounded-lg focus:ring-fpt-orange/20 cursor-pointer disabled:opacity-30 transition-all"
                                             />
                                         </th>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase w-1/5">Loại yêu cầu</th>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase w-1/3">Tiêu đề</th>
-                                        <th className="px-4 py-3 text-center text-xs font-medium text-white uppercase w-1/6">Trạng thái</th>
-                                        <th className="px-4 py-3 text-center text-xs font-medium text-white uppercase w-1/6">Ngày tạo</th>
-                                        <th className="px-4 py-3 text-center text-xs font-medium text-white uppercase w-1/6">Hạn nộp</th>
+                                        <th className="px-6 py-5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Loại yêu cầu</th>
+                                        <th className="px-6 py-5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Tiêu đề (Nhấn đúp để xem)</th>
+                                        <th className="px-6 py-5 text-center text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Trạng thái</th>
+                                        <th className="px-6 py-5 text-center text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Ngày tạo</th>
+                                        <th className="px-6 py-5 text-center text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Hạn nộp</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                                <tbody className="divide-y divide-gray-50 dark:divide-zinc-800/50">
                                     {requests.map((request) => (
                                         <tr
                                             key={request.id}
-                                            className="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors"
+                                            className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/30 cursor-pointer transition-all group"
                                             onDoubleClick={() => {
                                                 setSelectedRequest(request);
                                                 setShowDetailDialog(true);
                                             }}
                                         >
-                                            <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                                            <td className="px-6 py-5 text-center" onClick={(e) => e.stopPropagation()}>
                                                 <input
                                                     type="checkbox"
                                                     checked={selectedIds.includes(request.id)}
                                                     onChange={() => toggleSelect(request.id)}
                                                     disabled={request.status !== 'PENDING'}
-                                                    className="w-4 h-4 text-orange-600 dark:text-orange-500 border-gray-300 dark:border-gray-600 rounded focus:ring-orange-500 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                                    className="w-4 h-4 text-fpt-orange dark:text-fpt-orange border-gray-300 dark:border-zinc-700 rounded-lg focus:ring-fpt-orange/20 cursor-pointer disabled:opacity-30 transition-all"
                                                 />
                                             </td>
-                                            <td className="px-4 py-3">
-                                                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                            <td className="px-6 py-5">
+                                                <span className="text-sm font-bold text-gray-900 dark:text-zinc-200 group-hover:text-fpt-orange transition-colors">
                                                     {request.requestTypeLabel}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3">
-                                                <span className="text-sm text-gray-600 dark:text-gray-300">{request.requestTitle}</span>
+                                            <td className="px-6 py-5">
+                                                <span className="text-sm text-gray-500 dark:text-zinc-400 font-medium line-clamp-1">{request.requestTitle}</span>
                                             </td>
-                                            <td className="px-4 py-3 text-center">
+                                            <td className="px-6 py-5 text-center">
                                                 {getStatusBadge(request.status, request.statusLabel)}
                                             </td>
-                                            <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+                                            <td className="px-6 py-5 text-sm font-bold text-gray-400 dark:text-zinc-500 text-center">
                                                 {formatDate(request.createdAt)}
                                             </td>
-                                            <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+                                            <td className="px-6 py-5 text-sm font-bold text-gray-400 dark:text-zinc-500 text-center">
                                                 {request.dueDate || '—'}
                                             </td>
                                         </tr>
@@ -743,7 +774,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
 
                     {/* Pagination */}
                     {totalPages > 1 && (
-                        <div className="px-4 py-3 border-t">
+                        <div className="px-8 py-5 border-t border-gray-50 dark:border-zinc-800 bg-gray-50/30 dark:bg-zinc-900/50">
                             <Pagination
                                 currentPage={currentPage}
                                 totalPages={totalPages}
@@ -760,86 +791,100 @@ export const StudentAcademicRequestPage: React.FC = () => {
             {showCreateDialog && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center">
                     <div
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-md"
                         style={{ width: '100vw', height: '100vh' }}
                         onClick={() => !submitting && setShowCreateDialog(false)}
                     />
-                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative z-10 flex flex-col m-4 border dark:border-gray-700">
-                        <div className="p-6 border-b dark:border-gray-700 flex items-center justify-between bg-white dark:bg-gray-800 sticky top-0 z-20">
-                            <h2 className="text-xl font-bold text-gray-900 dark:text-white leading-none">
-                                {selectedType ? selectedType.label : 'Chọn loại yêu cầu'}
-                            </h2>
+                    <div className="bg-white dark:bg-zinc-900 rounded-[32px] shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto relative z-10 flex flex-col m-4 border border-gray-100 dark:border-zinc-800 transition-all">
+                        <div className="px-8 py-6 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between sticky top-0 z-20 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl">
+                            <div className="flex items-center gap-4">
+                                <div className="p-2.5 bg-fpt-orange/10 rounded-xl">
+                                    <Plus className="w-5 h-5 text-fpt-orange" />
+                                </div>
+                                <h2 className="text-xl font-extrabold text-zinc-900 dark:text-white tracking-tight">
+                                    {selectedType ? selectedType.label : 'Chọn loại yêu cầu'}
+                                </h2>
+                            </div>
                             <button
                                 onClick={() => {
                                     setShowCreateDialog(false);
                                     setSelectedType(null);
                                     setCourseSearch('');
                                 }}
-                                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors flex-shrink-0"
+                                className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-full transition-colors flex-shrink-0"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
-                        <div className="p-6">
+                        <div className="p-8">
                             {!selectedType ? (
                                 // Type selection
-                                <div className="grid gap-3">
-                                    {requestTypes.map((type) => (
-                                        <button
-                                            key={type.value}
-                                            onClick={() => handleTypeSelect(type)}
-                                            disabled={!type.canSubmit || (type.value !== 'GRADE_APPEAL' && type.value !== 'OTHERS' && semesters.length === 0)}
-                                            className={`p-4 rounded-lg border dark:border-gray-700 text-left transition-colors w-full ${(type.canSubmit && (type.value === 'GRADE_APPEAL' || type.value === 'OTHERS' || semesters.length > 0))
-                                                ? 'hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer'
-                                                : 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-900/50'
-                                                }`}
-                                        >
-                                            <div className="flex items-center justify-between">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {requestTypes.map((type) => {
+                                        const isUnavailable = !type.canSubmit || (type.value !== 'GRADE_APPEAL' && type.value !== 'OTHERS' && semesters.length === 0);
+                                        const isFuture = (type.startDate && new Date(type.startDate).setHours(0, 0, 0, 0) > new Date().setHours(0, 0, 0, 0));
+                                        const isDisabled = isUnavailable || isFuture;
+
+                                        return (
+                                            <div
+                                                key={type.value}
+                                                onClick={() => !isDisabled && handleTypeSelect(type)}
+                                                className={`group p-6 rounded-3xl border transition-all duration-300 relative overflow-hidden flex flex-col justify-between h-full ${isDisabled
+                                                    ? 'bg-zinc-50 dark:bg-zinc-800/20 border-zinc-100 dark:border-zinc-800 opacity-60 cursor-not-allowed'
+                                                    : 'bg-white dark:bg-zinc-800 border-gray-100 dark:border-zinc-700 hover:border-fpt-orange/50 hover:shadow-xl hover:shadow-orange-500/5 cursor-pointer active:scale-[0.98]'
+                                                    }`}
+                                            >
+                                                {!isDisabled && (
+                                                    <div className="absolute top-0 right-0 w-16 h-16 bg-fpt-orange/5 rounded-full -mr-8 -mt-8 group-hover:scale-150 transition-transform duration-500" />
+                                                )}
+
                                                 <div>
-                                                    <div className="font-medium text-gray-900 dark:text-gray-100 text-base">{type.label}</div>
+                                                    <div className="flex items-center justify-between mb-2 relative z-10">
+                                                        <div className={`p-2 rounded-xl border ${isDisabled ? 'bg-zinc-100/50 dark:bg-zinc-800/50 border-zinc-200/50' : 'bg-fpt-orange/5 border-orange-100/50 dark:border-orange-900/20 text-fpt-orange'}`}>
+                                                            <FileText className="w-4 h-4" />
+                                                        </div>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setInfoType(type);
+                                                            }}
+                                                            className="text-zinc-400 hover:text-fpt-orange p-1 transition-colors"
+                                                            title="Xem thông tin chi tiết"
+                                                        >
+                                                            <Info className="w-5 h-5" />
+                                                        </button>
+                                                    </div>
+                                                    <div className="font-bold text-zinc-900 dark:text-zinc-100 text-base leading-snug mb-1 relative z-10">{type.label}</div>
                                                     {type.requiresClassSection && (
-                                                        <div className="text-sm text-blue-600 mt-1">
-                                                            Cần chọn lớp học phần
+                                                        <div className="text-[10px] font-bold text-blue-500 uppercase tracking-widest relative z-10">
+                                                            Lớp học phần
                                                         </div>
                                                     )}
                                                 </div>
 
-                                                <div className="flex flex-col items-end">
-                                                    <div
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setInfoType(type);
-                                                        }}
-                                                        className="text-blue-500 hover:text-blue-700 p-1 cursor-pointer"
-                                                        title="Xem thông tin chi tiết"
-                                                    >
-                                                        <Info className="w-5 h-5" />
-                                                    </div>
-                                                    <div className="mt-1">
-                                                        {(type.value !== 'GRADE_APPEAL' && type.value !== 'OTHERS' && semesters.length === 0) ? (
-                                                            <span className="text-sm text-red-500 font-medium">
-                                                                Chưa đến thời gian nộp đơn
-                                                            </span>
-                                                        ) : (type.startDate && new Date(type.startDate).setHours(0, 0, 0, 0) > new Date().setHours(0, 0, 0, 0)) ? (
-                                                            <span className="text-sm text-blue-600 font-medium">
-                                                                Bắt đầu từ: {type.startDate} (Chưa đến thời gian)
-                                                            </span>
-                                                        ) : type.dueDate ? (
-                                                            <span className="text-sm text-gray-600">
-                                                                Hạn nộp: {type.dueDate}
-                                                                {!type.canSubmit && <span className="text-red-500 font-medium ml-1">(Đã hết hạn)</span>}
-                                                            </span>
-                                                        ) : null}
-                                                    </div>
+                                                <div className="mt-4 relative z-10">
+                                                    {isUnavailable && type.value !== 'GRADE_APPEAL' && type.value !== 'OTHERS' && semesters.length === 0 ? (
+                                                        <span className="text-[10px] font-bold text-rose-500 uppercase tracking-widest bg-rose-50 dark:bg-rose-900/20 px-2 py-0.5 rounded-lg border border-rose-100 dark:border-rose-900/30">Chưa đến thời gian</span>
+                                                    ) : isFuture ? (
+                                                        <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-lg border border-amber-100 dark:border-amber-900/30">Từ: {type.startDate}</span>
+                                                    ) : type.dueDate ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Hạn: {type.dueDate}</span>
+                                                            {!type.canSubmit && <span className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">(Hết hạn)</span>}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-lg border border-emerald-100 dark:border-emerald-900/30">Đang mở</span>
+                                                    )}
                                                 </div>
                                             </div>
-                                        </button>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             ) : (
                                 // Request form
-                                <div className="space-y-4">
+                                <div className="space-y-6">
+
                                     {/* Dynamic Fields based on Type */}
                                     {selectedType.value === 'OTHERS' && (
                                         <div>
@@ -1130,80 +1175,85 @@ export const StudentAcademicRequestPage: React.FC = () => {
 
                                     {/* Target Sub-Specialization Selection */}
                                     {selectedType.value === 'CHANGE_SPECIALIZATION' && (
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                Chuyên ngành hẹp muốn chọn <span className="text-red-500">*</span>
+                                        <div className="space-y-2">
+                                            <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">
+                                                Chuyên ngành hẹp muốn chọn <span className="text-rose-500">*</span>
                                             </label>
                                             <select
                                                 value={formData.toSubSpecialization || ''}
                                                 onChange={(e) => handleFieldChange('toSubSpecialization', e.target.value)}
-                                                className="w-full px-3 py-2 bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                className="w-full px-5 py-3 bg-gray-50/50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800 rounded-2xl text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange transition-all outline-none font-medium appearance-none"
                                             >
-                                                <option value="">{subSpecializations.length > 0 ? 'Chọn chuyên ngành hẹp' : 'Không có chuyên ngành hẹp phù hợp'}</option>
-                                                {subSpecializations
-                                                    .filter(ss => ss.name !== studentProfile?.subSpecialization)
-                                                    .map(ss => (
-                                                        <option key={ss.id} value={ss.name} className="bg-white dark:bg-gray-800">{ss.name}</option>
-                                                    ))}
+                                                <option value="">Chọn chuyên ngành hẹp</option>
+                                                {specializations.map(s => (
+                                                    <option key={s.id} value={s.name}>{s.name}</option>
+                                                ))}
                                             </select>
                                         </div>
                                     )}
-
                                     {/* Reason */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Lý do <span className="text-red-500">*</span>
+                                    <div className="space-y-2">
+                                        <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">
+                                            Lý do <span className="text-rose-500">*</span>
                                         </label>
                                         <textarea
                                             value={formData.reason}
                                             onChange={(e) => handleFieldChange('reason', e.target.value)}
                                             rows={4}
-                                            className="w-full px-3 py-2 bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="Nhập lý do chi tiết..."
+                                            className="w-full px-5 py-4 bg-gray-50/50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800 rounded-2xl text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange transition-all outline-none font-medium resize-none"
+                                            placeholder="Ghi rõ lý do tại sao bạn gửi yêu cầu này..."
                                         />
                                     </div>
 
                                     {/* Note */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            Ghi chú thêm
+                                    <div className="space-y-2">
+                                        <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">
+                                            Ghi chú bổ sung
                                         </label>
                                         <textarea
                                             value={formData.note || ''}
                                             onChange={(e) => handleFieldChange('note', e.target.value)}
                                             rows={2}
-                                            className="w-full px-3 py-2 bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="Ghi chú thêm (nếu có)..."
+                                            className="w-full px-5 py-3 bg-gray-50/50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800 rounded-2xl text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange transition-all outline-none font-medium resize-none"
+                                            placeholder="Bất kỳ thông tin nào khác bạn muốn cung cấp..."
                                         />
                                     </div>
 
+
                                     {/* File upload */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                            File đính kèm
+                                    <div className="space-y-2">
+                                        <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">
+                                            Tài liệu đính kèm
                                         </label>
-                                        <div className="border-2 border-dashed dark:border-gray-700 rounded-lg p-4">
+                                        <div className={`border-2 border-dashed rounded-[32px] p-8 transition-all duration-300 group/upload ${selectedFile ? 'border-emerald-100 dark:border-emerald-900/20 bg-emerald-50/30' : 'border-zinc-100 dark:border-zinc-800 hover:border-fpt-orange/30 hover:bg-zinc-50/50'}`}>
                                             {selectedFile ? (
                                                 <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        <FileText className="w-5 h-5 text-blue-600" />
-                                                        <span className="text-sm">{selectedFile.name}</span>
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="p-3 bg-emerald-100/50 rounded-2xl">
+                                                            <FileText className="w-6 h-6 text-emerald-600" />
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{selectedFile.name}</span>
+                                                            <span className="text-xs text-zinc-400 uppercase font-bold tracking-widest">Sẵn sàng để tải lên</span>
+                                                        </div>
                                                     </div>
                                                     <button
                                                         onClick={() => setSelectedFile(null)}
-                                                        className="text-red-500 hover:text-red-700"
+                                                        className="p-2 text-zinc-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
                                                     >
-                                                        <X className="w-4 h-4" />
+                                                        <X className="w-5 h-5" />
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <label className="flex flex-col items-center cursor-pointer">
-                                                    <Upload className="w-8 h-8 text-gray-400" />
-                                                    <span className="text-sm text-gray-500 mt-2">
-                                                        Kéo thả hoặc click để chọn file
+                                                <label className="flex flex-col items-center justify-center cursor-pointer min-h-[120px]">
+                                                    <div className="p-4 bg-fpt-orange/5 group-hover/upload:bg-fpt-orange/10 rounded-2xl transition-colors mb-4">
+                                                        <Upload className="w-8 h-8 text-fpt-orange group-hover/upload:scale-110 transition-transform duration-300" />
+                                                    </div>
+                                                    <span className="text-sm font-bold text-zinc-900 dark:text-zinc-200">
+                                                        Chọn tài liệu hoặc kéo thả vào đây
                                                     </span>
-                                                    <span className="text-xs text-gray-400 mt-1">
-                                                        Tối đa 10MB
+                                                    <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mt-1">
+                                                        Kích thước tối đa: 10MB
                                                     </span>
                                                     <input
                                                         type="file"
@@ -1228,20 +1278,24 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                     )}
 
                                     {/* Actions */}
-                                    <div className="flex justify-end gap-3 pt-4">
+                                    <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-8 mt-4 border-t border-gray-100 dark:border-zinc-800">
                                         <button
                                             onClick={() => setSelectedType(null)}
-                                            className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                                            className="px-8 py-3.5 text-[10px] font-bold text-zinc-400 uppercase tracking-widest hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
                                         >
-                                            Quay lại
+                                            Quay lại danh sách
                                         </button>
                                         <button
                                             onClick={handleSubmit}
                                             disabled={submitting}
-                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                                            className="px-10 py-3.5 bg-fpt-orange text-white rounded-[20px] font-bold text-sm hover:bg-orange-600 shadow-xl shadow-orange-500/20 active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2 group"
                                         >
-                                            {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                                            Gửi yêu cầu
+                                            {submitting ? (
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                            ) : (
+                                                <CheckCircle className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                            )}
+                                            Gửi yêu cầu ngay
                                         </button>
                                     </div>
                                 </div>
@@ -1251,217 +1305,227 @@ export const StudentAcademicRequestPage: React.FC = () => {
                 </div>
             )}
 
-            {/* Detail Dialog */}
             {showDetailDialog && selectedRequest && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                     <div
-                        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        className="absolute inset-0 bg-black/60 backdrop-blur-md"
                         onClick={() => setShowDetailDialog(false)}
                     />
-                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full relative z-10 border dark:border-gray-700">
-                        <div className="p-6 border-b dark:border-gray-700 flex items-center justify-between">
-                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Chi tiết yêu cầu</h2>
+                    <div className="bg-white dark:bg-zinc-900 rounded-[40px] shadow-2xl max-w-2xl w-full relative z-10 border border-gray-100 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[90vh]">
+                        {/* Header */}
+                        <div className="px-8 py-6 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl shrink-0">
+                            <div className="flex items-center gap-4">
+                                <div className="p-2.5 bg-fpt-orange/10 rounded-xl">
+                                    <FileText className="w-5 h-5 text-fpt-orange" />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-bold text-zinc-900 dark:text-white leading-tight">Chi tiết yêu cầu</h2>
+                                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">
+                                        Mã ID: {selectedRequest.id || 'N/A'}
+                                    </p>
+                                </div>
+                            </div>
                             <button
                                 onClick={() => setShowDetailDialog(false)}
-                                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+                                className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-full transition-colors"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
-                        <div className="p-6 space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <span className="text-sm text-gray-500 dark:text-gray-400">Loại yêu cầu</span>
-                                    <p className="font-medium text-gray-900 dark:text-gray-100">{selectedRequest.requestTypeLabel}</p>
+
+                        <div className="p-8 overflow-y-auto space-y-8 custom-scrollbar">
+                            {/* Status and Type Card */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="p-6 rounded-3xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800">
+                                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block mb-2">Loại yêu cầu</span>
+                                    <p className="text-base font-bold text-zinc-900 dark:text-zinc-100">{selectedRequest.requestTypeLabel}</p>
                                 </div>
-                                <div>
-                                    <span className="text-sm text-gray-500 dark:text-gray-400">Trạng thái</span>
-                                    <p>{getStatusBadge(selectedRequest.status, selectedRequest.statusLabel)}</p>
+                                <div className="p-6 rounded-3xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 flex flex-col justify-center">
+                                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block mb-2">Trạng thái hiện tại</span>
+                                    <div>{getStatusBadge(selectedRequest.status, selectedRequest.statusLabel)}</div>
                                 </div>
                             </div>
-                            
-                            <div>
-                                <span className="text-sm text-gray-500 dark:text-gray-400">Tiêu đề</span>
-                                <p className="font-medium text-gray-900 dark:text-gray-100">{selectedRequest.requestTitle}</p>
+
+                            {/* Title Section */}
+                            <div className="space-y-2">
+                                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Tiêu đề yêu cầu</span>
+                                <div className="p-6 rounded-3xl bg-white dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 shadow-sm">
+                                    <p className="text-lg font-bold text-zinc-900 dark:text-zinc-100">{selectedRequest.requestTitle}</p>
+                                </div>
                             </div>
 
-                            {/* Dynamic content based on request type */}
-                            <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-100 dark:border-gray-700 space-y-4">
-                                {selectedRequest.requestType === 'CHANGE_CLASS' && (
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-1">
-                                            <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Lớp hiện tại</span>
-                                            <p className="font-semibold text-gray-700 dark:text-gray-200">{selectedRequest.className || '—'}</p>
+                            {/* Dynamic Content Bento Grid */}
+                            <div className="space-y-4">
+                                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Thông tin bổ sung</span>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {selectedRequest.className && (
+                                        <div className="p-5 rounded-3xl bg-blue-50/30 dark:bg-blue-900/10 border border-blue-100/50 dark:border-blue-900/20">
+                                            <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest block mb-1">Lớp học phần</span>
+                                            <p className="font-bold text-zinc-900 dark:text-zinc-100">{selectedRequest.className}</p>
                                         </div>
-                                        <div className="space-y-1">
-                                            <span className="text-[10px] text-blue-400 uppercase tracking-widest font-bold">Lớp muốn chuyển</span>
-                                            <p className="font-semibold text-blue-700 dark:text-blue-400">{selectedRequest.toClassName || '—'}</p>
+                                    )}
+                                    {selectedRequest.semesterName && (
+                                        <div className="p-5 rounded-3xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800">
+                                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block mb-1">Học kỳ</span>
+                                            <p className="font-bold text-zinc-900 dark:text-zinc-100">{selectedRequest.semesterName}</p>
                                         </div>
-                                    </div>
-                                )}
-
-                                {selectedRequest.requestType === 'CHANGE_MAJOR' && (
-                                    <div className="grid grid-cols-1 gap-4">
-                                        <div className="space-y-1">
-                                            <span className="text-[10px] text-blue-400 uppercase tracking-widest font-bold">Ngành mới</span>
-                                            <p className="font-semibold text-blue-700 dark:text-blue-400">{selectedRequest.toMajor || '—'}</p>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <span className="text-[10px] text-blue-400 uppercase tracking-widest font-bold">Chuyên ngành mới</span>
-                                            <p className="font-semibold text-blue-700 dark:text-blue-400">{selectedRequest.toSpecialization || '—'}</p>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {selectedRequest.requestType === 'CHANGE_SPECIALIZATION' && (
-                                    <div className="space-y-1">
-                                        <span className="text-[10px] text-blue-400 uppercase tracking-widest font-bold">Chuyên ngành hẹp mới</span>
-                                        <p className="font-semibold text-blue-700 dark:text-blue-400">{selectedRequest.toSubSpecialization || '—'}</p>
-                                    </div>
-                                )}
-
-                                {/* PAUSE_SEMESTER (Xin tạm nghỉ học) & ABSENT_REQUEST (Miễn điểm danh) - Show Semester */}
-                                {(['PAUSE_SEMESTER', 'ABSENT_REQUEST'].includes(selectedRequest.requestType)) && (
-                                    <div className="space-y-1">
-                                        <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Học kỳ</span>
-                                        <p className="font-semibold text-gray-700 dark:text-gray-200">{selectedRequest.semesterName || '—'}</p>
-                                    </div>
-                                )}
-
-                                {/* RETAKE_COURSE (Học lại) & OVERLOAD_STUDY (Học vượt) - Show Course + Semester */}
-                                {(['RETAKE_COURSE', 'OVERLOAD_STUDY'].includes(selectedRequest.requestType)) && (
-                                    <div className="space-y-3">
-                                        <div className="space-y-1">
-                                            <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Môn học</span>
-                                            <p className="font-semibold text-gray-700 dark:text-gray-200">
-                                                {selectedRequest.courseCode} {selectedRequest.courseName ? `- ${selectedRequest.courseName}` : ''}
+                                    )}
+                                    {selectedRequest.courseCode && (
+                                        <div className="md:col-span-2 p-5 rounded-3xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800">
+                                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block mb-1">Môn học</span>
+                                            <p className="font-bold text-zinc-900 dark:text-zinc-100">
+                                                [{selectedRequest.courseCode}] {selectedRequest.courseName}
                                             </p>
                                         </div>
-                                        {selectedRequest.semesterName && (
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Học kỳ</span>
-                                                <p className="font-semibold text-gray-700 dark:text-gray-200">{selectedRequest.semesterName}</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* GRADE_APPEAL (Phúc khảo) - Show Class Section + Semester (NO COURSE as per request) */}
-                                {selectedRequest.requestType === 'GRADE_APPEAL' && (
-                                    <div className="grid grid-cols-2 gap-4">
-                                        {selectedRequest.className && (
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Lớp học phần</span>
-                                                <p className="font-semibold text-gray-700 dark:text-gray-200">{selectedRequest.className}</p>
-                                            </div>
-                                        )}
-                                        {selectedRequest.semesterName && (
-                                            <div className="space-y-1">
-                                                <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Học kỳ</span>
-                                                <p className="font-semibold text-gray-700 dark:text-gray-200">{selectedRequest.semesterName}</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-
-                            <div>
-                                <span className="text-sm text-gray-500 dark:text-gray-400">Lý do</span>
-                                <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{selectedRequest.reason}</p>
-                            </div>
-
-                            {selectedRequest.note && (
-                                <div>
-                                    <span className="text-sm text-gray-500 dark:text-gray-400">Ghi chú</span>
-                                    <p className="text-gray-700 dark:text-gray-300">{selectedRequest.note}</p>
+                                    )}
                                 </div>
-                            )}
+                            </div>
 
+                            {/* Reason & Notes Row */}
+                            <div className="grid grid-cols-1 gap-6">
+                                <div className="space-y-2">
+                                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Lý do gửi yêu cầu</span>
+                                    <div className="p-6 rounded-3xl bg-zinc-50/50 dark:bg-zinc-800/30 border border-zinc-100 dark:border-zinc-800">
+                                        <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed font-medium">
+                                            {selectedRequest.reason}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {selectedRequest.note && (
+                                    <div className="space-y-2">
+                                        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Ghi chú của bạn</span>
+                                        <div className="p-6 rounded-3xl bg-zinc-50/50 dark:bg-zinc-800/30 border border-zinc-100 dark:border-zinc-800 italic">
+                                            <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
+                                                "{selectedRequest.note}"
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* File Attachment */}
                             {selectedRequest.fileUrl && (
-                                <div>
-                                    <span className="text-sm text-gray-500 dark:text-gray-400">File đính kèm</span>
+                                <div className="space-y-2">
+                                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Tài liệu đính kèm</span>
                                     <a
                                         href={selectedRequest.fileUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                                        className="flex items-center justify-between p-4 rounded-3xl bg-emerald-50/30 dark:bg-emerald-900/10 border border-emerald-100/50 dark:border-emerald-900/20 group hover:border-emerald-500/30 transition-all"
                                     >
-                                        <FileText className="w-4 h-4" />
-                                        Xem file
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-3 bg-emerald-100/50 dark:bg-emerald-900/30 rounded-2xl">
+                                                <FileText className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">Xem tệp đính kèm</p>
+                                                <p className="text-[10px] font-bold text-emerald-600/50 uppercase tracking-widest">Nhấn để mở tệp trong tab mới</p>
+                                            </div>
+                                        </div>
+                                        <div className="p-2 rounded-xl group-hover:bg-emerald-500/10 transition-colors">
+                                            <ExternalLink className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                        </div>
                                     </a>
                                 </div>
                             )}
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <span className="text-sm text-gray-500 dark:text-gray-400">Ngày tạo</span>
-                                    <p className="text-gray-900 dark:text-gray-100">{formatDate(selectedRequest.createdAt)}</p>
-                                </div>
-                                <div>
-                                    <span className="text-sm text-gray-500 dark:text-gray-400">Hạn nộp</span>
-                                    <p className="text-gray-900 dark:text-gray-100">{selectedRequest.dueDate || '—'}</p>
-                                </div>
-                            </div>
-
+                            {/* Processing Information */}
                             {selectedRequest.approverName && (
-                                <div className="border-t dark:border-gray-700 pt-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <span className="text-sm text-gray-500 dark:text-gray-400">Người xử lý</span>
-                                            <p className="text-gray-900 dark:text-gray-100">{selectedRequest.approverName}</p>
+                                <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-zinc-800">
+                                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Kết quả xử lý</span>
+                                    <div className="p-6 rounded-[32px] bg-indigo-50/30 dark:bg-indigo-900/10 border border-indigo-100/50 dark:border-indigo-900/20 space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest block mb-1">Người xử lý</span>
+                                                <p className="font-bold text-zinc-900 dark:text-zinc-100">{selectedRequest.approverName}</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest block mb-1">Thời gian xử lý</span>
+                                                <p className="font-bold text-zinc-900 dark:text-zinc-100">{formatDate(selectedRequest.approvedAt)}</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <span className="text-sm text-gray-500 dark:text-gray-400">Thời gian xử lý</span>
-                                            <p className="text-gray-900 dark:text-gray-100">{formatDate(selectedRequest.approvedAt)}</p>
-                                        </div>
+                                        {selectedRequest.approverNote && (
+                                            <div className="pt-4 border-t border-indigo-100/30">
+                                                <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest block mb-1">Ghi chú từ Phòng Đào tạo</span>
+                                                <p className="text-sm text-zinc-700 dark:text-zinc-300 font-medium italic">
+                                                    "{selectedRequest.approverNote}"
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
-                                    {selectedRequest.approverNote && (
-                                        <div className="mt-3">
-                                            <span className="text-sm text-gray-500 dark:text-gray-400">Ghi chú từ phòng đào tạo</span>
-                                            <p className="text-gray-700 dark:text-gray-300">{selectedRequest.approverNote}</p>
-                                        </div>
-                                    )}
                                 </div>
                             )}
+
+                            {/* Timestamps Section */}
+                            <div className="grid grid-cols-2 gap-4 pt-8 border-t border-zinc-50 dark:border-zinc-800">
+                                <div>
+                                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block mb-1">Ngày tạo yêu cầu</span>
+                                    <p className="text-xs font-bold text-zinc-500 tracking-tight">{formatDate(selectedRequest.createdAt, true)}</p>
+                                </div>
+                                {selectedRequest.dueDate && (
+                                    <div className="text-right">
+                                        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block mb-1">Hạn xử lý</span>
+                                        <p className="text-xs font-bold text-zinc-500 tracking-tight">{selectedRequest.dueDate}</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Footer Actions */}
+                        <div className="px-8 py-6 border-t border-gray-100 dark:border-zinc-800 flex justify-end shrink-0 bg-gray-50/30 dark:bg-zinc-900/30">
+                            <button
+                                onClick={() => setShowDetailDialog(false)}
+                                className="px-10 py-3.5 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-[20px] font-bold text-sm hover:opacity-90 transition-all active:scale-95"
+                            >
+                                Đã xem và đóng
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
 
+
             {/* Request Type Info Modal */}
             {infoType && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
                     <div
-                        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        className="absolute inset-0 bg-black/60 backdrop-blur-md"
                         onClick={() => setInfoType(null)}
                     />
-                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full overflow-hidden relative z-10 transform animate-in zoom-in-95 duration-200 border dark:border-gray-700">
-                        <div className="p-6 border-b dark:border-gray-700 flex items-center justify-between bg-blue-50 dark:bg-blue-900/20">
-                            <h3 className="text-lg font-bold text-blue-900 dark:text-blue-300 flex items-center gap-2">
-                                <Info className="w-5 h-5" />
-                                Thông tin loại yêu cầu
-                            </h3>
+                    <div className="bg-white dark:bg-zinc-900 rounded-[32px] shadow-2xl max-w-md w-full overflow-hidden relative z-10 transform animate-in zoom-in-95 duration-200 border border-gray-100 dark:border-zinc-800">
+                        <div className="p-8 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/30">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-fpt-orange/10 rounded-lg">
+                                    <Info className="w-5 h-5 text-fpt-orange" />
+                                </div>
+                                <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
+                                    Thông tin loại yêu cầu
+                                </h3>
+                            </div>
                             <button
                                 onClick={() => setInfoType(null)}
-                                className="text-blue-400 hover:text-blue-600 dark:hover:text-blue-300"
+                                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
-                        <div className="p-6">
-                            <h4 className="font-bold text-gray-900 dark:text-white mb-3">{infoType.label}</h4>
-                            <div className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed space-y-2">
+                        <div className="p-8">
+                            <h4 className="font-bold text-zinc-900 dark:text-white text-base mb-3 leading-snug">{infoType.label}</h4>
+                            <div className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed space-y-3 font-medium">
                                 {infoType.description ? (
-                                    <p>{infoType.description}</p>
+                                    <p className="p-5 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 italic">
+                                        "{infoType.description}"
+                                    </p>
                                 ) : (
-                                    <p className="italic text-gray-400 dark:text-gray-500">Không có thông tin chi tiết cho loại yêu cầu này.</p>
+                                    <p className="italic text-zinc-400 dark:text-zinc-500">Không có thông tin chi tiết cho loại yêu cầu này.</p>
                                 )}
                             </div>
                         </div>
-                        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 border-t dark:border-gray-700 flex justify-end">
+                        <div className="px-8 py-6 bg-gray-50/50 dark:bg-zinc-900/50 border-t border-gray-100 dark:border-zinc-800 flex justify-end">
                             <button
                                 onClick={() => setInfoType(null)}
-                                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
+                                className="px-8 py-3 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-xl hover:opacity-90 transition-all font-bold text-sm shadow-lg shadow-zinc-950/10 active:scale-95"
                             >
                                 Đã hiểu
                             </button>
@@ -1472,43 +1536,46 @@ export const StudentAcademicRequestPage: React.FC = () => {
 
             {/* Cancel Confirmation Modal */}
             {requestToCancel.length > 0 && (
-                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 animate-in fade-in duration-200">
                     <div
-                        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        className="absolute inset-0 bg-black/60 backdrop-blur-md"
                         onClick={() => !cancelling && setRequestToCancel([])}
                     />
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden relative z-10 transform animate-in zoom-in-95 duration-200 border dark:border-gray-700">
-                        <div className="p-8 text-center">
-                            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
+                    <div className="bg-white dark:bg-zinc-900 rounded-[40px] shadow-2xl max-w-md w-full overflow-hidden relative z-10 transform animate-in zoom-in-95 duration-200 border border-gray-100 dark:border-zinc-800">
+                        <div className="p-10 text-center">
+                            <div className="w-20 h-20 bg-rose-50 dark:bg-rose-900/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-rose-100/50 dark:border-rose-900/20">
+                                <AlertTriangle className="w-10 h-10 text-rose-600 dark:text-rose-400" />
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Thu hồi yêu cầu?</h3>
-                            <p className="text-gray-500 dark:text-gray-400">
+                            <h3 className="text-2xl font-bold text-zinc-900 dark:text-white mb-3">Thu hồi yêu cầu?</h3>
+                            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 leading-relaxed px-4">
                                 Bạn có chắc chắn muốn thu hồi {requestToCancel.length > 1 ? `${requestToCancel.length} yêu cầu đã chọn` : 'yêu cầu này'} không? Hành động này không thể hoàn tác.
                             </p>
                         </div>
-                        <div className="px-8 pb-8 flex gap-3">
+                        <div className="px-10 pb-10 flex gap-4">
                             <button
                                 onClick={() => setRequestToCancel([])}
                                 disabled={cancelling}
-                                className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+                                className="flex-1 px-6 py-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 rounded-2xl font-bold text-sm hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all disabled:opacity-50 active:scale-95"
                             >
-                                Bỏ qua
+                                Quay lại
                             </button>
                             <button
                                 onClick={performCancel}
                                 disabled={cancelling}
-                                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-all shadow-lg shadow-red-200 dark:shadow-none flex items-center justify-center gap-2 disabled:opacity-50"
+                                className="flex-1 px-6 py-4 bg-rose-600 text-white rounded-2xl font-bold text-sm hover:bg-rose-700 transition-all shadow-xl shadow-rose-500/20 flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95"
                             >
                                 {cancelling ? (
                                     <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : null}
+                                ) : (
+                                    <Trash2 className="w-4 h-4" />
+                                )}
                                 Xác nhận
                             </button>
                         </div>
                     </div>
                 </div>
             )}
+
         </StudentLayout>
     );
 };

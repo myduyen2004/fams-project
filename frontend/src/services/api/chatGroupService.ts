@@ -56,6 +56,7 @@ export interface ChatMessageResponse {
     replyToAttachmentUrl?: string | null;
     replyToType?: string | null;
     replyToSenderName?: string | null;
+    replyToIsDeleted?: boolean | null;
     sentAt: string;
     isOwn: boolean;
     isDeleted?: boolean;

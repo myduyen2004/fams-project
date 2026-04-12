@@ -30,8 +30,8 @@ const ChatMessageItem = memo(({ msg, onContinue }: { msg: AIChatMessage; onConti
             {msg.role === 'USER' ? <User className="w-4 h-4 text-fpt-orange" /> : <Bot className="w-4 h-4 text-fpt-orange" />}
         </div>
         <div className={`flex flex-col space-y-1 ${msg.role === 'USER' ? 'items-end' : 'items-start'}`}>
-            <div className={`w-full overflow-hidden rounded-2xl border px-4 py-3 text-sm leading-6 shadow-[0_8px_20px_rgba(15,23,42,0.04)] transition-all duration-300 ${msg.role === 'USER' ? 'rounded-tr-md border-gray-200 bg-white text-gray-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100' : 'rounded-tl-md border-gray-200 bg-white text-gray-800 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200'}`}>
-                <div className="prose prose-sm max-w-none break-words chat-table-wrapper dark:prose-invert">
+            <div className={`w-full overflow-hidden rounded-2xl border px-4 py-3 text-sm leading-6 shadow-[0_8px_20px_rgba(15,23,42,0.04)] transition-all duration-300 ${msg.role === 'USER' ? 'rounded-tr-md border-orange-200 bg-fpt-orange !text-white shadow-orange-500/20' : 'rounded-tl-md border-gray-200 bg-white text-gray-800 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200'}`}>
+                <div className={`prose prose-sm max-w-none break-words chat-table-wrapper ${msg.role === 'USER' ? 'prose-invert !text-white' : 'dark:prose-invert'}`}>
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                 </div>
                 {msg.redirectPath && (

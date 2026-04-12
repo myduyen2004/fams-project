@@ -88,18 +88,16 @@ export const StudentRequestDetailPage = () => {
         <AcademicStaffLayout pageTitle="Chi tiết yêu cầu học thuật">
             <div className="max-w-7xl mx-auto space-y-6">
                 {/* Top Actions */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 no-print">
-                    <div className="flex flex-col gap-2">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 no-print">
+                    <div className="flex flex-col gap-3">
                         <button
                             onClick={() => navigate('/academic-staff/requests')}
-                            className="flex items-center gap-2 text-sm text-gray-500 hover:text-fpt-orange transition-colors w-fit"
+                            className="flex items-center gap-2 text-sm text-gray-400 hover:text-fpt-orange transition-all w-fit group"
                         >
-                            <ArrowLeft size={16} />
+                            <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
                             Quay lại danh sách
                         </button>
-                        <div className="flex items-center gap-3">
-                            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Chi tiết yêu cầu học thuật</h1>
-                        </div>
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">Chi tiết yêu cầu học thuật</h1>
                     </div>
                 </div>
 
@@ -107,91 +105,101 @@ export const StudentRequestDetailPage = () => {
                     {/* Main Content (Left) */}
                     <div className="lg:col-span-2 space-y-6">
                         {/* Section 1: Thông tin yêu cầu */}
-                        <section className="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-800">
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                                    <FileText size={20} className="text-fpt-orange" />
+                        <section className="bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-zinc-800 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-fpt-orange/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-700" />
+                            <div className="flex items-center justify-between mb-8 relative z-10">
+                                <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                                    <div className="w-1.5 h-6 bg-fpt-orange rounded-full" />
                                     Thông tin yêu cầu
                                 </h2>
-                                <span className="px-3 py-1 bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 rounded-full text-xs font-bold uppercase tracking-wider">
+                                <span className="px-4 py-1.5 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 rounded-full text-[10px] font-bold uppercase tracking-widest border border-blue-100 dark:border-blue-800 shadow-sm">
                                     {request.requestTypeLabel}
                                 </span>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8">
-                                <div>
-                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Tiêu đề</p>
-                                    <p className="font-semibold text-gray-700 dark:text-gray-200">{request.requestTitle}</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+                                <div className="space-y-1 md:col-span-2">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tiêu đề yêu cầu</p>
+                                    <p className="text-lg font-bold text-gray-800 dark:text-zinc-200 leading-tight">{request.requestTitle}</p>
                                 </div>
-                                <div>
-                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Ngày tạo</p>
-                                    <p className="font-semibold text-gray-700 dark:text-gray-200">{dayjs(request.createdAt).format('DD/MM/YYYY HH:mm')}</p>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Thời gian tạo</p>
+                                    <p className="text-sm font-bold text-gray-700 dark:text-zinc-300">{dayjs(request.createdAt).format('DD/MM/YYYY HH:mm')}</p>
                                 </div>
                                 {request.semesterName && (
-                                    <div>
-                                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Học kỳ</p>
-                                        <p className="font-semibold text-gray-700 dark:text-gray-200">{request.semesterName} ({request.semesterCode})</p>
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Học kỳ</p>
+                                        <p className="text-sm font-bold text-gray-700 dark:text-zinc-300">{request.semesterName} ({request.semesterCode})</p>
                                     </div>
                                 )}
                                 {request.courseName && (
-                                    <div>
-                                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Môn học</p>
-                                        <p className="font-semibold text-gray-700 dark:text-gray-200">{request.courseName} ({request.courseCode})</p>
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Môn học</p>
+                                        <p className="text-sm font-bold text-gray-700 dark:text-zinc-300">{request.courseName} ({request.courseCode})</p>
                                     </div>
                                 )}
                                 {request.className && (
-                                    <div>
-                                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Lớp / Nhóm</p>
-                                        <p className="font-semibold text-gray-700 dark:text-gray-200">{request.className}</p>
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Lớp học hiện tại</p>
+                                        <p className="text-sm font-bold text-gray-700 dark:text-zinc-300">{request.className}</p>
                                     </div>
                                 )}
                             </div>
                         </section>
 
                         {/* Section 2: Chi tiết nội dung */}
-                        <section className="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-800">
-                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Nội dung chi tiết</h2>
-                            <div className="space-y-6">
-                                {request.toMajor && (
-                                    <div>
-                                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Ngành muốn chuyển</p>
-                                        <p className="font-semibold text-gray-700 dark:text-gray-200">{request.toMajor}</p>
-                                    </div>
-                                )}
-                                {request.toSpecialization && (
-                                    <div>
-                                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Chuyên ngành muốn chuyển</p>
-                                        <p className="font-semibold text-gray-700 dark:text-gray-200">{request.toSpecialization}</p>
-                                    </div>
-                                )}
-                                {request.toSubSpecialization && (
-                                    <div>
-                                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Chuyên ngành hẹp mục tiêu</p>
-                                        <p className="font-semibold text-gray-700 dark:text-gray-200">{request.toSubSpecialization}</p>
-                                    </div>
-                                )}
-                                {request.toClassName && (
-                                    <div>
-                                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Lớp muốn chuyển đến</p>
-                                        <p className="font-semibold text-gray-700 dark:text-gray-200">{request.toClassName}</p>
-                                    </div>
-                                )}
-                                <div>
-                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Lý do</p>
-                                    <div className="p-4 bg-gray-50 dark:bg-zinc-800/50 rounded-lg text-gray-600 dark:text-gray-300 text-sm leading-relaxed border border-gray-100 dark:border-zinc-700 min-h-[100px]">
-                                        {request.reason}
+                        <section className="bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-zinc-800 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-700" />
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-8 flex items-center gap-3 relative z-10">
+                                <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
+                                Nội dung chi tiết
+                            </h2>
+                            
+                            <div className="space-y-8 relative z-10">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    {request.toMajor && (
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Ngành chuyển đến</p>
+                                            <p className="text-sm font-bold text-gray-700 dark:text-zinc-200">{request.toMajor}</p>
+                                        </div>
+                                    )}
+                                    {request.toSpecialization && (
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Chuyên ngành chuyển đến</p>
+                                            <p className="text-sm font-bold text-gray-700 dark:text-zinc-200">{request.toSpecialization}</p>
+                                        </div>
+                                    )}
+                                    {request.toSubSpecialization && (
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Chuyên ngành hẹp mục tiêu</p>
+                                            <p className="text-sm font-bold text-gray-700 dark:text-zinc-200">{request.toSubSpecialization}</p>
+                                        </div>
+                                    )}
+                                    {request.toClassName && (
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Lớp chuyển đến</p>
+                                            <p className="text-sm font-bold text-gray-700 dark:text-zinc-200">{request.toClassName}</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Lý do yêu cầu</p>
+                                    <div className="p-5 bg-gray-50/50 dark:bg-zinc-800/50 rounded-2xl text-gray-700 dark:text-gray-300 text-sm leading-relaxed border border-gray-100 dark:border-zinc-800 italic">
+                                        "{request.reason}"
                                     </div>
                                 </div>
+
                                 {request.fileUrl && (
-                                    <div>
-                                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Tài liệu đính kèm</p>
+                                    <div className="space-y-3">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Hồ sơ đính kèm</p>
                                         <a
                                             href={request.fileUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors border border-blue-100 font-medium"
+                                            className="inline-flex items-center gap-3 px-6 py-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all border border-blue-100 font-bold text-sm shadow-sm group/btn"
                                         >
-                                            <Download size={18} />
-                                            Xem tài liệu
+                                            <Download size={18} className="group-hover/btn:translate-y-0.5 transition-transform" />
+                                            Xem tài liệu minh chứng
                                         </a>
                                     </div>
                                 )}
@@ -199,48 +207,48 @@ export const StudentRequestDetailPage = () => {
                         </section>
 
                         {/* History Card */}
-                        <div className="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-800">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                                <MessageSquare size={20} className="text-fpt-orange" />
+                        <div className="bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-zinc-800">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-8 flex items-center gap-3">
+                                <div className="w-1.5 h-6 bg-orange-400 rounded-full" />
                                 Lịch sử xử lý
                             </h3>
 
-                            <div className="space-y-6 relative before:absolute before:left-5 before:top-2 before:bottom-2 before:w-px before:bg-gray-100 dark:before:bg-zinc-800">
+                            <div className="space-y-8 relative before:absolute before:left-5 before:top-2 before:bottom-2 before:w-px before:bg-gray-100 dark:before:bg-zinc-800">
                                 {request.approverName && (
                                     <div className="relative pl-12">
-                                        <div className="absolute left-0 top-0 w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 border-4 border-white dark:border-zinc-900 flex items-center justify-center text-blue-600 z-10 overflow-hidden font-bold">
+                                        <div className="absolute left-0 top-0 w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-100 dark:border-emerald-800 flex items-center justify-center text-emerald-600 z-10 shadow-sm overflow-hidden">
                                             {request.approverAvatar ? (
                                                 <img src={request.approverAvatar} alt="avatar" className="w-full h-full object-cover" />
                                             ) : (
-                                                <User size={18} />
+                                                <CheckCircle size={18} />
                                             )}
                                         </div>
-                                        <div className="bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-50 dark:border-blue-900/20">
+                                        <div className="bg-emerald-50/30 dark:bg-emerald-900/10 p-5 rounded-2xl border border-emerald-50 dark:border-emerald-900/20">
                                             <div className="flex items-center justify-between mb-2">
-                                                <p className="font-bold text-sm text-gray-900 dark:text-white">{request.approverName}</p>
-                                                <span className="text-[10px] text-gray-500">{dayjs(request.approvedAt).format('DD/MM/YYYY - HH:mm')}</span>
+                                                <p className="font-bold text-sm text-gray-900 dark:text-white uppercase tracking-wide">{request.approverName}</p>
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{dayjs(request.approvedAt).format('DD/MM/YYYY - HH:mm')}</span>
                                             </div>
-                                            <p className="text-sm text-gray-600 dark:text-zinc-400 italic">
-                                                "{request.approverNote || 'Đã duyệt yêu cầu.'}"
+                                            <p className="text-sm text-gray-600 dark:text-zinc-400 italic font-medium">
+                                                "{request.approverNote || 'Đã phê duyệt yêu cầu học thuật này.'}"
                                             </p>
                                         </div>
                                     </div>
                                 )}
 
                                 <div className="relative pl-12">
-                                    <div className="absolute left-0 top-0 w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 border-4 border-white dark:border-zinc-900 flex items-center justify-center text-purple-600 z-10 font-bold overflow-hidden">
+                                    <div className="absolute left-0 top-0 w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-100 dark:border-blue-800 flex items-center justify-center text-blue-600 z-10 shadow-sm font-bold text-sm overflow-hidden">
                                         {request.studentAvatar ? (
                                             <img src={request.studentAvatar} alt="avatar" className="w-full h-full object-cover" />
                                         ) : (
                                             <span>{request.studentName?.charAt(0).toUpperCase()}</span>
                                         )}
                                     </div>
-                                    <div>
-                                        <div className="flex items-center justify-between mb-1">
-                                            <p className="font-bold text-sm text-gray-900 dark:text-white">{request.studentName}</p>
-                                            <span className="text-[10px] text-gray-500">{dayjs(request.createdAt).format('DD/MM/YYYY - HH:mm')}</span>
+                                    <div className="p-5 rounded-2xl bg-gray-50/50 dark:bg-zinc-800/30 border border-gray-100 dark:border-zinc-800">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <p className="font-bold text-sm text-gray-900 dark:text-white uppercase tracking-wide">{request.studentName}</p>
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{dayjs(request.createdAt).format('DD/MM/YYYY - HH:mm')}</span>
                                         </div>
-                                        <p className="text-xs text-gray-500">Đã tạo yêu cầu</p>
+                                        <p className="text-xs font-bold text-blue-500 uppercase tracking-widest">Đã tạo yêu cầu học thuật</p>
                                     </div>
                                 </div>
                             </div>

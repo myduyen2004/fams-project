@@ -12,34 +12,34 @@ const getStatusBadge = (status: string, label: string) => {
     switch (status) {
         case 'PENDING':
             return (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full border border-amber-200">
-                    <Clock size={12} />
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-600 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-900/40">
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                     {label}
                 </span>
             );
         case 'APPROVED':
             return (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full border border-green-200">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-900/40">
                     <CheckCircle size={12} />
                     {label}
                 </span>
             );
         case 'REJECTED':
             return (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-full border border-red-200">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-50 text-rose-600 border border-rose-200 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-900/40">
                     <XCircle size={12} />
                     {label}
                 </span>
             );
         case 'CANCELLED':
             return (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded-full border border-gray-200">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-gray-50 text-gray-600 border border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-900/40">
                     <AlertCircle size={12} />
                     {label}
                 </span>
             );
         default:
-            return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">{label || status}</span>;
+            return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-[10px] font-bold uppercase rounded-full">{label || status}</span>;
     }
 };
 
@@ -47,7 +47,7 @@ const StudentRequestTableRow: React.FC<StudentRequestTableRowProps> = ({ request
     return (
         <tr
             onDoubleClick={onView}
-            className="hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all text-sm border-b border-gray-100 dark:border-zinc-800 cursor-pointer"
+            className="hover:bg-gray-50/50 dark:hover:bg-zinc-800/50 transition-colors text-sm border-b border-gray-100 dark:border-zinc-800 cursor-pointer group"
         >
             <td className="px-4 py-4">
                 <div className="flex items-center gap-3">
@@ -91,7 +91,7 @@ const StudentRequestTableRow: React.FC<StudentRequestTableRowProps> = ({ request
                     </span>
                 </div>
             </td>
-            <td className="px-4 py-4">
+            <td className="px-6 py-4 text-center whitespace-nowrap text-center">
                 {getStatusBadge(request.status, request.statusLabel)}
             </td>
         </tr>
