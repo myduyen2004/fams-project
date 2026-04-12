@@ -27,12 +27,29 @@ class _AcademicRequestCreateScreenState extends State<AcademicRequestCreateScree
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: AppBackground(
-        child: SafeArea(
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark 
+            ? Theme.of(context).scaffoldBackgroundColor 
+            : null,
+        gradient: Theme.of(context).brightness == Brightness.dark 
+            ? null 
+            : const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFFFEF3DE),
+                  Colors.white,
+                ],
+                stops: [0.0, 0.3],
+              ),
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
           child: Column(
             children: [
-              _buildHeader(controller),
+              _buildHeader(context, controller),
               Expanded(
                 child: Obx(() {
                   if (controller.selectedType.value == null) {
@@ -48,43 +65,35 @@ class _AcademicRequestCreateScreenState extends State<AcademicRequestCreateScree
     );
   }
 
-  Widget _buildHeader(AcademicRequestController controller) {
+  Widget _buildHeader(BuildContext context, AcademicRequestController controller) {
+    const Color textMain = Color(0xFF1E2A3A);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
       child: Row(
         children: [
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2)),
-              ],
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-              color: const Color(0xFF2D3436),
-              onPressed: () {
-                if (controller.selectedType.value != null) {
-                  controller.backToTypeSelection();
-                } else {
-                  Get.back();
-                }
-              },
-            ),
+          IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 24),
+            color: textMain,
+            onPressed: () {
+              if (controller.selectedType.value != null) {
+                controller.backToTypeSelection();
+              } else {
+                Get.back();
+              }
+            },
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 8),
           Expanded(
             child: Obx(() => Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   controller.selectedType.value == null ? 'Chọn loại yêu cầu' : 'Thông tin yêu cầu',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2D3436)),
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: textMain),
                 ),
                 if (controller.selectedType.value != null)
                   Text(controller.selectedType.value!.label,
-                      style: TextStyle(fontSize: 13, color: Colors.grey[600])),
+                      style: TextStyle(fontSize: 13, color: textMain.withOpacity(0.6), fontWeight: FontWeight.w500)),
               ],
             )),
           ),
@@ -130,11 +139,11 @@ class _TypeCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: enabled ? Colors.white : Colors.grey[100],
+        color: enabled ? Theme.of(context).cardColor : (Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : Colors.grey[100]),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: enabled ? Colors.transparent : Colors.grey[300]!, width: 1),
+        border: Border.all(color: enabled ? (Theme.of(context).brightness == Brightness.dark ? Colors.transparent : Colors.transparent) : (Theme.of(context).brightness == Brightness.dark ? Colors.transparent : Colors.grey[300]!), width: 1),
         boxShadow: enabled
-            ? [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 3))]
+            ? [BoxShadow(color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.04), blurRadius: 8, offset: const Offset(0, 3))]
             : null,
       ),
       child: Material(
@@ -149,7 +158,7 @@ class _TypeCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: enabled ? const Color(0xFFFFF0E0) : Colors.grey[200],
+                    color: enabled ? AppColors.primaryOrange.withOpacity(0.12) : (Theme.of(context).brightness == Brightness.dark ? Colors.grey[700] : Colors.grey[200]),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(Icons.article_outlined,
@@ -164,7 +173,7 @@ class _TypeCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: enabled ? const Color(0xFF2D3436) : Colors.grey[500],
+                            color: enabled ? Theme.of(context).colorScheme.onSurface : Colors.grey[500],
                           )),
                       if (type.dueDate != null) ...[
                         const SizedBox(height: 3),
@@ -674,7 +683,7 @@ class _FormStep extends StatelessWidget {
   Widget _buildSubmitButton() {
     return Obx(() => Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-      color: Colors.white,
+      color: Colors.transparent,
       child: SizedBox(
         width: double.infinity,
         child: ElevatedButton(
@@ -732,7 +741,7 @@ class _DropdownField<T> extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Text(
           labelOf(item),
-          style: customStyle ?? const TextStyle(fontSize: 14, color: Color(0xFF2D3436)),
+          style: customStyle ?? TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
         ),
       );
     }
@@ -740,9 +749,9 @@ class _DropdownField<T> extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: enabled ? Colors.white : Colors.grey[100],
+        color: enabled ? Theme.of(context).cardColor : (Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : Colors.grey[100]),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
+        border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? Colors.grey[800]! : Colors.grey[300]!),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
@@ -758,7 +767,7 @@ class _DropdownField<T> extends StatelessWidget {
           }).toList(),
           selectedItemBuilder: (_) => items.map(buildItemLabel).toList(),
           onChanged: enabled ? onChanged : null,
-          dropdownColor: Colors.white,
+          dropdownColor: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(12),
         ),
       ),

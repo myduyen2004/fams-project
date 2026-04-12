@@ -127,7 +127,7 @@ class ScheduleRequestService {
       String className, String date, int slotNumber, int originalSlotId) async {
     try {
       final response = await _apiService.get(
-        '/api/lecturer/check-conflicts',
+        ApiConstants.lecturerCheckConflicts,
         queryParameters: {
           'className': className,
           'date': date,

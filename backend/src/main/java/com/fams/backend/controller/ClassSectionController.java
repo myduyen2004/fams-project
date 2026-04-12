@@ -40,7 +40,7 @@ public class ClassSectionController {
         // ==================== READ ENDPOINTS ====================
 
         @GetMapping("/semester/{semesterCode}")
-        @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_SEMESTERS') or hasRole('LECTURER')")
+        @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_SEMESTERS') or hasRole('LECTURER') or hasRole('STUDENT')")
         @Operation(summary = "Get all class sections by semester", description = "Retrieve paginated list of class sections for a specific semester with optional filters")
         public ResponseEntity<Page<ClassSectionResponse>> getClassSectionsBySemester(
                         @PathVariable String semesterCode,
@@ -76,7 +76,7 @@ public class ClassSectionController {
         }
 
         @GetMapping("/semester/{semesterCode}/courses")
-        @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_SEMESTERS') or hasRole('LECTURER')")
+        @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_SEMESTERS') or hasRole('LECTURER') or hasRole('STUDENT')")
         @Operation(summary = "Get courses by semester and lecturer", description = "Get list of unique courses taught by a lecturer in a semester")
         public ResponseEntity<List<com.fams.backend.dto.response.CourseOptionResponse>> getCoursesBySemesterAndLecturer(
                         @PathVariable String semesterCode,
@@ -96,7 +96,7 @@ public class ClassSectionController {
         }
 
         @GetMapping("/{className}/details")
-        @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_SEMESTERS') or hasRole('LECTURER')")
+        @PreAuthorize("hasRole('ACADEMIC_STAFF') or hasAuthority('MANAGE_SEMESTERS') or hasRole('LECTURER') or hasRole('STUDENT')")
         @Operation(summary = "Get class section details", description = "Get detailed information for a specific class section including enrollments")
         public ResponseEntity<ClassDetailResponse> getClassDetail(@PathVariable String className) {
                 log.info("GET /api/v1/class-sections/{}/details", className);

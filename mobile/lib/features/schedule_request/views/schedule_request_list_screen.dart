@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/app_background.dart';
 import '../../home/controllers/home_controller.dart';
+import '../../../core/constants/app_routes.dart';
 import '../controllers/schedule_request_controller.dart';
 import '../utils/request_type_labels.dart';
 import '../widgets/request_status_badge.dart';
@@ -20,9 +21,26 @@ class ScheduleRequestListScreen extends StatelessWidget {
         : Get.put(ScheduleRequestController());
     final homeController = Get.find<HomeController>();
 
-    return Scaffold(
-      body: AppBackground(
-        child: SafeArea(
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark 
+            ? Theme.of(context).scaffoldBackgroundColor 
+            : null,
+        gradient: Theme.of(context).brightness == Brightness.dark 
+            ? null 
+            : const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFFFEF3DE),
+                  Colors.white,
+                ],
+                stops: [0.0, 0.3],
+              ),
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
           child: Column(
           children: [
             // Header
@@ -52,7 +70,7 @@ class ScheduleRequestListScreen extends StatelessWidget {
                   onRefresh: controller.refreshList,
                   color: AppColors.primaryOrange,
                   child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
                     physics: const BouncingScrollPhysics(),
                     itemCount: controller.requests.length,
                     itemBuilder: (context, index) {
@@ -67,13 +85,8 @@ class ScheduleRequestListScreen extends StatelessWidget {
           ),
         ),
       ),
-      
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.primaryOrange,
-        onPressed: () => Get.toNamed('/lecturer/requests/create'),
-        icon: const Icon(Icons.add_circle_outline_rounded, color: Colors.white, size: 24),
-        label: const Text('Tạo yêu cầu', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-      ),
+
+
     );
   }
 
@@ -82,27 +95,12 @@ class ScheduleRequestListScreen extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
       child: Row(
         children: [
-          // Back button
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-              onPressed: () => Get.back(),
-              color: const Color(0xFF2D3436),
-            ),
+          IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+            onPressed: () => Get.back(),
+            color: const Color(0xFF1E2A3A),
           ),
-          const SizedBox(width: 16),
-          // Title
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -111,22 +109,64 @@ class ScheduleRequestListScreen extends StatelessWidget {
                   'Quản lý Yêu cầu',
                   style: TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2D3436),
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF1E2A3A),
                     letterSpacing: -0.5,
                   ),
                 ),
                 Obx(() => Text(
                   '${controller.requests.length} yêu cầu',
                   style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey[600],
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[500],
                   ),
                 )),
               ],
             ),
           ),
-          // Orange Filter Button
+          // Create Button
+          GestureDetector(
+            onTap: () => Get.toNamed(AppRoutes.lecturerCreateRequest),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.primaryOrange,
+                    Color(0xFFE05200),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primaryOrange.withOpacity(0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.add_rounded, color: Colors.white, size: 16),
+                  SizedBox(width: 4),
+                  Text(
+                    'Tạo',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Sort Button
           PopupMenuButton<String>(
             onSelected: (value) {
               controller.changeSortOrder(value);
@@ -148,16 +188,9 @@ class ScheduleRequestListScreen extends StatelessWidget {
                           : Colors.grey[600],
                     ),
                     const SizedBox(width: 12),
-                    Text(
+                    const Text(
                       'Mới nhất',
-                      style: TextStyle(
-                        fontWeight: controller.sortOrder.value == 'desc' 
-                            ? FontWeight.bold 
-                            : FontWeight.normal,
-                        color: controller.sortOrder.value == 'desc' 
-                            ? AppColors.primaryOrange 
-                            : Colors.grey[800],
-                      ),
+                      style: TextStyle(fontSize: 13),
                     ),
                   ],
                 )),
@@ -174,38 +207,31 @@ class ScheduleRequestListScreen extends StatelessWidget {
                           : Colors.grey[600],
                     ),
                     const SizedBox(width: 12),
-                    Text(
+                    const Text(
                       'Cũ nhất',
-                      style: TextStyle(
-                        fontWeight: controller.sortOrder.value == 'asc' 
-                            ? FontWeight.bold 
-                            : FontWeight.normal,
-                        color: controller.sortOrder.value == 'asc' 
-                            ? AppColors.primaryOrange 
-                            : Colors.grey[800],
-                      ),
+                      style: TextStyle(fontSize: 13),
                     ),
                   ],
                 )),
               ),
             ],
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: AppColors.primaryOrange,
-                borderRadius: BorderRadius.circular(12),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primaryOrange.withOpacity(0.3),
+                    color: Colors.black.withOpacity(0.05),
                     blurRadius: 8,
-                    offset: const Offset(0, 3),
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
               child: const Icon(
                 Icons.filter_list_rounded,
-                color: Colors.white,
-                size: 22,
+                color: Color(0xFF1E2A3A),
+                size: 20,
               ),
             ),
           ),

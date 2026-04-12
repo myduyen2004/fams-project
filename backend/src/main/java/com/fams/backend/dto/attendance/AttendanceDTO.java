@@ -145,6 +145,8 @@ public class AttendanceDTO {
         private Integer excusedAbsentCount; // Excused
         private Double attendancePercentage; // (Present + Excused) / TotalHeld
         private Double absentPercentage; // Unexcused / TotalSlots (Threshold check)
+        private LocalDate startDate;
+        private LocalDate endDate;
     }
 
     @Data

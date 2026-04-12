@@ -15,7 +15,7 @@ public class AttendanceConfigController {
     private final AttendanceConfigService configService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ACADEMIC_STAFF', 'STUDENT', 'LECTURER')")
     public ResponseEntity<AttendanceConfig> getConfig() {
         return ResponseEntity.ok(configService.getConfig());
     }

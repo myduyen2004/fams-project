@@ -151,7 +151,7 @@ class FaceAttendanceView extends StatelessWidget {
             child: Text(
               'Điểm danh khuôn mặt',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 color: Colors.white,
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -217,7 +217,7 @@ class FaceAttendanceView extends StatelessWidget {
           Text(
             statusText,
             textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
@@ -272,7 +272,7 @@ class FaceAttendanceView extends StatelessWidget {
               // 2. Title
               Text(
                 isSuccess ? 'Thành công' : 'Thất bại',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 28,
                   fontWeight: FontWeight.w900,
                   color: isSuccess ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
@@ -284,7 +284,7 @@ class FaceAttendanceView extends StatelessWidget {
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
                   color: const Color(0xFF475569),
@@ -297,7 +297,7 @@ class FaceAttendanceView extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   'Số lần thử còn lại: ${controller.remainingAttempts.value}',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
                     color: const Color(0xFF94A3B8),
                     fontWeight: FontWeight.w500,
@@ -333,7 +333,7 @@ class FaceAttendanceView extends StatelessWidget {
                   ),
                   child: Text(
                     isSuccess ? 'Hoàn tất' : 'Thử lại',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
@@ -349,7 +349,7 @@ class FaceAttendanceView extends StatelessWidget {
                   onPressed: secondaryAction,
                   child: Text(
                     secondaryLabel ?? 'Thoát',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 14,
                       color: const Color(0xFF94A3B8),
                       fontWeight: FontWeight.w600,

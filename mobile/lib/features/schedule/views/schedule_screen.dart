@@ -70,92 +70,39 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            const Color(0xFFFEF3DE), // Peach-like light orange
-            Colors.white,
-          ],
-          stops: const [0.0, 0.3], // Soft fade 
-        ),
+        color: Theme.of(context).brightness == Brightness.dark 
+            ? Theme.of(context).scaffoldBackgroundColor 
+            : null,
+        gradient: Theme.of(context).brightness == Brightness.dark 
+            ? null 
+            : LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  const Color(0xFFFEF3DE), // Peach-like light orange
+                  Colors.white,
+                ],
+                stops: const [0.0, 0.3], // Soft fade 
+              ),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Redesigned Top Header
+          // 1. Standardized Title Header (Lowered & Aligned like Home)
           Padding(
-            padding: EdgeInsets.fromLTRB(24.w, 32.h, 24.w, 4.h), // Reduced padding
-            child: Row(
-              children: [
-                GestureDetector(
-                  onTap: () => _showSemesterPicker(context, controller),
-                  child: Icon(SolarIconsOutline.altArrowDown, color: AppColors.primaryOrange, size: 24.sp),
-                ),
-                SizedBox(width: 12.w),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => _showSemesterPicker(context, controller),
-                    child: Obx(() => Text(
-                      controller.selectedSemester.value?.name.toUpperCase() ?? 'KỲ HỌC',
-                      style: GoogleFonts.beVietnamPro(
-                        fontSize: 14.sp, // Even smaller
-                        fontWeight: FontWeight.w600, // Even lighter
-                        color: AppColors.primaryOrange.withOpacity(0.9),
-                        letterSpacing: -0.5,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    )),
-                  ),
-                ),
-                Obx(() => Text(
-                  '${controller.selectedDate.value.year}',
-                  style: GoogleFonts.beVietnamPro(
-                    fontSize: 13.sp, 
-                    fontWeight: FontWeight.w700, 
-                    color: Colors.grey[400],
-                  ),
-                )),
-                SizedBox(width: 8.w),
-                GestureDetector(
-                  onTap: () => _showYearPicker(context, controller),
-                  child: Icon(SolarIconsBold.calendar, color: AppColors.primaryOrange, size: 24.sp),
-                ),
-              ],
-            ),
-          ),
-                    // 3. New Title Section (Moved up)
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+            padding: EdgeInsets.fromLTRB(20.w, 60.h, 20.w, 15.h),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Obx(() => Text(
-                      _getWeekdayNameAllCaps(controller.selectedDate.value.weekday),
-                      style: GoogleFonts.beVietnamPro(
-                        fontSize: 10.sp, // Smaller caps text
-                        fontWeight: FontWeight.w600, // Even lighter
-                        color: AppColors.primaryOrange.withOpacity(0.6),
-                        letterSpacing: 2.0,
-                      ),
-                    )),
-                    SizedBox(height: 4.h),
-                    Obx(() => Text(
-                      '${controller.isLecturer ? 'Lịch dạy' : 'Lịch học'} ${controller.selectedDate.value.year}',
-                      style: GoogleFonts.beVietnamPro(
-                        fontSize: 20.sp, // Even more compact
-                        fontWeight: FontWeight.w700, // Bold but not heavy
-                        color: const Color(0xFF2D3436).withOpacity(0.85),
-                        letterSpacing: -0.2,
-                      ),
-                    )),
-                  ],
+                Text(
+                  controller.isLecturer ? 'Lịch dạy' : 'Lịch học',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 22.sp,
+                    fontWeight: FontWeight.w800,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
-                Obx(() => GestureDetector(
+                GestureDetector(
                   onTap: controller.isSavingToCalendar.value 
                       ? null 
                       : () => controller.saveAllSemesterToCalendar(),
@@ -167,10 +114,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         end: Alignment.bottomRight,
                         colors: [
                           AppColors.primaryOrange,
-                          const Color(0xFFE05200), // Original matching orange
+                          const Color(0xFFE05200),
                         ],
                       ),
-                      borderRadius: BorderRadius.circular(16.r), // More square
+                      borderRadius: BorderRadius.circular(16.r),
                       boxShadow: [
                         BoxShadow(
                           color: AppColors.primaryOrange.withOpacity(0.3),
@@ -186,27 +133,59 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                           SizedBox(
                             width: 16.sp,
                             height: 16.sp,
-                            child: const CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
+                            child: const CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
                         else ...[
                           Icon(SolarIconsBold.bookmark, color: Colors.white, size: 16.sp),
                           SizedBox(width: 8.w),
                           Text(
                             'Lưu',
-                            style: GoogleFonts.beVietnamPro(
-                              color: Colors.white, 
-                              fontWeight: FontWeight.w700, // Lighter 
-                              fontSize: 13.sp
-                            ),
+                            style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13.sp),
                           ),
                         ],
                       ],
                     ),
                   ),
+                ),
+              ],
+            ),
+          ),
+
+          // 2. Navigator (Semester & Year) - Moved below title
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: () => _showSemesterPicker(context, controller),
+                  child: Icon(SolarIconsOutline.altArrowDown, color: AppColors.primaryOrange, size: 18.sp),
+                ),
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => _showSemesterPicker(context, controller),
+                    child: Obx(() => Text(
+                      controller.selectedSemester.value?.name.toUpperCase() ?? 'KỲ HỌC',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primaryOrange.withOpacity(0.8),
+                        letterSpacing: 0.5,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    )),
+                  ),
+                ),
+                Obx(() => Text(
+                  'Tháng ${controller.selectedDate.value.month}, ${controller.selectedDate.value.year}',
+                  style: GoogleFonts.plusJakartaSans(fontSize: 12.sp, fontWeight: FontWeight.w700, color: Colors.grey[400]),
                 )),
+                SizedBox(width: 8.w),
+                GestureDetector(
+                  onTap: () => _showYearPicker(context, controller),
+                  child: Icon(SolarIconsBold.calendar, color: AppColors.primaryOrange, size: 18.sp),
+                ),
               ],
             ),
           ),
@@ -217,10 +196,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             child: const ScheduleCalendar(),
           ),
 
-          // 3.5 Attendance Statistics
           Obx(() {
+            if (controller.isLecturer) return const SizedBox.shrink();
             if (controller.selectedDaySlots.isEmpty) return const SizedBox.shrink();
-            
+
             final now = controller.currentTime.value;
             int presentCount = 0;
             int absentCount = 0;
@@ -250,13 +229,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             }
             
             return Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                    Text(
                      'Có mặt: ',
-                     style: GoogleFonts.beVietnamPro(fontSize: 11.sp, fontWeight: FontWeight.w600, color: const Color(0xFF2D3436)),
+                     style: GoogleFonts.plusJakartaSans(fontSize: 11.sp, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
                    ),
                    Container(
                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 1.h),
@@ -266,7 +245,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                    SizedBox(width: 12.w),
                    Text(
                      'Vắng mặt: ',
-                     style: GoogleFonts.beVietnamPro(fontSize: 11.sp, fontWeight: FontWeight.w600, color: const Color(0xFF2D3436)),
+                     style: GoogleFonts.plusJakartaSans(fontSize: 11.sp, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
                    ),
                    Container(
                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 1.h),
@@ -328,7 +307,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
               return ListView.builder(
                 controller: _scrollController,
-                padding: EdgeInsets.fromLTRB(24.w, 8.h, 24.w, 100.h), // Increased bottom padding for floating navbar
+                padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 100.h), // Consistent horizontal padding
                 physics: const BouncingScrollPhysics(),
                 itemCount: controller.selectedDaySlots.length,
                 itemBuilder: (context, index) {
@@ -362,7 +341,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       Container(
         padding: EdgeInsets.all(24.w),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).scaffoldBackgroundColor,
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(20.r),
             topRight: Radius.circular(20.r),
@@ -376,7 +355,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 18.sp,
                 fontWeight: FontWeight.w800,
-                color: const Color(0xFF2D3436),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             SizedBox(height: 20.h),
@@ -395,13 +374,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   child: Container(
                     padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
                     decoration: BoxDecoration(
-                      color: isSelected ? AppColors.primaryOrange : Colors.grey[100],
+                      color: isSelected ? AppColors.primaryOrange : (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF2C2C2E) : Colors.grey[100]),
                       borderRadius: BorderRadius.circular(12.r),
                     ),
                     child: Text(
                       year.toString(),
                       style: GoogleFonts.plusJakartaSans(
-                        color: isSelected ? Colors.white : Colors.grey[600],
+                        color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -432,7 +411,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       Container(
         padding: EdgeInsets.all(24.w),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).scaffoldBackgroundColor,
           borderRadius: BorderRadius.only(topLeft: Radius.circular(24.r), topRight: Radius.circular(24.r)),
         ),
         child: Column(
@@ -441,7 +420,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           children: [
             Text(
               'Chọn học kỳ',
-              style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold, color: const Color(0xFF2D3436)),
+              style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
             ),
             const SizedBox(height: 20),
             Flexible(
@@ -457,10 +436,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       style: TextStyle(
                         fontSize: 14.sp,
                         fontWeight: controller.selectedSemester.value?.code == sem.code ? FontWeight.bold : FontWeight.normal,
-                        color: controller.selectedSemester.value?.code == sem.code ? AppColors.primaryOrange : const Color(0xFF2D3436),
+                        color: controller.selectedSemester.value?.code == sem.code ? AppColors.primaryOrange : Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
-                    subtitle: Text(sem.code, style: TextStyle(color: Colors.grey[500], fontSize: 12.sp)),
+                    subtitle: Text(sem.code, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12.sp)),
                     onTap: () {
                       controller.selectedSemester.value = sem;
                       Get.back();

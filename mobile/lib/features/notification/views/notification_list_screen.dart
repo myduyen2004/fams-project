@@ -18,7 +18,24 @@ class NotificationListScreen extends StatelessWidget {
     final controller = Get.put(NotificationController());
 
     return Scaffold(
-      body: AppBackground(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark 
+              ? Theme.of(context).scaffoldBackgroundColor 
+              : null,
+          gradient: Theme.of(context).brightness == Brightness.dark 
+              ? null 
+              : const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFFFEF3DE),
+                    Colors.white,
+                  ],
+                  stops: [0.0, 0.3],
+                ),
+        ),
         child: SafeArea(
           child: Column(
             children: [
@@ -46,6 +63,7 @@ class NotificationListScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildNotificationSection(
+                            context: context,
                             title: 'Hôm nay',
                             notifications: _getTodayNotifications(controller.notifications),
                             showMarkRead: _getTodayNotifications(controller.notifications).any((n) => !n.isRead),
@@ -55,6 +73,7 @@ class NotificationListScreen extends StatelessWidget {
                           SizedBox(height: 16.h),
                           
                           _buildNotificationSection(
+                            context: context,
                             title: 'Trước đó',
                             notifications: _getEarlierNotifications(controller.notifications),
                             showMarkRead: false,
@@ -110,7 +129,7 @@ class NotificationListScreen extends StatelessWidget {
                     SizedBox(width: 4.w),
                     Text(
                       'Quay lại',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         color: AppColors.primaryOrange,
                         fontWeight: FontWeight.w500,
                         fontSize: 16.sp,
@@ -126,10 +145,10 @@ class NotificationListScreen extends StatelessWidget {
           Text(
             'Thông báo',
             textAlign: TextAlign.left,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 28.sp, 
               fontWeight: FontWeight.bold,
-              color: const Color(0xFF181411),
+              color: Theme.of(context).colorScheme.onSurface,
               letterSpacing: -0.5,
             ),
           ),
@@ -155,6 +174,7 @@ class NotificationListScreen extends StatelessWidget {
   }
 
   Widget _buildNotificationSection({
+    required BuildContext context,
     required String title,
     required List<NotificationModel> notifications,
     required bool showMarkRead,
@@ -173,10 +193,10 @@ class NotificationListScreen extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 18.sp,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF181411),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               if (showMarkRead && onMarkRead != null)
@@ -184,7 +204,7 @@ class NotificationListScreen extends StatelessWidget {
                   onTap: onMarkRead,
                   child: Text(
                     'Đánh dấu đã đọc',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 12.sp,
                       fontWeight: FontWeight.w500,
                       color: AppColors.primaryOrange,
@@ -194,12 +214,12 @@ class NotificationListScreen extends StatelessWidget {
             ],
           ),
         ),
-        ...notifications.map((n) => _buildNotificationItem(n)).toList(),
+        ...notifications.map((n) => _buildNotificationItem(context, n)).toList(),
       ],
     );
   }
 
-  Widget _buildNotificationItem(NotificationModel notification) {
+  Widget _buildNotificationItem(BuildContext context, NotificationModel notification) {
     return InkWell(
       onTap: () {
         final controller = Get.find<NotificationController>();
@@ -213,13 +233,13 @@ class NotificationListScreen extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
         decoration: BoxDecoration(
           color: notification.isRead 
-              ? Colors.white.withOpacity(0.7) // Slightly translucent for read
-              : Colors.white, // Solid white for unread to pop
+              ? Theme.of(context).cardColor.withOpacity(0.7) // Slightly translucent for read
+              : Theme.of(context).cardColor, // Solid white for unread to pop
           borderRadius: BorderRadius.circular(16.r), // Rounded corners matches Request Card
           border: Border.all(
             color: notification.isRead 
                 ? Colors.transparent
-                : AppColors.primaryOrange.withOpacity(0.2), // Subtle border for unread
+                : AppColors.primaryOrange.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.2), // Subtle border for unread
           ),
           boxShadow: [
              if (!notification.isRead)
@@ -245,10 +265,10 @@ class NotificationListScreen extends StatelessWidget {
                       Expanded(
                         child: Text(
                           notification.title,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 15.sp,
                             fontWeight: notification.isRead ? FontWeight.w500 : FontWeight.w600,
-                            color: const Color(0xFF181411),
+                            color: Theme.of(context).colorScheme.onSurface,
                             height: 1.3,
                           ),
                         ),
@@ -260,7 +280,7 @@ class NotificationListScreen extends StatelessWidget {
                         children: [
                           Text(
                             _getExactTime(notification.timestamp),
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.plusJakartaSans(
                               fontSize: 12.sp,
                               fontWeight: FontWeight.w500,
                               color: Colors.grey[600],
@@ -285,7 +305,7 @@ class NotificationListScreen extends StatelessWidget {
                   // Sender name
                   Text(
                     notification.senderFullName?.toUpperCase() ?? 'HỆ THỐNG',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 12.sp,
                       fontWeight: FontWeight.w600,
                       color: AppColors.primaryOrange,
@@ -294,7 +314,7 @@ class NotificationListScreen extends StatelessWidget {
                   SizedBox(height: 4.h),
                   Text(
                     notification.cleanDescription,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 14.sp,
                       color: Colors.grey[600],
                       height: 1.4,

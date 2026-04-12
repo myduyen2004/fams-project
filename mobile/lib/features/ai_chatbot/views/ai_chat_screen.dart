@@ -18,14 +18,14 @@ class AiChatScreen extends StatelessWidget {
     final ScrollController scrollController = ScrollController();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(
+          icon: Icon(
             Icons.arrow_back_ios_new_rounded,
-            color: Colors.black,
+            color: Theme.of(context).iconTheme.color,
           ),
           onPressed: () => Get.back(),
         ),
@@ -34,8 +34,8 @@ class AiChatScreen extends StatelessWidget {
             children: [
               Text(
                 controller.chatTitle,
-                style: GoogleFonts.inter(
-                  color: Colors.black,
+                style: GoogleFonts.plusJakartaSans(
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
                 ),
@@ -54,7 +54,7 @@ class AiChatScreen extends StatelessWidget {
                   const SizedBox(width: 4),
                   Text(
                     'Online',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       color: Colors.green,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
@@ -130,7 +130,7 @@ class AiChatScreen extends StatelessWidget {
                   const SizedBox(width: 12),
                   Text(
                     'AI đang suy nghĩ...',
-                    style: GoogleFonts.inter(color: Colors.grey, fontSize: 13),
+                    style: GoogleFonts.plusJakartaSans(color: Colors.grey, fontSize: 13),
                   ),
                 ],
               ),
@@ -164,17 +164,17 @@ class AiChatScreen extends StatelessWidget {
             const SizedBox(height: 24),
             Text(
               'Chào mừng bạn!',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'Tôi là trợ lý ảo FAMS. Tôi có thể giúp gì cho bạn hôm nay?',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[600]),
+              style: GoogleFonts.plusJakartaSans(fontSize: 14, color: Colors.grey[600]),
             ),
             const SizedBox(height: 32),
             Wrap(
@@ -186,12 +186,12 @@ class AiChatScreen extends StatelessWidget {
                     (q) => ActionChip(
                       label: Text(
                         q,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                           color: AppColors.primaryOrange,
                           fontSize: 13,
                         ),
                       ),
-                      backgroundColor: Colors.white,
+                      backgroundColor: Theme.of(context).cardColor,
                       side: const BorderSide(
                         color: AppColors.primaryOrange,
                         width: 0.5,
@@ -211,14 +211,14 @@ class AiChatScreen extends StatelessWidget {
     if (steps.isEmpty) return const SizedBox.shrink();
     return Container(
       width: double.infinity,
-      color: Colors.grey[50],
+      color: Theme.of(context).brightness == Brightness.dark ? Colors.grey[900] : Colors.grey[50],
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Tiến trình xử lý:',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 11,
               fontWeight: FontWeight.bold,
               color: Colors.grey,
@@ -260,7 +260,7 @@ class AiChatScreen extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             step.name,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 10,
               color: color,
               fontWeight: FontWeight.w500,
@@ -305,7 +305,7 @@ class AiChatScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: isUser
                         ? AppColors.primaryOrange
-                        : const Color(0xFFF1F0F0),
+                        : (Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : const Color(0xFFF1F0F0)),
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(16),
                       topRight: const Radius.circular(16),
@@ -326,20 +326,20 @@ class AiChatScreen extends StatelessWidget {
                             data: msg.content,
                             selectable: true,
                             styleSheet: MarkdownStyleSheet(
-                              p: GoogleFonts.inter(
-                                color: isUser ? Colors.white : Colors.black87,
+                              p: GoogleFonts.plusJakartaSans(
+                                color: isUser ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87),
                                 fontSize: 14,
                               ),
                               tableBorder: TableBorder.all(
                                 color: isUser ? Colors.white70 : Colors.black26,
                                 width: 0.5,
                               ),
-                              tableBody: GoogleFonts.inter(
-                                color: isUser ? Colors.white : Colors.black87,
+                              tableBody: GoogleFonts.plusJakartaSans(
+                                color: isUser ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87),
                                 fontSize: 12,
                               ),
-                              tableHead: GoogleFonts.inter(
-                                color: isUser ? Colors.white : Colors.black87,
+                              tableHead: GoogleFonts.plusJakartaSans(
+                                color: isUser ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87),
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -355,7 +355,7 @@ class AiChatScreen extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
                   child: Text(
                     DateFormat('HH:mm').format(msg.createdAt),
-                    style: GoogleFonts.inter(fontSize: 10, color: Colors.grey),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 10, color: Colors.grey),
                   ),
                 ),
               ],
@@ -382,10 +382,10 @@ class AiChatScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),
@@ -397,15 +397,16 @@ class AiChatScreen extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: Colors.grey[100],
+                color: Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : Colors.grey[100],
                 borderRadius: BorderRadius.circular(24),
               ),
               child: TextField(
                 controller: textController,
-                decoration: const InputDecoration(
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                decoration: InputDecoration(
                   hintText: 'Nhập câu hỏi...',
                   border: InputBorder.none,
-                  hintStyle: TextStyle(fontSize: 14),
+                  hintStyle: TextStyle(fontSize: 14, color: Theme.of(context).brightness == Brightness.dark ? Colors.grey[400] : Colors.grey[600]),
                 ),
                 onSubmitted: (val) {
                   if (val.isNotEmpty) {
@@ -448,13 +449,18 @@ class AiChatScreen extends StatelessWidget {
       ),
       builder: (context) => Container(
         padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
         child: Column(
           children: [
             Text(
               'Lịch sử trò chuyện',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 16),
@@ -477,13 +483,13 @@ class AiChatScreen extends StatelessWidget {
                         session.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                           fontWeight: isCurrent
                               ? FontWeight.bold
                               : FontWeight.normal,
                           color: isCurrent
                               ? AppColors.primaryOrange
-                              : Colors.black87,
+                              : Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       subtitle: Text(

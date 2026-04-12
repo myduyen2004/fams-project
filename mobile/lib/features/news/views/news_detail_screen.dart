@@ -37,7 +37,7 @@ class NewsDetailScreen extends StatelessWidget {
     return html.replaceAll(base64ImgRegex, placeholder);
   }
 
-  Widget _buildSafeImage({required String url, double? width, double? height, BoxFit? fit, required Widget errorWidget}) {
+  Widget _buildSafeImage({required BuildContext context, required String url, double? width, double? height, BoxFit? fit, required Widget errorWidget}) {
     // Use SafeImageDecoder to sanitize URL first
     final safeUrl = SafeImageDecoder.sanitizeImageUrl(url);
     if (safeUrl == null) {
@@ -50,7 +50,7 @@ class NewsDetailScreen extends StatelessWidget {
       fit: fit,
       errorWidget: (context, url, error) => errorWidget,
       placeholder: (context, url) => Container(
-        width: width, height: height, color: Colors.grey.shade100,
+        width: width, height: height, color: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade800 : Colors.grey.shade100,
       ),
     );
   }
@@ -78,14 +78,14 @@ class NewsDetailScreen extends StatelessWidget {
     else if (displayCategory == 'IMPORTANT') displayCategory = 'Quan trọng';
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundColor,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
           // 1. Sliver AppBar
           SliverAppBar(
             pinned: true,
-            backgroundColor: Colors.white.withOpacity(0.95),
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.95),
             elevation: 0,
             leading: GestureDetector(
               onTap: () => Get.back(),
@@ -126,6 +126,7 @@ class NewsDetailScreen extends StatelessWidget {
                           ? Opacity(
                               opacity: 0.35,
                               child: _buildSafeImage(
+                                context: context,
                                 url: resolvedThumbnail,
                                 width: double.infinity,
                                 height: double.infinity,
@@ -185,7 +186,7 @@ class NewsDetailScreen extends StatelessWidget {
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 24.sp,
                               fontWeight: FontWeight.w800,
-                              color: AppColors.textPrimary,
+                              color: Theme.of(context).colorScheme.onSurface,
                               height: 1.3,
                               letterSpacing: -0.5,
                             ),
@@ -219,7 +220,7 @@ class NewsDetailScreen extends StatelessWidget {
                         fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
                         fontSize: FontSize(15.sp),
                         lineHeight: LineHeight(1.7),
-                        color: AppColors.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                         margin: Margins.zero,
                         padding: HtmlPaddings.zero,
                       ),
@@ -281,7 +282,7 @@ class NewsDetailScreen extends StatelessWidget {
 
                           // Handle base64 images
                           if (resolvedSrc.startsWith('data:image')) {
-                            return _buildImagePlaceholder();
+                            return _buildImagePlaceholder(context);
                           }
 
                           // Handle network images
@@ -290,10 +291,11 @@ class NewsDetailScreen extends StatelessWidget {
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(12.r),
                               child: _buildSafeImage(
+                                context: context,
                                 url: resolvedSrc,
                                 width: double.infinity,
                                 fit: BoxFit.contain,
-                                errorWidget: _buildImagePlaceholder(),
+                                errorWidget: _buildImagePlaceholder(context),
                               ),
                             ),
                           );
@@ -308,7 +310,7 @@ class NewsDetailScreen extends StatelessWidget {
                   SizedBox(height: 24.h),
 
                   // Related Articles Section
-                  _buildRelatedArticles(),
+                  _buildRelatedArticles(context),
 
                   // Bottom spacing
                   SizedBox(height: 60.h),
@@ -323,12 +325,12 @@ class NewsDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildImagePlaceholder() {
+  Widget _buildImagePlaceholder(BuildContext context) {
     return Container(
       width: double.infinity,
       height: 150.h,
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade800 : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(12.r),
       ),
       alignment: Alignment.center,
@@ -347,7 +349,7 @@ class NewsDetailScreen extends StatelessWidget {
   }
 
   /// Build the "Bài viết mới nhất" section with 3 cards from the NewsController
-  Widget _buildRelatedArticles() {
+  Widget _buildRelatedArticles(BuildContext context) {
     final NewsController newsController = Get.find<NewsController>();
 
     return Obx(() {
@@ -369,7 +371,7 @@ class NewsDetailScreen extends StatelessWidget {
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 20.sp,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               SizedBox(width: 12.w),
@@ -385,13 +387,13 @@ class NewsDetailScreen extends StatelessWidget {
             ],
           ),
           SizedBox(height: 16.h),
-          ...relatedList.map((relatedNews) => _buildRelatedCard(relatedNews)),
+          ...relatedList.map((relatedNews) => _buildRelatedCard(context, relatedNews)),
         ],
       );
     });
   }
 
-  Widget _buildRelatedCard(NewsModel relatedNews) {
+  Widget _buildRelatedCard(BuildContext context, NewsModel relatedNews) {
     bool hasImg = relatedNews.thumbnailImage != null && relatedNews.thumbnailImage!.isNotEmpty;
     final resolvedImg = hasImg ? _resolveImageUrl(relatedNews.thumbnailImage!) : '';
 
@@ -408,16 +410,16 @@ class NewsDetailScreen extends StatelessWidget {
       child: Container(
         margin: EdgeInsets.only(bottom: 20.h),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16.r),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.05),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
           ],
-          border: Border.all(color: Colors.grey.shade100),
+          border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? Colors.transparent : Colors.grey.shade100),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -430,6 +432,7 @@ class NewsDetailScreen extends StatelessWidget {
               ),
               child: hasImg
                 ? _buildSafeImage(
+                    context: context,
                     url: resolvedImg,
                     width: double.infinity,
                     height: 180.h,
@@ -437,7 +440,7 @@ class NewsDetailScreen extends StatelessWidget {
                     errorWidget: Container(
                       width: double.infinity,
                       height: 180.h,
-                      color: Colors.grey.shade100,
+                      color: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade800 : Colors.grey.shade100,
                       alignment: Alignment.center,
                       child: Image.asset('assets/images/logo.png', height: 40.h, fit: BoxFit.contain),
                     ),
@@ -445,7 +448,7 @@ class NewsDetailScreen extends StatelessWidget {
                 : Container(
                     width: double.infinity,
                     height: 180.h,
-                    color: Colors.grey.shade100,
+                    color: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade800 : Colors.grey.shade100,
                     alignment: Alignment.center,
                     child: Image.asset('assets/images/logo.png', height: 40.h, fit: BoxFit.contain),
                   ),
@@ -463,7 +466,7 @@ class NewsDetailScreen extends StatelessWidget {
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                       height: 1.4,
                     ),
                   ),

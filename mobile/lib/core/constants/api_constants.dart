@@ -14,17 +14,29 @@ class ApiConstants {
       'http://10.0.14.210:8080'; // Real device via WiFi
 
   // --- THIET LAP KET NOI (Team FAMS) ---
-  // Bat TRUE neu dung fams-connect (USB), bat FALSE neu dung Ngrok
-  static const bool useUsbMode = true;
+  // Chọn 1 trong 3 chế độ kết nối bằng cách bật TRUE cho biến tương ứng:
+  static const bool useNgrok = false;   // Dùng Ngrok
+  static const bool useUsb = true;     // Dùng máy thật qua USB (Cần chạy adb reverse)
+  // Nếu cả 2 trên đều FALSE -> Mặc định dùng cho Android Emulator (10.0.2.2)
 
   // Current Backend URL
   static String get baseUrl {
     if (Platform.isIOS) {
-      return baseUrlNgrok; // iOS luon dung ngrok
+      return baseUrlNgrok; // iOS luôn dùng ngrok (hoặc local IP máy tính)
     }
 
-    // Android: Dung USB (Localhost) neu bat useUsbMode, nguoc lai dung Ngrok
-    return useUsbMode ? baseUrlUsb : baseUrlNgrok;
+    // Android:
+    if (useUsb) {
+      // Phải chạy lệnh: adb reverse tcp:8080 tcp:8080
+      return baseUrlUsb; 
+    }
+    
+    if (useNgrok) {
+      return baseUrlNgrok;
+    }
+
+    // Mặc định cho Emulator
+    return baseUrlLocal;
   }
 
   // Auth Endpoints
@@ -46,10 +58,13 @@ class ApiConstants {
       '/api/v1/timetable/lecturer'; // + /{id}/semester?semesterCode=X
   static const String attendanceConfig = '/api/v1/attendance-config';
   static const String checkIn = '/api/v1/attendance/check-in';
+  static const String studentAttendanceReport = '/api/v1/attendance/student/report';
+  static const String studentAttendanceDetail = '/api/v1/attendance/student/class/{className}/detail';
 
   // Schedule Request Endpoints
   static const String lecturerRequests = '/api/v1/lecturer/requests';
   static const String lecturerClasses = '/api/v1/lecturer/classes';
+  static const String lecturerCheckConflicts = '/api/v1/lecturer/check-conflicts';
   static const String roomsAvailability = '/api/v1/rooms/availability';
 
   // Timeouts

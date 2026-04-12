@@ -64,7 +64,7 @@ class _NewsListScreenState extends State<NewsListScreen> {
 
     return Scaffold(
       extendBody: true,
-      backgroundColor: AppColors.backgroundColor,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       bottomNavigationBar: _buildBottomNav(homeController, authController),
       body: Obx(() {
         if (controller.isLoading.value && controller.newsList.isEmpty) {
@@ -215,7 +215,7 @@ class _NewsListScreenState extends State<NewsListScreen> {
         duration: const Duration(milliseconds: 200),
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.brandOrangePrimary : Colors.grey.shade100,
+          color: isSelected ? AppColors.brandOrangePrimary : (Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade800 : Colors.grey.shade100),
           borderRadius: BorderRadius.circular(20.r),
           boxShadow: isSelected 
               ? [BoxShadow(color: AppColors.brandOrangePrimary.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))] 
@@ -226,7 +226,7 @@ class _NewsListScreenState extends State<NewsListScreen> {
           style: GoogleFonts.plusJakartaSans(
             fontSize: 14.sp,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-            color: isSelected ? Colors.white : Colors.grey.shade600,
+            color: isSelected ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.grey.shade600),
           ),
         ),
       ),
@@ -242,7 +242,7 @@ class _NewsListScreenState extends State<NewsListScreen> {
           fit: StackFit.expand,
           children: [
             Container(
-              color: Colors.white,
+              color: Theme.of(context).cardColor,
               alignment: Alignment.center,
               child: Image.asset('assets/images/logo.png', height: 100.h, fit: BoxFit.contain),
             ),
@@ -309,7 +309,7 @@ class _NewsListScreenState extends State<NewsListScreen> {
       fit: fit,
       errorWidget: (context, url, error) => errorWidget,
       placeholder: (context, url) => Container(
-        width: width, height: height, color: Colors.grey.shade100,
+        width: width, height: height, color: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade800 : Colors.grey.shade100,
       ),
     );
   }
@@ -337,13 +337,13 @@ class _NewsListScreenState extends State<NewsListScreen> {
                 url: safeThumb,
                 fit: BoxFit.cover,
                 errorWidget: Container(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   alignment: Alignment.center,
                   child: Image.asset('assets/images/logo.png', height: 100.h, fit: BoxFit.contain),
                 ),
               )
             : Container(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 alignment: Alignment.center,
                 child: Image.asset('assets/images/logo.png', height: 100.h, fit: BoxFit.contain),
               ),
@@ -462,16 +462,16 @@ class _NewsListScreenState extends State<NewsListScreen> {
       child: Container(
         padding: EdgeInsets.all(12.r),
         decoration: BoxDecoration(
-          color: AppColors.cardBackground,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(20.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
-        border: Border.all(color: AppColors.borderColor.withOpacity(0.5)),
+        border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? Colors.transparent : AppColors.borderColor.withOpacity(0.5)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -488,7 +488,7 @@ class _NewsListScreenState extends State<NewsListScreen> {
                   errorWidget: Container(
                     height: 96.w,
                     width: 96.w,
-                    color: Colors.white,
+                    color: Theme.of(context).cardColor,
                     alignment: Alignment.center,
                     child: Image.asset('assets/images/logo.png', height: 40.h, fit: BoxFit.contain),
                   ),
@@ -496,7 +496,7 @@ class _NewsListScreenState extends State<NewsListScreen> {
               : Container(
                   height: 96.w,
                   width: 96.w,
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   alignment: Alignment.center,
                   child: Image.asset('assets/images/logo.png', height: 40.h, fit: BoxFit.contain),
                 ),
@@ -540,7 +540,7 @@ class _NewsListScreenState extends State<NewsListScreen> {
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                     height: 1.3,
                   ),
                 ),
@@ -559,12 +559,12 @@ class _NewsListScreenState extends State<NewsListScreen> {
       height: 82.h,
       margin: EdgeInsets.fromLTRB(16.w, 0, 16.w, 20.h), 
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(100.r), 
-        border: Border.all(color: Colors.grey.shade200.withOpacity(0.8), width: 1.0),
+        border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade800 : Colors.grey.shade200.withOpacity(0.8), width: 1.0),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.12),
+            color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.12),
             blurRadius: 20,
             spreadRadius: 1,
             offset: const Offset(0, 8), 

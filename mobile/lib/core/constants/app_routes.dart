@@ -14,6 +14,7 @@ class AppRoutes {
   static const String lecturerRequests = '/lecturer/requests';
   static const String lecturerRequestDetail = '/lecturer/requests/:id';
   static const String lecturerCreateRequest = '/lecturer/requests/create';
+  static const String lecturerClasses = '/lecturer/classes';
 
   // Student Academic Request Routes
   static const String studentAcademicRequests = '/student/academic-requests';
@@ -21,4 +22,12 @@ class AppRoutes {
 
   // AI Chat Route
   static const String aiChat = '/ai-chatbot';
+
+  // Attendance Report Routes
+  static const String studentAttendanceReport = '/student/attendance-report';
+  static const String studentAttendanceDetail = '/student/attendance-detail';
+
+  // Student Grade Routes
+  static const String studentGradeSemester = '/student/grade-semester';
+  static const String studentGradeDetail = '/student/grade-detail';
 }

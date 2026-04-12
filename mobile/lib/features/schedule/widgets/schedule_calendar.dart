@@ -63,6 +63,7 @@ class _ScheduleCalendarState extends State<ScheduleCalendar> {
     final monday = now.subtract(Duration(days: now.weekday - 1));
     final date = monday.add(Duration(days: index));
     final isSelected = _isSameDay(date, controller.selectedDate.value);
+    final isToday = _isSameDay(date, DateTime.now());
     
     final Color textColor = const Color(0xFF264653);
 
@@ -83,9 +84,9 @@ class _ScheduleCalendarState extends State<ScheduleCalendar> {
               // 1. Weekday Title
               Text(
                 _getDayName(date.weekday),
-                style: GoogleFonts.beVietnamPro(
+                style: GoogleFonts.plusJakartaSans(
                    fontSize: 11.sp, // Reduced from 13
-                   color: isSelected ? const Color(0xFF264653) : const Color(0xFF264653).withOpacity(0.35),
+                   color: isSelected ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withOpacity(0.35),
                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                    letterSpacing: 0.5,
                 ),
@@ -105,12 +106,17 @@ class _ScheduleCalendarState extends State<ScheduleCalendar> {
                     decoration: BoxDecoration(
                       color: isSelected ? AppColors.primaryOrange : Colors.transparent,
                       shape: BoxShape.circle,
+                      border: isSelected 
+                          ? null 
+                          : (isToday 
+                              ? Border.all(color: AppColors.primaryOrange, width: 1.5) 
+                              : null),
                     ),
                     child: Text(
                       date.day.toString(),
-                      style: GoogleFonts.beVietnamPro(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 13.sp, // Reduced from 15
-                        color: isSelected ? Colors.white : const Color(0xFF2D3436).withOpacity(0.7),
+                        color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                         fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                       ),
                     ),

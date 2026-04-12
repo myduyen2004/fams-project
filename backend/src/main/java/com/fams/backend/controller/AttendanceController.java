@@ -89,4 +89,19 @@ public class AttendanceController {
                 .orElseThrow(() -> new RuntimeException("Student not found"));
         return ResponseEntity.ok(attendanceService.getStudentAttendanceDetail(student.getId(), className));
     }
+
+    @GetMapping("/class/{className}/report/export")
+    @PreAuthorize("hasAnyRole('LECTURER', 'ACADEMIC_STAFF')")
+    @Operation(summary = "Export class attendance report to Excel")
+    public void exportClassAttendanceReport(
+            @PathVariable String className,
+            jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+        
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        String headerKey = "Content-Disposition";
+        String headerValue = "attachment; filename=attendance_report_" + className + ".xlsx";
+        response.setHeader(headerKey, headerValue);
+
+        attendanceService.exportClassAttendanceReport(className, response);
+    }
 }
