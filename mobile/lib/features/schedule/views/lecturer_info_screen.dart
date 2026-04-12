@@ -76,7 +76,7 @@ class _LecturerInfoScreenState extends State<LecturerInfoScreen> {
           ),
           Text(
             'Thông tin giảng viên',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: const Color(0xFF2D3436),
@@ -126,7 +126,7 @@ class _LecturerInfoScreenState extends State<LecturerInfoScreen> {
               child: avatar == null || avatar.isEmpty
                   ? Text(
                       fullName.isNotEmpty ? fullName[0].toUpperCase() : 'L',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 40.sp,
                         fontWeight: FontWeight.bold,
                         color: const Color(0xFFFF922B),
@@ -137,7 +137,7 @@ class _LecturerInfoScreenState extends State<LecturerInfoScreen> {
             20.verticalSpace,
             Text(
               fullName,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 24.sp,
                 fontWeight: FontWeight.w900,
                 color: const Color(0xFF1E293B),
@@ -153,7 +153,7 @@ class _LecturerInfoScreenState extends State<LecturerInfoScreen> {
               ),
               child: Text(
                 roleName,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   color: const Color(0xFF27AE60),
                   fontWeight: FontWeight.bold,
                   fontSize: 12.sp,
@@ -189,7 +189,7 @@ class _LecturerInfoScreenState extends State<LecturerInfoScreen> {
             children: [
               Text(
                 label,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 12.sp,
                   color: const Color(0xFF94A3B8),
                   fontWeight: FontWeight.bold,
@@ -198,7 +198,7 @@ class _LecturerInfoScreenState extends State<LecturerInfoScreen> {
               4.verticalSpace,
               Text(
                 value,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 16.sp,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF334155),

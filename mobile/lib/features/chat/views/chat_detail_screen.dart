@@ -67,10 +67,24 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         return true;
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF8F5F0),
+        backgroundColor: Colors.transparent, // Let Container handle background
         appBar: _buildAppBar(controller),
-        body: Column(
-          children: [
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: Theme.of(context).brightness == Brightness.dark
+                ? null
+                : const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xFFFEF3DE), Colors.white],
+                    stops: [0.0, 0.3],
+                  ),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Theme.of(context).scaffoldBackgroundColor
+                : null,
+          ),
+          child: Column(
+            children: [
             // Messages
             Expanded(
               child: Obx(() {
@@ -163,8 +177,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   vertical: 8.h,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border(top: BorderSide(color: Colors.grey[200]!)),
+                  color: Theme.of(context).cardColor,
+                  border: Border(top: BorderSide(color: Theme.of(context).brightness == Brightness.dark ? Colors.grey[800]! : Colors.grey[200]!)),
                 ),
                 child: Row(
                   children: [
@@ -211,9 +225,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               );
             }),
 
-            // Input area
             _buildInputArea(controller),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -221,11 +235,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   PreferredSizeWidget _buildAppBar(ChatController controller) {
     return AppBar(
-      backgroundColor: Colors.white,
-      surfaceTintColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      surfaceTintColor: Theme.of(context).scaffoldBackgroundColor,
       elevation: 1,
       leading: IconButton(
-        icon: Icon(SolarIconsOutline.altArrowLeft, color: const Color(0xFF2D3436), size: 20.sp),
+        icon: Icon(SolarIconsOutline.altArrowLeft, color: Theme.of(context).iconTheme.color, size: 20.sp),
         onPressed: () {
           controller.clearSelectedGroup();
           Get.back();
@@ -336,7 +350,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     style: TextStyle(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF2D3436),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -534,10 +548,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                           ),
                     decoration: BoxDecoration(
                       color: msg.deleted
-                          ? Colors.grey[100]
+                          ? (Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : Colors.grey[100])
                           : isOwn
                           ? AppColors.primaryOrange
-                          : Colors.white,
+                          : Theme.of(context).cardColor,
                       borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(18.r),
                         topRight: Radius.circular(18.r),
@@ -546,7 +560,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
+                          color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.08),
                           blurRadius: 4,
                           offset: const Offset(0, 2),
                         ),
@@ -567,7 +581,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                             decoration: BoxDecoration(
                               color: isOwn
                                   ? Colors.white.withOpacity(0.2)
-                                  : Colors.grey[100],
+                                  : (Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : Colors.grey[100]),
                               borderRadius: BorderRadius.circular(8),
                               border: Border(
                                 left: BorderSide(
@@ -746,7 +760,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           child: Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: isOwn ? Colors.white.withOpacity(0.15) : Colors.grey[50],
+              color: isOwn ? Colors.white.withOpacity(0.15) : (Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : Colors.grey[50]),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
@@ -769,7 +783,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
-                          color: isOwn ? Colors.white : const Color(0xFF2D3436),
+                          color: isOwn ? Colors.white : Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -815,7 +829,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           msg.content,
           style: TextStyle(
             fontSize: 14,
-            color: isOwn ? Colors.white : const Color(0xFF2D3436),
+            color: isOwn ? Colors.white : Theme.of(context).colorScheme.onSurface,
           ),
         );
     }
@@ -884,10 +898,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         MediaQuery.of(context).padding.bottom + 8.h,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.06),
             blurRadius: 8.r,
             offset: Offset(0, -2.h),
           ),
@@ -919,7 +933,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 child: Container(
                   constraints: BoxConstraints(maxHeight: 120.h),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF5F5F5),
+                    color: Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : const Color(0xFFF5F5F5),
                     borderRadius: BorderRadius.circular(24.r),
                   ),
                   child: TextField(
@@ -930,7 +944,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     onChanged: (v) {
                       if (v.isNotEmpty) controller.sendTypingIndicator();
                     },
-                    style: TextStyle(fontSize: 15.sp),
+                    style: TextStyle(fontSize: 15.sp, color: Theme.of(context).colorScheme.onSurface),
                     decoration: InputDecoration(
                       hintText: 'Nhập tin nhắn...',
                       hintStyle: TextStyle(
@@ -949,8 +963,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               SizedBox(width: 4.w),
               // Send button
               Container(
-                width: 44.r,
-                height: 44.r,
+                width: 48.r,
+                height: 48.r,
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     colors: [Color(0xFFFF9F43), Color(0xFFFF6B00)],
@@ -961,31 +975,31 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   () => IconButton(
                     icon: controller.isSending.value
                         ? SizedBox(
-                            width: 20.r,
-                            height: 20.r,
+                            width: 24.r,
+                            height: 24.r,
                             child: const CircularProgressIndicator(
                               color: Colors.white,
-                              strokeWidth: 2,
+                              strokeWidth: 3,
                             ),
                           )
                         : Icon(
                             Icons.send_rounded,
                             color: Colors.white,
-                            size: 22.sp,
+                            size: 24.sp,
                           ),
                     onPressed: controller.isSending.value
                         ? null
-                        : () {
+                        : () async {
                             final text = _textController.text.trim();
                             final file = controller.selectedFile.value;
 
                             if (text.isNotEmpty) {
-                              controller.sendMessage(text);
-                              _textController.clear();
+                              final success = await controller.sendMessage(text);
+                              if (success) _textController.clear();
                             }
 
                             if (file != null) {
-                              controller.sendFile(file);
+                              await controller.sendFile(file);
                             }
                           },
                   ),
@@ -1008,9 +1022,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       margin: EdgeInsets.only(bottom: 8.h, left: 44.w, right: 44.w),
       padding: EdgeInsets.all(8.r),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : Colors.grey[100],
         borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: Colors.grey[300]!),
+        border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? Colors.transparent : Colors.grey[300]!),
       ),
       child: Row(
         children: [
@@ -1059,7 +1073,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   ) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1084,7 +1098,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     SolarIconsOutline.reply,
                     color: AppColors.primaryOrange,
                   ),
-                  title: const Text('Trả lời'),
+                  title: Text('Trả lời', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                   onTap: () {
                     Navigator.pop(ctx);
                     controller.setReplyTo(msg);
@@ -1094,7 +1108,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 if (msg.readBy.isNotEmpty)
                   ListTile(
                     leading: const Icon(SolarIconsOutline.eye),
-                    title: const Text('Thông tin lượt xem'),
+                    title: Text('Thông tin lượt xem', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                     onTap: () {
                       Get.back();
                       _showReadDetails(msg);
@@ -1121,7 +1135,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       SolarIconsOutline.download,
                       color: AppColors.primaryOrange,
                     ),
-                    title: const Text('Tải xuống'),
+                    title: Text('Tải xuống', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                     onTap: () {
                       Navigator.pop(ctx);
                       _downloadFile(msg);
@@ -1292,6 +1306,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 style: TextStyle(
                   fontSize: 16.sp,
                   fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 15),
@@ -1324,7 +1339,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       ),
                       title: Text(
                         receipt.fullName,
-                        style: const TextStyle(fontWeight: FontWeight.w500),
+                        style: TextStyle(fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.onSurface),
                       ),
                     );
                   },

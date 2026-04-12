@@ -25,10 +25,20 @@ import 'features/schedule_request/bindings/schedule_request_bindings.dart';
 import 'features/academic_request/views/academic_request_list_screen.dart';
 import 'features/academic_request/views/academic_request_create_screen.dart';
 import 'features/academic_request/bindings/academic_request_bindings.dart';
+import 'features/face_attendance/views/attendance_report_screen.dart';
+import 'features/face_attendance/views/attendance_detail_screen.dart';
 
+import 'features/student_grade/views/grade_semester_screen.dart';
+import 'features/student_grade/views/grade_detail_screen.dart';
+import 'features/student_grade/bindings/student_grade_binding.dart';
+import 'features/lecturer/views/class_list_screen.dart';
+
+import 'package:fams_mobile/core/theme/app_theme.dart';
+import 'package:fams_mobile/core/controllers/theme_controller.dart';
 import 'features/chat/controllers/chat_controller.dart';
 import 'features/schedule/controllers/schedule_controller.dart';
 import 'features/notification/services/fcm_service.dart';
+import 'features/notification/controllers/notification_controller.dart';
 import 'core/services/api_service.dart';
 import 'core/services/websocket_service.dart';
 
@@ -65,11 +75,13 @@ class InitialBinding extends Bindings {
     // Core Services
     Get.put(ApiService()..init(), permanent: true);
     Get.put(WebSocketService(), permanent: true);
+    Get.put(ThemeController(), permanent: true);
 
     Get.put(AuthController());
     // Khởi tạo các controller dùng chung ở cấp độ toàn cục để tránh lỗi "not found" khi lướt các tab
     Get.put(ChatController(), permanent: true);
     Get.put(ScheduleController(), permanent: true);
+    Get.put(NotificationController(), permanent: true);
 
     // Initialize FcmService
     Get.put(FcmService(), permanent: true);
@@ -102,17 +114,10 @@ class MyApp extends StatelessWidget {
           ],
           supportedLocales: const [Locale('vi', 'VN'), Locale('en', 'US')],
           locale: const Locale('vi', 'VN'),
-          theme: ThemeData(
-            primaryColor: AppColors.primaryOrange,
-            scaffoldBackgroundColor: Colors.white,
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: AppColors.primaryOrange,
-              primary: AppColors.primaryOrange,
-            ),
-            textTheme: GoogleFonts.beVietnamProTextTheme(),
-            fontFamily: GoogleFonts.beVietnamPro().fontFamily,
-            useMaterial3: true,
-          ),
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          // ThemeController dictates the default boot theme mode via onInit (but we keep system as fallback)
+          themeMode: ThemeMode.system,
           initialRoute: AppRoutes.splash,
           initialBinding: InitialBinding(),
           getPages: [
@@ -156,6 +161,10 @@ class MyApp extends StatelessWidget {
               page: () => const ScheduleRequestDetailScreen(),
               binding: ScheduleRequestBinding(),
             ),
+            GetPage(
+              name: AppRoutes.lecturerClasses,
+              page: () => ClassListScreen(),
+            ),
             // Student Academic Request Routes
             GetPage(
               name: AppRoutes.studentAcademicRequests,
@@ -166,6 +175,26 @@ class MyApp extends StatelessWidget {
               name: AppRoutes.studentAcademicRequestCreate,
               page: () => const AcademicRequestCreateScreen(),
               binding: AcademicRequestBinding(),
+            ),
+            // Attendance Report Routes
+            GetPage(
+              name: AppRoutes.studentAttendanceReport,
+              page: () => const AttendanceReportScreen(),
+            ),
+            GetPage(
+              name: AppRoutes.studentAttendanceDetail,
+              page: () => const AttendanceDetailScreen(),
+            ),
+            // Student Grade Routes
+            GetPage(
+              name: AppRoutes.studentGradeSemester,
+              page: () => const GradeSemesterScreen(),
+              binding: StudentGradeBinding(),
+            ),
+            GetPage(
+              name: AppRoutes.studentGradeDetail,
+              page: () => const GradeDetailScreen(),
+              binding: StudentGradeBinding(),
             ),
           ],
         );

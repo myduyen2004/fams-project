@@ -17,4 +17,7 @@ public interface AttendanceService {
     AttendanceDTO.StudentAttendanceSummaryResponse getStudentAttendanceSummary(Long studentId, String semesterCode);
 
     AttendanceDTO.IndividualAttendanceDetail getStudentAttendanceDetail(Long studentId, String className);
+
+    void exportClassAttendanceReport(String className, jakarta.servlet.http.HttpServletResponse response)
+            throws java.io.IOException;
 }

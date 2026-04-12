@@ -46,10 +46,13 @@ class ApiConstants {
       '/api/v1/timetable/lecturer'; // + /{id}/semester?semesterCode=X
   static const String attendanceConfig = '/api/v1/attendance-config';
   static const String checkIn = '/api/v1/attendance/check-in';
+  static const String studentAttendanceReport = '/api/v1/attendance/student/report';
+  static const String studentAttendanceDetail = '/api/v1/attendance/student/class/{className}/detail';
 
   // Schedule Request Endpoints
   static const String lecturerRequests = '/api/v1/lecturer/requests';
   static const String lecturerClasses = '/api/v1/lecturer/classes';
+  static const String lecturerCheckConflicts = '/api/v1/lecturer/check-conflicts';
   static const String roomsAvailability = '/api/v1/rooms/availability';
 
   // Timeouts

@@ -5,11 +5,14 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../../core/constants/app_colors.dart';
-import 'edit_profile_screen.dart';
-import '../../../core/widgets/app_background.dart';
+import 'personal_info_screen.dart';
 import '../../face_recognition/views/face_registration_view.dart';
 import '../../face_recognition/views/face_registration_guide_screen.dart';
 import '../../face_recognition/views/view_face_info_screen.dart';
+import 'display_mode_screen.dart';
+import '../../../../core/controllers/theme_controller.dart';
+import '../../notification/views/notification_list_screen.dart';
+import '../../notification/controllers/notification_controller.dart';
 import 'package:solar_icons/solar_icons.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -19,309 +22,304 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final AuthController authController = Get.find<AuthController>();
 
-    // Using Obx to listen to changes in currentUser
     return Obx(() {
-        final user = authController.currentUser.value;
-        const cardColor = Colors.white;
+      final user = authController.currentUser.value;
+      const Color orangePrimary = Color(0xFFF26F21);
 
-        return Scaffold(
-          body: AppBackground(
-            child: SafeArea(
-            child: Stack(
-              children: [
-                // Scrollable content to handle different screen sizes
-                SingleChildScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  child: Center(
-                    child: Container(
-                      margin: EdgeInsets.symmetric(horizontal: 24.0.w, vertical: 20.0.h),
-                      padding: EdgeInsets.symmetric(horizontal: 20.0.w, vertical: 24.0.h),
-                      decoration: BoxDecoration(
-                        color: cardColor,
-                        borderRadius: BorderRadius.circular(40.0.r),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 20.r,
-                            offset: Offset(0, 10.h),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min, // Wrap content
-                        children: [
-                        // 1. Avatar
-                        Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: const Color(0xFFFFB74D), // Orange border
-                              width: 3.w,
-                            ),
-                          ),
-                          child: ClipOval(
-                            child: SizedBox(
-                              width: 110.r, // 2 * radius 55
-                              height: 110.r,
-                              child: _buildAvatarImage(authController, user?.avatarUrl),
-                            ),
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: Stack(
+          children: [
+            // 1. Curved Background
+            ClipPath(
+              clipper: HeaderCurveClipper(),
+              child: Container(
+                height: 280.h,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: Theme.of(context).brightness == Brightness.dark 
+                      ? [const Color(0xFF1E1E1E), const Color(0xFF121212)]
+                      : [const Color(0xFFFEF3DE), Colors.white],
+                  ),
+                ),
+              ),
+            ),
+
+            CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                // 2. Top Icon Bar (Bell, History, etc.)
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(20.w, 50.h, 20.w, 10.h),
+                  sliver: SliverToBoxAdapter(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        GestureDetector(
+                          onTap: () => Get.to(() => const NotificationListScreen()),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Icon(SolarIconsOutline.bell, color: Theme.of(context).colorScheme.onSurface, size: 26.sp),
+                              Obx(() {
+                                final notifController = Get.find<NotificationController>();
+                                return notifController.unreadCount.value > 0 ? Positioned(
+                                  right: 2,
+                                  top: 2,
+                                  child: Container(
+                                    height: 8.h,
+                                    width: 8.h,
+                                    decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                                  ),
+                                ) : const SizedBox.shrink();
+                              }),
+                            ],
                           ),
                         ),
+                        const SizedBox.shrink(), // Keeps Bell on the left
+                      ],
+                    ),
+                  ),
+                ),
 
-                        20.verticalSpace,
-
-                        // 2. Name
+                // 3. Centered Profile Header
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10.h),
+                    child: Column(
+                      children: [
+                        _buildMainAvatar(context, authController, user?.avatarUrl),
+                        SizedBox(height: 16.h),
                         Text(
-                          user?.fullName ?? 'Người dùng',
-                          style: GoogleFonts.inter(
-                            fontSize: 26.sp,
-                            fontWeight: FontWeight.w500, // Medium/Regular looks cleaner
-                            color: Colors.black87,
-                            height: 1.2,
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-
-                        12.verticalSpace,
-
-                        // 3. ID Capsule
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFE0B2), // Light orange fill
-                            borderRadius: BorderRadius.circular(20.r),
-                          ),
-                          child: Text(
-                            'ID: ${user?.username ?? "N/A"}',
-                            style: GoogleFonts.inter(
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.black87,
-                            ),
+                          user?.fullName ?? "Người dùng",
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 24.sp,
+                            fontWeight: FontWeight.w800,
+                            color: Theme.of(context).colorScheme.onSurface,
+                            letterSpacing: -0.5,
                           ),
                         ),
-
-                        20.verticalSpace,
-                        Divider(color: Colors.grey[400], thickness: 1, indent: 20.w, endIndent: 20.w),
-                        20.verticalSpace,
-
-                        // 4. QR Code
-                        QrImageView(
-                          data: user?.username ?? 'FAMS_USER_ID',
-                          version: QrVersions.auto,
-                          size: 180.0.r,
-                          gapless: false,
-                        ),
-
-                        24.verticalSpace,
-
-                        // 5. Details (Major & Email)
-                        if (user != null) ...[
-                          _buildInfoRow(
-                            icon: SolarIconsOutline.courseUp, 
-                            text: user.isLecturer 
-                                ? (user.department ?? 'Khoa/Bộ môn') 
-                                : 'Chuyên ngành: ${user.major ?? "Kỹ thuật phần mềm"}',
-                            iconColor: const Color(0xFFFF6B00),
-                          ),
-                          12.verticalSpace,
-                          _buildInfoRow(
-                            icon: SolarIconsOutline.letter,
-                            text: 'Email: ${user.email}',
-                            iconColor: const Color(0xFFFF6B00),
-                          ),
-                        ],
-
-
-                        const SizedBox(height: 20),
-
-                        // Face Registration Section (Students Only)
-                        if (user?.isLecturer != true) ...[
-                          if (user?.hasFaceRegistered == true) ...[
-                            // Clickable container to view registered face info
-                            InkWell(
-                              onTap: () => Get.to(() => const ViewFaceInfoScreen()),
-                              borderRadius: BorderRadius.circular(16),
-                              child: Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(16.r),
-                                  border: Border.all(color: Colors.green.withOpacity(0.3), width: 1.w),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(SolarIconsBold.checkCircle, color: Colors.green, size: 24.sp),
-                                    SizedBox(width: 10.w),
-                                    Text(
-                                      'Đã đăng ký khuôn mặt',
-                                      style: GoogleFonts.inter(
-                                        color: Colors.green,
-                                        fontSize: 16.sp,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    8.horizontalSpace,
-                                    Icon(SolarIconsOutline.altArrowRight, color: Colors.green, size: 16.r),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ] else ...[
-                            // Show register button if face not registered
-                            SizedBox(
-                              width: double.infinity,
-                              height: 54.h,
-                              child: OutlinedButton.icon(
-                                onPressed: () => Get.to(() => const FaceRegistrationGuideScreen()),
-                                icon: Icon(SolarIconsOutline.userId, color: AppColors.primaryOrange, size: 24.r),
-                                label: Text(
-                                  'Đăng ký khuôn mặt',
-                                  style: GoogleFonts.inter(
-                                    color: AppColors.primaryOrange,
-                                    fontSize: 16.sp,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  side: BorderSide(color: AppColors.primaryOrange, width: 2.w),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16.r),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                          20.verticalSpace,
-                        ],
-
-                        12.verticalSpace,
-
-                        // Logout Button
-                        SizedBox(
-                          width: double.infinity,
-                          height: 54.h,
-                          child: ElevatedButton.icon(
-                            onPressed: () => authController.logout(),
-                            icon: Icon(SolarIconsBold.logout, color: Colors.white, size: 24.r),
-                            label: Text(
-                              'Đăng xuất',
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontSize: 18.sp,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryOrange,
-                              padding: EdgeInsets.symmetric(vertical: 12.h),
-                              elevation: 4,
-                              shadowColor: AppColors.primaryOrange.withOpacity(0.4),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16.r),
-                              ),
-                            ),
+                        SizedBox(height: 4.h),
+                        Text(
+                          "${user?.email ?? 'youremail@domain.com'} | ${user?.phone ?? '+01 234 567 89'}",
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  ),
                 ),
-                
-                 // Edit Button
-                Positioned(
-                  top: 10.h,
-                  right: 10.w,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 5.r)
-                      ]
-                    ),
-                    child: IconButton(
-                      icon: Icon(SolarIconsOutline.pen, color: const Color(0xFFFF6B00), size: 24.r),
-                      onPressed: () => Get.to(() => const EditProfileScreen()),
-                    ),
+
+                // 4. Menu Groups
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(20.w, 20.h, 20.w, 100.h),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      // Group 1: Personal Information & Security
+                      _buildGroupedMenuCard(context, [
+                        _buildMenuListItem(
+                          context,
+                          onTap: () => Get.to(() => const PersonalInfoScreen()),
+                          icon: SolarIconsOutline.userId,
+                          title: "Thông tin cá nhân",
+                          trailing: Icon(SolarIconsOutline.altArrowRight, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2), size: 20.sp),
+                        ),
+                        _buildMenuListItem(
+                          context,
+                          onTap: () => user?.hasFaceRegistered == true 
+                              ? Get.to(() => const ViewFaceInfoScreen()) 
+                              : Get.to(() => const FaceRegistrationGuideScreen()),
+                          icon: SolarIconsOutline.shieldCheck,
+                          title: "Xác thực khuôn mặt",
+                          trailing: user?.hasFaceRegistered == true 
+                              ? Text("ĐÃ XÁC THỰC", style: GoogleFonts.plusJakartaSans(color: Colors.green, fontWeight: FontWeight.w800, fontSize: 12.sp))
+                              : Icon(SolarIconsOutline.altArrowRight, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2), size: 20.sp),
+                        ),
+                        _buildMenuListItem(
+                          context,
+                          onTap: () {
+                            authController.toggleNotifications(!authController.isNotificationsEnabled.value);
+                          },
+                          icon: SolarIconsOutline.bell,
+                          title: "Thông báo",
+                          trailing: Transform.scale(
+                            scale: 0.8,
+                            child: Obx(() => Switch(
+                              value: authController.isNotificationsEnabled.value,
+                              onChanged: (value) => authController.toggleNotifications(value),
+                              activeColor: Colors.white,
+                              activeTrackColor: orangePrimary,
+                              inactiveTrackColor: Colors.grey.shade300,
+                              inactiveThumbColor: Colors.white,
+                            )),
+                          ),
+                        ),
+                      ]),
+
+                      SizedBox(height: 16.h),
+
+                      // Group 2: Display Settings
+                      _buildGroupedMenuCard(context, [
+                        _buildMenuListItem(
+                          context,
+                          onTap: () => Get.to(() => const DisplayModeScreen()),
+                          icon: SolarIconsOutline.widget,
+                          title: "Chế độ hiển thị",
+                          trailing: Obx(() => Text(ThemeController.to.isDarkMode ? "Tối" : "Sáng", style: GoogleFonts.plusJakartaSans(color: orangePrimary, fontWeight: FontWeight.w800, fontSize: 13.sp))),
+                        ),
+                      ]),
+
+                      SizedBox(height: 16.h),
+
+                      // Group 4: Logout
+                      _buildGroupedMenuCard(context, [
+                        _buildMenuListItem(
+                          context,
+                          onTap: () => authController.logout(),
+                          icon: SolarIconsOutline.logout,
+                          title: "Đăng xuất tài khoản",
+                          isDestructive: true,
+                          trailing: Icon(SolarIconsOutline.altArrowRight, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2), size: 20.sp),
+                        ),
+                      ]),
+                    ]),
                   ),
                 ),
               ],
             ),
-          ),
-          ),
-        );
+          ],
+        ),
+      );
     });
   }
 
-  Widget _buildInfoRow({required IconData icon, required String text, required Color iconColor}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, color: iconColor, size: 20.r),
-        10.horizontalSpace,
-        Flexible(
-          child: Text(
-            text,
-            style: GoogleFonts.inter(
-              fontSize: 15.sp,
-              color: Colors.black87,
-              fontWeight: FontWeight.w400,
+  Widget _buildMainAvatar(BuildContext context, AuthController authController, String? avatarUrl) {
+    return Center(
+      child: Stack(
+        children: [
+          Container(
+            padding: EdgeInsets.all(4.r),
+            decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+            child: Container(
+              width: 120.r,
+              height: 120.r,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : const Color(0xFFFEF3DE),
+              ),
+              child: ClipOval(
+                child: avatarUrl != null && avatarUrl.isNotEmpty
+                    ? Image.network(avatarUrl, fit: BoxFit.cover)
+                    : Icon(SolarIconsBold.user, size: 60.sp, color: AppColors.primaryOrange.withOpacity(0.2)),
+              ),
             ),
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAvatarImage(AuthController authController, String? avatarUrl) {
-    // Debug: Print avatar URL to console
-    debugPrint('Avatar URL: $avatarUrl');
-    
-    // Default fallback avatar with person icon
-    Widget fallbackAvatar = Container(
-      color: const Color(0xFFFFE0B2),
-      child: Icon(
-        SolarIconsBold.user,
-        size: 80.sp,
-        color: const Color(0xFFFF6B00),
+          Positioned(
+            bottom: 0,
+            right: 5.w,
+            child: GestureDetector(
+              onTap: () => Get.to(() => const PersonalInfoScreen()),
+              child: Container(
+                padding: EdgeInsets.all(8.r),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4)),
+                  ],
+                ),
+                child: Icon(SolarIconsOutline.pen, color: const Color(0xFF1E2A3A), size: 18.sp),
+              ),
+            ),
+          ),
+        ],
       ),
     );
-    
-    if (avatarUrl == null || avatarUrl.isEmpty) {
-      debugPrint('Avatar URL is null or empty, using fallback');
-      return fallbackAvatar;
-    }
+  }
 
-    final optimizedUrl = authController.getOptimizedAvatarUrl(avatarUrl);
-    debugPrint('Optimized Avatar URL: $optimizedUrl');
-
-    return Image.network(
-      optimizedUrl,
-      fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) {
-        debugPrint('Avatar load error: $error');
-        return fallbackAvatar;
-      },
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return Center(
-          child: CircularProgressIndicator(
-            value: loadingProgress.expectedTotalBytes != null
-                ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                : null,
-            strokeWidth: 2,
-            color: Colors.orange,
+  Widget _buildGroupedMenuCard(BuildContext context, List<Widget> items) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(24.r),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark 
+            ? Colors.transparent 
+            : Colors.grey.shade100.withOpacity(0.5)
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.02), 
+            blurRadius: 20, 
+            offset: const Offset(0, 8)
           ),
-        );
-      },
+        ],
+      ),
+      child: Column(
+        children: items,
+      ),
     );
   }
+
+  Widget _buildMenuListItem(
+    BuildContext context, {
+    required VoidCallback onTap,
+    required IconData icon,
+    required String title,
+    required Widget trailing,
+    bool isDestructive = false,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24.r),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 18.h),
+        child: Row(
+          children: [
+            Icon(icon, color: isDestructive ? Colors.red : Theme.of(context).colorScheme.onSurface, size: 24.sp),
+            SizedBox(width: 16.w),
+            Expanded(
+              child: Text(
+                title,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 15.sp,
+                  fontWeight: FontWeight.w700,
+                  color: isDestructive ? Colors.red : Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ),
+            trailing,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class HeaderCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    Path path = Path();
+    path.lineTo(0, size.height * 0.7);
+    
+    var firstControlPoint = Offset(size.width * 0.25, size.height * 0.6);
+    var firstEndPoint = Offset(size.width * 0.5, size.height * 0.7);
+    path.quadraticBezierTo(firstControlPoint.dx, firstControlPoint.dy, firstEndPoint.dx, firstEndPoint.dy);
+    
+    var secondControlPoint = Offset(size.width * 0.75, size.height * 0.82);
+    var secondEndPoint = Offset(size.width, size.height * 0.75);
+    path.quadraticBezierTo(secondControlPoint.dx, secondControlPoint.dy, secondEndPoint.dx, secondEndPoint.dy);
+    
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

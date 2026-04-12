@@ -19,13 +19,30 @@ class AcademicRequestListScreen extends StatelessWidget {
         ? Get.find<AcademicRequestController>()
         : Get.put(AcademicRequestController());
 
-    return Scaffold(
-      body: AppBackground(
-        child: SafeArea(
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark 
+            ? Theme.of(context).scaffoldBackgroundColor 
+            : null,
+        gradient: Theme.of(context).brightness == Brightness.dark 
+            ? null 
+            : const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFFFEF3DE),
+                  Colors.white,
+                ],
+                stops: [0.0, 0.3],
+              ),
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
           child: Column(
             children: [
-              _buildHeader(controller),
-              _buildFilterBar(controller),
+              _buildHeader(context, controller),
+              _buildFilterBar(context, controller),
               Expanded(
                 child: Obx(() {
                   if (controller.isLoading.value && controller.requests.isEmpty) {
@@ -58,39 +75,20 @@ class AcademicRequestListScreen extends StatelessWidget {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.primaryOrange,
-        onPressed: () => Get.toNamed('/student/academic-requests/create'),
-        icon: Icon(SolarIconsOutline.addCircle, color: Colors.white, size: 24.sp),
-        label: Text('Tạo yêu cầu', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14.sp)),
-      ),
     );
   }
 
-  Widget _buildHeader(AcademicRequestController controller) {
+  Widget _buildHeader(BuildContext context, AcademicRequestController controller) {
     return Padding(
       padding: EdgeInsets.fromLTRB(16.w, 20.h, 16.w, 12.h),
       child: Row(
         children: [
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12.r),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 8.r,
-                  offset: Offset(0, 2.h),
-                ),
-              ],
-            ),
-            child: IconButton(
-              icon: Icon(SolarIconsOutline.altArrowLeft, size: 20.sp),
-              onPressed: () => Get.back(),
-              color: const Color(0xFF2D3436),
-            ),
+          IconButton(
+            icon: Icon(SolarIconsOutline.altArrowLeft, size: 24.sp),
+            onPressed: () => Get.back(),
+            color: const Color(0xFF1E2A3A),
           ),
-          SizedBox(width: 16.w),
+          SizedBox(width: 8.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -98,17 +96,30 @@ class AcademicRequestListScreen extends StatelessWidget {
                 Text(
                   'Yêu Cầu Học Thuật',
                   style: TextStyle(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF2D3436),
+                    fontSize: 20.sp,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF1E2A3A),
                     letterSpacing: -0.5,
                   ),
                 ),
                 Obx(() => Text(
                   '${controller.totalElements.value} yêu cầu',
-                  style: TextStyle(fontSize: 13.sp, color: Colors.grey[600]),
+                  style: TextStyle(fontSize: 13.sp, color: Colors.grey[600], fontWeight: FontWeight.w500),
                 )),
               ],
+            ),
+          ),
+          // Small Create Button next to Title row
+          ElevatedButton.icon(
+            onPressed: () => Get.toNamed('/student/academic-requests/create'),
+            icon: Icon(SolarIconsOutline.addCircle, color: Colors.white, size: 16.sp),
+            label: Text('Tạo', style: TextStyle(color: Colors.white, fontSize: 12.sp, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryOrange,
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+              minimumSize: Size(0, 36.h),
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
             ),
           ),
         ],
@@ -116,7 +127,7 @@ class AcademicRequestListScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFilterBar(AcademicRequestController controller) {
+  Widget _buildFilterBar(BuildContext context, AcademicRequestController controller) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
       child: SingleChildScrollView(
@@ -204,11 +215,11 @@ class _AcademicRequestCard extends StatelessWidget {
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.05),
             blurRadius: 10.r,
             offset: Offset(0, 4.h),
           ),
@@ -230,7 +241,7 @@ class _AcademicRequestCard extends StatelessWidget {
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFF0E0),
+                        color: AppColors.primaryOrange.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(8.r),
                       ),
                       child: Text(
@@ -256,7 +267,7 @@ class _AcademicRequestCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 15.sp,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF2D3436),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -328,7 +339,7 @@ class _DetailSheet extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 17.sp,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF2D3436),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ),
@@ -450,7 +461,7 @@ class _DetailRow extends StatelessWidget {
           ),
           Expanded(
             child: Text(value,
-                style: TextStyle(fontSize: 13.sp, color: const Color(0xFF2D3436), fontWeight: FontWeight.w600)),
+                style: TextStyle(fontSize: 13.sp, color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -479,10 +490,10 @@ class _FilterChip extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
         decoration: BoxDecoration(
-          color: isSelected ? (color ?? AppColors.primaryOrange) : Colors.white,
+          color: isSelected ? (color ?? AppColors.primaryOrange) : Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(20.r),
           border: Border.all(
-            color: isSelected ? (color ?? AppColors.primaryOrange) : Colors.grey[300]!,
+            color: isSelected ? (color ?? AppColors.primaryOrange) : (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF333333) : Colors.grey[300]!),
             width: 1.5.w,
           ),
         ),
@@ -491,7 +502,7 @@ class _FilterChip extends StatelessWidget {
           style: TextStyle(
             fontSize: 12.sp,
             fontWeight: FontWeight.w600,
-            color: isSelected ? Colors.white : Colors.grey[700],
+            color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ),

@@ -19,11 +19,14 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('LECTURER')")
 public class LecturerController {
+    
+    private final ScheduleRequestService scheduleRequestService;
+    private final UserRepository userRepository;
+    private final com.fams.backend.repository.ClassSectionRepository classSectionRepository;
+    private final com.fams.backend.repository.TimetableSlotRepository timetableSlotRepository;
+    private final com.fams.backend.repository.ScheduleRequestRepository scheduleRequestRepository;
 
-        private final ScheduleRequestService scheduleRequestService;
-        private final UserRepository userRepository;
-
-        @GetMapping("/requests")
+    @GetMapping("/requests")
         public ResponseEntity<Page<ScheduleRequestResponse>> getMyRequests(
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "10") int size,
@@ -82,7 +85,6 @@ public class LecturerController {
                 return ResponseEntity.ok(scheduleRequestService.getSlotsForClass(className, lecturer.getId()));
         }
 
-        private final com.fams.backend.repository.ClassSectionRepository classSectionRepository;
 
         @GetMapping("/classes")
         public ResponseEntity<java.util.List<String>> getClasses(
@@ -95,8 +97,6 @@ public class LecturerController {
                 return ResponseEntity.ok(classNames);
         }
 
-        private final com.fams.backend.repository.TimetableSlotRepository timetableSlotRepository;
-        private final com.fams.backend.repository.ScheduleRequestRepository scheduleRequestRepository;
 
         @GetMapping("/check-conflicts")
         public ResponseEntity<java.util.Map<String, Object>> checkConflicts(

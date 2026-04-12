@@ -316,7 +316,7 @@ class ChatInfoScreen extends StatelessWidget {
           const SizedBox(width: 12),
           Text(
             label,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 14,
               color: Colors.grey[600],
               fontWeight: FontWeight.w400,
@@ -326,7 +326,7 @@ class ChatInfoScreen extends StatelessWidget {
           Text(
             value,
             textAlign: TextAlign.right,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: const Color(0xFF2D3436),

@@ -37,8 +37,8 @@ class NotificationDetailScreen extends StatelessWidget {
                           const SizedBox(width: 8),
                           Text(
                             'Thông báo',
-                            style: GoogleFonts.inter(
-                              color: const Color(0xFF181411),
+                            style: GoogleFonts.plusJakartaSans(
+                              color: Theme.of(context).colorScheme.onSurface,
                               fontWeight: FontWeight.w600,
                               fontSize: 18,
                             ),
@@ -58,16 +58,16 @@ class NotificationDetailScreen extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).cardColor,
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
+                            color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.04),
                             blurRadius: 16,
                             offset: const Offset(0, 4),
                           ),
                         ],
-                        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+                        border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? Colors.transparent : Colors.grey.withOpacity(0.1)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,7 +84,7 @@ class NotificationDetailScreen extends StatelessWidget {
                                 ),
                                 child: Text(
                                   notification.senderFullName?.toUpperCase() ?? 'HỆ THỐNG',
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.plusJakartaSans(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
                                     color: AppColors.primaryOrange,
@@ -97,7 +97,7 @@ class NotificationDetailScreen extends StatelessWidget {
                                 padding: const EdgeInsets.only(top: 4),
                                 child: Text(
                                   _getExactTime(notification.timestamp),
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.plusJakartaSans(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
                                     color: const Color(0xFF9CA3AF),
@@ -111,10 +111,10 @@ class NotificationDetailScreen extends StatelessWidget {
                           // Title
                           Text(
                             notification.title,
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.plusJakartaSans(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
-                              color: const Color(0xFF111827), // gray-900
+                              color: Theme.of(context).colorScheme.onSurface,
                               height: 1.3,
                             ),
                           ),
@@ -137,7 +137,7 @@ class NotificationDetailScreen extends StatelessWidget {
                                   style: {
                                     "body": Style(
                                       fontSize: FontSize(15.0),
-                                      color: const Color(0xFF374151),
+                                      color: Theme.of(context).colorScheme.onSurface,
                                       lineHeight: LineHeight(1.0),
                                       margin: Margins.zero,
                                       padding: HtmlPaddings.zero,
@@ -158,7 +158,7 @@ class NotificationDetailScreen extends StatelessWidget {
                             const SizedBox(height: 20),
                             Text(
                               'TỆP ĐÍNH KÈM',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.plusJakartaSans(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
                                 color: const Color(0xFF9CA3AF), // gray-400
@@ -166,7 +166,7 @@ class NotificationDetailScreen extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 16),
-                            ...notification.attachmentUrls.map((url) => _buildAttachmentCard(url)),
+                            ...notification.attachmentUrls.map((url) => _buildAttachmentCard(context, url)),
                           ],
                         ],
                       ),
@@ -181,16 +181,16 @@ class NotificationDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAttachmentCard(String url) {
+  Widget _buildAttachmentCard(BuildContext context, String url) {
     final fileName = url.split('/').last;
     
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB), // gray-50
+        color: Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade800 : const Color(0xFFF9FAFB),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFF3F4F6)), // gray-100
+        border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? Colors.transparent : const Color(0xFFF3F4F6)),
       ),
       child: Row(
         children: [
@@ -200,10 +200,10 @@ class NotificationDetailScreen extends StatelessWidget {
               children: [
                 Text(
                   fileName,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF111827), // gray-900
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -211,7 +211,7 @@ class NotificationDetailScreen extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   'TỆP ĐÍNH KÈM', // Placeholder for size
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF9CA3AF), // gray-400
@@ -230,7 +230,7 @@ class NotificationDetailScreen extends StatelessWidget {
             ),
             child: Text(
               'TẢI VỀ',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: AppColors.primaryOrange,

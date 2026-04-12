@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
-import { ArrowLeft, Users, BookOpen } from 'lucide-react';
+import { ArrowLeft, Users, BookOpen, Download } from 'lucide-react';
 import attendanceService, { ClassAttendanceReportResponse } from '../../services/api/attendanceService';
 import { toast } from 'react-hot-toast';
 import { ViewStudentModal } from '../../components/academic-staff/students/StudentModals';
@@ -21,6 +21,7 @@ export const ClassAttendanceReportPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'danger' | 'warning' | 'safe'>('all');
+    const [exportLoading, setExportLoading] = useState(false);
     
     // View Student Modal State
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -55,6 +56,29 @@ export const ClassAttendanceReportPage: React.FC = () => {
             toast.error('Không thể tải dữ liệu báo cáo điểm danh');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleExport = async () => {
+        if (!className) return;
+        
+        try {
+            setExportLoading(true);
+            const blob = await attendanceService.exportClassAttendanceReport(className);
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `attendance_report_${className}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+            toast.success('Xuất file excel thành công');
+        } catch (error) {
+            console.error('Failed to export attendance report:', error);
+            toast.error('Không thể xuất file excel');
+        } finally {
+            setExportLoading(false);
         }
     };
 
@@ -156,6 +180,21 @@ export const ClassAttendanceReportPage: React.FC = () => {
                                 {filter === 'safe' && 'An toàn'}
                             </button>
                         ))}
+                        
+                        <div className="w-px h-6 bg-gray-100 dark:bg-zinc-800 mx-2 hidden md:block" />
+
+                        <button
+                            onClick={handleExport}
+                            disabled={exportLoading}
+                            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 text-fpt-orange border border-fpt-orange/30 rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-fpt-orange hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed group shadow-sm"
+                        >
+                            {exportLoading ? (
+                                <div className="w-3.5 h-3.5 border-2 border-fpt-orange border-t-transparent group-hover:border-white rounded-full animate-spin"></div>
+                            ) : (
+                                <Download size={14} />
+                            )}
+                            {exportLoading ? 'Đang xuất...' : 'Xuất Excel'}
+                        </button>
                     </div>
                 </div>
 

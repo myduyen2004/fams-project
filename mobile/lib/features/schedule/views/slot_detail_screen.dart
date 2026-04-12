@@ -70,9 +70,11 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
     final isLecturer = authController.currentUser.value?.isLecturer ?? false;
 
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).scaffoldBackgroundColor : null,
+          gradient: Theme.of(context).brightness == Brightness.dark ? null : const LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
@@ -122,10 +124,10 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
           ),
           Text(
             isLecturer ? 'Chi tiết Slot dạy' : 'Chi tiết Slot học',
-            style: GoogleFonts.beVietnamPro(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 18.sp,
               fontWeight: FontWeight.w800,
-              color: const Color(0xFF2D3436),
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(width: 48), // Spacer to keep title centered
@@ -139,11 +141,12 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
       width: double.infinity,
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(24.r),
+        border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? Colors.transparent : Colors.grey.shade100),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.04),
             blurRadius: 15.r,
             offset: Offset(0, 4.h),
           ),
@@ -158,15 +161,15 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF4E6),
+                  color: AppColors.primaryOrange.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(16.r),
                 ),
                 child: Text(
                   'SLOT ${widget.slot.slotNumber}',
-                  style: GoogleFonts.beVietnamPro(
-                    color: const Color(0xFFFF922B),
+                  style: GoogleFonts.plusJakartaSans(
+                    color: AppColors.primaryOrange,
                     fontWeight: FontWeight.bold,
-                    fontSize: 10.sp, // Reduced from 11.sp
+                    fontSize: 10.sp, 
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -177,25 +180,25 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
           12.verticalSpace,
           Text(
             widget.slot.courseCode ?? 'N/A',
-            style: GoogleFonts.beVietnamPro(
-              fontSize: 20.sp, // Reduced from 24.sp
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 20.sp, 
               fontWeight: FontWeight.w900,
-              color: const Color(0xFF1E293B),
+              color: Theme.of(context).colorScheme.onSurface,
               height: 1.1,
             ),
           ),
           2.verticalSpace,
           Text(
             widget.slot.courseName ?? 'N/A',
-            style: GoogleFonts.beVietnamPro(
-              fontSize: 13.sp, // Reduced from 14.sp
-              color: const Color(0xFF64748B),
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13.sp, 
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               fontWeight: FontWeight.w400,
             ),
           ),
           16.verticalSpace,
           
-          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          Divider(height: 1, color: Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : const Color(0xFFF1F5F9)),
           8.verticalSpace,
 
           // Timeline Details
@@ -267,7 +270,7 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
             padding: const EdgeInsets.only(top: 8),
             child: Text(
               '* Cần đăng ký khuôn mặt mới có thể điểm danh bằng khuôn mặt',
-              style: GoogleFonts.beVietnamPro(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 11.sp,
                 fontStyle: FontStyle.italic,
                 color: AppColors.orange600,
@@ -302,7 +305,7 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
                       Expanded(
                         child: Text(
                           isBeforeStart ? "Chưa đến giờ điểm danh" : "Đã quá thời gian điểm danh",
-                          style: GoogleFonts.beVietnamPro(
+                          style: GoogleFonts.plusJakartaSans(
                             color: Colors.red,
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w600,
@@ -368,10 +371,10 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
                       Expanded(
                         child: Text(
                           title,
-                          style: GoogleFonts.beVietnamPro(
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 13.sp,
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF1E293B),
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ),
@@ -383,7 +386,7 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
                     2.verticalSpace,
                     Text(
                       subtitle,
-                      style: GoogleFonts.beVietnamPro(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 11.sp,
                         color: const Color(0xFF64748B),
                         fontWeight: FontWeight.w400,
@@ -409,11 +412,12 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
       width: double.infinity,
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(24.r),
+        border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? Colors.transparent : Colors.grey.shade100),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.04),
             blurRadius: 15.r,
             offset: Offset(0, 4.h),
           ),
@@ -427,10 +431,10 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
               Expanded(
                 child: Text(
                   hasAssignment ? (isLecturer ? 'Bài tập đã giao' : 'Bài tập được giao') : 'Nội dung bài học',
-                  style: GoogleFonts.beVietnamPro(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w900,
-                    color: const Color(0xFF1E293B),
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -450,7 +454,7 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
                     ),
                     child: Text(
                       'Chi tiết',
-                      style: GoogleFonts.beVietnamPro(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 11.sp,
                         fontWeight: FontWeight.w600,
                         color: AppColors.primaryOrange,
@@ -465,7 +469,7 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
           if (hasAssignment) ...[
             Text(
               widget.slot.assignmentTitle ?? 'Bài tập tuần',
-              style: GoogleFonts.beVietnamPro(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 14.sp,
                 fontWeight: FontWeight.bold,
                 color: const Color(0xFF334155),
@@ -482,7 +486,7 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
                     children: [
                       Text(
                         'HẠN NỘP',
-                        style: GoogleFonts.beVietnamPro(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 9.sp,
                           fontWeight: FontWeight.bold,
                           color: const Color(0xFF94A3B8),
@@ -491,7 +495,7 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
                       2.verticalSpace,
                       Text(
                         DateFormat('dd/MM/yyyy').format(widget.slot.assignmentDueDate ?? widget.slot.date),
-                        style: GoogleFonts.beVietnamPro(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 13.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF475569),
@@ -507,7 +511,7 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
                       children: [
                         Text(
                           'TRẠNG THÁI',
-                          style: GoogleFonts.beVietnamPro(
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 9.sp,
                             fontWeight: FontWeight.bold,
                             color: const Color(0xFF94A3B8),
@@ -520,7 +524,7 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
                               _submission != null && _submission!.status != 'NOT_SUBMITTED' 
                                 ? _getTaskStatusText(_submission!.status) 
                                 : 'Chưa nộp',
-                              style: GoogleFonts.beVietnamPro(
+                              style: GoogleFonts.plusJakartaSans(
                                 fontSize: 13.sp,
                                 fontWeight: FontWeight.w800,
                                 color: _submission != null && _submission!.status != 'NOT_SUBMITTED' 
@@ -536,7 +540,7 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
           ] else ...[
             Text(
               'Không có bài học hoặc bài tập cho buổi này.',
-              style: GoogleFonts.beVietnamPro(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 13.sp,
                 color: const Color(0xFF64748B),
                 fontStyle: FontStyle.italic,
@@ -581,7 +585,7 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
           12.verticalSpace,
           Text(
             'Điểm danh thành công',
-            style: GoogleFonts.beVietnamPro(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 18.sp,
               fontWeight: FontWeight.bold,
               color: const Color(0xFF27AE60),
@@ -590,7 +594,7 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
           4.verticalSpace,
           Text(
             'HOÀN TẤT LÚC $timeStr',
-            style: GoogleFonts.beVietnamPro(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 11.sp,
               color: const Color(0xFF94A3B8),
               fontWeight: FontWeight.bold,
@@ -646,7 +650,7 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
           children: [
             Icon(hasFace ? Icons.camera_alt_rounded : Icons.face_retouching_natural_rounded, color: Colors.white, size: 12.r),
             6.horizontalSpace,
-            Text(hasFace ? 'Điểm danh' : 'Đăng ký', style: GoogleFonts.beVietnamPro(fontSize: 11.sp, fontWeight: FontWeight.bold, color: Colors.white)),
+            Text(hasFace ? 'Điểm danh' : 'Đăng ký', style: GoogleFonts.plusJakartaSans(fontSize: 11.sp, fontWeight: FontWeight.bold, color: Colors.white)),
           ],
         ),
       );
@@ -662,7 +666,7 @@ class _SlotDetailScreenState extends State<SlotDetailScreen> {
         children: [
           Icon(icon, color: color, size: 12.r),
           4.horizontalSpace,
-          Text(text, style: GoogleFonts.beVietnamPro(fontSize: 11.sp, fontWeight: FontWeight.bold, color: color)),
+          Text(text, style: GoogleFonts.plusJakartaSans(fontSize: 11.sp, fontWeight: FontWeight.bold, color: color)),
         ],
       ),
     );

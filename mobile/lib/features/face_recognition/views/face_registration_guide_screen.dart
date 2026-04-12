@@ -81,7 +81,7 @@ class _FaceRegistrationGuideScreenState extends State<FaceRegistrationGuideScree
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -91,7 +91,7 @@ class _FaceRegistrationGuideScreenState extends State<FaceRegistrationGuideScree
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_back_ios, color: Colors.black54),
+                  icon: Icon(Icons.arrow_back_ios, color: Theme.of(context).iconTheme.color),
                   onPressed: () => Get.back(),
                 ),
               ),
@@ -136,7 +136,7 @@ class _FaceRegistrationGuideScreenState extends State<FaceRegistrationGuideScree
                   ),
                   child: Text(
                     _currentPage == _steps.length - 1 ? 'Hoàn tất đăng ký' : 'Tiếp tục',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
                     ),
@@ -151,7 +151,7 @@ class _FaceRegistrationGuideScreenState extends State<FaceRegistrationGuideScree
                 onPressed: _skipGuide,
                 child: Text(
                   'Bỏ qua hướng dẫn',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
                     color: Colors.grey.shade500,
                   ),
@@ -177,7 +177,7 @@ class _FaceRegistrationGuideScreenState extends State<FaceRegistrationGuideScree
           // Step Label
           Text(
             'BƯỚC ${step.stepNumber}: ${step.stepLabel}',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: AppColors.primaryOrange,
@@ -194,7 +194,7 @@ class _FaceRegistrationGuideScreenState extends State<FaceRegistrationGuideScree
                 width: 280,
                 height: 280,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF5EE), // Light peach background
+                  color: Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : const Color(0xFFFFF5EE), // Light peach background
                   borderRadius: BorderRadius.circular(140),
                 ),
                 child: _buildImagePlaceholder(step),
@@ -207,10 +207,10 @@ class _FaceRegistrationGuideScreenState extends State<FaceRegistrationGuideScree
           // Title
           Text(
             step.title,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 28,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
             textAlign: TextAlign.center,
           ),
@@ -220,7 +220,7 @@ class _FaceRegistrationGuideScreenState extends State<FaceRegistrationGuideScree
           // Description
           Text(
             step.description,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 16,
               color: Colors.grey.shade600,
               height: 1.5,
@@ -255,7 +255,7 @@ class _FaceRegistrationGuideScreenState extends State<FaceRegistrationGuideScree
               const SizedBox(height: 8),
               Text(
                 'Chưa có ảnh',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 12,
                   color: Colors.grey.shade500,
                 ),
@@ -278,7 +278,7 @@ class _FaceRegistrationGuideScreenState extends State<FaceRegistrationGuideScree
           width: isActive ? 24 : 8,
           height: 8,
           decoration: BoxDecoration(
-            color: isActive ? AppColors.primaryOrange : Colors.grey.shade300,
+            color: isActive ? AppColors.primaryOrange : (Theme.of(context).brightness == Brightness.dark ? Colors.grey[700] : Colors.grey.shade300),
             borderRadius: BorderRadius.circular(4),
           ),
         );

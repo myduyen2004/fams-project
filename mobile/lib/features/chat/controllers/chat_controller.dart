@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../models/chat_models.dart';
 import '../services/chat_service.dart';
@@ -443,8 +443,8 @@ class ChatController extends GetxController {
     }
   }
 
-  Future<void> sendMessage(String content) async {
-    if (content.trim().isEmpty || selectedGroup.value == null) return;
+  Future<bool> sendMessage(String content) async {
+    if (content.trim().isEmpty || selectedGroup.value == null) return false;
 
     final groupId = selectedGroup.value!.id;
     final replyId = replyingTo.value?.id;
@@ -467,9 +467,13 @@ class ChatController extends GetxController {
       replyToId: replyId,
       replyToContent: replyingTo.value?.content,
       replyToSenderName: replyingTo.value?.senderName,
+      readBy: [],
     );
     messages.insert(0, optimisticMsg);
+    final previousReply = replyingTo.value;
     replyingTo.value = null;
+    
+    isSending.value = true;
 
     try {
       await _chatService.sendMessage(
@@ -478,27 +482,52 @@ class ChatController extends GetxController {
         type: type,
         replyToId: replyId,
       );
+      return true;
     } catch (e) {
       // Remove optimistic message on failure
       messages.removeWhere((m) => m.id == optimisticMsg.id);
+      replyingTo.value = previousReply;
       debugPrint('Failed to send message: $e');
+      Get.snackbar(
+        'Lỗi gửi tin nhắn',
+        'Không thể gửi tin nhắn. Vui lòng kiểm tra kết nối.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent.withOpacity(0.8),
+        colorText: Colors.white,
+      );
+      return false;
+    } finally {
+      isSending.value = false;
     }
   }
 
-  Future<void> sendFile(File file) async {
-    if (selectedGroup.value == null) return;
+  Future<bool> sendFile(File file) async {
+    if (selectedGroup.value == null) return false;
 
     final groupId = selectedGroup.value!.id;
     final replyId = replyingTo.value?.id;
 
     isSending.value = true;
+    final previousReply = replyingTo.value;
     replyingTo.value = null;
+    final previousFile = selectedFile.value;
     clearSelectedFile();
 
     try {
       await _chatService.uploadAndSendFile(groupId, file, replyToId: replyId);
+      return true;
     } catch (e) {
       debugPrint('Failed to upload file: $e');
+      replyingTo.value = previousReply;
+      selectedFile.value = previousFile;
+      Get.snackbar(
+        'Lỗi gửi tệp',
+        'Không thể tải tệp lên. Vui lòng thử lại sau.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent.withOpacity(0.8),
+        colorText: Colors.white,
+      );
+      return false;
     } finally {
       isSending.value = false;
     }

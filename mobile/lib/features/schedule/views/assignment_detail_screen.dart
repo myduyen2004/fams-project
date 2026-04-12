@@ -124,7 +124,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: _buildAppBar(),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(20.w),
@@ -153,14 +153,14 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
       centerTitle: true,
       title: Text(
         'Chi tiết bài tập',
-        style: GoogleFonts.inter(
-          color: const Color(0xFF1E293B),
+        style: GoogleFonts.plusJakartaSans(
+          color: Theme.of(context).colorScheme.onSurface,
           fontSize: 18.sp,
           fontWeight: FontWeight.bold,
         ),
       ),
       leading: IconButton(
-        icon: Icon(Icons.arrow_back_rounded, color: const Color(0xFF1E293B), size: 24.r),
+        icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onSurface, size: 24.r),
         onPressed: () => Get.back(),
       ),
     );
@@ -174,7 +174,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
         children: [
           Text(
             title.toUpperCase(),
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 13.sp,
               fontWeight: FontWeight.bold,
               color: const Color(0xFF64748B),
@@ -206,7 +206,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
             ),
             child: Text(
               'Đang diễn ra',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.plusJakartaSans(
                 color: const Color(0xFFEA580C),
                 fontSize: 12.sp,
                 fontWeight: FontWeight.w600,
@@ -217,9 +217,9 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
         Container(
           width: double.infinity,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(16.r),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
+            border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? Colors.transparent : const Color(0xFFE2E8F0)),
           ),
           clipBehavior: Clip.antiAlias,
           child: Column(
@@ -254,17 +254,17 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                   children: [
                     Text(
                       slot.assignmentTitle ?? 'Bài tập tuần',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 18.sp,
                         fontWeight: FontWeight.bold,
-                        color: const Color(0xFF1E293B),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     if (slot.assignmentDescription != null && slot.assignmentDescription!.isNotEmpty) ...[
                       8.verticalSpace,
                       Text(
                         slot.assignmentDescription!,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 14.sp,
                           color: const Color(0xFF64748B),
                         ),
@@ -277,9 +277,9 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                         6.horizontalSpace,
                         Text(
                           'Hạn nộp: ${DateFormat('dd/MM/yyyy').format(slot.assignmentDueDate ?? slot.date)}',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 13.sp,
-                            color: const Color(0xFF1E293B),
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ],
@@ -384,7 +384,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                       6.horizontalSpace,
                       Text(
                         sheetName,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 9.sp,
                           fontWeight: FontWeight.bold,
                           color: const Color(0xFF475569),
@@ -412,7 +412,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                         padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 4.h),
                         child: Text(
                           cell,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 10.sp,
                             fontWeight: isHeader ? FontWeight.w800 : FontWeight.w500,
                             color: isHeader ? const Color(0xFF166534) : const Color(0xFF334155),
@@ -559,7 +559,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                   4.horizontalSpace,
                   Text(
                     'Trang 1 • PDF',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       color: Colors.white,
                       fontSize: 10.sp,
                       fontWeight: FontWeight.bold,
@@ -626,7 +626,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                   6.horizontalSpace,
                   Text(
                     'Ảnh từ tệp nén',
-                    style: GoogleFonts.inter(fontSize: 10.sp, color: Colors.white70, fontWeight: FontWeight.w500),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 10.sp, color: Colors.white70, fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
@@ -653,7 +653,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
               6.horizontalSpace,
               Text(
                 'Nội dung tệp nén',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 11.sp,
                   fontWeight: FontWeight.bold,
                   color: const Color(0xFF475569),
@@ -675,14 +675,14 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                 Expanded(
                   child: Text(
                     entry.name,
-                    style: GoogleFonts.inter(fontSize: 10.sp, color: const Color(0xFF334155)),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 10.sp, color: const Color(0xFF334155)),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 Text(
                   entry.formattedSize,
-                  style: GoogleFonts.inter(fontSize: 9.sp, color: const Color(0xFF94A3B8)),
+                  style: GoogleFonts.plusJakartaSans(fontSize: 9.sp, color: const Color(0xFF94A3B8)),
                 ),
               ],
             ),
@@ -711,7 +711,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                           6.horizontalSpace,
                           Text(
                             'README',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.plusJakartaSans(
                               fontSize: 11.sp,
                               fontWeight: FontWeight.bold,
                               color: const Color(0xFF475569),
@@ -722,7 +722,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                       8.verticalSpace,
                       Text(
                         content,
-                        style: GoogleFonts.inter(fontSize: 10.sp, height: 1.5, color: const Color(0xFF475569)),
+                        style: GoogleFonts.plusJakartaSans(fontSize: 10.sp, height: 1.5, color: const Color(0xFF475569)),
                         maxLines: 10,
                         overflow: TextOverflow.fade,
                       ),
@@ -760,7 +760,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
           Text(
             _previewErrorMsg ?? 'Nhấn để mở',
             textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 10.sp,
               color: _previewErrorMsg != null ? Colors.redAccent : const Color(0xFF94A3B8),
             ),
@@ -769,7 +769,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
             4.verticalSpace,
             Text(
               'Tệp vẫn có thể tải về được bên dưới',
-              style: GoogleFonts.inter(fontSize: 9.sp, color: const Color(0xFF94A3B8)),
+              style: GoogleFonts.plusJakartaSans(fontSize: 9.sp, color: const Color(0xFF94A3B8)),
             ),
           ],
         ],
@@ -909,7 +909,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                     children: [
                       Text(
                         fileName,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 14.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF1E293B),
@@ -941,7 +941,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
               4.horizontalSpace,
               Text(
                 'Đã hoàn thành',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   color: const Color(0xFF10B981),
                   fontSize: 12.sp,
                   fontWeight: FontWeight.w600,
@@ -974,7 +974,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                 16.horizontalSpace,
                 Text(
                   'Chưa nộp bài',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 15.sp,
                     color: const Color(0xFF64748B),
                     fontWeight: FontWeight.w500,
@@ -1025,7 +1025,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                   children: [
                     Text(
                       firstFileName,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.bold,
                         color: const Color(0xFF1E293B),
@@ -1037,7 +1037,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                     if (submission!.submittedAt != null)
                       Text(
                         'Đã nộp: ${DateFormat('HH:mm - dd/MM/yyyy').format(submission!.submittedAt!)}',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 12.sp,
                           color: const Color(0xFF64748B),
                         ),
@@ -1067,7 +1067,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                       8.horizontalSpace,
                       Text(
                         'Phản hồi',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 13.sp,
                           color: const Color(0xFFD97706),
                           fontWeight: FontWeight.bold,
@@ -1078,7 +1078,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                   6.verticalSpace,
                   Text(
                     submission!.lecturerComment!,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 14.sp,
                       color: const Color(0xFF92400E),
                     ),
@@ -1108,7 +1108,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                   ),
                   child: Text(
                     'Xem bài nộp',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       color: const Color(0xFF334155),
                       fontWeight: FontWeight.w600,
                       fontSize: 13.sp,
@@ -1131,7 +1131,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                   ),
                   child: Text(
                     'Chỉnh sửa',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.plusJakartaSans(
                       color: const Color(0xFFEA580C),
                       fontWeight: FontWeight.w600,
                       fontSize: 13.sp,

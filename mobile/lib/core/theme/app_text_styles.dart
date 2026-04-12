@@ -7,10 +7,10 @@ class AppTextStyles {
   AppTextStyles._();
 
   // Base Be Vietnam Pro TextTheme
-  static TextTheme get textTheme => GoogleFonts.interTextTheme();
+  static TextTheme get textTheme => GoogleFonts.plusJakartaSansTextTheme();
 
   // Display Styles - For large headings
-  static TextStyle displayLarge = GoogleFonts.inter(
+  static TextStyle displayLarge = GoogleFonts.plusJakartaSans(
     fontSize: 32,
     fontWeight: FontWeight.w700,
     height: 1.2,
@@ -18,7 +18,7 @@ class AppTextStyles {
     letterSpacing: -0.5,
   );
 
-  static TextStyle displayMedium = GoogleFonts.inter(
+  static TextStyle displayMedium = GoogleFonts.plusJakartaSans(
     fontSize: 28,
     fontWeight: FontWeight.w700,
     height: 1.3,
@@ -26,7 +26,7 @@ class AppTextStyles {
     letterSpacing: -0.3,
   );
 
-  static TextStyle displaySmall = GoogleFonts.inter(
+  static TextStyle displaySmall = GoogleFonts.plusJakartaSans(
     fontSize: 24,
     fontWeight: FontWeight.w600,
     height: 1.3,
@@ -34,21 +34,21 @@ class AppTextStyles {
   );
 
   // Title Styles - For section headers
-  static TextStyle titleLarge = GoogleFonts.inter(
+  static TextStyle titleLarge = GoogleFonts.plusJakartaSans(
     fontSize: 22,
     fontWeight: FontWeight.w600,
     height: 1.4,
     color: AppColors.textPrimary,
   );
 
-  static TextStyle titleMedium = GoogleFonts.inter(
+  static TextStyle titleMedium = GoogleFonts.plusJakartaSans(
     fontSize: 18,
     fontWeight: FontWeight.w500,
     height: 1.4,
     color: AppColors.textPrimary,
   );
 
-  static TextStyle titleSmall = GoogleFonts.inter(
+  static TextStyle titleSmall = GoogleFonts.plusJakartaSans(
     fontSize: 16,
     fontWeight: FontWeight.w500,
     height: 1.4,
@@ -56,21 +56,21 @@ class AppTextStyles {
   );
 
   // Body Styles - For general content
-  static TextStyle bodyLarge = GoogleFonts.inter(
+  static TextStyle bodyLarge = GoogleFonts.plusJakartaSans(
     fontSize: 16,
     fontWeight: FontWeight.w400,
     height: 1.5,
     color: AppColors.textPrimary,
   );
 
-  static TextStyle bodyMedium = GoogleFonts.inter(
+  static TextStyle bodyMedium = GoogleFonts.plusJakartaSans(
     fontSize: 14,
     fontWeight: FontWeight.w400,
     height: 1.5,
     color: AppColors.textSecondary,
   );
 
-  static TextStyle bodySmall = GoogleFonts.inter(
+  static TextStyle bodySmall = GoogleFonts.plusJakartaSans(
     fontSize: 12,
     fontWeight: FontWeight.w400,
     height: 1.5,
@@ -78,7 +78,7 @@ class AppTextStyles {
   );
 
   // Label Styles - For buttons, tabs, etc.
-  static TextStyle labelLarge = GoogleFonts.inter(
+  static TextStyle labelLarge = GoogleFonts.plusJakartaSans(
     fontSize: 14,
     fontWeight: FontWeight.w500,
     height: 1.4,
@@ -86,7 +86,7 @@ class AppTextStyles {
     letterSpacing: 0.1,
   );
 
-  static TextStyle labelMedium = GoogleFonts.inter(
+  static TextStyle labelMedium = GoogleFonts.plusJakartaSans(
     fontSize: 12,
     fontWeight: FontWeight.w500,
     height: 1.4,
@@ -94,7 +94,7 @@ class AppTextStyles {
     letterSpacing: 0.5,
   );
 
-  static TextStyle labelSmall = GoogleFonts.inter(
+  static TextStyle labelSmall = GoogleFonts.plusJakartaSans(
     fontSize: 11,
     fontWeight: FontWeight.w500,
     height: 1.4,
@@ -103,21 +103,21 @@ class AppTextStyles {
   );
 
   // Special Styles
-  static TextStyle buttonText = GoogleFonts.inter(
+  static TextStyle buttonText = GoogleFonts.plusJakartaSans(
     fontSize: 16,
     fontWeight: FontWeight.w600,
     height: 1.2,
     letterSpacing: 0.5,
   );
 
-  static TextStyle caption = GoogleFonts.inter(
+  static TextStyle caption = GoogleFonts.plusJakartaSans(
     fontSize: 12,
     fontWeight: FontWeight.w400,
     height: 1.3,
     color: AppColors.textTertiary,
   );
 
-  static TextStyle overline = GoogleFonts.inter(
+  static TextStyle overline = GoogleFonts.plusJakartaSans(
     fontSize: 10,
     fontWeight: FontWeight.w500,
     height: 1.6,

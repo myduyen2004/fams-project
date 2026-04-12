@@ -290,6 +290,18 @@ public class UserServiceImpl implements UserService {
                 user.setFaceDataStatus(User.FaceDataStatus.REGISTERED);
             }
         }
+
+        // --- NEW: Update Lecturer Specific Fields ---
+        if (user.getRole() == User.UserRole.LECTURER && user.getLecturerProfile() != null) {
+            var profile = user.getLecturerProfile();
+            if (request.getExpertise() != null) {
+                profile.setExpertise(request.getExpertise());
+            }
+            if (request.getBio() != null) {
+                profile.setBio(request.getBio());
+            }
+            // JPA will cascade save because LecturerProfile is linked to User
+        }
         // Note: Silently ignore avatar update for students or if file is empty
 
         log.info("Profile updated for user: {}", username);

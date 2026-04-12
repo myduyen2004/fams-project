@@ -19,6 +19,7 @@ class AuthController extends GetxController {
   final Rx<User?> currentUser = Rx<User?>(null);
   final isAuthenticated = false.obs;
   final isInitialized = false.obs;
+  final isNotificationsEnabled = true.obs;
 
   @override
   void onInit() {
@@ -491,5 +492,18 @@ class AuthController extends GetxController {
   Future<void> saveUserToStorage(User user) async {
     await apiService.saveUserData(user.toJson());
     currentUser.value = user;
+  }
+
+  Future<void> toggleNotifications(bool value) async {
+    isNotificationsEnabled.value = value;
+    if (value) {
+      if (Get.isRegistered<FcmService>()) {
+        await FcmService.to.registerDeviceToken();
+      }
+    } else {
+      if (Get.isRegistered<FcmService>()) {
+        await FcmService.to.unregisterDeviceToken();
+      }
+    }
   }
 }
