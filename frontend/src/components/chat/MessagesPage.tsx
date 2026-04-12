@@ -45,8 +45,7 @@ interface MessagesPageProps {
 const UNREAD_THRESHOLD = 10;
 const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
   const location = useLocation();
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const currentUserId = Number(user.id);
+
   const [groups, setGroups] = useState<ChatGroupResponse[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<ChatGroupResponse | null>(
     null

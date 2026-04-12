@@ -3,10 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft,
     Printer,
-    User,
     CheckCircle,
     Loader2,
-    MessageSquare,
     FileText
 } from 'lucide-react';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';

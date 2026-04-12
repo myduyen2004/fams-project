@@ -19,11 +19,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -33,7 +31,7 @@ import static org.mockito.Mockito.*;
 /**
  * Unit Tests for ChatGroupServiceImpl
  * Covers: createGroupForClass, getMyGroups, getGroupById, existsByClassName,
- *         getMessages, sendMessage, deleteMessage, markAsRead, toggleReaction
+ * getMessages, sendMessage, deleteMessage, markAsRead, toggleReaction
  */
 @ExtendWith(MockitoExtension.class)
 class ChatGroupServiceImplTest {
@@ -134,8 +132,8 @@ class ChatGroupServiceImplTest {
 
     private void mockSecurityContext(User user) {
         SecurityContext securityContext = mock(SecurityContext.class);
-        UsernamePasswordAuthenticationToken auth =
-                new UsernamePasswordAuthenticationToken(user.getUsername(), null, List.of());
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(user.getUsername(), null,
+                List.of());
         when(securityContext.getAuthentication()).thenReturn(auth);
         SecurityContextHolder.setContext(securityContext);
         lenient().when(userRepository.findByUsername(user.getUsername())).thenReturn(Optional.of(user));
@@ -158,8 +156,10 @@ class ChatGroupServiceImplTest {
             when(chatGroupRepository.save(any(ChatGroup.class))).thenReturn(chatGroup);
             when(chatGroupMemberRepository.save(any(ChatGroupMember.class))).thenReturn(lecturerMember);
             when(enrollmentRepository.findByClassSectionClassName("SE18B01-PRF192")).thenReturn(List.of(enrollment));
-            when(chatMessageRepository.findTopByChatGroupIdAndIsDeletedFalseOrderBySentAtDesc(1L)).thenReturn(Optional.empty());
-            when(chatGroupMemberRepository.findActiveMembersWithUser(1L)).thenReturn(List.of(lecturerMember, studentMember));
+            when(chatMessageRepository.findTopByChatGroupIdAndIsDeletedFalseOrderBySentAtDesc(1L))
+                    .thenReturn(Optional.empty());
+            when(chatGroupMemberRepository.findActiveMembersWithUser(1L))
+                    .thenReturn(List.of(lecturerMember, studentMember));
 
             ChatGroupResponse result = chatGroupService.createGroupForClass("SE18B01-PRF192");
 
@@ -172,7 +172,8 @@ class ChatGroupServiceImplTest {
         @DisplayName("UTCID02 - Normal: Group already exists, return existing")
         void createGroup_alreadyExists() {
             when(chatGroupRepository.findByClassSectionClassName("SE18B01-PRF192")).thenReturn(Optional.of(chatGroup));
-            when(chatMessageRepository.findTopByChatGroupIdAndIsDeletedFalseOrderBySentAtDesc(1L)).thenReturn(Optional.empty());
+            when(chatMessageRepository.findTopByChatGroupIdAndIsDeletedFalseOrderBySentAtDesc(1L))
+                    .thenReturn(Optional.empty());
             when(chatGroupMemberRepository.findActiveMembersWithUser(1L)).thenReturn(List.of(lecturerMember));
 
             ChatGroupResponse result = chatGroupService.createGroupForClass("SE18B01-PRF192");
@@ -214,7 +215,8 @@ class ChatGroupServiceImplTest {
             when(chatGroupRepository.save(any(ChatGroup.class))).thenReturn(chatGroup);
             when(chatGroupMemberRepository.save(any(ChatGroupMember.class))).thenReturn(lecturerMember);
             when(enrollmentRepository.findByClassSectionClassName("SE18B01-PRF192")).thenReturn(List.of(enrollment));
-            when(chatMessageRepository.findTopByChatGroupIdAndIsDeletedFalseOrderBySentAtDesc(1L)).thenReturn(Optional.empty());
+            when(chatMessageRepository.findTopByChatGroupIdAndIsDeletedFalseOrderBySentAtDesc(1L))
+                    .thenReturn(Optional.empty());
             when(chatGroupMemberRepository.findActiveMembersWithUser(1L)).thenReturn(List.of(lecturerMember));
 
             ChatGroupResponse result = chatGroupService.createGroupForClass("SE18B01-PRF192", "lecturer01");
@@ -243,7 +245,8 @@ class ChatGroupServiceImplTest {
             when(chatGroupRepository.save(any(ChatGroup.class))).thenReturn(chatGroup);
             when(chatGroupMemberRepository.save(any(ChatGroupMember.class))).thenReturn(lecturerMember);
             when(enrollmentRepository.findByClassSectionClassName("SE18B01-PRF192")).thenReturn(List.of());
-            when(chatMessageRepository.findTopByChatGroupIdAndIsDeletedFalseOrderBySentAtDesc(1L)).thenReturn(Optional.empty());
+            when(chatMessageRepository.findTopByChatGroupIdAndIsDeletedFalseOrderBySentAtDesc(1L))
+                    .thenReturn(Optional.empty());
             when(chatGroupMemberRepository.findActiveMembersWithUser(1L)).thenReturn(List.of(lecturerMember));
 
             ChatGroupResponse result = chatGroupService.createGroupForClass("SE18B01-PRF192");
@@ -263,8 +266,10 @@ class ChatGroupServiceImplTest {
             when(classSectionRepository.findByClassName("SE18B01-PRF192")).thenReturn(Optional.of(classSection));
             when(chatGroupRepository.save(any(ChatGroup.class))).thenReturn(chatGroup);
             when(chatGroupMemberRepository.save(any(ChatGroupMember.class))).thenReturn(lecturerMember);
-            when(enrollmentRepository.findByClassSectionClassName("SE18B01-PRF192")).thenReturn(List.of(droppedEnrollment));
-            when(chatMessageRepository.findTopByChatGroupIdAndIsDeletedFalseOrderBySentAtDesc(1L)).thenReturn(Optional.empty());
+            when(enrollmentRepository.findByClassSectionClassName("SE18B01-PRF192"))
+                    .thenReturn(List.of(droppedEnrollment));
+            when(chatMessageRepository.findTopByChatGroupIdAndIsDeletedFalseOrderBySentAtDesc(1L))
+                    .thenReturn(Optional.empty());
             when(chatGroupMemberRepository.findActiveMembersWithUser(1L)).thenReturn(List.of(lecturerMember));
 
             ChatGroupResponse result = chatGroupService.createGroupForClass("SE18B01-PRF192");
@@ -287,8 +292,10 @@ class ChatGroupServiceImplTest {
             when(chatGroupRepository.findByMemberId(2L)).thenReturn(List.of(chatGroup));
             when(chatMessageReadRepository.countUnreadMessages(1L, 2L)).thenReturn(3L);
             when(chatMessageReadRepository.findFirstUnreadMessageId(1L, 2L)).thenReturn(Optional.of(5L));
-            when(chatMessageRepository.findTopByChatGroupIdAndIsDeletedFalseOrderBySentAtDesc(1L)).thenReturn(Optional.empty());
-            when(chatGroupMemberRepository.findActiveMembersWithUser(1L)).thenReturn(List.of(lecturerMember, studentMember));
+            when(chatMessageRepository.findTopByChatGroupIdAndIsDeletedFalseOrderBySentAtDesc(1L))
+                    .thenReturn(Optional.empty());
+            when(chatGroupMemberRepository.findActiveMembersWithUser(1L))
+                    .thenReturn(List.of(lecturerMember, studentMember));
 
             List<ChatGroupResponse> result = chatGroupService.getMyGroups();
 
@@ -317,8 +324,10 @@ class ChatGroupServiceImplTest {
             when(chatGroupRepository.findByMemberId(2L)).thenReturn(List.of(chatGroup));
             when(chatMessageReadRepository.countUnreadMessages(1L, 2L)).thenReturn(0L);
             when(chatMessageReadRepository.findFirstUnreadMessageId(1L, 2L)).thenReturn(Optional.empty());
-            when(chatMessageRepository.findTopByChatGroupIdAndIsDeletedFalseOrderBySentAtDesc(1L)).thenReturn(Optional.empty());
-            when(chatGroupMemberRepository.findActiveMembersWithUser(1L)).thenReturn(List.of(lecturerMember, studentMember));
+            when(chatMessageRepository.findTopByChatGroupIdAndIsDeletedFalseOrderBySentAtDesc(1L))
+                    .thenReturn(Optional.empty());
+            when(chatGroupMemberRepository.findActiveMembersWithUser(1L))
+                    .thenReturn(List.of(lecturerMember, studentMember));
 
             List<ChatGroupResponse> result = chatGroupService.getMyGroups();
 
@@ -339,8 +348,10 @@ class ChatGroupServiceImplTest {
             mockSecurityContext(studentUser);
             when(chatGroupRepository.findByIdWithClassSection(1L)).thenReturn(Optional.of(chatGroup));
             when(chatGroupMemberRepository.existsByChatGroupIdAndUserIdAndLeftAtIsNull(1L, 2L)).thenReturn(true);
-            when(chatGroupMemberRepository.findActiveMembersWithUser(1L)).thenReturn(List.of(lecturerMember, studentMember));
-            when(chatMessageRepository.findTopByChatGroupIdAndIsDeletedFalseOrderBySentAtDesc(1L)).thenReturn(Optional.empty());
+            when(chatGroupMemberRepository.findActiveMembersWithUser(1L))
+                    .thenReturn(List.of(lecturerMember, studentMember));
+            when(chatMessageRepository.findTopByChatGroupIdAndIsDeletedFalseOrderBySentAtDesc(1L))
+                    .thenReturn(Optional.empty());
 
             ChatGroupResponse result = chatGroupService.getGroupById(1L);
 
@@ -403,7 +414,7 @@ class ChatGroupServiceImplTest {
             Page<ChatMessage> messagePage = new PageImpl<>(List.of(chatMessage), pageable, 1);
 
             when(chatGroupMemberRepository.existsByChatGroupIdAndUserIdAndLeftAtIsNull(1L, 2L)).thenReturn(true);
-            when(chatMessageRepository.findByChatGroupIdOrderBySentAtAsc(1L, pageable)).thenReturn(messagePage);
+            when(chatMessageRepository.findByChatGroupIdOrderBySentAtDesc(1L, pageable)).thenReturn(messagePage);
             when(chatMessageReadRepository.findReadMessageIds(2L, 1L)).thenReturn(List.of(1L));
             when(chatMessageReactionRepository.findByMessageId(1L)).thenReturn(List.of());
 
@@ -432,7 +443,7 @@ class ChatGroupServiceImplTest {
             Page<ChatMessage> emptyPage = new PageImpl<>(List.of(), pageable, 0);
 
             when(chatGroupMemberRepository.existsByChatGroupIdAndUserIdAndLeftAtIsNull(1L, 2L)).thenReturn(true);
-            when(chatMessageRepository.findByChatGroupIdOrderBySentAtAsc(1L, pageable)).thenReturn(emptyPage);
+            when(chatMessageRepository.findByChatGroupIdOrderBySentAtDesc(1L, pageable)).thenReturn(emptyPage);
             when(chatMessageReadRepository.findReadMessageIds(2L, 1L)).thenReturn(List.of());
 
             Page<ChatMessageResponse> result = chatGroupService.getMessages(1L, pageable);
@@ -449,7 +460,7 @@ class ChatGroupServiceImplTest {
             Page<ChatMessage> messagePage = new PageImpl<>(List.of(chatMessage), pageable, 1);
 
             when(chatGroupMemberRepository.existsByChatGroupIdAndUserIdAndLeftAtIsNull(1L, 2L)).thenReturn(true);
-            when(chatMessageRepository.findByChatGroupIdOrderBySentAtAsc(1L, pageable)).thenReturn(messagePage);
+            when(chatMessageRepository.findByChatGroupIdOrderBySentAtDesc(1L, pageable)).thenReturn(messagePage);
             when(chatMessageReadRepository.findReadMessageIds(2L, 1L)).thenReturn(List.of()); // NOT in read list
             when(chatMessageReactionRepository.findByMessageId(1L)).thenReturn(List.of());
 
@@ -708,8 +719,7 @@ class ChatGroupServiceImplTest {
             when(chatMessageReactionRepository.save(any(ChatMessageReaction.class)))
                     .thenReturn(ChatMessageReaction.builder().id(1L).build());
             when(chatMessageReactionRepository.findByMessageId(1L)).thenReturn(List.of(
-                    ChatMessageReaction.builder().emoji("👍").user(studentUser).build()
-            ));
+                    ChatMessageReaction.builder().emoji("👍").user(studentUser).build()));
 
             ChatMessageResponse result = chatGroupService.toggleReaction(1L, "👍");
 

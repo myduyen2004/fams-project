@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { ShieldCheck, ShieldAlert } from 'lucide-react';
 import { ScheduleRequestResponse } from '../../../services/api/academicStaffService';
 import dayjs from 'dayjs';
 

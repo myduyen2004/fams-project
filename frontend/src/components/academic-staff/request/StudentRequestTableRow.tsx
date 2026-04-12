@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { AcademicRequest } from '../../../services/api/academicRequestService';
 import dayjs from 'dayjs';
 

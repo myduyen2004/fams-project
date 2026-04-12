@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { FileText, Plus, Clock, CheckCircle, XCircle, AlertCircle, Upload, X, Loader2, Info, Trash2, AlertTriangle, ExternalLink, Search } from 'lucide-react';
+import { FileText, Plus, CheckCircle, AlertCircle, Upload, X, Loader2, Info, Trash2, AlertTriangle, ExternalLink } from 'lucide-react';
 import { StudentLayout } from '../../layouts/StudentLayout';
 import { Pagination } from '../../components/common/Pagination';
 import { academicRequestService, AcademicRequest, AcademicRequestType, CreateAcademicRequestPayload } from '../../services/api/academicRequestService';
@@ -12,7 +12,7 @@ import { classSectionService, ClassSectionTransferResponse } from '../../service
 import apiClient from '../../services/api/authService';
 import { Major } from '../../types/major';
 import { Specialization } from '../../types/specialization';
-import { SubSpecialization } from '../../types/subspecialization';
+
 import { Course } from '../../types/course';
 import toast from 'react-hot-toast';
 
@@ -78,7 +78,6 @@ export const StudentAcademicRequestPage: React.FC = () => {
     const [myCourses, setMyCourses] = useState<StudentCourseOption[]>([]);
     const [majors, setMajors] = useState<Major[]>([]);
     const [specializations, setSpecializations] = useState<Specialization[]>([]);
-    const [subSpecializations, setSubSpecializations] = useState<SubSpecialization[]>([]);
     const [studentProfile, setStudentProfile] = useState<any>(null);
     const [transferTargets, setTransferTargets] = useState<ClassSectionTransferResponse[]>([]);
     const [loadingTargets, setLoadingTargets] = useState(false);
@@ -309,33 +308,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
     }, [formData.toMajor, majors]);
 
     // Fetch sub-specializations when target specialization changes
-    useEffect(() => {
-        const fetchSubSpecs = async () => {
-            // Determine which specialization ID to use
-            let targetSpecId: number | undefined;
 
-            if (selectedType?.value === 'CHANGE_SPECIALIZATION') {
-                // For sub-spec change, always use student's current specialization ID
-                targetSpecId = studentProfile?.specializationId;
-            } else if (formData.toSpecialization) {
-                // For other changes (like major change), find ID by name
-                const spec = specializations.find(s => s.name === formData.toSpecialization);
-                targetSpecId = spec?.id;
-            }
-
-            if (targetSpecId) {
-                try {
-                    const response = await subSpecializationService.getSubSpecializationsBySpecialization(targetSpecId);
-                    setSubSpecializations(response);
-                } catch (err) {
-                    console.error('Failed to fetch sub-specializations', err);
-                }
-            } else {
-                setSubSpecializations([]);
-            }
-        };
-        fetchSubSpecs();
-    }, [formData.toSpecialization, selectedType, studentProfile, specializations]);
 
     // Fetch transfer targets for CHANGE_CLASS
     useEffect(() => {

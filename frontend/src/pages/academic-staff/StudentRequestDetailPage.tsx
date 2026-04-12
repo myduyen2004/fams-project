@@ -2,11 +2,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft,
-    User,
     CheckCircle,
     Loader2,
-    MessageSquare,
-    FileText,
     BookOpen,
     GraduationCap,
     Download,
