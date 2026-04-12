@@ -84,20 +84,20 @@ export const LecturerRequestDetailPage: React.FC = () => {
 
     return (
         <LecturerLayout pageTitle="Chi tiết yêu cầu">
-            <div className="max-w-7xl mx-auto w-full">
+            <div className="max-w-7xl mx-auto w-full space-y-8">
                 {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                    <div className="flex flex-col gap-2">
-                        <Link to="/lecturer/requests" className="flex items-center gap-2 text-sm text-gray-500 hover:text-fpt-orange transition-colors w-fit">
-                            <ArrowLeft size={16} />
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800">
+                    <div className="flex flex-col gap-3">
+                        <Link to="/lecturer/requests" className="flex items-center gap-2 text-sm text-gray-400 hover:text-fpt-orange transition-all w-fit group">
+                            <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
                             Quay lại danh sách
                         </Link>
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Chi tiết yêu cầu thay đổi lịch dạy</h1>
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">Chi tiết yêu cầu thay đổi lịch dạy</h1>
                     </div>
                     {request.status === 'PENDING' && (
                         <button
                             onClick={() => setIsRevokeModalOpen(true)}
-                            className="bg-red-50 hover:bg-red-100 text-red-600 font-bold py-2 px-4 rounded-lg shadow-sm transition-colors flex items-center gap-2 border border-red-200"
+                            className="bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold py-2.5 px-6 rounded-xl shadow-sm transition-all active:scale-95 flex items-center gap-2 border border-rose-100"
                         >
                             <XCircle size={18} />
                             Thu hồi đơn
@@ -108,67 +108,92 @@ export const LecturerRequestDetailPage: React.FC = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     <div className="lg:col-span-8 space-y-6">
                         {/* General Info */}
-                        <section className="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-800">
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Thông tin chung</h2>
-                                <span className="px-3 py-1 bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 rounded-full text-xs font-bold uppercase tracking-wider">
+                        <section className="bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-zinc-800 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-700" />
+                            <div className="flex items-center justify-between mb-8 relative z-10">
+                                <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                                    <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
+                                    Thông tin chung
+                                </h2>
+                                <span className="px-4 py-1.5 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 rounded-full text-[10px] font-bold uppercase tracking-widest border border-blue-100 dark:border-blue-800">
                                     {REQUEST_TYPE_LABELS[request.type] || request.typeLabel}
                                 </span>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
-                                <div>
-                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Lớp học</p>
-                                    <p className="font-semibold text-gray-700 dark:text-gray-200">{request.className}</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Lớp học</p>
+                                    <p className="text-lg font-bold text-gray-800 dark:text-zinc-200">{request.className}</p>
                                 </div>
-                                <div>
-                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Ngày tạo</p>
-                                    <p className="font-semibold text-gray-700 dark:text-gray-200">{formatDate(request.createdAt)}</p>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Ngày tạo đơn</p>
+                                    <p className="text-lg font-bold text-gray-800 dark:text-zinc-200">{formatDate(request.createdAt)}</p>
                                 </div>
                             </div>
                         </section>
 
                         {/* Change Details */}
-                        <section className="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-800">
-                            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Chi tiết thay đổi</h2>
+                        <section className="bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-zinc-800 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-700" />
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-8 flex items-center gap-3 relative z-10">
+                                <div className="w-1.5 h-6 bg-fpt-orange rounded-full" />
+                                Chi tiết thay đổi
+                            </h2>
 
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-4">
-                                {/* Row 1: Thông tin ban đầu */}
-                                <div>
-                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Ngày ban đầu</p>
-                                    <p className="font-semibold text-gray-700 dark:text-gray-200">
-                                        {request.originalDate ? new Date(request.originalDate).toLocaleDateString('vi-VN') : 'Không có'}
-                                    </p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 relative z-10">
+                                {/* Ban đầu */}
+                                <div className="space-y-6">
+                                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+                                        Thông tin hiện tại
+                                    </h3>
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest opacity-70">Ngày</p>
+                                            <p className="font-bold text-gray-700 dark:text-zinc-300">
+                                                {request.originalDate ? new Date(request.originalDate).toLocaleDateString('vi-VN') : '---'}
+                                            </p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest opacity-70">Slot</p>
+                                            <p className="font-bold text-gray-700 dark:text-zinc-300">
+                                                {request.originalSlotNumber ? `Slot ${request.originalSlotNumber}` : '---'}
+                                            </p>
+                                        </div>
+                                        <div className="col-span-2 space-y-1">
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest opacity-70">Phòng học</p>
+                                            <p className="font-bold text-gray-700 dark:text-zinc-300">
+                                                {request.originalRoomName || '---'}
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Slot ban đầu</p>
-                                    <p className="font-semibold text-gray-700 dark:text-gray-200">
-                                        {request.originalSlotNumber ? `Slot ${request.originalSlotNumber}` : 'Không có'}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Phòng ban đầu</p>
-                                    <p className="font-semibold text-gray-700 dark:text-gray-200">
-                                        {request.originalRoomName || 'Không có'}
-                                    </p>
-                                </div>
-                                {/* Row 2: Thông tin yêu cầu */}
-                                <div>
-                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Ngày yêu cầu</p>
-                                    <p className="font-semibold text-gray-700 dark:text-gray-200">
-                                        {request.requestedDate ? new Date(request.requestedDate).toLocaleDateString('vi-VN') : 'Không có'}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Slot yêu cầu</p>
-                                    <p className="font-semibold text-gray-700 dark:text-gray-200">
-                                        {request.requestedSlotNumber ? `Slot ${request.requestedSlotNumber}` : 'Không có'}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Phòng yêu cầu</p>
-                                    <p className="font-semibold text-gray-700 dark:text-gray-200">
-                                        {request.requestedRoomName || 'Không đổi'}
-                                    </p>
+
+                                {/* Yêu cầu */}
+                                <div className="space-y-6 bg-orange-50/30 dark:bg-orange-950/10 p-6 rounded-2xl border border-orange-100/50 dark:border-orange-900/20">
+                                    <h3 className="text-xs font-bold text-fpt-orange uppercase tracking-widest flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-fpt-orange" />
+                                        Thông tin đề xuất
+                                    </h3>
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest">Ngày</p>
+                                            <p className="font-bold text-orange-900 dark:text-orange-200">
+                                                {request.requestedDate ? new Date(request.requestedDate).toLocaleDateString('vi-VN') : '---'}
+                                            </p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest">Slot</p>
+                                            <p className="font-bold text-orange-900 dark:text-orange-200">
+                                                {request.requestedSlotNumber ? `Slot ${request.requestedSlotNumber}` : '---'}
+                                            </p>
+                                        </div>
+                                        <div className="col-span-2 space-y-1">
+                                            <p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest">Phòng học</p>
+                                            <p className="font-bold text-orange-900 dark:text-orange-200">
+                                                {request.requestedRoomName || 'Không đổi'}
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </section>
@@ -241,41 +266,44 @@ export const LecturerRequestDetailPage: React.FC = () => {
                         </section>
                     </div>
 
-                    <div className="lg:col-span-4">
-                        <section className="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-800 sticky top-8">
-                            <h2 className="text-lg font-bold text-slate-800 dark:text-white mb-6">Trạng thái & Phê duyệt</h2>
+                    <div className="lg:col-span-4 space-y-8">
+                        <section className="bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-zinc-800 sticky top-8">
+                            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-8 flex items-center gap-3">
+                                <div className="w-1.5 h-6 bg-orange-400 rounded-full" />
+                                Phê duyệt
+                            </h2>
 
-                            <div className="mb-8 text-center p-8 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-100 dark:border-orange-900/30">
-                                <p className="text-xs font-bold text-fpt-orange uppercase tracking-widest mb-3">TRẠNG THÁI HIỆN TẠI</p>
-                                <span className={`inline-block px-8 py-2.5 rounded-full text-lg font-bold shadow-lg text-white ${request.status === 'APPROVED' ? 'bg-green-500 shadow-green-500/30' :
-                                    request.status === 'REJECTED' ? 'bg-red-500 shadow-red-500/30' :
-                                        request.status === 'REVOKED' ? 'bg-gray-500 shadow-gray-500/30' :
-                                            'bg-fpt-orange shadow-orange-500/30'
+                            <div className="mb-8 text-center p-8 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/10 dark:to-amber-900/10 rounded-3xl border border-orange-100 dark:border-orange-900/30">
+                                <p className="text-[10px] font-bold text-fpt-orange uppercase tracking-widest mb-4">TRẠNG THÁI HIỆN TẠI</p>
+                                <span className={`inline-block px-8 py-3 rounded-2xl text-lg font-bold shadow-xl text-white ${request.status === 'APPROVED' ? 'bg-emerald-500 shadow-emerald-500/20' :
+                                    request.status === 'REJECTED' ? 'bg-rose-500 shadow-rose-500/20' :
+                                        request.status === 'REVOKED' ? 'bg-slate-500 shadow-slate-500/20' :
+                                            'bg-fpt-orange shadow-orange-500/20'
                                     }`}>
                                     {request.statusLabel}
                                 </span>
                             </div>
 
-                            <div className="space-y-6 px-2">
-                                <div>
-                                    <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">NGƯỜI PHÊ DUYỆT</p>
-                                    <p className="font-medium text-slate-700 dark:text-slate-300">
-                                        {request.approverName || <span className="italic text-slate-400">Chưa có thông tin</span>}
+                            <div className="space-y-6">
+                                <div className="p-4 rounded-2xl bg-gray-50/50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">NGƯỜI PHÊ DUYỆT</p>
+                                    <p className="font-bold text-gray-700 dark:text-zinc-300">
+                                        {request.approverName || <span className="italic text-gray-400 font-medium text-sm">Chưa có thông tin</span>}
                                     </p>
                                 </div>
 
-                                <div>
-                                    <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">THỜI GIAN PHÊ DUYỆT</p>
-                                    <p className="font-medium text-slate-700 dark:text-slate-300">
-                                        {request.approvedAt ? formatDate(request.approvedAt) : <span className="italic text-slate-400">Chưa có thông tin</span>}
+                                <div className="p-4 rounded-2xl bg-gray-50/50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">THỜI GIAN PHÊ DUYỆT</p>
+                                    <p className="font-bold text-gray-700 dark:text-zinc-300">
+                                        {request.approvedAt ? formatDate(request.approvedAt) : <span className="italic text-gray-400 font-medium text-sm">Chưa có thông tin</span>}
                                     </p>
                                 </div>
 
-                                <div className="border-t border-slate-100 dark:border-slate-800 pt-6">
-                                    <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">GHI CHÚ PHÊ DUYỆT</p>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400 italic leading-relaxed">
-                                        {request.approverNote || 'Yêu cầu đang chờ quản lý xem xét và phê duyệt.'}
-                                    </p>
+                                <div className="border-t border-gray-100 dark:border-zinc-800 pt-6">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">GHI CHÚ HỆ THỐNG</p>
+                                    <div className="p-4 bg-slate-50 dark:bg-zinc-800/50 rounded-2xl text-sm text-gray-500 dark:text-zinc-400 italic leading-relaxed border border-slate-100 dark:border-zinc-700">
+                                        {request.approverNote || 'Đang chờ xử lý từ Phòng Đào Tạo.'}
+                                    </div>
                                 </div>
                             </div>
                         </section>

@@ -45,6 +45,7 @@ interface MessagesPageProps {
 const UNREAD_THRESHOLD = 10;
 const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
   const location = useLocation();
+
   const [groups, setGroups] = useState<ChatGroupResponse[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<ChatGroupResponse | null>(
     null
@@ -299,7 +300,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
         allGroups.forEach((group) => {
           // Message subscription
           const msgId = `messages_${group.id}`;
-          if (stompSubsRef.current[msgId])
+          if (stompSubsRef.current[msgId] && stompClient.connected)
             stompSubsRef.current[msgId].unsubscribe();
           stompSubsRef.current[msgId] = stompClient.subscribe(
             `/topic/chat/${group.id}`,
@@ -386,11 +387,11 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                       },
                       unreadCount:
                         selectedGroupRef.current?.id !== group.id &&
-                        !isOwnMessage
+                          !isOwnMessage
                           ? (g.unreadCount || 0) + 1
                           : selectedGroupRef.current?.id === group.id
-                          ? 0
-                          : g.unreadCount,
+                            ? 0
+                            : g.unreadCount,
                     };
                   }
                   return g;
@@ -411,7 +412,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
 
           // Read receipt subscription for this group
           const readId = `read_${group.id}`;
-          if (stompSubsRef.current[readId])
+          if (stompSubsRef.current[readId] && stompClient.connected)
             stompSubsRef.current[readId].unsubscribe();
           stompSubsRef.current[readId] = stompClient.subscribe(
             `/topic/chat/${group.id}/read`,
@@ -487,7 +488,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
 
           // Delete subscription for this group
           const deleteId = `delete_${group.id}`;
-          if (stompSubsRef.current[deleteId])
+          if (stompSubsRef.current[deleteId] && stompClient.connected)
             stompSubsRef.current[deleteId].unsubscribe();
           stompSubsRef.current[deleteId] = stompClient.subscribe(
             `/topic/chat/${group.id}/delete`,
@@ -667,11 +668,11 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
 
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       const currentUserId = Number(user.id);
-      const msgList = data.content.map((msg) => ({
+      const msgList = [...data.content].reverse().map((msg) => ({
         ...msg,
         isOwn: Number(msg.senderId) === currentUserId,
       }));
-      console.log("[MessagesPage] Formatted messages list:", msgList);
+      console.log("[MessagesPage] Formatted messages list (reversed):", msgList);
       setMessages(msgList);
 
       // If unread messages <= THRESHOLD, mark as read automatically
@@ -760,38 +761,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
 
   useLayoutEffect(() => {
     if (messages.length > 0) {
-      // Priority: Jump to first unread if exists on initial load AND over threshold
-      if (
-        isInitialLoad.current &&
-        selectedGroup?.unreadCount &&
-        selectedGroup.unreadCount > UNREAD_THRESHOLD &&
-        selectedGroup?.firstUnreadMessageId
-      ) {
-        const unreadEl =
-          messageRefs.current[selectedGroup.firstUnreadMessageId];
-        if (unreadEl) {
-          console.info(
-            "[MessagesPage] Unread count > threshold, stopping at boundary:",
-            selectedGroup.firstUnreadMessageId
-          );
-          unreadEl.scrollIntoView({ behavior: "auto", block: "end" });
-          setUnreadMessageCount(selectedGroup.unreadCount);
-          setShowScrollBottom(true);
-          isInitialLoad.current = false;
-          return;
-        } else {
-          // Even if el not found (on previous page etc), if count > 0 and over threshold, dont auto-scroll to bottom
-          console.info(
-            "[MessagesPage] Unread count > threshold but element not found. Staying at top."
-          );
-          setUnreadMessageCount(selectedGroup.unreadCount);
-          setShowScrollBottom(true);
-          isInitialLoad.current = false;
-          return;
-        }
-      }
-
-      // Priority: Always scroll to bottom as requested by user if under threshold
+      // Always scroll to bottom as requested by user
       scrollToBottom(isInitialLoad.current);
 
       if (isInitialLoad.current) {
@@ -983,8 +953,8 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
       msg.type === "TEXT" || msg.type === "LINK"
         ? msg.content
         : msg.type === "IMAGE"
-        ? "[Hình ảnh]"
-        : "[Tệp tin]";
+          ? "[Hình ảnh]"
+          : "[Tệp tin]";
 
     setReplyingTo({
       id: msg.id,
@@ -997,7 +967,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
     // Focus input
     setTimeout(() => {
       const input = document.querySelector(
-        'input[placeholder="Type a message..."]'
+        'input[placeholder="Nhập tin nhắn..."]'
       ) as HTMLInputElement;
       if (input) input.focus();
     }, 100);
@@ -1164,9 +1134,8 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
           {images.map((img) => (
             <div
               key={img.id}
-              className={`relative aspect-square cursor-pointer active:scale-95 transition-transform overflow-hidden ${
-                count === 1 ? "max-h-[300px]" : ""
-              }`}
+              className={`relative aspect-square cursor-pointer active:scale-95 transition-transform overflow-hidden ${count === 1 ? "max-h-[300px]" : ""
+                }`}
               onClick={() =>
                 handleOpenPreview(
                   img.attachmentUrl!,
@@ -1178,11 +1147,11 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
               <img
                 src={
                   img.attachmentUrl &&
-                  img.attachmentUrl.includes("cloudinary.com")
+                    img.attachmentUrl.includes("cloudinary.com")
                     ? img.attachmentUrl.replace(
-                        "/upload/",
-                        "/upload/f_auto,q_auto,w_300/"
-                      )
+                      "/upload/",
+                      "/upload/f_auto,q_auto,w_300/"
+                    )
                     : img.attachmentUrl || ""
                 }
                 alt={img.attachmentName || "Image"}
@@ -1209,11 +1178,11 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
             <img
               src={
                 msg.attachmentUrl &&
-                msg.attachmentUrl.includes("cloudinary.com")
+                  msg.attachmentUrl.includes("cloudinary.com")
                   ? msg.attachmentUrl.replace(
-                      "/upload/",
-                      "/upload/f_auto,q_auto,w_300/"
-                    )
+                    "/upload/",
+                    "/upload/f_auto,q_auto,w_300/"
+                  )
                   : msg.attachmentUrl
               }
               alt={msg.attachmentName || "Image"}
@@ -1292,15 +1261,14 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
           <div className="p-3 flex items-center gap-3">
             {/* File Icon */}
             <div
-              className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm ${
-                isPDF
-                  ? "bg-[#FF7A7A]"
-                  : isWord
+              className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm ${isPDF
+                ? "bg-[#FF7A7A]"
+                : isWord
                   ? "bg-[#4B8BFF]"
                   : isExcel
-                  ? "bg-[#21A366]"
-                  : "bg-gray-400"
-              }`}
+                    ? "bg-[#21A366]"
+                    : "bg-gray-400"
+                }`}
             >
               {isPDF ? (
                 <span className="text-white font-black text-xs">PDF</span>
@@ -1386,9 +1354,8 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
           }
           target="_blank"
           rel="noopener noreferrer"
-          className={`flex items-center gap-2 underline break-all hover:opacity-80 transition-opacity ${
-            msg.isOwn ? "text-white" : "text-blue-600"
-          }`}
+          className={`flex items-center gap-2 underline break-all hover:opacity-80 transition-opacity ${msg.isOwn ? "text-white" : "text-blue-600"
+            }`}
         >
           <ExternalLink size={16} className="flex-shrink-0" />
           {msg.content}
@@ -1404,9 +1371,8 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
     <div className="flex h-[calc(100vh-80px)] bg-gray-50 overflow-hidden">
       {/* Sidebar - Group List */}
       <div
-        className={`${
-          selectedGroup ? "hidden md:flex" : "flex"
-        } flex-col relative bg-white border-r border-gray-100 transition-[width] duration-75`}
+        className={`${selectedGroup ? "hidden md:flex" : "flex"
+          } flex-col relative bg-white border-r border-gray-100 transition-[width] duration-75`}
         style={{
           width:
             selectedGroup && window.innerWidth < 768
@@ -1438,11 +1404,10 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
             />
             <button
               onClick={() => setIsUnreadOnly(!isUnreadOnly)}
-              className={`absolute right-4 top-1/2 transform -translate-y-1/2 p-2 rounded-full transition-all ${
-                isUnreadOnly
-                  ? "bg-[#FF8C33] text-white"
-                  : "text-gray-400 hover:bg-gray-100"
-              }`}
+              className={`absolute right-4 top-1/2 transform -translate-y-1/2 p-2 rounded-full transition-all ${isUnreadOnly
+                ? "bg-[#FF8C33] text-white"
+                : "text-gray-400 hover:bg-gray-100"
+                }`}
               title={isUnreadOnly ? "Hiện tất cả" : "Chỉ hiện chưa xem"}
             >
               <MessageCircle size={16} />
@@ -1457,15 +1422,15 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
               ></div>
             </div>
           ) : (isUnreadOnly
-              ? groups.filter((g) => (g.unreadCount || 0) > 0)
-              : groups
-            ).filter(
-              (group) =>
-                group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                group.lecturerName
-                  ?.toLowerCase()
-                  .includes(searchTerm.toLowerCase())
-            ).length === 0 ? (
+            ? groups.filter((g) => (g.unreadCount || 0) > 0)
+            : groups
+          ).filter(
+            (group) =>
+              group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              group.lecturerName
+                ?.toLowerCase()
+                .includes(searchTerm.toLowerCase())
+          ).length === 0 ? (
             <div className="flex flex-col items-center justify-center h-32 text-gray-500">
               <MessageCircle size={32} className="mb-2" />
               <p>
@@ -1497,11 +1462,10 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                   <div
                     key={group.id}
                     onClick={() => handleGroupSelect(group)}
-                    className={`p-3 rounded-2xl cursor-pointer transition-all duration-300 relative bg-white border ${
-                      isSelected
-                        ? "border-orange-200 bg-orange-50/30"
-                        : "border-transparent hover:bg-gray-50/80 shadow-none"
-                    }`}
+                    className={`p-3 rounded-2xl cursor-pointer transition-all duration-300 relative bg-white border ${isSelected
+                      ? "border-orange-200 bg-orange-50/30"
+                      : "border-transparent hover:bg-gray-50/80 shadow-none"
+                      }`}
                   >
                     <div className="flex items-center gap-4">
                       {(() => {
@@ -1513,9 +1477,8 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                         if (avatars.length === 0) {
                           return (
                             <div
-                              className={`w-11 h-11 ${
-                                isSelected ? "bg-orange-100" : "bg-orange-50"
-                              } rounded-full flex items-center justify-center flex-shrink-0 border border-transparent`}
+                              className={`w-11 h-11 ${isSelected ? "bg-orange-100" : "bg-orange-50"
+                                } rounded-full flex items-center justify-center flex-shrink-0 border border-transparent`}
                             >
                               <Users
                                 className={
@@ -1534,16 +1497,14 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                             {avatars.map((member, idx) => (
                               <div
                                 key={member.userId}
-                                className={`w-9 h-9 rounded-full border-2 border-white dark:border-zinc-950 overflow-hidden shadow-sm relative flex items-center justify-center bg-gray-50 ${
-                                  idx === 0 ? "z-20" : "z-10 bg-orange-200"
-                                }`}
+                                className={`w-9 h-9 rounded-full border-2 border-white dark:border-zinc-950 overflow-hidden shadow-sm relative flex items-center justify-center bg-gray-50 ${idx === 0 ? "z-20" : "z-10 bg-orange-200"
+                                  }`}
                               >
                                 {member.avatar ? (
                                   <>
                                     <img
-                                      src={`${member.avatar}${
-                                        member.avatar.includes("?") ? "&" : "?"
-                                      }t=${new Date().getTime()}`}
+                                      src={`${member.avatar}${member.avatar.includes("?") ? "&" : "?"
+                                        }t=${new Date().getTime()}`}
                                       alt={member.fullName}
                                       className="w-full h-full object-cover"
                                       onError={(e) => {
@@ -1592,25 +1553,24 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                           <p className="text-[12px] text-gray-500 truncate font-medium">
                             {group.lastMessage
                               ? (() => {
-                                  const lm = group.lastMessage;
-                                  let preview = "";
-                                  if (lm.type === "IMAGE")
-                                    preview = "🖼️ Hình ảnh";
-                                  else if (lm.type === "FILE")
-                                    preview = `📎 ${
-                                      lm.attachmentName ||
-                                      lm.content ||
-                                      "Tệp tin"
+                                const lm = group.lastMessage;
+                                let preview = "";
+                                if (lm.type === "IMAGE")
+                                  preview = "🖼️ Hình ảnh";
+                                else if (lm.type === "FILE")
+                                  preview = `📎 ${lm.attachmentName ||
+                                    lm.content ||
+                                    "Tệp tin"
                                     }`;
-                                  else if (lm.type === "LINK")
-                                    preview = `🔗 ${lm.content || "Liên kết"}`;
-                                  else preview = lm.content || "";
-                                  return (
-                                    <>
-                                      {lm.senderName}: {preview}
-                                    </>
-                                  );
-                                })()
+                                else if (lm.type === "LINK")
+                                  preview = `🔗 ${lm.content || "Liên kết"}`;
+                                else preview = lm.content || "";
+                                return (
+                                  <>
+                                    {lm.senderName}: {preview}
+                                  </>
+                                );
+                              })()
                               : `Mr.${group.lecturerName || "An"}: `}
                           </p>
                           {group.unreadCount !== undefined &&
@@ -1664,16 +1624,14 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                     {avatars.map((member, idx) => (
                       <div
                         key={member.userId}
-                        className={`w-10 h-10 rounded-full border-2 border-white dark:border-zinc-950 overflow-hidden shadow-sm relative flex items-center justify-center bg-gray-50 ${
-                          idx === 0 ? "z-20" : "z-10 bg-orange-200"
-                        }`}
+                        className={`w-10 h-10 rounded-full border-2 border-white dark:border-zinc-950 overflow-hidden shadow-sm relative flex items-center justify-center bg-gray-50 ${idx === 0 ? "z-20" : "z-10 bg-orange-200"
+                          }`}
                       >
                         {member.avatar ? (
                           <>
                             <img
-                              src={`${member.avatar}${
-                                member.avatar.includes("?") ? "&" : "?"
-                              }t=${new Date().getTime()}`}
+                              src={`${member.avatar}${member.avatar.includes("?") ? "&" : "?"
+                                }t=${new Date().getTime()}`}
                               alt={member.fullName}
                               className="w-full h-full object-cover"
                               onError={(e) => {
@@ -1712,9 +1670,8 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                     setShowDetailSidebar(!showDetailSidebar);
                     setDetailViewMode("INFO");
                   }}
-                  className={`p-2 hover:bg-gray-100 rounded-full transition-colors ${
-                    showDetailSidebar ? textColor : "text-gray-500"
-                  }`}
+                  className={`p-2 hover:bg-gray-100 rounded-full transition-colors ${showDetailSidebar ? textColor : "text-gray-500"
+                    }`}
                   title="Thông tin nhóm"
                 >
                   <Info size={20} />
@@ -1825,10 +1782,10 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                           const nextMsg = messages[j];
                           const timeDiff =
                             nextMsg.sentAt &&
-                            messages[j - 1] &&
-                            messages[j - 1].sentAt
+                              messages[j - 1] &&
+                              messages[j - 1].sentAt
                               ? new Date(nextMsg.sentAt).getTime() -
-                                new Date(messages[j - 1].sentAt).getTime()
+                              new Date(messages[j - 1].sentAt).getTime()
                               : 999999;
                           if (
                             nextMsg.type === "IMAGE" &&
@@ -1869,7 +1826,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                       const isDateChanged =
                         !prevMsgDate ||
                         formatDate(processedMessages[index - 1].sentAt) !==
-                          formatDate(msg.sentAt);
+                        formatDate(msg.sentAt);
                       const timeGapSinceLast = prevMsgDate
                         ? currentMsgDate.getTime() - prevMsgDate.getTime()
                         : 0;
@@ -1908,14 +1865,14 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                             const isFirstInSequence =
                               index === 0 ||
                               processedMessages[index - 1].senderId !==
-                                msg.senderId ||
+                              msg.senderId ||
                               showDateSeparator ||
                               showTimeSeparator;
 
                             const isLastInSequence =
                               index === processedMessages.length - 1 ||
                               processedMessages[index + 1].senderId !==
-                                msg.senderId ||
+                              msg.senderId ||
                               (index < processedMessages.length - 1 &&
                                 (formatDate(
                                   processedMessages[index + 1].sentAt
@@ -1923,48 +1880,41 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                                   new Date(
                                     processedMessages[index + 1].sentAt
                                   ).getTime() -
-                                    currentMsgDate.getTime() >
-                                    3600000));
+                                  currentMsgDate.getTime() >
+                                  3600000));
 
                             const getRadiusClasses = () => {
                               const shadow =
                                 "shadow-[0_1px_2px_rgba(0,0,0,0.05)]";
                               if (msg.isOwn) {
-                                return `${shadow} ${
-                                  isFirstInSequence
-                                    ? "rounded-tr-2xl"
-                                    : "rounded-tr-sm"
-                                } ${
-                                  isLastInSequence
+                                return `${shadow} ${isFirstInSequence
+                                  ? "rounded-tr-2xl"
+                                  : "rounded-tr-sm"
+                                  } ${isLastInSequence
                                     ? "rounded-br-2xl"
                                     : "rounded-br-sm"
-                                } rounded-l-2xl`;
+                                  } rounded-l-2xl`;
                               } else {
-                                return `${shadow} ${
-                                  isFirstInSequence
-                                    ? "rounded-tl-2xl"
-                                    : "rounded-tl-sm"
-                                } ${
-                                  isLastInSequence
+                                return `${shadow} ${isFirstInSequence
+                                  ? "rounded-tl-2xl"
+                                  : "rounded-tl-sm"
+                                  } ${isLastInSequence
                                     ? "rounded-bl-2xl"
                                     : "rounded-bl-sm"
-                                } rounded-r-2xl`;
+                                  } rounded-r-2xl`;
                               }
                             };
 
                             return (
                               <div
                                 ref={(el) => (messageRefs.current[msg.id] = el)}
-                                className={`flex ${
-                                  msg.isOwn ? "justify-end" : "justify-start"
-                                } ${
-                                  isFirstInSequence ? "mt-4" : "mt-0"
-                                } w-full relative z-0`}
+                                className={`flex ${msg.isOwn ? "justify-end" : "justify-start"
+                                  } ${isFirstInSequence ? "mt-4" : "mt-0"
+                                  } w-full relative z-0`}
                               >
                                 <div
-                                  className={`flex gap-3 max-w-[85%] ${
-                                    msg.isOwn ? "flex-row-reverse" : ""
-                                  }`}
+                                  className={`flex gap-3 max-w-[85%] ${msg.isOwn ? "flex-row-reverse" : ""
+                                    }`}
                                 >
                                   {!msg.isOwn && (
                                     <div className="w-8 flex-shrink-0 flex flex-col justify-end pb-1">
@@ -2010,36 +1960,49 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                                     >
                                       <div
                                         title={formatFullTime(msg.sentAt)}
-                                        className={`group/bubble relative cursor-pointer transition-all duration-200 ${
-                                          (msg.type === "IMAGE" ||
+                                        className={`group/bubble relative cursor-pointer transition-all duration-200 ${msg.reactions && msg.reactions.length > 0 ? "z-20" : "z-10"
+                                          } hover:z-30 ${(msg.type === "IMAGE" ||
                                             msg.type === "IMAGE_GROUP" ||
                                             msg.type === "FILE") &&
-                                          !msg.isDeleted
+                                            !msg.isDeleted
                                             ? "p-0 overflow-hidden"
                                             : "px-4 py-2.5"
-                                        } ${getRadiusClasses()} ${
-                                          (msg.type === "IMAGE" ||
+                                          } ${getRadiusClasses()} ${(msg.type === "IMAGE" ||
                                             msg.type === "IMAGE_GROUP") &&
-                                          !msg.isDeleted
+                                            !msg.isDeleted
                                             ? ""
                                             : msg.isOwn
-                                            ? "bg-gradient-to-br from-[#FF8C33] to-[#FF7A1A] text-white shadow-sm"
-                                            : "bg-white text-gray-700 shadow-sm"
-                                        } min-w-[40px]`}
+                                              ? "bg-gradient-to-br from-[#FF8C33] to-[#FF7A1A] text-white shadow-sm"
+                                              : "bg-white text-gray-700 shadow-sm"
+                                          } min-w-[40px]`}
                                       >
                                         <div className="flex flex-col">
                                           {msg.replyToId && (
                                             <div
-                                              className={`mb-2 p-2 rounded-lg text-xs border-l-2 ${
-                                                msg.isOwn
-                                                  ? "bg-orange-600/30 border-white/50 text-white/90"
-                                                  : "bg-gray-100 border-orange-500 text-gray-500"
-                                              }`}
+                                              className={`mb-2 p-2 rounded-lg text-xs border-l-2 cursor-pointer hover:brightness-95 transition-all ${msg.isOwn
+                                                ? "bg-orange-600/30 border-white/50 text-white/90"
+                                                : "bg-gray-100 border-orange-500 text-gray-500"
+                                                }`}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (msg.replyToId) {
+                                                  const targetEl = messageRefs.current[msg.replyToId];
+                                                  if (targetEl) {
+                                                    targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+                                                    // Briefly highlight the target message
+                                                    targetEl.style.transition = "background 0.3s";
+                                                    targetEl.style.background = "rgba(255,140,51,0.15)";
+                                                    setTimeout(() => { targetEl.style.background = ""; }, 1500);
+                                                  }
+                                                }
+                                              }}
                                             >
-                                              <p className="font-bold mb-0.5">
-                                                Trả lời{" "}
-                                                {msg.replyToSenderName || ""}:
-                                              </p>
+                                              <div className="flex items-center gap-1 mb-0.5">
+                                                <p className="font-bold">
+                                                  Trả lời{" "}
+                                                  {msg.replyToSenderName || ""}:
+                                                </p>
+                                              </div>
                                               <div className="flex items-center gap-2">
                                                 {msg.replyToType === "IMAGE" &&
                                                   msg.replyToAttachmentUrl && (
@@ -2047,29 +2010,31 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                                                       <img
                                                         src={
                                                           msg.replyToAttachmentUrl &&
-                                                          msg.replyToAttachmentUrl.includes(
-                                                            "cloudinary.com"
-                                                          )
+                                                            msg.replyToAttachmentUrl.includes(
+                                                              "cloudinary.com"
+                                                            )
                                                             ? msg.replyToAttachmentUrl.replace(
-                                                                "/upload/",
-                                                                "/upload/c_thumb,w_100,h_100,f_auto/"
-                                                              )
+                                                              "/upload/",
+                                                              "/upload/c_thumb,w_100,h_100,f_auto/"
+                                                            )
                                                             : msg.replyToAttachmentUrl ||
-                                                              ""
+                                                            ""
                                                         }
                                                         alt=""
                                                         className="w-full h-full object-cover"
                                                       />
                                                     </div>
                                                   )}
-                                                <p className="line-clamp-2 italic text-xs">
-                                                  {msg.replyToContent ||
+                                                <p className={`line-clamp-2 italic text-xs pr-4 overflow-visible ${msg.replyToIsDeleted ? "opacity-70" : ""
+                                                  }`}>
+                                                  {msg.replyToIsDeleted
+                                                    ? "Tin nhắn đã bị thu hồi"
+                                                    : msg.replyToContent ||
                                                     (msg.replyToType === "IMAGE"
                                                       ? "[Hình ảnh]"
-                                                      : msg.replyToType ===
-                                                        "FILE"
-                                                      ? "[Tệp tin]"
-                                                      : "")}
+                                                      : msg.replyToType === "FILE"
+                                                        ? "[Tệp tin]"
+                                                        : "")}
                                                 </p>
                                               </div>
                                             </div>
@@ -2089,9 +2054,8 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                                       {!msg.isDeleted &&
                                         showReactionPickerId === msg.id && (
                                           <div
-                                            className={`absolute -top-12 ${
-                                              msg.isOwn ? "right-0" : "left-0"
-                                            } z-[100] pb-2`}
+                                            className={`absolute -top-12 ${msg.isOwn ? "right-0" : "left-0"
+                                              } z-[100] pb-2`}
                                             onMouseLeave={() =>
                                               setShowReactionPickerId(null)
                                             }
@@ -2127,9 +2091,8 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                                         )}
                                       {!msg.isDeleted && (
                                         <div
-                                          className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity z-20 ${
-                                            msg.isOwn ? "-left-28" : "-right-20"
-                                          }`}
+                                          className={`absolute top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity z-20 ${msg.isOwn ? "-left-28" : "-right-20"
+                                            }`}
                                         >
                                           <button
                                             onClick={(e) => {
@@ -2168,16 +2131,15 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                                       {!msg.isDeleted &&
                                         msg.reactions &&
                                         msg.reactions.length > 0 && (
-                                          <div className="absolute -bottom-3 -right-2 flex flex-wrap gap-1 z-30 scale-90 origin-bottom-right max-w-[150px] justify-end">
+                                          <div className="absolute -bottom-3 -right-2 flex flex-wrap gap-1 z-[40] scale-90 origin-bottom-right max-w-[150px] justify-end">
                                             {msg.reactions.map(
                                               (r: any, ri: number) => (
                                                 <div
                                                   key={ri}
-                                                  className={`px-2 py-0.5 rounded-full shadow-md border flex items-center gap-1 cursor-pointer transition-all duration-200 hover:scale-110 ${
-                                                    r.reactedByMe
-                                                      ? "bg-orange-50 border-orange-200 text-orange-600"
-                                                      : "bg-white border-gray-100 text-gray-700"
-                                                  }`}
+                                                  className={`px-2 py-0.5 rounded-full shadow-md border flex items-center gap-1 cursor-pointer transition-all duration-200 hover:scale-110 ${r.reactedByMe
+                                                    ? "bg-orange-50 border-orange-200 text-orange-600"
+                                                    : "bg-white border-gray-100 text-gray-700"
+                                                    }`}
                                                   onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleSelectReaction(
@@ -2201,7 +2163,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                                     {!msg.isDeleted &&
                                       (expandedMessageId === msg.id ||
                                         index ===
-                                          processedMessages.length - 1) &&
+                                        processedMessages.length - 1) &&
                                       msg.readers &&
                                       msg.readers.filter(
                                         (r: any) =>
@@ -2209,11 +2171,10 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                                           Number(msg.senderId)
                                       ).length > 0 && (
                                         <div
-                                          className={`flex items-center mt-1 ${
-                                            msg.isOwn
-                                              ? "justify-end"
-                                              : "justify-start"
-                                          } px-1 relative z-10 min-h-[20px] gap-2 animate-in fade-in slide-in-from-top-1 duration-200`}
+                                          className={`flex items-center mt-1 ${msg.isOwn
+                                            ? "justify-end"
+                                            : "justify-start"
+                                            } px-1 relative z-10 min-h-[20px] gap-2 animate-in fade-in slide-in-from-top-1 duration-200`}
                                         >
                                           <div className="flex items-center -space-x-2 transition-all duration-300 hover:space-x-1">
                                             {msg.readers
@@ -2355,7 +2316,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                 </div>
               )}
 
-              <div className="flex items-center gap-2 bg-gray-50/80 p-1.5 rounded-full border border-gray-100 focus-within:bg-white focus-within:shadow-sm transition-all">
+              <div className="flex items-center gap-2 bg-gray-50/80 p-1.5 rounded-full border border-gray-100 focus-within:bg-white focus-within:shadow-sm transition-all mr-4">
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   className="p-2 bg-white text-gray-400 rounded-full border border-gray-100 hover:text-orange-500 hover:border-orange-200 transition-all active:scale-95 flex items-center justify-center shrink-0"
@@ -2378,7 +2339,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                     handleTyping();
                   }}
                   onKeyPress={handleKeyPress}
-                  placeholder="Type a message..."
+                  placeholder="Nhập tin nhắn..."
                   className="flex-1 bg-transparent border-none focus:ring-0 text-base font-medium text-gray-800 py-2"
                 />
                 <button
@@ -2454,16 +2415,14 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                             {avatars.map((member, idx) => (
                               <div
                                 key={member.userId}
-                                className={`w-14 h-14 rounded-full border border-white dark:border-zinc-950 overflow-hidden shadow-md relative transition-transform hover:-translate-y-1 ${
-                                  idx === 0 ? "z-20" : "z-10 bg-orange-200"
-                                }`}
+                                className={`w-14 h-14 rounded-full border border-white dark:border-zinc-950 overflow-hidden shadow-md relative transition-transform hover:-translate-y-1 ${idx === 0 ? "z-20" : "z-10 bg-orange-200"
+                                  }`}
                               >
                                 {member.avatar ? (
                                   <>
                                     <img
-                                      src={`${member.avatar}${
-                                        member.avatar.includes("?") ? "&" : "?"
-                                      }t=${new Date().getTime()}`}
+                                      src={`${member.avatar}${member.avatar.includes("?") ? "&" : "?"
+                                        }t=${new Date().getTime()}`}
                                       alt={member.fullName}
                                       className="w-full h-full object-cover block"
                                       onError={(e) => {
@@ -2588,17 +2547,16 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                         <button
                           key={tab}
                           onClick={() => setMediaTab(tab)}
-                          className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-[14px] transition-all duration-300 ${
-                            mediaTab === tab
-                              ? "bg-white shadow-sm text-[#FF8C33]"
-                              : "text-gray-400 hover:text-orange-500"
-                          }`}
+                          className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-[14px] transition-all duration-300 ${mediaTab === tab
+                            ? "bg-white shadow-sm text-[#FF8C33]"
+                            : "text-gray-400 hover:text-orange-500"
+                            }`}
                         >
                           {tab === "IMAGE"
                             ? "Ảnh"
                             : tab === "FILE"
-                            ? "File"
-                            : "Link"}
+                              ? "File"
+                              : "Link"}
                         </button>
                       ))}
                     </div>
@@ -2623,11 +2581,11 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                                 <img
                                   src={
                                     m.attachmentUrl &&
-                                    m.attachmentUrl.includes("cloudinary.com")
+                                      m.attachmentUrl.includes("cloudinary.com")
                                       ? m.attachmentUrl.replace(
-                                          "/upload/",
-                                          "/upload/f_auto,q_auto/"
-                                        )
+                                        "/upload/",
+                                        "/upload/f_auto,q_auto/"
+                                      )
                                       : m.attachmentUrl!
                                   }
                                   alt=""
@@ -2638,13 +2596,13 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                           {messages.filter(
                             (m) => m.type === "IMAGE" && !m.isDeleted
                           ).length === 0 && (
-                            <div className="col-span-3 text-center py-20 opacity-20">
-                              <ImageIcon size={48} className="mx-auto mb-2" />
-                              <p className="text-xs font-black uppercase tracking-widest">
-                                Không có ảnh
-                              </p>
-                            </div>
-                          )}
+                              <div className="col-span-3 text-center py-20 opacity-20">
+                                <ImageIcon size={48} className="mx-auto mb-2" />
+                                <p className="text-xs font-black uppercase tracking-widest">
+                                  Không có ảnh
+                                </p>
+                              </div>
+                            )}
                         </div>
                       )}
 
@@ -2684,13 +2642,13 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                           {messages.filter(
                             (m) => m.type === "FILE" && !m.isDeleted
                           ).length === 0 && (
-                            <div className="text-center py-20 opacity-20">
-                              <FileText size={48} className="mx-auto mb-2" />
-                              <p className="text-xs font-black uppercase tracking-widest">
-                                Không có file
-                              </p>
-                            </div>
-                          )}
+                              <div className="text-center py-20 opacity-20">
+                                <FileText size={48} className="mx-auto mb-2" />
+                                <p className="text-xs font-black uppercase tracking-widest">
+                                  Không có file
+                                </p>
+                              </div>
+                            )}
                         </div>
                       )}
 
@@ -2726,16 +2684,16 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                           {messages.filter(
                             (m) => m.type === "LINK" && !m.isDeleted
                           ).length === 0 && (
-                            <div className="text-center py-20 opacity-20">
-                              <ExternalLink
-                                size={48}
-                                className="mx-auto mb-2"
-                              />
-                              <p className="text-xs font-black uppercase tracking-widest">
-                                Không có link
-                              </p>
-                            </div>
-                          )}
+                              <div className="text-center py-20 opacity-20">
+                                <ExternalLink
+                                  size={48}
+                                  className="mx-auto mb-2"
+                                />
+                                <p className="text-xs font-black uppercase tracking-widest">
+                                  Không có link
+                                </p>
+                              </div>
+                            )}
                         </div>
                       )}
                     </div>
@@ -2823,9 +2781,9 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                 src={
                   previewData.url!.includes("cloudinary.com")
                     ? previewData.url!.replace(
-                        "/upload/",
-                        "/upload/f_auto,q_auto/"
-                      )
+                      "/upload/",
+                      "/upload/f_auto,q_auto/"
+                    )
                     : previewData.url!
                 }
                 alt=""

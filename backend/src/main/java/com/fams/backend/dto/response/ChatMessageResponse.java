@@ -27,6 +27,7 @@ public class ChatMessageResponse {
     private String replyToAttachmentUrl;
     private String replyToType;
     private String replyToSenderName;
+    private Boolean replyToIsDeleted;
     private LocalDateTime sentAt;
     private Boolean isOwn;
     private Boolean isDeleted;

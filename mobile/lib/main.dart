@@ -39,6 +39,7 @@ import 'features/chat/controllers/chat_controller.dart';
 import 'features/schedule/controllers/schedule_controller.dart';
 import 'features/notification/services/fcm_service.dart';
 import 'features/notification/controllers/notification_controller.dart';
+import 'core/constants/api_constants.dart';
 import 'core/services/api_service.dart';
 import 'core/services/websocket_service.dart';
 
@@ -52,6 +53,9 @@ bool isFirebaseInitialized = false;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Tu dong tim kiem ket noi tot nhat (USB hoac Ngrok)
+  await ApiConstants.findBestConnection();
 
   try {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);

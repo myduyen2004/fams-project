@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { Card } from '../../components/common/Card';
-import { dashboardService } from '../../services/api/dashboardService';
 import timetableService, { TimetableSlotDTO } from '../../services/api/timetableService';
-import { AppNotification } from '../../types/dashboard';
 import {
     Clock,
     MapPin,
-    Lock
+    Lock,
+    Users,
+    Activity,
+    FastForward,
+    ArrowUpRight
 } from 'lucide-react';
 import { MiniCalendar } from '../../components/common/MiniCalendar';
 
@@ -18,8 +20,6 @@ interface TodayScheduleData {
 }
 
 const QuickStats = () => {
-    const navigate = useNavigate();
-    const [notifications, setNotifications] = useState<AppNotification[]>([]);
     const [scheduleData, setScheduleData] = useState<TodayScheduleData>({
         todayClassCount: 0,
         nextClass: null
@@ -38,13 +38,6 @@ const QuickStats = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Fetch notifications
-                const notifData = await dashboardService.getNotifications();
-                const sorted = (notifData || []).sort((a, b) =>
-                    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-                );
-                setNotifications(sorted);
-
                 // Fetch timetable for today
                 const userStr = localStorage.getItem('user');
                 if (userStr) {
@@ -94,96 +87,94 @@ const QuickStats = () => {
         fetchData();
     }, []);
 
-    const unreadCount = notifications.filter(n => !n.isRead).length;
-    const latestNotification = notifications.length > 0 ? notifications[0] : null;
-
-    const cardGradientClass = "bg-gradient-to-br from-orange-50/80 to-amber-50/80 dark:from-orange-900/5 dark:to-amber-900/5 border-orange-100/50 dark:border-orange-800/20";
-    const cardGreenGradientClass = "bg-gradient-to-br from-green-50/80 to-emerald-50/80 dark:from-green-900/5 dark:to-emerald-900/5 border-green-100/50 dark:border-green-800/20";
-
-    // Format time for display (remove seconds if present)
+    // Format time for display
     const formatTime = (time?: string) => {
         if (!time) return '--:--';
         return time.substring(0, 5);
     };
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Card 1: Total Classes Today */}
-            <Card className={`p-5 flex flex-col justify-between min-h-[160px] hover:shadow-md transition-shadow ${cardGradientClass}`}>
-                <div className="flex justify-between items-start">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-4">
+            {/* Card 1: Today's Classes */}
+            <div className="group relative overflow-hidden rounded-[32px] bg-gradient-to-br from-orange-500 to-orange-600 p-6 text-white shadow-lg shadow-orange-200 transition-all hover:scale-[1.02] hover:shadow-xl dark:shadow-none">
+                <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/10 blur-2xl transition-all group-hover:scale-150"></div>
+                <div className="relative z-10 flex h-full flex-col justify-between">
+                    <div className="flex items-center justify-between">
+                        <div className="rounded-2xl bg-white/20 p-3 backdrop-blur-md">
+                            <Users className="h-6 w-6 text-white" />
+                        </div>
+                        <div className="flex items-center gap-1 rounded-full bg-white/20 px-2 py-1 text-[10px] font-bold uppercase tracking-wider backdrop-blur-md">
+                            <Activity className="h-3 w-3" />
+                            <span>Hôm nay</span>
+                        </div>
+                    </div>
+                    <div className="mt-4">
+                        <div className="flex items-baseline gap-1">
+                            <h3 className="text-4xl font-black">
+                                {loading ? '...' : isScheduleHidden ? '--' : scheduleData.todayClassCount}
+                            </h3>
+                            <span className="text-sm font-medium opacity-80">lớp</span>
+                        </div>
+                        <p className="mt-1 text-sm font-bold uppercase tracking-widest opacity-90">Lớp học hiện có</p>
+                        <p className="mt-2 text-[11px] font-medium leading-tight opacity-70">
+                            {isScheduleHidden ? 'Lịch chưa được công bố' : 'Dựa trên thời khóa biểu chính thức'}
+                        </p>
+                    </div>
                 </div>
-                <div>
-                    <h3 className="text-3xl font-bold text-gray-900 dark:text-white">
-                        {loading ? '...' : isScheduleHidden ? '--' : scheduleData.todayClassCount}
-                    </h3>
-                    <p className="text-base font-medium text-gray-900 dark:text-white mt-1">Lớp học hôm nay</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        {isScheduleHidden ? 'Lịch chưa được công bố' : 'Tổng quan trong ngày'}
-                    </p>
-                </div>
-            </Card>
+            </div>
 
             {/* Card 2: Attendance Rate */}
-            <Card className={`p-5 flex flex-col justify-between min-h-[160px] hover:shadow-md transition-shadow ${cardGreenGradientClass}`}>
-                <div className="flex justify-between items-start">
-                </div>
-                <div>
-                    <h3 className="text-3xl font-bold text-gray-900 dark:text-white">{isScheduleHidden ? '--' : '92%'}</h3>
-                    <p className="text-base font-medium text-gray-900 dark:text-white mt-1">Tỷ lệ điểm danh</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        {isScheduleHidden ? 'Lịch chưa được công bố' : '+2% so với tuần trước'}
-                    </p>
-                </div>
-            </Card>
-
-            {/* Card 3: New Notifications */}
-            <Card className={`p-5 flex flex-col justify-between min-h-[160px] hover:shadow-md transition-shadow ${cardGradientClass}`}>
-                <div className="flex justify-between items-start">
-                </div>
-                <div>
-                    <h3 className="text-3xl font-bold text-gray-900 dark:text-white">
-                        {unreadCount}
-                    </h3>
-                    <p className="text-base font-medium text-gray-900 dark:text-white mt-1">Thông báo mới</p>
-
-                    {latestNotification ? (
-                        <div className="mt-2 flex flex-col gap-1">
-                            <p
-                                className="text-sm text-fpt-orange hover:underline cursor-pointer font-medium"
-                                onClick={() => navigate('/notifications')}
-                            >
-                                Xem chi tiết
-                            </p>
+            <div className="group relative overflow-hidden rounded-[32px] bg-white p-6 shadow-sm border border-gray-100 transition-all hover:scale-[1.02] hover:shadow-md dark:bg-zinc-900 dark:border-zinc-800">
+                <div className="absolute -right-6 -bottom-6 h-32 w-32 rounded-full bg-emerald-500/5 blur-3xl transition-all group-hover:bg-emerald-500/10"></div>
+                <div className="relative z-10 flex h-full flex-col justify-between">
+                    <div className="flex items-center justify-between">
+                        <div className="rounded-2xl bg-emerald-50 p-3 dark:bg-emerald-900/20">
+                            <Activity className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                         </div>
-                    ) : (
-                        <p
-                            className="text-sm text-fpt-orange hover:underline cursor-pointer mt-1 font-medium"
-                            onClick={() => navigate('/notifications')}
-                        >
-                            Xem tất cả
+                        <div className="flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-bold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                            <ArrowUpRight className="h-3 w-3" />
+                            <span>+2.4%</span>
+                        </div>
+                    </div>
+                    <div className="mt-4">
+                        <div className="flex items-baseline gap-1">
+                            <h3 className="text-4xl font-black text-gray-900 dark:text-white">92.8<span className="text-xl">%</span></h3>
+                        </div>
+                        <p className="mt-1 text-sm font-bold uppercase tracking-widest text-gray-500 dark:text-zinc-400">Tỷ lệ điểm danh</p>
+                        <p className="mt-2 text-[11px] font-medium leading-tight text-gray-400 dark:text-zinc-500">
+                            Tăng nhẹ so với tuần trước
                         </p>
-                    )}
+                    </div>
                 </div>
-            </Card>
+            </div>
 
-            {/* Card 4: Next Class Info */}
-            <Card className={`p-5 flex flex-col justify-between min-h-[160px] hover:shadow-md transition-shadow ${cardGradientClass}`}>
-                <div className="flex justify-between items-start">
+            {/* Card 3: Next Class (Modernized with Blue style) */}
+            <div className="group relative overflow-hidden rounded-[32px] bg-white p-6 shadow-sm border border-gray-100 transition-all hover:scale-[1.02] hover:shadow-md dark:bg-zinc-900 dark:border-zinc-800">
+                <div className="absolute -right-6 -bottom-6 h-32 w-32 rounded-full bg-blue-500/5 blur-3xl transition-all group-hover:bg-blue-500/10"></div>
+                <div className="relative z-10 flex h-full flex-col justify-between">
+                    <div className="flex items-center justify-between">
+                        <div className="rounded-2xl bg-blue-50 p-3 dark:bg-blue-900/20">
+                            <FastForward className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div className="rounded-full bg-blue-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800/30">
+                            {loading ? '---' : isScheduleHidden ? '--' : (scheduleData.nextClass ? formatTime(scheduleData.nextClass.startTime) : '---')}
+                        </div>
+                    </div>
+                    <div className="mt-4">
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white truncate">
+                            {loading ? '...' : isScheduleHidden ? '--' : (scheduleData.nextClass ? scheduleData.nextClass.courseCode : 'Hoàn thành')}
+                        </h3>
+                        <p className="mt-1 text-sm font-bold uppercase tracking-widest text-gray-500 dark:text-zinc-400">Lớp tiếp theo</p>
+                        <p className="mt-2 text-[11px] font-medium leading-tight text-gray-400 dark:text-zinc-500 truncate">
+                            {loading ? 'Đang tải...' : isScheduleHidden ? 'Lịch chưa công bố' : (
+                                scheduleData.nextClass
+                                    ? `Phòng: ${scheduleData.nextClass.roomCode || scheduleData.nextClass.roomName}`
+                                    : 'Bạn đã hoàn thành lịch dạy!'
+                            )}
+                        </p>
+                    </div>
                 </div>
-                <div>
-                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {loading ? '...' : isScheduleHidden ? '--' : (scheduleData.nextClass ? formatTime(scheduleData.nextClass.startTime) : 'Không có')}
-                    </h3>
-                    <p className="text-base font-medium text-gray-900 dark:text-white mt-1">Lớp tiếp theo</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        {loading ? '...' : isScheduleHidden ? 'Lịch chưa được công bố' : (
-                            scheduleData.nextClass
-                                ? `${scheduleData.nextClass.courseCode} - Phòng: ${scheduleData.nextClass.roomCode || scheduleData.nextClass.roomName}`
-                                : 'Hôm nay không còn lớp'
-                        )}
-                    </p>
-                </div>
-            </Card>
+            </div>
         </div>
     );
 };

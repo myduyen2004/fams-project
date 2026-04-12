@@ -183,7 +183,7 @@ public class ChatGroupServiceImpl implements ChatGroupService {
             throw new RuntimeException("Bạn không phải thành viên của nhóm này");
         }
 
-        Page<ChatMessage> messages = chatMessageRepository.findByChatGroupIdOrderBySentAtAsc(groupId, pageable);
+        Page<ChatMessage> messages = chatMessageRepository.findByChatGroupIdOrderBySentAtDesc(groupId, pageable);
         List<Long> readMessageIds = chatMessageReadRepository.findReadMessageIds(currentUser.getId(), groupId);
 
         return messages.map(msg -> {
@@ -345,19 +345,21 @@ public class ChatGroupServiceImpl implements ChatGroupService {
     private ChatMessageResponse convertToMessageResponse(ChatMessage message, Long currentUserId, boolean isRead) {
         List<MessageReactionDTO> reactions = buildReactionDtos(message.getId(), currentUserId);
 
+        boolean isDeleted = message.getIsDeleted() != null && message.getIsDeleted();
+        
         ChatMessageResponse response = ChatMessageResponse.builder()
                 .id(message.getId())
                 .senderId(message.getSender().getId())
                 .senderName(message.getSender().getFullName())
                 .senderAvatar(message.getSender().getAvatar())
                 .senderRole(message.getSender().getRole().name())
-                .content(message.getContent())
+                .content(isDeleted ? "Tin nhắn đã bị thu hồi" : message.getContent())
                 .type(message.getType().name())
-                .attachmentUrl(message.getAttachmentUrl())
-                .attachmentName(message.getAttachmentName())
+                .attachmentUrl(isDeleted ? null : message.getAttachmentUrl())
+                .attachmentName(isDeleted ? null : message.getAttachmentName())
                 .sentAt(message.getSentAt())
                 .isOwn(message.getSender().getId().equals(currentUserId))
-                .isDeleted(message.getIsDeleted())
+                .isDeleted(isDeleted)
                 .isRead(isRead)
                 .readers(message.getReadReceipts() != null ? message.getReadReceipts().stream()
                         .map(r -> ReadReceiptDTO.builder()
@@ -370,21 +372,29 @@ public class ChatGroupServiceImpl implements ChatGroupService {
                 .build();
 
         if (message.getReplyTo() != null) {
-            response.setReplyToId(message.getReplyTo().getId());
+            ChatMessage replyTo = message.getReplyTo();
+            boolean replyToDeleted = replyTo.getIsDeleted() != null && replyTo.getIsDeleted();
 
-            String replyContent = message.getReplyTo().getContent();
+            response.setReplyToId(replyTo.getId());
+            response.setReplyToIsDeleted(replyToDeleted);
+            response.setReplyToSenderName(replyTo.getSender().getFullName());
+            response.setReplyToType(replyTo.getType().name());
+
+            // Mask content for quote if recalled
+            String replyContent = replyToDeleted ? "Tin nhắn đã bị thu hồi" : replyTo.getContent();
             if (replyContent == null || replyContent.isEmpty()) {
-                if (message.getReplyTo().getType() == ChatMessage.MessageType.IMAGE) {
+                if (replyTo.getType() == ChatMessage.MessageType.IMAGE) {
                     replyContent = "🖼️ Hình ảnh";
-                } else if (message.getReplyTo().getType() == ChatMessage.MessageType.FILE) {
-                    replyContent = "📎 " + message.getReplyTo().getAttachmentName();
+                } else if (replyTo.getType() == ChatMessage.MessageType.FILE) {
+                    replyContent = "📎 " + replyTo.getAttachmentName();
                 }
             }
             response.setReplyToContent(replyContent);
 
-            response.setReplyToAttachmentUrl(message.getReplyTo().getAttachmentUrl());
-            response.setReplyToType(message.getReplyTo().getType().name());
-            response.setReplyToSenderName(message.getReplyTo().getSender().getFullName());
+            // Only expose attachment URL if message is not deleted (or it's an image for thumbnail)
+            if (!replyToDeleted) {
+                response.setReplyToAttachmentUrl(replyTo.getAttachmentUrl());
+            }
         }
 
         return response;
