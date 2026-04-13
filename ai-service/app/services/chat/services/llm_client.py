@@ -23,7 +23,7 @@ from typing import Generator, Optional
 import requests
 from loguru import logger
 
-from config.settings import LLM_CONFIG
+from app.services.chat.config.settings import LLM_CONFIG
 
 _THOUGHT_RE = re.compile(r"<thought>.*?</thought>", re.S)
 

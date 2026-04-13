@@ -12,6 +12,8 @@ Cải tiến so với v1:
   • v2.1: Thêm normalize_entities() để chuẩn hóa TODAY/TOMORROW/THIS_WEEK
 """
 from __future__ import annotations
+import calendar
+import re
 from datetime import datetime, timedelta
 from typing import Any, Tuple, Optional
 from loguru import logger # type: ignore
@@ -21,9 +23,145 @@ from loguru import logger # type: ignore
 # ENTITY NORMALIZATION - Chuyển đổi giá trị từ LLM sang giá trị thực
 # ══════════════════════════════════════════════════════════════════════════════
 
+_WEEKDAY_INDEX = {
+    "monday": 0, "mon": 0, "thu 2": 0, "thứ 2": 0, "t2": 0,
+    "tuesday": 1, "tue": 1, "thu 3": 1, "thứ 3": 1, "t3": 1,
+    "wednesday": 2, "wed": 2, "thu 4": 2, "thứ 4": 2, "t4": 2,
+    "thursday": 3, "thu": 3, "thu 5": 3, "thứ 5": 3, "t5": 3,
+    "friday": 4, "fri": 4, "thu 6": 4, "thứ 6": 4, "t6": 4,
+    "saturday": 5, "sat": 5, "thu 7": 5, "thứ 7": 5, "t7": 5,
+    "sunday": 6, "sun": 6, "chu nhat": 6, "chủ nhật": 6, "cn": 6,
+}
+
+_DAY_OF_WEEK_NORMALIZED = {
+    "monday": 0, "mon": 0, "thu2": 0, "thứ2": 0, "t2": 0, "mondays": 0,
+    "tuesday": 1, "tue": 1, "thu3": 1, "thứ3": 1, "t3": 1,
+    "wednesday": 2, "wed": 2, "thu4": 2, "thứ4": 2, "t4": 2,
+    "thursday": 3, "thu": 3, "thu5": 3, "thứ5": 3, "t5": 3,
+    "friday": 4, "fri": 4, "thu6": 4, "thứ6": 4, "t6": 4,
+    "saturday": 5, "sat": 5, "thu7": 5, "thứ7": 5, "t7": 5,
+    "sunday": 6, "sun": 6, "chunhat": 6, "chủnhật": 6, "cn": 6,
+}
+
+
+def _normalize_date_literal(raw: str) -> str:
+    s = str(raw or "").strip()
+    if not s:
+        return s
+
+    m = re.match(r"^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$", s)
+    if m:
+        return f"{m.group(1)}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
+
+    m = re.match(r"^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$", s)
+    if m:
+        return f"{m.group(3)}-{int(m.group(2)):02d}-{int(m.group(1)):02d}"
+
+    m = re.match(r"^(\d{1,2})[-/](\d{1,2})$", s)
+    if m:
+        now = datetime.now()
+        return f"{now.year}-{int(m.group(2)):02d}-{int(m.group(1)):02d}"
+
+    return s
+
+
+def _month_bounds(year: int, month: int) -> tuple[str, str]:
+    first = datetime(year, month, 1)
+    last_day = calendar.monthrange(year, month)[1]
+    last = datetime(year, month, last_day)
+    return first.strftime("%Y-%m-%d"), last.strftime("%Y-%m-%d")
+
+
+def _week_bounds(base: datetime) -> tuple[str, str]:
+    monday = base - timedelta(days=base.weekday())
+    sunday = monday + timedelta(days=6)
+    return monday.strftime("%Y-%m-%d"), sunday.strftime("%Y-%m-%d")
+
+
+def _weekday_date(base: datetime, weekday_index: int, week_shift: int = 0) -> str:
+    monday = base - timedelta(days=base.weekday()) + timedelta(weeks=week_shift)
+    target = monday + timedelta(days=weekday_index)
+    return target.strftime("%Y-%m-%d")
+
+
+def _normalize_day_of_week_value(raw: Any) -> Optional[int]:
+    if raw in (None, ""):
+        return None
+    text = str(raw).strip().lower().replace("_", "").replace(" ", "")
+    return _DAY_OF_WEEK_NORMALIZED.get(text)
+
+
+def resolve_date_expression(dt_raw: str, now: Optional[datetime] = None) -> Tuple[str, str]:
+    if not dt_raw or dt_raw == "1970-01-01":
+        return "1970-01-01", "2099-12-31"
+
+    now = now or datetime.now()
+    raw = str(dt_raw).strip()
+    lowered = raw.lower().replace("_", " ")
+    normalized_text = " ".join(lowered.split())
+
+    if " đến " in normalized_text or " to " in normalized_text:
+        parts = re.split(r"\s+(?:đến|den|to)\s+", normalized_text, maxsplit=1)
+        if len(parts) == 2:
+            start = _normalize_date_literal(parts[0])
+            end = _normalize_date_literal(parts[1])
+            if re.match(r"^\d{4}-\d{2}-\d{2}$", start) and re.match(r"^\d{4}-\d{2}-\d{2}$", end):
+                return start, end
+
+    if normalized_text in ("today", "hôm nay", "hom nay"):
+        t = now.strftime("%Y-%m-%d")
+        return t, t
+    if normalized_text in ("tomorrow", "ngày mai", "ngay mai"):
+        t = (now + timedelta(days=1)).strftime("%Y-%m-%d")
+        return t, t
+    if normalized_text in ("yesterday", "hôm qua", "hom qua"):
+        t = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+        return t, t
+    if normalized_text in ("day after tomorrow", "ngày kia", "ngay kia", "mốt", "mot"):
+        t = (now + timedelta(days=2)).strftime("%Y-%m-%d")
+        return t, t
+
+    weekday_match = None
+    for token, weekday_index in _WEEKDAY_INDEX.items():
+        if token in normalized_text:
+            weekday_match = weekday_index
+            break
+    if weekday_match is not None:
+        week_shift = 0
+        if any(kw in normalized_text for kw in ("next week", "tuần sau", "tuan sau", "tuần tới", "tuan toi")):
+            week_shift = 1
+        elif any(kw in normalized_text for kw in ("last week", "tuần trước", "tuan truoc")):
+            week_shift = -1
+        t = _weekday_date(now, weekday_match, week_shift)
+        return t, t
+
+    if any(kw in normalized_text for kw in ("next week", "tuần sau", "tuan sau", "tuần tới", "tuan toi")):
+        return _week_bounds(now + timedelta(weeks=1))
+    if any(kw in normalized_text for kw in ("last week", "tuần trước", "tuan truoc")):
+        return _week_bounds(now - timedelta(weeks=1))
+    if any(kw in normalized_text for kw in ("this week", "tuần này", "tuan nay")):
+        return _week_bounds(now)
+
+    if any(kw in normalized_text for kw in ("next month", "tháng sau", "thang sau")):
+        year = now.year + (1 if now.month == 12 else 0)
+        month = 1 if now.month == 12 else now.month + 1
+        return _month_bounds(year, month)
+    if any(kw in normalized_text for kw in ("last month", "tháng trước", "thang truoc")):
+        year = now.year - (1 if now.month == 1 else 0)
+        month = 12 if now.month == 1 else now.month - 1
+        return _month_bounds(year, month)
+    if any(kw in normalized_text for kw in ("this month", "tháng này", "thang nay", "month")):
+        return _month_bounds(now.year, now.month)
+
+    normalized_literal = _normalize_date_literal(raw)
+    if re.match(r"^\d{4}-\d{2}-\d{2}$", normalized_literal):
+        return normalized_literal, normalized_literal
+
+    return normalized_literal, normalized_literal
+
 def normalize_entities(
     entities: Optional[dict], 
-    user_code: str = None,
+    user_code: str = None, # type: ignore
     tool_name: str = None
 ) -> dict:
     """
@@ -42,59 +180,123 @@ def normalize_entities(
         tool_name: Tên tool để xác định có cần inject user_code không
         
     Returns:
-        Dict đã được chuẩn hóa
+        Dict đã được chuẩn hoá
     """
     if not entities:
         entities = {}
     else:
-        entities = entities.copy()  # Tránh mutate dict gốc
+        entities = entities.copy()  # Trnh mutate dict gc
     
     now = datetime.now()
-    
+
+    def _strip_noise_prefixes(value: str, prefixes: list[str]) -> str:
+        cleaned = str(value or "").strip().strip("\"'")
+        changed = True
+        while changed and cleaned:
+            changed = False
+            for prefix in prefixes:
+                if re.match(prefix, cleaned, re.IGNORECASE):
+                    cleaned = re.sub(prefix, "", cleaned, count=1, flags=re.IGNORECASE).strip()
+                    changed = True
+        return cleaned.strip(" .,:;!?")
+
+    def _clean_named_value(field: str, value: Any) -> str:
+        text = str(value or "").strip()
+        if not text:
+            return ""
+        common_prefixes = [
+            r"^(?:của|cua|thuộc|trong|ở|ve|về)\s+",
+        ]
+        field_prefixes = {
+            "full_name": [
+                r"^(?:theo\s+tên|dùng\s+tên|tim\s+theo\s+tên|tìm\s+theo\s+tên|người\s+dùng\s+theo\s+tên|người\s+dùng\s+tên|tên)\s+",
+            ],
+            "major_name": [
+                r"^(?:mã\s+\S+\s+thuộc\s+ngành)\s+",
+                r"^(?:tra\s+cứu\s+mã\s+ngành(?:\s+học)?(?:\s+của)?|tra\s+ma\s+nganh(?:\s+hoc)?(?:\s+cua)?|mã\s+ngành(?:\s+học)?(?:\s+của)?|ma\s+nganh(?:\s+hoc)?(?:\s+cua)?|ngành|nghành|nganh|nhành)\s+",
+            ],
+            "specialization_name": [
+                r"^(?:mã\s+\S+\s+thuộc\s+chuyên\s+ngành)\s+",
+                r"^(?:tra\s+cứu\s+mã\s+chuyên\s+ngành(?:\s+của)?|tra\s+ma\s+chuyen\s+nganh(?:\s+cua)?|mã\s+chuyên\s+ngành(?:\s+của)?|ma\s+chuyen\s+nganh(?:\s+cua)?|chuyên\s+ngành)\s+",
+            ],
+            "spec_name": [
+                r"^(?:chuyên\s+ngành)\s+",
+            ],
+            "sub_specialization_name": [
+                r"^(?:chuyên\s+ngành\s+hẹp|sub[\s-]*specialization)\s+",
+            ],
+            "course_name": [
+                r"^(?:môn\s+học|môn|course)\s+",
+            ],
+        }
+        prefixes = common_prefixes + field_prefixes.get(field, [])
+        return _strip_noise_prefixes(text, prefixes)
+
     # ── Normalize date expressions ──
-    date_val = str(entities.get("date", "")).upper().strip()
+    if entities.get("date"):
+        start_dt, end_dt = resolve_date_expression(str(entities.get("date") or ""), now)
+        if start_dt == end_dt:
+            entities["date"] = start_dt
+            entities.pop("start_date", None)
+            entities.pop("end_date", None)
+            logger.debug(f"[normalize] date → {entities['date']}")
+        else:
+            entities["start_date"] = start_dt
+            entities["end_date"] = end_dt
+            entities.pop("date", None)
+            logger.debug(f"[normalize] range → {entities['start_date']} to {entities['end_date']}")
+
+    for date_key in ("start_date", "end_date", "original_date", "requested_date"):
+        if entities.get(date_key):
+            entities[date_key] = _normalize_date_literal(str(entities[date_key]))
+
+    for code_key in (
+        "code",
+        "user_code",
+        "student_code",
+        "lecturer_code",
+        "course_code",
+        "semester_code",
+        "major_code",
+        "specialization_code",
+        "sub_specialization_code",
+        "spec_code",
+        "sub_code",
+        "class_name",
+        "room_name",
+    ):
+        if entities.get(code_key):
+            entities[code_key] = str(entities[code_key]).strip().upper().rstrip(".")
+
+    for name_key in (
+        "full_name",
+        "major_name",
+        "specialization_name",
+        "sub_specialization_name",
+        "spec_name",
+        "sub_name",
+        "course_name",
+        "name",
+    ):
+        if entities.get(name_key):
+            entities[name_key] = _clean_named_value(name_key, entities.get(name_key))
+
+    if entities.get("major_name") and not entities.get("major_code"):
+        major_candidate = str(entities["major_name"]).strip().upper()
+        if re.fullmatch(r"[A-Z]{2,10}", major_candidate):
+            entities["major_code"] = major_candidate
+
+    if entities.get("specialization_name") and not entities.get("specialization_code"):
+        spec_candidate = str(entities["specialization_name"]).strip().upper()
+        if re.fullmatch(r"[A-Z]{2,12}", spec_candidate):
+            entities["specialization_code"] = spec_candidate
+
+    if entities.get("spec_name") and not entities.get("spec_code"):
+        spec_candidate = str(entities["spec_name"]).strip().upper()
+        if re.fullmatch(r"[A-Z]{2,12}", spec_candidate):
+            entities["spec_code"] = spec_candidate
     
-    if date_val in ("TODAY", "HÔM NAY", "HOM NAY", "HÔMNAY"):
-        entities["date"] = now.strftime("%Y-%m-%d")
-        logger.debug(f"[normalize] date: TODAY → {entities['date']}")
-        
-    elif date_val in ("TOMORROW", "NGÀY MAI", "NGAY MAI", "NGÀYMAI"):
-        entities["date"] = (now + timedelta(days=1)).strftime("%Y-%m-%d")
-        logger.debug(f"[normalize] date: TOMORROW → {entities['date']}")
-        
-    elif date_val in ("YESTERDAY", "HÔM QUA", "HOM QUA"):
-        entities["date"] = (now - timedelta(days=1)).strftime("%Y-%m-%d")
-        logger.debug(f"[normalize] date: YESTERDAY → {entities['date']}")
-        
-    elif date_val in ("THIS_WEEK", "TUẦN NÀY", "TUAN NAY", "TUẦNNÀY"):
-        # Monday (start) và Sunday (end) của tuần hiện tại
-        monday = now - timedelta(days=now.weekday())
-        sunday = monday + timedelta(days=6)
-        entities["start_date"] = monday.strftime("%Y-%m-%d")
-        entities["end_date"] = sunday.strftime("%Y-%m-%d")
-        if "date" in entities:
-            del entities["date"]
-        logger.debug(f"[normalize] THIS_WEEK → {entities['start_date']} to {entities['end_date']}")
-        
-    elif date_val in ("NEXT_WEEK", "TUẦN SAU", "TUAN SAU", "TUẦNSAU"):
-        monday = now - timedelta(days=now.weekday()) + timedelta(weeks=1)
-        sunday = monday + timedelta(days=6)
-        entities["start_date"] = monday.strftime("%Y-%m-%d")
-        entities["end_date"] = sunday.strftime("%Y-%m-%d")
-        if "date" in entities:
-            del entities["date"]
-        logger.debug(f"[normalize] NEXT_WEEK → {entities['start_date']} to {entities['end_date']}")
-        
-    elif date_val in ("LAST_WEEK", "TUẦN TRƯỚC", "TUAN TRUOC"):
-        monday = now - timedelta(days=now.weekday()) - timedelta(weeks=1)
-        sunday = monday + timedelta(days=6)
-        entities["start_date"] = monday.strftime("%Y-%m-%d")
-        entities["end_date"] = sunday.strftime("%Y-%m-%d")
-        if "date" in entities:
-            del entities["date"]
-        logger.debug(f"[normalize] LAST_WEEK → {entities['start_date']} to {entities['end_date']}")
-    
-    # ── Inject user_code cho get_own_*/get_my_* tools ──
+    #  Inject user_code cho get_own_*/get_my_* tools 
     own_tools = {
         "get_own_schedule", "get_own_grades", "get_my_attendance_status",
         "get_my_notifications", "get_my_schedule_requests", 
@@ -111,12 +313,10 @@ def normalize_entities(
     return entities
 
 
-# ── SQL Templates ─────────────────────────────────────────────────────────────
 TEMPLATES: dict[str, str] = {
-
-    # ════════════════════════════════════════════════════════════════════════
+    # 
     # USER SEARCH
-    # ════════════════════════════════════════════════════════════════════════
+    # 
 
     "search_user_by_name": """
         SELECT u.full_name, u.code, u.email, u.phone, u.dob, u.role, u.status,
@@ -129,7 +329,6 @@ TEMPLATES: dict[str, str] = {
         LEFT JOIN specializations    s  ON sp.specialization_id = s.id
         WHERE  unaccent(u.full_name) ILIKE unaccent(%s)
         ORDER BY u.role, u.full_name
-        LIMIT  100
     """,
 
     "get_user_by_code": """
@@ -156,7 +355,6 @@ TEMPLATES: dict[str, str] = {
         LEFT JOIN majors            m  ON sp.major_id = m.id
         WHERE  u.status = 'INACTIVE'
         ORDER BY u.role, u.full_name
-        LIMIT  100
     """,
 
     "count_users_by_role": """
@@ -165,21 +363,47 @@ TEMPLATES: dict[str, str] = {
                SUM(CASE WHEN status = 'ACTIVE'   THEN 1 ELSE 0 END) AS active,
                SUM(CASE WHEN status = 'INACTIVE' THEN 1 ELSE 0 END) AS inactive
         FROM   users
+        WHERE  role = %s
         GROUP BY role
         ORDER BY role
     """,
 
-    # ════════════════════════════════════════════════════════════════════════
+    # 
     # STUDENTS
-    # ════════════════════════════════════════════════════════════════════════
+    # 
 
     "get_student_by_code": """
         SELECT u.full_name, u.code, u.email, u.phone, u.dob, u.status,
-               COALESCE(sp.gpa, 0)      AS gpa,
-               COALESCE(m.name,  '')    AS major,
-               COALESCE(m.code,  '')    AS major_code,
-               COALESCE(s.name,  '')    AS specialization,
-               COALESCE(ss.name, '')    AS sub_specialization,
+               CASE WHEN %s = -1 OR EXISTS (
+                    SELECT 1
+                    FROM enrollments e_scope
+                    JOIN class_sections cs_scope ON e_scope.class_name = cs_scope.class_name
+                    WHERE e_scope.student_id = u.id AND cs_scope.lecturer_id = %s
+               ) THEN COALESCE(sp.gpa, 0) ELSE NULL END AS gpa,
+               CASE WHEN %s = -1 OR EXISTS (
+                    SELECT 1
+                    FROM enrollments e_scope
+                    JOIN class_sections cs_scope ON e_scope.class_name = cs_scope.class_name
+                    WHERE e_scope.student_id = u.id AND cs_scope.lecturer_id = %s
+               ) THEN COALESCE(m.name,  '') ELSE '' END AS major,
+               CASE WHEN %s = -1 OR EXISTS (
+                    SELECT 1
+                    FROM enrollments e_scope
+                    JOIN class_sections cs_scope ON e_scope.class_name = cs_scope.class_name
+                    WHERE e_scope.student_id = u.id AND cs_scope.lecturer_id = %s
+               ) THEN COALESCE(m.code,  '') ELSE '' END AS major_code,
+               CASE WHEN %s = -1 OR EXISTS (
+                    SELECT 1
+                    FROM enrollments e_scope
+                    JOIN class_sections cs_scope ON e_scope.class_name = cs_scope.class_name
+                    WHERE e_scope.student_id = u.id AND cs_scope.lecturer_id = %s
+               ) THEN COALESCE(s.name,  '') ELSE '' END AS specialization,
+               CASE WHEN %s = -1 OR EXISTS (
+                    SELECT 1
+                    FROM enrollments e_scope
+                    JOIN class_sections cs_scope ON e_scope.class_name = cs_scope.class_name
+                    WHERE e_scope.student_id = u.id AND cs_scope.lecturer_id = %s
+               ) THEN COALESCE(ss.name, '') ELSE '' END AS sub_specialization,
                (SELECT COUNT(*) FROM enrollments e2 WHERE e2.student_id = u.id)
                                         AS enrolled_classes,
                (SELECT COUNT(*) FROM student_attendances sa2
@@ -191,7 +415,9 @@ TEMPLATES: dict[str, str] = {
         LEFT JOIN majors              m  ON sp.major_id = m.id
         LEFT JOIN specializations     s  ON sp.specialization_id = s.id
         LEFT JOIN sub_specializations ss ON sp.sub_specialization_id = ss.id
-        WHERE  (u.code = %s OR unaccent(u.full_name) ILIKE unaccent(%s))
+        WHERE  (%s = '' OR u.code = %s)
+          AND  (%s = '' OR unaccent(u.full_name) ILIKE unaccent(%s))
+          AND  (%s <> '' OR %s <> '')
           AND  u.role = 'STUDENT'
         LIMIT  5
     """,
@@ -212,7 +438,6 @@ TEMPLATES: dict[str, str] = {
           AND  u.status = 'ACTIVE'
           AND  u.role = 'STUDENT'
         ORDER BY sp.gpa DESC NULLS LAST
-        LIMIT  100
     """,
 
     "get_students_by_class": """
@@ -237,7 +462,6 @@ TEMPLATES: dict[str, str] = {
              OR unaccent(c.name)       ILIKE unaccent(%s))
           AND  (cs.lecturer_id = %s OR %s = -1)
         ORDER BY u.full_name
-        LIMIT  200
     """,
 
     "get_students_without_class": """
@@ -251,7 +475,6 @@ TEMPLATES: dict[str, str] = {
           AND  u.status = 'ACTIVE'
           AND  u.id NOT IN (SELECT DISTINCT student_id FROM enrollments)
         ORDER BY u.full_name
-        LIMIT  100
     """,
 
     "get_top_students": """
@@ -300,11 +523,29 @@ TEMPLATES: dict[str, str] = {
         WHERE  u.status = 'ACTIVE'
           AND  u.role = 'STUDENT'
           AND  (sp.gpa < %s OR %s = 0)
+          AND  (unaccent(COALESCE(m.name, '')) ILIKE unaccent(%s)
+             OR unaccent(COALESCE(m.code, '')) ILIKE unaccent(%s)
+             OR %s = '')
         ORDER BY sp.gpa ASC, total_absences DESC
-        LIMIT  50
     """,
 
-    # NEW: Timeline học tập của một sinh viên
+    "get_classmates": """
+        SELECT DISTINCT u_mate.full_name, u_mate.code, u_mate.email,
+               e2.class_name,
+               COALESCE(sp.gpa, 0) AS gpa,
+               m.name AS major
+        FROM   enrollments e1
+        JOIN   users u ON e1.student_id = u.id
+        JOIN   enrollments e2 ON e1.class_name = e2.class_name
+        JOIN   users u_mate ON e2.student_id = u_mate.id
+        LEFT JOIN student_profiles sp ON u_mate.id = sp.user_id
+        LEFT JOIN majors            m  ON sp.major_id = m.id
+        WHERE  (u.code = %s OR u.full_name ILIKE %s)
+          AND  u_mate.id <> u.id
+        ORDER BY e2.class_name, u_mate.full_name
+    """,
+
+    # NEW: Timeline hc tp ca mt sinh vin
     "get_student_academic_timeline": """
         SELECT sem.name AS semester, c.name AS course, e.class_name,
                COALESCE(u_lec.full_name, 'N/A') AS lecturer,
@@ -327,7 +568,7 @@ TEMPLATES: dict[str, str] = {
         ORDER BY sem.start_date DESC
     """,
 
-    # NEW: So sánh GPA của SV với trung bình ngành
+    # NEW: So snh GPA ca SV vi trung bnh ngnh
     "get_student_gpa_comparison": """
         SELECT u.full_name, u.code,
                sp.gpa AS student_gpa,
@@ -347,9 +588,9 @@ TEMPLATES: dict[str, str] = {
         LIMIT 1
     """,
 
-    # ════════════════════════════════════════════════════════════════════════
+    # 
     # LECTURERS
-    # ════════════════════════════════════════════════════════════════════════
+    # 
 
     "get_lecturer_by_code": """
         SELECT u.full_name, u.code, u.email, u.phone, u.role, u.status,
@@ -361,7 +602,9 @@ TEMPLATES: dict[str, str] = {
         LEFT JOIN lecturer_profiles lp ON u.id = lp.user_id
         LEFT JOIN class_sections    cs ON u.id = cs.lecturer_id
         LEFT JOIN semesters         s  ON cs.semester_id = s.id AND s.status = 'ACTIVE'
-        WHERE  (u.code = %s OR unaccent(u.full_name) ILIKE unaccent(%s))
+        WHERE  (%s = '' OR u.code = %s)
+          AND  (%s = '' OR unaccent(u.full_name) ILIKE unaccent(%s))
+          AND  (%s <> '' OR %s <> '')
           AND  u.role = 'LECTURER'
         GROUP BY u.full_name, u.code, u.email, u.phone, u.role, u.status, lp.expertise, lp.department
     """,
@@ -385,7 +628,6 @@ TEMPLATES: dict[str, str] = {
              OR %s = '')
         GROUP BY u.full_name, u.code, u.email, lp.expertise, lp.department
         ORDER BY total_classes DESC, u.full_name
-        LIMIT  50
     """,
 
     "get_lecturers_by_expertise": """
@@ -408,7 +650,7 @@ TEMPLATES: dict[str, str] = {
         LIMIT  30
     """,
 
-    # NEW: Thống kê tải giảng dạy của từng GV
+    # NEW: Thng k ti ging dy ca tng GV
     "get_lecturer_workload": """
         SELECT u.full_name, u.code,
                COALESCE(lp.department, '') AS department,
@@ -423,15 +665,17 @@ TEMPLATES: dict[str, str] = {
         LEFT JOIN semesters        sem ON cs.semester_id = sem.id
         LEFT JOIN enrollments       e  ON cs.class_name = e.class_name
         WHERE  u.role = 'LECTURER' AND u.status = 'ACTIVE'
-          AND  (unaccent(u.full_name) ILIKE unaccent(%s) OR u.code = %s OR %s = '')
+          AND  (%s = '' OR u.code = %s)
+          AND  (%s = '' OR unaccent(u.full_name) ILIKE unaccent(%s))
+          AND  (%s <> '' OR %s <> '')
         GROUP BY u.full_name, u.code, lp.department
         ORDER BY total_students DESC
         LIMIT  30
     """,
 
-    # ════════════════════════════════════════════════════════════════════════
+    # 
     # ROOMS
-    # ════════════════════════════════════════════════════════════════════════
+    # 
 
     "get_empty_rooms": """
         SELECT r.name, r.capacity, r.status,
@@ -442,7 +686,7 @@ TEMPLATES: dict[str, str] = {
         WHERE  r.id NOT IN (
             SELECT ts.room_id FROM timetable_slots ts
             WHERE  ts.date = %s::date
-              AND  ts.slot_number = %s
+              AND  (%s = 'ALL' OR ts.slot_number = %s)
               AND  ts.room_id IS NOT NULL
         )
           AND  r.status = 'ACTIVE'
@@ -466,11 +710,12 @@ TEMPLATES: dict[str, str] = {
                SUM(capacity)   AS total_capacity,
                ROUND(AVG(capacity)) AS avg_capacity
         FROM   rooms
+        WHERE  status = %s
         GROUP BY status
         ORDER BY status
     """,
 
-    # NEW: Lịch sử sử dụng phòng trong tuần
+    # NEW: Lch s s dng phng trong tun
     "get_room_usage_weekly": """
         SELECT r.name AS room, r.capacity,
                ts.date, ts.slot_number,
@@ -487,12 +732,11 @@ TEMPLATES: dict[str, str] = {
         WHERE  unaccent(r.name) ILIKE unaccent(%s)
           AND  ts.date BETWEEN %s AND %s
         ORDER BY ts.date, ts.slot_number
-        LIMIT  100
     """,
 
-    # ════════════════════════════════════════════════════════════════════════
+    # 
     # MAJORS
-    # ════════════════════════════════════════════════════════════════════════
+    # 
 
     "list_majors": """
         SELECT m.code, m.name, m.status,
@@ -514,9 +758,9 @@ TEMPLATES: dict[str, str] = {
         LIMIT  1
     """,
 
-    # ════════════════════════════════════════════════════════════════════════
+    # 
     # SPECIALIZATIONS
-    # ════════════════════════════════════════════════════════════════════════
+    # 
 
     "get_specializations_by_major": """
         SELECT s.name, s.code, s.status,
@@ -560,9 +804,9 @@ TEMPLATES: dict[str, str] = {
         LIMIT  1
     """,
 
-    # ════════════════════════════════════════════════════════════════════════
+    # 
     # COURSES
-    # ════════════════════════════════════════════════════════════════════════
+    # 
 
     "list_courses": """
         SELECT c.code, c.name, c.credits, c.status,
@@ -574,7 +818,6 @@ TEMPLATES: dict[str, str] = {
         WHERE  c.status = 'ACTIVE'
         GROUP BY c.code, c.name, c.credits, c.status
         ORDER BY c.name
-        LIMIT  100
     """,
 
     "get_courses_by_name": """
@@ -590,6 +833,23 @@ TEMPLATES: dict[str, str] = {
            OR  unaccent(c.code) ILIKE unaccent(%s)
         GROUP BY c.code, c.name, c.credits, c.status
         LIMIT  20
+    """,
+
+    "get_courses_by_semester": """
+        SELECT c.code, c.name, c.credits, c.status,
+               sem.code AS semester_code,
+               sem.name AS semester_name,
+               COUNT(DISTINCT cs.class_name) AS total_classes,
+               COUNT(DISTINCT e.student_id)  AS total_students
+        FROM   courses c
+        JOIN   class_sections cs ON c.id = cs.course_id
+        JOIN   semesters sem ON cs.semester_id = sem.id
+        LEFT JOIN enrollments e ON cs.class_name = e.class_name
+        WHERE  unaccent(COALESCE(sem.code, '')) ILIKE unaccent(%s)
+           OR  unaccent(COALESCE(sem.name, '')) ILIKE unaccent(%s)
+           OR  unaccent(COALESCE(sem.code, '')) = unaccent(%s)
+        GROUP BY c.code, c.name, c.credits, c.status, sem.code, sem.name
+        ORDER BY c.name
     """,
 
     "get_courses_by_spec": """
@@ -633,9 +893,9 @@ TEMPLATES: dict[str, str] = {
         ORDER BY gc.weight DESC
     """,
 
-    # ════════════════════════════════════════════════════════════════════════
+    # 
     # SEMESTERS
-    # ════════════════════════════════════════════════════════════════════════
+    # 
 
     "list_semesters": """
         SELECT s.code, s.name, s.start_date, s.end_date, s.status,
@@ -646,7 +906,6 @@ TEMPLATES: dict[str, str] = {
         LEFT JOIN enrollments     e  ON cs.class_name = e.class_name
         GROUP BY s.code, s.name, s.start_date, s.end_date, s.status
         ORDER BY s.start_date DESC
-        LIMIT  100
     """,
 
     "get_active_semester": """
@@ -663,7 +922,7 @@ TEMPLATES: dict[str, str] = {
         LIMIT  1
     """,
 
-    # NEW: Tổng quan một học kỳ
+    # NEW: Tng quan mt hc k
     "get_semester_overview": """
         SELECT s.code, s.name, s.start_date, s.end_date, s.status,
                COUNT(DISTINCT cs.class_name)   AS total_classes,
@@ -686,9 +945,9 @@ TEMPLATES: dict[str, str] = {
         LIMIT  5
     """,
 
-    # ════════════════════════════════════════════════════════════════════════
+    # 
     # CLASSES & ENROLLMENT
-    # ════════════════════════════════════════════════════════════════════════
+    # 
 
     "get_classes_by_semester": """
         SELECT cs.class_name,
@@ -712,7 +971,6 @@ TEMPLATES: dict[str, str] = {
           AND  (cs.lecturer_id = %s OR %s = -1)
         GROUP BY cs.class_name, c.name, c.credits, u.full_name, u.code, s.name
         ORDER BY cs.class_name
-        LIMIT  100
     """,
 
     "get_class_info": """
@@ -762,12 +1020,11 @@ TEMPLATES: dict[str, str] = {
         LEFT JOIN majors            m  ON sp.major_id = m.id
         WHERE  unaccent(e.class_name) ILIKE unaccent(%s)
         ORDER BY sp.gpa DESC NULLS LAST, u.full_name
-        LIMIT  200
     """,
 
-    # ════════════════════════════════════════════════════════════════════════
+    # 
     # SCHEDULES
-    # ════════════════════════════════════════════════════════════════════════
+    # 
 
     "get_my_schedule": """
         SELECT DISTINCT ts.date, ts.slot_number,
@@ -787,7 +1044,6 @@ TEMPLATES: dict[str, str] = {
         WHERE  (e.student_id = %s OR cs.lecturer_id = %s)
           AND  ts.date >= CURRENT_DATE
         ORDER BY ts.date, ts.slot_number
-        LIMIT  50
     """,
 
     "get_my_schedule_targeted": """
@@ -811,7 +1067,6 @@ TEMPLATES: dict[str, str] = {
           AND  (ts.date BETWEEN %s AND %s)
           AND  (unaccent(cs.class_name) ILIKE unaccent(%s) OR %s = '')
         ORDER BY ts.date, ts.slot_number
-        LIMIT  100
     """,
 
     "get_class_schedule": """
@@ -830,7 +1085,6 @@ TEMPLATES: dict[str, str] = {
         WHERE  ts.class_name = %s
           AND  ts.date BETWEEN %s AND %s
         ORDER BY ts.date, ts.slot_number
-        LIMIT  50
     """,
 
     "get_lecturer_schedule_by_search": """
@@ -848,10 +1102,11 @@ TEMPLATES: dict[str, str] = {
         LEFT JOIN semesters    sem  ON cs.semester_id  = sem.id
         LEFT JOIN rooms         r   ON ts.room_id      = r.id
         LEFT JOIN slot_types    st  ON ts.slot_type_id = st.id
-        WHERE  (unaccent(u.full_name) ILIKE unaccent(%s) OR u.code = %s)
+        WHERE  (%s = '' OR u.code = %s)
+          AND  (%s = '' OR unaccent(u.full_name) ILIKE unaccent(%s))
+          AND  (%s <> '' OR %s <> '')
           AND  ts.date BETWEEN %s AND %s
         ORDER BY ts.date, ts.slot_number
-        LIMIT  100
     """,
 
     "get_student_schedule_by_search": """
@@ -869,15 +1124,16 @@ TEMPLATES: dict[str, str] = {
         LEFT JOIN semesters   sem  ON cs.semester_id  = sem.id
         LEFT JOIN rooms        r   ON ts.room_id      = r.id
         LEFT JOIN slot_types   st  ON ts.slot_type_id = st.id
-        WHERE  (unaccent(u.full_name) ILIKE unaccent(%s) OR u.code = %s)
+        WHERE  (%s = '' OR u.code = %s)
+          AND  (%s = '' OR unaccent(u.full_name) ILIKE unaccent(%s))
+          AND  (%s <> '' OR %s <> '')
           AND  ts.date BETWEEN %s AND %s
         ORDER BY ts.date, ts.slot_number
-        LIMIT  100
     """,
 
-    # ════════════════════════════════════════════════════════════════════════
+    # 
     # SCHEDULE REQUESTS
-    # ════════════════════════════════════════════════════════════════════════
+    # 
 
     "get_schedule_request_list": """
         SELECT sr.id, u.full_name AS requester, u.code AS requester_code,
@@ -894,8 +1150,8 @@ TEMPLATES: dict[str, str] = {
         LEFT JOIN rooms           r1   ON ts1.room_id = r1.id
         LEFT JOIN rooms           r2   ON ts2.room_id = r2.id
         LEFT JOIN class_sections  cs1  ON ts1.class_name = cs1.class_name
+        WHERE  (%s = '' OR sr.status = %s)
         ORDER BY sr.created_at DESC
-        LIMIT  50
     """,
 
     "get_my_schedule_requests": """
@@ -918,7 +1174,21 @@ TEMPLATES: dict[str, str] = {
 
     "create_schedule_request": """
         INSERT INTO schedule_requests (requester_id, original_slot_id, requested_slot_id, reason, status, created_at, updated_at)
-        VALUES (%s, %s, %s, %s, 'PENDING', NOW(), NOW())
+        VALUES (
+            %s,
+            COALESCE(
+                NULLIF(%s, 0),
+                (SELECT id FROM timetable_slots WHERE class_name = %s AND date = %s::date AND slot_number = %s LIMIT 1)
+            ),
+            COALESCE(
+                NULLIF(%s, 0),
+                (SELECT id FROM timetable_slots WHERE class_name = %s AND date = %s::date AND slot_number = %s LIMIT 1)
+            ),
+            %s,
+            'PENDING',
+            NOW(),
+            NOW()
+        )
         RETURNING id, reason, status, created_at
     """,
 
@@ -943,9 +1213,9 @@ TEMPLATES: dict[str, str] = {
         WHERE  sr.id = %s
     """,
 
-    # ════════════════════════════════════════════════════════════════════════
+    # 
     # ATTENDANCE
-    # ════════════════════════════════════════════════════════════════════════
+    # 
 
     "get_attendance_by_slot": """
         SELECT u.full_name, u.code,
@@ -981,6 +1251,39 @@ TEMPLATES: dict[str, str] = {
         JOIN   attendance_sessions ats ON sa.session_id = ats.id
         JOIN   timetable_slots     ts  ON ats.timetable_slot_id = ts.id
         WHERE  unaccent(ts.class_name) ILIKE unaccent(%s)
+    """,
+
+    "get_absence_rate_by_class": """
+        SELECT
+            ts.class_name,
+            COUNT(DISTINCT sa.student_id) AS total_students,
+            COUNT(sa.id) AS total_records,
+            COUNT(DISTINCT ts.date) AS total_sessions,
+            SUM(CASE WHEN sa.status = 'ABSENT' THEN 1 ELSE 0 END) AS absent_records,
+            ROUND(
+                100.0 * SUM(CASE WHEN sa.status = 'ABSENT' THEN 1 ELSE 0 END)
+                / NULLIF(COUNT(sa.id), 0),
+                1
+            ) AS absent_rate,
+            SUM(CASE WHEN sa.status = 'PRESENT' THEN 1 ELSE 0 END) AS present_records,
+            ROUND(
+                100.0 * SUM(CASE WHEN sa.status = 'PRESENT' THEN 1 ELSE 0 END)
+                / NULLIF(COUNT(sa.id), 0),
+                1
+            ) AS present_rate,
+            SUM(CASE WHEN sa.status = 'LATE' THEN 1 ELSE 0 END) AS late_records,
+            ROUND(
+                100.0 * SUM(CASE WHEN sa.status = 'LATE' THEN 1 ELSE 0 END)
+                / NULLIF(COUNT(sa.id), 0),
+                1
+            ) AS late_rate,
+            COUNT(DISTINCT CASE WHEN sa.status = 'ABSENT' THEN sa.student_id END) AS students_with_absence,
+            MAX(CASE WHEN sa.status = 'ABSENT' THEN ts.date END) AS latest_absence_date
+        FROM   student_attendances sa
+        JOIN   attendance_sessions ats ON sa.session_id = ats.id
+        JOIN   timetable_slots     ts  ON ats.timetable_slot_id = ts.id
+        WHERE  unaccent(ts.class_name) ILIKE unaccent(%s)
+        GROUP BY ts.class_name
     """,
 
     "get_attendance_rate_by_course": """
@@ -1036,6 +1339,217 @@ TEMPLATES: dict[str, str] = {
         ORDER BY attendance_rate ASC
     """,
 
+    "get_my_attendance_overview": """
+        WITH base AS (
+            SELECT ts.id AS slot_id,
+                   ts.date,
+                   ts.slot_number,
+                   ts.class_name,
+                   c.code AS course_code,
+                   c.name AS course_name,
+                   st.end_time,
+                   sa.status AS attendance_status
+            FROM   enrollments e
+            JOIN   users               u   ON e.student_id = u.id
+            JOIN   class_sections      cs  ON e.class_name = cs.class_name
+            JOIN   semesters           sem ON cs.semester_id = sem.id
+            JOIN   courses             c   ON cs.course_id = c.id
+            JOIN   timetable_slots     ts  ON ts.class_name = cs.class_name
+            JOIN   slot_types          st  ON ts.slot_type_id = st.id
+            LEFT JOIN attendance_sessions ats
+                   ON ats.timetable_slot_id = ts.id
+            LEFT JOIN student_attendances sa
+                   ON sa.session_id = ats.id
+                  AND sa.student_id = e.student_id
+            WHERE  (e.student_id = %s OR u.code = %s)
+              AND  e.status IN ('ENROLLED', 'COMPLETED')
+              AND  ts.status <> 'CANCELLED'
+              AND  (%s = '' OR unaccent(sem.code) ILIKE unaccent(%s) OR unaccent(sem.name) ILIKE unaccent(%s))
+        )
+        SELECT course_code,
+               course_name,
+               class_name,
+               COUNT(slot_id) AS total_slots,
+               COUNT(CASE WHEN CURRENT_TIMESTAMP > (date + end_time) THEN 1 END) AS sessions_held,
+               COUNT(CASE
+                        WHEN CURRENT_TIMESTAMP > (date + end_time)
+                         AND attendance_status = 'PRESENT'
+                        THEN 1
+                    END) AS present,
+               COUNT(CASE
+                        WHEN CURRENT_TIMESTAMP > (date + end_time)
+                         AND attendance_status = 'EXCUSED'
+                        THEN 1
+                    END) AS excused,
+               COUNT(CASE
+                        WHEN CURRENT_TIMESTAMP > (date + end_time)
+                         AND COALESCE(attendance_status, 'ABSENT') = 'ABSENT'
+                        THEN 1
+                    END) AS absent,
+               ROUND(
+                   100.0 * COUNT(CASE
+                                     WHEN CURRENT_TIMESTAMP > (date + end_time)
+                                      AND COALESCE(attendance_status, 'ABSENT') IN ('PRESENT', 'EXCUSED')
+                                     THEN 1
+                                 END)
+                   / NULLIF(COUNT(CASE WHEN CURRENT_TIMESTAMP > (date + end_time) THEN 1 END), 0),
+                   1
+               ) AS attendance_rate,
+               GREATEST(
+                   0,
+                   4 - COUNT(CASE
+                                 WHEN CURRENT_TIMESTAMP > (date + end_time)
+                                  AND COALESCE(attendance_status, 'ABSENT') = 'ABSENT'
+                                 THEN 1
+                             END)
+               ) AS slots_before_fail,
+               CASE
+                   WHEN COUNT(CASE
+                                 WHEN CURRENT_TIMESTAMP > (date + end_time)
+                                  AND COALESCE(attendance_status, 'ABSENT') = 'ABSENT'
+                                 THEN 1
+                              END) >= 4 THEN 'FAILED_BY_ATTENDANCE'
+                   WHEN COUNT(CASE
+                                 WHEN CURRENT_TIMESTAMP > (date + end_time)
+                                  AND COALESCE(attendance_status, 'ABSENT') = 'ABSENT'
+                                 THEN 1
+                              END) = 3 THEN 'WARNING'
+                   ELSE 'SAFE'
+               END AS attendance_status,
+               MAX(CASE
+                       WHEN CURRENT_TIMESTAMP > (date + end_time)
+                       THEN date
+                   END) AS latest_session_date
+        FROM   base
+        GROUP BY course_code, course_name, class_name
+        ORDER BY absent DESC, attendance_rate ASC NULLS LAST, latest_session_date DESC NULLS LAST, class_name
+    """,
+
+    "get_my_absence_history": """
+        SELECT ts.date,
+               ts.slot_number,
+               ts.class_name,
+               c.code AS course_code,
+               c.name AS course_name,
+               COALESCE(sa.status, 'ABSENT') AS status,
+               COALESCE(sa.method, 'SYSTEM') AS method,
+               r.name AS room,
+               st.start_time,
+               st.end_time
+        FROM   enrollments e
+        JOIN   users               u   ON e.student_id = u.id
+        JOIN   class_sections      cs  ON e.class_name = cs.class_name
+        JOIN   semesters           sem ON cs.semester_id = sem.id
+        JOIN   courses             c   ON cs.course_id = c.id
+        JOIN   timetable_slots     ts  ON ts.class_name = cs.class_name
+        JOIN   slot_types          st  ON ts.slot_type_id = st.id
+        LEFT JOIN rooms            r   ON ts.room_id = r.id
+        LEFT JOIN attendance_sessions ats
+               ON ats.timetable_slot_id = ts.id
+        LEFT JOIN student_attendances sa
+               ON sa.session_id = ats.id
+              AND sa.student_id = e.student_id
+        WHERE  (e.student_id = %s OR u.code = %s)
+          AND  e.status IN ('ENROLLED', 'COMPLETED')
+          AND  ts.status <> 'CANCELLED'
+          AND  (%s = '' OR unaccent(sem.code) ILIKE unaccent(%s) OR unaccent(sem.name) ILIKE unaccent(%s))
+          AND  CURRENT_TIMESTAMP > (ts.date + st.end_time)
+          AND  COALESCE(sa.status, 'ABSENT') = 'ABSENT'
+        ORDER BY ts.date DESC, ts.slot_number DESC
+        LIMIT  30
+    """,
+
+    "get_my_attendance_risk_courses": """
+        WITH base AS (
+            SELECT ts.id AS slot_id,
+                   ts.date,
+                   ts.slot_number,
+                   ts.class_name,
+                   c.code AS course_code,
+                   c.name AS course_name,
+                   st.end_time,
+                   sa.status AS attendance_status
+            FROM   enrollments e
+            JOIN   users               u   ON e.student_id = u.id
+            JOIN   class_sections      cs  ON e.class_name = cs.class_name
+            JOIN   semesters           sem ON cs.semester_id = sem.id
+            JOIN   courses             c   ON cs.course_id = c.id
+            JOIN   timetable_slots     ts  ON ts.class_name = cs.class_name
+            JOIN   slot_types          st  ON ts.slot_type_id = st.id
+            LEFT JOIN attendance_sessions ats
+                   ON ats.timetable_slot_id = ts.id
+            LEFT JOIN student_attendances sa
+                   ON sa.session_id = ats.id
+                  AND sa.student_id = e.student_id
+            WHERE  (e.student_id = %s OR u.code = %s)
+              AND  e.status IN ('ENROLLED', 'COMPLETED')
+              AND  ts.status <> 'CANCELLED'
+              AND  (%s = '' OR unaccent(sem.code) ILIKE unaccent(%s) OR unaccent(sem.name) ILIKE unaccent(%s))
+        )
+        SELECT course_code,
+               course_name,
+               class_name,
+               COUNT(slot_id) AS total_slots,
+               COUNT(CASE WHEN CURRENT_TIMESTAMP > (date + end_time) THEN 1 END) AS sessions_held,
+               COUNT(CASE
+                        WHEN CURRENT_TIMESTAMP > (date + end_time)
+                         AND attendance_status = 'PRESENT'
+                        THEN 1
+                    END) AS present,
+               COUNT(CASE
+                        WHEN CURRENT_TIMESTAMP > (date + end_time)
+                         AND attendance_status = 'EXCUSED'
+                        THEN 1
+                    END) AS excused,
+               COUNT(CASE
+                        WHEN CURRENT_TIMESTAMP > (date + end_time)
+                         AND COALESCE(attendance_status, 'ABSENT') = 'ABSENT'
+                        THEN 1
+                    END) AS absent,
+               ROUND(
+                   100.0 * COUNT(CASE
+                                     WHEN CURRENT_TIMESTAMP > (date + end_time)
+                                      AND COALESCE(attendance_status, 'ABSENT') IN ('PRESENT', 'EXCUSED')
+                                     THEN 1
+                                 END)
+                   / NULLIF(COUNT(CASE WHEN CURRENT_TIMESTAMP > (date + end_time) THEN 1 END), 0),
+                   1
+               ) AS attendance_rate,
+               GREATEST(
+                   0,
+                   4 - COUNT(CASE
+                                 WHEN CURRENT_TIMESTAMP > (date + end_time)
+                                  AND COALESCE(attendance_status, 'ABSENT') = 'ABSENT'
+                                 THEN 1
+                             END)
+               ) AS slots_before_fail,
+               CASE
+                   WHEN COUNT(CASE
+                                 WHEN CURRENT_TIMESTAMP > (date + end_time)
+                                  AND COALESCE(attendance_status, 'ABSENT') = 'ABSENT'
+                                 THEN 1
+                              END) >= 4 THEN 'FAILED_BY_ATTENDANCE'
+                   WHEN COUNT(CASE
+                                 WHEN CURRENT_TIMESTAMP > (date + end_time)
+                                  AND COALESCE(attendance_status, 'ABSENT') = 'ABSENT'
+                                 THEN 1
+                              END) = 3 THEN 'WARNING'
+                   ELSE 'SAFE'
+               END AS attendance_status,
+               MAX(CASE
+                       WHEN CURRENT_TIMESTAMP > (date + end_time)
+                       THEN date
+                   END) AS latest_session_date
+        FROM   base
+        GROUP BY course_code, course_name, class_name
+        HAVING COUNT(CASE
+                        WHEN CURRENT_TIMESTAMP > (date + end_time)
+                         AND COALESCE(attendance_status, 'ABSENT') = 'ABSENT'
+                        THEN 1
+                     END) >= %s
+        ORDER BY absent DESC, attendance_rate ASC NULLS LAST, latest_session_date DESC NULLS LAST, class_name
+    """,
+
     "get_abnormal_attendance": """
         SELECT u.full_name, u.code,
                ts.class_name, ts.date,
@@ -1050,7 +1564,6 @@ TEMPLATES: dict[str, str] = {
         WHERE  sa.method = 'QR_CODE'
           AND  sa.created_at < (ats.opened_at + INTERVAL '30 seconds')
         ORDER BY sa.created_at DESC
-        LIMIT  100
     """,
 
     "get_attendance_trends": """
@@ -1079,7 +1592,7 @@ TEMPLATES: dict[str, str] = {
         ORDER BY absent_rate DESC
     """,
 
-    # NEW: Danh sách SV vắng nhiều nhất trong một lớp
+    # NEW: Danh sch SV vng nhiu nht trong mt lp
     "get_most_absent_students": """
         WITH cls AS (
             SELECT DISTINCT ts.class_name
@@ -1110,9 +1623,9 @@ TEMPLATES: dict[str, str] = {
         LIMIT  30
     """,
 
-    # ════════════════════════════════════════════════════════════════════════
+    # 
     # GRADES
-    # ════════════════════════════════════════════════════════════════════════
+    # 
 
     "get_my_courses": """
         SELECT DISTINCT
@@ -1230,6 +1743,9 @@ TEMPLATES: dict[str, str] = {
         FROM   student_profiles sp
         JOIN   majors           m  ON sp.major_id = m.id
         JOIN   users            u  ON sp.user_id  = u.id AND u.status = 'ACTIVE'
+        WHERE  (unaccent(m.name) ILIKE unaccent(%s)
+             OR unaccent(m.code) ILIKE unaccent(%s)
+             OR %s = '')
         GROUP BY m.name, m.code
         ORDER BY avg_gpa DESC
     """,
@@ -1336,10 +1852,9 @@ TEMPLATES: dict[str, str] = {
         WHERE  e.class_name = (SELECT class_name FROM cls)
         GROUP BY u.full_name, u.code, sp.gpa
         ORDER BY rank
-        LIMIT  50
     """,
 
-    # NEW: Xu hướng điểm số theo thời gian (per session/attempt)
+    # NEW: Xu hng im s theo thi gian (per session/attempt)
     "get_grade_trend_by_student": """
         SELECT c.name AS course_name, gc.name AS component, gc.type,
                sg.attempt, sg.score,
@@ -1354,9 +1869,9 @@ TEMPLATES: dict[str, str] = {
         ORDER BY sem.start_date ASC, c.name, sg.attempt
     """,
 
-    # ════════════════════════════════════════════════════════════════════════
+    # 
     # NOTIFICATIONS
-    # ════════════════════════════════════════════════════════════════════════
+    # 
 
     "get_my_notifications": """
         SELECT n.title, n.content, n.type, n.priority,
@@ -1388,9 +1903,9 @@ TEMPLATES: dict[str, str] = {
         WHERE  nr.recipient_id = %s AND nr.is_read = FALSE
     """,
 
-    # ════════════════════════════════════════════════════════════════════════
+    # 
     # MUTATIONS (unchanged logic, kept for completeness)
-    # ════════════════════════════════════════════════════════════════════════
+    # 
 
     "create_major": """
         INSERT INTO majors (code, name, status, created_at, updated_at)
@@ -1478,7 +1993,7 @@ TEMPLATES: dict[str, str] = {
 }
 
 
-# ── Param Builders ────────────────────────────────────────────────────────────
+#  Param Builders 
 def build_params(
     tool_name: str,
     entities: dict,
@@ -1490,6 +2005,7 @@ def build_params(
     Raises ValueError khi thiếu entity bắt buộc.
     """
     e = entities
+    date_str = e.get("date") or datetime.now().strftime("%Y-%m-%d")
 
     def req(key: str, label: str = "") -> Any:
         val = e.get(key)
@@ -1498,15 +2014,7 @@ def build_params(
         return val
 
     def _normalize_date(raw: str) -> str:
-        import re as _re
-        s = str(raw).strip()
-        m = _re.match(r"^(\d{4})-(\d{1,2})-(\d{1,2})$", s)
-        if m:
-            return f"{m.group(1)}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
-        m = _re.match(r"^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$", s)
-        if m:
-            return f"{m.group(3)}-{int(m.group(2)):02d}-{int(m.group(1)):02d}"
-        return s
+        return _normalize_date_literal(raw)
 
     def _normalize_major(val: str) -> str:
         if not val:
@@ -1514,7 +2022,7 @@ def build_params(
         v = str(val).strip()
         # ✅ NEW: Remove "ngành" prefix if present (common in Vietnamese queries)
         if v.lower().startswith("ngành "):
-            v = v[6:].strip()  # Remove "ngành " (6 chars including space)
+            v = v[6:].strip()  # Remove "ngành " (6 chars including space) # type: ignore
         v_upper = v.upper()
         _map = {
             "CNTT": "Công nghệ thông tin",
@@ -1530,42 +2038,11 @@ def build_params(
         }
         return _map.get(v_upper, v)
 
+    def _semester_search_text() -> str:
+        return str(e.get("semester_code") or e.get("semester_name") or e.get("semester") or "").strip()
+
     def _resolve_date_range(dt_raw: str) -> Tuple[str, str]:
-        if not dt_raw or dt_raw == "1970-01-01":
-            return "1970-01-01", "2099-12-31"
-
-        dt_lower = dt_raw.lower().replace("_", " ")
-        now = datetime.now()
-
-        _WEEK_KW   = ("tuan nay", "tuần này", "this week", "week", "tuần")
-        _NXTW_KW   = ("tuan sau", "tuần sau", "next week", "tuần tới")
-        _TODAY_KW  = ("hom nay", "hôm nay", "today")
-        _TMRW_KW   = ("ngay mai", "ngày mai", "tomorrow")
-        _MONTH_KW  = ("thang nay", "tháng này", "this month", "month")
-
-        if any(kw in dt_lower for kw in _NXTW_KW):
-            monday = now - timedelta(days=now.weekday()) + timedelta(weeks=1)
-            sunday = monday + timedelta(days=6)
-            return monday.strftime("%Y-%m-%d"), sunday.strftime("%Y-%m-%d")
-        elif any(kw in dt_lower for kw in _WEEK_KW):
-            monday = now - timedelta(days=now.weekday())
-            sunday = monday + timedelta(days=6)
-            return monday.strftime("%Y-%m-%d"), sunday.strftime("%Y-%m-%d")
-        elif any(kw in dt_lower for kw in _TODAY_KW):
-            t = now.strftime("%Y-%m-%d")
-            return t, t
-        elif any(kw in dt_lower for kw in _TMRW_KW):
-            t = (now + timedelta(days=1)).strftime("%Y-%m-%d")
-            return t, t
-        elif any(kw in dt_lower for kw in _MONTH_KW):
-            first = now.replace(day=1).strftime("%Y-%m-%d")
-            import calendar
-            last_day = calendar.monthrange(now.year, now.month)[1]
-            last = now.replace(day=last_day).strftime("%Y-%m-%d")
-            return first, last
-        else:
-            normalized = _normalize_date(dt_raw)
-            return normalized, normalized
+        return resolve_date_expression(dt_raw)
 
     def like(val: str) -> str:
         s = "" if val is None else str(val)
@@ -1593,33 +2070,64 @@ def build_params(
             raise ValueError("Thiếu trường bắt buộc: class_name")
         return like(s), s
 
-    # ── Users ────────────────────────────────────────────────────────────
+    def _apply_day_of_week_filter(start_dt: str, end_dt: str) -> Tuple[str, str]:
+        weekday_index = _normalize_day_of_week_value(e.get("day_of_week"))
+        if weekday_index is None:
+            return start_dt, end_dt
+        try:
+            start_date = datetime.strptime(start_dt, "%Y-%m-%d")
+            end_date = datetime.strptime(end_dt, "%Y-%m-%d")
+        except ValueError:
+            return start_dt, end_dt
+        if end_date < start_date:
+            return start_dt, end_dt
+        current = start_date
+        while current <= end_date:
+            if current.weekday() == weekday_index:
+                exact = current.strftime("%Y-%m-%d")
+                return exact, exact
+            current += timedelta(days=1)
+        return start_dt, end_dt
+
+    #  Users 
     if tool_name == "search_user_by_name":
-        return tool_name, (like(req("full_name")),)
+        return tool_name, (like(req("full_name").strip()),)
     elif tool_name == "get_user_by_code":
         val = e.get("code") or e.get("user_code") or e.get("student_code") or e.get("lecturer_code")
         if not val:
             val = req("code")
         return tool_name, (_norm_code(val),)
-    elif tool_name in ("view_inactive_users", "count_users_by_role"):
+    elif tool_name == "view_inactive_users":
         return tool_name, ()
+    elif tool_name == "count_users_by_role":
+        return tool_name, (str(req("role")).upper(),)
     elif tool_name == "activate_user":
         return tool_name, (_norm_code(req("code")),)
 
-    # ── Students ─────────────────────────────────────────────────────────
+    #  Students 
     elif tool_name == "get_student_by_code":
-        raw = e.get("student_code") or e.get("code") or e.get("full_name")
-        if not raw:
+        student_code = e.get("student_code") or e.get("code")
+        full_name = e.get("full_name")
+        if not student_code and not full_name:
             raise ValueError("Thiếu trường bắt buộc: student_code hoặc full_name")
-        val = _norm_code(raw)
-        return tool_name, (val, like(raw))
+        lecturer_scope_id = user_id if user_role == "LECTURER" else -1
+        code = _norm_code(student_code) if student_code else ""
+        fuzzy_name = like(full_name) if full_name else ""
+        return tool_name, (
+            lecturer_scope_id, lecturer_scope_id,
+            lecturer_scope_id, lecturer_scope_id,
+            lecturer_scope_id, lecturer_scope_id,
+            lecturer_scope_id, lecturer_scope_id,
+            lecturer_scope_id, lecturer_scope_id,
+            code, code, fuzzy_name, fuzzy_name, code, fuzzy_name,
+        )
     elif tool_name == "get_students_by_major":
-        val = _normalize_major(e.get("major_name", ""))
+        val = _normalize_major(e.get("major_name") or e.get("major_code") or "")
         return tool_name, (like(val), like(val), val)
     elif tool_name == "count_students_by_major":
         val = _normalize_major(e.get("major_name") or e.get("major_code") or "")
         params = (like(val), like(val), val)
-        logger.info(f"[build_params] count_students_by_major: major_name={e.get('major_name')} → normalized={val} → params={params}")
+        logger.info(f"[build_params] count_students_by_major: major_name={e.get('major_name')}  normalized={val}  params={params}")
         return tool_name, params
     elif tool_name == "get_students_by_class":
         val = e.get("class_name") or e.get("course_code")
@@ -1629,7 +2137,8 @@ def build_params(
         return tool_name, (like(val), like(val), like(val), lec_id, lec_id)
     elif tool_name == "get_students_at_risk":
         gpa_threshold = float(e.get("gpa_threshold") or 2.0)
-        return tool_name, (gpa_threshold, gpa_threshold)
+        major_val = _normalize_major(e.get("major_name") or e.get("major_code") or "")
+        return tool_name, (gpa_threshold, gpa_threshold, like(major_val), like(major_val), major_val)
     elif tool_name in ("get_top_students", "get_students_without_class"):
         return tool_name, ()
     elif tool_name == "get_class_info":
@@ -1645,13 +2154,15 @@ def build_params(
         val = e.get("student_code") or e.get("code", "")
         return tool_name, (val, like(val))
 
-    # ── Lecturers ────────────────────────────────────────────────────────
+    #  Lecturers 
     elif tool_name == "get_lecturer_by_code":
-        raw = e.get("lecturer_code") or e.get("code") or e.get("full_name")
-        if not raw:
+        lecturer_code = e.get("lecturer_code") or e.get("code")
+        full_name = e.get("full_name")
+        if not lecturer_code and not full_name:
             raise ValueError("Thiếu trường bắt buộc: lecturer_code hoặc full_name")
-        val = _norm_code(raw)
-        return tool_name, (val, like(raw))
+        code = _norm_code(lecturer_code) if lecturer_code else ""
+        fuzzy_name = like(full_name) if full_name else ""
+        return tool_name, (code, code, fuzzy_name, fuzzy_name, code, fuzzy_name)
     elif tool_name == "get_lecturers_by_major":
         val = _normalize_major(e.get("major_name") or e.get("course_name") or e.get("keyword") or "")
         return tool_name, (like(val), like(val), like(val), like(val), val)
@@ -1661,21 +2172,26 @@ def build_params(
     elif tool_name == "list_lecturers":
         return "get_lecturers_by_major", ("%", "%", "%", "%", "")
     elif tool_name == "get_lecturer_workload":
-        val = e.get("full_name") or e.get("lecturer_code") or ""
-        code = e.get("lecturer_code") or e.get("code") or ""
-        return tool_name, (like(val), code, val)
+        code = _norm_code(e.get("lecturer_code") or e.get("code")) if (e.get("lecturer_code") or e.get("code")) else ""
+        full_name = e.get("full_name") or ""
+        fuzzy_name = like(full_name) if full_name else ""
+        return tool_name, (code, code, fuzzy_name, fuzzy_name, code, fuzzy_name)
 
-    # ── Rooms ────────────────────────────────────────────────────────────
+    #  Rooms 
     elif tool_name == "get_empty_rooms":
-        dt = e.get("date") or datetime.now().strftime("%Y-%m-%d")
-        slot = e.get("slot_number") or e.get("slot") or 1
+        dt = req("date", "Date")
+        slot = e.get("slot_number")
+        if slot in (None, "", []):
+            slot = "ALL"
+        if str(slot).upper() == "ALL":
+            return tool_name, (_normalize_date(dt), _normalize_date(dt), "ALL", None)
         try:
             slot = int(slot)
         except (ValueError, TypeError):
-            slot = 1
-        return tool_name, (_normalize_date(dt), _normalize_date(dt), slot)
+            raise ValueError("Thiếu trường bắt buộc: slot_number")
+        return tool_name, (_normalize_date(dt), _normalize_date(dt), "", slot)
     elif tool_name == "count_rooms_by_status":
-        return tool_name, ()
+        return tool_name, (str(req("status")).upper(),)
     elif tool_name == "get_room_info":
         return tool_name, (like(req("room_name", "tên phòng")),)
     elif tool_name == "create_room":
@@ -1684,19 +2200,35 @@ def build_params(
         start_dt, end_dt = _resolve_date_range(e.get("date") or "tuần này")
         return tool_name, (like(req("room_name")), start_dt, end_dt)
 
-    # ── Majors ───────────────────────────────────────────────────────────
+    #  Majors 
     elif tool_name == "list_majors":
         return tool_name, ()
     elif tool_name == "create_major":
         return tool_name, (_norm_code(req("code", "mã ngành")), req("name", "tên ngành"))
+    elif tool_name == "get_major_id_by_name":
+        val = _normalize_major(e.get("major_name") or e.get("major_code") or e.get("name") or e.get("code") or "")
+        if not val:
+            raise ValueError("Thiếu trường bắt buộc: major_name hoặc major_code")
+        return tool_name, (like(val), like(val))
 
-    # ── Specializations ──────────────────────────────────────────────────
+    #  Specializations 
     elif tool_name == "get_specializations_by_major":
         val = _normalize_major(e.get("major_name", ""))
         return tool_name, (like(val), like(val), val)
     elif tool_name == "get_sub_specializations":
         val = e.get("specialization_name") or e.get("major_name", "")
         return tool_name, (like(val), like(val), val)
+    elif tool_name == "get_specialization_id_by_name":
+        val = (
+            e.get("specialization_name")
+            or e.get("specialization_code")
+            or e.get("spec_name")
+            or e.get("spec_code")
+            or ""
+        )
+        if not val:
+            raise ValueError("Thiếu trường bắt buộc: specialization_name hoặc specialization_code")
+        return tool_name, (like(val), like(val))
     elif tool_name == "get_courses_by_spec":
         val = e.get("specialization_name") or e.get("major_name", "")
         return tool_name, (like(val), like(val), val)
@@ -1704,12 +2236,15 @@ def build_params(
         val = e.get("sub_specialization_name") or e.get("specialization_name", "")
         return tool_name, (like(val), like(val), val)
 
-    # ── Courses ──────────────────────────────────────────────────────────
+    #  Courses 
     elif tool_name == "list_courses":
         return tool_name, ()
     elif tool_name == "get_courses_by_name":
         val = e.get("course_name") or e.get("course_code", "")
         return tool_name, (like(val), like(val))
+    elif tool_name == "get_courses_by_semester":
+        val = e.get("semester_code") or e.get("semester_name") or e.get("semester") or ""
+        return tool_name, (like(val), like(val), str(val).strip())
     elif tool_name == "get_grade_components_by_course":
         val = e.get("course_name") or e.get("course_code", "")
         return tool_name, (like(val), like(val))
@@ -1722,16 +2257,147 @@ def build_params(
     elif tool_name == "create_course":
         return tool_name, (_norm_code(req("code")), req("name"), e.get("credits") or 3)
 
-    # ── Semesters ────────────────────────────────────────────────────────
+    #  Semesters 
     elif tool_name in ("list_semesters", "get_active_semester"):
         return tool_name, ()
+
+
+
+    # --- Category I: Notifications ---
+    elif tool_name == "get_overdue_urgent_notifications":
+        params = ()
+    elif tool_name == "get_notification_history_for_user":
+        params = (req('user_code', 'User Code'),)
+    elif tool_name == "get_system_broadcast_stats":
+        params = ()
+
+    # --- Category J: Analytics ---
+    elif tool_name == "get_system_dashboard":
+        params = ()
+    elif tool_name == "get_gpa_attendance_correlation":
+        params = ()
+    elif tool_name == "get_best_performing_classes":
+        semester_val = _semester_search_text() or req("semester_code", "Semester Code")
+        params = (rf"%{semester_val}%",)
+    elif tool_name == "get_teaching_effectiveness":
+        semester_val = _semester_search_text() or req("semester_code", "Semester Code")
+        params = (rf"%{semester_val}%",)
+
+    # --- Category E: Grades ---
+    elif tool_name == "get_grade_histogram":
+        params = (rf"%{req('class_name', 'Class Name')}%",)
+    elif tool_name == "get_grade_improvement_on_retake":
+        params = (rf"%{req('course_code', 'Course Code')}%",)
+    elif tool_name == "get_full_grade_sheet":
+        params = (rf"%{req('class_name', 'Class Name')}%",)
+    elif tool_name == "get_student_academic_standing":
+        params = (req('student_code', 'Student Code'),)
+
+    # --- Category F: Classes & Semesters ---
+    elif tool_name == "get_available_classes_for_student":
+        semester_val = _semester_search_text() or req("semester_code", "Semester Code")
+        params = (rf"%{semester_val}%", req('student_code', 'Student Code'))
+    elif tool_name == "get_semester_countdown":
+        params = ()
+    elif tool_name == "get_high_risk_classes":
+        semester_val = _semester_search_text() or req("semester_code", "Semester Code")
+        params = (rf"%{semester_val}%",)
+    elif tool_name == "get_class_leaderboard":
+        semester_val = _semester_search_text() or req("semester_code", "Semester Code")
+        params = (rf"%{semester_val}%",)
+
+    # --- Category G: Rooms ---
+    elif tool_name == "get_rooms_busy_now":
+        params = ()
+    elif tool_name == "get_suitable_rooms_for_class":
+        params = (rf"%{req('class_name', 'Class Name')}%",)
+    elif tool_name == "get_room_fill_rate_by_weekday":
+        params = (rf"%{req('room_name', 'Room Name')}%",)
+    elif tool_name == "get_all_rooms_today":
+        params = (date_str,)
+
+    # --- Category H: Majors ---
+    elif tool_name == "get_major_curriculum_tree":
+        params = (rf"%{req('major_code', 'Major Code')}%",)
+    elif tool_name == "get_shared_courses_across_specs":
+        params = (rf"%{req('course_code', 'Course Code')}%",)
+
+    # --- Category A: Slots ---
+    elif tool_name == "get_slots_by_date":
+        params = (date_str,)
+    elif tool_name == "get_slots_by_slot_number":
+        params = (req('slot_number', 'Slot Number'), date_str)
+    elif tool_name == "get_slot_time_info":
+        params = ()
+    elif tool_name == "get_slots_by_time_range":
+        start_time = req('time_start', 'Time Start (HH:MM)')
+        end_time = req('time_end', 'Time End (HH:MM)')
+        params = (date_str, start_time, end_time)
+    elif tool_name == "get_timetable_conflicts":
+        params = (req('lecturer_code', 'Lecturer Code'), date_str)
+    elif tool_name == "get_class_next_session":
+        params = (rf"%{req('class_name', 'Class Name')}%",)
+    elif tool_name == "get_available_slots_for_room":
+        params = (date_str, rf"%{req('room_name', 'Room Name')}%")
+    elif tool_name == "get_slot_detail_by_id":
+        params = (req('slot_id', 'Slot ID (Session ID)'),)
+    elif tool_name == "get_makeup_slot_candidates":
+        start_time = req('start_time', 'Start Time')
+        end_time = req('end_time', 'End Time')
+        params = (start_time, end_time, rf"%{req('class_name', 'Class Name')}%")
+    elif tool_name == "get_weekly_timetable_grid":
+        end_date = entities.get('end_date') or (datetime.strptime(date_str, "%Y-%m-%d") + timedelta(days=7)).strftime("%Y-%m-%d")
+        params = (date_str, end_date)
+    elif tool_name == "get_rescheduled_slots":
+        params = ()
+
+    # --- Category B: Students ---
+    elif tool_name == "get_student_vs_class_grade":
+        c_name = req('class_name', 'Class Name')
+        params = (rf"%{c_name}%", req('student_code', 'Student Code'), rf"%{c_name}%")
+    elif tool_name == "get_graduation_eligible_students":
+        params = (e.get('credit_threshold', 120),) # Default 120 if missing
+    elif tool_name == "get_classmates":
+        st_code = req('student_code', 'Student Code')
+        params = (st_code, st_code)
+        
+    # --- Category C: Lecturers ---
+    elif tool_name == "get_lecturers_teaching_today":
+        params = (date_str,)
+    elif tool_name == "get_lecturer_workload_comparison":
+        semester_val = _semester_search_text() or req("semester_code", "Semester Code")
+        params = (rf"%{semester_val}%",)
+    elif tool_name == "get_idle_lecturers":
+        semester_val = _semester_search_text() or req("semester_code", "Semester Code")
+        params = (rf"%{semester_val}%",)
+    elif tool_name == "get_top_lecturers_by_pass_rate":
+        semester_val = _semester_search_text() or req("semester_code", "Semester Code")
+        params = (rf"%{semester_val}%",)
+        
+    # --- Category D: Attendance ---
+    elif tool_name == "get_attendance_by_session_id":
+        params = (req('session_id', 'Session ID (Slot ID)'),)
+    elif tool_name == "get_attendance_by_slot_number":
+        params = (req('slot_number', 'Slot Number'), date_str)
+    elif tool_name == "get_student_attendance_by_class":
+        params = (req('student_code', 'Student Code'), rf"%{req('class_name', 'Class Name')}%")
+    elif tool_name == "get_attendance_heatmap":
+        params = (rf"%{req('class_name', 'Class Name')}%",)
+    elif tool_name == "get_sessions_by_class":
+        params = (rf"%{req('class_name', 'Class Name')}%",)
+    elif tool_name == "get_open_sessions_now":
+        params = ()
+    elif tool_name == "get_consecutive_absences":
+        threshold = e.get('threshold_absences', 3) # default 3 
+        params = (rf"%{req('class_name', 'Class Name')}%", threshold, threshold)
+
     elif tool_name == "get_semester_overview":
         val = e.get("semester_code") or e.get("semester_name") or ""
         return tool_name, (like(val), like(val), val)
     elif tool_name == "create_semester":
         return tool_name, (_norm_code(req("code", "mã HK")), req("name", "tên HK"), e.get("start_date", ""), e.get("end_date", ""))
 
-    # ── Classes ──────────────────────────────────────────────────────────
+    #  Classes 
     elif tool_name == "get_classes_by_semester":
         import re as _re
         raw_val = (e.get("semester_code") or e.get("semester_name") or e.get("semester") or "").strip()
@@ -1755,21 +2421,44 @@ def build_params(
             _norm_code(req("semester_code")),
         )
 
-    # ── Schedule ─────────────────────────────────────────────────────────
+    #  Schedule 
     elif tool_name == "get_own_schedule":
         dt_raw = e.get("date") or ""
         cls    = e.get("class_name") or ""
-        # ✅ FIX: normalize_entities may have converted THIS_WEEK→start_date/end_date
+        #  FIX: normalize_entities may have converted THIS_WEEKstart_date/end_date
         if e.get("start_date") and e.get("end_date"):
             start_dt, end_dt = e["start_date"], e["end_date"]
         else:
             start_dt, end_dt = _resolve_date_range(dt_raw)
+        start_dt, end_dt = _apply_day_of_week_filter(start_dt, end_dt)
         if (not dt_raw and not e.get("start_date")) or dt_raw == "1970-01-01":
             if not cls:
                 return "get_my_schedule", (user_id, user_id)
         return "get_my_schedule_targeted", (user_id, user_id, start_dt, end_dt, like(cls), cls)
+    elif tool_name == "get_my_schedule":
+        dt_raw = e.get("date") or ""
+        cls = e.get("class_name") or ""
+        if e.get("start_date") and e.get("end_date"):
+            start_dt, end_dt = e["start_date"], e["end_date"]
+        else:
+            start_dt, end_dt = _resolve_date_range(dt_raw)
+        start_dt, end_dt = _apply_day_of_week_filter(start_dt, end_dt)
+        if (not dt_raw and not e.get("start_date")) or dt_raw == "1970-01-01":
+            if not cls:
+                return "get_my_schedule", (user_id, user_id)
+        return "get_my_schedule_targeted", (user_id, user_id, start_dt, end_dt, like(cls), cls)
+    elif tool_name == "get_my_schedule_targeted":
+        if e.get("start_date") and e.get("end_date"):
+            start_dt, end_dt = e["start_date"], e["end_date"]
+        else:
+            start_dt, end_dt = _resolve_date_range(e.get("date") or "")
+        start_dt, end_dt = _apply_day_of_week_filter(start_dt, end_dt)
+        cls = e.get("class_name") or ""
+        return "get_my_schedule_targeted", (user_id, user_id, start_dt, end_dt, like(cls), cls)
     elif tool_name == "get_own_grades":
-        return "get_my_courses", (user_id,)
+        return "get_my_grades", (user_id,)
+    elif tool_name == "get_my_grades":
+        return "get_my_grades", (user_id,)
     elif tool_name == "get_my_notifications":
         return tool_name, (user_id,)
     elif tool_name == "count_unread_notifications":
@@ -1778,39 +2467,95 @@ def build_params(
         return tool_name, (user_id,)
     elif tool_name == "get_attendance_report_by_student":
         return tool_name, (user_id,)
+    elif tool_name == "get_my_attendance_overview":
+        student_code = str(e.get("student_code") or "").strip().upper()
+        semester = str(e.get("semester_code") or e.get("semester_name") or e.get("semester") or "").strip()
+        if user_role == "ACADEMIC_STAFF":
+            student_code = req("student_code", "Student Code").upper()
+            return tool_name, (-1, student_code, semester, like(semester), like(semester))
+        return tool_name, (user_id, student_code, semester, like(semester), like(semester))
+    elif tool_name == "get_my_absence_history":
+        student_code = str(e.get("student_code") or "").strip().upper()
+        semester = str(e.get("semester_code") or e.get("semester_name") or e.get("semester") or "").strip()
+        if user_role == "ACADEMIC_STAFF":
+            student_code = req("student_code", "Student Code").upper()
+            return tool_name, (-1, student_code, semester, like(semester), like(semester))
+        return tool_name, (user_id, student_code, semester, like(semester), like(semester))
+    elif tool_name == "get_my_attendance_risk_courses":
+        threshold_absences = int(e.get("threshold_absences") or 3)
+        student_code = str(e.get("student_code") or "").strip().upper()
+        semester = str(e.get("semester_code") or e.get("semester_name") or e.get("semester") or "").strip()
+        if user_role == "ACADEMIC_STAFF":
+            student_code = req("student_code", "Student Code").upper()
+            return tool_name, (-1, student_code, semester, like(semester), like(semester), threshold_absences)
+        return tool_name, (user_id, student_code, semester, like(semester), like(semester), threshold_absences)
     elif tool_name == "get_class_schedule":
         cls = e.get("class_name")
         if not cls and user_role in ("LECTURER", "STUDENT"):
             logger.info("[build_params] Safety Net: fallback get_class_schedule -> get_own_schedule")
             return build_params("get_own_schedule", e, user_id, user_role)
-        # ✅ FIX: Use start_date/end_date from normalize_entities first
+        #  FIX: Use start_date/end_date from normalize_entities first
         if e.get("start_date") and e.get("end_date"):
             start_dt, end_dt = e["start_date"], e["end_date"]
         else:
             start_dt, end_dt = _resolve_date_range(e.get("date") or "")
+        start_dt, end_dt = _apply_day_of_week_filter(start_dt, end_dt)
         return tool_name, (req("class_name"), start_dt, end_dt)
     elif tool_name == "get_other_lecturer_schedule":
-        val = e.get("full_name") or e.get("code") or e.get("lecturer_code", "")
-        # ✅ FIX: normalize_entities converts THIS_WEEK→start_date/end_date and DELETES date
+        code = _norm_code(e.get("lecturer_code") or e.get("code")) if (e.get("lecturer_code") or e.get("code")) else ""
+        full_name = e.get("full_name") or ""
+        fuzzy_name = like(full_name) if full_name else ""
+        #  FIX: normalize_entities converts THIS_WEEKstart_date/end_date and DELETES date
         # So check start_date/end_date first, only fallback to _resolve_date_range(date)
         if e.get("start_date") and e.get("end_date"):
             start_dt, end_dt = e["start_date"], e["end_date"]
         else:
             start_dt, end_dt = _resolve_date_range(e.get("date") or "")
-        return "get_lecturer_schedule_by_search", (like(val), val, start_dt, end_dt)
-    elif tool_name == "get_other_student_schedule":
-        val = e.get("full_name") or e.get("code") or e.get("student_code", "")
-        # ✅ FIX: Same as above — use start_date/end_date from normalize_entities
+        start_dt, end_dt = _apply_day_of_week_filter(start_dt, end_dt)
+        return "get_lecturer_schedule_by_search", (code, code, fuzzy_name, fuzzy_name, code, fuzzy_name, start_dt, end_dt)
+    elif tool_name == "get_lecturer_schedule_by_search":
+        code = _norm_code(e.get("lecturer_code") or e.get("code")) if (e.get("lecturer_code") or e.get("code")) else ""
+        full_name = e.get("full_name") or ""
+        fuzzy_name = like(full_name) if full_name else ""
+        if not code and not full_name:
+            raise ValueError("Thiếu trường bắt buộc: lecturer_code hoặc full_name")
         if e.get("start_date") and e.get("end_date"):
             start_dt, end_dt = e["start_date"], e["end_date"]
         else:
             start_dt, end_dt = _resolve_date_range(e.get("date") or "")
-        return "get_student_schedule_by_search", (like(val), val, start_dt, end_dt)
+        start_dt, end_dt = _apply_day_of_week_filter(start_dt, end_dt)
+        return "get_lecturer_schedule_by_search", (code, code, fuzzy_name, fuzzy_name, code, fuzzy_name, start_dt, end_dt)
+    elif tool_name == "get_other_student_schedule":
+        code = _norm_code(e.get("student_code") or e.get("code")) if (e.get("student_code") or e.get("code")) else ""
+        full_name = e.get("full_name") or ""
+        fuzzy_name = like(full_name) if full_name else ""
+        #  FIX: Same as above  use start_date/end_date from normalize_entities
+        if e.get("start_date") and e.get("end_date"):
+            start_dt, end_dt = e["start_date"], e["end_date"]
+        else:
+            start_dt, end_dt = _resolve_date_range(e.get("date") or "")
+        start_dt, end_dt = _apply_day_of_week_filter(start_dt, end_dt)
+        return "get_student_schedule_by_search", (code, code, fuzzy_name, fuzzy_name, code, fuzzy_name, start_dt, end_dt)
+    elif tool_name == "get_student_schedule_by_search":
+        code = _norm_code(e.get("student_code") or e.get("code")) if (e.get("student_code") or e.get("code")) else ""
+        full_name = e.get("full_name") or ""
+        fuzzy_name = like(full_name) if full_name else ""
+        if not code and not full_name:
+            raise ValueError("Thiếu trường bắt buộc: student_code hoặc full_name")
+        if e.get("start_date") and e.get("end_date"):
+            start_dt, end_dt = e["start_date"], e["end_date"]
+        else:
+            start_dt, end_dt = _resolve_date_range(e.get("date") or "")
+        start_dt, end_dt = _apply_day_of_week_filter(start_dt, end_dt)
+        return "get_student_schedule_by_search", (code, code, fuzzy_name, fuzzy_name, code, fuzzy_name, start_dt, end_dt)
 
-    # ── Schedule Requests ────────────────────────────────────────────────
+    #  Schedule Requests 
     elif tool_name == "get_schedule_request_list":
-        return tool_name, ()
+        status = str(e.get("status") or "").upper().strip()
+        return tool_name, (status, status)
     elif tool_name == "get_my_schedule_requests":
+        return tool_name, (user_id,)
+    elif tool_name == "get_my_courses":
         return tool_name, (user_id,)
     elif tool_name == "get_schedule_request_detail":
         return tool_name, (req("request_id"),)
@@ -1819,7 +2564,7 @@ def build_params(
     elif tool_name == "reject_schedule_request":
         return tool_name, (req("request_id"),)
 
-    # ── Attendance ───────────────────────────────────────────────────────
+    #  Attendance 
     elif tool_name == "get_attendance_by_slot":
         cls = e.get("class_name") or e.get("class") or e.get("class_code")
         if not cls:
@@ -1827,6 +2572,8 @@ def build_params(
         date_raw = e.get("date") or datetime.now().strftime("%Y-%m-%d")
         return tool_name, (like(cls), _normalize_date(date_raw))
     elif tool_name == "get_attendance_stats_by_class":
+        return tool_name, (like(req("class_name")),)
+    elif tool_name == "get_absence_rate_by_class":
         return tool_name, (like(req("class_name")),)
     elif tool_name == "get_attendance_trends":
         return tool_name, _class_match_params(e.get("class_name"))
@@ -1847,18 +2594,19 @@ def build_params(
             req("session_id"),
         )
 
-    # ── Grades ───────────────────────────────────────────────────────────
+    #  Grades 
     elif tool_name == "get_detail_course_grade":
         val = e.get("course_name") or e.get("course_code", "")
         return tool_name, (user_id, like(val), like(val))
     elif tool_name == "get_grade_report_by_class":
         return tool_name, (like(req("class_name")),)
     elif tool_name == "get_gpa_stats_by_major":
-        return tool_name, ()
+        val = _normalize_major(e.get("major_name") or e.get("major_code") or "")
+        return tool_name, (like(val), like(val), val)
     elif tool_name == "get_grade_trend_by_student":
         return tool_name, (user_id,)
 
-    # ── Mutations: delete ────────────────────────────────────────────────
+    #  Mutations: delete 
     elif tool_name in ("delete_major", "delete_course", "delete_specialization", "delete_sub_specialization"):
         val = e.get("code") or e.get("name", "")
         return tool_name, (val, like(val))
@@ -1869,7 +2617,7 @@ def build_params(
     elif tool_name == "delete_class":
         return tool_name, (req("class_name"),)
 
-    # ── Mutations: update ────────────────────────────────────────────────
+    #  Mutations: update 
     elif tool_name == "update_student_info":
         return tool_name, (_norm_code(e.get("major_code") or e.get("major_name", "")), like(e.get("major_name", "")), _norm_code(req("student_code")))
     elif tool_name == "update_lecturer_info":
@@ -1889,7 +2637,7 @@ def build_params(
     elif tool_name == "update_class":
         return tool_name, (_norm_code(req("lecturer_code")), _norm_code(req("semester_code")), req("class_name"))
 
-    # ── Assignments ──────────────────────────────────────────────────────
+    #  Assignments 
     elif tool_name == "assign_course_to_specialization":
         return tool_name, (
             e.get("semester", 1),
@@ -1906,35 +2654,195 @@ def build_params(
             like(e.get("course_name", "")),
         )
 
-    # ── Specialization create ────────────────────────────────────────────
+    #  Specialization create 
     elif tool_name == "create_specialization":
         return tool_name, (req("major_code"), req("spec_code"), req("spec_name"))
     elif tool_name == "create_sub_specialization":
         return tool_name, (req("sub_code"), req("sub_name"), req("spec_code"))
+    elif tool_name == "add_student_to_class":
+        return tool_name, (req("class_name"), _norm_code(req("student_code")))
+    elif tool_name == "remove_student_from_class":
+        return tool_name, (req("class_name"), _norm_code(req("student_code")))
 
-    # ── Schedule Requests mutations ─────────────────────────────────────
+    #  Schedule Requests mutations 
     elif tool_name == "create_schedule_request":
+        original_slot_id = e.get("original_slot_id")
+        requested_slot_id = e.get("requested_slot_id")
+        if str(original_slot_id or "").isdigit() and str(requested_slot_id or "").isdigit():
+            return tool_name, (
+                user_id,
+                int(original_slot_id),
+                "",
+                "1970-01-01",
+                0,
+                int(requested_slot_id),
+                "",
+                "1970-01-01",
+                0,
+                e.get("reason", "")
+            )
+
+        class_name = req("class_name")
+        original_date = e.get("original_date") or e.get("date")
+        requested_date = e.get("requested_date")
+        original_slot_number = e.get("original_slot_number") or e.get("slot_number")
+        requested_slot_number = e.get("requested_slot_number")
+        if not (original_date and requested_date and original_slot_number and requested_slot_number):
+            raise ValueError(
+                "Thiếu trường bắt buộc: class_name, original_date, requested_date, "
+                "original_slot_number, requested_slot_number"
+            )
         return tool_name, (
             user_id,
-            req("original_slot_id"),
-            req("requested_slot_id"),
+            0,
+            class_name,
+            _normalize_date(str(original_date)),
+            int(original_slot_number),
+            0,
+            class_name,
+            _normalize_date(str(requested_date)),
+            int(requested_slot_number),
             e.get("reason", "")
         )
 
-    # ── Notifications ────────────────────────────────────────────────────
+    #  Notifications 
     elif tool_name == "list_notifications":
         return tool_name, ()
 
-    # ── Semester overview ────────────────────────────────────────────────
+    # --- Category I: Notifications ---
+    elif tool_name == "get_overdue_urgent_notifications":
+        params = ()
+    elif tool_name == "get_notification_history_for_user":
+        params = (req('user_code', 'User Code'),)
+    elif tool_name == "get_system_broadcast_stats":
+        params = ()
+
+    # --- Category J: Analytics ---
+    elif tool_name == "get_system_dashboard":
+        params = ()
+    elif tool_name == "get_gpa_attendance_correlation":
+        params = ()
+    elif tool_name == "get_best_performing_classes":
+        params = (rf"%{req('semester_code', 'Semester Code')}%",)
+    elif tool_name == "get_teaching_effectiveness":
+        params = (rf"%{req('semester_code', 'Semester Code')}%",)
+
+    # --- Category E: Grades ---
+    elif tool_name == "get_grade_histogram":
+        params = (rf"%{req('class_name', 'Class Name')}%",)
+    elif tool_name == "get_grade_improvement_on_retake":
+        params = (rf"%{req('course_code', 'Course Code')}%",)
+    elif tool_name == "get_full_grade_sheet":
+        params = (rf"%{req('class_name', 'Class Name')}%",)
+    elif tool_name == "get_student_academic_standing":
+        params = (req('student_code', 'Student Code'),)
+
+    # --- Category F: Classes & Semesters ---
+    elif tool_name == "get_available_classes_for_student":
+        params = (rf"%{req('semester_code', 'Semester Code')}%", req('student_code', 'Student Code'))
+    elif tool_name == "get_semester_countdown":
+        params = ()
+    elif tool_name == "get_high_risk_classes":
+        params = (rf"%{req('semester_code', 'Semester Code')}%",)
+    elif tool_name == "get_class_leaderboard":
+        params = (rf"%{req('semester_code', 'Semester Code')}%",)
+
+    # --- Category G: Rooms ---
+    elif tool_name == "get_rooms_busy_now":
+        params = ()
+    elif tool_name == "get_suitable_rooms_for_class":
+        params = (rf"%{req('class_name', 'Class Name')}%",)
+    elif tool_name == "get_room_fill_rate_by_weekday":
+        params = (rf"%{req('room_name', 'Room Name')}%",)
+    elif tool_name == "get_all_rooms_today":
+        params = (date_str,)
+
+    # --- Category H: Majors ---
+    elif tool_name == "get_major_curriculum_tree":
+        params = (rf"%{req('major_code', 'Major Code')}%",)
+    elif tool_name == "get_shared_courses_across_specs":
+        params = (rf"%{req('course_code', 'Course Code')}%",)
+
+    # --- Category A: Slots ---
+    elif tool_name == "get_slots_by_date":
+        params = (date_str,)
+    elif tool_name == "get_slots_by_slot_number":
+        params = (req('slot_number', 'Slot Number'), date_str)
+    elif tool_name == "get_slot_time_info":
+        params = ()
+    elif tool_name == "get_slots_by_time_range":
+        start_time = req('time_start', 'Time Start (HH:MM)')
+        end_time = req('time_end', 'Time End (HH:MM)')
+        params = (date_str, start_time, end_time)
+    elif tool_name == "get_timetable_conflicts":
+        params = (req('lecturer_code', 'Lecturer Code'), date_str)
+    elif tool_name == "get_class_next_session":
+        params = (rf"%{req('class_name', 'Class Name')}%",)
+    elif tool_name == "get_available_slots_for_room":
+        params = (date_str, rf"%{req('room_name', 'Room Name')}%")
+    elif tool_name == "get_slot_detail_by_id":
+        params = (req('slot_id', 'Slot ID (Session ID)'),)
+    elif tool_name == "get_makeup_slot_candidates":
+        start_time = req('start_time', 'Start Time')
+        end_time = req('end_time', 'End Time')
+        params = (start_time, end_time, rf"%{req('class_name', 'Class Name')}%")
+    elif tool_name == "get_weekly_timetable_grid":
+        end_date = entities.get('end_date') or (datetime.strptime(date_str, "%Y-%m-%d") + timedelta(days=7)).strftime("%Y-%m-%d")
+        params = (date_str, end_date)
+    elif tool_name == "get_rescheduled_slots":
+        params = ()
+
+    # --- Category B: Students ---
+    elif tool_name == "get_student_vs_class_grade":
+        c_name = req('class_name', 'Class Name')
+        params = (rf"%{c_name}%", req('student_code', 'Student Code'), rf"%{c_name}%")
+    elif tool_name == "get_graduation_eligible_students":
+        params = (e.get('credit_threshold', 120),) # Default 120 if missing
+    elif tool_name == "get_classmates":
+        st_code = req('student_code', 'Student Code')
+        params = (st_code, st_code)
+        
+    # --- Category C: Lecturers ---
+    elif tool_name == "get_lecturers_teaching_today":
+        params = (date_str,)
+    elif tool_name == "get_lecturer_workload_comparison":
+        params = (rf"%{req('semester_code', 'Semester Code')}%",)
+    elif tool_name == "get_idle_lecturers":
+        params = (rf"%{req('semester_code', 'Semester Code')}%",)
+    elif tool_name == "get_top_lecturers_by_pass_rate":
+        params = (rf"%{req('semester_code', 'Semester Code')}%",)
+        
+    # --- Category D: Attendance ---
+    elif tool_name == "get_attendance_by_session_id":
+        params = (req('session_id', 'Session ID (Slot ID)'),)
+    elif tool_name == "get_attendance_by_slot_number":
+        params = (req('slot_number', 'Slot Number'), date_str)
+    elif tool_name == "get_student_attendance_by_class":
+        params = (req('student_code', 'Student Code'), rf"%{req('class_name', 'Class Name')}%")
+    elif tool_name == "get_attendance_heatmap":
+        params = (rf"%{req('class_name', 'Class Name')}%",)
+    elif tool_name == "get_sessions_by_class":
+        params = (rf"%{req('class_name', 'Class Name')}%",)
+    elif tool_name == "get_open_sessions_now":
+        params = ()
+    elif tool_name == "get_consecutive_absences":
+        threshold = e.get('threshold_absences', 3) # default 3 
+        params = (rf"%{req('class_name', 'Class Name')}%", threshold, threshold)
+
     elif tool_name == "get_semester_overview":
         val = e.get("semester_code") or e.get("semester_name") or ""
         return tool_name, (like(val), like(val), val)
 
-    # ── Excel queries (adhoc SQL) ────────────────────────────────────────
+    #  Excel queries (adhoc SQL) 
     elif tool_name == "excel_query":
         # excel_query uses dynamic SQL from intent_data, not standard template
         # Return special marker that executor recognizes
         return "dynamic_sql", ()
 
-    else:
-        raise ValueError(f"Không có param builder cho tool: '{tool_name}'")
+    #  Generic category block above already set `params`; return here to avoid
+    #  falling through to the final "no param builder" error for valid tools.
+    if "params" in locals():
+        return tool_name, params
+
+    raise ValueError(f"Không có param builder cho tool: '{tool_name}'")
+

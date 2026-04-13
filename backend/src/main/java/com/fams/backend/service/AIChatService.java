@@ -16,7 +16,17 @@ public interface AIChatService {
 
     AIChatSession getSession(Long sessionId);
 
-    Map<String, Object> sendMessage(Long sessionId, String message, String routingModel, String answerModel);
+    Map<String, Object> sendMessage(
+            Long sessionId,
+            String message,
+            String routingModel,
+            String answerModel,
+            Map<String, Object> extraEntities,
+            String pendingTool,
+            String originalMessage,
+            Map<String, Object> pendingEntities,
+            Map<String, Object> continuation
+    );
 
     Flux<Map<String, Object>> streamMessage(Long sessionId, String message, String routingModel, String answerModel);
 

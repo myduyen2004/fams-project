@@ -15,21 +15,35 @@ from __future__ import annotations
 
 import io
 import json
+import re
 import time
 from datetime import datetime
-from typing import Any, Dict, Generator, List, Optional
+from typing import Any, Dict, Generator, List, Optional, Tuple, Union, cast
 
 import pandas as pd # type: ignore
 from loguru import logger # type: ignore
 
-from router.hard_router import hard_router, IntentResult
-from router.light_router import light_router
-from router.permissions import check_permission
-from services.answer_generator import answer_generator
-from tools.executor import tool_executor
+from app.services.chat.router.hard_router import hard_router, IntentResult
+from app.services.chat.router.light_router import light_router
+from app.services.chat.router.permissions import check_permission
+from app.services.chat.router.tool_catalog import (
+    FIELD_META,
+    build_action_review_fields,
+    build_missing_fields,
+    detect_agent,
+    get_agent_label,
+    get_tool_agent,
+    has_enough_required_entities,
+    require_all_required_fields,
+    validate_required_entities,
+)
+from app.services.chat.db.queries import normalize_entities
+from app.services.chat.services.answer_generator import answer_generator
+from app.services.chat.tools.executor import tool_executor
 
 # ── Timeout budget ────────────────────────────────────────────────────────────
 _MAX_TOTAL_SECONDS = 7.0   # Tối đa 7s cho toàn bộ flow
+_PAGE_SIZE = 100
 
 # ── Route mapping ─────────────────────────────────────────────────────────────
 _ROUTE_MAP: Dict[str, str] = {
@@ -42,6 +56,7 @@ _ROUTE_MAP: Dict[str, str] = {
     "view_schedule":          "/academic-staff/schedule",
     "view_results":           "/academic-staff/academic-results",
     "view_users":             "/admin/users",
+    "view_inactive_users":    "/admin/locked-users",
     "view_logs":              "/admin/system-logs",
     "view_alerts":            "/admin/alerts",
     "view_notifications":     "/admin/notification-management",
@@ -69,15 +84,32 @@ _ROUTE_MAP: Dict[str, str] = {
 _ROLE_PREFIXES = {"LECTURER": "lecturer", "STUDENT": "student"}
 
 _BACKEND_ACTION_TOOLS = {
-    "create_notification", "send_email", "create_user", "update_user", "delete_user",
-    "create_major", "update_major", "create_course", "update_course",
-    "create_specialization", "create_room", "create_semester",
-    "create_sub_specialization", "create_class",
+    "create_notification", "send_email",
+    "create_user", "update_user",
+    "create_class", "create_course", "create_major", "create_room",
+    "create_semester", "create_specialization", "create_sub_specialization",
+    "update_course", "update_major",
+    "activate_user", "create_schedule_request",
+    "update_attendance_manually", "update_class", "update_lecturer_info",
+    "update_room", "update_semester", "update_specialization",
+    "update_student_info", "update_sub_specialization",
     "add_student_to_class", "remove_student_from_class",
+    "assign_course_to_specialization", "assign_course_to_sub_specialization",
+    "approve_schedule_request", "reject_schedule_request",
+    "import_component_grades", "export_attendance_stats", "export_excel",
+    "create_group_chat",
+    "create_academic_request",
+}
+_AI_ONLY_TOOLS = {"general_offtopic_chat"}
+_ACADEMIC_STUDENT_CONTEXT_TOOLS = {
+    "get_my_attendance_overview",
+    "get_my_absence_history",
+    "get_my_attendance_risk_courses",
 }
 
 _ERR_RATE_LIMIT = "⚠️ Hệ thống AI đang quá tải. Vui lòng thử lại sau 30 giây."
 _ERR_SYSTEM     = "⚠️ Hệ thống gặp sự cố. Vui lòng thử lại."
+_ERR_UNSUPPORTED = "Xin lỗi, chức năng này hệ thống chưa phát triển."
 
 
 def _fallback_answer(tool_result: Any, tool_name: str) -> str:
@@ -98,11 +130,13 @@ def _fallback_answer(tool_result: Any, tool_name: str) -> str:
         lines = [f"📊 **Kết quả** ({len(tool_result)} mục):"]
         for i, row in enumerate(tool_result[:10]):
             if isinstance(row, dict):
-                parts = []
+                parts: List[str] = []
                 for k, v in row.items():
                     if v is not None and v != "" and v != 0:
                         parts.append(f"**{k}**: {v}")
-                lines.append(f"{i+1}. " + " | ".join(parts[:5]))
+                # Use explicit loop or limit to avoid slice indexing issue in some type checkers
+                parts_to_join = [parts[j] for j in range(min(5, len(parts)))]
+                lines.append(f"{i+1}. " + " | ".join(parts_to_join))
             else:
                 lines.append(f"{i+1}. {row}")
         if len(tool_result) > 10:
@@ -110,6 +144,17 @@ def _fallback_answer(tool_result: Any, tool_name: str) -> str:
         return "\n".join(lines)
 
     return str(tool_result)[:2000]
+
+
+def _academic_student_code_missing_fields() -> List[Dict[str, Any]]:
+    meta = dict(FIELD_META.get("student_code", {}))
+    return [{
+        "name": "student_code",
+        "label": meta.get("label", "Mã sinh viên"),
+        "placeholder": meta.get("placeholder", "Ví dụ: SE170001"),
+        "format": meta.get("format", "SE******"),
+        "description": "Vui lòng cung cấp mã sinh viên để tra cứu điểm danh.",
+    }]
 
 
 def _is_rate_limit_error(exc: Exception) -> bool:
@@ -134,6 +179,14 @@ def _resolve_redirect(
         if user_role == "ADMIN":
             return "/admin/profile"
         return "/academic-staff/profile" if user_role == "ACADEMIC_STAFF" else f"/{role_lower}/profile"
+    if tool_name == "view_notifications":
+        if user_role == "ADMIN":
+            return "/admin/notification-management"
+        if user_role == "ACADEMIC_STAFF":
+            return "/academic-staff/notification-management"
+        if user_role == "LECTURER":
+            return "/lecturer/granted/notifications"
+        return "/notifications"
     if user_role in ("LECTURER", "STUDENT"):
         if tool_name == "view_grades":
             class_name = entities.get("class_name") if entities else None
@@ -175,8 +228,36 @@ def _build_response(
     steps: List[Dict],
     redirect: Optional[str],
     action: Optional[Dict],
+    agent: Optional[str] = None,
+    missing_fields: Optional[List[Dict[str, Any]]] = None,
+    pending_tool: Optional[str] = None,
+    original_message: Optional[str] = None,
+    pending_entities: Optional[Dict[str, Any]] = None,
+    continuation: Optional[Dict[str, Any]] = None,
+    action_review: bool = False,
 ) -> Dict[str, Any]:
-    return {"answer": answer, "thinkingSteps": steps, "redirectPath": redirect, "action": action}
+    response: Dict[str, Any] = {
+        "answer": answer,
+        "thinkingSteps": steps,
+        "redirectPath": redirect,
+        "action": action,
+    }
+    if agent:
+        response["agent"] = agent
+        response["agentLabel"] = get_agent_label(agent)
+    if missing_fields:
+        response["missingFields"] = missing_fields
+    if pending_tool:
+        response["pendingTool"] = pending_tool
+    if original_message:
+        response["originalMessage"] = original_message
+    if pending_entities:
+        response["pendingEntities"] = pending_entities
+    if continuation:
+        response["continuation"] = continuation
+    if action_review:
+        response["actionReview"] = True
+    return response
 
 
 # ── Clarification questions mapping ───────────────────────────────────────────
@@ -204,6 +285,56 @@ _TOOL_CONTEXT = {
     "get_lecturer_by_code": "thông tin giảng viên",
 }
 
+_EMPTY_RESULT_RETRY_FIELDS: Dict[str, List[str]] = {
+    "count_students_by_major": ["major_name", "major_code"],
+    "get_students_by_major": ["major_name", "major_code"],
+    "get_students_at_risk": ["major_name", "major_code"],
+    "get_gpa_stats_by_major": ["major_name", "major_code"],
+    "get_specializations_by_major": ["major_name", "major_code"],
+    "get_sub_specializations": ["specialization_name", "specialization_code", "major_name"],
+    "get_courses_by_name": ["course_name", "course_code"],
+    "get_grade_components_by_course": ["course_name", "course_code"],
+    "get_detail_course_grade": ["course_name", "course_code"],
+    "get_students_by_class": ["class_name"],
+    "get_enrollments_by_class": ["class_name"],
+    "get_class_schedule": ["class_name"],
+    "get_class_info": ["class_name"],
+    "get_grade_report_by_class": ["class_name"],
+    "get_attendance_by_slot": ["class_name"],
+    "get_attendance_stats_by_class": ["class_name"],
+    "get_lecturer_by_code": ["lecturer_code", "full_name"],
+    "get_student_by_code": ["student_code", "full_name"],
+}
+
+
+def _build_retry_fields(field_names: List[str]) -> List[Dict[str, Any]]:
+    retry_fields: List[Dict[str, Any]] = []
+    for field in field_names:
+        meta = FIELD_META.get(field, {})
+        format_hint = meta.get("formatHint", "")
+        question = f"Vui lòng kiểm tra lại {meta.get('label', field.replace('_', ' '))}."
+        if format_hint:
+            question = f"{question} {format_hint}"
+        retry_fields.append({
+            "id": field,
+            "name": field,
+            "label": meta.get("label", field.replace("_", " ").title()),
+            "placeholder": meta.get("placeholder", f"Nhập {field}"),
+            "inputType": meta.get("inputType", "text"),
+            "question": question,
+            "required": False,
+        })
+    return retry_fields
+
+
+def _build_empty_result_retry(tool_name: str, entities: Dict[str, Any]) -> List[Dict[str, Any]]:
+    retry_fields = _EMPTY_RESULT_RETRY_FIELDS.get(tool_name, [])
+    if not retry_fields:
+        return []
+    if not any(entities.get(field) not in (None, "", []) for field in retry_fields):
+        return []
+    return _build_retry_fields(retry_fields)
+
 
 # ── ChatbotService ─────────────────────────────────────────────────────────────
 class ChatbotService:
@@ -227,6 +358,109 @@ class ChatbotService:
         
         return f"❓ Tôi cần thêm thông tin để tra cứu {context}.\n\n{question}"
 
+    @staticmethod
+    def _hydrate_entities_from_message(
+        tool_name: str,
+        message: str,
+        entities: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        hydrated = dict(entities or {})
+        msg_lower = message.lower()
+
+        schedule_tools = {
+            "get_own_schedule",
+            "get_my_schedule",
+            "get_my_schedule_targeted",
+            "get_class_schedule",
+            "get_other_lecturer_schedule",
+            "get_lecturer_schedule_by_search",
+            "get_other_student_schedule",
+            "get_student_schedule_by_search",
+        }
+
+        if tool_name in schedule_tools and not (
+            hydrated.get("date") or (hydrated.get("start_date") and hydrated.get("end_date"))
+        ):
+            if "tuần sau" in msg_lower or "tuan sau" in msg_lower or "next week" in msg_lower:
+                hydrated["date"] = "NEXT_WEEK"
+            elif "tuần này" in msg_lower or "tuan nay" in msg_lower or "this week" in msg_lower:
+                hydrated["date"] = "THIS_WEEK"
+            elif "ngày mai" in msg_lower or "ngay mai" in msg_lower or "tomorrow" in msg_lower:
+                hydrated["date"] = "TOMORROW"
+            elif "hôm nay" in msg_lower or "hom nay" in msg_lower or "today" in msg_lower:
+                hydrated["date"] = "TODAY"
+
+        if tool_name == "get_empty_rooms":
+            if not hydrated.get("slot_number"):
+                if re.search(r"(tất cả slot|tat ca slot|mọi slot|moi slot|cả ngày|ca ngay|all slots?)", msg_lower, re.IGNORECASE):
+                    hydrated["slot_number"] = "ALL"
+                slot_match = re.search(r"\b(?:slot|tiết|ca)\s*(\d+)\b", message, re.IGNORECASE)
+                if slot_match:
+                    hydrated["slot_number"] = int(slot_match.group(1))
+            if not hydrated.get("date"):
+                if "ngày mai" in msg_lower or "tomorrow" in msg_lower:
+                    hydrated["date"] = "TOMORROW"
+                elif "hôm nay" in msg_lower or "hom nay" in msg_lower or "today" in msg_lower:
+                    hydrated["date"] = "TODAY"
+
+        return hydrated
+
+    @staticmethod
+    def _merge_entities(
+        base: Optional[Dict[str, Any]],
+        extra: Optional[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        merged: Dict[str, Any] = {}
+        for source in (base or {}, extra or {}):
+            for key, value in source.items():
+                if value not in (None, "", []):
+                    merged[key] = value
+        return merged
+
+    @staticmethod
+    def _normalize_for_debug(
+        tool_name: str,
+        entities: Dict[str, Any],
+        user_code: str,
+    ) -> Dict[str, Any]:
+        normalized = normalize_entities(entities, user_code=user_code, tool_name=tool_name)
+        normalized.pop("__invalid_required_fields__", None)
+        return normalized
+
+    @staticmethod
+    def _infer_intent_for_tool(tool_name: str) -> str:
+        if tool_name.startswith("view_"):
+            return "navigation"
+        if tool_name in _BACKEND_ACTION_TOOLS:
+            return "action"
+        return "data_query"
+
+    def _slice_rows(
+        self,
+        rows: Any,
+        offset: int,
+        page_size: int,
+    ) -> tuple[Any, Optional[Dict[str, Any]]]:
+        if not isinstance(rows, list):
+            return rows, None
+
+        total = len(rows)
+        safe_offset = max(0, int(offset or 0))
+        page_rows = rows[safe_offset: safe_offset + page_size]
+
+        if page_rows and isinstance(page_rows[0], dict):
+            page_rows = [{**row, "__total__": total} for row in page_rows]
+
+        next_offset = safe_offset + len(page_rows)
+        continuation = None
+        if next_offset < total:
+            continuation = {
+                "offset": next_offset,
+                "pageSize": page_size,
+                "total": total,
+            }
+        return page_rows, continuation
+
     def chat(
         self,
         *,
@@ -237,9 +471,15 @@ class ChatbotService:
         history: Optional[List[Dict[str, str]]] = None,
         routing_model: Optional[str] = None,
         answer_model: Optional[str] = None,
+        extra_entities: Optional[Dict[str, Any]] = None,
+        pending_tool: Optional[str] = None,
+        original_message: Optional[str] = None,
+        pending_entities: Optional[Dict[str, Any]] = None,
+        continuation: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         steps: List[Dict[str, Any]] = []
         t_start = time.time()
+        is_continuation_request = bool(continuation and isinstance(continuation, dict))
 
         def _remaining() -> float:
             return max(0, _MAX_TOTAL_SECONDS - (time.time() - t_start))
@@ -247,11 +487,34 @@ class ChatbotService:
         # ── Stage 1: Hard Router ──────────────────────────────────────────
         steps.append(_make_step(1, "Hard Router",
             "Kiểm tra nhanh pattern (regex/cache). Nếu khớp → trả về ngay, không gọi LLM."))
-        hard_result: Optional[IntentResult] = hard_router.route(message, user_role)
+        hard_result: Optional[IntentResult] = None if (pending_tool or continuation) else hard_router.route(message, user_role)
 
         if hard_result and hard_result.intent == "direct_response":
             steps[-1]["status"] += " → Khớp mẫu trực tiếp"
             return _build_response(hard_result.answer, steps, None, None)
+
+        if hard_result and hard_result.intent == "tool_locked":
+            steps[-1]["status"] += " → Tool đang bị khóa"
+            steps.append(_make_step(2, "Unified Router", "Bỏ qua (tool đã bị khóa từ Hard Router)."))
+            steps.append(_make_step(3, "Tool Executor", "Bỏ qua (tool bị khóa)."))
+            steps.append(_make_step(4, "Answer Generator", "Thông báo trạng thái khóa tool."))
+            intent_data = _intent_result_to_dict(hard_result)
+            answer = answer_generator.generate(
+                message,
+                intent_data,
+                None,
+                history,
+                answer_model,
+                today=datetime.now().strftime("%Y-%m-%d"),
+                user_role=user_role,
+            )
+            return _build_response(
+                answer,
+                steps,
+                None,
+                None,
+                agent=detect_agent(message, hard_result.tool_name or ""),
+            )
 
         if hard_result:
             steps[-1]["status"] += f" → Pattern matched: {hard_result.tool_name}"
@@ -262,7 +525,61 @@ class ChatbotService:
             intent_data = None
 
         # ── Stage 2: Light Router ─────────────────────────────────────────
-        if intent_data is None:
+        if is_continuation_request:
+            steps[-1]["status"] += " → Bỏ qua (đang tải thêm dữ liệu)"
+            steps.append(_make_step(2, "Unified Router", "Tiếp tục phân trang cho kết quả trước đó."))
+            continuation_message = str(continuation.get("originalMessage") or original_message or message)
+            continuation_entities = self._merge_entities(
+                cast(Optional[Dict[str, Any]], continuation.get("entities")),
+                extra_entities,
+            )
+            continuation_entities = self._hydrate_entities_from_message(
+                str(continuation.get("toolName") or ""),
+                continuation_message,
+                continuation_entities,
+            )
+            continuation_tool = str(continuation.get("toolName") or "")
+            continuation_entities = self._normalize_for_debug(
+                continuation_tool,
+                continuation_entities,
+                user_code,
+            )
+            continuation_entities["__page_offset__"] = int(continuation.get("offset") or 0)
+            continuation_entities["__page_size__"] = int(continuation.get("pageSize") or _PAGE_SIZE)
+            intent_data = {
+                "intent": str(continuation.get("intent") or self._infer_intent_for_tool(continuation_tool)),
+                "toolName": continuation_tool,
+                "entities": continuation_entities,
+                "confidence": "high",
+                "agent": continuation.get("agent") or get_tool_agent(continuation_tool),
+            }
+            corrected_message = continuation_message
+            steps[-1]["detail"] = (
+                f"Continue tool: {continuation_tool} | Offset: {continuation.get('offset', 0)} | "
+                f"Entities: {json.dumps(continuation_entities, ensure_ascii=False, default=str)}"
+            )
+            steps[-1]["status"] += " → Trang kế tiếp"
+        elif pending_tool:
+            steps[-1]["status"] += " → Bỏ qua (đang tiếp tục tool trước đó)"
+            steps.append(_make_step(2, "Unified Router", "Tiếp tục tool đang chờ bổ sung thông tin."))
+            merged_entities = self._merge_entities(pending_entities, extra_entities)
+            merged_entities = self._normalize_for_debug(pending_tool, merged_entities, user_code)
+            intent_data = {
+                "intent": self._infer_intent_for_tool(pending_tool),
+                "toolName": pending_tool,
+                "entities": merged_entities,
+                "confidence": "high",
+                "agent": get_tool_agent(pending_tool),
+            }
+            if pending_tool in _BACKEND_ACTION_TOOLS:
+                intent_data["action"] = {"type": pending_tool.upper(), "params": merged_entities}
+            corrected_message = original_message or message
+            steps[-1]["detail"] = (
+                f"Resume tool: {pending_tool} | Agent: {intent_data.get('agent')} | "
+                f"Entities: {json.dumps(merged_entities, ensure_ascii=False, default=str)}"
+            )
+            steps[-1]["status"] += " → Dùng dữ liệu bổ sung"
+        elif intent_data is None:
             active_routing_model = routing_model or "llama-3.1-8b-instant"
             steps.append(_make_step(2, "Unified Router",
                 "Phân tích intent, trích xuất entities qua LLM."))
@@ -285,6 +602,17 @@ class ChatbotService:
             confidence        = intent_data.get("confidence", "medium")
             # KHÔNG dùng corrected_text để tránh ghi đè tên riêng tiếng Việt
             corrected_message = message
+            intent_data["entities"] = self._merge_entities(
+                cast(Optional[Dict[str, Any]], intent_data.get("entities")),
+                extra_entities,
+            )
+            routed_tool_name = str(intent_data.get("toolName") or "")
+            if routed_tool_name:
+                intent_data["entities"] = self._normalize_for_debug(
+                    routed_tool_name,
+                    cast(Dict[str, Any], intent_data.get("entities") or {}),
+                    user_code,
+                )
             detail_parts = []
             detail_parts.append(
                 f"Intent: {intent_data.get('intent')} | Tool: {intent_data.get('toolName')} | "
@@ -296,36 +624,208 @@ class ChatbotService:
         else:
             steps.append(_make_step(2, "Unified Router", "Bỏ qua (Hard Router đã khớp)"))
             corrected_message = message
+            intent_data["entities"] = self._merge_entities(
+                cast(Optional[Dict[str, Any]], intent_data.get("entities")),
+                extra_entities,
+            )
+            existing_tool_name = str(intent_data.get("toolName") or "")
+            if existing_tool_name:
+                intent_data["entities"] = self._normalize_for_debug(
+                    existing_tool_name,
+                    cast(Dict[str, Any], intent_data.get("entities") or {}),
+                    user_code,
+                )
 
         # ── Handle need_clarification (hỏi lại khi không hiểu) ─────────────
         if intent_data.get("intent") == "need_clarification" or (
-            intent_data.get("confidence") == "low" and not intent_data.get("toolName")
+            intent_data.get("confidence") == "low"
+            and not intent_data.get("toolName")
+            and intent_data.get("intent") not in ("general_chat", "permission_denied", "direct_response", "navigation")
         ):
             missing_info = intent_data.get("entities", {}).get("missingInfo")
             if not missing_info:
                 missing_info = "Xin lỗi, tôi chưa hiểu rõ yêu cầu của bạn. Bạn có thể mô tả chi tiết hơn không?"
             steps.append(_make_step(3, "Clarification", "Cần làm rõ yêu cầu"))
             steps.append(_make_step(4, "Answer Generator", "Tạo câu hỏi làm rõ"))
-            return _build_response(f"❓ {missing_info}", steps, None, None)
+            return _build_response(
+                f"❓ {missing_info}",
+                steps,
+                None,
+                None,
+                agent=cast(Optional[str], intent_data.get("agent")) or detect_agent(message),
+            )
+
+        if intent_data.get("intent") == "tool_locked":
+            steps.append(_make_step(3, "Tool Executor", "Bỏ qua (tool bị khóa)."))
+            steps.append(_make_step(4, "Answer Generator", "Thông báo trạng thái khóa tool."))
+            answer = answer_generator.generate(
+                corrected_message,
+                intent_data,
+                None,
+                history,
+                answer_model,
+                today=datetime.now().strftime("%Y-%m-%d"),
+                user_role=user_role,
+            )
+            return _build_response(
+                answer,
+                steps,
+                None,
+                None,
+                agent=cast(Optional[str], intent_data.get("agent")),
+            )
+
+        current_tool_name = (intent_data.get("toolName") or "").strip()
+        if not current_tool_name and intent_data.get("intent") == "general_chat":
+            steps.append(_make_step(3, "Tool Executor", "Bỏ qua (không khớp tool ngoài lề nào trong hệ thống)."))
+            steps.append(_make_step(4, "Answer Generator", "Trả về thông báo chức năng chưa được hệ thống hỗ trợ."))
+            return _build_response(
+                _ERR_UNSUPPORTED,
+                steps,
+                None,
+                None,
+                agent=cast(Optional[str], intent_data.get("agent")) or detect_agent(message),
+            )
+        if not current_tool_name and intent_data.get("intent") not in ("general_chat", "need_clarification", "permission_denied", "direct_response", "navigation"):
+            steps.append(_make_step(3, "Tool Executor", "Bỏ qua (không khớp tool nào trong hệ thống)."))
+            steps.append(_make_step(4, "Answer Generator", "Trả về thông báo chức năng chưa được hệ thống hỗ trợ."))
+            return _build_response(
+                _ERR_UNSUPPORTED,
+                steps,
+                None,
+                None,
+                agent=cast(Optional[str], intent_data.get("agent")) or detect_agent(message),
+            )
 
         # ── Permission check ──────────────────────────────────────────────
         tool_name = (intent_data.get("toolName") or "").strip()
-        if tool_name and not tool_name.startswith("view_"):
+        intent_data["agent"] = intent_data.get("agent") or (get_tool_agent(tool_name) if tool_name else detect_agent(message))
+        if tool_name and tool_name not in _AI_ONLY_TOOLS and not tool_name.startswith("view_"):
             allowed, reason = check_permission(user_role, tool_name)
             if not allowed:
-                intent_data = {"intent": "permission_denied", "entities": {"reason": reason}, "toolName": None}
+                intent_data = {
+                    "intent": "permission_denied",
+                    "entities": {"reason": reason},
+                    "toolName": None,
+                    "agent": detect_agent(message, tool_name),
+                }
+
+        tool_name = (intent_data.get("toolName") or "").strip()
+        if tool_name:
+            intent_data["entities"] = self._hydrate_entities_from_message(
+                tool_name,
+                original_message or corrected_message,
+                cast(Dict[str, Any], intent_data.get("entities") or {}),
+            )
+
+        # ── Validate required entities before executor ───────────────────
+        tool_name = (intent_data.get("toolName") or "").strip()
+        if (
+            tool_name
+            and tool_name not in _AI_ONLY_TOOLS
+            and not is_continuation_request
+            and intent_data.get("intent") not in ("navigation", "permission_denied", "tool_locked", "direct_response")
+        ):
+            validated_entities = validate_required_entities(
+                tool_name,
+                cast(Dict[str, Any], intent_data.get("entities") or {}),
+            )
+            action_confirmed = str(validated_entities.get("__action_confirmed__") or "").strip().lower() in {
+                "1", "true", "yes", "on"
+            }
+            should_review_action = (
+                intent_data.get("intent") == "action"
+                and require_all_required_fields(tool_name)
+                and bool(build_action_review_fields(tool_name, validated_entities))
+            )
+            if should_review_action and not action_confirmed:
+                steps.append(_make_step(3, "Tool Executor", "Tạm dừng để người dùng xác nhận thông tin thực hiện action."))
+                steps[-1]["detail"] = "Hiển thị lại đầy đủ các trường bắt buộc để kiểm tra hoặc chỉnh sửa trước khi thực hiện."
+                steps.append(_make_step(4, "Answer Generator", "Hiển thị bảng xác nhận thông tin action."))
+                return _build_response(
+                    "Vui lòng kiểm tra và xác nhận thông tin bên dưới trước khi thực hiện thao tác.",
+                    steps,
+                    None,
+                    None,
+                    agent=cast(Optional[str], intent_data.get("agent")),
+                    missing_fields=build_action_review_fields(tool_name, validated_entities),
+                    pending_tool=tool_name,
+                    original_message=original_message or corrected_message,
+                    pending_entities={k: v for k, v in validated_entities.items() if not str(k).startswith("__")},
+                    action_review=True,
+                )
+            if (
+                user_role == "ACADEMIC_STAFF"
+                and tool_name in _ACADEMIC_STUDENT_CONTEXT_TOOLS
+                and not str(validated_entities.get("student_code") or "").strip()
+            ):
+                steps.append(_make_step(3, "Tool Executor", "Dừng trước khi gọi tool vì thiếu hoặc sai tham số bắt buộc.", "Thiếu mã sinh viên cho chế độ tra cứu của nhân viên đào tạo."))
+                steps.append(_make_step(4, "Answer Generator", "Yêu cầu người dùng bổ sung đúng định dạng."))
+                pending_entities = {k: v for k, v in validated_entities.items() if not str(k).startswith("__")}
+                return _build_response(
+                    "Tôi cần mã sinh viên để tra cứu điểm danh cho sinh viên cụ thể. Vui lòng điền vào bảng bên dưới.",
+                    steps,
+                    None,
+                    None,
+                    agent=cast(Optional[str], intent_data.get("agent")),
+                    missing_fields=_academic_student_code_missing_fields(),
+                    pending_tool=tool_name,
+                    original_message=original_message or corrected_message,
+                    pending_entities=pending_entities,
+                )
+            invalid_required_fields = cast(List[str], validated_entities.get("__invalid_required_fields__") or [])
+            allow_schedule_request_by_slot_ids = False
+            if tool_name == "create_schedule_request":
+                original_slot_id = str(validated_entities.get("original_slot_id") or "").strip()
+                requested_slot_id = str(validated_entities.get("requested_slot_id") or "").strip()
+                reason = str(validated_entities.get("reason") or "").strip()
+                allow_schedule_request_by_slot_ids = (
+                    original_slot_id.isdigit() and requested_slot_id.isdigit() and bool(reason)
+                )
+
+            required_missing = [] if allow_schedule_request_by_slot_ids else build_missing_fields(tool_name, validated_entities)
+            if not allow_schedule_request_by_slot_ids and not has_enough_required_entities(tool_name, validated_entities):
+                steps.append(_make_step(3, "Tool Executor", "Dừng trước khi gọi tool vì thiếu hoặc sai tham số bắt buộc."))
+                if invalid_required_fields:
+                    steps[-1]["detail"] = (
+                        "Tham số bắt buộc chưa hợp lệ: "
+                        + ", ".join(invalid_required_fields)
+                    )
+                else:
+                    steps[-1]["detail"] = "Thiếu tham số bắt buộc."
+                steps.append(_make_step(4, "Answer Generator", "Yêu cầu người dùng bổ sung đúng định dạng."))
+                review_fields = build_action_review_fields(tool_name, validated_entities) if should_review_action else required_missing
+                return _build_response(
+                    "Vui lòng kiểm tra và hoàn thiện đầy đủ thông tin bên dưới trước khi thực hiện thao tác."
+                    if should_review_action
+                    else "Tôi cần thêm thông tin hợp lệ để xử lý chính xác. Vui lòng điền vào bảng bên dưới.",
+                    steps,
+                    None,
+                    None,
+                    agent=cast(Optional[str], intent_data.get("agent")),
+                    missing_fields=review_fields,
+                    pending_tool=tool_name,
+                    original_message=original_message or corrected_message,
+                    pending_entities={k: v for k, v in validated_entities.items() if not str(k).startswith("__")},
+                    action_review=should_review_action,
+                )
+            validated_entities.pop("__invalid_required_fields__", None)
+            validated_entities.pop("__action_confirmed__", None)
+            intent_data["entities"] = validated_entities
 
         # ── Stage 3: Tool Executor ────────────────────────────────────────
         tool_result = None
+        continuation_response = None
         intent      = (intent_data.get("intent") or "").strip().lower()
         tool_name   = (intent_data.get("toolName") or "").strip()
-        needs_tool  = bool(tool_name or intent_data.get("dynamicSql"))
-        is_backend  = (intent == "action" or tool_name in _BACKEND_ACTION_TOOLS)
+        needs_tool  = bool((tool_name and tool_name not in _AI_ONLY_TOOLS) or intent_data.get("dynamicSql"))
+        is_backend  = tool_name in _BACKEND_ACTION_TOOLS
         if is_backend and not (tool_name or intent_data.get("action")):
             is_backend = False
 
         if is_backend:
             steps.append(_make_step(3, "Tool Executor", "Chuẩn bị tham số hành động backend."))
+            intent_data = cast(Dict[str, Any], intent_data)
             intent_data["intent"] = "action"
             intent = "action"
             action = intent_data.get("action")
@@ -339,6 +839,15 @@ class ChatbotService:
                     action["params"] = intent_data.get("entities", {})
             steps[-1]["detail"]  = f"Action: {json.dumps(action, ensure_ascii=False, default=str)}"
             steps[-1]["status"] += " → Tham số đã sẵn sàng"
+            steps.append(_make_step(4, "Answer Generator", "Bỏ qua sinh câu trả lời mô tả vì đây là action backend."))
+            steps[-1]["status"] += " → Chuyển sang backend"
+            return _build_response(
+                "Đang thực hiện thao tác theo yêu cầu của bạn.",
+                steps,
+                None,
+                cast(Optional[Dict[str, Any]], intent_data.get("action")),
+                agent=cast(Optional[str], intent_data.get("agent")),
+            )
 
         elif needs_tool and intent not in ("permission_denied", "direct_response"):
             steps.append(_make_step(3, "Tool Executor", "Truy vấn dữ liệu từ Database."))
@@ -359,16 +868,87 @@ class ChatbotService:
                     tool_name_err = tool_result.get("tool", "")
                     steps[-1]["status"] += f" → Thiếu thông tin"
                     steps[-1]["detail"] = f"Lỗi: {error_msg}"
-                    # Tạo câu hỏi làm rõ dựa trên lỗi
+                    entities = cast(Dict[str, Any], intent_data.get("entities") or {})
+                    missing_fields = build_missing_fields(tool_name_err or tool_name, entities)
                     clarify_msg = self._generate_clarification_question(error_msg, tool_name_err, message)
                     steps.append(_make_step(4, "Answer Generator", "Yêu cầu làm rõ thông tin"))
-                    return _build_response(clarify_msg, steps, None, None)
+                    return _build_response(
+                        clarify_msg,
+                        steps,
+                        None,
+                        None,
+                        agent=cast(Optional[str], intent_data.get("agent")),
+                        missing_fields=missing_fields,
+                        pending_tool=tool_name_err or tool_name,
+                        original_message=original_message or corrected_message,
+                        pending_entities={k: v for k, v in entities.items() if not str(k).startswith("__")},
+                    )
                 
                 # ✅ FIX: Ensure tool_result is always a list (even if empty or None from executor)
                 if tool_result is None:
                     tool_result = []
-                count = len(tool_result) if isinstance(tool_result, list) else "-"
+                if isinstance(tool_result, dict) and "__paginated_rows__" in tool_result:
+                    current_offset = int(tool_result.get("__offset__") or 0)
+                    page_size = int(tool_result.get("__page_size__") or _PAGE_SIZE)
+                    total = int(tool_result.get("__total__") or 0)
+                    page_rows = cast(List[Dict[str, Any]], tool_result.get("__paginated_rows__") or [])
+                    if page_rows and isinstance(page_rows[0], dict):
+                        page_rows = [{**row, "__total__": total} for row in page_rows]
+                    next_offset = current_offset + len(page_rows)
+                    if next_offset < total:
+                        continuation_response = {
+                            "toolName": tool_name,
+                            "intent": intent,
+                            "entities": intent_data.get("entities", {}),
+                            "agent": intent_data.get("agent"),
+                            "originalMessage": original_message or corrected_message,
+                            "offset": next_offset,
+                            "pageSize": page_size,
+                            "total": total,
+                        }
+                    tool_result = page_rows
+                    count = len(tool_result)
+                else:
+                    count = len(tool_result) if isinstance(tool_result, list) else "-"
+                    current_offset = int((continuation or {}).get("offset") or 0)
+                    tool_result, page_meta = self._slice_rows(
+                        tool_result,
+                        current_offset,
+                        _PAGE_SIZE,
+                    )
+                    if page_meta:
+                        continuation_response = {
+                            "toolName": tool_name,
+                            "intent": intent,
+                            "entities": intent_data.get("entities", {}),
+                            "agent": intent_data.get("agent"),
+                            "originalMessage": original_message or corrected_message,
+                            **page_meta,
+                        }
                 steps[-1]["status"] += f" → {count} dòng kết quả"
+                if isinstance(tool_result, list) and not tool_result:
+                    retry_fields = _build_empty_result_retry(
+                        tool_name,
+                        cast(Dict[str, Any], intent_data.get("entities") or {}),
+                    )
+                    if retry_fields:
+                        steps[-1]["status"] = "Không tìm thấy dữ liệu khớp"
+                        steps[-1]["detail"] = (
+                            "Không tìm thấy bản ghi phù hợp với mã/ngành/lớp/môn đã nhập. "
+                            "Yêu cầu người dùng kiểm tra lại thông tin."
+                        )
+                        steps.append(_make_step(4, "Answer Generator", "Yêu cầu người dùng nhập lại thông tin định danh."))
+                        return _build_response(
+                            "Tôi không tìm thấy dữ liệu khớp chính xác. Vui lòng kiểm tra và nhập lại thông tin bên dưới.",
+                            steps,
+                            None,
+                            None,
+                            agent=cast(Optional[str], intent_data.get("agent")),
+                            missing_fields=retry_fields,
+                            pending_tool=tool_name,
+                            original_message=original_message or corrected_message,
+                            pending_entities={k: v for k, v in cast(Dict[str, Any], intent_data.get("entities") or {}).items() if not str(k).startswith("__")},
+                        )
             if tool_result and (isinstance(tool_result, list) and len(tool_result) > 0 or not isinstance(tool_result, list)):
                 sample = tool_result[:3] if isinstance(tool_result, list) else tool_result
                 steps[-1]["detail"] = f"Sample: {json.dumps(sample, ensure_ascii=False, default=str)}"
@@ -388,7 +968,13 @@ class ChatbotService:
         else:
             try:
                 answer = answer_generator.generate(
-                    corrected_message, intent_data, tool_result, history, answer_model, today=today_str
+                    corrected_message,
+                    intent_data,
+                    tool_result,
+                    history,
+                    answer_model,
+                    today=today_str,
+                    user_role=user_role,
                 )
             except RuntimeError as exc:
                 if _is_rate_limit_error(exc) and tool_result:
@@ -406,7 +992,14 @@ class ChatbotService:
 
         steps[-1]["status"] += " → Hoàn thành"
         redirect = _resolve_redirect(tool_name, intent_data.get("redirectPath"), user_role, intent_data.get("entities"))
-        return _build_response(answer, steps, redirect, intent_data.get("action"))
+        return _build_response(
+            answer,
+            steps,
+            redirect,
+            intent_data.get("action"),
+            agent=cast(Optional[str], intent_data.get("agent")),
+            continuation=continuation_response,
+        )
 
     def chat_stream(
         self,
@@ -418,6 +1011,9 @@ class ChatbotService:
         history: Optional[List[Dict[str, str]]] = None,
         routing_model: Optional[str] = None,
         answer_model: Optional[str] = None,
+        extra_entities: Optional[Dict[str, Any]] = None,
+        pending_tool: Optional[str] = None,
+        original_message: Optional[str] = None,
     ) -> Generator[Dict[str, Any], None, None]:
         steps: List[Dict[str, Any]] = []
         t_start = time.time()
@@ -429,11 +1025,17 @@ class ChatbotService:
         steps.append(_make_step(1, "Hard Router", "Kiểm tra nhanh pattern."))
         yield {"type": "step", "step": steps[-1]}
 
-        hard_result: Optional[IntentResult] = hard_router.route(message, user_role)
+        hard_result: Optional[IntentResult] = None if pending_tool else hard_router.route(message, user_role)
         if hard_result and hard_result.intent == "direct_response":
             steps[-1]["status"] += " → Khớp mẫu trực tiếp"
             yield {"type": "step", "step": steps[-1]}
             yield {"type": "answer", "chunk": hard_result.answer}
+            return
+
+        if hard_result and hard_result.intent == "tool_locked":
+            steps[-1]["status"] += " → Tool đang bị khóa"
+            yield {"type": "step", "step": steps[-1]}
+            yield {"type": "answer", "chunk": f"🔒 **Công cụ đã bị khóa**: Công cụ '{hard_result.tool_name}' hiện đang bị khóa."}
             return
 
         if hard_result:
@@ -445,7 +1047,22 @@ class ChatbotService:
         yield {"type": "step", "step": steps[-1]}
 
         # Stage 2
-        if intent_data is None:
+        if pending_tool:
+            steps.append(_make_step(2, "Unified Router", "Tiếp tục tool đang chờ bổ sung thông tin."))
+            merged_entities = self._merge_entities({}, extra_entities)
+            intent_data = {
+                "intent": self._infer_intent_for_tool(pending_tool),
+                "toolName": pending_tool,
+                "entities": merged_entities,
+                "confidence": "high",
+                "agent": get_tool_agent(pending_tool),
+            }
+            if pending_tool in _BACKEND_ACTION_TOOLS:
+                intent_data["action"] = {"type": pending_tool.upper(), "params": merged_entities}
+            corrected_message = original_message or message
+            steps[-1]["detail"] = f"Resume tool: {pending_tool}"
+            steps[-1]["status"] += " → Dùng dữ liệu bổ sung"
+        elif intent_data is None:
             steps.append(_make_step(2, "Unified Router", "Phân tích intent qua LLM."))
             yield {"type": "step", "step": steps[-1]}
             try:
@@ -464,6 +1081,10 @@ class ChatbotService:
             confidence        = intent_data.get("confidence", "medium")
             # KHÔNG dùng corrected_text để tránh ghi đè tên riêng tiếng Việt
             corrected_message = message
+            intent_data["entities"] = self._merge_entities(
+                cast(Optional[Dict[str, Any]], intent_data.get("entities")),
+                extra_entities,
+            )
             steps[-1]["detail"] = (
                 f"Intent: {intent_data.get('intent')} | Tool: {intent_data.get('toolName')} | Confidence: {confidence}"
             )
@@ -471,15 +1092,45 @@ class ChatbotService:
         else:
             steps.append(_make_step(2, "Unified Router", "Bỏ qua (Hard Router matched)."))
             corrected_message = message
+            intent_data["entities"] = self._merge_entities(
+                cast(Optional[Dict[str, Any]], intent_data.get("entities")),
+                extra_entities,
+            )
         yield {"type": "step", "step": steps[-1]}
+
+        if intent_data.get("intent") == "tool_locked":
+            steps.append(_make_step(3, "Tool Executor", "Bỏ qua (tool bị khóa)."))
+            yield {"type": "step", "step": steps[-1]}
+            yield {
+                "type": "answer",
+                "chunk": f"🔒 **Công cụ đã bị khóa**: {(intent_data.get('entities') or {}).get('reason', 'Công cụ này hiện đang bị khóa.')}",
+            }
+            return
+
+        current_tool_name = (intent_data.get("toolName") or "").strip()
+        if not current_tool_name and intent_data.get("intent") == "general_chat":
+            steps.append(_make_step(3, "Tool Executor", "Bỏ qua (không khớp tool ngoài lề nào trong hệ thống)."))
+            yield {"type": "step", "step": steps[-1]}
+            steps.append(_make_step(4, "Answer Generator", "Trả về thông báo chức năng chưa được hệ thống hỗ trợ."))
+            yield {"type": "step", "step": steps[-1]}
+            yield {"type": "answer", "chunk": _ERR_UNSUPPORTED}
+            return
+        if not current_tool_name and intent_data.get("intent") not in ("general_chat", "need_clarification", "permission_denied", "direct_response", "navigation"):
+            steps.append(_make_step(3, "Tool Executor", "Bỏ qua (không khớp tool nào trong hệ thống)."))
+            yield {"type": "step", "step": steps[-1]}
+            steps.append(_make_step(4, "Answer Generator", "Trả về thông báo chức năng chưa được hệ thống hỗ trợ."))
+            yield {"type": "step", "step": steps[-1]}
+            yield {"type": "answer", "chunk": _ERR_UNSUPPORTED}
+            return
 
         # Stage 3
         tool_result = None
         intent    = (intent_data.get("intent") or "").strip().lower()
         tool_name = (intent_data.get("toolName") or "").strip()
-        needs_tool = bool(tool_name or intent_data.get("dynamicSql"))
+        intent_data["agent"] = intent_data.get("agent") or (get_tool_agent(tool_name) if tool_name else detect_agent(message))
+        needs_tool = bool((tool_name and tool_name not in _AI_ONLY_TOOLS) or intent_data.get("dynamicSql"))
 
-        if intent == "action" or tool_name in _BACKEND_ACTION_TOOLS:
+        if tool_name in _BACKEND_ACTION_TOOLS:
             steps.append(_make_step(3, "Tool Executor", "Chuẩn bị action backend."))
             yield {"type": "step", "step": steps[-1]}
             intent_data["intent"] = "action"
@@ -496,6 +1147,11 @@ class ChatbotService:
             steps[-1]["status"] += " → Tham số sẵn sàng"
             yield {"type": "action", "action": action}
             yield {"type": "step",   "step": steps[-1]}
+            steps.append(_make_step(4, "Answer Generator", "Bỏ qua sinh câu trả lời mô tả vì đây là action backend."))
+            steps[-1]["status"] += " → Chuyển sang backend"
+            yield {"type": "step", "step": steps[-1]}
+            yield {"type": "answer", "chunk": "Đang thực hiện thao tác theo yêu cầu của bạn."}
+            return
 
         elif needs_tool and intent not in ("permission_denied", "direct_response"):
             steps.append(_make_step(3, "Tool Executor", "Truy vấn Database."))
@@ -523,7 +1179,8 @@ class ChatbotService:
             steps.append(_make_step(3, "Tool Executor", "Bỏ qua (không cần truy vấn DB)."))
             yield {"type": "step", "step": steps[-1]}
 
-        # Stage 4: Stream answer — ✅ Timeout-aware với fallback\n        steps.append(_make_step(4, "Answer Generator", "Tổng hợp câu trả lời."))
+        # Stage 4: Stream answer — ✅ Timeout-aware với fallback
+        steps.append(_make_step(4, "Answer Generator", "Tổng hợp câu trả lời."))
         yield {"type": "step", "step": steps[-1]}
 
         redirect = _resolve_redirect(tool_name, intent_data.get("redirectPath"), user_role, intent_data.get("entities"))
@@ -540,7 +1197,13 @@ class ChatbotService:
         else:
             try:
                 for chunk in answer_generator.generate_stream(
-                    corrected_message, intent_data, tool_result, history, answer_model, today=today_str
+                    corrected_message,
+                    intent_data,
+                    tool_result,
+                    history,
+                    answer_model,
+                    today=today_str,
+                    user_role=user_role,
                 ):
                     yield {"type": "answer", "chunk": chunk}
             except RuntimeError as exc:

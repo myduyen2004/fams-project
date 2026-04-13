@@ -35,7 +35,7 @@ public interface AssignmentSubmissionService {
 
     AssignmentResponse updateAssignment(Long assignmentId, Long lecturerId,
             String title, String description, LocalDateTime dueDate,
-            String referenceUrl, String referenceName);
+            List<String> referenceUrls, List<String> referenceNames);
 
     /**
      * Gửi thông báo nhắc nhở sinh viên trước hạn nộp 1 ngày.

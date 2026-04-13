@@ -114,23 +114,23 @@ public class StagingImportService {
             String insertSql = """
                     INSERT INTO class_sections (class_name, semester_id, course_id, lecturer_id, number_of_slots, max_students, current_enrollment, status, created_at, updated_at)
                     SELECT
-                        s.class_name,
+                        TRIM(s.class_name),
                         ?,
                         c.id,
                         u.id,
                         COALESCE(c.number_of_slots, 20),
-                        COALESCE(NULLIF(s.max_students, '')::int, 30),
+                        COALESCE(NULLIF(TRIM(s.max_students), '')::int, 30),
                         0,
                         'UPCOMING',
                         NOW(),
                         NOW()
                     FROM %s s
-                    JOIN courses c ON s.course_code = c.code
-                    LEFT JOIN users u ON s.lecturer_code = u.username AND u.role = 'LECTURER'
+                    JOIN courses c ON UPPER(TRIM(s.course_code)) = UPPER(TRIM(c.code))
+                    LEFT JOIN users u ON UPPER(TRIM(s.lecturer_code)) = UPPER(TRIM(u.username)) AND u.role = 'LECTURER'
                     WHERE s.error_message IS NULL
                     AND NOT EXISTS (
                         SELECT 1 FROM class_sections cs
-                        WHERE cs.class_name = s.class_name
+                        WHERE UPPER(TRIM(cs.class_name)) = UPPER(TRIM(s.class_name))
                     )
                     """
                     .formatted(stagingTable);
@@ -287,7 +287,7 @@ public class StagingImportService {
                         NOW(),
                         NOW()
                     FROM %s s
-                    JOIN users u ON UPPER(TRIM(s.student_code)) = UPPER(u.code) AND u.role = 'STUDENT'
+                    JOIN users u ON UPPER(TRIM(s.student_code)) = UPPER(TRIM(u.code)) AND u.role = 'STUDENT'
                     JOIN student_profiles sp ON u.id = sp.user_id
                     JOIN class_sections cs ON s.class_name = cs.class_name AND cs.semester_id = ?
                     WHERE s.error_message IS NULL
@@ -301,12 +301,19 @@ public class StagingImportService {
 
             int created = jdbcTemplate.update(insertSql, semesterId);
 
-            // Update current_enrollment count
+            // Update current_enrollment count (Optimized: Targeted update using JOIN)
             jdbcTemplate.update("""
                     UPDATE class_sections cs
-                    SET current_enrollment = (SELECT COUNT(*) FROM enrollments e WHERE e.class_name = cs.class_name)
-                    WHERE cs.semester_id = ?
-                    """, semesterId);
+                    SET current_enrollment = cs.current_enrollment + counts.added
+                    FROM (
+                        SELECT class_name, COUNT(*) as added 
+                        FROM %s 
+                        WHERE error_message IS NULL 
+                        GROUP BY class_name
+                    ) counts
+                    WHERE cs.class_name = counts.class_name
+                    AND cs.semester_id = ?
+                    """.formatted(stagingTable), semesterId);
 
             Integer failedCount = jdbcTemplate.queryForObject(
                     "SELECT COUNT(*) FROM " + stagingTable + " WHERE error_message IS NOT NULL",
@@ -443,7 +450,10 @@ public class StagingImportService {
 
                     handler.flushBatch();
                     
-                    // Add indices to speed up validation
+                    // 1. Single-pass CLEANING (Critical for performance)
+                    jdbcTemplate.execute("UPDATE " + stagingTable + " SET class_name = UPPER(TRIM(class_name)), course_code = UPPER(TRIM(course_code)), lecturer_code = UPPER(TRIM(lecturer_code))");
+
+                    // 2. Add indices to speed up validation
                     jdbcTemplate.execute("CREATE INDEX ON " + stagingTable + " (class_name)");
                     jdbcTemplate.execute("CREATE INDEX ON " + stagingTable + " (course_code)");
                 }
@@ -480,7 +490,10 @@ public class StagingImportService {
 
                     handler.flushBatch();
                     
-                    // Add indices to speed up validation
+                    // 1. Single-pass CLEANING (Critical for performance)
+                    jdbcTemplate.execute("UPDATE " + stagingTable + " SET student_code = UPPER(TRIM(student_code)), class_name = UPPER(TRIM(class_name))");
+
+                    // 2. Add indices to speed up validation
                     jdbcTemplate.execute("CREATE INDEX ON " + stagingTable + " (student_code)");
                     jdbcTemplate.execute("CREATE INDEX ON " + stagingTable + " (class_name)");
                 }
@@ -539,7 +552,7 @@ public class StagingImportService {
                         WHERE s.class_name != ''
                         AND EXISTS (
                             SELECT 1 FROM class_sections cs
-                            WHERE cs.class_name = s.class_name
+                            WHERE UPPER(TRIM(cs.class_name)) = UPPER(TRIM(s.class_name))
                         )
                         """
                         .formatted(stagingTable));
@@ -551,7 +564,7 @@ public class StagingImportService {
         // Mark rows with missing student_code
         jdbcTemplate.update("""
                 UPDATE %s SET error_message = 'MSSV không được để trống'
-                WHERE TRIM(COALESCE(student_code, '')) = ''
+                WHERE COALESCE(student_code, '') = ''
                 """.formatted(stagingTable));
 
         // Mark rows with missing class_name
@@ -599,8 +612,8 @@ public class StagingImportService {
                             SELECT 1 FROM enrollments e
                             JOIN users u ON e.student_id = u.id
                             JOIN class_sections cs ON e.class_name = cs.class_name
-                            WHERE s.student_code = u.code
-                            AND s.class_name = cs.class_name
+                            WHERE UPPER(TRIM(u.code)) = s.student_code
+                            AND UPPER(TRIM(cs.class_name)) = s.class_name
                             AND cs.semester_id = ?
                         )
                         """
@@ -612,9 +625,9 @@ public class StagingImportService {
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Sinh viên chưa có hồ sơ (student profile)'
                         WHERE NOT EXISTS (
                             SELECT 1 FROM users u
-                            JOIN student_profiles sp ON u.id = sp.user_id
-                            WHERE s.student_code = u.code
+                            WHERE UPPER(TRIM(u.code)) = s.student_code
                             AND u.role = 'STUDENT'
+                            AND NOT EXISTS (SELECT 1 FROM student_profiles sp WHERE sp.user_id = u.id)
                         )
                         """
                         .formatted(stagingTable));
@@ -626,7 +639,7 @@ public class StagingImportService {
                         WHERE EXISTS (
                             SELECT 1 FROM users u
                             JOIN student_profiles sp ON u.id = sp.user_id
-                            WHERE s.student_code = u.code
+                            WHERE UPPER(TRIM(u.code)) = s.student_code
                             AND u.role = 'STUDENT'
                             AND (sp.major_id IS NULL OR sp.specialization_id IS NULL)
                         )
@@ -639,8 +652,8 @@ public class StagingImportService {
                         WHERE EXISTS (
                             SELECT 1 FROM users u
                             JOIN student_profiles sp ON sp.user_id = u.id
-                            JOIN class_sections cs ON s.class_name = cs.class_name AND cs.semester_id = ?
-                            WHERE s.student_code = u.code
+                            JOIN class_sections cs ON s.class_name = UPPER(TRIM(cs.class_name)) AND cs.semester_id = ?
+                            WHERE UPPER(TRIM(u.code)) = s.student_code
                             AND u.role = 'STUDENT'
                             AND NOT EXISTS (
                                 SELECT 1 FROM specialization_courses sc

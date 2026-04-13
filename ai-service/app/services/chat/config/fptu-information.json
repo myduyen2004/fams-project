@@ -1,0 +1,303 @@
+{
+  "school_profile": {
+    "official_name": "Trường Đại học FPT",
+    "english_name": "FPT University",
+    "abbreviation": "FPTU",
+    "founded_year": 2006,
+    "type": "Đại học tư thục",
+    "governing_body": "Tập đoàn FPT",
+    "slogan": "Future Forward – Global Ready",
+    "educational_philosophy": "Giáo dục đào tạo là tổ chức và quản trị việc tự học của người học.",
+    "mission": "Cung cấp năng lực cạnh tranh toàn cầu cho người học, góp phần mở mang bờ cõi trí tuệ đất nước.",
+    "vision": "Trở thành một hệ thống giáo dục Mega mang tính quốc tế, đáp ứng nhu cầu xã hội dựa trên các công nghệ đào tạo tiên tiến nhất.",
+    "leadership": {
+      "chairman": "TS. Lê Trường Tùng",
+      "rector": "TS. Nguyễn Khắc Thành"
+    }
+  },
+  "academic_system": {
+    "credit_system": true,
+    "grading_scale": "Thang điểm 10 và quy đổi GPA 4.0",
+    "semester_structure": {
+      "total_semesters": 9,
+      "includes": [
+        "Kỳ tiếng Anh dự bị",
+        "Kỳ chuyên ngành",
+        "Học kỳ doanh nghiệp (OJT)"
+      ]
+    }
+  },
+  "core_values": [
+    {
+      "pillar": "Toàn cầu",
+      "details": "Đào tạo bằng tiếng Anh, giáo trình quốc tế, bắt buộc ngoại ngữ thứ 2, cơ hội làm việc xuyên biên giới."
+    },
+    {
+      "pillar": "Khởi nghiệp",
+      "details": "Nuôi dưỡng tư duy làm chủ, dự án thực tế, kết nối mạng lưới startup."
+    },
+    {
+      "pillar": "Công nghệ",
+      "details": "Ứng dụng AI, Big Data, chuyển đổi số toàn diện."
+    }
+  ],
+  "academic_structure": {
+    "information_technology": {
+      "traditional": [
+        "Kỹ thuật phần mềm",
+        "An toàn thông tin",
+        "Hệ thống thông tin",
+        "Thiết kế đồ họa"
+      ],
+      "advanced": [
+        "Trí tuệ nhân tạo (AI)",
+        "Khoa học dữ liệu",
+        "Thiết kế vi mạch bán dẫn",
+        "Automotive Software",
+        "Khoa học máy tính"
+      ]
+    },
+    "business": [
+      "Marketing",
+      "Kinh doanh quốc tế",
+      "Thương mại điện tử",
+      "Quản trị khách sạn",
+      "Du lịch & lữ hành",
+      "Logistics & Chuỗi cung ứng",
+      "Tài chính doanh nghiệp",
+      "Fintech"
+    ],
+    "languages": [
+      "Ngôn ngữ Anh",
+      "Ngôn ngữ Nhật",
+      "Ngôn ngữ Hàn",
+      "Ngôn ngữ Trung"
+    ],
+    "communication": [
+      "Truyền thông đa phương tiện",
+      "Quan hệ công chúng"
+    ],
+    "law": "Luật kinh tế"
+  },
+  "training_model": {
+    "ojt": {
+      "name": "Học kỳ doanh nghiệp",
+      "duration": "4-8 tháng",
+      "benefits": [
+        "Thực tế doanh nghiệp",
+        "Có mentor",
+        "Có thể có lương"
+      ]
+    },
+    "global_program": {
+      "english_preparation": "1 năm tiếng Anh",
+      "second_language": "Bắt buộc học ngoại ngữ thứ 2",
+      "study_abroad": "1 học kỳ tại nước ngoài"
+    },
+    "student_life": {
+      "physical": "Vovinam",
+      "arts": "Nhạc cụ dân tộc",
+      "clubs": "Hơn 50 CLB"
+    },
+    "digital_education": {
+      "platforms": [
+        "LMS",
+        "Coursera",
+        "EdX"
+      ],
+      "labs": [
+        "AI Lab",
+        "IoT Lab",
+        "IC Design Lab",
+        "Embedded Lab"
+      ]
+    }
+  },
+  "learning_environment": {
+    "platforms": [
+      "LMS (Learning Management System)",
+      "FAP (FPT Academic Portal)",
+      "Coursera",
+      "EdX"
+    ],
+    "student_tools": [
+      "Email sinh viên (.edu)",
+      "Microsoft Teams",
+      "Google Workspace"
+    ]
+  },
+  "exam_system": {
+    "types_of_exams": [
+      "Progress Test (PT)",
+      "Assignment",
+      "Final Exam (FE)",
+      "Practical Exam"
+    ],
+    "exam_format": [
+      "Trắc nghiệm",
+      "Tự luận",
+      "Coding",
+      "Project"
+    ],
+    "EOS_exam": {
+      "definition": "End Of Subject - kỳ thi kết thúc môn",
+      "format": "Thi trên máy tính",
+      "requirements": [
+        "Mang laptop cá nhân",
+        "Cài phần mềm SEB",
+        "Không sử dụng tài liệu nếu không cho phép"
+      ]
+    },
+    "SEB_software": {
+      "name": "Safe Exam Browser",
+      "purpose": "Khóa trình duyệt khi thi, chống gian lận",
+      "installation_steps": [
+        "Tải từ website chính thức của trường",
+        "Cài đặt trước ngày thi",
+        "Test thử trước khi vào phòng thi"
+      ],
+      "rules": [
+        "Không được thoát SEB khi đang thi",
+        "Không mở phần mềm khác",
+        "Vi phạm sẽ bị đánh dấu gian lận"
+      ]
+    }
+  },
+  "study_rules": {
+    "attendance": {
+      "requirement": "Phải tham gia tối thiểu 80% số buổi",
+      "penalty": "Thiếu chuyên cần có thể bị cấm thi"
+    },
+    "assignment": {
+      "late_submission": "Nộp trễ bị trừ điểm hoặc 0 điểm",
+      "plagiarism": "Đạo văn bị 0 điểm hoặc kỷ luật"
+    },
+    "retake": {
+      "allowed": true,
+      "conditions": "Điểm thấp hoặc trượt môn"
+    }
+  },
+  "disciplinary_actions": {
+    "levels": [
+      {
+        "level": "Nhắc nhở",
+        "cases": [
+          "Vi phạm nhẹ",
+          "Đi trễ"
+        ]
+      },
+      {
+        "level": "Cảnh cáo",
+        "cases": [
+          "Gian lận nhẹ",
+          "Không tuân thủ quy định"
+        ]
+      },
+      {
+        "level": "Đình chỉ thi",
+        "cases": [
+          "Gian lận trong thi cử"
+        ]
+      },
+      {
+        "level": "Đình chỉ học",
+        "cases": [
+          "Vi phạm nghiêm trọng",
+          "Tái phạm nhiều lần"
+        ]
+      }
+    ]
+  },
+  "student_guidelines": {
+    "before_exam": [
+      "Kiểm tra lịch thi trên FAP",
+      "Cài SEB trước",
+      "Mang thẻ sinh viên"
+    ],
+    "during_exam": [
+      "Không trao đổi",
+      "Không dùng điện thoại",
+      "Tuân thủ giám thị"
+    ],
+    "after_exam": [
+      "Kiểm tra kết quả trên hệ thống",
+      "Phúc khảo nếu cần"
+    ]
+  },
+  "campuses": [
+    {
+      "city": "Hà Nội",
+      "location": "Hòa Lạc",
+      "features": "AI Lab, Innovation Hub"
+    },
+    {
+      "city": "TP.HCM",
+      "location": "Quận 9",
+      "features": "Kết nối doanh nghiệp mạnh"
+    },
+    {
+      "city": "Đà Nẵng",
+      "features": "Kiến trúc xanh"
+    },
+    {
+      "city": "Cần Thơ",
+      "features": "Sinh thái kết hợp công nghệ"
+    },
+    {
+      "city": "Quy Nhơn",
+      "features": "Trung tâm AI"
+    }
+  ],
+  "rankings_and_accreditations": {
+    "international": [
+      "ACBSP",
+      "AQAS",
+      "AUN-QA",
+      "ISO 21001:2018"
+    ],
+    "rankings_2025": {
+      "education_quality": "Top 101-200 thế giới",
+      "economic_growth": "Top 80 thế giới"
+    }
+  },
+  "career_outcomes": {
+    "employment_rate": "98%",
+    "second_language_rate": "100%",
+    "advantages": [
+      "Kết nối doanh nghiệp",
+      "Kỹ năng thực tế",
+      "Cơ hội quốc tế"
+    ]
+  },
+  "admissions": {
+    "methods": [
+      "SchoolRank",
+      "Xét tuyển IELTS",
+      "Thi học bổng",
+      "Tuyển thẳng"
+    ]
+  },
+  "tuition": {
+    "hn_hcm": {
+      "english": "11,900,000 VNĐ",
+      "major": "31,600,000 - 32,500,000 VNĐ"
+    },
+    "other_campuses": {
+      "english": "8,330,000 VNĐ",
+      "major": "20,090,000 - 22,750,000 VNĐ"
+    }
+  },
+  "important_notes": [
+    "Luôn kiểm tra email sinh viên để cập nhật thông báo",
+    "Chủ động học và tự học là yếu tố quan trọng",
+    "Tham gia CLB để phát triển kỹ năng mềm",
+    "Tuân thủ quy định để tránh bị kỷ luật"
+  ],
+  "highlights": [
+    "Định hướng đào tạo thực tiễn",
+    "Liên kết doanh nghiệp mạnh",
+    "Môi trường năng động",
+    "Cơ hội làm việc tại FPT",
+    "Mạng lưới cựu sinh viên rộng"
+  ]
+}

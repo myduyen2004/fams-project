@@ -23,6 +23,8 @@ export enum TargetType {
   ALL = 'ALL',           // Tất cả
   STUDENT = 'STUDENT',   // Tất cả sinh viên
   LECTURER = 'LECTURER', // Tất cả giảng viên
+  ACADEMIC_STAFF = 'ACADEMIC_STAFF', // Tất cả nhân viên đào tạo
+  ADMIN = 'ADMIN',       // Tất cả quản trị viên
   CLASS = 'CLASS',       // Theo lớp học phần
   COURSE = 'COURSE',     // Theo môn học
   USER = 'USER'          // Cá nhân cụ thể
@@ -173,6 +175,10 @@ export const getTargetTypeLabel = (targetType: TargetType): string => {
       return 'Sinh viên';
     case TargetType.LECTURER:
       return 'Giảng viên';
+    case TargetType.ACADEMIC_STAFF:
+      return 'Phòng đào tạo';
+    case TargetType.ADMIN:
+      return 'Quản trị viên';
     case TargetType.CLASS:
       return 'Theo lớp';
     case TargetType.COURSE:

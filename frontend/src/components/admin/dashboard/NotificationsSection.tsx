@@ -109,7 +109,13 @@ export const NotificationsSection: React.FC<NotificationsSectionProps> = ({ noti
                   />
                   <div className="flex items-center gap-2 mt-2">
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                      {notification.senderName && notification.senderName !== 'System' ? (notification.senderFullName || notification.senderName) : (notification.type === 'SYSTEM' ? 'Hệ thống' : 'Cảnh báo')}
+                      {notification.senderName && notification.senderName !== 'System' 
+                        ? (notification.senderFullName || notification.senderName) 
+                        : (notification.type === 'SYSTEM' ? 'Hệ thống' : 
+                           notification.type === 'ALERT' ? 'Cảnh báo' : 
+                           notification.type === 'SUBMISSION' ? 'Bài nộp' :
+                           notification.type === 'NEWS' ? 'Tin tức' : 
+                           notification.type === 'SCHEDULE' ? 'Lịch trình' : 'Thông báo')}
                     </span>
                     <span className="text-[10px] text-gray-400">•</span>
                     <span className="text-[10px] text-gray-400 font-medium">{notification.timestamp}</span>

@@ -13,6 +13,7 @@ export interface RecentAccess {
     accessTime: string;
     location: string;
     status: string;
+    avatar?: string;
 }
 
 export interface Alert {
@@ -30,7 +31,7 @@ export interface AppNotification {
     description: string;
     isRead: boolean;
     timestamp: string;
-    type?: 'SYSTEM' | 'ALERT' | 'IMPORT' | 'CHAT' | 'SCHEDULE' | 'ACADEMIC';
+    type?: 'SYSTEM' | 'ALERT' | 'IMPORT' | 'CHAT' | 'SCHEDULE' | 'ACADEMIC' | 'SUBMISSION' | 'NEWS' | 'NEW_ASSIGNMENT';
     targetUrl?: string;
     senderName?: string;
     senderFullName?: string;
@@ -42,8 +43,16 @@ export interface SystemLog {
     id: number;
     title: string;
     description: string;
-    type: string;
     timestamp: string;
+    type: 'info' | 'success' | 'warning' | 'error' | string;
+    source?: string;
+    performerName?: string;
+    performerAvatar?: string;
+    performerRole?: string;
+    ipAddress?: string;
+    userAgent?: string;
+    oldValue?: string;
+    newValue?: string;
 }
 
 export interface NotificationResponse {

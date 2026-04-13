@@ -5,6 +5,7 @@ import com.fams.backend.entity.WiFiAccessPoint;
 import com.fams.backend.repository.RoomRepository;
 import com.fams.backend.repository.RoomWiFiAccessPointRepository;
 import com.fams.backend.repository.WiFiAccessPointRepository;
+import com.fams.backend.exception.BadRequestException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
@@ -130,7 +131,7 @@ public class WiFiAccessPointController {
     @Operation(summary = "Create AP", description = "Create a new WiFi access point")
     public ResponseEntity<WiFiApDTO> createAccessPoint(@RequestBody CreateWiFiApRequest request) {
         if (wifiApRepository.existsByBssid(request.getBssid())) {
-            return ResponseEntity.badRequest().build();
+            throw new BadRequestException("Địa chỉ MAC (BSSID) này đã tồn tại trong hệ thống");
         }
 
         WiFiAccessPoint ap = WiFiAccessPoint.builder()
@@ -158,6 +159,10 @@ public class WiFiAccessPointController {
 
         return wifiApRepository.findById(id)
                 .map(ap -> {
+                    // Check duplicate BSSID if it is changed
+                    if (!ap.getBssid().equalsIgnoreCase(request.getBssid()) && wifiApRepository.existsByBssid(request.getBssid())) {
+                        throw new BadRequestException("Địa chỉ MAC (BSSID) này đã tồn tại trong hệ thống");
+                    }
                     ap.setSsid(request.getSsid());
                     ap.setBssid(request.getBssid());
                     ap.setName(request.getName());

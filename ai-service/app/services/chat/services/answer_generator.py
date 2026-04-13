@@ -16,7 +16,15 @@ from typing import Any, Dict, Generator, List, Optional
 
 from loguru import logger # type: ignore
 
-from services.llm_client import llm_client
+from app.services.chat.router.tool_catalog import (
+    detect_agent,
+    get_agent_guidance,
+    get_agent_label,
+    get_role_guidance,
+    get_tool_agent,
+)
+from app.services.chat.services.fptu_knowledge import get_relevant_fptu_context, is_fptu_knowledge_question
+from app.services.chat.services.llm_client import llm_client
 
 # ✅ NEW: Mapping từ data_tool → count_tool
 TOOL_COUNT_MAP: Dict[str, str] = {
@@ -46,6 +54,12 @@ TOOL_VIEW_MAP: Dict[str, str] = {
     "get_empty_rooms": "view_rooms",
     "search_user_by_name": "view_users",
     "get_enrollments_by_class": "view_classes",
+}
+
+_EXACT_LOOKUP_TOOLS = {
+    "get_lecturer_by_code",
+    "get_student_by_code",
+    "get_user_by_code",
 }
 
 _NAV_LABELS: Dict[str, str] = {
@@ -179,6 +193,10 @@ _PROMPT = """Bạn là FAMS AI Assistant. Trả lời CHUYÊN NGHIỆP bằng ti
 
 ⚠️ TUYỆT ĐỐI KHÔNG BỊA DỮ LIỆU. CHỈ dùng dữ liệu DATABASE bên dưới.
 
+ROLE: {user_role}
+ROLE_GUIDANCE: {role_guidance}
+AGENT: {agent_label}
+AGENT_GUIDANCE: {agent_guidance}
 YÊU CẦU: {message}
 LỊCH SỬ: {history}
 PHÂN TÍCH: {question_analysis}
@@ -199,6 +217,30 @@ LOẠI CÂU HỎI → TRẢ LỜI:
 - table → COPY toàn bộ bảng
 
 ĐỊNH DẠNG: **In đậm** giá trị quan trọng. Emoji: 📋 📊 🏫 👨‍🏫 👨‍🎓 📌"""
+
+_GENERAL_CHAT_PROMPT = """Bạn là FAMS AI Assistant. Hãy trả lời bằng tiếng Việt tự nhiên, ấm áp, thông minh.
+
+Đây là câu hỏi ngoài lề hệ thống FAMS, vì vậy hãy trả lời bằng kiến thức và suy luận của AI, KHÔNG giả vờ đó là dữ liệu trong cơ sở dữ liệu FAMS.
+
+ROLE: {user_role}
+ROLE_GUIDANCE: {role_guidance}
+AGENT: {agent_label}
+AGENT_GUIDANCE: {agent_guidance}
+LỊCH SỬ: {history}
+CÂU HỎI: {message}
+HÔM NAY: {today}
+TRI THỨC FPTU CỤC BỘ:
+{knowledge_context}
+
+QUY TẮC:
+1. Trả lời ngắn gọn, hữu ích, tự nhiên.
+2. Nếu là phép tính đơn giản, trả lời trực tiếp kết quả.
+3. Nếu là lời khuyên đời sống, trả lời thực tế, nhẹ nhàng, tích cực.
+4. Nếu là câu hỏi thời tiết hiện tại hoặc dữ liệu thời gian thực mà bạn không có nguồn live, hãy nói rõ bạn không có dữ liệu thời tiết thời gian thực trong hệ thống.
+5. Không nhắc đến database, tool hay router.
+6. Nếu câu hỏi liên quan Trường Đại học FPT/FPTU và phần TRI THỨC FPTU CỤC BỘ có dữ liệu phù hợp, ưu tiên trả lời dựa trên đó.
+7. Nếu người dùng hỏi về FPTU nhưng TRI THỨC FPTU CỤC BỘ không có thông tin tương ứng, nói rõ bạn chưa thấy thông tin đó trong file tri thức hiện có; không tự bịa.
+"""
 
 
 class DateTimeEncoder(json.JSONEncoder):
@@ -245,8 +287,9 @@ def _format_table(rows: List[Dict[str, Any]], tool_name: Optional[str] = None, e
         return "[KHÔNG CÓ DỮ LIỆU]"
     
     try:
+        page_offset = int((entities or {}).get("__page_offset__") or 0)
         # ✅ v5.3: Show 100 rows, cut if >100
-        if len(rows) > 100:
+        if len(rows) > 100 and page_offset == 0:
             result = (
                 f"[TOO_MANY_RESULTS: {len(rows)}]\n"
                 f"Hiển thị tổng  {len(rows)} kết quả.\n\n"
@@ -314,6 +357,12 @@ class AnswerGenerator:
     _TOOL_TITLES: Dict[str, str] = {
         "get_empty_rooms": "🏫 Danh sách phòng trống",
         "get_own_schedule": "📅 Lịch của bạn",
+        "get_lecturer_by_code": "👨‍🏫 Thông tin giảng viên",
+        "get_student_by_code": "👨‍🎓 Thông tin sinh viên",
+        "get_user_by_code": "👤 Thông tin người dùng",
+        "get_my_attendance_overview": "📋 Tổng quan điểm danh của bạn",
+        "get_my_absence_history": "🚨 Lịch sử vắng và trễ của bạn",
+        "get_my_attendance_risk_courses": "⚠️ Môn học có nguy cơ vì điểm danh",
         "get_other_lecturer_schedule": "👨‍🏫 Lịch giảng dạy",
         "get_other_student_schedule": "👨‍🎓 Lịch học sinh viên",
         "get_class_schedule": "📅 Lịch lớp học",
@@ -325,6 +374,7 @@ class AnswerGenerator:
         "get_grade_report_by_class": "📊 Bảng điểm lớp",
         "get_grade_report_by_course": "📊 Bảng điểm theo môn",
         "get_attendance_stats_by_class": "📋 Thống kê điểm danh",
+        "get_absence_rate_by_class": "📋 Tỉ lệ vắng của lớp",
         "get_attendance_by_slot": "📋 Điểm danh buổi học",
         "get_classes_by_semester": "📚 Danh sách lớp học",
         "get_own_grades": "📊 Kết quả học tập",
@@ -340,6 +390,7 @@ class AnswerGenerator:
         "get_my_schedule_requests": "📋 Yêu cầu đổi lịch của bạn",
         "search_user_by_name": "🔍 Kết quả tìm kiếm",
         "get_my_notifications": "🔔 Thông báo của bạn",
+        "count_unread_notifications": "🔔 Số thông báo chưa đọc",
         "get_grade_distribution": "📊 Phổ điểm",
         "get_student_ranking_in_class": "🏆 Xếp hạng sinh viên",
         "get_abnormal_attendance": "⚠️ Điểm danh bất thường",
@@ -357,11 +408,13 @@ class AnswerGenerator:
         history: Optional[List[Dict[str, str]]] = None,
         model: Optional[str] = None,
         today: Optional[str] = None,
+        user_role: str = "STUDENT",
     ) -> str:
         intent    = (intent_data.get("intent") or "").strip().lower()
         tool_name = intent_data.get("toolName") or ""
         entities  = intent_data.get("entities") or {}
         today     = today or datetime.now().strftime("%Y-%m-%d")
+        agent_id  = intent_data.get("agent") or (get_tool_agent(tool_name) if tool_name else detect_agent(message))
 
         # ── Fast-path: no LLM needed ─────────────────────────────────────
         if intent == "permission_denied":
@@ -370,8 +423,40 @@ class AnswerGenerator:
             )
             return f"🚫 **Truy cập bị từ chối**: {reason}"
 
+        if intent == "tool_locked":
+            reason = (intent_data.get("entities") or {}).get(
+                "reason", "Công cụ này hiện đang bị khóa."
+            )
+            return f"🔒 **Công cụ đã bị khóa**: {reason}"
+
         if intent == "navigation" or (tool_name and tool_name.startswith("view_")):
             return self._navigation_response(tool_name, tool_result)
+
+        if (
+            intent == "data_query"
+            and tool_name in _EXACT_LOOKUP_TOOLS
+            and isinstance(tool_result, list)
+            and tool_result
+            and isinstance(tool_result[0], dict)
+        ):
+            return self._direct_table_response(message, tool_result, tool_name, {})
+
+        if intent == "general_chat" or tool_name == "general_offtopic_chat":
+            knowledge_context = get_relevant_fptu_context(message)
+            prompt = _GENERAL_CHAT_PROMPT.format(
+                user_role=user_role,
+                role_guidance=get_role_guidance(user_role),
+                agent_label=get_agent_label(agent_id),
+                agent_guidance=get_agent_guidance(agent_id),
+                history=self._fmt_history(history),
+                message=message,
+                today=today,
+                knowledge_context=knowledge_context,
+            )
+            response = llm_client.complete(prompt, model)
+            if is_fptu_knowledge_question(message) and knowledge_context == "[KHÔNG CÓ TRI THỨC FPTU PHÙ HỢP]":
+                return "Mình chưa thấy thông tin này trong file tri thức FPTU hiện có."
+            return response.strip()
 
         # ✅ NEW v5.5: BYPASS LLM cho data_query có bảng lớn (≥10 rows)
         # LLM hay cắt bảng dài → format sẵn rồi trả thẳng, không qua LLM
@@ -408,6 +493,10 @@ class AnswerGenerator:
             return "Không tìm thấy dữ liệu phù hợp với yêu cầu của bạn."
         
         prompt = _PROMPT.format(
+            user_role         = user_role,
+            role_guidance     = get_role_guidance(user_role),
+            agent_label       = get_agent_label(agent_id),
+            agent_guidance    = get_agent_guidance(agent_id),
             history           = self._fmt_history(history),
             message           = message,
             question_analysis = question_analysis,
@@ -438,11 +527,13 @@ class AnswerGenerator:
         history: Optional[List[Dict[str, str]]] = None,
         model: Optional[str] = None,
         today: Optional[str] = None,
+        user_role: str = "STUDENT",
     ) -> Generator[str, None, None]:
         intent    = (intent_data.get("intent") or "").strip().lower()
         tool_name = intent_data.get("toolName") or ""
         entities  = intent_data.get("entities") or {}  # ✅ NEW
         today     = today or datetime.now().strftime("%Y-%m-%d")
+        agent_id  = intent_data.get("agent") or (get_tool_agent(tool_name) if tool_name else detect_agent(message))
 
         # Fast-path
         if intent == "permission_denied":
@@ -452,8 +543,43 @@ class AnswerGenerator:
             yield f"🚫 **Truy cập bị từ chối**: {reason}"
             return
 
+        if intent == "tool_locked":
+            reason = (intent_data.get("entities") or {}).get(
+                "reason", "Công cụ này hiện đang bị khóa."
+            )
+            yield f"🔒 **Công cụ đã bị khóa**: {reason}"
+            return
+
         if intent == "navigation" or (tool_name and tool_name.startswith("view_")):
             yield self._navigation_response(tool_name, tool_result)
+            return
+
+        if (
+            intent == "data_query"
+            and tool_name in _EXACT_LOOKUP_TOOLS
+            and isinstance(tool_result, list)
+            and tool_result
+            and isinstance(tool_result[0], dict)
+        ):
+            yield self._direct_table_response(message, tool_result, tool_name, {})
+            return
+
+        if intent == "general_chat" or tool_name == "general_offtopic_chat":
+            knowledge_context = get_relevant_fptu_context(message)
+            prompt = _GENERAL_CHAT_PROMPT.format(
+                user_role=user_role,
+                role_guidance=get_role_guidance(user_role),
+                agent_label=get_agent_label(agent_id),
+                agent_guidance=get_agent_guidance(agent_id),
+                history=self._fmt_history(history),
+                message=message,
+                today=today,
+                knowledge_context=knowledge_context,
+            )
+            if is_fptu_knowledge_question(message) and knowledge_context == "[KHÔNG CÓ TRI THỨC FPTU PHÙ HỢP]":
+                yield "Mình chưa thấy thông tin này trong file tri thức FPTU hiện có."
+                return
+            yield llm_client.complete(prompt, model).strip()
             return
 
         # ✅ v5.5: BYPASS LLM cho bảng lớn (≥10 rows) — stream cũng không cắt
@@ -486,6 +612,10 @@ class AnswerGenerator:
             logger.info(f"[AnswerGen] STREAM tool={tool_name}, rows={len(tool_result)}, q_analysis={question_analysis[:80]}")
         
         prompt = _PROMPT.format(
+            user_role         = user_role,
+            role_guidance     = get_role_guidance(user_role),
+            agent_label       = get_agent_label(agent_id),
+            agent_guidance    = get_agent_guidance(agent_id),
             history           = self._fmt_history(history),
             message           = message,
             question_analysis = question_analysis,
@@ -513,14 +643,17 @@ class AnswerGenerator:
         """✅ v5.5: Bypass LLM — format bảng trực tiếp, KHÔNG bao giờ bị cắt."""
         # ✅ Extract total from __total__ field (COUNT(*) OVER()) or fallback to len()
         total = data[0].get("__total__", len(data)) if data else 0
+        page_offset = int(entities.get("__page_offset__") or 0)
+        shown_start = page_offset + 1 if data else 0
+        shown_end = page_offset + len(data)
 
         # Build title
         title = self._generate_title(message, tool_name, entities)
 
         # Format full table (dùng _format_table_impl đã có)
         if total > 100:
-            table = _format_table_impl(data[:100])
-            footer = f"\n\n📊 **Hiển thị 100/{total} kết quả**"
+            table = _format_table_impl(data)
+            footer = f"\n\n📊 **Hiển thị {shown_start}-{shown_end}/{total} kết quả**"
         else:
             table = _format_table_impl(data)
             footer = f"\n\n📊 **Tổng cộng: {total} kết quả**"

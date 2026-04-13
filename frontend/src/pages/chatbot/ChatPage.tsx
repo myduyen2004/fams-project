@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
-import { Send, Bot, User, Loader2, History, ChevronRight, Activity, Terminal, ExternalLink, PanelLeftClose, PanelLeft, Plus, Sparkles, FileSpreadsheet, Trash2 } from 'lucide-react';
+import { Send, Bot, User, Loader2, History, ChevronRight, Activity, ExternalLink, PanelLeftClose, PanelLeft, Plus, Sparkles, FileSpreadsheet, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { chatService, AIChatMessage, AIChatSession, ThinkingStep } from '../../services/api/chatService';
+import { chatService, AIChatMessage, AIChatSession, ContinuationRequest, MissingField, ThinkingStep } from '../../services/api/chatService';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
 import { AcademicStaffSidebar } from '../../components/academic-staff/AcademicStaffSidebar';
@@ -24,25 +24,36 @@ const MODELS = [
 
 // --- Sub-components for Optimization ---
 
-const ChatMessageItem = memo(({ msg }: { msg: AIChatMessage }) => (
-    <div className={`flex gap-4 w-full max-w-5xl md:max-w-7xl ${msg.role === 'USER' ? 'ml-auto flex-row-reverse' : 'mr-auto'}`}>
-        <div className={`w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center shadow-sm ${msg.role === 'USER' ? 'bg-fpt-orange' : 'bg-gray-100 dark:bg-zinc-800'}`}>
-            {msg.role === 'USER' ? <User className="w-5 h-5 text-white" /> : <Bot className="w-5 h-5 text-fpt-orange" />}
+const ChatMessageItem = memo(({ msg, onContinue }: { msg: AIChatMessage; onContinue: (continuation: ContinuationRequest) => void }) => (
+    <div className={`flex w-full max-w-[min(100%,48rem)] gap-2 px-2 ${msg.role === 'USER' ? 'ml-auto flex-row-reverse' : 'mr-auto'}`}>
+        <div className={`h-8 w-8 rounded-full flex-shrink-0 flex items-center justify-center border shadow-sm ${msg.role === 'USER' ? 'border-gray-200 bg-white' : 'border-gray-200 bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800'}`}>
+            {msg.role === 'USER' ? <User className="w-4 h-4 text-fpt-orange" /> : <Bot className="w-4 h-4 text-fpt-orange" />}
         </div>
         <div className={`flex flex-col space-y-1 ${msg.role === 'USER' ? 'items-end' : 'items-start'}`}>
-            <div className={`px-7 py-5 rounded-2xl shadow-sm text-lg leading-relaxed overflow-hidden transition-all duration-300 ring-1 ring-black/5 dark:ring-white/5 ${msg.role === 'USER' ? 'bg-fpt-orange text-white rounded-tr-none' : 'bg-white dark:bg-zinc-900 text-gray-800 dark:text-zinc-200 border border-gray-100 dark:border-zinc-800 rounded-tl-none'}`}>
-                <div className="prose dark:prose-invert prose-sm max-w-none chat-table-wrapper">
+            <div className={`w-full overflow-hidden rounded-2xl border px-4 py-3 text-sm leading-6 shadow-[0_8px_20px_rgba(15,23,42,0.04)] transition-all duration-300 ${msg.role === 'USER' ? 'rounded-tr-md border-gray-200 bg-white text-gray-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100' : 'rounded-tl-md border-gray-200 bg-white text-gray-800 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200'}`}>
+                <div className="prose prose-sm max-w-none break-words chat-table-wrapper dark:prose-invert">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                 </div>
                 {msg.redirectPath && (
-                    <div className="mt-3 pt-3 border-t border-gray-100 dark:border-zinc-800">
+                    <div className="mt-3 border-t border-gray-100 pt-3 dark:border-zinc-800">
                         <Link
                             to={msg.redirectPath}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-orange-50 dark:bg-orange-900/10 text-fpt-orange rounded-lg text-xs font-bold hover:bg-fpt-orange hover:text-white transition-all group/link"
+                            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-fpt-orange transition-all hover:bg-fpt-orange hover:text-white dark:border-zinc-700 dark:bg-zinc-900"
                         >
                             <ExternalLink className="w-3 h-3" />
                             Xem chi tiết
                         </Link>
+                    </div>
+                )}
+                {msg.continuation && (
+                    <div className="mt-3 border-t border-gray-100 pt-3 dark:border-zinc-800">
+                        <button
+                            onClick={() => onContinue(msg.continuation!)}
+                            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-fpt-orange transition hover:bg-fpt-orange hover:text-white dark:border-zinc-700 dark:bg-zinc-900"
+                        >
+                            <ChevronRight className="w-3 h-3" />
+                            Tiếp
+                        </button>
                     </div>
                 )}
             </div>
@@ -79,7 +90,7 @@ const ChatSidebar = memo(({ sessions, currentSession, isSidebarOpen, onSelect, o
                 <div key={s.id} className="relative group/item">
                     <button
                         onClick={() => onSelect(s)}
-                        className={`w-full p-3 text-left rounded-lg group flex items-start gap-3 transition-all pr-10 ${currentSession?.id === s.id ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange border border-orange-100 dark:border-orange-900/20' : 'hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-700 dark:text-zinc-300'}`}
+                        className={`w-full p-3 text-left rounded-lg group flex items-start gap-3 transition-all pr-10 ${currentSession?.id === s.id ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange border border-gray-200 dark:border-zinc-700' : 'hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-700 dark:text-zinc-300'}`}
                     >
                         <History className={`w-4 h-4 mt-1 flex-shrink-0 ${currentSession?.id === s.id ? 'text-fpt-orange' : 'text-gray-400'}`} />
                         <div className="overflow-hidden">
@@ -103,65 +114,28 @@ const ChatSidebar = memo(({ sessions, currentSession, isSidebarOpen, onSelect, o
     </div>
 ));
 
-interface CreditLogProps {
-    thinkingSteps: ThinkingStep[];
-    isLoading: boolean;
-}
-
-const CreditLog = memo(({ thinkingSteps, isLoading }: CreditLogProps) => (
-    <div className="w-80 border-l border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col p-6 hidden lg:flex">
-        <div className="flex items-center gap-2 mb-6 text-fpt-orange">
-            <Activity className="w-5 h-5" />
-            <h3 className="font-bold uppercase tracking-wider text-sm">Credit Log</h3>
-        </div>
-
-        <div className="flex-1 space-y-6 overflow-y-auto custom-scrollbar pr-2">
-            {thinkingSteps.length > 0 ? (
-                thinkingSteps.map((step: ThinkingStep) => (
-                    <div key={step.stage} className="relative pl-6 border-l-2 border-orange-100 dark:border-orange-900/20 py-1 transition-all hover:border-fpt-orange">
-                        <div className="absolute -left-[9px] top-2 w-4 h-4 rounded-full bg-orange-50 dark:bg-orange-900/10 border-2 border-fpt-orange flex items-center justify-center">
-                            <div className="w-1 h-1 rounded-full bg-fpt-orange"></div>
-                        </div>
-                        <div className="space-y-1">
-                            <div className="flex items-center justify-between">
-                                <h4 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight">[Stage {step.stage}] {step.name}</h4>
-                                <ChevronRight className="w-3 h-3 text-fpt-orange opacity-40" />
-                            </div>
-                            <p className="text-xs text-fpt-orange font-medium">{step.status}</p>
-                            {step.detail && (
-                                <div className="mt-2 p-3 bg-gray-50 dark:bg-zinc-950 rounded-lg border border-gray-100 dark:border-zinc-800">
-                                    <div className="flex items-center gap-2 mb-1 opacity-50">
-                                        <Terminal className="w-3 h-3" />
-                                        <span className="text-[10px] font-mono">DEBUG_INFO</span>
-                                    </div>
-                                    <p className="text-[11px] text-gray-500 dark:text-zinc-400 font-mono break-words leading-relaxed">{step.detail}</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                ))
-            ) : (
-                <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-30">
-                    <Activity className="w-10 h-10" />
-                    <p className="text-xs font-medium uppercase tracking-widest">Đang chờ xử lý...</p>
-                </div>
-            )}
-        </div>
-
-        {isLoading && (
-            <div className="mt-6 p-4 bg-orange-50 dark:bg-orange-900/10 rounded-xl flex items-center gap-3 border border-orange-100 dark:border-orange-900/20">
-                <Loader2 className="w-4 h-4 text-fpt-orange animate-spin" />
-                <span className="text-xs font-bold text-fpt-orange animate-pulse">Hệ thống đang suy nghĩ...</span>
-            </div>
-        )}
-    </div>
-));
-
 interface ChatInputProps {
     onSendMessage: (msg: string) => void;
     onUploadFile: (file: File) => void;
     isLoading: boolean;
     disabled: boolean;
+}
+
+interface PendingFieldRequest {
+    fields: MissingField[];
+    pendingTool: string;
+    originalMessage: string;
+    pendingEntities?: Record<string, string>;
+    agentLabel?: string;
+    answer?: string;
+    actionReview?: boolean;
+}
+
+interface MissingFieldFormProps {
+    request: PendingFieldRequest;
+    isLoading: boolean;
+    onSubmit: (values: Record<string, string>) => void;
+    onCancel: () => void;
 }
 
 const ChatInput = memo(({ onSendMessage, onUploadFile, isLoading, disabled }: ChatInputProps) => {
@@ -177,15 +151,18 @@ const ChatInput = memo(({ onSendMessage, onUploadFile, isLoading, disabled }: Ch
     };
 
     return (
-        <div className="p-6 bg-white dark:bg-zinc-950/50 backdrop-blur-md">
-            <form onSubmit={handleSubmit} className="max-w-4xl mx-auto relative group">
+        <div className="border-t border-gray-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950/80">
+            <form
+                onSubmit={handleSubmit}
+                className="group relative mx-auto max-w-[48rem]"
+            >
                 <input
                     type="text"
                     value={localValue}
                     onChange={(e) => setLocalValue(e.target.value)}
                     placeholder="Nhập câu hỏi của bạn tại đây..."
                     disabled={isLoading || disabled}
-                    className="w-full pl-12 pr-14 py-4 bg-gray-100 dark:bg-zinc-900 border-none rounded-2xl focus:ring-2 focus:ring-fpt-orange text-gray-900 dark:text-white transition-all placeholder:text-gray-400 dark:placeholder:text-zinc-600 shadow-inner"
+                    className="w-full rounded-2xl border border-gray-200 bg-white py-3 pl-11 pr-14 text-sm text-gray-900 shadow-sm transition-all placeholder:text-gray-400 focus:ring-2 focus:ring-orange-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:placeholder:text-zinc-600"
                 />
                 <input
                     type="file"
@@ -204,7 +181,7 @@ const ChatInput = memo(({ onSendMessage, onUploadFile, isLoading, disabled }: Ch
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isLoading || disabled}
-                    className="absolute left-2 top-2 bottom-2 px-3 hover:bg-gray-200 dark:hover:bg-zinc-800 text-gray-400 dark:text-zinc-500 rounded-xl transition-all disabled:opacity-50"
+                    className="absolute bottom-2 left-2 top-2 rounded-xl px-2.5 text-gray-400 transition-all hover:bg-orange-50 dark:text-zinc-500 dark:hover:bg-zinc-800 disabled:opacity-50"
                     title="Tải lên file Excel"
                 >
                     <FileSpreadsheet className="w-5 h-5" />
@@ -212,12 +189,96 @@ const ChatInput = memo(({ onSendMessage, onUploadFile, isLoading, disabled }: Ch
                 <button
                     type="submit"
                     disabled={isLoading || !localValue.trim() || disabled}
-                    className="absolute right-2 top-2 bottom-2 px-3 bg-fpt-orange hover:bg-fpt-orange/90 text-white rounded-xl transition-all disabled:bg-gray-300 dark:disabled:bg-zinc-800 disabled:cursor-not-allowed group-hover:scale-105 active:scale-95 flex items-center justify-center"
+                    className="absolute bottom-2 right-2 top-2 flex items-center justify-center rounded-xl bg-fpt-orange px-3 text-white transition-all hover:bg-fpt-orange/90 group-hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-zinc-800"
                 >
                     {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                 </button>
             </form>
-            <p className="text-center text-[10px] text-gray-400 mt-4 uppercase tracking-widest font-bold">FAMS AI Assistant - High Performance Reasoning Pipeline</p>
+            <p className="mt-2 text-center text-[10px] font-bold uppercase tracking-[0.24em] text-gray-400">FAMS AI Assistant</p>
+        </div>
+    );
+});
+
+const MissingFieldForm = memo(({ request, isLoading, onSubmit, onCancel }: MissingFieldFormProps) => {
+    const [values, setValues] = useState<Record<string, string>>({});
+
+    useEffect(() => {
+        const initialValues: Record<string, string> = {};
+        request.fields.forEach((field) => {
+            const fromPending = request.pendingEntities?.[field.id];
+            initialValues[field.id] = fromPending ?? field.value ?? '';
+        });
+        setValues(initialValues);
+    }, [request]);
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSubmit(values);
+    };
+
+    return (
+        <div className="mx-auto mb-3 w-full max-w-[min(100%,48rem)] rounded-2xl border border-gray-200 bg-white p-3.5 shadow-[0_8px_18px_rgba(15,23,42,0.05)] dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="mb-3 flex items-start justify-between gap-3">
+                <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.24em] text-fpt-orange">
+                        {request.agentLabel || 'Agent hỗ trợ'}
+                    </p>
+                    <h3 className="mt-1 text-sm font-bold text-gray-900 dark:text-white">
+                        {request.actionReview ? 'Xác nhận thông tin trước khi thực hiện thao tác' : 'Cần thêm thông tin để trả lời chính xác'}
+                    </h3>
+                    {request.answer && (
+                        <p className="mt-1.5 text-xs leading-5 text-gray-600 dark:text-zinc-300">{request.answer}</p>
+                    )}
+                </div>
+                <button
+                    type="button"
+                    onClick={onCancel}
+                    disabled={isLoading}
+                    className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-[11px] font-semibold text-gray-500 transition hover:border-red-200 hover:text-red-500 dark:border-zinc-800 dark:text-zinc-400"
+                >
+                    Bỏ qua
+                </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+                {request.fields.map((field) => (
+                    <label key={field.id} className="flex flex-col gap-1.5">
+                        <span className="text-xs font-semibold text-gray-700 dark:text-zinc-200">{field.label}</span>
+                        <span className="text-[11px] leading-4 text-gray-500 dark:text-zinc-400">{field.question || `Nhập ${field.label.toLowerCase()}`}</span>
+                        {field.inputType === 'textarea' ? (
+                            <textarea
+                                value={values[field.id] || ''}
+                                onChange={(e) => setValues(prev => ({ ...prev, [field.id]: e.target.value }))}
+                                placeholder={field.placeholder}
+                                required={field.required !== false && field.required !== 'false'}
+                                disabled={isLoading}
+                                className="min-h-[78px] rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-fpt-orange focus:ring-2 focus:ring-orange-100 dark:border-zinc-800 dark:bg-zinc-950 dark:text-white"
+                            />
+                        ) : (
+                            <input
+                                type={field.inputType === 'number' ? 'number' : field.inputType === 'date' ? 'date' : 'text'}
+                                value={values[field.id] || ''}
+                                onChange={(e) => setValues(prev => ({ ...prev, [field.id]: e.target.value }))}
+                                placeholder={field.placeholder}
+                                required={field.required !== false && field.required !== 'false'}
+                                disabled={isLoading}
+                                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-fpt-orange focus:ring-2 focus:ring-orange-100 dark:border-zinc-800 dark:bg-zinc-950 dark:text-white"
+                            />
+                        )}
+                    </label>
+                ))}
+
+                <div className="md:col-span-2 flex items-center justify-end gap-2 pt-1">
+                    <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="inline-flex items-center gap-2 rounded-xl bg-fpt-orange px-4 py-2.5 text-xs font-bold text-white transition hover:bg-fpt-orange/90 disabled:opacity-60"
+                    >
+                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                        {request.actionReview ? 'Xác nhận và thực hiện' : 'Gửi bổ sung'}
+                    </button>
+                </div>
+            </form>
         </div>
     );
 });
@@ -233,6 +294,7 @@ export const ChatPage: React.FC = () => {
     const [selectedAnswerModel, setSelectedAnswerModel] = useState('llama-3.1-8b-instant');
     const [userRole, setUserRole] = useState('');
     const [userId, setUserId] = useState<string | null>(null);
+    const [pendingFieldRequest, setPendingFieldRequest] = useState<PendingFieldRequest | null>(null);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const lastUserIdRef = useRef<string | null>(null);
@@ -240,6 +302,20 @@ export const ChatPage: React.FC = () => {
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
+
+    useEffect(() => {
+        if (!thinkingSteps.length) return;
+
+        const timestamp = format(new Date(), 'HH:mm:ss');
+        console.groupCollapsed(`[FAMS AI] Credit Log ${timestamp}`);
+        thinkingSteps.forEach((step) => {
+            console.log(`[Stage ${step.stage}] ${step.name} | ${step.status}`);
+            if (step.detail) {
+                console.log(step.detail);
+            }
+        });
+        console.groupEnd();
+    }, [thinkingSteps]);
 
     const loadSessions = useCallback(async () => {
         try {
@@ -291,6 +367,7 @@ export const ChatPage: React.FC = () => {
             const msgs = await chatService.getMessages(session.id);
             setMessages(msgs);
             setThinkingSteps([]);
+            setPendingFieldRequest(null);
         } catch {
             toast.error('Không thể tải tin nhắn');
         }
@@ -303,6 +380,7 @@ export const ChatPage: React.FC = () => {
             setCurrentSession(newSession);
             setMessages([]);
             setThinkingSteps([]);
+            setPendingFieldRequest(null);
         } catch {
             toast.error('Không thể tạo phiên chat mới');
         }
@@ -318,6 +396,7 @@ export const ChatPage: React.FC = () => {
                 setCurrentSession(null);
                 setMessages([]);
                 setThinkingSteps([]);
+                setPendingFieldRequest(null);
             }
             toast.success('Đã xóa phiên chat');
         } catch {
@@ -329,6 +408,7 @@ export const ChatPage: React.FC = () => {
         if (!content.trim() || !currentSession || isLoading) return;
 
         setIsLoading(true);
+        setPendingFieldRequest(null);
 
         const optimisticUserMsg: AIChatMessage = {
             id: Date.now(),
@@ -351,10 +431,25 @@ export const ChatPage: React.FC = () => {
                 content: response.answer,
                 role: 'ASSISTANT',
                 createdAt: new Date().toISOString(),
-                redirectPath: response.redirectPath
+                redirectPath: response.redirectPath,
+                continuation: response.continuation,
             };
             setMessages(prev => [...prev, aiMsg]);
             setThinkingSteps(response.thinkingSteps);
+            setPendingFieldRequest(null);
+            if (response.missingFields?.length && response.pendingTool && response.originalMessage) {
+                setPendingFieldRequest({
+                    fields: response.missingFields,
+                    pendingTool: response.pendingTool,
+                    originalMessage: response.originalMessage,
+                    pendingEntities: response.pendingEntities,
+                    agentLabel: response.agentLabel,
+                    answer: response.answer,
+                    actionReview: response.actionReview
+                });
+            } else {
+                setPendingFieldRequest(null);
+            }
 
             // If it was the first message, the title might have changed
             if (messages.length === 0) {
@@ -366,6 +461,110 @@ export const ChatPage: React.FC = () => {
             setIsLoading(false);
         }
     }, [currentSession, isLoading, selectedRoutingModel, selectedAnswerModel, messages.length, loadSessions]);
+
+    const handleSubmitMissingFields = useCallback(async (values: Record<string, string>) => {
+        if (!currentSession || !pendingFieldRequest || isLoading) return;
+
+        setIsLoading(true);
+        const mergedEntities = {
+            ...(pendingFieldRequest.pendingEntities || {}),
+            ...values,
+        };
+        if (pendingFieldRequest.actionReview) {
+            mergedEntities.__action_confirmed__ = 'true';
+        }
+
+        try {
+            const response = await chatService.sendMessage(
+                currentSession.id,
+                'Bổ sung thông tin cho yêu cầu trước',
+                selectedRoutingModel,
+                selectedAnswerModel,
+                mergedEntities,
+                pendingFieldRequest.pendingTool,
+                pendingFieldRequest.originalMessage,
+                mergedEntities
+            );
+
+            const userSummary = Object.entries(values)
+                .filter(([, value]) => value?.trim())
+                .map(([key, value]) => `- ${key}: ${value}`)
+                .join('\n');
+
+            if (userSummary) {
+                const userMsg: AIChatMessage = {
+                    id: Date.now(),
+                    content: `Bổ sung thông tin:\n${userSummary}`,
+                    role: 'USER',
+                    createdAt: new Date().toISOString()
+                };
+                setMessages(prev => [...prev, userMsg]);
+            }
+
+            const aiMsg: AIChatMessage = {
+                id: Date.now() + 1,
+                content: response.answer,
+                role: 'ASSISTANT',
+                createdAt: new Date().toISOString(),
+                redirectPath: response.redirectPath,
+                continuation: response.continuation,
+            };
+            setMessages(prev => [...prev, aiMsg]);
+            setThinkingSteps(response.thinkingSteps);
+
+            if (response.missingFields?.length && response.pendingTool && response.originalMessage) {
+                setPendingFieldRequest({
+                    fields: response.missingFields,
+                    pendingTool: response.pendingTool,
+                    originalMessage: response.originalMessage,
+                    pendingEntities: response.pendingEntities || mergedEntities,
+                    agentLabel: response.agentLabel,
+                    answer: response.answer,
+                    actionReview: response.actionReview
+                });
+            } else {
+                setPendingFieldRequest(null);
+            }
+        } catch {
+            toast.error('Không thể gửi phần thông tin bổ sung');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [currentSession, pendingFieldRequest, isLoading, selectedRoutingModel, selectedAnswerModel]);
+
+    const handleContinueResult = useCallback(async (continuation: ContinuationRequest) => {
+        if (!currentSession || isLoading) return;
+        setIsLoading(true);
+
+        try {
+            const response = await chatService.sendMessage(
+                currentSession.id,
+                'Tiếp',
+                selectedRoutingModel,
+                selectedAnswerModel,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                continuation
+            );
+
+            const aiMsg: AIChatMessage = {
+                id: Date.now() + 1,
+                content: response.answer,
+                role: 'ASSISTANT',
+                createdAt: new Date().toISOString(),
+                redirectPath: response.redirectPath,
+                continuation: response.continuation,
+            };
+            setMessages(prev => [...prev, aiMsg]);
+            setThinkingSteps(response.thinkingSteps);
+        } catch {
+            toast.error('Không thể tải thêm kết quả');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [currentSession, isLoading, selectedRoutingModel, selectedAnswerModel]);
 
     const handleUploadFile = useCallback(async (file: File) => {
         if (!file || !currentSession) return;
@@ -430,7 +629,7 @@ export const ChatPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 font-sans">
+        <div className="min-h-screen bg-white dark:bg-zinc-950 font-sans">
             {/* Role-based app sidebar */}
             {renderSidebar()}
 
@@ -451,6 +650,11 @@ export const ChatPage: React.FC = () => {
 
 
                     <div className="flex-1 flex flex-col relative min-w-0">
+                        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+                            <div className="chat-ambient-orb chat-ambient-orb-one" />
+                            <div className="chat-ambient-orb chat-ambient-orb-two" />
+                            <div className="chat-ambient-grid" />
+                        </div>
                         <header className="h-16 border-b border-gray-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md flex items-center justify-between px-4 z-10">
                             <div className="flex items-center gap-3">
                                 <button
@@ -500,7 +704,7 @@ export const ChatPage: React.FC = () => {
                             </div>
                         </header>
 
-                        <div className="flex-1 overflow-y-auto px-3 md:px-0 py-6 md:py-8 space-y-6 custom-scrollbar relative flex flex-col items-center w-full">
+                        <div className="custom-scrollbar relative z-10 flex w-full flex-1 flex-col items-center space-y-3 overflow-y-auto bg-transparent px-2 py-4 md:px-4 md:py-5">
                             {messages.length === 0 && !isLoading && (
                                 <div className="h-full flex flex-col items-center justify-center text-center max-w-2xl mx-auto space-y-8 animate-in fade-in zoom-in duration-700">
                                     <div className="relative">
@@ -545,46 +749,117 @@ export const ChatPage: React.FC = () => {
                             )}
 
                             {messages.map((msg) => (
-                                <ChatMessageItem key={msg.id} msg={msg} />
+                                <ChatMessageItem key={msg.id} msg={msg} onContinue={handleContinueResult} />
                             ))}
                             <div ref={messagesEndRef} />
                         </div>
 
+                        {pendingFieldRequest && (
+                            <MissingFieldForm
+                                request={pendingFieldRequest}
+                                isLoading={isLoading}
+                                onSubmit={handleSubmitMissingFields}
+                                onCancel={() => setPendingFieldRequest(null)}
+                            />
+                        )}
+
+                        <div className="relative z-10">
                         <ChatInput
                             onSendMessage={handleSendMessage}
                             onUploadFile={handleUploadFile}
                             isLoading={isLoading}
                             disabled={!currentSession}
                         />
+                        </div>
                     </div>
-
-                    <CreditLog thinkingSteps={thinkingSteps} isLoading={isLoading} />
 
                     <style>{`
                 .custom-scrollbar::-webkit-scrollbar { width: 5px; }
                 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
                 .custom-scrollbar::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
                 dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #27272a; }
-                
-                /* ── Chat Table Professional Styling ── */
-                .chat-table-wrapper { overflow-x: auto; }
+
+                .chat-ambient-orb {
+                    position: absolute;
+                    border-radius: 9999px;
+                    filter: blur(14px);
+                    opacity: 0.55;
+                    will-change: transform;
+                }
+                .chat-ambient-orb-one {
+                    top: 6%;
+                    left: 10%;
+                    width: 18rem;
+                    height: 18rem;
+                    background: radial-gradient(circle, rgba(251, 191, 36, 0.14) 0%, rgba(255, 255, 255, 0) 72%);
+                    animation: chatFloatOne 15s ease-in-out infinite;
+                }
+                .chat-ambient-orb-two {
+                    right: 8%;
+                    bottom: 10%;
+                    width: 22rem;
+                    height: 22rem;
+                    background: radial-gradient(circle, rgba(249, 115, 22, 0.11) 0%, rgba(255, 255, 255, 0) 74%);
+                    animation: chatFloatTwo 19s ease-in-out infinite;
+                }
+                .chat-ambient-grid {
+                    position: absolute;
+                    inset: 0;
+                    background-image:
+                        linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+                    background-size: 36px 36px;
+                    mask-image: linear-gradient(to bottom, rgba(0,0,0,0.28), transparent 70%);
+                    opacity: 0.4;
+                }
+                @keyframes chatFloatOne {
+                    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+                    50% { transform: translate3d(24px, -16px, 0) scale(1.06); }
+                }
+                @keyframes chatFloatTwo {
+                    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+                    50% { transform: translate3d(-26px, 18px, 0) scale(1.04); }
+                }
+
+                .chat-table-wrapper {
+                    max-width: 100%;
+                    overflow-x: auto;
+                }
                 .chat-table-wrapper table {
-                    border-collapse: collapse; width: 100%; margin: 0.75em 0;
-                    background: white; border-radius: 8px; overflow: hidden;
-                    font-size: 13px; border: 1px solid #e5e7eb;
+                    border-collapse: collapse;
+                    width: 100%;
+                    max-width: 100%;
+                    margin: 0.5em 0;
+                    background: white;
+                    border-radius: 10px;
+                    overflow: hidden;
+                    font-size: 12px;
+                    border: 1px solid #e5e7eb;
+                    table-layout: auto;
                 }
                 .dark .chat-table-wrapper table { background: #18181b; border-color: #27272a; }
                 .chat-table-wrapper th {
-                    background: #f1f5f9; font-weight: 600; text-align: left;
-                    padding: 8px 12px; white-space: nowrap; color: #334155;
-                    border-bottom: 2px solid #e2e8f0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em;
+                    background: #fff7ed;
+                    font-weight: 700;
+                    text-align: left;
+                    padding: 7px 8px;
+                    white-space: nowrap;
+                    color: #9a3412;
+                    border-bottom: 1px solid #e5e7eb;
+                    font-size: 10px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.04em;
                 }
-                .dark .chat-table-wrapper th { background: #1e1e22; color: #a1a1aa; border-bottom-color: #27272a; }
+                .dark .chat-table-wrapper th { background: #1e1e22; color: #f4f4f5; border-bottom-color: #27272a; }
                 .chat-table-wrapper td {
-                    padding: 6px 12px; border-bottom: 1px solid #f1f5f9; color: #475569;
+                    padding: 6px 8px;
+                    border-bottom: 1px solid #f1f5f9;
+                    color: #475569;
+                    word-break: break-word;
+                    white-space: normal;
                 }
                 .dark .chat-table-wrapper td { border-bottom-color: #27272a; color: #d4d4d8; }
-                .chat-table-wrapper tr:nth-child(even) td { background: #f8fafc; }
+                .chat-table-wrapper tr:nth-child(even) td { background: #fffdfb; }
                 .dark .chat-table-wrapper tr:nth-child(even) td { background: #1a1a1e; }
                 .chat-table-wrapper tr:hover td { background: #fff7ed; }
                 .dark .chat-table-wrapper tr:hover td { background: #1c1917; }
@@ -595,4 +870,3 @@ export const ChatPage: React.FC = () => {
         </div>
     );
 };
-

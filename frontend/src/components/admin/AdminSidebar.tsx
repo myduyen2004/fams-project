@@ -4,6 +4,7 @@ import {
   Home,
   Settings,
   Newspaper,
+  Bell,
   AlertTriangle,
   Clock,
   LogOut,
@@ -48,7 +49,8 @@ export const AdminSidebar: React.FC = () => {
       submenu: [
         { id: 'users', label: 'Tài khoản chưa kích hoạt', path: '/admin/users' },
         { id: 'activated-users', label: 'Tài khoản đã kích hoạt', path: '/admin/activated-users' },
-        { id: 'permissions', label: 'Phân quyền & vai trò', path: '/admin/permissions' }
+        { id: 'permissions', label: 'Phân quyền & vai trò', path: '/admin/permissions' },
+        { id: 'ai-tools', label: 'Quản lý AI Toolset', path: '/admin/ai-tools' }
       ]
     },
     {
@@ -56,6 +58,12 @@ export const AdminSidebar: React.FC = () => {
       label: 'Quản lý tin tức',
       icon: <Newspaper size={20} />,
       path: '/admin/news-management'
+    },
+    {
+      id: 'notification-management',
+      label: 'Quản lý thông báo',
+      icon: <Bell size={20} />,
+      path: '/admin/notification-management'
     },
     {
       id: 'alerts',
@@ -101,8 +109,16 @@ export const AdminSidebar: React.FC = () => {
       return true;
     }
 
+    if (path === '/admin/notification-management' && location.pathname.startsWith('/admin/notification-management')) {
+      return true;
+    }
+
     // Highlighting 'Activated Accounts' when on 'Locked Accounts' page
     if (path === '/admin/activated-users' && location.pathname === '/admin/locked-users') {
+      return true;
+    }
+
+    if (path === '/admin/ai-tools' && location.pathname.startsWith('/admin/ai-tools')) {
       return true;
     }
 

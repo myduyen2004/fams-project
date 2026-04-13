@@ -87,6 +87,11 @@ const WiFiApFormModal: React.FC<{
                 <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
                     {mode === 'view' ? 'Chi tiết Access Point' : mode === 'edit' ? 'Chỉnh sửa Access Point' : 'Thêm Access Point mới'}
                 </h2>
+                {mode !== 'view' && (
+                    <p className="mb-4 text-sm text-gray-500 dark:text-zinc-400 italic">
+                        Những thông tin có <span className="text-red-500">*</span> là thông tin bắt buộc.
+                    </p>
+                )}
                 {mode === 'view' ? (
                     <div className="space-y-3 py-1">
                         {/* Status & Name Banner */}
@@ -307,10 +312,21 @@ export const WiFiAPManagement: React.FC = () => {
     const handleBulkDelete = () => {
         if (selectedIds.length === 0) return;
 
+        const selectedAps = accessPoints.filter(ap => selectedIds.includes(ap.id));
+        const apsWithRooms = selectedAps.filter(ap => (ap.roomCount || 0) > 0);
+
+        let title = 'Xóa Access Point';
+        let message = `Bạn có chắc chắn muốn xóa ${selectedIds.length} Access Point đã chọn?`;
+
+        if (apsWithRooms.length > 0) {
+            title = 'Xác nhận xóa Access Point có liên kết';
+            message = `${apsWithRooms.length} Access Point đang được gán vào phòng học, bạn có chắc chắn muốn xóa không?`;
+        }
+
         setConfirmModal({
             isOpen: true,
-            title: 'Xóa Access Point',
-            message: `Bạn có chắc chắn muốn xóa ${selectedIds.length} Access Point đã chọn?`,
+            title: title,
+            message: message,
             type: 'danger',
             confirmLabel: 'Xóa',
             onConfirm: async () => {

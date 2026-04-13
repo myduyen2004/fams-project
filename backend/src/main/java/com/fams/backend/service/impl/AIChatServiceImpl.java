@@ -7,6 +7,8 @@ import com.fams.backend.repository.AIChatMessageRepository;
 import com.fams.backend.repository.AIChatSessionRepository;
 import com.fams.backend.service.AIChatActionService;
 import com.fams.backend.service.AIChatService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -28,14 +30,22 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
 public class AIChatServiceImpl implements AIChatService {
-
+    private static final Pattern CLASS_NAME_PATTERN = Pattern.compile(
+            "\\b([A-Z]{2,}\\d{2,}[A-Z\\d]*_[A-Z0-9]+|[A-Z]{2,}\\d{2,}[A-Z\\d]*-[A-Z]{2,4}\\d{3,4})\\b",
+            Pattern.CASE_INSENSITIVE);
+    private static final Pattern CREATE_GROUP_CHAT_PATTERN = Pattern.compile(
+            "(tạo|tao|mở|mo).*(nhóm chat|group chat)",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private final AIChatSessionRepository sessionRepository;
     private final AIChatMessageRepository messageRepository;
     private final AIChatActionService aiChatActionService;
+    private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate = new RestTemplate();
     private final WebClient webClient = WebClient.builder().build(); // Basic initialization
 
@@ -81,9 +91,17 @@ public class AIChatServiceImpl implements AIChatService {
                 .orElseThrow(() -> new RuntimeException("Session not found"));
     }
 
-    @Override
     @Transactional
-    public Map<String, Object> sendMessage(Long sessionId, String content, String routingModel, String answerModel) {
+    public Map<String, Object> sendMessage(
+            Long sessionId,
+            String content,
+            String routingModel,
+            String answerModel,
+            Map<String, Object> extraEntities,
+            String pendingTool,
+            String originalMessage,
+            Map<String, Object> pendingEntities,
+            Map<String, Object> continuation) {
         AIChatSession session = getSession(sessionId);
 
         // 1. Save User Message
@@ -104,6 +122,36 @@ public class AIChatServiceImpl implements AIChatService {
         }
         session.setLastMessageAt(LocalDateTime.now());
         sessionRepository.save(session);
+
+        Map<String, Object> directGroupChatAction = synthesizeGroupChatAction(content);
+        if (directGroupChatAction != null) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> actionParams = (Map<String, Object>) directGroupChatAction.get("params");
+            if (actionParams != null) {
+                actionParams.putIfAbsent("requesterUsername", session.getUser().getUsername());
+                actionParams.putIfAbsent("requesterCode", session.getUser().getCode());
+                actionParams.putIfAbsent("requesterUserId", session.getUser().getId());
+            }
+
+            String answer = aiChatActionService.handleAction(directGroupChatAction);
+            AIChatMessage aiMessage = AIChatMessage.builder()
+                    .session(session)
+                    .content(answer)
+                    .role(AIChatMessage.MessageRole.ASSISTANT)
+                    .build();
+            messageRepository.save(aiMessage);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("answer", answer);
+            response.put("thinkingSteps", List.of(Map.of(
+                    "stage", 3,
+                    "name", "Tool Executor",
+                    "status", "Action backend → Hoàn thành",
+                    "detail", "Action: " + directGroupChatAction)));
+            response.put("action", directGroupChatAction);
+            response.put("redirectPath", null);
+            return response;
+        }
 
         // 2. Prepare History for AI Service (Last 10 messages)
         List<AIChatMessage> messages = messageRepository.findBySessionOrderByCreatedAtAsc(session);
@@ -130,6 +178,11 @@ public class AIChatServiceImpl implements AIChatService {
         payload.put("history", history);
         payload.put("routingModel", routingModel);
         payload.put("answerModel", answerModel);
+        payload.put("extraEntities", extraEntities);
+        payload.put("pendingTool", pendingTool);
+        payload.put("originalMessage", originalMessage);
+        payload.put("pendingEntities", pendingEntities);
+        payload.put("continuation", continuation);
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(payload, headers);
 
@@ -140,10 +193,24 @@ public class AIChatServiceImpl implements AIChatService {
             if (aiResponse != null) {
                 String answer = (String) aiResponse.get("answer");
                 String redirectPath = (String) aiResponse.get("redirectPath");
-                Map<String, Object> action = (Map<String, Object>) aiResponse.get("action");
+                Map<String, Object> action = resolveAction(aiResponse);
+                if (action == null || isPlaceholderActionAnswer(answer)) {
+                    Map<String, Object> synthesizedAction = synthesizeGroupChatAction(content);
+                    if (synthesizedAction != null) {
+                        action = synthesizedAction;
+                    }
+                }
 
                 // If AI suggests an action, execute it via the Action Service
                 if (action != null) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> actionParams = (Map<String, Object>) action.get("params");
+                    if (actionParams != null) {
+                        actionParams.putIfAbsent("requesterUsername", session.getUser().getUsername());
+                        actionParams.putIfAbsent("requesterCode", session.getUser().getCode());
+                        actionParams.putIfAbsent("requesterUserId", session.getUser().getId());
+                        actionParams.putIfAbsent("originalMessage", content);
+                    }
                     String actionResult = aiChatActionService.handleAction(action);
                     if (actionResult != null) {
                         answer = actionResult;
@@ -371,5 +438,72 @@ public class AIChatServiceImpl implements AIChatService {
         if (session != null) {
             sessionRepository.delete(session);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> resolveAction(Map<String, Object> aiResponse) {
+        Object directAction = aiResponse.get("action");
+        if (directAction instanceof Map<?, ?>) {
+            return (Map<String, Object>) directAction;
+        }
+
+        Object stepsRaw = aiResponse.get("thinkingSteps");
+        if (!(stepsRaw instanceof List<?> steps)) {
+            return null;
+        }
+
+        for (Object stepObj : steps) {
+            if (!(stepObj instanceof Map<?, ?> step)) {
+                continue;
+            }
+            Object detailObj = step.get("detail");
+            if (!(detailObj instanceof String detail) || !detail.startsWith("Action:")) {
+                continue;
+            }
+            String json = detail.substring("Action:".length()).trim();
+            try {
+                return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {
+                });
+            } catch (Exception ignored) {
+                // try next step
+            }
+        }
+
+        return null;
+    }
+
+    private boolean isPlaceholderActionAnswer(String answer) {
+        if (answer == null) {
+            return false;
+        }
+        String normalized = answer.trim().toLowerCase();
+        return normalized.equals("đang thực hiện thao tác theo yêu cầu của bạn.")
+                || normalized.equals("dang thuc hien thao tac theo yeu cau cua ban.");
+    }
+
+    private Map<String, Object> synthesizeGroupChatAction(String content) {
+        if (content == null || content.isBlank()) {
+            return null;
+        }
+
+        Matcher classMatcher = CLASS_NAME_PATTERN.matcher(content);
+        String className = classMatcher.find() ? classMatcher.group(1).toUpperCase() : null;
+
+        if (CREATE_GROUP_CHAT_PATTERN.matcher(content).find()) {
+            Map<String, Object> params = new HashMap<>();
+            if (className != null) {
+                params.put("class_name", className);
+            }
+            return buildAction("CREATE_GROUP_CHAT", params);
+        }
+
+        return null;
+    }
+
+    private Map<String, Object> buildAction(String type, Map<String, Object> params) {
+        Map<String, Object> action = new HashMap<>();
+        action.put("type", type);
+        action.put("params", params);
+        return action;
     }
 }

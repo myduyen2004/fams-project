@@ -178,5 +178,9 @@ export const userService = {
             link.remove();
             window.URL.revokeObjectURL(url);
         }, 150);
+    },
+
+    changePassword: async (currentPassword: String, newPassword: String) => {
+        await apiClient.post('/auth/change-password', { currentPassword, newPassword });
     }
 };

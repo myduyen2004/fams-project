@@ -23,6 +23,8 @@ public class AcademicStaffDashboardResponse {
 
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class RunningRoomDTO {
         private String roomName;
         private String lecturerName;
@@ -31,6 +33,8 @@ public class AcademicStaffDashboardResponse {
 
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class DashboardStats {
         private Long totalStudents;
         private Long totalLecturers;
@@ -41,6 +45,8 @@ public class AcademicStaffDashboardResponse {
 
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class TopStudentDTO {
         private Integer rank;
         private String name;
@@ -53,6 +59,8 @@ public class AcademicStaffDashboardResponse {
 
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class AttendanceStatsDTO {
         private Integer present;
         private Integer absent;
@@ -61,6 +69,8 @@ public class AcademicStaffDashboardResponse {
 
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class WeeklyAttendanceDTO {
         private String day; // "Thứ 2", "Thứ 3", etc.
         private String date; // "dd/MM"
