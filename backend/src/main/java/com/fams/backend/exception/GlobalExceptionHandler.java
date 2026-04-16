@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.dao.DataIntegrityViolationException;
+import com.fams.backend.util.DatabaseErrorTranslator;
 
 @RestControllerAdvice
 @Slf4j
@@ -171,15 +172,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
 
-    /**
-     * Handle DataIntegrityViolationException
-     */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
         log.error("Database error: {}", ex.getMessage());
+        String friendlyMessage = DatabaseErrorTranslator.translate(ex);
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.CONFLICT.value(),
-                "Dữ liệu không hợp lệ hoặc vi phạm ràng buộc cơ sở dữ liệu: " + ex.getMessage());
+                friendlyMessage);
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
