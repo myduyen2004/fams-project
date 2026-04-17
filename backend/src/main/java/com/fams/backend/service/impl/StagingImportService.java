@@ -125,12 +125,12 @@ public class StagingImportService {
                         NOW(),
                         NOW()
                     FROM %s s
-                    JOIN courses c ON UPPER(TRIM(s.course_code)) = UPPER(TRIM(c.code))
-                    LEFT JOIN users u ON UPPER(TRIM(s.lecturer_code)) = UPPER(TRIM(u.username)) AND u.role = 'LECTURER'
+                    JOIN courses c ON TRIM(s.course_code) = TRIM(c.code)
+                    LEFT JOIN users u ON TRIM(s.lecturer_code) = TRIM(u.username) AND u.role = 'LECTURER'
                     WHERE s.error_message IS NULL
                     AND NOT EXISTS (
                         SELECT 1 FROM class_sections cs
-                        WHERE UPPER(TRIM(cs.class_name)) = UPPER(TRIM(s.class_name))
+                        WHERE TRIM(cs.class_name) = TRIM(s.class_name)
                     )
                     """
                     .formatted(stagingTable);
@@ -287,7 +287,7 @@ public class StagingImportService {
                         NOW(),
                         NOW()
                     FROM %s s
-                    JOIN users u ON UPPER(TRIM(s.student_code)) = UPPER(TRIM(u.code)) AND u.role = 'STUDENT'
+                    JOIN users u ON TRIM(s.student_code) = TRIM(u.code) AND u.role = 'STUDENT'
                     JOIN student_profiles sp ON u.id = sp.user_id
                     JOIN class_sections cs ON s.class_name = cs.class_name AND cs.semester_id = ?
                     WHERE s.error_message IS NULL
@@ -451,7 +451,7 @@ public class StagingImportService {
                     handler.flushBatch();
                     
                     // 1. Single-pass CLEANING (Critical for performance)
-                    jdbcTemplate.execute("UPDATE " + stagingTable + " SET class_name = UPPER(TRIM(class_name)), course_code = UPPER(TRIM(course_code)), lecturer_code = UPPER(TRIM(lecturer_code))");
+                    jdbcTemplate.execute("UPDATE " + stagingTable + " SET class_name = TRIM(class_name), course_code = TRIM(course_code), lecturer_code = TRIM(lecturer_code)");
 
                     // 2. Add indices to speed up validation
                     jdbcTemplate.execute("CREATE INDEX ON " + stagingTable + " (class_name)");
@@ -491,7 +491,7 @@ public class StagingImportService {
                     handler.flushBatch();
                     
                     // 1. Single-pass CLEANING (Critical for performance)
-                    jdbcTemplate.execute("UPDATE " + stagingTable + " SET student_code = UPPER(TRIM(student_code)), class_name = UPPER(TRIM(class_name))");
+                    jdbcTemplate.execute("UPDATE " + stagingTable + " SET student_code = TRIM(student_code), class_name = TRIM(class_name)");
 
                     // 2. Add indices to speed up validation
                     jdbcTemplate.execute("CREATE INDEX ON " + stagingTable + " (student_code)");
@@ -552,7 +552,7 @@ public class StagingImportService {
                         WHERE s.class_name != ''
                         AND EXISTS (
                             SELECT 1 FROM class_sections cs
-                            WHERE UPPER(TRIM(cs.class_name)) = UPPER(TRIM(s.class_name))
+                            WHERE TRIM(cs.class_name) = TRIM(s.class_name)
                         )
                         """
                         .formatted(stagingTable));
@@ -612,8 +612,8 @@ public class StagingImportService {
                             SELECT 1 FROM enrollments e
                             JOIN users u ON e.student_id = u.id
                             JOIN class_sections cs ON e.class_name = cs.class_name
-                            WHERE UPPER(TRIM(u.code)) = s.student_code
-                            AND UPPER(TRIM(cs.class_name)) = s.class_name
+                            WHERE TRIM(u.code) = s.student_code
+                            AND TRIM(cs.class_name) = s.class_name
                             AND cs.semester_id = ?
                         )
                         """
@@ -652,8 +652,8 @@ public class StagingImportService {
                         WHERE EXISTS (
                             SELECT 1 FROM users u
                             JOIN student_profiles sp ON sp.user_id = u.id
-                            JOIN class_sections cs ON s.class_name = UPPER(TRIM(cs.class_name)) AND cs.semester_id = ?
-                            WHERE UPPER(TRIM(u.code)) = s.student_code
+                            JOIN class_sections cs ON s.class_name = TRIM(cs.class_name) AND cs.semester_id = ?
+                            WHERE TRIM(u.code) = s.student_code
                             AND u.role = 'STUDENT'
                             AND NOT EXISTS (
                                 SELECT 1 FROM specialization_courses sc
