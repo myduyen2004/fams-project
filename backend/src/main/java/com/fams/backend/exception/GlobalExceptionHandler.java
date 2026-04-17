@@ -20,6 +20,9 @@ import java.util.HashMap;
 import java.util.Map;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DataAccessException;
+import org.springframework.orm.jpa.JpaSystemException;
+import org.springframework.transaction.TransactionSystemException;
 import com.fams.backend.util.DatabaseErrorTranslator;
 
 @RestControllerAdvice
@@ -172,10 +175,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
 
-    @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
-        log.error("Database error: {}", ex.getMessage());
+    /**
+     * Handle Database Errors (FK violations, unique constraints, etc.)
+     */
+    @ExceptionHandler({
+        DataIntegrityViolationException.class,
+        DataAccessException.class,
+        JpaSystemException.class,
+        TransactionSystemException.class
+    })
+    public ResponseEntity<ErrorResponse> handleDatabaseErrors(Exception ex) {
+        log.error("Database or Transaction error: {}", ex.getMessage());
         String friendlyMessage = DatabaseErrorTranslator.translate(ex);
+        
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.CONFLICT.value(),
                 friendlyMessage);
