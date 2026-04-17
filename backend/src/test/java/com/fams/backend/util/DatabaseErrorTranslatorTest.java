@@ -12,7 +12,7 @@ class DatabaseErrorTranslatorTest {
         
         String translated = DatabaseErrorTranslator.translate(ex);
         
-        assertEquals("Không thể thực hiện vì có các 'Yêu cầu đổi lịch' đang liên kết với dữ liệu này. Vui lòng xử lý hoặc xóa các yêu cầu liên quan trước khi thao tác.", translated);
+        assertEquals("Không thể xóa lớp học này vì đang có các 'Yêu cầu đổi lịch' liên quan. Vui lòng xử lý hoặc xóa các yêu cầu đổi lịch trước.", translated);
     }
 
     @Test
@@ -22,7 +22,7 @@ class DatabaseErrorTranslatorTest {
         
         String translated = DatabaseErrorTranslator.translate(ex);
         
-        assertEquals("Không thể thực hiện hành động này vì dữ liệu đang được tham chiếu hoặc sử dụng ở nơi khác trong hệ thống.", translated);
+        assertEquals("Không thể xóa hoặc thay đổi dữ liệu này vì nó đang được sử dụng ở các phần khác trong hệ thống.", translated);
     }
 
     @Test
@@ -32,7 +32,7 @@ class DatabaseErrorTranslatorTest {
         
         String translated = DatabaseErrorTranslator.translate(ex);
         
-        assertTrue(translated.contains("đã tồn tại trong hệ thống"));
+        assertTrue(translated.contains("Email này đã được sử dụng") || translated.contains("Dữ liệu bị trùng lặp"));
     }
 
     @Test
@@ -42,7 +42,7 @@ class DatabaseErrorTranslatorTest {
         
         String translated = DatabaseErrorTranslator.translate(ex);
         
-        assertTrue(translated.contains("thông tin bắt buộc còn thiếu"));
+        assertTrue(translated.contains("điền đầy đủ các thông tin bắt buộc"));
     }
 
     @Test
@@ -52,6 +52,6 @@ class DatabaseErrorTranslatorTest {
         
         String translated = DatabaseErrorTranslator.translate(ex);
         
-        assertEquals("Lỗi hệ thống: Something went wrong in the matrix", translated);
+        assertEquals("Lỗi dữ liệu: Something went wrong in the matrix", translated);
     }
 }
