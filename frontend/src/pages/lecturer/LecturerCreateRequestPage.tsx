@@ -29,6 +29,7 @@ export const LecturerCreateRequestPage: React.FC = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [conflictResult, setConflictResult] = useState<ConflictCheckResponse | null>(null);
     const [checkingConflict, setCheckingConflict] = useState(false);
+    const hasConflict = conflictResult?.hasConflict === true;
 
 
 
@@ -57,6 +58,12 @@ export const LecturerCreateRequestPage: React.FC = () => {
 
     // Handle file upload
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (hasConflict) {
+            toast.error('Không thể tải tài liệu khi đang có xung đột lịch học');
+            if (e.target) e.target.value = '';
+            return;
+        }
+
         const files = e.target.files;
         if (files) {
             const newFiles = Array.from(files).filter(file => {
@@ -402,7 +409,7 @@ export const LecturerCreateRequestPage: React.FC = () => {
                     </section>
 
                     {/* Conflict Warnings */}
-                    {conflictResult?.hasConflict && (
+                    {hasConflict && (
                         <div className="p-4 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-200 dark:border-red-900/30">
                             <div className="flex items-start gap-3">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
@@ -448,6 +455,11 @@ export const LecturerCreateRequestPage: React.FC = () => {
                     {/* Content & Docs */}
                     <section className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-8">
                         <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Nội dung & Tài liệu</h3>
+                        {hasConflict && (
+                            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/10 dark:text-amber-300">
+                                Phần này đang bị khóa do phát hiện xung đột lịch học. Vui lòng đổi ngày hoặc slot trước khi nhập lý do và tải tài liệu.
+                            </div>
+                        )}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div>
                                 <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">LÝ DO THAY ĐỔI <span className="text-red-500">*</span></label>
@@ -457,18 +469,27 @@ export const LecturerCreateRequestPage: React.FC = () => {
                                     rows={8}
                                     value={reason}
                                     onChange={(e) => setReason(e.target.value)}
+                                    disabled={hasConflict}
                                     required
                                 ></textarea>
                             </div>
                             <div>
                                 <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">TỆP ĐÍNH KÈM</label>
                                 <div
-                                    className="flex justify-center px-6 pt-5 pb-6 border-2 border-slate-200 dark:border-slate-800 border-dashed rounded-lg hover:border-fpt-orange transition-colors cursor-pointer group h-[190px] flex-col"
-                                    onClick={() => fileInputRef.current?.click()}
+                                    className={`flex justify-center px-6 pt-5 pb-6 border-2 border-slate-200 dark:border-slate-800 border-dashed rounded-lg transition-colors h-[190px] flex-col ${hasConflict ? 'cursor-not-allowed opacity-60' : 'hover:border-fpt-orange cursor-pointer group'}`}
+                                    onClick={() => {
+                                        if (!hasConflict) {
+                                            fileInputRef.current?.click();
+                                        }
+                                    }}
                                     onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
                                     onDrop={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
+                                        if (hasConflict) {
+                                            toast.error('Không thể tải tài liệu khi đang có xung đột lịch học');
+                                            return;
+                                        }
                                         const files = e.dataTransfer.files;
                                         if (files.length) {
                                             const event = { target: { files, value: '' } } as unknown as React.ChangeEvent<HTMLInputElement>;
@@ -492,6 +513,7 @@ export const LecturerCreateRequestPage: React.FC = () => {
                                     multiple
                                     accept="image/*,.pdf"
                                     onChange={handleFileChange}
+                                    disabled={hasConflict}
                                 />
 
                                 {/* Display uploaded files */}
@@ -519,12 +541,16 @@ export const LecturerCreateRequestPage: React.FC = () => {
                                                         type="button"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
+                                                            if (hasConflict) {
+                                                                return;
+                                                            }
                                                             const newFiles = [...uploadedFiles];
                                                             newFiles.splice(index, 1);
                                                             setUploadedFiles(newFiles);
                                                         }}
-                                                        className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded-md hover:bg-slate-200 dark:hover:bg-zinc-700"
+                                                        className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded-md hover:bg-slate-200 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                                         title="Xóa file"
+                                                        disabled={hasConflict}
                                                     >
                                                         <Trash2 size={16} />
                                                     </button>
@@ -540,8 +566,8 @@ export const LecturerCreateRequestPage: React.FC = () => {
                     <div className="flex pt-4 mb-12 justify-end">
                         <button
                             type="submit"
-                            disabled={submitting}
-                            className={`w-auto min-w-[200px] px-8 bg-fpt-orange hover:bg-orange-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-500/20 transition-all active:scale-[0.95] flex items-center justify-center gap-2 text-base uppercase tracking-wider ${submitting ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            disabled={submitting || hasConflict}
+                            className={`w-auto min-w-[200px] px-8 bg-fpt-orange hover:bg-orange-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-500/20 transition-all active:scale-[0.95] flex items-center justify-center gap-2 text-base uppercase tracking-wider ${(submitting || hasConflict) ? 'opacity-70 cursor-not-allowed' : ''}`}
                         >
                             {submitting ? (
                                 <>

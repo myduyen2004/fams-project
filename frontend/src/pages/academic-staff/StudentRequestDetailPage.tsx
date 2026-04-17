@@ -20,6 +20,7 @@ export const StudentRequestDetailPage = () => {
     const [request, setRequest] = useState<AcademicRequest | null>(null);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
+    const [isApproverAvatarBroken, setIsApproverAvatarBroken] = useState(false);
     const [note, setNote] = useState('');
 
     useEffect(() => {
@@ -27,6 +28,7 @@ export const StudentRequestDetailPage = () => {
             if (!id) return;
             try {
                 setLoading(true);
+                setIsApproverAvatarBroken(false);
                 const data = await academicRequestService.getRequestById(parseInt(id));
                 setRequest(data);
                 setNote(data.approverNote || '');
@@ -69,6 +71,22 @@ export const StudentRequestDetailPage = () => {
 
     if (!request) return null;
 
+    const currentUser = (() => {
+        const raw = localStorage.getItem('user');
+        if (!raw) return null;
+        try {
+            const parsed = JSON.parse(raw) as { fullName?: string; avatar?: string };
+            return parsed;
+        } catch {
+            return null;
+        }
+    })();
+
+    const approverAvatarUrl = request.approverAvatar
+        || (request.approverName && currentUser?.fullName && request.approverName === currentUser.fullName ? currentUser.avatar : undefined);
+    const showApproverAvatar = Boolean(approverAvatarUrl) && !isApproverAvatarBroken;
+    const approverInitial = (request.approverName || '?').charAt(0).toUpperCase();
+
     const isPending = request.status === 'PENDING';
     const statusInfo = {
         label: request.statusLabel || request.status,
@@ -80,6 +98,22 @@ export const StudentRequestDetailPage = () => {
             request.status === 'APPROVED' ? 'bg-green-500' :
                 request.status === 'REJECTED' ? 'bg-red-500' : 'bg-gray-500'
     };
+    const isApproved = request.status === 'APPROVED';
+    const isRejected = request.status === 'REJECTED';
+    const approverActionText = isApproved ? 'Đã duyệt yêu cầu' : isRejected ? 'Đã từ chối yêu cầu' : 'Đã xử lý yêu cầu';
+    const approverReasonText = request.approverNote?.trim()
+        || (isApproved ? 'Yêu cầu đáp ứng điều kiện xử lý.' : isRejected ? 'Yêu cầu chưa đáp ứng điều kiện xử lý.' : 'Không có lý do.');
+    const approverTheme = isRejected
+        ? {
+            avatar: 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800 text-red-600',
+            card: 'bg-red-50/30 dark:bg-red-900/10 border-red-50 dark:border-red-900/20',
+            action: 'text-red-600 dark:text-red-400'
+        }
+        : {
+            avatar: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800 text-emerald-600',
+            card: 'bg-emerald-50/30 dark:bg-emerald-900/10 border-emerald-50 dark:border-emerald-900/20',
+            action: 'text-emerald-600 dark:text-emerald-400'
+        };
 
     return (
         <AcademicStaffLayout pageTitle="Chi tiết yêu cầu học thuật">
@@ -150,7 +184,7 @@ export const StudentRequestDetailPage = () => {
                                 <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
                                 Nội dung chi tiết
                             </h2>
-                            
+
                             <div className="space-y-8 relative z-10">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     {request.toMajor && (
@@ -213,20 +247,28 @@ export const StudentRequestDetailPage = () => {
                             <div className="space-y-8 relative before:absolute before:left-5 before:top-2 before:bottom-2 before:w-px before:bg-gray-100 dark:before:bg-zinc-800">
                                 {request.approverName && (
                                     <div className="relative pl-12">
-                                        <div className="absolute left-0 top-0 w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-100 dark:border-emerald-800 flex items-center justify-center text-emerald-600 z-10 shadow-sm overflow-hidden">
-                                            {request.approverAvatar ? (
-                                                <img src={request.approverAvatar} alt="avatar" className="w-full h-full object-cover" />
+                                        <div className={`absolute left-0 top-0 w-10 h-10 rounded-2xl border-2 flex items-center justify-center z-10 shadow-sm overflow-hidden ${approverTheme.avatar}`}>
+                                            {showApproverAvatar ? (
+                                                <img
+                                                    src={approverAvatarUrl}
+                                                    alt={request.approverName || 'avatar'}
+                                                    className="w-full h-full object-cover"
+                                                    onError={() => setIsApproverAvatarBroken(true)}
+                                                />
                                             ) : (
-                                                <CheckCircle size={18} />
+                                                <span className="font-bold text-sm">{approverInitial}</span>
                                             )}
                                         </div>
-                                        <div className="bg-emerald-50/30 dark:bg-emerald-900/10 p-5 rounded-2xl border border-emerald-50 dark:border-emerald-900/20">
+                                        <div className={`p-5 rounded-2xl border ${approverTheme.card}`}>
                                             <div className="flex items-center justify-between mb-2">
                                                 <p className="font-bold text-sm text-gray-900 dark:text-white uppercase tracking-wide">{request.approverName}</p>
                                                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{dayjs(request.approvedAt).format('DD/MM/YYYY - HH:mm')}</span>
                                             </div>
+                                            <p className={`text-xs font-bold uppercase tracking-widest mb-1 ${approverTheme.action}`}>
+                                                {approverActionText}
+                                            </p>
                                             <p className="text-sm text-gray-600 dark:text-zinc-400 italic font-medium">
-                                                "{request.approverNote || 'Đã phê duyệt yêu cầu học thuật này.'}"
+                                                Lý do: {approverReasonText}
                                             </p>
                                         </div>
                                     </div>
