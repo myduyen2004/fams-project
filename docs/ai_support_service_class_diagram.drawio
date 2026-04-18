@@ -1,67 +1,337 @@
-<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36">
-  <diagram name="AI Support Service" id="d2">
-    <mxGraphModel dx="4000" dy="4000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="2500" pageHeight="2500" math="0" shadow="0">
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0">
+  <diagram id="clean_ai_complete" name="AI Support Service">
+    <mxGraphModel dx="3185" dy="865" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="2000" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        
-        <!-- ========== LAYER 1: CONTROLLER (ID 12XX) ========== -->
-        
-        <mxCell id="1201" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#d5e8d4;strokeColor=#82b366;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;RestController&amp;gt;&amp;gt;&#xa;AIChatController" vertex="1">
-          <mxGeometry height="240" width="560" x="430" y="40" as="geometry" />
+        <mxCell id="11" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;RestController&amp;gt;&amp;gt;&lt;br&gt;AIChatController" vertex="1">
+          <mxGeometry height="238" width="420" x="-420" y="383" as="geometry" />
         </mxCell>
-        <mxCell id="1211" parent="1201" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- aiChatService : AIChatService" vertex="1">
-          <mxGeometry height="30" width="560" y="30" as="geometry" />
+        <mxCell id="12" parent="11" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- aiChatService : AIChatService" vertex="1">
+          <mxGeometry height="26" width="420" y="40" as="geometry" />
         </mxCell>
-        <mxCell id="1212" parent="1201" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=inherit;html=1;" value="" vertex="1">
-          <mxGeometry height="8" width="560" y="60" as="geometry" />
+        <mxCell id="13" parent="11" style="line;strokeWidth=2;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=#000000;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="420" y="66" as="geometry" />
         </mxCell>
-        <mxCell id="1213" parent="1201" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ createSession() : AIChatSession&#xa;+ getUserSessions() : List&amp;lt;AIChatSession&amp;gt;&#xa;+ getSessionMessages(Long sessionId) : List&amp;lt;AIChatMessage&amp;gt;&#xa;+ sendMessage(sessionId, Map request) : Map&amp;lt;String, Object&amp;gt;&#xa;+ uploadFile(sessionId, MultipartFile, Map) : Map&amp;lt;String, Object&amp;gt;&#xa;+ deleteSession(Long sessionId) : void" vertex="1">
-          <mxGeometry height="160" width="560" y="68" as="geometry" />
+        <mxCell id="14" parent="11" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ createSession() : Session" vertex="1">
+          <mxGeometry height="26" width="420" y="74" as="geometry" />
         </mxCell>
-
-        <!-- ========== LAYER 2: SERVICES (ID 13XX) ========== -->
-
-        <mxCell id="1301" parent="1" style="swimlane;fontStyle=3;align=center;startSize=30;html=1;collapsible=0;fillColor=#e1d5e7;strokeColor=#9673a6;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&#xa;AIChatService" vertex="1">
-          <mxGeometry height="260" width="600" x="410" y="380" as="geometry" />
+        <mxCell id="15" parent="11" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ getUserSessions() : List" vertex="1">
+          <mxGeometry height="26" width="420" y="100" as="geometry" />
         </mxCell>
-        <mxCell id="1311" parent="1301" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="+ createSession(User) : AIChatSession&#xa;+ getUserSessions(User) : List&amp;lt;AIChatSession&amp;gt;&#xa;+ sendMessage(sessionId, message, routingModel, answerModel) : Map&#xa;+ streamMessage(sessionId, message, routingModel, answerModel) : Flux&#xa;+ uploadFile(sessionId, file, routingModel, answerModel) : Map&#xa;+ deleteSession(Long sessionId) : void" vertex="1">
-          <mxGeometry height="220" width="600" y="30" as="geometry" />
+        <mxCell id="16" parent="11" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ getSessionMessages(sessionId) : List" vertex="1">
+          <mxGeometry height="26" width="420" y="126" as="geometry" />
         </mxCell>
-
-        <!-- ========== LAYER 4: ENTITIES (ID 14XX) ========== -->
-
-        <mxCell id="1401" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#f8cecc;strokeColor=#b85450;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&#xa;AIChatSession" vertex="1">
-          <mxGeometry height="140" width="280" x="280" y="750" as="geometry" />
+        <mxCell id="17" parent="11" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ sendMessage(sessionId, Map) : Map" vertex="1">
+          <mxGeometry height="26" width="420" y="152" as="geometry" />
         </mxCell>
-        <mxCell id="1411" parent="1401" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- id : Long&#xa;- user : User&#xa;- title : String&#xa;- startedAt : LocalDateTime" vertex="1">
-          <mxGeometry height="100" width="280" y="30" as="geometry" />
+        <mxCell id="18" parent="11" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ streamMessage(sessionId, ...) : Flux" vertex="1">
+          <mxGeometry height="26" width="420" y="178" as="geometry" />
         </mxCell>
-
-        <mxCell id="1402" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#f8cecc;strokeColor=#b85450;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&#xa;AIChatMessage" vertex="1">
-          <mxGeometry height="160" width="280" x="650" y="750" as="geometry" />
+        <mxCell id="19" parent="11" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ uploadFile(sessionId, file, ...) : Map" vertex="1">
+          <mxGeometry height="26" width="420" y="204" as="geometry" />
         </mxCell>
-        <mxCell id="1421" parent="1402" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=15;" value="- id : Long&#xa;- session : AIChatSession&#xa;- sender : UserRole (USER/AI)&#xa;- content : String&#xa;- sentAt : LocalDateTime" vertex="1">
-          <mxGeometry height="120" width="280" y="30" as="geometry" />
+        <mxCell id="20" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;RestController&amp;gt;&amp;gt;&lt;br&gt;AIToolController" vertex="1">
+          <mxGeometry height="238" width="450" x="1580" y="440" as="geometry" />
         </mxCell>
-
-        <!-- Auxiliary Context -->
-        <mxCell id="1001" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#d5e8d4;strokeColor=#82b366;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;External Entity&amp;gt;&amp;gt;&#xa;User" vertex="1">
-          <mxGeometry height="160" width="280" x="470" y="1000" as="geometry" />
+        <mxCell id="21" parent="20" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- aiToolService : AIToolService" vertex="1">
+          <mxGeometry height="26" width="450" y="40" as="geometry" />
         </mxCell>
-
-        <!-- ========== EDGES (ID 15XX+) ========== -->
-        
-        <mxCell id="1501" edge="1" parent="1" source="1201" target="1301" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;fontSize=15;" value="&amp;lt;&amp;lt;use&amp;gt;&amp;gt;">
+        <mxCell id="22" parent="20" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- similarityService : SimilarityService" vertex="1">
+          <mxGeometry height="26" width="450" y="66" as="geometry" />
+        </mxCell>
+        <mxCell id="23" parent="20" style="line;strokeWidth=2;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=#000000;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="450" y="92" as="geometry" />
+        </mxCell>
+        <mxCell id="24" parent="20" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ getTools() : List&amp;lt;AITool&amp;gt;" vertex="1">
+          <mxGeometry height="26" width="450" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="25" parent="20" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ getToolDetail(id) : AITool" vertex="1">
+          <mxGeometry height="26" width="450" y="126" as="geometry" />
+        </mxCell>
+        <mxCell id="26" parent="20" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ toggleToolStatus(id, status) : void" vertex="1">
+          <mxGeometry height="26" width="450" y="152" as="geometry" />
+        </mxCell>
+        <mxCell id="27" parent="20" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ testModel(id, request) : Map" vertex="1">
+          <mxGeometry height="26" width="450" y="178" as="geometry" />
+        </mxCell>
+        <mxCell id="28" parent="20" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ checkAssignmentSimilarity(id) : Map" vertex="1">
+          <mxGeometry height="26" width="450" y="204" as="geometry" />
+        </mxCell>
+        <mxCell id="29" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&lt;br&gt;AIChatService" vertex="1">
+          <mxGeometry height="204" width="420" x="100" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="30" parent="29" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ createSession(User) : Session" vertex="1">
+          <mxGeometry height="26" width="420" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="31" parent="29" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ getUserSessions(User) : List" vertex="1">
+          <mxGeometry height="26" width="420" y="66" as="geometry" />
+        </mxCell>
+        <mxCell id="32" parent="29" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ sendMessage(...) : Map" vertex="1">
+          <mxGeometry height="26" width="420" y="92" as="geometry" />
+        </mxCell>
+        <mxCell id="33" parent="29" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ streamMessage(...) : Flux" vertex="1">
+          <mxGeometry height="26" width="420" y="118" as="geometry" />
+        </mxCell>
+        <mxCell id="34" parent="29" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ uploadFile(...) : Map" vertex="1">
+          <mxGeometry height="26" width="420" y="144" as="geometry" />
+        </mxCell>
+        <mxCell id="35" parent="29" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ deleteSession(id) : void" vertex="1">
+          <mxGeometry height="26" width="420" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="36" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;Service&amp;gt;&amp;gt;&lt;br&gt;AIChatServiceImpl" vertex="1">
+          <mxGeometry height="126" width="420" x="100" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="37" parent="36" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- chatSessionRepo : AIChatSessionRepository" vertex="1">
+          <mxGeometry height="26" width="420" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="38" parent="36" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- chatMessageRepo : AIChatMessageRepository" vertex="1">
+          <mxGeometry height="26" width="420" y="66" as="geometry" />
+        </mxCell>
+        <mxCell id="39" parent="36" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- modelClient : AIModelClient" vertex="1">
+          <mxGeometry height="26" width="420" y="92" as="geometry" />
+        </mxCell>
+        <mxCell id="40" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&lt;br&gt;AIToolService" vertex="1">
+          <mxGeometry height="126" width="450" x="600" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="41" parent="40" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ getListAITools() : List" vertex="1">
+          <mxGeometry height="26" width="450" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="42" parent="40" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ setToolActive(id, bool) : void" vertex="1">
+          <mxGeometry height="26" width="450" y="66" as="geometry" />
+        </mxCell>
+        <mxCell id="43" parent="40" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ testToolConnection(id, Map) : Map" vertex="1">
+          <mxGeometry height="26" width="450" y="92" as="geometry" />
+        </mxCell>
+        <mxCell id="44" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;Service&amp;gt;&amp;gt;&lt;br&gt;AIToolServiceImpl" vertex="1">
+          <mxGeometry height="74" width="450" x="600" y="613" as="geometry" />
+        </mxCell>
+        <mxCell id="45" parent="44" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- aiToolRepo : AIToolRepository" vertex="1">
+          <mxGeometry height="26" width="450" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="46" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&lt;br&gt;SimilarityService" vertex="1">
+          <mxGeometry height="74" width="320" x="1100" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="47" parent="46" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ checkSimilarity(assignmentId) : Map" vertex="1">
+          <mxGeometry height="26" width="320" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="48" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;Service&amp;gt;&amp;gt;&lt;br&gt;SimilarityServiceImpl" vertex="1">
+          <mxGeometry height="100" width="350" x="1100" y="600" as="geometry" />
+        </mxCell>
+        <mxCell id="49" parent="48" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- submissionRepo : AssignmentSubmissionRepository" vertex="1">
+          <mxGeometry height="26" width="350" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="50" parent="48" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- vectorDbClient : VectorDatabaseClient" vertex="1">
+          <mxGeometry height="26" width="350" y="66" as="geometry" />
+        </mxCell>
+        <mxCell id="51" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;Component&amp;gt;&amp;gt;&lt;br&gt;AIModelClient" vertex="1">
+          <mxGeometry height="160" width="300" x="125" y="900" as="geometry" />
+        </mxCell>
+        <mxCell id="52" parent="51" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- apiKey : String" vertex="1">
+          <mxGeometry height="26" width="300" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="53" parent="51" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- baseUrl : String" vertex="1">
+          <mxGeometry height="26" width="300" y="66" as="geometry" />
+        </mxCell>
+        <mxCell id="54" parent="51" style="line;strokeWidth=2;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=#000000;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="300" y="92" as="geometry" />
+        </mxCell>
+        <mxCell id="55" parent="51" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ prompt(model, input) : Map" vertex="1">
+          <mxGeometry height="26" width="300" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="56" parent="51" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ stream(model, input) : Flux" vertex="1">
+          <mxGeometry height="26" width="300" y="126" as="geometry" />
+        </mxCell>
+        <mxCell id="57" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;Component&amp;gt;&amp;gt;&lt;br&gt;VectorDatabaseClient" vertex="1">
+          <mxGeometry height="100" width="350" x="1100" y="850" as="geometry" />
+        </mxCell>
+        <mxCell id="58" parent="57" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ searchSimilar(vector) : List" vertex="1">
+          <mxGeometry height="26" width="350" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="59" parent="57" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ indexSubmission(id, vector) : void" vertex="1">
+          <mxGeometry height="26" width="350" y="66" as="geometry" />
+        </mxCell>
+        <mxCell id="60" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&lt;br&gt;AIChatSessionRepository" vertex="1">
+          <mxGeometry height="74" width="350" x="100" y="1100" as="geometry" />
+        </mxCell>
+        <mxCell id="61" parent="60" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ findByUserId(id) : List" vertex="1">
+          <mxGeometry height="26" width="350" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="62" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&lt;br&gt;AIChatMessageRepository" vertex="1">
+          <mxGeometry height="74" width="350" x="100" y="1250" as="geometry" />
+        </mxCell>
+        <mxCell id="63" parent="62" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ findBySessionId(id) : List" vertex="1">
+          <mxGeometry height="26" width="350" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="64" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&lt;br&gt;AIToolRepository" vertex="1">
+          <mxGeometry height="100" width="400" x="600" y="810" as="geometry" />
+        </mxCell>
+        <mxCell id="65" parent="64" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ findAll() : List" vertex="1">
+          <mxGeometry height="26" width="400" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="66" parent="64" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ findByIsActive(bool) : List" vertex="1">
+          <mxGeometry height="26" width="400" y="66" as="geometry" />
+        </mxCell>
+        <mxCell id="67" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&lt;br&gt;AIChatSession" vertex="1">
+          <mxGeometry height="152" width="300" x="100" y="1373" as="geometry" />
+        </mxCell>
+        <mxCell id="68" parent="67" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- id : Long" vertex="1">
+          <mxGeometry height="26" width="300" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="69" parent="67" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- user : User" vertex="1">
+          <mxGeometry height="26" width="300" y="66" as="geometry" />
+        </mxCell>
+        <mxCell id="70" parent="67" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- title : String" vertex="1">
+          <mxGeometry height="26" width="300" y="92" as="geometry" />
+        </mxCell>
+        <mxCell id="71" parent="67" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- startedAt : LocalDateTime" vertex="1">
+          <mxGeometry height="26" width="300" y="118" as="geometry" />
+        </mxCell>
+        <mxCell id="72" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&lt;br&gt;AIChatMessage" vertex="1">
+          <mxGeometry height="178" width="300" x="480" y="1360" as="geometry" />
+        </mxCell>
+        <mxCell id="73" parent="72" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- id : Long" vertex="1">
+          <mxGeometry height="26" width="300" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="74" parent="72" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- session : AIChatSession" vertex="1">
+          <mxGeometry height="26" width="300" y="66" as="geometry" />
+        </mxCell>
+        <mxCell id="75" parent="72" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- sender : Role" vertex="1">
+          <mxGeometry height="26" width="300" y="92" as="geometry" />
+        </mxCell>
+        <mxCell id="76" parent="72" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- content : String" vertex="1">
+          <mxGeometry height="26" width="300" y="118" as="geometry" />
+        </mxCell>
+        <mxCell id="77" parent="72" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- sentAt : LocalDateTime" vertex="1">
+          <mxGeometry height="26" width="300" y="144" as="geometry" />
+        </mxCell>
+        <mxCell id="78" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&lt;br&gt;AITool" vertex="1">
+          <mxGeometry height="204" width="350" x="625" y="1060" as="geometry" />
+        </mxCell>
+        <mxCell id="79" parent="78" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- id : Long" vertex="1">
+          <mxGeometry height="26" width="350" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="80" parent="78" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- name : String" vertex="1">
+          <mxGeometry height="26" width="350" y="66" as="geometry" />
+        </mxCell>
+        <mxCell id="81" parent="78" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- description : String" vertex="1">
+          <mxGeometry height="26" width="350" y="92" as="geometry" />
+        </mxCell>
+        <mxCell id="82" parent="78" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- isActive : Boolean" vertex="1">
+          <mxGeometry height="26" width="350" y="118" as="geometry" />
+        </mxCell>
+        <mxCell id="83" parent="78" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- config : Map" vertex="1">
+          <mxGeometry height="26" width="350" y="144" as="geometry" />
+        </mxCell>
+        <mxCell id="84" parent="78" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- lastTestedAt : LocalDateTime" vertex="1">
+          <mxGeometry height="26" width="350" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="85" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;External Entity&amp;gt;&amp;gt;&lt;br&gt;User" vertex="1">
+          <mxGeometry height="66" width="200" x="-240" y="1416" as="geometry" />
+        </mxCell>
+        <mxCell id="86" edge="1" parent="1" source="11" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="29" value="uses">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="1510" edge="1" parent="1" source="1402" target="1401" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=diamond;endFill=1;fontSize=15;" value="*        1">
+        <mxCell id="87" edge="1" parent="1" source="20" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="40" value="uses">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1805" y="360" />
+              <mxPoint x="920" y="360" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="88" edge="1" parent="1" source="20" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="46" value="uses">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="1511" edge="1" parent="1" source="1401" target="1001" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;fontSize=15;" value="*        1">
+        <mxCell id="89" edge="1" parent="1" source="36" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=block;endFill=0;" target="29" value="implements">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-
+        <mxCell id="90" edge="1" parent="1" source="44" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=block;endFill=0;" target="40" value="implements">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="91" edge="1" parent="1" source="48" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=block;endFill=0;" target="46" value="implements">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="92" edge="1" parent="1" source="36" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="60" value="uses">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="50" y="763" />
+              <mxPoint x="50" y="1137" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="93" edge="1" parent="1" source="36" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="62" value="uses">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="500" y="1270" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="94" edge="1" parent="1" source="36" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="51" value="uses">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="275" y="850" />
+              <mxPoint x="275" y="850" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="95" edge="1" parent="1" source="36" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="40" value="uses">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="550" y="763" />
+              <mxPoint x="550" y="600" />
+              <mxPoint x="720" y="600" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="96" edge="1" parent="1" source="44" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="64" value="uses">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="800" y="820" />
+              <mxPoint x="800" y="820" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="97" edge="1" parent="1" source="48" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="57" value="uses">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="98" edge="1" parent="1" source="48" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="40" value="uses">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1200" y="570" />
+              <mxPoint x="940" y="570" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="99" edge="1" parent="1" source="60" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="67" value="manages">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="50" y="1160" />
+              <mxPoint x="50" y="1449" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="100" edge="1" parent="1" source="62" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="72" value="manages">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="600" y="1300" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="101" edge="1" parent="1" source="64" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="78" value="manages">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="102" edge="1" parent="1" source="67" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=0;endArrow=open;endFill=0;" target="85" value="n..1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="30" y="1470" />
+              <mxPoint x="30" y="1470" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="103" edge="1" parent="1" source="72" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=0;endArrow=open;endFill=0;" target="67" value="n..1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>

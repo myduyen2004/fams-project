@@ -18,6 +18,7 @@ public class DataInitializer implements CommandLineRunner {
         private final UserRepository userRepository;
         private final PasswordEncoder passwordEncoder;
         private final AttendanceConfigRepository attendanceConfigRepository;
+        private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
         @Override
         public void run(String... args) throws Exception {
@@ -33,12 +34,28 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         private void seedAdminUser() {
-                // Check by both username and email to prevent unique constraint violations
-                boolean existsByUsername = userRepository.findByUsername("admin").isPresent();
-                boolean existsByEmail = userRepository.findByEmail("admin@fams.com").isPresent();
+                // Determine if we should update or insert
+                User admin = userRepository.findById(1L).orElse(null);
+                
+                if (admin == null) {
+                        // Not found by ID 1, check by username/email/code as fallback
+                        admin = userRepository.findByUsernameIgnoreCase("admin")
+                                .orElseGet(() -> userRepository.findByCode("ADMIN001").orElse(null));
+                }
 
-                if (!existsByUsername && !existsByEmail) {
-                        User admin = User.builder()
+                if (admin != null) {
+                        log.info("Updating existing admin user (ID: {})...", admin.getId());
+                        admin.setUsername("admin");
+                        admin.setEmail("admin@fams.com");
+                        admin.setCode("ADMIN001");
+                        admin.setPassword(passwordEncoder.encode("admin123"));
+                        admin.setStatus(User.UserStatus.ACTIVE);
+                        admin.setRole(User.UserRole.ADMIN);
+                        admin.setIsPasswordChanged(true);
+                        userRepository.save(admin);
+                } else {
+                        log.info("Creating new admin user...");
+                        admin = User.builder()
                                         .code("ADMIN001")
                                         .username("admin")
                                         .password(passwordEncoder.encode("admin123"))
@@ -52,20 +69,31 @@ public class DataInitializer implements CommandLineRunner {
                                         .isPasswordChanged(true)
                                         .build();
                         userRepository.save(admin);
-                        log.info("Default admin user created: admin/admin123");
-                } else {
-                        log.info("Admin user already exists, skipping seeding.");
                 }
         }
 
         private void seedAcademicStaffUser() {
-                // Check by username, email, and code to prevent unique constraint violations
-                boolean existsByUsername = userRepository.findByUsername("academic").isPresent();
-                boolean existsByEmail = userRepository.findByEmail("staff@fams.com").isPresent();
-                boolean existsByCode = userRepository.findByCode("STAFF001").isPresent();
+                // Update or insert
+                User staff = userRepository.findById(2L).orElse(null);
+                
+                if (staff == null) {
+                        staff = userRepository.findByUsernameIgnoreCase("academic")
+                                .orElseGet(() -> userRepository.findByCode("STAFF001").orElse(null));
+                }
 
-                if (!existsByUsername && !existsByEmail && !existsByCode) {
-                        User staff = User.builder()
+                if (staff != null) {
+                        log.info("Updating existing academic staff user (ID: {})...", staff.getId());
+                        staff.setUsername("academic");
+                        staff.setEmail("staff@fams.com");
+                        staff.setCode("STAFF001");
+                        staff.setPassword(passwordEncoder.encode("staff123"));
+                        staff.setStatus(User.UserStatus.ACTIVE);
+                        staff.setRole(User.UserRole.ACADEMIC_STAFF);
+                        staff.setIsPasswordChanged(true);
+                        userRepository.save(staff);
+                } else {
+                        log.info("Creating new academic staff user...");
+                        staff = User.builder()
                                         .code("STAFF001")
                                         .username("academic")
                                         .password(passwordEncoder.encode("staff123"))
@@ -79,9 +107,6 @@ public class DataInitializer implements CommandLineRunner {
                                         .isPasswordChanged(true)
                                         .build();
                         userRepository.save(staff);
-                        log.info("Default academic staff user created: academic/staff123");
-                } else {
-                        log.info("Academic staff user already exists, skipping seeding.");
                 }
         }
 

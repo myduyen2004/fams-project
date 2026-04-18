@@ -1,4 +1,6 @@
 package com.fams.backend.service.impl;
+ 
+import java.util.Optional;
 
 import com.fams.backend.dto.request.LoginRequest;
 import com.fams.backend.dto.response.LoginResponse;
@@ -106,11 +108,19 @@ public class AuthService implements UserDetailsService {
         }
 
         // 2. Tìm user theo username (with profiles for response)
-        User user = userRepository.findByUsernameWithProfiles(username)
-                .orElseThrow(() -> {
-                    log.warn("Login failed | username={} | reason=USER_NOT_FOUND", username);
-                    return new UnauthorizedException("Tài khoản hoặc mật khẩu không đúng");
-                });
+        log.info("Searching for user with username (ignore case): {}", username);
+        Optional<User> userOpt = userRepository.findByUsernameIgnoreCase(username);
+        if (userOpt.isEmpty()) {
+            log.warn("Login failed | username={} | reason=USER_NOT_FOUND_IN_ROOT_TABLE", username);
+            throw new UnauthorizedException("Tài khoản hoặc mật khẩu không đúng");
+        }
+        
+        User foundUser = userOpt.get();
+        log.info("User found in root table: {} (ID: {}, Role: {})", foundUser.getUsername(), foundUser.getId(), foundUser.getRole());
+        
+        // Try to fetch profiles but continue if it fails (not essential for auth logic check)
+        User user = userRepository.findByUsernameWithProfiles(foundUser.getUsername())
+                .orElse(foundUser);
 
         // 3. Kiểm tra status
         if (user.getStatus() == User.UserStatus.INACTIVE) {
@@ -126,8 +136,6 @@ public class AuthService implements UserDetailsService {
 
         // 4. Verify password
         boolean matches = passwordEncoder.matches(request.getPassword(), user.getPassword());
-        log.info("Password verification | username={} | matches={} | hashPrefix={}",
-                username, matches, user.getPassword().substring(0, Math.min(10, user.getPassword().length())));
 
         if (!matches) {
             log.warn("Login failed | username={} | reason=INVALID_PASSWORD | userId={}",

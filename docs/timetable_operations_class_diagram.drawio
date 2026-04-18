@@ -1,392 +1,359 @@
-<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36" version="29.6.6">
-  <diagram name="Timetable Operations" id="d1">
-    <mxGraphModel dx="4060" dy="2006" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="2400" pageHeight="2000" math="0" shadow="0">
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0">
+  <diagram id="clean_timetable" name="Timetable Operations">
+    <mxGraphModel dx="3473" dy="2422" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1400" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="12" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#dae8fc;strokeColor=#6c8ebf;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;RestController&amp;gt;&amp;gt;&#xa;TimetableController" vertex="1">
-          <mxGeometry height="586" width="500" x="430" y="40" as="geometry" />
+        <mxCell id="11" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&lt;br&gt;GenerateRequest" vertex="1">
+          <mxGeometry height="100" width="280" x="20" y="-14" as="geometry" />
         </mxCell>
-        <mxCell id="13" parent="12" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- generationService : TimetableGenerationService" vertex="1">
-          <mxGeometry height="26" width="500" y="30" as="geometry" />
+        <mxCell id="12" parent="11" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- semesterCode : String" vertex="1">
+          <mxGeometry height="26" width="280" y="40" as="geometry" />
         </mxCell>
-        <mxCell id="13_2" parent="12" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- slotService : TimetableSlotService" vertex="1">
-          <mxGeometry height="26" width="500" y="56" as="geometry" />
+        <mxCell id="13" parent="11" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- config : GAConfigDTO" vertex="1">
+          <mxGeometry height="26" width="280" y="66" as="geometry" />
         </mxCell>
-        <mxCell id="15" parent="12" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- excelExportService : ExcelExportService" vertex="1">
-          <mxGeometry height="26" width="500" y="82" as="geometry" />
+        <mxCell id="14" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&lt;br&gt;GAConfigDTO" vertex="1">
+          <mxGeometry height="152" width="280" x="420" y="-40" as="geometry" />
         </mxCell>
-        <mxCell id="16" parent="12" style="line;strokeWidth=1;fillColor=none;html=1;" value="" vertex="1">
-          <mxGeometry height="8" width="500" y="108" as="geometry" />
+        <mxCell id="15" parent="14" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- populationSize : Integer" vertex="1">
+          <mxGeometry height="26" width="280" y="40" as="geometry" />
         </mxCell>
-        <mxCell id="17" parent="12" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ generateTimetable(GenerateRequest) : GenerateResponse" vertex="1">
-          <mxGeometry height="26" width="500" y="116" as="geometry" />
+        <mxCell id="16" parent="14" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- maxGenerations : Integer" vertex="1">
+          <mxGeometry height="26" width="280" y="66" as="geometry" />
         </mxCell>
-        <mxCell id="17_1" parent="12" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ startAsyncGeneration(GenerateRequest) : Map" vertex="1">
-          <mxGeometry height="26" width="500" y="142" as="geometry" />
+        <mxCell id="17" parent="14" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- minMutationRate : Double" vertex="1">
+          <mxGeometry height="26" width="280" y="92" as="geometry" />
         </mxCell>
-        <mxCell id="17_2" parent="12" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ getJobStatus(jobId) : JobStatusResponse" vertex="1">
-          <mxGeometry height="26" width="500" y="168" as="geometry" />
+        <mxCell id="18" parent="14" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- maxMutationRate : Double" vertex="1">
+          <mxGeometry height="26" width="280" y="118" as="geometry" />
         </mxCell>
-        <mxCell id="17_3" parent="12" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ cancelJob(jobId) : Map" vertex="1">
-          <mxGeometry height="26" width="500" y="194" as="geometry" />
+        <mxCell id="19" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&lt;br&gt;GenerateResponse" vertex="1">
+          <mxGeometry height="126" width="280" x="730" y="-100" as="geometry" />
         </mxCell>
-        <mxCell id="18" parent="12" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ getTimetableBySemester(semesterCode) : List" vertex="1">
-          <mxGeometry height="26" width="500" y="220" as="geometry" />
+        <mxCell id="20" parent="19" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- success : boolean" vertex="1">
+          <mxGeometry height="26" width="280" y="40" as="geometry" />
         </mxCell>
-        <mxCell id="18_1" parent="12" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ getTimetableBySemesterAndDate(...) : List" vertex="1">
-          <mxGeometry height="26" width="500" y="246" as="geometry" />
+        <mxCell id="21" parent="19" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- jobId : String" vertex="1">
+          <mxGeometry height="26" width="280" y="66" as="geometry" />
         </mxCell>
-        <mxCell id="18_2" parent="12" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ getTimetableBySemesterAndDateRange(...) : List" vertex="1">
-          <mxGeometry height="26" width="500" y="272" as="geometry" />
+        <mxCell id="22" parent="19" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- message : String" vertex="1">
+          <mxGeometry height="26" width="280" y="92" as="geometry" />
         </mxCell>
-        <mxCell id="18_3" parent="12" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ checkTimetableExists(semesterCode) : Map" vertex="1">
-          <mxGeometry height="26" width="500" y="298" as="geometry" />
+        <mxCell id="23" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&lt;br&gt;JobStatusResponse" vertex="1">
+          <mxGeometry height="152" width="280" x="1100" y="-40" as="geometry" />
         </mxCell>
-        <mxCell id="18_4" parent="12" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ countUnscheduledClassSections(semesterCode) : Map" vertex="1">
-          <mxGeometry height="26" width="500" y="324" as="geometry" />
+        <mxCell id="24" parent="23" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- jobId : String" vertex="1">
+          <mxGeometry height="26" width="280" y="40" as="geometry" />
         </mxCell>
-        <mxCell id="18_5" parent="12" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ checkConfigChangedAfterGeneration(...) : Map" vertex="1">
-          <mxGeometry height="26" width="500" y="350" as="geometry" />
+        <mxCell id="25" parent="23" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- semesterCode : String" vertex="1">
+          <mxGeometry height="26" width="280" y="66" as="geometry" />
         </mxCell>
-        <mxCell id="18_6" parent="12" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ getTimetableByClass(className) : List" vertex="1">
-          <mxGeometry height="26" width="500" y="376" as="geometry" />
+        <mxCell id="26" parent="23" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- status : String" vertex="1">
+          <mxGeometry height="26" width="280" y="92" as="geometry" />
         </mxCell>
-        <mxCell id="20" parent="12" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ updateSlot(id, UpdateSlotRequest) : TimetableSlotDTO" vertex="1">
-          <mxGeometry height="26" width="500" y="402" as="geometry" />
+        <mxCell id="27" parent="23" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- percentComplete : double" vertex="1">
+          <mxGeometry height="26" width="280" y="118" as="geometry" />
         </mxCell>
-        <mxCell id="22_1" parent="12" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ getAvailability(date, semesterCode) : AvailabilityResponse" vertex="1">
-          <mxGeometry height="26" width="500" y="428" as="geometry" />
+        <mxCell id="28" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&lt;br&gt;UpdateSlotRequest" vertex="1">
+          <mxGeometry height="126" width="280" x="90" y="270" as="geometry" />
         </mxCell>
-        <mxCell id="19" parent="12" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ getStudentTimetable(studentId, date) : WeeklyTimetableDTO" vertex="1">
-          <mxGeometry height="26" width="500" y="454" as="geometry" />
+        <mxCell id="29" parent="28" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- date : LocalDate" vertex="1">
+          <mxGeometry height="26" width="280" y="40" as="geometry" />
         </mxCell>
-        <mxCell id="19_1" parent="12" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ getSemesterSlotsForStudent(...) : List" vertex="1">
-          <mxGeometry height="26" width="500" y="480" as="geometry" />
+        <mxCell id="30" parent="28" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- slotNumber : Integer" vertex="1">
+          <mxGeometry height="26" width="280" y="66" as="geometry" />
         </mxCell>
-        <mxCell id="19_2" parent="12" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ getLecturerTimetable(lecturerId, date) : WeeklyTimetableDTO" vertex="1">
-          <mxGeometry height="26" width="500" y="506" as="geometry" />
+        <mxCell id="31" parent="28" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- roomId : Long" vertex="1">
+          <mxGeometry height="26" width="280" y="92" as="geometry" />
         </mxCell>
-        <mxCell id="19_4" parent="12" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ getLecturerTeachingDates(...) : List" vertex="1">
-          <mxGeometry height="26" width="500" y="532" as="geometry" />
+        <mxCell id="32" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&lt;br&gt;TimetableSlotDTO" vertex="1">
+          <mxGeometry height="204" width="280" x="410" y="140" as="geometry" />
         </mxCell>
-        <mxCell id="21" parent="12" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ exportStudentTimetable(studentId, semesterCode) : void" vertex="1">
-          <mxGeometry height="26" width="500" y="558" as="geometry" />
+        <mxCell id="33" parent="32" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- id : Long" vertex="1">
+          <mxGeometry height="26" width="280" y="40" as="geometry" />
         </mxCell>
-        <mxCell id="29" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#d5e8d4;strokeColor=#82b366;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;Service&amp;gt;&amp;gt;&#xa;TimetableGenerationService" vertex="1">
-          <mxGeometry height="168" width="550" x="870" y="690" as="geometry" />
+        <mxCell id="34" parent="32" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- className : String" vertex="1">
+          <mxGeometry height="26" width="280" y="66" as="geometry" />
         </mxCell>
-        <mxCell id="30" parent="29" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- timetableSlotRepo : TimetableSlotRepository" vertex="1">
-          <mxGeometry height="26" width="550" y="30" as="geometry" />
+        <mxCell id="35" parent="32" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- courseCode : String" vertex="1">
+          <mxGeometry height="26" width="280" y="92" as="geometry" />
         </mxCell>
-        <mxCell id="31" parent="29" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- classSectionRepo : ClassSectionRepository" vertex="1">
-          <mxGeometry height="26" width="550" y="56" as="geometry" />
+        <mxCell id="36" parent="32" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- lecturerName : String" vertex="1">
+          <mxGeometry height="26" width="280" y="118" as="geometry" />
         </mxCell>
-        <mxCell id="33" parent="29" style="line;strokeWidth=1;fillColor=none;html=1;" value="" vertex="1">
-          <mxGeometry height="8" width="550" y="82" as="geometry" />
+        <mxCell id="37" parent="32" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- date : LocalDate" vertex="1">
+          <mxGeometry height="26" width="280" y="144" as="geometry" />
         </mxCell>
-        <mxCell id="34" parent="29" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ generateTimetable(jobId, semesterCode, GAConfig) : CompletableFuture" vertex="1">
-          <mxGeometry height="26" width="550" y="90" as="geometry" />
+        <mxCell id="38" parent="32" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- slotNumber : int" vertex="1">
+          <mxGeometry height="26" width="280" y="170" as="geometry" />
         </mxCell>
-        <mxCell id="35" parent="29" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ getJobStatus(jobId) : GenerationJob" vertex="1">
-          <mxGeometry height="26" width="550" y="116" as="geometry" />
+        <mxCell id="39" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&lt;br&gt;AvailabilityResponse" vertex="1">
+          <mxGeometry height="126" width="320" x="770" y="190" as="geometry" />
         </mxCell>
-        <mxCell id="35_1" parent="29" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ cancelJob(jobId) : boolean" vertex="1">
-          <mxGeometry height="26" width="550" y="142" as="geometry" />
+        <mxCell id="40" parent="39" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- availableSlots : List&amp;lt;Integer&amp;gt;" vertex="1">
+          <mxGeometry height="26" width="320" y="40" as="geometry" />
         </mxCell>
-        <mxCell id="S1" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#d5e8d4;strokeColor=#82b366;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;Service&amp;gt;&amp;gt;&#xa;TimetableSlotServiceImpl" vertex="1">
-          <mxGeometry height="168" width="420" x="-150" y="340" as="geometry" />
+        <mxCell id="41" parent="39" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- allRooms : List&amp;lt;RoomDTO&amp;gt;" vertex="1">
+          <mxGeometry height="26" width="320" y="66" as="geometry" />
         </mxCell>
-        <mxCell id="S1_1" parent="S1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- timetableSlotRepo : TimetableSlotRepository" vertex="1">
-          <mxGeometry height="26" width="420" y="30" as="geometry" />
+        <mxCell id="42" parent="39" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- occupiedRoomIdsBySlot : Map" vertex="1">
+          <mxGeometry height="26" width="320" y="92" as="geometry" />
         </mxCell>
-        <mxCell id="S1_2" parent="S1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- roomRepo : RoomRepository" vertex="1">
-          <mxGeometry height="26" width="420" y="56" as="geometry" />
+        <mxCell id="43" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&lt;br&gt;WeeklyTimetableDTO" vertex="1">
+          <mxGeometry height="126" width="280" x="1280" y="259" as="geometry" />
         </mxCell>
-        <mxCell id="S1_3" parent="S1" style="line;strokeWidth=1;fillColor=none;html=1;" value="" vertex="1">
-          <mxGeometry height="8" width="420" y="82" as="geometry" />
+        <mxCell id="44" parent="43" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- weekStart : LocalDate" vertex="1">
+          <mxGeometry height="26" width="280" y="40" as="geometry" />
         </mxCell>
-        <mxCell id="S1_4" parent="S1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ updateSlot(id, UpdateSlotRequest) : TimetableSlotDTO" vertex="1">
-          <mxGeometry height="26" width="420" y="90" as="geometry" />
+        <mxCell id="45" parent="43" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- weekEnd : LocalDate" vertex="1">
+          <mxGeometry height="26" width="280" y="66" as="geometry" />
         </mxCell>
-        <mxCell id="S1_5" parent="S1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ getAvailability(date, semesterCode) : AvailabilityResponse" vertex="1">
-          <mxGeometry height="26" width="420" y="116" as="geometry" />
+        <mxCell id="46" parent="43" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- days : List&amp;lt;DailyTimetableDTO&amp;gt;" vertex="1">
+          <mxGeometry height="26" width="280" y="92" as="geometry" />
         </mxCell>
-        <mxCell id="S1_6" parent="S1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ searchAssignments(...) : Page" vertex="1">
-          <mxGeometry height="26" width="420" y="142" as="geometry" />
+        <mxCell id="47" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;RestController&amp;gt;&amp;gt;&lt;br&gt;TimetableController" vertex="1">
+          <mxGeometry height="446" width="500" x="450" y="477" as="geometry" />
         </mxCell>
-        <mxCell id="S2" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#d5e8d4;strokeColor=#82b366;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;Service&amp;gt;&amp;gt;&#xa;ExcelExportService" vertex="1">
-          <mxGeometry height="116" width="420" x="1080" y="40" as="geometry" />
+        <mxCell id="48" parent="47" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- generationService : TimetableGenerationService" vertex="1">
+          <mxGeometry height="26" width="500" y="40" as="geometry" />
         </mxCell>
-        <mxCell id="S2_1" parent="S2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ exportStudentScheduleToExcel(response, slots, ...) : void" vertex="1">
-          <mxGeometry height="26" width="420" y="30" as="geometry" />
+        <mxCell id="49" parent="47" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- slotService : TimetableSlotService" vertex="1">
+          <mxGeometry height="26" width="500" y="66" as="geometry" />
         </mxCell>
-        <mxCell id="S2_2" parent="S2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ exportLecturerScheduleToExcel(response, slots, ...) : void" vertex="1">
-          <mxGeometry height="26" width="420" y="56" as="geometry" />
+        <mxCell id="50" parent="47" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- excelExportService : ExcelExportService" vertex="1">
+          <mxGeometry height="26" width="500" y="92" as="geometry" />
         </mxCell>
-        <mxCell id="67" parent="1" style="swimlane;fontStyle=3;align=center;startSize=30;html=1;collapsible=0;fillColor=#d0e8f2;strokeColor=#5b9bd5;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&#xa;TimetableSlotRepository" vertex="1">
-          <mxGeometry height="220" width="500" x="-160" y="610" as="geometry" />
+        <mxCell id="51" parent="47" style="line;strokeWidth=2;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=#000000;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="500" y="118" as="geometry" />
         </mxCell>
-        <mxCell id="69_1" parent="67" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ findBySemesterCode(String) : List" vertex="1">
-          <mxGeometry height="26" width="500" y="30" as="geometry" />
+        <mxCell id="52" parent="47" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ generateTimetable(GenerateRequest) : GenerateResponse" vertex="1">
+          <mxGeometry height="26" width="500" y="126" as="geometry" />
         </mxCell>
-        <mxCell id="69" parent="67" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ findByStudentIdAndDateBetween(Long, LocalDate, LocalDate) : List" vertex="1">
-          <mxGeometry height="26" width="500" y="56" as="geometry" />
+        <mxCell id="53" parent="47" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ startAsyncGeneration(GenerateRequest) : Map" vertex="1">
+          <mxGeometry height="26" width="500" y="152" as="geometry" />
         </mxCell>
-        <mxCell id="70" parent="67" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ findBySemesterCodeAndDate(String, LocalDate) : List" vertex="1">
-          <mxGeometry height="26" width="500" y="82" as="geometry" />
+        <mxCell id="54" parent="47" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ getJobStatus(jobId) : JobStatusResponse" vertex="1">
+          <mxGeometry height="26" width="500" y="178" as="geometry" />
         </mxCell>
-        <mxCell id="70_1" parent="67" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ findBySemesterCodeAndDateBetween(String, LocalDate, LocalDate) : List" vertex="1">
-          <mxGeometry height="26" width="500" y="108" as="geometry" />
+        <mxCell id="55" parent="47" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ cancelJob(jobId) : Map" vertex="1">
+          <mxGeometry height="26" width="500" y="204" as="geometry" />
         </mxCell>
-        <mxCell id="70_2" parent="67" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ findByClassName(String) : List" vertex="1">
-          <mxGeometry height="26" width="500" y="134" as="geometry" />
+        <mxCell id="56" parent="47" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ getTimetableBySemester(semesterCode) : List" vertex="1">
+          <mxGeometry height="26" width="500" y="230" as="geometry" />
         </mxCell>
-        <mxCell id="70_3" parent="67" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="+ findByLecturerIdAndDateBetween(Long, LocalDate, LocalDate) : List" vertex="1">
-          <mxGeometry height="26" width="500" y="160" as="geometry" />
+        <mxCell id="57" parent="47" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ getTimetableByClass(className) : List" vertex="1">
+          <mxGeometry height="26" width="500" y="256" as="geometry" />
         </mxCell>
-        <mxCell id="50" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#f8cecc;strokeColor=#b85450;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&#xa;TimetableSlot" vertex="1">
-          <mxGeometry height="194" width="300" x="490" y="840" as="geometry" />
+        <mxCell id="58" parent="47" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ updateSlot(id, UpdateSlotRequest) : TimetableSlotDTO" vertex="1">
+          <mxGeometry height="26" width="500" y="282" as="geometry" />
         </mxCell>
-        <mxCell id="51" parent="50" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- classSection : ClassSection" vertex="1">
-          <mxGeometry height="26" width="300" y="30" as="geometry" />
+        <mxCell id="59" parent="47" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ getAvailability(date, semesterCode) : AvailabilityResponse" vertex="1">
+          <mxGeometry height="26" width="500" y="308" as="geometry" />
         </mxCell>
-        <mxCell id="52" parent="50" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- room : Room" vertex="1">
-          <mxGeometry height="26" width="300" y="56" as="geometry" />
+        <mxCell id="60" parent="47" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ getStudentTimetable(studentId, date) : WeeklyTimetableDTO" vertex="1">
+          <mxGeometry height="26" width="500" y="334" as="geometry" />
         </mxCell>
-        <mxCell id="53" parent="50" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- dayOfWeek : DayOfWeek" vertex="1">
-          <mxGeometry height="26" width="300" y="82" as="geometry" />
+        <mxCell id="61" parent="47" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ getLecturerTimetable(lecturerId, date) : WeeklyTimetableDTO" vertex="1">
+          <mxGeometry height="26" width="500" y="360" as="geometry" />
         </mxCell>
-        <mxCell id="54" parent="50" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- slotNumber : Integer" vertex="1">
-          <mxGeometry height="26" width="300" y="108" as="geometry" />
+        <mxCell id="62" parent="47" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ exportStudentTimetable(studentId, semesterCode) : void" vertex="1">
+          <mxGeometry height="26" width="500" y="386" as="geometry" />
         </mxCell>
-        <mxCell id="55" parent="50" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- startTime : LocalTime" vertex="1">
-          <mxGeometry height="26" width="300" y="134" as="geometry" />
+        <mxCell id="63" parent="47" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ checkTimetableExists(semesterCode) : Map" vertex="1">
+          <mxGeometry height="26" width="500" y="412" as="geometry" />
         </mxCell>
-        <mxCell id="56" parent="50" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- date : LocalDate" vertex="1">
-          <mxGeometry height="26" width="300" y="160" as="geometry" />
+        <mxCell id="64" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;Service&amp;gt;&amp;gt;&lt;br&gt;TimetableGenerationService" vertex="1">
+          <mxGeometry height="186" width="450" x="-200" y="737" as="geometry" />
         </mxCell>
-        <mxCell id="D2" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#fff2cc;strokeColor=#d6b656;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&#xa;GenerateRequest" vertex="1">
-          <mxGeometry height="90" width="260" x="30" y="-10" as="geometry" />
+        <mxCell id="65" parent="64" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- timetableSlotRepo : TimetableSlotRepository" vertex="1">
+          <mxGeometry height="26" width="450" y="40" as="geometry" />
         </mxCell>
-        <mxCell id="D2_1" parent="D2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- semesterCode : String" vertex="1">
-          <mxGeometry height="26" width="260" y="30" as="geometry" />
+        <mxCell id="66" parent="64" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- classSectionRepo : ClassSectionRepository" vertex="1">
+          <mxGeometry height="26" width="450" y="66" as="geometry" />
         </mxCell>
-        <mxCell id="D2_2" parent="D2" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- config : GAConfigDTO" vertex="1">
-          <mxGeometry height="26" width="260" y="56" as="geometry" />
+        <mxCell id="67" parent="64" style="line;strokeWidth=2;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=#000000;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="450" y="92" as="geometry" />
         </mxCell>
-        <mxCell id="D2_3_Cont" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#fff2cc;strokeColor=#d6b656;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&#xa;GAConfigDTO" vertex="1">
-          <mxGeometry height="178" width="300" x="20" y="-259" as="geometry" />
+        <mxCell id="68" parent="64" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ generateTimetable(jobId, semesterCode, GAConfig) : CompletableFuture" vertex="1">
+          <mxGeometry height="26" width="450" y="100" as="geometry" />
         </mxCell>
-        <mxCell id="D2_3_1" parent="D2_3_Cont" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- populationSize : Integer" vertex="1">
-          <mxGeometry height="26" width="300" y="30" as="geometry" />
+        <mxCell id="69" parent="64" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ getJobStatus(jobId) : GenerationJob" vertex="1">
+          <mxGeometry height="26" width="450" y="126" as="geometry" />
         </mxCell>
-        <mxCell id="D2_3_2" parent="D2_3_Cont" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- maxGenerations : Integer" vertex="1">
-          <mxGeometry height="26" width="300" y="56" as="geometry" />
+        <mxCell id="70" parent="64" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ cancelJob(jobId) : boolean" vertex="1">
+          <mxGeometry height="26" width="450" y="152" as="geometry" />
         </mxCell>
-        <mxCell id="D2_3_3" parent="D2_3_Cont" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- minMutationRate : Double" vertex="1">
-          <mxGeometry height="26" width="300" y="82" as="geometry" />
+        <mxCell id="71" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;Service&amp;gt;&amp;gt;&lt;br&gt;TimetableSlotServiceImpl" vertex="1">
+          <mxGeometry height="186" width="400" x="1170" y="923" as="geometry" />
         </mxCell>
-        <mxCell id="D2_3_4" parent="D2_3_Cont" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- maxMutationRate : Double" vertex="1">
-          <mxGeometry height="26" width="300" y="108" as="geometry" />
+        <mxCell id="72" parent="71" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- timetableSlotRepo : TimetableSlotRepository" vertex="1">
+          <mxGeometry height="26" width="400" y="40" as="geometry" />
         </mxCell>
-        <mxCell id="D2_3_5" parent="D2_3_Cont" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- ... other properties" vertex="1">
-          <mxGeometry height="26" width="300" y="134" as="geometry" />
+        <mxCell id="73" parent="71" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- roomRepo : RoomRepository" vertex="1">
+          <mxGeometry height="26" width="400" y="66" as="geometry" />
         </mxCell>
-        <mxCell id="D4" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#fff2cc;strokeColor=#d6b656;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&#xa;UpdateSlotRequest" vertex="1">
-          <mxGeometry height="116" width="260" x="40" y="164" as="geometry" />
+        <mxCell id="74" parent="71" style="line;strokeWidth=2;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=10;rotatable=0;labelPosition=left;points=[];portConstraint=eastwest;strokeColor=#000000;html=1;" value="" vertex="1">
+          <mxGeometry height="8" width="400" y="92" as="geometry" />
         </mxCell>
-        <mxCell id="D4_1" parent="D4" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- date : LocalDate" vertex="1">
-          <mxGeometry height="26" width="260" y="30" as="geometry" />
+        <mxCell id="75" parent="71" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ updateSlot(id, UpdateSlotRequest) : TimetableSlotDTO" vertex="1">
+          <mxGeometry height="26" width="400" y="100" as="geometry" />
         </mxCell>
-        <mxCell id="D4_2" parent="D4" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- slotNumber : Integer" vertex="1">
-          <mxGeometry height="26" width="260" y="56" as="geometry" />
+        <mxCell id="76" parent="71" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ getAvailability(date, semesterCode) : AvailabilityResponse" vertex="1">
+          <mxGeometry height="26" width="400" y="126" as="geometry" />
         </mxCell>
-        <mxCell id="D4_3" parent="D4" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- roomId : Long" vertex="1">
-          <mxGeometry height="26" width="260" y="82" as="geometry" />
+        <mxCell id="77" parent="71" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ searchAssignments(...) : Page" vertex="1">
+          <mxGeometry height="26" width="400" y="152" as="geometry" />
         </mxCell>
-        <mxCell id="D6" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#fff2cc;strokeColor=#d6b656;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&#xa;GenerateResponse" vertex="1">
-          <mxGeometry height="142" width="260" x="405" y="-210" as="geometry" />
+        <mxCell id="78" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;Service&amp;gt;&amp;gt;&lt;br&gt;ExcelExportService" vertex="1">
+          <mxGeometry height="100" width="420" x="1060" y="620" as="geometry" />
         </mxCell>
-        <mxCell id="D6_1" parent="D6" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- success : boolean" vertex="1">
-          <mxGeometry height="26" width="260" y="30" as="geometry" />
+        <mxCell id="79" parent="78" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ exportStudentScheduleToExcel(response, slots, ...) : void" vertex="1">
+          <mxGeometry height="26" width="420" y="40" as="geometry" />
         </mxCell>
-        <mxCell id="D6_2" parent="D6" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- jobId : String" vertex="1">
-          <mxGeometry height="26" width="260" y="56" as="geometry" />
+        <mxCell id="80" parent="78" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ exportLecturerScheduleToExcel(response, slots, ...) : void" vertex="1">
+          <mxGeometry height="26" width="420" y="66" as="geometry" />
         </mxCell>
-        <mxCell id="D6_3" parent="D6" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- message : String" vertex="1">
-          <mxGeometry height="26" width="260" y="82" as="geometry" />
+        <mxCell id="81" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;interface&amp;gt;&amp;gt;&lt;br&gt;TimetableSlotRepository" vertex="1">
+          <mxGeometry height="178" width="450" x="475" y="970" as="geometry" />
         </mxCell>
-        <mxCell id="D6_4" parent="D6" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- ... other stats" vertex="1">
-          <mxGeometry height="26" width="260" y="108" as="geometry" />
+        <mxCell id="82" parent="81" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ findBySemesterCode(String) : List" vertex="1">
+          <mxGeometry height="26" width="450" y="40" as="geometry" />
         </mxCell>
-        <mxCell id="D7" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#fff2cc;strokeColor=#d6b656;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&#xa;JobStatusResponse" vertex="1">
-          <mxGeometry height="168" width="260" x="720" y="-210" as="geometry" />
+        <mxCell id="83" parent="81" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ findByStudentIdAndDateBetween(...) : List" vertex="1">
+          <mxGeometry height="26" width="450" y="66" as="geometry" />
         </mxCell>
-        <mxCell id="D7_1" parent="D7" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- jobId : String" vertex="1">
-          <mxGeometry height="26" width="260" y="30" as="geometry" />
+        <mxCell id="84" parent="81" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ findBySemesterCodeAndDate(String, LocalDate) : List" vertex="1">
+          <mxGeometry height="26" width="450" y="92" as="geometry" />
         </mxCell>
-        <mxCell id="D7_2" parent="D7" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- semesterCode : String" vertex="1">
-          <mxGeometry height="26" width="260" y="56" as="geometry" />
+        <mxCell id="85" parent="81" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ findByClassName(String) : List" vertex="1">
+          <mxGeometry height="26" width="450" y="118" as="geometry" />
         </mxCell>
-        <mxCell id="D7_3" parent="D7" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- status : String" vertex="1">
-          <mxGeometry height="26" width="260" y="82" as="geometry" />
+        <mxCell id="86" parent="81" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="+ findByLecturerIdAndDateBetween(...) : List" vertex="1">
+          <mxGeometry height="26" width="450" y="144" as="geometry" />
         </mxCell>
-        <mxCell id="D7_4" parent="D7" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- percentComplete : double" vertex="1">
-          <mxGeometry height="26" width="260" y="108" as="geometry" />
+        <mxCell id="87" parent="1" style="swimlane;fontStyle=1;align=center;startSize=40;html=1;collapsible=0;strokeWidth=2;fillColor=#ffffff;strokeColor=#000000;rounded=0;" value="&amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&lt;br&gt;TimetableSlot" vertex="1">
+          <mxGeometry height="230" width="350" x="525" y="1290" as="geometry" />
         </mxCell>
-        <mxCell id="D7_5" parent="D7" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- ... other props" vertex="1">
-          <mxGeometry height="26" width="260" y="134" as="geometry" />
+        <mxCell id="88" parent="87" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- id : Long" vertex="1">
+          <mxGeometry height="26" width="350" y="40" as="geometry" />
         </mxCell>
-        <mxCell id="D8" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#fff2cc;strokeColor=#d6b656;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&#xa;AvailabilityResponse" vertex="1">
-          <mxGeometry height="116" width="300" x="1090" y="-197" as="geometry" />
+        <mxCell id="89" parent="87" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- classSection : ClassSection" vertex="1">
+          <mxGeometry height="26" width="350" y="66" as="geometry" />
         </mxCell>
-        <mxCell id="D8_1" parent="D8" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- availableSlots : List&amp;lt;Integer&amp;gt;" vertex="1">
-          <mxGeometry height="26" width="300" y="30" as="geometry" />
+        <mxCell id="90" parent="87" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- room : Room" vertex="1">
+          <mxGeometry height="26" width="350" y="92" as="geometry" />
         </mxCell>
-        <mxCell id="D8_2" parent="D8" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- allRooms : List&amp;lt;RoomDTO&amp;gt;" vertex="1">
-          <mxGeometry height="26" width="300" y="56" as="geometry" />
+        <mxCell id="91" parent="87" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- dayOfWeek : DayOfWeek" vertex="1">
+          <mxGeometry height="26" width="350" y="118" as="geometry" />
         </mxCell>
-        <mxCell id="D8_3" parent="D8" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- occupiedRoomIdsBySlot : Map" vertex="1">
-          <mxGeometry height="26" width="300" y="82" as="geometry" />
+        <mxCell id="92" parent="87" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- slotNumber : Integer" vertex="1">
+          <mxGeometry height="26" width="350" y="144" as="geometry" />
         </mxCell>
-        <mxCell id="D1" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#fff2cc;strokeColor=#d6b656;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&#xa;TimetableSlotDTO" vertex="1">
-          <mxGeometry height="298" width="300" x="1070" y="250" as="geometry" />
+        <mxCell id="93" parent="87" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- startTime : LocalTime" vertex="1">
+          <mxGeometry height="26" width="350" y="170" as="geometry" />
         </mxCell>
-        <mxCell id="D1_1" parent="D1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- id : Long" vertex="1">
-          <mxGeometry height="26" width="300" y="30" as="geometry" />
+        <mxCell id="94" parent="87" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;html=1;fontSize=14;fontColor=#000000;" value="- date : LocalDate" vertex="1">
+          <mxGeometry height="26" width="350" y="196" as="geometry" />
         </mxCell>
-        <mxCell id="D1_2" parent="D1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- className : String" vertex="1">
-          <mxGeometry height="26" width="300" y="56" as="geometry" />
-        </mxCell>
-        <mxCell id="D1_3" parent="D1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- courseCode : String" vertex="1">
-          <mxGeometry height="26" width="300" y="82" as="geometry" />
-        </mxCell>
-        <mxCell id="D1_4" parent="D1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- lecturerName : String" vertex="1">
-          <mxGeometry height="26" width="300" y="108" as="geometry" />
-        </mxCell>
-        <mxCell id="D1_5" parent="D1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- date : LocalDate" vertex="1">
-          <mxGeometry height="26" width="300" y="134" as="geometry" />
-        </mxCell>
-        <mxCell id="D1_6" parent="D1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- slotNumber : int" vertex="1">
-          <mxGeometry height="26" width="300" y="160" as="geometry" />
-        </mxCell>
-        <mxCell id="D1_7" parent="D1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- attendanceStatus : String" vertex="1">
-          <mxGeometry height="26" width="300" y="186" as="geometry" />
-        </mxCell>
-        <mxCell id="D1_8" parent="D1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- assignmentTitle : String" vertex="1">
-          <mxGeometry height="26" width="300" y="212" as="geometry" />
-        </mxCell>
-        <mxCell id="D1_9" parent="D1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- submissionStatus : String" vertex="1">
-          <mxGeometry height="26" width="300" y="238" as="geometry" />
-        </mxCell>
-        <mxCell id="D1_12" parent="D1" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- ... other props" vertex="1">
-          <mxGeometry height="26" width="300" y="264" as="geometry" />
-        </mxCell>
-        <mxCell id="D5" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#fff2cc;strokeColor=#d6b656;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&#xa;DailyTimetableDTO" vertex="1">
-          <mxGeometry height="142" width="300" x="1560" y="328" as="geometry" />
-        </mxCell>
-        <mxCell id="D5_1" parent="D5" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- date : LocalDate" vertex="1">
-          <mxGeometry height="26" width="300" y="30" as="geometry" />
-        </mxCell>
-        <mxCell id="D5_2" parent="D5" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- dayOfWeek : int" vertex="1">
-          <mxGeometry height="26" width="300" y="56" as="geometry" />
-        </mxCell>
-        <mxCell id="D5_3" parent="D5" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- dayName : String" vertex="1">
-          <mxGeometry height="26" width="300" y="82" as="geometry" />
-        </mxCell>
-        <mxCell id="D5_4" parent="D5" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- slots : List&amp;lt;TimetableSlotDTO&amp;gt;" vertex="1">
-          <mxGeometry height="26" width="300" y="108" as="geometry" />
-        </mxCell>
-        <mxCell id="D3" parent="1" style="swimlane;fontStyle=1;align=center;startSize=30;html=1;collapsible=0;fillColor=#fff2cc;strokeColor=#d6b656;rounded=1;shadow=1;fontSize=15;" value="&amp;lt;&amp;lt;DTO&amp;gt;&amp;gt;&#xa;WeeklyTimetableDTO" vertex="1">
-          <mxGeometry height="116" width="300" x="1450" y="530" as="geometry" />
-        </mxCell>
-        <mxCell id="D3_1" parent="D3" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- weekStart : LocalDate" vertex="1">
-          <mxGeometry height="26" width="300" y="30" as="geometry" />
-        </mxCell>
-        <mxCell id="D3_2" parent="D3" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- weekEnd : LocalDate" vertex="1">
-          <mxGeometry height="26" width="300" y="56" as="geometry" />
-        </mxCell>
-        <mxCell id="D3_3" parent="D3" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;html=1;fontSize=13;" value="- days : List&amp;lt;DailyTimetableDTO&amp;gt;" vertex="1">
-          <mxGeometry height="26" width="300" y="82" as="geometry" />
-        </mxCell>
-        <mxCell id="R1" edge="1" parent="1" source="21" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;exitX=0.941;exitY=0.954;exitDx=0;exitDy=0;exitPerimeter=0;" target="29">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="R2" edge="1" parent="1" source="12" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;" target="S1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="R3" edge="1" parent="1" source="12" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;" target="S2">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="R5" edge="1" parent="1" source="29" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;" target="70_3">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="R7" edge="1" parent="1" source="S1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;" target="67">
+        <mxCell id="95" edge="1" parent="1" source="47" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="11" value="receives">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="60" y="550" />
-              <mxPoint x="60" y="550" />
+              <mxPoint x="-40" y="580" />
+              <mxPoint x="-40" y="36" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="R8" edge="1" parent="1" source="67" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=2;endArrow=open;endFill=0;exitX=0.75;exitY=1;exitDx=0;exitDy=0;" target="50" value="1    *">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="RU1" edge="1" parent="1" source="12" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;dashed=1;" target="D2" value="&amp;lt;&amp;lt;use&amp;gt;&amp;gt;">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="RU2" edge="1" parent="1" source="12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;dashed=1;" target="D4" value="&amp;lt;&amp;lt;use&amp;gt;&amp;gt;">
+        <mxCell id="96" edge="1" parent="1" source="47" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="19" value="returns">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="360" y="220" />
-              <mxPoint x="360" y="220" />
+              <mxPoint x="1130" y="520" />
+              <mxPoint x="1130" y="150" />
+              <mxPoint x="870" y="150" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="RU3" edge="1" parent="1" source="D2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;dashed=1;" target="D2_3_Cont" value="&amp;lt;&amp;lt;has&amp;gt;&amp;gt;">
+        <mxCell id="97" edge="1" parent="1" source="47" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="23" value="returns">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="160" y="-50" />
-              <mxPoint x="160" y="-50" />
+              <mxPoint x="1200" y="560" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="RU5" edge="1" parent="1" source="12" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;dashed=1;" target="D1" value="&amp;lt;&amp;lt;use&amp;gt;&amp;gt;">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="RU6" edge="1" parent="1" source="12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;dashed=1;" target="D6" value="&amp;lt;&amp;lt;return&amp;gt;&amp;gt;">
+        <mxCell id="98" edge="1" parent="1" source="47" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="28" value="receives">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="535" y="30" />
-              <mxPoint x="535" y="30" />
+              <mxPoint x="230" y="520" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="RU7" edge="1" parent="1" source="12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;dashed=1;" target="D7" value="&amp;lt;&amp;lt;return&amp;gt;&amp;gt;">
+        <mxCell id="99" edge="1" parent="1" source="47" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="32" value="returns">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="770" />
-              <mxPoint x="770" />
+              <mxPoint x="780" y="330" />
+              <mxPoint x="720" y="330" />
+              <mxPoint x="720" y="322" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="RU8" edge="1" parent="1" source="12" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;dashed=1;" target="D8" value="&amp;lt;&amp;lt;return&amp;gt;&amp;gt;">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="RU9" edge="1" parent="1" source="19_4" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="D3" value="&amp;lt;&amp;lt;return&amp;gt;&amp;gt;">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="RU10" edge="1" parent="1" source="D3" style="rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;dashed=1;" target="D5" value="&amp;lt;&amp;lt;has&amp;gt;&amp;gt;">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="RU11" edge="1" parent="1" source="D5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=1;endArrow=open;endFill=0;dashed=1;" target="D1" value="&amp;lt;&amp;lt;has&amp;gt;&amp;gt;">
+        <mxCell id="100" edge="1" parent="1" source="47" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="39" value="returns">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="1860" y="380" />
-              <mxPoint x="1860" y="380" />
+              <mxPoint x="900" y="450" />
+              <mxPoint x="900" y="450" />
             </Array>
           </mxGeometry>
+        </mxCell>
+        <mxCell id="101" edge="1" parent="1" source="47" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="43" value="returns">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1350" y="580" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="102" edge="1" parent="1" source="11" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=0;endArrow=open;endFill=0;" target="14" value="contains">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="103" edge="1" parent="1" source="47" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="64" value="uses">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="25" y="640" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="104" edge="1" parent="1" source="47" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="71" value="uses">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1360" y="860" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="105" edge="1" parent="1" source="47" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="78" value="uses">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1030" y="810" />
+              <mxPoint x="1030" y="810" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="106" edge="1" parent="1" source="64" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="81" value="uses">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="310" y="1059" />
+              <mxPoint x="310" y="1059" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="107" edge="1" parent="1" source="71" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="81" value="uses">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1120" y="1059" />
+              <mxPoint x="1120" y="1059" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="108" edge="1" parent="1" source="81" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;html=1;rounded=0;strokeWidth=2;strokeColor=#000000;fontSize=14;fontColor=#000000;startSize=16;endSize=16;dashed=1;endArrow=open;endFill=0;" target="87" value="manages">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
