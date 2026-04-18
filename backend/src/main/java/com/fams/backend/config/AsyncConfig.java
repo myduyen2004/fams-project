@@ -54,4 +54,18 @@ public class AsyncConfig {
     public Executor dashboardExecutor() {
         return Executors.newVirtualThreadPerTaskExecutor();
     }
+
+    @Bean(name = "plagiarismExecutor")
+    public Executor plagiarismExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(8);
+        executor.setMaxPoolSize(32);
+        executor.setQueueCapacity(2000);
+        executor.setThreadNamePrefix("plagiarism-index-");
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(30);
+        executor.initialize();
+        return executor;
+    }
 }

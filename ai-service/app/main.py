@@ -52,13 +52,14 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max for image uploads
 
 # Register blueprints
-from app.api.v1 import v1_bp, face_bp
+from app.api.v1 import v1_bp, face_bp, plagiarism_bp
 
 # Register v1 API blueprints
 app.register_blueprint(v1_bp)
 
 # Also register face_bp at root level for backward compatibility
 app.register_blueprint(face_bp)
+app.register_blueprint(plagiarism_bp)
 
 @app.before_request
 def log_request_info():

@@ -38,6 +38,9 @@ public interface AssignmentSubmissionService {
             String title, String description, LocalDateTime dueDate,
             List<String> referenceUrls, List<String> referenceNames);
 
+    AssignmentResponse updatePlagiarismThresholds(Long assignmentId, Long lecturerId,
+            Double textThreshold, Double imageThreshold);
+
     /**
      * Gửi thông báo nhắc nhở sinh viên trước hạn nộp 1 ngày.
      * Được gọi bởi AssignmentReminderScheduler.

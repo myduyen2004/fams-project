@@ -362,7 +362,7 @@ public class AuthService implements UserDetailsService {
         String key = "login_failures:" + username;
         Long failures = redisTemplate.opsForValue().increment(key);
         redisTemplate.expire(key, 30, java.util.concurrent.TimeUnit.MINUTES);
-        
+
         if (failures != null && failures >= 5) {
             systemLogService.logBruteForceWarning(username, failures.intValue());
         } else {

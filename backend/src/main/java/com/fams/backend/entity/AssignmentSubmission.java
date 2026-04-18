@@ -77,6 +77,14 @@ public class AssignmentSubmission {
     @Column(nullable = false)
     private LocalDateTime submittedAt;
 
+    // Ngưỡng đạo văn (summary)
+    @Column(name = "plagiarism_percent")
+    private Integer plagiarismPercent;
+
+    @Column(name = "plagiarism_status", length = 20)
+    @Builder.Default
+    private String plagiarismStatus = "NOT_CHECKED";
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

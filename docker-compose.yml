@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     container_name: fams-postgres
     ports:
       - "5432:5432"
@@ -69,6 +69,13 @@ services:
       - DB_PASSWORD=postgres123
       - DB_PORT=5432
       - GROQ_API_KEY=${GROQ_API_KEY}
+      - COHERE_API_KEY=${COHERE_API_KEY}
+      - COHERE_EMBED_MODEL=${COHERE_EMBED_MODEL:-embed-multilingual-v3.0}
+      - COHERE_EMBED_DIM=${COHERE_EMBED_DIM:-1024}
+      - JINA_API_KEY=${JINA_API_KEY}
+      - JINA_IMAGE_EMBED_MODEL=${JINA_IMAGE_EMBED_MODEL:-jina-clip-v2}
+      - JINA_IMAGE_EMBED_DIM=${JINA_IMAGE_EMBED_DIM:-1024}
+      - GROQ_COMMENT_MODEL=${GROQ_COMMENT_MODEL:-llama-3.1-8b-instant}
     networks:
       - fams-network
     healthcheck:

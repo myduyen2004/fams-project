@@ -75,6 +75,15 @@ public class Assignment {
     @Column(name = "reference_name", length = 1000)
     private String referenceName;
 
+    // Ngưỡng đạo văn theo bài tập (mặc định: text >= 70%, image >= 95%)
+    @Column(name = "plagiarism_text_threshold", nullable = false)
+    @Builder.Default
+    private Double plagiarismTextThreshold = 0.70d;
+
+    @Column(name = "plagiarism_image_threshold", nullable = false)
+    @Builder.Default
+    private Double plagiarismImageThreshold = 0.95d;
+
     // Đã gửi thông báo nhắc nhở trước hạn nộp chưa
     @Column(name = "reminder_sent", nullable = false)
     @Builder.Default
