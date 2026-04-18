@@ -1,9 +1,10 @@
+import { useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
 
 interface ConfirmModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   title: string;
   message: string;
   confirmLabel?: string;
@@ -23,7 +24,22 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   type = 'info',
   isLoading = false
 }) => {
+  const [isConfirming, setIsConfirming] = useState(false);
+
   if (!isOpen) return null;
+
+  const isBusy = isLoading || isConfirming;
+
+  const handleConfirm = async () => {
+    if (isBusy) return;
+
+    setIsConfirming(true);
+    try {
+      await Promise.resolve(onConfirm());
+    } finally {
+      setIsConfirming(false);
+    }
+  };
 
   const getStyles = () => {
     switch (type) {
@@ -53,7 +69,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       {/* Backdrop with blur */}
       <div
         className="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm transition-opacity duration-300"
-        onClick={isLoading ? undefined : onClose}
+        onClick={isBusy ? undefined : onClose}
       />
 
       {/* Modal Content */}
@@ -65,7 +81,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
               {title}
             </h3>
           </div>
-          {!isLoading && (
+          {!isBusy && (
             <button
               onClick={onClose}
               className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
@@ -88,7 +104,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             {cancelLabel && (
               <button
                 onClick={onClose}
-                disabled={isLoading}
+                disabled={isBusy}
                 className="flex-1 px-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700 transition-all duration-200 disabled:opacity-50"
               >
                 {cancelLabel}
@@ -96,12 +112,12 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             )}
             {confirmLabel && (
               <button
-                onClick={onConfirm}
-                disabled={isLoading}
+                onClick={handleConfirm}
+                disabled={isBusy}
                 className={`flex-1 px-4 py-2.5 rounded-xl text-white font-semibold shadow-lg active:scale-95 transition-all duration-200 ${styles.buttonBg} disabled:opacity-70 flex items-center justify-center gap-2`}
               >
-                {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-                {isLoading ? 'Đang xử lý...' : confirmLabel}
+                {isBusy && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isBusy ? 'Đang xử lý...' : confirmLabel}
               </button>
             )}
           </div>

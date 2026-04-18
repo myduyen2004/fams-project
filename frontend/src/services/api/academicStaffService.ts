@@ -24,6 +24,7 @@ export interface ScheduleRequestResponse {
     status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'REVOKED';
     statusLabel: string; // Tiếng Việt
     approverName?: string;
+    approverAvatar?: string;
     createdAt: string;
     approvedAt?: string;
     approverNote?: string;
