@@ -3,6 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft,
     CheckCircle,
+    XCircle,
+    Clock,
+    Mail,
     Loader2,
     BookOpen,
     GraduationCap,
@@ -211,36 +214,66 @@ export const StudentRequestDetailPage = () => {
                             </h3>
 
                             <div className="space-y-8 relative before:absolute before:left-5 before:top-2 before:bottom-2 before:w-px before:bg-gray-100 dark:before:bg-zinc-800">
-                                {request.approverName && (
+                                {request.status !== 'PENDING' && (
                                     <div className="relative pl-12">
-                                        <div className="absolute left-0 top-0 w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-100 dark:border-emerald-800 flex items-center justify-center text-emerald-600 z-10 shadow-sm overflow-hidden">
+                                        <div className={`absolute left-0 top-0 w-10 h-10 rounded-2xl flex items-center justify-center z-10 shadow-sm overflow-hidden border-2 ${
+                                            request.status === 'APPROVED' 
+                                            ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 border-emerald-100 dark:border-emerald-800' 
+                                            : 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 border-rose-100 dark:border-rose-800'
+                                        }`}>
                                             {request.approverAvatar ? (
                                                 <img src={request.approverAvatar} alt="avatar" className="w-full h-full object-cover" />
                                             ) : (
-                                                <CheckCircle size={18} />
+                                                request.status === 'APPROVED' ? <CheckCircle size={18} /> : <XCircle size={18} />
                                             )}
                                         </div>
-                                        <div className="bg-emerald-50/30 dark:bg-emerald-900/10 p-5 rounded-2xl border border-emerald-50 dark:border-emerald-900/20">
+                                        <div className={`p-5 rounded-2xl border ${
+                                            request.status === 'APPROVED'
+                                            ? 'bg-emerald-50/30 dark:bg-emerald-900/10 border-emerald-50 dark:border-emerald-900/20'
+                                            : 'bg-rose-50/30 dark:bg-rose-900/10 border-rose-50 dark:border-rose-900/20'
+                                        }`}>
                                             <div className="flex items-center justify-between mb-2">
-                                                <p className="font-bold text-sm text-gray-900 dark:text-white uppercase tracking-wide">{request.approverName}</p>
-                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{dayjs(request.approvedAt).format('DD/MM/YYYY - HH:mm')}</span>
+                                                <p className="font-bold text-sm text-gray-900 dark:text-white uppercase tracking-wide">
+                                                    {request.approverName || 'Phòng Đào Tạo'}
+                                                </p>
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                                    {request.approvedAt ? dayjs(request.approvedAt).format('DD/MM/YYYY - HH:mm') : '---'}
+                                                </span>
                                             </div>
+                                            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">
+                                                {request.status === 'APPROVED' ? 'Đã phê duyệt yêu cầu' : 'Đã từ chối yêu cầu'}
+                                            </p>
                                             <p className="text-sm text-gray-600 dark:text-zinc-400 italic font-medium">
-                                                "{request.approverNote || 'Đã phê duyệt yêu cầu học thuật này.'}"
+                                                "{request.approverNote || (request.status === 'APPROVED' ? 'Đã phê duyệt yêu cầu học thuật này.' : 'Đã từ chối yêu cầu học thuật này.')}"
                                             </p>
                                         </div>
                                     </div>
                                 )}
 
+                                {request.status === 'PENDING' && (
+                                    <div className="relative pl-12">
+                                        <div className="absolute left-0 top-0 w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-900/20 text-amber-600 border-2 border-amber-100 dark:border-amber-800 flex items-center justify-center z-10 shadow-sm animate-pulse">
+                                            <Clock size={18} />
+                                        </div>
+                                        <div className="bg-amber-50/30 dark:bg-amber-900/10 p-5 rounded-2xl border border-amber-50 dark:border-amber-900/20">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <p className="font-bold text-sm text-gray-900 dark:text-white uppercase tracking-wide">Hệ thống</p>
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Đang chờ</span>
+                                            </div>
+                                            <p className="text-xs font-bold text-amber-600 uppercase tracking-widest">Đang chờ bạn xử lý</p>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="relative pl-12">
-                                    <div className="absolute left-0 top-0 w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-100 dark:border-blue-800 flex items-center justify-center text-blue-600 z-10 shadow-sm font-bold text-sm overflow-hidden">
+                                    <div className="absolute left-0 top-0 w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-100 dark:border-blue-800 flex items-center justify-center text-blue-600 z-10 shadow-sm overflow-hidden">
                                         {request.studentAvatar ? (
                                             <img src={request.studentAvatar} alt="avatar" className="w-full h-full object-cover" />
                                         ) : (
-                                            <span>{request.studentName?.charAt(0).toUpperCase()}</span>
+                                            <span className="font-bold text-sm">{request.studentName?.charAt(0).toUpperCase()}</span>
                                         )}
                                     </div>
-                                    <div className="p-5 rounded-2xl bg-gray-50/50 dark:bg-zinc-800/30 border border-gray-100 dark:border-zinc-800">
+                                    <div className="p-5 rounded-2xl bg-gray-50/50 dark:bg-zinc-800/30 border border-gray-100 dark:border-zinc-800 transition-colors hover:border-blue-200">
                                         <div className="flex items-center justify-between mb-2">
                                             <p className="font-bold text-sm text-gray-900 dark:text-white uppercase tracking-wide">{request.studentName}</p>
                                             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{dayjs(request.createdAt).format('DD/MM/YYYY - HH:mm')}</span>
@@ -255,45 +288,64 @@ export const StudentRequestDetailPage = () => {
                     {/* Sidebar (Right) */}
                     <div className="space-y-6">
                         {/* Student Info */}
-                        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800">
-                            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-6">Thông tin sinh viên</h3>
-                            <div className="flex flex-col items-center mb-6">
-                                <div className="w-20 h-20 rounded-2xl bg-fpt-orange/10 flex items-center justify-center text-fpt-orange text-2xl font-bold border-2 border-fpt-orange/20 overflow-hidden mb-3 shadow-lg">
-                                    {request.studentAvatar ? (
-                                        <img src={request.studentAvatar} alt="avatar" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <span>{request.studentName?.charAt(0).toUpperCase()}</span>
-                                    )}
+                        <div className="bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-zinc-800 transition-all hover:shadow-md">
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-8">Thông tin sinh viên</h3>
+                            
+                            <div className="flex flex-col items-center mb-8">
+                                <div className="relative group">
+                                    <div className="w-24 h-24 rounded-3xl bg-fpt-orange/10 flex items-center justify-center text-fpt-orange text-3xl font-bold border-2 border-fpt-orange/20 overflow-hidden mb-4 shadow-xl transition-transform group-hover:scale-105 duration-300">
+                                        {request.studentAvatar ? (
+                                            <img src={request.studentAvatar} alt="avatar" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <span>{request.studentName?.charAt(0).toUpperCase()}</span>
+                                        )}
+                                    </div>
+                                    <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-emerald-500 border-4 border-white dark:border-zinc-900 rounded-full flex items-center justify-center text-white">
+                                        <CheckCircle size={14} />
+                                    </div>
                                 </div>
-                                <h4 className="text-lg font-bold text-gray-900 dark:text-white">{request.studentName}</h4>
-                                <p className="text-sm font-mono text-gray-500">{request.studentCode}</p>
+                                <h4 className="text-xl font-black text-gray-900 dark:text-white mb-1 text-center">{request.studentName}</h4>
+                                <p className="text-sm font-mono font-bold text-fpt-orange bg-orange-50 dark:bg-orange-900/20 px-4 py-1 rounded-full border border-orange-100 dark:border-orange-900/30">
+                                    {request.studentCode}
+                                </p>
                             </div>
 
-                            <div className="space-y-4 pt-6 border-t border-gray-100 dark:border-zinc-800">
-                                <div className="flex justify-between items-center text-sm">
-                                    <div className="flex items-center gap-2 text-gray-500">
-                                        <GraduationCap size={14} />
-                                        Ngành
+                            <div className="space-y-4 pt-8 border-t border-gray-100 dark:border-zinc-800">
+                                <div className="flex items-center gap-4 text-sm group/item">
+                                    <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-zinc-800/50 flex items-center justify-center text-gray-400 group-hover/item:text-fpt-orange transition-colors">
+                                        <GraduationCap size={18} />
                                     </div>
-                                    <span className="font-semibold text-gray-900 dark:text-white">{request.studentMajor || '---'}</span>
-                                </div>
-                                <div className="flex justify-between items-center text-sm">
-                                    <div className="flex items-center gap-2 text-gray-500">
-                                        <BookOpen size={14} />
-                                        Chuyên ngành
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Lớp học - Ngành</span>
+                                        <span className="font-bold text-gray-900 dark:text-white">
+                                            {request.className ? `${request.className} - ` : ''}{request.studentMajor || '---'}
+                                        </span>
                                     </div>
-                                    <span className="font-semibold text-gray-900 dark:text-white">{request.studentSpecialization || '---'}</span>
                                 </div>
-                                <div className="flex justify-between items-center text-sm">
-                                    <div className="flex items-center gap-2 text-gray-500">
-                                        <GraduationCap size={14} />
-                                        Chuyên ngành hẹp
+                                
+                                <div className="flex items-center gap-4 text-sm group/item">
+                                    <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-zinc-800/50 flex items-center justify-center text-gray-400 group-hover/item:text-fpt-orange transition-colors">
+                                        <BookOpen size={18} />
                                     </div>
-                                    <span className="font-semibold text-gray-900 dark:text-white">{request.studentSubSpecialization || '---'}</span>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Chuyên ngành</span>
+                                        <span className="font-bold text-gray-900 dark:text-white">
+                                            {request.studentSpecialization || '---'} 
+                                            {request.studentSubSpecialization ? ` (${request.studentSubSpecialization})` : ''}
+                                        </span>
+                                    </div>
                                 </div>
-                                <div className="flex flex-col gap-1 text-sm">
-                                    <span className="text-gray-500">Email:</span>
-                                    <span className="font-semibold text-fpt-orange break-all">{request.studentEmail || '---'}</span>
+
+                                <div className="flex items-center gap-4 text-sm group/item">
+                                    <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-zinc-800/50 flex items-center justify-center text-gray-400 group-hover/item:text-fpt-orange transition-colors">
+                                        <Mail size={18} />
+                                    </div>
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Email liên hệ</span>
+                                        <span className="font-bold text-fpt-orange truncate overflow-hidden" title={request.studentEmail}>
+                                            {request.studentEmail || '---'}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>

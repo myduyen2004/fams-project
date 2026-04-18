@@ -305,13 +305,13 @@ public class ExamGradeService {
         }
 
         // Calculate statistics based on the final (potentially filtered) list
-        // Update: Only calculate stats for students in classes that have submitted grades
+        // Update: Only calculate stats for students in classes that have submitted
+        // grades
         Map<String, Boolean> classSubmissionStatus = classSections.stream()
                 .collect(Collectors.toMap(
                         com.fams.backend.entity.ClassSection::getClassName,
                         cs -> cs.getGradesSubmitted() != null ? cs.getGradesSubmitted() : false,
-                        (existing, replacement) -> existing
-                ));
+                        (existing, replacement) -> existing));
 
         List<ExamStudentGradeRow> submittedStudents = finalStudentRows.stream()
                 .filter(row -> classSubmissionStatus.getOrDefault(row.getClassName(), false))
@@ -538,25 +538,32 @@ public class ExamGradeService {
             int validCount = 0;
             int errorCount = 0;
 
+            // BATCH OPTIMIZATION: Fetch all components and grades upfront
+            List<GradeComponent> allCourseComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId());
+            Map<Long, Double> currentWeightsMap = allCourseComponents.stream()
+                .filter(gc -> !gc.getIsResit() && gc.getType() != GradeComponent.GradeType.RESIT)
+                .collect(Collectors.toMap(GradeComponent::getId, GradeComponent::getWeight));
+
+            List<StudentGrade> allGradesInCourse = studentGradeRepository.findByCourseAndSemester(courseCode, semesterCode);
+            Map<Long, Map<Long, Double>> enrollmentToGradesMap = allGradesInCourse.stream()
+                .collect(Collectors.groupingBy(
+                    sg -> sg.getEnrollment().getId(),
+                    Collectors.toMap(sg -> sg.getGradeComponent().getId(), StudentGrade::getScore, (a, b) -> a)
+                ));
+
             // Find data rows (skip first row which is header)
             for (int i = 1; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
                 if (row == null)
                     continue;
 
-                // Check if row matches expected format (column indices might vary, but assuming
-                // MSSV is always col 1)
-                // Actually, let's look for MSSV column too if we want to be super robust, but
-                // for now assuming std format
-                // Export format: STT(0), MSSV(1), Name(2), Class(3)
-
                 Cell mssvCell = row.getCell(1);
                 String studentCode = getCellStringValue(mssvCell);
                 if (studentCode.isEmpty())
-                    continue; // Skip empty rows
+                    continue;
 
-                String studentName = getCellStringValue(row.getCell(2)); // Column C = Họ tên
-                String className = getCellStringValue(row.getCell(3)); // Column D = Lớp
+                String studentName = getCellStringValue(row.getCell(2));
+                String className = getCellStringValue(row.getCell(3));
 
                 Map<String, Object> rowData = new HashMap<>();
                 rowData.put("rowNumber", i + 1);
@@ -564,7 +571,6 @@ public class ExamGradeService {
                 rowData.put("studentName", studentName);
                 rowData.put("className", className);
 
-                // Validate student exists
                 Enrollment enrollment = enrollmentMap.get(studentCode.toLowerCase());
                 boolean hasError = false;
                 String errorMsg = null;
@@ -574,31 +580,69 @@ public class ExamGradeService {
                     hasError = true;
                 }
 
-                // Parse grades using the column map
-                Map<Long, Double> grades = new HashMap<>();
-
+                Map<Long, Double> providedGrades = new HashMap<>();
                 for (Map.Entry<Integer, GradeComponent> entry : colToComponent.entrySet()) {
                     int colIdx = entry.getKey();
                     GradeComponent component = entry.getValue();
-
                     Cell cell = row.getCell(colIdx);
                     Double score = getCellDoubleValue(cell);
-
                     if (score != null) {
                         if (score < 0 || score > 10) {
                             errorMsg = "Điểm " + component.getName() + " phải từ 0-10";
                             hasError = true;
                         } else {
-                            grades.put(component.getId(), score);
+                            providedGrades.put(component.getId(), score);
                         }
                     }
                 }
-                rowData.put("grades", grades);
+                rowData.put("grades", providedGrades);
 
-                // Only check submission status if there are grades to import
-                if (!hasError && !grades.isEmpty() && !Boolean.TRUE.equals(enrollment.getClassSection().getGradesSubmitted())) {
+                if (!hasError && !providedGrades.isEmpty()
+                        && !Boolean.TRUE.equals(enrollment.getClassSection().getGradesSubmitted())) {
                     errorMsg = "Lớp học chưa nộp điểm thành phần";
                     hasError = true;
+                }
+
+                if (!hasError && !providedGrades.isEmpty()) {
+                    if ("RESIT".equalsIgnoreCase(type)) {
+                        if (!Boolean.TRUE.equals(enrollment.getClassSection().getGradesPublished())) {
+                            errorMsg = "Chưa công bố điểm thi (FE), chưa được thi lại";
+                            hasError = true;
+                        } else if (Boolean.TRUE.equals(enrollment.getClassSection().getResitGradesPublished())) {
+                            errorMsg = "Điểm thi lại đã được công bố, không thể sửa";
+                            hasError = true;
+                        } else {
+                            // Use pre-fetched grades
+                            Map<Long, Double> currentScoresMap = enrollmentToGradesMap.getOrDefault(enrollment.getId(), new HashMap<>());
+                            Double currentAverage = GradeCalculator.calculateAverage(currentScoresMap, currentWeightsMap);
+
+                            boolean hasFailedExam = false;
+                            boolean hasZeroScore = false;
+                            for (GradeComponent gc : allCourseComponents) {
+                                if (gc.getType() == GradeComponent.GradeType.FINAL_EXAM) {
+                                    Double score = currentScoresMap.get(gc.getId());
+                                    if (score != null && score < 4.0) {
+                                        hasFailedExam = true;
+                                    }
+                                }
+                                
+                                if (!Boolean.TRUE.equals(gc.getIsResit()) && gc.getType() != GradeComponent.GradeType.RESIT) {
+                                    Double score = currentScoresMap.get(gc.getId());
+                                    if (score != null && score <= 0.0) {
+                                        hasZeroScore = true;
+                                    }
+                                }
+                            }
+
+                            if (currentAverage != null && currentAverage >= 5.0 && !hasFailedExam && !hasZeroScore) {
+                                errorMsg = "Sinh viên đã ĐẠT (" + String.format("%.1f", currentAverage) + "), không được thi lại";
+                                hasError = true;
+                            }
+                        }
+                    } else if (Boolean.TRUE.equals(enrollment.getClassSection().getGradesPublished())) {
+                        errorMsg = "Điểm thi đã được công bố, không thể nhập thêm";
+                        hasError = true;
+                    }
                 }
 
                 if (errorMsg != null) {
@@ -608,7 +652,7 @@ public class ExamGradeService {
                 if (hasError) {
                     errorCount++;
                     rowData.put("status", "ERROR");
-                } else if (grades.isEmpty()) {
+                } else if (providedGrades.isEmpty()) {
                     rowData.put("status", "SKIP");
                 } else {
                     validCount++;
@@ -690,9 +734,31 @@ public class ExamGradeService {
                 }
             }
 
+            // BATCH OPTIMIZATION: Fetch all components and grades upfront
+            List<GradeComponent> allCourseComponents = gradeComponentRepository.findByCourseIdOrderById(course.getId());
+            Map<Long, Double> currentWeightsMap = allCourseComponents.stream()
+                    .filter(gc -> !gc.getIsResit() && gc.getType() != GradeComponent.GradeType.RESIT)
+                    .collect(Collectors.toMap(GradeComponent::getId, GradeComponent::getWeight));
+
+            List<StudentGrade> allGradesInCourse = studentGradeRepository.findByCourseAndSemester(courseCode, semesterCode);
+            Map<Long, Map<Long, StudentGrade>> enrollmentToGradeObjectsMap = allGradesInCourse.stream()
+                    .collect(Collectors.groupingBy(
+                            sg -> sg.getEnrollment().getId(),
+                            Collectors.toMap(sg -> sg.getGradeComponent().getId(), sg -> sg, (a, b) -> a)));
+            
+            // Map for just scores for eligibility checks
+            Map<Long, Map<Long, Double>> enrollmentToScoresMap = allGradesInCourse.stream()
+                    .collect(Collectors.groupingBy(
+                            sg -> sg.getEnrollment().getId(),
+                            Collectors.toMap(sg -> sg.getGradeComponent().getId(), StudentGrade::getScore, (a, b) -> a)));
+
             int imported = 0;
             int updated = 0;
             int skipped = 0;
+
+            // Collect all grade changes here, flush with saveAll() at the end (UserServiceImpl pattern)
+            List<StudentGrade> gradesToInsert = new ArrayList<>();
+            List<StudentGrade> gradesToUpdate = new ArrayList<>();
 
             for (int i = 1; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
@@ -710,7 +776,6 @@ public class ExamGradeService {
                 }
 
                 // ---- Check visibility/editability guards ----
-                // Check if any grades are actually being provided first
                 boolean hasProvidedGrades = false;
                 for (int colIdx : colToComponent.keySet()) {
                     if (getCellDoubleValue(row.getCell(colIdx)) != null) {
@@ -720,55 +785,58 @@ public class ExamGradeService {
                 }
 
                 if (!hasProvidedGrades) {
-                    continue; // Skip rows with no data provided
+                    continue;
                 }
 
-                // Guard 0: General - Class must have submitted component grades first
                 if (!Boolean.TRUE.equals(enrollment.getClassSection().getGradesSubmitted())) {
                     skipped++;
                     continue;
                 }
 
                 if ("RESIT".equalsIgnoreCase(type)) {
-                    // Guard 1: Exam grades (EXAM type) must be published before allowing Resit
-                    // entry
                     if (!Boolean.TRUE.equals(enrollment.getClassSection().getGradesPublished())) {
                         skipped++;
-                        continue; // Cannot enter resit grades if exam grades are not published yet
+                        continue;
                     }
-                    // Guard 2: Resit grades already published – no more editing allowed
                     if (Boolean.TRUE.equals(enrollment.getClassSection().getResitGradesPublished())) {
                         skipped++;
                         continue;
                     }
-                    // Guard 3: Only allow resit for students whose current average is < 5.0
-                    // Calculate current average using ALL grade components for this enrollment
-                    List<StudentGrade> studentAllGrades = studentGradeRepository
-                            .findByEnrollmentIdIn(java.util.Collections.singletonList(enrollment.getId()));
-                    List<GradeComponent> allGradeComponents = gradeComponentRepository
-                            .findByCourseIdOrderById(courseRepository.findByCode(courseCode)
-                                     .orElseThrow(() -> new RuntimeException("Course not found")).getId());
-                    Map<Long, Double> currentScoresMap = studentAllGrades.stream()
-                            .collect(Collectors.toMap(sg -> sg.getGradeComponent().getId(), StudentGrade::getScore,
-                                    (a, b) -> a));
-                    Map<Long, Double> currentWeightsMap = allGradeComponents.stream()
-                            .filter(gc -> !gc.getIsResit())
-                            .collect(Collectors.toMap(GradeComponent::getId, GradeComponent::getWeight));
+
+                    // Use pre-fetched scores for eligibility
+                    Map<Long, Double> currentScoresMap = enrollmentToScoresMap.getOrDefault(enrollment.getId(),
+                            new HashMap<>());
+
+                    boolean hasFailedExam = false;
+                    boolean hasZeroScore = false;
+                    for (GradeComponent gc : allCourseComponents) {
+                        if (gc.getType() == GradeComponent.GradeType.FINAL_EXAM) {
+                            Double score = currentScoresMap.get(gc.getId());
+                            if (score != null && score < 4.0) {
+                                hasFailedExam = true;
+                            }
+                        }
+                        
+                        // Check for automatic fail due to 0 score in ANY mandatory component
+                        if (!Boolean.TRUE.equals(gc.getIsResit()) && gc.getType() != GradeComponent.GradeType.RESIT) {
+                            Double score = currentScoresMap.get(gc.getId());
+                            if (score != null && score <= 0.0) {
+                                hasZeroScore = true;
+                            }
+                        }
+                    }
 
                     Double currentAverage = GradeCalculator.calculateAverage(currentScoresMap, currentWeightsMap);
-                    if (currentAverage != null && currentAverage >= 5.0) {
-                        skipped++; // Student already passed – no resit allowed
+                    if (currentAverage != null && currentAverage >= 5.0 && !hasFailedExam && !hasZeroScore) {
+                        skipped++;
                         continue;
                     }
-                } else {
-                    // For EXAM type: skip if grades already published
-                    if (Boolean.TRUE.equals(enrollment.getClassSection().getGradesPublished())) {
-                        skipped++;
-                        continue; // Skip if published
-                    }
+                } else if (Boolean.TRUE.equals(enrollment.getClassSection().getGradesPublished())) {
+                    skipped++;
+                    continue;
                 }
 
-                // Parse and save grades using map
+                // Parse grades and collect changes - do NOT save yet
                 for (Map.Entry<Integer, GradeComponent> entry : colToComponent.entrySet()) {
                     int colIdx = entry.getKey();
                     GradeComponent component = entry.getValue();
@@ -777,20 +845,19 @@ public class ExamGradeService {
                     Double score = getCellDoubleValue(cell);
 
                     if (score != null && score >= 0 && score <= 10) {
-                        Optional<StudentGrade> existingGrade = studentGradeRepository
-                                .findByEnrollmentIdAndGradeComponentId(enrollment.getId(), component.getId());
+                        Map<Long, StudentGrade> studentGradeObjects = enrollmentToGradeObjectsMap.getOrDefault(enrollment.getId(), new HashMap<>());
+                        StudentGrade grade = studentGradeObjects.get(component.getId());
 
                         // Rounding logic for consistency
                         score = Math.round(score * 10.0) / 10.0;
 
-                        if (existingGrade.isPresent()) {
-                            StudentGrade grade = existingGrade.get();
+                        if (grade != null) {
                             // Check if score actually changed
                             if (Math.abs(grade.getScore() - score) > 0.01) {
                                 grade.setScore(score);
                                 grade.setGradedBy(grader);
                                 grade.setGradedAt(LocalDateTime.now());
-                                studentGradeRepository.save(grade);
+                                gradesToUpdate.add(grade);
                                 updated++;
                             }
                         } else {
@@ -802,11 +869,19 @@ public class ExamGradeService {
                                     .gradedAt(LocalDateTime.now())
                                     .attempt(1)
                                     .build();
-                            studentGradeRepository.save(newGrade);
+                            gradesToInsert.add(newGrade);
                             imported++;
                         }
                     }
                 }
+            }
+
+            // BATCH SAVE: Single DB round-trip for all changes (pattern from UserServiceImpl)
+            if (!gradesToInsert.isEmpty()) {
+                studentGradeRepository.saveAll(gradesToInsert);
+            }
+            if (!gradesToUpdate.isEmpty()) {
+                studentGradeRepository.saveAll(gradesToUpdate);
             }
 
             Map<String, Object> result = new HashMap<>();
@@ -949,15 +1024,16 @@ public class ExamGradeService {
                     classSection.setGradesPublished(true);
                     classSection.setGradesPublishedAt(LocalDateTime.now());
                     classSection.setGradesPublishedBy(publisher);
-                    
+
                     // Force submit if not already submitted
                     if (!Boolean.TRUE.equals(classSection.getGradesSubmitted())) {
                         classSection.setGradesSubmitted(true);
                         classSection.setGradesSubmittedAt(LocalDateTime.now());
                         classSection.setGradesSubmittedBy(publisher);
-                        log.info("Class {} auto-submitted by publisher {}", classSection.getClassName(), publisher.getUsername());
+                        log.info("Class {} auto-submitted by publisher {}", classSection.getClassName(),
+                                publisher.getUsername());
                     }
-                    
+
                     shouldPublish = true;
                 }
             }
@@ -1001,9 +1077,12 @@ public class ExamGradeService {
                         }
                     }
                 }
-                
+
                 if (!missingGradesMessages.isEmpty()) {
-                    throw new RuntimeException("Vui lòng nhập đầy đủ điểm cho tất cả sinh viên trước khi công bố. Còn thiếu " + missingGradesMessages.size() + " trường hợp (ví dụ: " + missingGradesMessages.get(0) + ").");
+                    throw new RuntimeException(
+                            "Vui lòng nhập đầy đủ điểm cho tất cả sinh viên trước khi công bố. Còn thiếu "
+                                    + missingGradesMessages.size() + " trường hợp (ví dụ: "
+                                    + missingGradesMessages.get(0) + ").");
                 }
 
                 classSectionRepository.save(classSection);
@@ -1063,8 +1142,27 @@ public class ExamGradeService {
                 .filter(gc -> !Boolean.TRUE.equals(gc.getIsResit()) && gc.getType() != GradeComponent.GradeType.RESIT)
                 .collect(java.util.stream.Collectors.toMap(GradeComponent::getId, GradeComponent::getWeight));
 
+        boolean hasFailedExam = false;
+        boolean hasZeroScore = false;
+        for (GradeComponent gc : allGradeComponents) {
+            if (gc.getType() == GradeComponent.GradeType.FINAL_EXAM) {
+                Double score = scoresForCalc.get(gc.getId());
+                if (score != null && score < 4.0) {
+                    hasFailedExam = true;
+                }
+            }
+            
+            // Check for automatic fail due to 0 score in ANY mandatory component
+            if (!Boolean.TRUE.equals(gc.getIsResit()) && gc.getType() != GradeComponent.GradeType.RESIT) {
+                Double score = scoresForCalc.get(gc.getId());
+                if (score != null && score <= 0.0) {
+                    hasZeroScore = true;
+                }
+            }
+        }
+
         Double currentAverage = GradeCalculator.calculateAverage(scoresForCalc, weightsForCalc);
 
-        return currentAverage != null && currentAverage < 5.0;
+        return currentAverage != null && (currentAverage < 5.0 || hasFailedExam || hasZeroScore);
     }
 }

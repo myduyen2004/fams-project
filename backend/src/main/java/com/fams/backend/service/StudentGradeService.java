@@ -195,20 +195,22 @@ public class StudentGradeService {
      */
     @Transactional
     public void updateGrade(UpdateGradeRequest request, Long updatedById) {
+        User updatedBy = userRepository.findById(updatedById)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
         Enrollment enrollment = enrollmentRepository.findById(request.getEnrollmentId())
                 .orElseThrow(() -> new RuntimeException("Enrollment not found"));
 
         // Check if grades are already submitted
         ClassSection classSection = enrollment.getClassSection();
-        if (Boolean.TRUE.equals(classSection.getGradesSubmitted())) {
+        boolean isAcademicStaff = User.UserRole.ACADEMIC_STAFF.equals(updatedBy.getRole());
+        
+        if (!isAcademicStaff && Boolean.TRUE.equals(classSection.getGradesSubmitted())) {
             throw new RuntimeException("Không thể chỉnh sửa điểm. Điểm đã được gửi cho phòng đào tạo.");
         }
 
         GradeComponent gradeComponent = gradeComponentRepository.findById(request.getGradeComponentId())
                 .orElseThrow(() -> new RuntimeException("Grade component not found"));
-
-        User updatedBy = userRepository.findById(updatedById)
-                .orElseThrow(() -> new RuntimeException("User not found"));
 
         StudentGrade grade = studentGradeRepository
                 .findByEnrollmentIdAndGradeComponentId(enrollment.getId(), gradeComponent.getId())
@@ -257,13 +259,15 @@ public class StudentGradeService {
         List<StudentGrade> toSave = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
 
+        boolean isAcademicStaff = User.UserRole.ACADEMIC_STAFF.equals(updatedBy.getRole());
+
         for (UpdateGradeRequest req : requests) {
             Enrollment enrollment = enrollmentMap.get(req.getEnrollmentId());
             if (enrollment == null)
                 continue;
 
             // Check if grades are already submitted
-            if (Boolean.TRUE.equals(enrollment.getClassSection().getGradesSubmitted())) {
+            if (!isAcademicStaff && Boolean.TRUE.equals(enrollment.getClassSection().getGradesSubmitted())) {
                 throw new RuntimeException("Không thể chỉnh sửa điểm. Điểm đã được gửi cho phòng đào tạo.");
             }
 
@@ -350,7 +354,7 @@ public class StudentGradeService {
         notificationService.notifyStudentsGradesPublished(studentsToNotify, course, "COMPONENT", submittedBy);
 
         // --- ADDED: Send Notification to Academic Staff ---
-        notificationService.notifyAcademicStaffGradesSubmitted(className, submittedBy, course);
+        notificationService.notifyAcademicStaffGradesSubmitted(classSection, submittedBy);
     }
 
     /**

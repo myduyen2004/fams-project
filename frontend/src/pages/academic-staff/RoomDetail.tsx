@@ -419,7 +419,7 @@ export const RoomDetail: React.FC = () => {
                             </div>
                         ) : (
                             /* 3D View - OrbitControls với góc nhìn giới hạn */
-                            <div className="w-full h-full min-h-[400px]">
+                            <div className="w-full h-full min-h-[400px] relative">
                                 <Canvas shadows>
                                     <React.Suspense fallback={null}>
                                         <Classroom3D rows={rows} tablesPerRow={tablesPerRow} isComputerLab={isComputerLab} />
@@ -427,7 +427,7 @@ export const RoomDetail: React.FC = () => {
                                 </Canvas>
 
                                 {/* 3D Mode Instructions */}
-                                <div className="absolute bottom-4 left-4 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm rounded-lg px-3 py-2 text-xs text-gray-600 dark:text-gray-300">
+                                <div className="absolute bottom-6 left-6 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm rounded-lg px-3 py-2 text-xs text-gray-600 dark:text-gray-300 shadow-sm border border-gray-100 dark:border-zinc-700">
                                     Kéo chuột trái để xoay • Cuộn chuột để zoom • Kéo chuột phải để di chuyển
                                 </div>
                             </div>
@@ -437,23 +437,25 @@ export const RoomDetail: React.FC = () => {
                     {/* Legend - Removed specific statuses since visual is unified */}
                 </div>
 
-                {/* Sidebar - Room Info */}
-                <div className="w-80 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-6 overflow-y-auto">
-                    <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Thông tin {room.name}</h2>
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1
-                            ${isComputerLab ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300' :
-                                isClassroom ? 'bg-orange-100 dark:bg-orange-900 text-orange-600 dark:text-orange-300' :
-                                    'bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400'}
-                        `}>
-                            <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isComputerLab ? 'bg-blue-500' : isClassroom ? 'bg-orange-500' : 'bg-emerald-500'}`}></span>
-                            TRỰC TIẾP
-                        </span>
-                    </div>
+                {/* Sidebar - Room Info - Hidden in 3D mode to prevent overlap and maximize view */}
+                {!is3DMode && (
+                    <div className="w-80 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-6 overflow-y-auto animate-in slide-in-from-right duration-300">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Thông tin {room.name}</h2>
+                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1
+                                ${isComputerLab ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300' :
+                                    isClassroom ? 'bg-orange-100 dark:bg-orange-900 text-orange-600 dark:text-orange-300' :
+                                        'bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400'}
+                            `}>
+                                <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isComputerLab ? 'bg-blue-500' : isClassroom ? 'bg-orange-500' : 'bg-emerald-500'}`}></span>
+                                TRỰC TIẾP
+                            </span>
+                        </div>
 
-                    {/* Room AP Assignment Component */}
-                    <RoomAPAssignment roomId={parseInt(id!)} />
-                </div>
+                        {/* Room AP Assignment Component */}
+                        <RoomAPAssignment roomId={parseInt(id!)} />
+                    </div>
+                )}
             </div>
         </AcademicStaffLayout>
     );
