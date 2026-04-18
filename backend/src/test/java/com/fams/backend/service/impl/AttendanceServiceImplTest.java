@@ -35,6 +35,14 @@ public class AttendanceServiceImplTest {
     private SystemLogService systemLogService;
     @Mock
     private ExcelExportService excelExportService;
+    @Mock
+    private StudentAttendanceRepository studentAttendanceRepository;
+    @Mock
+    private AttendanceConfigRepository configRepository;
+    @Mock
+    private SemesterRepository semesterRepository;
+    @Mock
+    private ClassSectionRepository classSectionRepository;
 
     @InjectMocks
     private AttendanceServiceImpl attendanceService;

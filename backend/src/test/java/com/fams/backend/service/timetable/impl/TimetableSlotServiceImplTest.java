@@ -63,6 +63,8 @@ public class TimetableSlotServiceImplTest {
         TimetableSlot slot = new TimetableSlot();
         slot.setId(101L);
         slot.setDate(date);
+        slot.setDayOfWeek(date.getDayOfWeek().getValue());
+        slot.setSlotNumber(1);
 
         Page<TimetableSlot> page = new PageImpl<>(Arrays.asList(slot));
         when(timetableSlotRepository.findAssignments(lecturerId, semesterCode, date, className, pageable))
@@ -180,6 +182,7 @@ public class TimetableSlotServiceImplTest {
             slot.setClassSection(classSection);
             slot.setRoom(room);
             slot.setDate(LocalDate.of(2026, 4, 16));
+            slot.setDayOfWeek(LocalDate.of(2026, 4, 16).getDayOfWeek().getValue());
             slot.setSlotNumber(2);
 
             request = TimetableDTO.UpdateSlotRequest.builder()
