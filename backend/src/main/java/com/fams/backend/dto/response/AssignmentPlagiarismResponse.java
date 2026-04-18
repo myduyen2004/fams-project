@@ -28,6 +28,10 @@ public class AssignmentPlagiarismResponse {
     private Integer originalityPercent;
     private Double probability;
     private Boolean plagiarized;
+    private Boolean plagiarizedText;
+    private Boolean plagiarizedImage;
+    private Double textThreshold;
+    private Double imageThreshold;
     private Integer comparedSubmissionCount;
     private Double textScore;
     private Double imageScore;
@@ -35,4 +39,10 @@ public class AssignmentPlagiarismResponse {
     private Double fileNameScore;
     private List<String> keySignals;
     private List<AssignmentPlagiarismMatchResponse> topMatches;
+    private List<AssignmentPlagiarismMatchResponse> topTextMatches;
+    private List<AssignmentPlagiarismMatchResponse> topImageMatches;
+    private String overallComment;
+    private Double indexCoverage;
+    private Integer pendingIndexedSubmissionCount;
+    private String coverageNote;
 }

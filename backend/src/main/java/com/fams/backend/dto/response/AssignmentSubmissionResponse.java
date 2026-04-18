@@ -46,4 +46,8 @@ public class AssignmentSubmissionResponse {
     private List<String> referenceNames;
 
     private Long timetableSlotId;
+
+    // Plagiarism summary
+    private Integer plagiarismPercent;
+    private String plagiarismStatus;
 }

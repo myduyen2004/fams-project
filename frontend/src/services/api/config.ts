@@ -8,7 +8,13 @@ const VITE_API_URL = import.meta.env.VITE_API_URL;
  */
 const ensureSecureUrl = (url: string) => {
     if (!url) return url;
-    const processed = url.trim().replace(/\/+$/, '');
+    let processed = url.trim().replace(/\/+$/, '');
+    // Prevent duplicated /api in API_URL when env var already includes it.
+    // Example: VITE_API_URL=https://example.com/api -> API_URL should still be
+    // https://example.com/api (not /api/api).
+    if (/\/api$/i.test(processed)) {
+        processed = processed.replace(/\/api$/i, '');
+    }
     if (typeof window !== 'undefined' && window.location.protocol === 'https:' && processed.startsWith('http:')) {
         return processed.replace(/^http:/, 'https:');
     }

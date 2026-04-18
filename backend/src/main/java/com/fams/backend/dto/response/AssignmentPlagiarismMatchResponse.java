@@ -14,9 +14,17 @@ import java.util.List;
 @AllArgsConstructor
 public class AssignmentPlagiarismMatchResponse {
 
+    public enum MatchCategory {
+        PLAGIARISM_SUSPECT,
+        TOPIC_SIMILAR,
+        LOW_SIMILARITY
+    }
+
     private Long submissionId;
     private String studentCode;
     private String studentName;
+    private String className;
+    private String assignmentTitle;
     private Integer plagiarismPercent;
     private Double probability;
     private Double textScore;
@@ -27,4 +35,13 @@ public class AssignmentPlagiarismMatchResponse {
     private String notePreview;
     private List<String> fileNames;
     private List<String> sharedSignals;
+    private MatchCategory matchCategory;
+    private Boolean topicSimilarOnly;
+    private Boolean textSuspect;
+    private Boolean imageSuspect;
+    private String matchComment;
+    private List<String> reasonTags;
+    private String reasonSummary;
+    private List<PlagiarismEvidenceItemResponse> evidenceTop3;
+    private List<String> comparedFileLinks;
 }

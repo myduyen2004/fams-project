@@ -65,6 +65,30 @@ public class AssignmentPlagiarismCheck {
     @Column(name = "plagiarized")
     private Boolean plagiarized;
 
+    @Column(name = "plagiarized_text")
+    private Boolean plagiarizedText;
+
+    @Column(name = "plagiarized_image")
+    private Boolean plagiarizedImage;
+
+    @Column(name = "text_threshold")
+    private Double textThreshold;
+
+    @Column(name = "image_threshold")
+    private Double imageThreshold;
+
+    @Column(name = "overall_comment", columnDefinition = "TEXT")
+    private String overallComment;
+
+    @Column(name = "match_comment", columnDefinition = "TEXT")
+    private String matchComment;
+
+    @Column(name = "reason_tags", length = 500)
+    private String reasonTags;
+
+    @Column(name = "index_coverage")
+    private Double indexCoverage;
+
     @Column(name = "target_text_length")
     private Integer targetTextLength;
 

@@ -33,9 +33,10 @@ RUN mvn package -DskipTests -T 1C -B
 # ========================================
 # STAGE 2: Runtime Stage
 # ========================================
-# GIẢI THÍCH: Stage này chỉ chứa JRE và file .jar, không có Maven
-# Alpine Linux rất nhẹ (~5MB), giúp image nhỏ gọn
-FROM eclipse-temurin:21-jre-alpine
+# GIẢI THÍCH: Dùng lại base image đã resolve ở stage build để tránh pull thêm
+# khi môi trường bị lỗi DNS tới Docker Hub.
+# Lưu ý: image runtime sẽ nặng hơn so với JRE-only.
+FROM maven:3.9.6-eclipse-temurin-21-alpine
 
 # Install curl để health check
 RUN apk add --no-cache curl

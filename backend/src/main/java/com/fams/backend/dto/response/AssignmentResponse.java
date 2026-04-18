@@ -34,6 +34,8 @@ public class AssignmentResponse {
     private String referenceName;
     private java.util.List<String> referenceUrls;
     private java.util.List<String> referenceNames;
+    private Double plagiarismTextThreshold;
+    private Double plagiarismImageThreshold;
 
     // Trạng thái
     private String status;
