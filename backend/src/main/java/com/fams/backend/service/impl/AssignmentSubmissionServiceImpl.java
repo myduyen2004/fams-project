@@ -13,6 +13,8 @@ import com.fams.backend.entity.*;
 import com.fams.backend.repository.*;
 import com.fams.backend.service.AssignmentSubmissionService;
 import com.fams.backend.service.UserNotificationService;
+import com.fams.backend.service.plagiarism.AssignmentVectorIndexingService;
+import com.fams.backend.service.plagiarism.AssignmentVectorPlagiarismService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -60,6 +62,8 @@ import java.util.zip.ZipOutputStream;
 @Slf4j
 public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionService {
 
+    private static final double DEFAULT_TEXT_THRESHOLD = 0.70d;
+    private static final double DEFAULT_IMAGE_THRESHOLD = 0.95d;
     private static final String INTERNAL_PLAGIARISM_MODEL = "logistic-regression-v1";
     private static final String PLAGIARISM_MODEL_RESOURCE = "ml/assignment-plagiarism-model.json";
     private static final int MIN_TEXT_ANALYSIS_LENGTH = 40;
@@ -74,6 +78,8 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
     private final TimetableSlotRepository timetableSlotRepository;
     private final UserNotificationService notificationService;
     private final ObjectMapper objectMapper;
+    private final AssignmentVectorIndexingService assignmentVectorIndexingService;
+    private final AssignmentVectorPlagiarismService assignmentVectorPlagiarismService;
 
     private volatile PlagiarismModelConfig plagiarismModelConfig;
 
@@ -307,18 +313,24 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
         submission = submissionRepository.save(submission);
         log.info("Assignment submitted: assignment={}, student={}", assignmentId, studentId);
 
+        try {
+            assignmentVectorIndexingService.enqueueSubmissionIndexing(submission.getId());
+        } catch (Exception e) {
+            log.warn("Failed to enqueue vector indexing for submission {}: {}", submission.getId(), e.getMessage());
+        }
+
         User lecturer = assignment.getCreatedBy();
         if (lecturer != null) {
             String title = "Sinh viên đã nộp bài: " + assignment.getTitle();
             String content = student.getFullName() + " đã nộp bài cho bài tập \""
-                + assignment.getTitle() + "\" (lớp " + className + ").";
+                    + assignment.getTitle() + "\" (lớp " + className + ").";
             notificationService.createNotification(
-                lecturer,
-                title,
-                content,
-                Notification.NotificationType.SUBMISSION,
-                "/lecturer/assignments",
-                student);
+                    lecturer,
+                    title,
+                    content,
+                    Notification.NotificationType.SUBMISSION,
+                    "/lecturer/assignments",
+                    student);
         }
 
         return toSubmissionResponse(submission);
@@ -364,12 +376,14 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
                             .assignmentDueDate(assignment.getDueDate())
                             .referenceUrl(assignment.getReferenceUrl())
                             .referenceName(assignment.getReferenceName())
-                            .referenceUrls(assignment.getReferenceUrl() != null && !assignment.getReferenceUrl().isEmpty()
-                                ? Arrays.asList(assignment.getReferenceUrl().split("\\|\\|\\|"))
-                                : Collections.emptyList())
-                            .referenceNames(assignment.getReferenceName() != null && !assignment.getReferenceName().isEmpty()
-                                ? Arrays.asList(assignment.getReferenceName().split("\\|\\|\\|"))
-                                : Collections.emptyList())
+                            .referenceUrls(
+                                    assignment.getReferenceUrl() != null && !assignment.getReferenceUrl().isEmpty()
+                                            ? Arrays.asList(assignment.getReferenceUrl().split("\\|\\|\\|"))
+                                            : Collections.emptyList())
+                            .referenceNames(
+                                    assignment.getReferenceName() != null && !assignment.getReferenceName().isEmpty()
+                                            ? Arrays.asList(assignment.getReferenceName().split("\\|\\|\\|"))
+                                            : Collections.emptyList())
                             .build());
                 }
             }
@@ -405,11 +419,11 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
                 .referenceUrl(assignment.getReferenceUrl())
                 .referenceName(assignment.getReferenceName())
                 .referenceUrls(assignment.getReferenceUrl() != null && !assignment.getReferenceUrl().isEmpty()
-                    ? Arrays.asList(assignment.getReferenceUrl().split("\\|\\|\\|"))
-                    : Collections.emptyList())
+                        ? Arrays.asList(assignment.getReferenceUrl().split("\\|\\|\\|"))
+                        : Collections.emptyList())
                 .referenceNames(assignment.getReferenceName() != null && !assignment.getReferenceName().isEmpty()
-                    ? Arrays.asList(assignment.getReferenceName().split("\\|\\|\\|"))
-                    : Collections.emptyList())
+                        ? Arrays.asList(assignment.getReferenceName().split("\\|\\|\\|"))
+                        : Collections.emptyList())
                 .build();
     }
 
@@ -432,12 +446,12 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
             // Chi lay sinh vien dang ky dung lop nay
             List<Enrollment> enrollments = enrollmentRepository.findByClassSectionClassName(cs.getClassName());
 
-                List<User> recipients = enrollments.stream()
+            List<User> recipients = enrollments.stream()
                     .map(Enrollment::getStudent)
                     .filter(java.util.Objects::nonNull)
                     .toList();
 
-                notificationService.createBatchNotification(
+            notificationService.createBatchNotification(
                     recipients,
                     title,
                     content,
@@ -465,12 +479,12 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
 
             List<Enrollment> enrollments = enrollmentRepository.findByClassSectionClassName(cs.getClassName());
 
-                List<User> recipients = enrollments.stream()
+            List<User> recipients = enrollments.stream()
                     .map(Enrollment::getStudent)
                     .filter(java.util.Objects::nonNull)
                     .toList();
 
-                notificationService.createBatchNotification(
+            notificationService.createBatchNotification(
                     recipients,
                     title,
                     content,
@@ -520,11 +534,17 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
                 .referenceUrl(assignment.getReferenceUrl())
                 .referenceName(assignment.getReferenceName())
                 .referenceUrls(assignment.getReferenceUrl() != null && !assignment.getReferenceUrl().isEmpty()
-                    ? Arrays.asList(assignment.getReferenceUrl().split("\\|\\|\\|"))
-                    : Collections.emptyList())
+                        ? Arrays.asList(assignment.getReferenceUrl().split("\\|\\|\\|"))
+                        : Collections.emptyList())
                 .referenceNames(assignment.getReferenceName() != null && !assignment.getReferenceName().isEmpty()
-                    ? Arrays.asList(assignment.getReferenceName().split("\\|\\|\\|"))
-                    : Collections.emptyList())
+                        ? Arrays.asList(assignment.getReferenceName().split("\\|\\|\\|"))
+                        : Collections.emptyList())
+                .plagiarismTextThreshold(assignment.getPlagiarismTextThreshold() != null
+                        ? assignment.getPlagiarismTextThreshold()
+                        : DEFAULT_TEXT_THRESHOLD)
+                .plagiarismImageThreshold(assignment.getPlagiarismImageThreshold() != null
+                        ? assignment.getPlagiarismImageThreshold()
+                        : DEFAULT_IMAGE_THRESHOLD)
                 .status(assignment.getStatus().name())
                 .totalSubmissions(totalSubmissions)
                 .totalStudents(totalStudents)
@@ -583,11 +603,13 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
                 .referenceUrl(assignment.getReferenceUrl())
                 .referenceName(assignment.getReferenceName())
                 .referenceUrls(assignment.getReferenceUrl() != null && !assignment.getReferenceUrl().isEmpty()
-                    ? Arrays.asList(assignment.getReferenceUrl().split("\\|\\|\\|"))
-                    : Collections.emptyList())
+                        ? Arrays.asList(assignment.getReferenceUrl().split("\\|\\|\\|"))
+                        : Collections.emptyList())
                 .referenceNames(assignment.getReferenceName() != null && !assignment.getReferenceName().isEmpty()
-                    ? Arrays.asList(assignment.getReferenceName().split("\\|\\|\\|"))
-                    : Collections.emptyList())
+                        ? Arrays.asList(assignment.getReferenceName().split("\\|\\|\\|"))
+                        : Collections.emptyList())
+                .plagiarismPercent(submission.getPlagiarismPercent())
+                .plagiarismStatus(submission.getPlagiarismStatus())
                 .build();
     }
 
@@ -645,6 +667,33 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
 
         assignmentRepository.save(assignment);
         log.info("Assignment updated: id={}, lecturer={}", assignmentId, lecturerId);
+        return toAssignmentResponse(assignment);
+    }
+
+    @Override
+    public AssignmentResponse updatePlagiarismThresholds(Long assignmentId, Long lecturerId,
+            Double textThreshold, Double imageThreshold) {
+        Assignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new RuntimeException("Bài tập không tồn tại"));
+
+        ClassSection cs = assignment.getClassSection();
+        if (!cs.getLecturer().getId().equals(lecturerId)) {
+            throw new RuntimeException("Bạn không phải giảng viên của lớp này");
+        }
+
+        if (textThreshold == null || imageThreshold == null) {
+            throw new RuntimeException("Vui lòng cung cấp đủ ngưỡng văn bản và hình ảnh");
+        }
+        if (textThreshold < 0.0d || textThreshold > 1.0d) {
+            throw new RuntimeException("Ngưỡng văn bản phải nằm trong khoảng 0 đến 1");
+        }
+        if (imageThreshold < 0.0d || imageThreshold > 1.0d) {
+            throw new RuntimeException("Ngưỡng hình ảnh phải nằm trong khoảng 0 đến 1");
+        }
+
+        assignment.setPlagiarismTextThreshold(textThreshold);
+        assignment.setPlagiarismImageThreshold(imageThreshold);
+        assignmentRepository.save(assignment);
         return toAssignmentResponse(assignment);
     }
 
@@ -742,86 +791,9 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
 
     @Override
     @Transactional
-    public AssignmentPlagiarismResponse checkSubmissionPlagiarism(Long assignmentId, Long submissionId, Long lecturerId) {
-        Assignment assignment = assignmentRepository.findById(assignmentId)
-                .orElseThrow(() -> new RuntimeException("Bài tập không tồn tại: " + assignmentId));
-
-        ClassSection classSection = assignment.getClassSection();
-        if (!classSection.getLecturer().getId().equals(lecturerId)) {
-            throw new RuntimeException("Bạn không phải giảng viên của lớp này");
-        }
-
-        AssignmentSubmission targetSubmission = submissionRepository.findById(submissionId)
-                .orElseThrow(() -> new RuntimeException("Bài nộp không tồn tại: " + submissionId));
-
-        if (!targetSubmission.getAssignment().getId().equals(assignmentId)) {
-            throw new RuntimeException("Bài nộp không thuộc bài tập này");
-        }
-
-        if (targetSubmission.getStatus() != AssignmentSubmission.SubmissionStatus.SUBMITTED) {
-            throw new RuntimeException("Chỉ có thể kiểm tra đạo văn cho bài đã nộp");
-        }
-
-        Long courseId = classSection.getCourse().getId();
-        String courseCode = classSection.getCourse().getCode();
-
-        List<AssignmentSubmission> candidates = submissionRepository.findSubmittedByCourseId(courseId).stream()
-                .filter(sub -> !sub.getId().equals(submissionId))
-                .toList();
-
-        HttpClient httpClient = HttpClient.newHttpClient();
-        Map<Long, SubmissionArtifactFeatures> artifactCache = new HashMap<>();
-
-        List<AssignmentPlagiarismMatchResponse> topMatches = candidates.stream()
-                .map(candidate -> toPlagiarismMatch(targetSubmission, candidate, httpClient, artifactCache))
-                .sorted(Comparator.comparing(AssignmentPlagiarismMatchResponse::getPlagiarismPercent).reversed())
-                .limit(5)
-                .toList();
-
-        SubmissionArtifactFeatures targetArtifacts = getSubmissionArtifacts(targetSubmission, httpClient, artifactCache);
-
-        AssignmentPlagiarismMatchResponse strongest = topMatches.isEmpty() ? null : topMatches.get(0);
-        int plagiarismPercent = strongest != null ? strongest.getPlagiarismPercent() : 0;
-        int originalityPercent = Math.max(0, 100 - plagiarismPercent);
-        double probability = strongest != null ? safeDouble(strongest.getProbability()) : 0.0d;
-
-        AssignmentPlagiarismResponse response = AssignmentPlagiarismResponse.builder()
-                .assignmentId(assignment.getId())
-                .submissionId(targetSubmission.getId())
-                .assignmentTitle(assignment.getTitle())
-                .className(classSection.getClassName())
-                .courseCode(classSection.getCourse().getCode())
-                .courseName(classSection.getCourse().getName())
-                .studentCode(targetSubmission.getStudent().getCode())
-                .studentName(targetSubmission.getStudent().getFullName())
-                .scope("internal-course:" + courseCode)
-                .model(getPlagiarismModelConfig().getModelName())
-                .strategy("text + image + metadata features -> logistic regression decision (course scope)")
-                .plagiarismPercent(plagiarismPercent)
-                .originalityPercent(originalityPercent)
-                .probability(round4(probability))
-                .plagiarized(probability >= getPlagiarismModelConfig().getThreshold())
-                .comparedSubmissionCount(candidates.size())
-                .textScore(strongest != null ? safeDouble(strongest.getTextScore()) : 0.0d)
-                .imageScore(strongest != null ? safeDouble(strongest.getImageScore()) : 0.0d)
-                .metadataScore(strongest != null ? safeDouble(strongest.getMetadataScore()) : 0.0d)
-                .fileNameScore(strongest != null ? safeDouble(strongest.getFileNameScore()) : 0.0d)
-                .keySignals(strongest != null
-                        ? strongest.getSharedSignals()
-                        : List.of("Không tìm thấy bài tương tự trong cùng môn học"))
-                .topMatches(topMatches)
-                .build();
-
-        persistPlagiarismCheckLogs(
-                assignmentId,
-                lecturerId,
-                response,
-                targetArtifacts,
-                topMatches,
-                artifactCache
-        );
-
-        return response;
+    public AssignmentPlagiarismResponse checkSubmissionPlagiarism(Long assignmentId, Long submissionId,
+            Long lecturerId) {
+        return assignmentVectorPlagiarismService.checkPlagiarism(assignmentId, submissionId, lecturerId);
     }
 
     private String sanitizeFileName(String name) {
@@ -841,16 +813,14 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
         double textScore = computeTextScore(targetArtifacts.analysisText(), candidateArtifacts.analysisText());
         double fileNameScore = computeFileNameScore(targetArtifacts.fileNames(), candidateArtifacts.fileNames());
         double imageScore = computeImageScore(targetArtifacts.imageHashes(), candidateArtifacts.imageHashes());
-        double metadataScore = computeMetadataScore(target, candidate, targetArtifacts.fileNames(), candidateArtifacts.fileNames());
+        double metadataScore = computeMetadataScore(target, candidate, targetArtifacts.fileNames(),
+                candidateArtifacts.fileNames());
 
         PlagiarismModelConfig config = getPlagiarismModelConfig();
         double probability = sigmoid(
                 config.getBias()
                         + config.weight("textScore", 3.05d) * textScore
-                        + config.weight("fileNameScore", 1.35d) * fileNameScore
-                        + config.weight("imageScore", 1.10d) * imageScore
-                        + config.weight("metadataScore", 1.40d) * metadataScore
-        );
+                        + config.weight("imageScore", 1.10d) * imageScore);
 
         return AssignmentPlagiarismMatchResponse.builder()
                 .submissionId(candidate.getId())
@@ -860,12 +830,11 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
                 .probability(round4(probability))
                 .textScore(round4(textScore))
                 .imageScore(round4(imageScore))
-                .metadataScore(round4(metadataScore))
-                .fileNameScore(round4(fileNameScore))
                 .submittedAt(candidate.getSubmittedAt())
                 .notePreview(trimPreview(candidateArtifacts.previewText()))
                 .fileNames(candidateArtifacts.fileNames())
-                .sharedSignals(buildSharedSignals(target, candidate, textScore, imageScore, metadataScore, fileNameScore))
+                .sharedSignals(
+                        buildSharedSignals(target, candidate, textScore, imageScore, metadataScore, fileNameScore))
                 .build();
     }
 
@@ -969,17 +938,8 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
         } else if (textScore >= 0.60d) {
             signals.add("Ghi chú bài làm có mức tương đồng cao");
         }
-
-        if (fileNameScore >= 0.80d) {
-            signals.add("Tên file đính kèm trùng hoặc rất giống");
-        }
-
         if (imageScore >= 0.80d) {
             signals.add("File hình ảnh đính kèm có tín hiệu trùng");
-        }
-
-        if (metadataScore >= 0.55d) {
-            signals.add("Metadata nộp bài gần nhau bất thường");
         }
 
         if (target.getSubmittedAt() != null && candidate.getSubmittedAt() != null) {
@@ -1173,6 +1133,12 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
                         .probability(response.getProbability())
                         .plagiarismPercent(response.getPlagiarismPercent())
                         .plagiarized(response.getPlagiarized())
+                        .plagiarizedText(response.getPlagiarizedText())
+                        .plagiarizedImage(response.getPlagiarizedImage())
+                        .textThreshold(response.getTextThreshold())
+                        .imageThreshold(response.getImageThreshold())
+                        .overallComment(response.getOverallComment())
+                        .indexCoverage(response.getIndexCoverage())
                         .targetTextLength(targetArtifacts.analysisText().length())
                         .comparedTextLength(0)
                         .contentBased(true)
@@ -1194,17 +1160,35 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
                             .fileNameScore(match.getFileNameScore())
                             .probability(match.getProbability())
                             .plagiarismPercent(match.getPlagiarismPercent())
-                            .plagiarized(match.getProbability() != null && match.getProbability() >= getPlagiarismModelConfig().getThreshold())
+                            .plagiarized(match.getProbability() != null
+                                    && match.getProbability() >= getPlagiarismModelConfig().getThreshold())
+                            .plagiarizedText(match.getTextSuspect())
+                            .plagiarizedImage(match.getImageSuspect())
+                            .textThreshold(response.getTextThreshold())
+                            .imageThreshold(response.getImageThreshold())
+                            .overallComment(response.getOverallComment())
+                            .matchComment(match.getMatchComment())
+                            .reasonTags(match.getReasonTags() != null ? String.join(",", match.getReasonTags()) : null)
+                            .indexCoverage(response.getIndexCoverage())
                             .targetTextLength(targetArtifacts.analysisText().length())
-                            .comparedTextLength(comparedArtifacts != null ? comparedArtifacts.analysisText().length() : 0)
+                            .comparedTextLength(
+                                    comparedArtifacts != null ? comparedArtifacts.analysisText().length() : 0)
                             .contentBased(true)
                             .build());
                 }
             }
 
             plagiarismCheckRepository.saveAll(logs);
+
+            // Update submission summary
+            submissionRepository.findById(response.getSubmissionId()).ifPresent(sub -> {
+                sub.setPlagiarismPercent(response.getPlagiarismPercent());
+                sub.setPlagiarismStatus((response.getPlagiarized() != null && response.getPlagiarized()) ? "SUSPECT" : "SAFE");
+                submissionRepository.save(sub);
+            });
         } catch (Exception e) {
-            log.warn("Failed to persist plagiarism audit logs for submission {}: {}", response.getSubmissionId(), e.getMessage());
+            log.warn("Failed to persist plagiarism audit logs for submission {}: {}", response.getSubmissionId(),
+                    e.getMessage());
         }
     }
 
@@ -1215,7 +1199,8 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
         return cache.computeIfAbsent(submission.getId(), ignored -> extractSubmissionArtifacts(submission, httpClient));
     }
 
-    private SubmissionArtifactFeatures extractSubmissionArtifacts(AssignmentSubmission submission, HttpClient httpClient) {
+    private SubmissionArtifactFeatures extractSubmissionArtifacts(AssignmentSubmission submission,
+            HttpClient httpClient) {
         List<String> fileUrls = splitTriplePipe(submission.getFileUrl());
         List<String> fileNames = splitTriplePipe(submission.getFileName());
         List<String> textParts = new ArrayList<>();
@@ -1255,8 +1240,7 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
                 analysisText,
                 trimPreview(analysisText.isBlank() ? safeText(submission.getNote()) : analysisText),
                 fileNames,
-                imageHashes
-        );
+                imageHashes);
     }
 
     private byte[] downloadFileBytes(HttpClient httpClient, String url) throws IOException, InterruptedException {

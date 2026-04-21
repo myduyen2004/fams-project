@@ -6,6 +6,7 @@ import com.fams.backend.dto.response.ExamGradeOverviewResponse.ExamStudentGradeR
 import com.fams.backend.entity.*;
 import com.fams.backend.repository.*;
 import com.fams.backend.util.GradeCalculator;
+import com.fams.backend.service.impl.AlertService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -37,6 +38,7 @@ public class ExamGradeService {
     private final UserRepository userRepository;
     private final ClassSectionRepository classSectionRepository;
     private final NotificationService notificationService;
+    private final AlertService alertService;
 
     // Grade types for exam page (ME, FE, PE)
     private static final List<GradeComponent.GradeType> EXAM_TYPES = Arrays.asList(
@@ -894,6 +896,18 @@ public class ExamGradeService {
             log.info("Imported exam grades for course {} semester {}: {} new, {} updated, {} skipped",
                     courseCode, semesterCode, imported, updated, skipped);
 
+            // --- ADDED: Suspicious Import Alert ---
+            if (imported + updated > enrollments.size() * 0.5) {
+                alertService.createAlert(
+                    "Nhập điểm thi khối lượng lớn",
+                    String.format("%s đã nhập/cập nhật %d điểm thi cho môn %s (%s).",
+                        grader.getFullName(), (imported + updated), course.getName(), semesterCode),
+                    Alert.AlertLevel.INFO,
+                    Alert.AlertType.GRADE,
+                    grader
+                );
+            }
+
             return result;
         }
     }
@@ -1099,6 +1113,23 @@ public class ExamGradeService {
                     .map(Enrollment::getStudent)
                     .collect(Collectors.toList());
             notificationService.notifyStudentsGradesPublished(studentsToNotify, course, type, publisher);
+
+            // --- ADDED: Suspicious Publication Alert ---
+            try {
+                ExamGradeOverviewResponse overview = getExamGradeOverview(courseCode, semesterCode, type, "ADMIN");
+                if (overview.getPassRate() < 50.0 && overview.getTotalStudents() > 10) {
+                    alertService.createAlert(
+                        "Tỉ lệ trượt thi cao bất thường",
+                        String.format("Môn %s (%s) có tỉ lệ đạt chỉ %.1f%% sau khi công bố điểm %s.",
+                            course.getName(), semesterCode, overview.getPassRate(), type),
+                        Alert.AlertLevel.WARNING,
+                        Alert.AlertType.GRADE,
+                        publisher
+                    );
+                }
+            } catch (Exception e) {
+                log.error("Failed to create exam grade publication alert", e);
+            }
         }
 
         Map<String, Object> result = new HashMap<>();

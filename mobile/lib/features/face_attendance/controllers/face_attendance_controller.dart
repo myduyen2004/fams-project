@@ -83,8 +83,7 @@ class FaceAttendanceController extends GetxController {
   bool _isDetecting = false;
   CameraImage? _lastCameraImage;
   Timer? _challengeTimer;
-  DateTime? _challengeStartTime;
-  
+    
   // Liveness Logic
   bool _eyeOpenState = true; // For blink detection
   bool _nodState = false;   // For nod detection (down phase)

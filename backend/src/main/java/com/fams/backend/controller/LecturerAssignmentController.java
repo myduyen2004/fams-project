@@ -91,6 +91,20 @@ public class LecturerAssignmentController {
         return ResponseEntity.ok(response);
     }
 
+    @PutMapping("/{id}/plagiarism-config")
+    public ResponseEntity<AssignmentResponse> updatePlagiarismConfig(
+            @PathVariable Long id,
+            @RequestBody Map<String, Double> body,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long lecturerId = getUserId(userDetails);
+        AssignmentResponse response = assignmentSubmissionService.updatePlagiarismThresholds(
+                id,
+                lecturerId,
+                body.get("textThreshold"),
+                body.get("imageThreshold"));
+        return ResponseEntity.ok(response);
+    }
+
     /**
      * Lấy danh sách bài tập theo lớp
      */

@@ -39,6 +39,8 @@ pydantic==2.5.3                # Validate data
 python-dotenv==1.0.0           # Đọc .env file
 marshmallow==3.20.1            # Serialize/Deserialize data
 requests==2.31.0               # HTTP requests
+pypdf==5.4.0
+python-docx==1.1.2
 
 # Security
 python-jose[cryptography]==3.3.0  # JWT tokens

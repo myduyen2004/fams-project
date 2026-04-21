@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-import '../../../core/constants/app_colors.dart';
 import '../controllers/chat_controller.dart';
 import '../models/chat_models.dart';
 import 'chat_detail_screen.dart';

@@ -86,7 +86,6 @@ class AttendanceDetailScreen extends StatelessWidget {
                   int absent = detail.slots.where((s) => s.status == 'ABSENT').length;
                   int future = detail.slots.where((s) => s.status == 'FUTURE').length;
                   int total = detail.slots.length;
-                  int attendedTotal = present + absent;
 
                   return ListView(
                     padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
@@ -323,7 +322,7 @@ class AttendanceDetailScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 4.h),
                 Text(
-                  'Lecturer: ${slot.lecturerName ?? "N/A"}',
+                  'Lecturer: ${slot.lecturerName}',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w600,

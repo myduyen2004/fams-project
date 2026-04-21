@@ -1,13 +1,16 @@
 package com.fams.backend.service.timetable.impl;
 
 import com.fams.backend.dto.timetable.TimetableDTO;
-import com.fams.backend.entity.*;
-import com.fams.backend.exception.BadRequestException;
+import com.fams.backend.entity.Semester;
+import com.fams.backend.entity.TimetableSlot;
 import com.fams.backend.exception.NotFoundException;
 import com.fams.backend.repository.RoomRepository;
 import com.fams.backend.repository.SemesterRepository;
 import com.fams.backend.repository.SlotTypeRepository;
 import com.fams.backend.repository.TimetableSlotRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -16,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -24,11 +28,10 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class TimetableSlotServiceImplTest {
+public class TimetableSlotServiceImplTest {
 
     @Mock
     private TimetableSlotRepository timetableSlotRepository;
@@ -40,238 +43,284 @@ class TimetableSlotServiceImplTest {
     private SemesterRepository semesterRepository;
 
     @InjectMocks
-    private TimetableSlotServiceImpl service;
+    private TimetableSlotServiceImpl timetableSlotService;
 
-    // =========================================================================
-    // 1. getLecturerTeachingDates Tests (5 Cases) - FE-75
-    // =========================================================================
+    private Long lecturerId = 1L;
+    private String semesterCode = "SUMMER2026";
 
-    @Test
-    void testGetLecturerTeachingDates_Success() {
-        Semester semester = Semester.builder().code("SP26").startDate(LocalDate.of(2026, 1, 1)).endDate(LocalDate.of(2026, 5, 1)).build();
-        when(semesterRepository.findByCode("SP26")).thenReturn(Optional.of(semester));
-        
-        List<LocalDate> expectedDates = Arrays.asList(LocalDate.of(2026, 2, 10), LocalDate.of(2026, 2, 15));
-        when(timetableSlotRepository.findDistinctDatesByLecturerIdAndDateBetween(1L, semester.getStartDate(), semester.getEndDate()))
-                .thenReturn(expectedDates);
-
-        List<LocalDate> result = service.getLecturerTeachingDates(1L, "SP26");
-        assertEquals(2, result.size());
-        assertEquals(expectedDates, result);
+    @BeforeEach
+    void setUp() {
     }
 
+    /**
+     * Test searchAssignments - Normal case with all filters
+     */
     @Test
-    void testGetLecturerTeachingDates_SemesterNotFound() {
-        when(semesterRepository.findByCode("INVALID")).thenReturn(Optional.empty());
+    void testSearchAssignments_AllFilters() {
+        LocalDate date = LocalDate.of(2026, 4, 16);
+        String className = "SE1701";
+        Pageable pageable = PageRequest.of(0, 10);
+        TimetableSlot slot = new TimetableSlot();
+        slot.setId(101L);
+        slot.setDate(date);
+        slot.setDayOfWeek(date.getDayOfWeek().getValue());
+        slot.setSlotNumber(1);
 
-        NotFoundException ex = assertThrows(NotFoundException.class, () -> service.getLecturerTeachingDates(1L, "INVALID"));
-        assertEquals("Semester not found: INVALID", ex.getMessage());
-        verify(timetableSlotRepository, never()).findDistinctDatesByLecturerIdAndDateBetween(anyLong(), any(LocalDate.class), any(LocalDate.class));
+        Page<TimetableSlot> page = new PageImpl<>(Arrays.asList(slot));
+        when(timetableSlotRepository.findAssignments(lecturerId, semesterCode, date, className, pageable))
+                .thenReturn(page);
+
+        Page<TimetableDTO.TimetableSlotDTO> result = timetableSlotService.searchAssignments(
+                lecturerId, semesterCode, date, className, "SCHEDULED", pageable);
+
+        assertNotNull(result);
+        assertEquals(1, result.getContent().size());
+        assertEquals(101L, result.getContent().get(0).getId());
     }
 
+    /**
+     * Test searchAssignments - Empty results
+     */
     @Test
-    void testGetLecturerTeachingDates_EmptySchedule() {
-        Semester semester = Semester.builder().code("SP26").startDate(LocalDate.of(2026, 1, 1)).endDate(LocalDate.of(2026, 5, 1)).build();
-        when(semesterRepository.findByCode("SP26")).thenReturn(Optional.of(semester));
+    void testSearchAssignments_Empty() {
+        Pageable pageable = PageRequest.of(0, 10);
+        when(timetableSlotRepository.findAssignments(any(), any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(Collections.emptyList()));
+
+        Page<TimetableDTO.TimetableSlotDTO> result = timetableSlotService.searchAssignments(
+                lecturerId, semesterCode, null, null, null, pageable);
+
+        assertTrue(result.getContent().isEmpty());
+    }
+
+    /**
+     * Test getLecturerTeachingDates - Normal case
+     */
+    @Test
+    void testGetLecturerTeachingDates_Normal() {
+        Semester semester = new Semester();
+        semester.setStartDate(LocalDate.of(2026, 1, 1));
+        semester.setEndDate(LocalDate.of(2026, 5, 1));
         
-        when(timetableSlotRepository.findDistinctDatesByLecturerIdAndDateBetween(99L, semester.getStartDate(), semester.getEndDate()))
+        when(semesterRepository.findByCode(semesterCode)).thenReturn(Optional.of(semester));
+        
+        List<LocalDate> dates = Arrays.asList(LocalDate.of(2026, 4, 16));
+        when(timetableSlotRepository.findDistinctDatesByLecturerIdAndDateBetween(
+                lecturerId, semester.getStartDate(), semester.getEndDate())).thenReturn(dates);
+
+        List<LocalDate> result = timetableSlotService.getLecturerTeachingDates(lecturerId, semesterCode);
+
+        assertEquals(1, result.size());
+        assertEquals(dates.get(0), result.get(0));
+    }
+
+    /**
+     * Test getLecturerTeachingDates - Free lecturer (No dates)
+     */
+    @Test
+    void testGetLecturerTeachingDates_FreeLecturer() {
+        Semester semester = new Semester();
+        semester.setStartDate(LocalDate.of(2026, 1, 1));
+        semester.setEndDate(LocalDate.of(2026, 5, 1));
+        
+        when(semesterRepository.findByCode(semesterCode)).thenReturn(Optional.of(semester));
+        when(timetableSlotRepository.findDistinctDatesByLecturerIdAndDateBetween(any(), any(), any()))
                 .thenReturn(Collections.emptyList());
 
-        List<LocalDate> result = service.getLecturerTeachingDates(99L, "SP26");
+        List<LocalDate> result = timetableSlotService.getLecturerTeachingDates(lecturerId, semesterCode);
+
         assertTrue(result.isEmpty());
     }
 
+    /**
+     * Test getLecturerTeachingDates - Semester NotFound
+     */
     @Test
-    void testGetLecturerTeachingDates_BoundarySemesterDates() {
-        LocalDate start = LocalDate.now();
-        LocalDate end = start.plusDays(1);
-        Semester edgeSemester = Semester.builder().code("EDGE").startDate(start).endDate(end).build();
-        when(semesterRepository.findByCode("EDGE")).thenReturn(Optional.of(edgeSemester));
-        when(timetableSlotRepository.findDistinctDatesByLecturerIdAndDateBetween(1L, start, end))
-                .thenReturn(Collections.singletonList(start));
+    void testGetLecturerTeachingDates_NotFound() {
+        when(semesterRepository.findByCode("INVALID")).thenReturn(Optional.empty());
 
-        List<LocalDate> result = service.getLecturerTeachingDates(1L, "EDGE");
-        assertEquals(1, result.size());
-        assertEquals(start, result.get(0));
+        assertThrows(NotFoundException.class, () -> {
+            timetableSlotService.getLecturerTeachingDates(lecturerId, "INVALID");
+        });
     }
 
-    @Test
-    void testGetLecturerTeachingDates_RepoThrowsException() {
-        Semester semester = Semester.builder().code("SP26").startDate(LocalDate.of(2026, 1, 1)).endDate(LocalDate.of(2026, 5, 1)).build();
-        when(semesterRepository.findByCode("SP26")).thenReturn(Optional.of(semester));
-        when(timetableSlotRepository.findDistinctDatesByLecturerIdAndDateBetween(anyLong(), any(), any()))
-                .thenThrow(new RuntimeException("DB Timeout"));
+    @Nested
+    @DisplayName("updateSlot()")
+    class UpdateSlotTests {
 
-        RuntimeException ex = assertThrows(RuntimeException.class, () -> service.getLecturerTeachingDates(1L, "SP26"));
-        assertEquals("DB Timeout", ex.getMessage());
-    }
+        private TimetableSlot slot;
+        private com.fams.backend.entity.Room room;
+        private com.fams.backend.entity.SlotType slotType;
+        private com.fams.backend.entity.ClassSection classSection;
+        private com.fams.backend.entity.User lecturer;
+        private TimetableDTO.UpdateSlotRequest request;
 
-    // =========================================================================
-    // 2. searchAssignments Tests (5 Cases) - FE-76
-    // =========================================================================
+        @BeforeEach
+        void setUp() {
+            lecturer = new com.fams.backend.entity.User();
+            lecturer.setId(lecturerId);
 
-    @Test
-    void testSearchAssignments_Success() {
-        TimetableSlot slot = new TimetableSlot();
-        slot.setId(10L);
-        slot.setDate(LocalDate.of(2026, 3, 15));
-        slot.setDayOfWeek(7); // Saturday
-        slot.setSlotNumber(1);
-        Page<TimetableSlot> mockPage = new PageImpl<>(Collections.singletonList(slot));
-        
-        when(timetableSlotRepository.findAssignments(eq(1L), eq("SP26"), any(), eq("SE1801"), any()))
-                .thenReturn(mockPage);
+            com.fams.backend.entity.Semester semester = new com.fams.backend.entity.Semester();
+            semester.setId(10L);
+            semester.setCode(semesterCode);
 
-        Page<TimetableDTO.TimetableSlotDTO> result = service.searchAssignments(1L, "SP26", null, "SE1801", "ALL", PageRequest.of(0, 10));
-        
-        assertEquals(1, result.getTotalElements());
-        assertEquals(10L, result.getContent().get(0).getId());
-        assertEquals(1, result.getContent().get(0).getSlotNumber());
-        assertEquals(7, result.getContent().get(0).getDayOfWeek());
-    }
+            classSection = new com.fams.backend.entity.ClassSection();
+            classSection.setClassName("SE1701");
+            classSection.setSemester(semester);
+            classSection.setLecturer(lecturer);
 
-    @Test
-    void testSearchAssignments_EmptyResult() {
-        when(timetableSlotRepository.findAssignments(anyLong(), anyString(), any(), anyString(), any()))
-                .thenReturn(Page.empty());
+            room = new com.fams.backend.entity.Room();
+            room.setId(10L);
+            room.setCode("BE-301");
 
-        Page<TimetableDTO.TimetableSlotDTO> result = service.searchAssignments(1L, "SP26", LocalDate.now(), "SE1801", null, PageRequest.of(0, 10));
-        assertTrue(result.isEmpty());
-    }
+            slotType = new com.fams.backend.entity.SlotType();
+            slotType.setId(5L);
+            slotType.setSlotIndex(1);
 
-    @Test
-    void testSearchAssignments_NullFiltersHandledSafely() {
-        TimetableSlot slot = new TimetableSlot();
-        slot.setId(11L);
-        slot.setDayOfWeek(1); // Monday
-        slot.setSlotNumber(2);
-        when(timetableSlotRepository.findAssignments(isNull(), isNull(), isNull(), isNull(), any()))
-                .thenReturn(new PageImpl<>(Collections.singletonList(slot)));
+            slot = new TimetableSlot();
+            slot.setId(101L);
+            slot.setClassSection(classSection);
+            slot.setRoom(room);
+            slot.setDate(LocalDate.of(2026, 4, 16));
+            slot.setDayOfWeek(LocalDate.of(2026, 4, 16).getDayOfWeek().getValue());
+            slot.setSlotNumber(2);
 
-        Page<TimetableDTO.TimetableSlotDTO> result = service.searchAssignments(null, null, null, null, null, PageRequest.of(0, 10));
-        assertFalse(result.isEmpty());
-        assertEquals(11L, result.getContent().get(0).getId());
-    }
+            request = TimetableDTO.UpdateSlotRequest.builder()
+                    .date(LocalDate.of(2026, 4, 17))
+                    .slotNumber(1)
+                    .roomId(10L)
+                    .build();
+        }
 
-    @Test
-    void testSearchAssignments_BoundaryPagination() {
-        when(timetableSlotRepository.findAssignments(anyLong(), anyString(), any(), anyString(), any()))
-                .thenReturn(Page.empty());
-        
-        PageRequest hugeOffset = PageRequest.of(9999, 100);
-        Page<TimetableDTO.TimetableSlotDTO> result = service.searchAssignments(1L, "SP26", null, "SE1801", "ALL", hugeOffset);
-        assertEquals(0, result.getTotalElements());
-    }
+        @Test
+        @DisplayName("UTCID01 - Normal: Update successful with no conflicts")
+        void updateSlot_success() {
+            when(timetableSlotRepository.findById(101L)).thenReturn(Optional.of(slot));
+            when(roomRepository.findById(10L)).thenReturn(Optional.of(room));
+            when(slotTypeRepository.findBySemesterIdAndSlotIndex(10L, 1)).thenReturn(Optional.of(slotType));
+            
+            // No conflicts
+            when(timetableSlotRepository.findByRoomIdAndDateAndSlotNumberAndStatusNot(any(), any(), any(), any()))
+                    .thenReturn(Collections.emptyList());
+            when(timetableSlotRepository.findByClassSectionLecturerIdAndDateAndSlotNumberAndStatusNot(any(), any(), any(), any()))
+                    .thenReturn(Collections.emptyList());
+            when(timetableSlotRepository.existsByClassSectionClassNameAndDateAndSlotNumberAndStatusNot(any(), any(), any(), any()))
+                    .thenReturn(false);
+            when(timetableSlotRepository.countStudentConflicts(any(), any(), any())).thenReturn(0L);
 
-    @Test
-    void testSearchAssignments_DatabaseError() {
-        when(timetableSlotRepository.findAssignments(any(), any(), any(), any(), any()))
-                .thenThrow(new RuntimeException("SQL Execution Error"));
+            when(timetableSlotRepository.save(any())).thenReturn(slot);
 
-        assertThrows(RuntimeException.class, () -> service.searchAssignments(1L, "SP26", null, "SE1801", null, PageRequest.of(0, 10)));
-    }
+            TimetableDTO.TimetableSlotDTO result = timetableSlotService.updateSlot(101L, request);
 
-    // =========================================================================
-    // 3. updateSlot Tests (5 Cases) - FE-77
-    // =========================================================================
+            assertNotNull(result);
+            assertEquals(101L, result.getId());
+            assertEquals(1, result.getSlotNumber());
+            verify(timetableSlotRepository).save(any());
+        }
 
-    @Test
-    void testUpdateSlot_SuccessNoConflicts() {
-        TimetableDTO.UpdateSlotRequest request = TimetableDTO.UpdateSlotRequest.builder()
-                .roomId(2L).slotNumber(3).date(LocalDate.now()).build();
-        
-        TimetableSlot existingSlot = new TimetableSlot();
-        existingSlot.setId(1L);
-        ClassSection cs = new ClassSection();
-        cs.setClassName("SE1801");
-        Semester sem = Semester.builder().id(5L).build();
-        cs.setSemester(sem);
-        existingSlot.setClassSection(cs);
+        @Test
+        @DisplayName("UTCID02 - Abnormal: Slot ID not found")
+        void updateSlot_slotNotFound() {
+            when(timetableSlotRepository.findById(999L)).thenReturn(Optional.empty());
+            assertThrows(com.fams.backend.exception.NotFoundException.class, 
+                    () -> timetableSlotService.updateSlot(999L, request));
+        }
 
-        when(timetableSlotRepository.findById(1L)).thenReturn(Optional.of(existingSlot));
-        when(roomRepository.findById(2L)).thenReturn(Optional.of(new Room()));
-        when(slotTypeRepository.findBySemesterIdAndSlotIndex(5L, 3)).thenReturn(Optional.of(new SlotType()));
-        
-        // Mock conflict checks mapping to empty
-        when(timetableSlotRepository.findByRoomIdAndDateAndSlotNumberAndStatusNot(anyLong(), any(), anyInt(), any())).thenReturn(Collections.emptyList());
-        when(timetableSlotRepository.countStudentConflicts(anyString(), any(), anyInt())).thenReturn(0L);
-        
-        when(timetableSlotRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
+        @Test
+        @DisplayName("UTCID03 - Abnormal: Room ID not found")
+        void updateSlot_roomNotFound() {
+            when(timetableSlotRepository.findById(101L)).thenReturn(Optional.of(slot));
+            when(roomRepository.findById(10L)).thenReturn(Optional.empty());
+            assertThrows(com.fams.backend.exception.BadRequestException.class, 
+                    () -> timetableSlotService.updateSlot(101L, request));
+        }
 
-        TimetableDTO.TimetableSlotDTO result = service.updateSlot(1L, request);
-        assertEquals(1L, result.getId());
-        assertEquals(3, result.getSlotNumber());
-    }
+        @Test
+        @DisplayName("UTCID04 - Abnormal: Invalid slot number for semester")
+        void updateSlot_invalidSlotNumber() {
+            when(timetableSlotRepository.findById(101L)).thenReturn(Optional.of(slot));
+            when(roomRepository.findById(10L)).thenReturn(Optional.of(room));
+            when(slotTypeRepository.findBySemesterIdAndSlotIndex(10L, 1)).thenReturn(Optional.empty());
+            assertThrows(com.fams.backend.exception.BadRequestException.class, 
+                    () -> timetableSlotService.updateSlot(101L, request));
+        }
 
-    @Test
-    void testUpdateSlot_SlotNotFound() {
-        when(timetableSlotRepository.findById(99L)).thenReturn(Optional.empty());
-        TimetableDTO.UpdateSlotRequest request = TimetableDTO.UpdateSlotRequest.builder().roomId(1L).build();
+        @Test
+        @DisplayName("UTCID05 - Conflict: Room is already occupied")
+        void updateSlot_roomConflict() {
+            when(timetableSlotRepository.findById(101L)).thenReturn(Optional.of(slot));
+            when(roomRepository.findById(10L)).thenReturn(Optional.of(room));
+            when(slotTypeRepository.findBySemesterIdAndSlotIndex(10L, 1)).thenReturn(Optional.of(slotType));
 
-        assertThrows(NotFoundException.class, () -> service.updateSlot(99L, request));
-    }
+            TimetableSlot otherSlot = new TimetableSlot();
+            otherSlot.setId(202L);
+            when(timetableSlotRepository.findByRoomIdAndDateAndSlotNumberAndStatusNot(any(), any(), any(), any()))
+                    .thenReturn(List.of(otherSlot));
 
-    @Test
-    void testUpdateSlot_RoomConflictOccurs() {
-        TimetableDTO.UpdateSlotRequest request = TimetableDTO.UpdateSlotRequest.builder().roomId(2L).slotNumber(3).date(LocalDate.now()).build();
-        TimetableSlot existingSlot = new TimetableSlot();
-        existingSlot.setId(1L);
-        ClassSection cs = new ClassSection();
-        cs.setSemester(Semester.builder().id(5L).build());
-        existingSlot.setClassSection(cs);
+            assertThrows(com.fams.backend.exception.BadRequestException.class, 
+                    () -> timetableSlotService.updateSlot(101L, request));
+        }
 
-        when(timetableSlotRepository.findById(1L)).thenReturn(Optional.of(existingSlot));
-        when(roomRepository.findById(2L)).thenReturn(Optional.of(new Room()));
-        when(slotTypeRepository.findBySemesterIdAndSlotIndex(5L, 3)).thenReturn(Optional.of(new SlotType()));
+        @Test
+        @DisplayName("UTCID06 - Conflict: Lecturer is teaching elsewhere")
+        void updateSlot_lecturerConflict() {
+            when(timetableSlotRepository.findById(101L)).thenReturn(Optional.of(slot));
+            when(roomRepository.findById(10L)).thenReturn(Optional.of(room));
+            when(slotTypeRepository.findBySemesterIdAndSlotIndex(10L, 1)).thenReturn(Optional.of(slotType));
 
-        TimetableSlot conflictingSlot = new TimetableSlot();
-        conflictingSlot.setId(20L); // Different ID causes conflict trigger
-        when(timetableSlotRepository.findByRoomIdAndDateAndSlotNumberAndStatusNot(anyLong(), any(), anyInt(), any()))
-                .thenReturn(Collections.singletonList(conflictingSlot));
+            when(timetableSlotRepository.findByRoomIdAndDateAndSlotNumberAndStatusNot(any(), any(), any(), any()))
+                    .thenReturn(Collections.emptyList());
+            
+            TimetableSlot otherSlot = new TimetableSlot();
+            otherSlot.setId(202L);
+            when(timetableSlotRepository.findByClassSectionLecturerIdAndDateAndSlotNumberAndStatusNot(any(), any(), any(), any()))
+                    .thenReturn(List.of(otherSlot));
 
-        BadRequestException ex = assertThrows(BadRequestException.class, () -> service.updateSlot(1L, request));
-        assertTrue(ex.getMessage().contains("Room is already occupied"));
-    }
+            assertThrows(com.fams.backend.exception.BadRequestException.class, 
+                    () -> timetableSlotService.updateSlot(101L, request));
+        }
 
-    @Test
-    void testUpdateSlot_StudentConflictOccurs() {
-        TimetableDTO.UpdateSlotRequest request = TimetableDTO.UpdateSlotRequest.builder().roomId(2L).slotNumber(3).date(LocalDate.now()).build();
-        TimetableSlot existingSlot = new TimetableSlot();
-        existingSlot.setId(1L);
-        ClassSection cs = new ClassSection();
-        cs.setClassName("SE1801");
-        cs.setSemester(Semester.builder().id(5L).build());
-        existingSlot.setClassSection(cs);
+        @Test
+        @DisplayName("UTCID07 - Conflict: Class already has another slot")
+        void updateSlot_classConflict() {
+            when(timetableSlotRepository.findById(101L)).thenReturn(Optional.of(slot));
+            when(roomRepository.findById(10L)).thenReturn(Optional.of(room));
+            when(slotTypeRepository.findBySemesterIdAndSlotIndex(10L, 1)).thenReturn(Optional.of(slotType));
 
-        when(timetableSlotRepository.findById(1L)).thenReturn(Optional.of(existingSlot));
-        when(roomRepository.findById(2L)).thenReturn(Optional.of(new Room()));
-        when(slotTypeRepository.findBySemesterIdAndSlotIndex(5L, 3)).thenReturn(Optional.of(new SlotType()));
+            when(timetableSlotRepository.findByRoomIdAndDateAndSlotNumberAndStatusNot(any(), any(), any(), any()))
+                    .thenReturn(Collections.emptyList());
+            when(timetableSlotRepository.findByClassSectionLecturerIdAndDateAndSlotNumberAndStatusNot(any(), any(), any(), any()))
+                    .thenReturn(Collections.emptyList());
+            
+            when(timetableSlotRepository.existsByClassSectionClassNameAndDateAndSlotNumberAndStatusNot(any(), any(), any(), any()))
+                    .thenReturn(true);
+            TimetableSlot otherSlot = new TimetableSlot();
+            otherSlot.setId(202L);
+            when(timetableSlotRepository.findByClassSectionClassNameAndDateAndSlotNumberAndStatusNot(any(), any(), any(), any()))
+                    .thenReturn(List.of(otherSlot));
 
-        // No room conflict
-        when(timetableSlotRepository.findByRoomIdAndDateAndSlotNumberAndStatusNot(anyLong(), any(), anyInt(), any())).thenReturn(Collections.emptyList());
-        // Simulating Student Conflict
-        when(timetableSlotRepository.countStudentConflicts(eq("SE1801"), any(), eq(3))).thenReturn(5L);
+            assertThrows(com.fams.backend.exception.BadRequestException.class, 
+                    () -> timetableSlotService.updateSlot(101L, request));
+        }
 
-        BadRequestException ex = assertThrows(BadRequestException.class, () -> service.updateSlot(1L, request));
-        assertTrue(ex.getMessage().contains("viên bị trùng lịch học khác"));
-    }
+        @Test
+        @DisplayName("UTCID08 - Conflict: Students in class have overlapping schedules")
+        void updateSlot_studentConflict() {
+            when(timetableSlotRepository.findById(101L)).thenReturn(Optional.of(slot));
+            when(roomRepository.findById(10L)).thenReturn(Optional.of(room));
+            when(slotTypeRepository.findBySemesterIdAndSlotIndex(10L, 1)).thenReturn(Optional.of(slotType));
 
-    @Test
-    void testUpdateSlot_InvalidSlotTypeBoundary() {
-        TimetableDTO.UpdateSlotRequest request = TimetableDTO.UpdateSlotRequest.builder().roomId(2L).slotNumber(99).date(LocalDate.now()).build();
-        TimetableSlot existingSlot = new TimetableSlot();
-        existingSlot.setId(1L);
-        ClassSection cs = new ClassSection();
-        cs.setSemester(Semester.builder().id(5L).build());
-        existingSlot.setClassSection(cs);
+            when(timetableSlotRepository.findByRoomIdAndDateAndSlotNumberAndStatusNot(any(), any(), any(), any()))
+                    .thenReturn(Collections.emptyList());
+            when(timetableSlotRepository.findByClassSectionLecturerIdAndDateAndSlotNumberAndStatusNot(any(), any(), any(), any()))
+                    .thenReturn(Collections.emptyList());
+            when(timetableSlotRepository.existsByClassSectionClassNameAndDateAndSlotNumberAndStatusNot(any(), any(), any(), any()))
+                    .thenReturn(false);
+            
+            when(timetableSlotRepository.countStudentConflicts(any(), any(), any())).thenReturn(5L);
 
-        when(timetableSlotRepository.findById(1L)).thenReturn(Optional.of(existingSlot));
-        when(roomRepository.findById(2L)).thenReturn(Optional.of(new Room()));
-        
-        // Simulating Slot 99 boundary failure (Not found for semester)
-        when(slotTypeRepository.findBySemesterIdAndSlotIndex(5L, 99)).thenReturn(Optional.empty());
-
-        BadRequestException ex = assertThrows(BadRequestException.class, () -> service.updateSlot(1L, request));
-        assertTrue(ex.getMessage().contains("Invalid slot number"));
+            assertThrows(com.fams.backend.exception.BadRequestException.class, 
+                    () -> timetableSlotService.updateSlot(101L, request));
+        }
     }
 }

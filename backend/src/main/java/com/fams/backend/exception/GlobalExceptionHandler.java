@@ -20,6 +20,10 @@ import java.util.HashMap;
 import java.util.Map;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DataAccessException;
+import org.springframework.orm.jpa.JpaSystemException;
+import org.springframework.transaction.TransactionSystemException;
+import com.fams.backend.util.DatabaseErrorTranslator;
 
 @RestControllerAdvice
 @Slf4j
@@ -172,14 +176,21 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Handle DataIntegrityViolationException
+     * Handle Database Errors (FK violations, unique constraints, etc.)
      */
-    @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
-        log.error("Database error: {}", ex.getMessage());
+    @ExceptionHandler({
+        DataIntegrityViolationException.class,
+        DataAccessException.class,
+        JpaSystemException.class,
+        TransactionSystemException.class
+    })
+    public ResponseEntity<ErrorResponse> handleDatabaseErrors(Exception ex) {
+        log.error("Database or Transaction error: {}", ex.getMessage());
+        String friendlyMessage = DatabaseErrorTranslator.translate(ex);
+        
         ErrorResponse error = new ErrorResponse(
                 HttpStatus.CONFLICT.value(),
-                "Dữ liệu không hợp lệ hoặc vi phạm ràng buộc cơ sở dữ liệu: " + ex.getMessage());
+                friendlyMessage);
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 

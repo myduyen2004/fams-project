@@ -7,7 +7,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'firebase_options.dart';
-import 'core/constants/app_colors.dart';
 import 'core/constants/app_routes.dart';
 import 'features/auth/controllers/auth_controller.dart';
 import 'features/auth/views/splash_screen.dart';

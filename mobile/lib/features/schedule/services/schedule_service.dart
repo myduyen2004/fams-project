@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/services/api_service.dart';

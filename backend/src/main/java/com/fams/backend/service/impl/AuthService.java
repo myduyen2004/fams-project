@@ -3,6 +3,7 @@ package com.fams.backend.service.impl;
 import com.fams.backend.dto.request.LoginRequest;
 import com.fams.backend.dto.response.LoginResponse;
 import com.fams.backend.entity.AccessLog;
+import com.fams.backend.entity.Alert;
 import com.fams.backend.entity.User;
 import com.fams.backend.entity.UserSession;
 import com.fams.backend.exception.BadRequestException;
@@ -51,6 +52,7 @@ public class AuthService implements UserDetailsService {
     private final StringRedisTemplate redisTemplate;
     private final SystemLogService systemLogService;
     private final com.fams.backend.repository.UserPermissionRepository userPermissionRepository;
+    private final AlertService alertService;
 
     private static final String OTP_PREFIX = "otp:";
     private static final long OTP_EXPIRY_MINUTES = 10;
@@ -106,11 +108,13 @@ public class AuthService implements UserDetailsService {
         }
 
         // 2. Tìm user theo username (with profiles for response)
-        User user = userRepository.findByUsernameWithProfiles(username)
-                .orElseThrow(() -> {
-                    log.warn("Login failed | username={} | reason=USER_NOT_FOUND", username);
-                    return new UnauthorizedException("Tài khoản hoặc mật khẩu không đúng");
-                });
+        User user = userRepository.findByUsernameWithProfiles(username).orElse(null);
+
+        if (user == null) {
+            log.warn("Login failed | username={} | reason=USER_NOT_FOUND", username);
+            trackLoginFailure(username);
+            throw new UnauthorizedException("Tài khoản hoặc mật khẩu không đúng");
+        }
 
         // 3. Kiểm tra status
         if (user.getStatus() == User.UserStatus.INACTIVE) {
@@ -126,13 +130,9 @@ public class AuthService implements UserDetailsService {
 
         // 4. Verify password
         boolean matches = passwordEncoder.matches(request.getPassword(), user.getPassword());
-        log.info("Password verification | username={} | matches={} | hashPrefix={}",
-                username, matches, user.getPassword().substring(0, Math.min(10, user.getPassword().length())));
-
         if (!matches) {
             log.warn("Login failed | username={} | reason=INVALID_PASSWORD | userId={}",
                     username, user.getId());
-            // Track failures in Redis for brute force detection
             trackLoginFailure(username);
             throw new UnauthorizedException("Tài khoản hoặc mật khẩu không đúng");
         }
@@ -331,9 +331,11 @@ public class AuthService implements UserDetailsService {
         }
 
         if (!storedOtp.equals(request.getOtp())) {
+            trackOtpFailure(request.getEmail());
             throw new BadRequestException("Mã OTP không chính xác");
         }
 
+        resetOtpFailures(request.getEmail());
         return true;
     }
 
@@ -362,9 +364,19 @@ public class AuthService implements UserDetailsService {
         String key = "login_failures:" + username;
         Long failures = redisTemplate.opsForValue().increment(key);
         redisTemplate.expire(key, 30, java.util.concurrent.TimeUnit.MINUTES);
+        log.info("Login failure tracked for user: {} | Count: {}", username, failures);
         
         if (failures != null && failures >= 5) {
             systemLogService.logBruteForceWarning(username, failures.intValue());
+            
+            // Generate system alert
+            alertService.createAlert(
+                "Cảnh báo bảo mật: Brute Force",
+                String.format("Phát hiện %d lần đăng nhập thất bại liên tiếp cho tài khoản: %s. Khuyến nghị kiểm tra ngay.", failures.intValue(), username),
+                Alert.AlertLevel.CRITICAL,
+                Alert.AlertType.SECURITY,
+                userRepository.findByUsername(username).orElse(null)
+            );
         } else {
             systemLogService.logLoginFailed(username);
         }
@@ -372,5 +384,25 @@ public class AuthService implements UserDetailsService {
 
     private void resetLoginFailures(String username) {
         redisTemplate.delete("login_failures:" + username);
+    }
+
+    private void trackOtpFailure(String email) {
+        String key = "otp_failures:" + email;
+        Long failures = redisTemplate.opsForValue().increment(key);
+        redisTemplate.expire(key, 10, java.util.concurrent.TimeUnit.MINUTES);
+
+        if (failures != null && failures >= 5) {
+            alertService.createAlert(
+                "Cảnh báo bảo mật: OTP Brute Force",
+                String.format("Phát hiện %d lần nhập sai OTP liên tiếp cho email: %s.", failures.intValue(), email),
+                Alert.AlertLevel.CRITICAL,
+                Alert.AlertType.SECURITY,
+                userRepository.findByEmail(email).orElse(null)
+            );
+        }
+    }
+
+    private void resetOtpFailures(String email) {
+        redisTemplate.delete("otp_failures:" + email);
     }
 }

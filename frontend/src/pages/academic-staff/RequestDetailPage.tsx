@@ -25,6 +25,8 @@ export const RequestDetailPage = () => {
     const [request, setRequest] = useState<ScheduleRequestResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
+    const [isRequesterAvatarBroken, setIsRequesterAvatarBroken] = useState(false);
+    const [isApproverAvatarBroken, setIsApproverAvatarBroken] = useState(false);
     const [note, setNote] = useState('');
     const [confirmModal, setConfirmModal] = useState<{
         isOpen: boolean;
@@ -36,6 +38,8 @@ export const RequestDetailPage = () => {
             if (!id) return;
             try {
                 setLoading(true);
+                setIsRequesterAvatarBroken(false);
+                setIsApproverAvatarBroken(false);
                 const data = await academicStaffService.getScheduleRequestById(parseInt(id));
                 setRequest(data);
                 setNote(data.approverNote || '');
@@ -79,6 +83,24 @@ export const RequestDetailPage = () => {
 
     if (!request) return null;
 
+    const currentUser = (() => {
+        const raw = localStorage.getItem('user');
+        if (!raw) return null;
+        try {
+            const parsed = JSON.parse(raw) as { fullName?: string; avatar?: string };
+            return parsed;
+        } catch {
+            return null;
+        }
+    })();
+
+    const requesterInitial = (request.requesterName || '?').charAt(0).toUpperCase();
+    const approverInitial = (request.approverName || '?').charAt(0).toUpperCase();
+    const showRequesterAvatar = Boolean(request.requesterAvatar) && !isRequesterAvatarBroken;
+    const approverAvatarUrl = request.approverAvatar
+        || (request.approverName && currentUser?.fullName && request.approverName === currentUser.fullName ? currentUser.avatar : undefined);
+    const showApproverAvatar = Boolean(approverAvatarUrl) && !isApproverAvatarBroken;
+
     const isPending = request.status === 'PENDING';
     const statusInfo = {
         label: request.status === 'PENDING' ? 'Đang xử lý' : request.status === 'APPROVED' ? 'Đã duyệt' : request.status === 'REVOKED' ? 'Đã thu hồi' : 'Đã từ chối',
@@ -88,6 +110,22 @@ export const RequestDetailPage = () => {
                     'bg-red-50 text-red-600 border-red-200',
         dot: request.status === 'PENDING' ? 'bg-amber-500' : request.status === 'APPROVED' ? 'bg-green-500' : request.status === 'REVOKED' ? 'bg-gray-500' : 'bg-red-500'
     };
+    const isApproved = request.status === 'APPROVED';
+    const isRejected = request.status === 'REJECTED';
+    const approverActionText = isApproved ? 'Đã duyệt yêu cầu' : isRejected ? 'Đã từ chối yêu cầu' : 'Đã xử lý yêu cầu';
+    const approverReasonText = request.approverNote?.trim()
+        || (isApproved ? 'Yêu cầu đáp ứng điều kiện xử lý.' : isRejected ? 'Yêu cầu chưa đáp ứng điều kiện xử lý.' : 'Không có lý do.');
+    const approverTheme = isRejected
+        ? {
+            avatar: 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800 text-red-600',
+            card: 'bg-red-50/30 dark:bg-red-900/10 border-red-50 dark:border-red-900/20',
+            action: 'text-red-600 dark:text-red-400'
+        }
+        : {
+            avatar: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800 text-emerald-600',
+            card: 'bg-emerald-50/30 dark:bg-emerald-900/10 border-emerald-50 dark:border-emerald-900/20',
+            action: 'text-emerald-600 dark:text-emerald-400'
+        };
 
     return (
         <AcademicStaffLayout pageTitle="Chi tiết yêu cầu thay đổi lịch dạy">
@@ -287,18 +325,19 @@ export const RequestDetailPage = () => {
                                 {/* Processed Step */}
                                 {request.status !== 'PENDING' && request.status !== 'REVOKED' && (
                                     <div className="relative pl-12">
-                                        <div className={`absolute left-0 top-0 w-10 h-10 rounded-2xl flex items-center justify-center z-10 shadow-sm border-2 ${
-                                            request.status === 'APPROVED' 
-                                            ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 border-emerald-100 dark:border-emerald-800' 
-                                            : 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 border-rose-100 dark:border-rose-800'
-                                        }`}>
-                                            {request.status === 'APPROVED' ? <CheckCircle size={18} /> : <XCircle size={18} />}
+                                        <div className={`absolute left-0 top-0 w-10 h-10 rounded-2xl border-2 flex items-center justify-center z-10 shadow-sm overflow-hidden font-bold text-sm ${approverTheme.avatar}`}>
+                                            {showApproverAvatar ? (
+                                                <img
+                                                    src={getViewableFileUrl(approverAvatarUrl || '')}
+                                                    alt={request.approverName || 'avatar'}
+                                                    className="w-full h-full object-cover"
+                                                    onError={() => setIsApproverAvatarBroken(true)}
+                                                />
+                                            ) : (
+                                                <span>{approverInitial}</span>
+                                            )}
                                         </div>
-                                        <div className={`p-5 rounded-2xl border ${
-                                            request.status === 'APPROVED'
-                                            ? 'bg-emerald-50/30 dark:bg-emerald-900/10 border-emerald-50 dark:border-emerald-900/20'
-                                            : 'bg-rose-50/30 dark:bg-rose-900/10 border-rose-50 dark:border-rose-900/20'
-                                        }`}>
+                                        <div className={`p-5 rounded-2xl border ${approverTheme.card}`}>
                                             <div className="flex items-center justify-between mb-2">
                                                 <p className="font-bold text-sm text-gray-900 dark:text-white uppercase tracking-wide">
                                                     {request.approverName || 'Phòng Đào Tạo'}
@@ -307,11 +346,11 @@ export const RequestDetailPage = () => {
                                                     {request.approvedAt ? dayjs(request.approvedAt).format('DD/MM/YYYY - HH:mm') : '---'}
                                                 </span>
                                             </div>
-                                            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">
-                                                {request.status === 'APPROVED' ? 'Đã phê duyệt yêu cầu' : 'Đã từ chối yêu cầu'}
+                                            <p className={`text-xs font-bold uppercase tracking-widest mb-1 ${approverTheme.action}`}>
+                                                {approverActionText}
                                             </p>
                                             <p className="text-sm text-gray-600 dark:text-zinc-400 italic font-medium">
-                                                "{request.approverNote || (request.status === 'APPROVED' ? 'Đã phê duyệt yêu cầu này.' : 'Đã từ chối yêu cầu này.')}"
+                                                Lý do: {approverReasonText}
                                             </p>
                                         </div>
                                     </div>
@@ -353,11 +392,16 @@ export const RequestDetailPage = () => {
 
                                 {/* Initial Request */}
                                 <div className="relative pl-12">
-                                    <div className="absolute left-0 top-0 w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-100 dark:border-blue-800 flex items-center justify-center text-blue-600 z-10 shadow-sm overflow-hidden">
-                                        {request.requesterAvatar ? (
-                                            <img src={request.requesterAvatar} alt={request.requesterName} className="w-full h-full object-cover" />
+                                    <div className="absolute left-0 top-0 w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-100 dark:border-blue-800 flex items-center justify-center text-blue-600 z-10 shadow-sm font-bold text-sm overflow-hidden">
+                                        {showRequesterAvatar ? (
+                                            <img
+                                                src={getViewableFileUrl(request.requesterAvatar)}
+                                                alt={request.requesterName || 'avatar'}
+                                                className="w-full h-full object-cover"
+                                                onError={() => setIsRequesterAvatarBroken(true)}
+                                            />
                                         ) : (
-                                            <span className="font-bold text-sm">{request.requesterName.charAt(0).toUpperCase()}</span>
+                                            <span>{requesterInitial}</span>
                                         )}
                                     </div>
                                     <div className="p-5 rounded-2xl bg-gray-50/50 dark:bg-zinc-800/30 border border-gray-100 dark:border-zinc-800">
@@ -380,15 +424,19 @@ export const RequestDetailPage = () => {
                     <div className="space-y-6">
                         {/* Requester Info */}
                         <div className="bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-zinc-800 transition-all hover:shadow-md">
-                            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-8">Thông tin {request.requesterRole === 'STUDENT' ? 'sinh viên' : 'giảng viên'}</h3>
-                            
+                            <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-8">Thông tin {request.requesterRole === 'STUDENT' ? 'sinh viên' : 'giảng viên'}</h3>
                             <div className="flex flex-col items-center mb-8">
                                 <div className="relative group">
                                     <div className="w-24 h-24 rounded-3xl bg-fpt-orange/10 flex items-center justify-center text-fpt-orange text-3xl font-bold border-2 border-fpt-orange/20 overflow-hidden mb-4 shadow-xl transition-transform group-hover:scale-105 duration-300">
-                                        {request.requesterAvatar ? (
-                                            <img src={request.requesterAvatar} alt="avatar" className="w-full h-full object-cover" />
+                                        {showRequesterAvatar ? (
+                                            <img
+                                                src={request.requesterAvatar}
+                                                alt={request.requesterName || 'avatar'}
+                                                className="w-full h-full object-cover"
+                                                onError={() => setIsRequesterAvatarBroken(true)}
+                                            />
                                         ) : (
-                                            <span>{request.requesterName?.charAt(0).toUpperCase() || (request.requesterRole === 'STUDENT' ? 'S' : 'G')}</span>
+                                            <span>{requesterInitial}</span>
                                         )}
                                     </div>
                                     <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-emerald-500 border-4 border-white dark:border-zinc-900 rounded-full flex items-center justify-center text-white">
@@ -431,17 +479,11 @@ export const RequestDetailPage = () => {
                                         <span className="font-bold text-gray-900 dark:text-white">{request.requesterMajor || '---'}</span>
                                     </div>
                                 </div>
-
-                                <div className="flex items-center gap-4 text-sm group/item">
-                                    <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-zinc-800/50 flex items-center justify-center text-gray-400 group-hover/item:text-fpt-orange transition-colors">
-                                        <Mail size={18} />
-                                    </div>
-                                    <div className="flex flex-col min-w-0">
-                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Email liên hệ</span>
-                                        <span className="font-bold text-fpt-orange truncate overflow-hidden" title={request.requesterEmail}>
-                                            {request.requesterEmail || '---'}
-                                        </span>
-                                    </div>
+                                <div className="flex flex-col gap-1 text-sm bg-gray-50 dark:bg-zinc-800/50 p-2.5 rounded-lg border border-gray-100 dark:border-zinc-800 mt-2 min-w-0">
+                                    <span className="text-gray-400 text-[10px] font-bold uppercase">Email liên hệ</span>
+                                    <span className="font-semibold text-fpt-orange break-all leading-5" title={request.requesterEmail}>
+                                        {request.requesterEmail || '---'}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -505,10 +547,14 @@ export const RequestDetailPage = () => {
                 <ConfirmModal
                     isOpen={confirmModal.isOpen}
                     onClose={() => setConfirmModal({ isOpen: false, status: null })}
-                    onConfirm={() => confirmModal.status && handleUpdateStatus(confirmModal.status)}
+                    onConfirm={() => {
+                        if (confirmModal.status) {
+                            handleUpdateStatus(confirmModal.status);
+                        }
+                    }}
                     title={confirmModal.status === 'APPROVED' ? 'Xác nhận duyệt' : 'Xác nhận từ chối'}
-                    message={confirmModal.status === 'APPROVED' 
-                        ? 'Bạn có chắc chắn muốn duyệt đơn yêu cầu thay đổi lịch dạy này không? Lịch dạy chính thức sẽ được cập nhật ngay lập tức.' 
+                    message={confirmModal.status === 'APPROVED'
+                        ? 'Bạn có chắc chắn muốn duyệt đơn yêu cầu thay đổi lịch dạy này không? Lịch dạy chính thức sẽ được cập nhật ngay lập tức.'
                         : 'Bạn có chắc chắn muốn từ chối đơn yêu cầu này không?'}
                     confirmLabel={confirmModal.status === 'APPROVED' ? 'Duyệt yêu cầu' : 'Từ chối yêu cầu'}
                     cancelLabel="Hủy"

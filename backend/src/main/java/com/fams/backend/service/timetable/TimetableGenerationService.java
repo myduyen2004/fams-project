@@ -6,6 +6,7 @@ import com.fams.backend.service.timetable.ga.core.GeneticAlgorithm;
 import com.fams.backend.service.timetable.ga.model.Chromosome;
 import com.fams.backend.service.timetable.ga.model.GAConfig;
 import com.fams.backend.service.timetable.ga.model.TimetableData;
+import com.fams.backend.util.DatabaseErrorTranslator;
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -147,17 +148,18 @@ public class TimetableGenerationService {
         } catch (Exception e) {
             log.error("Error generating timetable for semester: " + semesterCode, e);
 
+            String friendlyMessage = DatabaseErrorTranslator.translate(e);
             GenerationJob job = runningJobs.get(actualJobId);
             if (job != null) {
                 job.setStatus(JobStatus.FAILED);
-                job.setErrorMessage(e.getMessage());
+                job.setErrorMessage(friendlyMessage);
             }
 
             return CompletableFuture.completedFuture(
                     GenerationResult.builder()
                             .success(false)
                             .jobId(actualJobId)
-                            .message("Lỗi: " + e.getMessage())
+                            .message(friendlyMessage)
                             .build());
         } finally {
             // Cleanup after some time

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
@@ -6,11 +7,28 @@ import { timetableService, TimetableSlotDTO } from '../../services/api/timetable
 import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
 import { Pagination } from '../../components/common/Pagination';
 import {
-    ArrowLeft, Clock, ExternalLink, Search, Loader2, BookOpen, Lock, X, Download, MessageSquare, ShieldAlert, ScanSearch, Sparkles
+    ArrowLeft, Clock, ExternalLink, Search, Loader2, BookOpen, Lock, X, Download, MessageSquare, ShieldAlert, SlidersHorizontal
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const PAGE_SIZE = 30;
+const BATCH_CHECK_CONCURRENCY = 3;
+
+type BatchCheckFilter = 'ALL' | 'SUSPECT' | 'ERROR';
+
+interface BatchCheckRow {
+    key: string;
+    assignmentId: number;
+    assignmentTitle: string;
+    submissionId: number;
+    studentCode: string;
+    studentName: string;
+    plagiarismPercent?: number;
+    plagiarized?: boolean;
+    status: 'SUCCESS' | 'ERROR';
+    errorMessage?: string;
+    checkedAt: string;
+}
 
 export const LecturerAssignmentDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -31,6 +49,17 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
     const [plagiarismSubmission, setPlagiarismSubmission] = useState<AssignmentSubmissionDTO | null>(null);
     const [plagiarismResult, setPlagiarismResult] = useState<AssignmentPlagiarismDTO | null>(null);
     const [checkingPlagiarismId, setCheckingPlagiarismId] = useState<number | null>(null);
+    const [showPlagiarismConfigModal, setShowPlagiarismConfigModal] = useState(false);
+    const [configTextThreshold, setConfigTextThreshold] = useState('70');
+    const [configImageThreshold, setConfigImageThreshold] = useState('95');
+    const [savingPlagiarismConfig, setSavingPlagiarismConfig] = useState(false);
+    const [isBatchChecking, setIsBatchChecking] = useState(false);
+    const [showBatchResultModal, setShowBatchResultModal] = useState(false);
+    const [batchRows, setBatchRows] = useState<BatchCheckRow[]>([]);
+    const [batchTotal, setBatchTotal] = useState(0);
+    const [batchDone, setBatchDone] = useState(0);
+    const [batchErrors, setBatchErrors] = useState(0);
+    const [batchFilter, setBatchFilter] = useState<BatchCheckFilter>('ALL');
 
     useEffect(() => {
         if (!assignmentId || isNaN(assignmentId)) return;
@@ -59,6 +88,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                     }
                 }
             }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             toast.error('Không thể tải dữ liệu bài tập');
             console.error(err);
@@ -174,6 +204,100 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
         }
     };
 
+    const handleCheckPlagiarismWholeClass = async () => {
+        if (!assignmentId || Number.isNaN(assignmentId)) {
+            toast.error('Không xác định được bài tập để check');
+            return;
+        }
+        if (isBatchChecking) return;
+
+        setBatchRows([]);
+        setBatchTotal(0);
+        setBatchDone(0);
+        setBatchErrors(0);
+        setBatchFilter('ALL');
+        setShowBatchResultModal(true);
+        setIsBatchChecking(true);
+
+        try {
+            const assignmentSubs = await assignmentService.getAllSubmissionStatus(assignmentId);
+            const targets: Array<{ assignmentId: number; assignmentTitle: string; submission: AssignmentSubmissionDTO }> =
+                assignmentSubs
+                    .filter(sub => sub.status === 'SUBMITTED' && !!sub.id)
+                    .map(sub => ({
+                        assignmentId,
+                        assignmentTitle: assignment?.title || `Assignment #${assignmentId}`,
+                        submission: sub,
+                    }));
+
+            if (targets.length === 0) {
+                toast('Không có bài nộp hợp lệ để check trong bài tập này');
+                return;
+            }
+
+            setBatchTotal(targets.length);
+
+            let cursor = 0;
+            const workerCount = Math.min(BATCH_CHECK_CONCURRENCY, targets.length);
+            const workers = Array.from({ length: workerCount }, async () => {
+                while (true) {
+                    const currentIndex = cursor++;
+                    if (currentIndex >= targets.length) break;
+                    const target = targets[currentIndex];
+                    const now = new Date().toISOString();
+
+                    try {
+                        const result = await assignmentService.checkSubmissionPlagiarism(
+                            target.assignmentId,
+                            target.submission.id as number
+                        );
+                        setBatchRows(prev => [
+                            ...prev,
+                            {
+                                key: `${target.assignmentId}-${target.submission.id}`,
+                                assignmentId: target.assignmentId,
+                                assignmentTitle: target.assignmentTitle,
+                                submissionId: target.submission.id as number,
+                                studentCode: target.submission.studentCode || '—',
+                                studentName: target.submission.studentName || '—',
+                                plagiarismPercent: result.plagiarismPercent,
+                                plagiarized: result.plagiarized,
+                                status: 'SUCCESS',
+                                checkedAt: now,
+                            }
+                        ]);
+                    } catch (err: any) {
+                        setBatchErrors(prev => prev + 1);
+                        const message = err?.response?.data?.message || err?.message || 'Lỗi không xác định';
+                        setBatchRows(prev => [
+                            ...prev,
+                            {
+                                key: `${target.assignmentId}-${target.submission.id}-err`,
+                                assignmentId: target.assignmentId,
+                                assignmentTitle: target.assignmentTitle,
+                                submissionId: target.submission.id as number,
+                                studentCode: target.submission.studentCode || '—',
+                                studentName: target.submission.studentName || '—',
+                                status: 'ERROR',
+                                errorMessage: message,
+                                checkedAt: now,
+                            }
+                        ]);
+                    } finally {
+                        setBatchDone(prev => prev + 1);
+                    }
+                }
+            });
+
+            await Promise.all(workers);
+            toast.success('Đã hoàn tất check đạo văn cho bài tập này');
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || 'Không thể check đạo văn cho bài tập này');
+        } finally {
+            setIsBatchChecking(false);
+        }
+    };
+
     const closePlagiarismDialog = () => {
         if (checkingPlagiarismId) return;
         setPlagiarismSubmission(null);
@@ -198,6 +322,22 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
     // Pagination
     const totalPages = Math.ceil(filteredSubmissions.length / PAGE_SIZE);
     const paginatedSubmissions = filteredSubmissions.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+    const textThreshold = plagiarismResult?.textThreshold ?? assignment?.plagiarismTextThreshold ?? 0.7;
+    const imageThreshold = plagiarismResult?.imageThreshold ?? assignment?.plagiarismImageThreshold ?? 0.95;
+    const isTextPlagiarized = Boolean(plagiarismResult?.plagiarizedText);
+    const isImagePlagiarized = Boolean(plagiarismResult?.plagiarizedImage);
+    const overallPlagiarized = isTextPlagiarized || isImagePlagiarized;
+    const displayPlagiarismPercent = plagiarismResult?.plagiarismPercent ?? 0;
+    const batchSuspectCount = useMemo(() => batchRows.filter(row => row.status === 'SUCCESS' && row.plagiarized).length, [batchRows]);
+    const batchFilteredRows = useMemo(() => {
+        if (batchFilter === 'SUSPECT') {
+            return batchRows.filter(row => row.status === 'SUCCESS' && row.plagiarized);
+        }
+        if (batchFilter === 'ERROR') {
+            return batchRows.filter(row => row.status === 'ERROR');
+        }
+        return batchRows;
+    }, [batchRows, batchFilter]);
 
     const getPlagiarismTone = (percent?: number) => {
         const value = percent ?? 0;
@@ -205,6 +345,81 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
         if (value >= 45) return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
         return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
     };
+
+    const getBooleanTone = (value: boolean) =>
+        value
+            ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+            : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300';
+
+    const getReasonTagLabel = (tag: string) => {
+        const map: Record<string, string> = {
+            DIRECT_COPY: 'Sao chép trực tiếp',
+            IMPROPER_PARAPHRASING: 'Diễn đạt lại sai cách',
+            IDEA_PLAGIARISM: 'Đạo văn ý tưởng',
+            MOSAIC_PATCHWRITING: 'Mosaic/Patchwriting',
+            SELF_PLAGIARISM: 'Tự đạo văn',
+            MIS_CITATION: 'Trích dẫn sai/thiếu',
+            UNINTENTIONAL_RISK: 'Đạo văn vô ý (rủi ro)',
+            INSUFFICIENT_EVIDENCE: 'Chưa đủ bằng chứng',
+        };
+        return map[tag] || tag;
+    };
+
+    const openPlagiarismConfig = () => {
+        setConfigTextThreshold(String(Math.round((assignment?.plagiarismTextThreshold ?? 0.7) * 100)));
+        setConfigImageThreshold(String(Math.round((assignment?.plagiarismImageThreshold ?? 0.95) * 100)));
+        setShowPlagiarismConfigModal(true);
+    };
+
+    const handleSavePlagiarismConfig = async () => {
+        if (!assignment?.id) return;
+        const textPercent = Number(configTextThreshold);
+        const imagePercent = Number(configImageThreshold);
+        if (Number.isNaN(textPercent) || Number.isNaN(imagePercent)) {
+            toast.error('Vui lòng nhập ngưỡng hợp lệ');
+            return;
+        }
+        if (textPercent < 0 || textPercent > 100 || imagePercent < 0 || imagePercent > 100) {
+            toast.error('Ngưỡng phải trong khoảng 0% đến 100%');
+            return;
+        }
+
+        try {
+            setSavingPlagiarismConfig(true);
+            const updated = await assignmentService.updateAssignmentPlagiarismConfig(
+                assignment.id,
+                textPercent / 100,
+                imagePercent / 100
+            );
+            setAssignment(updated);
+            setShowPlagiarismConfigModal(false);
+            toast.success('Đã cập nhật cấu hình đạo văn');
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || 'Không thể cập nhật cấu hình đạo văn');
+        } finally {
+            setSavingPlagiarismConfig(false);
+        }
+    };
+
+    const filteredSimilarMatches = useMemo(
+        () =>
+            (plagiarismResult?.topMatches || []).filter(match => {
+                const hasSuspectSignal = Boolean(match.textSuspect) || Boolean(match.imageSuspect);
+                const hasInsufficientEvidenceTag = (match.reasonTags || []).includes('INSUFFICIENT_EVIDENCE');
+                return hasSuspectSignal && !hasInsufficientEvidenceTag;
+            }),
+        [plagiarismResult]
+    );
+
+    const uniqueReasonTags = useMemo(() => {
+        const tags = new Set<string>();
+        filteredSimilarMatches.forEach(match => {
+            (match.reasonTags || [])
+                .filter(tag => tag !== 'INSUFFICIENT_EVIDENCE')
+                .forEach(tag => tags.add(tag));
+        });
+        return Array.from(tags);
+    }, [filteredSimilarMatches]);
 
     useEffect(() => {
         setCurrentPage(0);
@@ -345,7 +560,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                                         {(() => {
                                             const urls = assignment.referenceUrls?.length ? assignment.referenceUrls : (assignment.referenceUrl ? assignment.referenceUrl.split('|||') : []);
                                             const names = assignment.referenceNames?.length ? assignment.referenceNames : (assignment.referenceName ? assignment.referenceName.split('|||') : []);
-                                            
+
                                             if (urls.length === 0) {
                                                 return <p className="text-sm text-gray-400 px-2 italic">Không có tài liệu đính kèm.</p>;
                                             }
@@ -386,7 +601,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                                         </div>
                                         Tổng quan nộp bài
                                     </h3>
-                                    
+
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 h-[calc(100%-3rem)] min-h-[120px]">
                                         <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-2xl border border-gray-100 dark:border-zinc-800 p-5 flex flex-col justify-center items-center text-center">
                                             <span className="text-xs font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider mb-2">Tổng sinh viên</span>
@@ -424,15 +639,34 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                             <span className="w-2 h-6 bg-fpt-orange rounded-full"></span>
                             Danh sách bài làm sinh viên
                         </h3>
-                        <div className="relative w-full sm:w-72">
-                            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Tìm theo MSSV, họ tên..."
-                                value={searchTerm}
-                                onChange={e => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange focus:border-transparent outline-none transition-all"
-                            />
+                        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                            <div className="relative w-full sm:w-72">
+                                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Tìm theo MSSV, họ tên..."
+                                    value={searchTerm}
+                                    onChange={e => setSearchTerm(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-fpt-orange focus:border-transparent outline-none transition-all"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleCheckPlagiarismWholeClass}
+                                disabled={isBatchChecking}
+                                className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs font-bold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-900/40 dark:bg-red-900/10 dark:text-red-300"
+                            >
+                                {isBatchChecking ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldAlert className="h-4 w-4" />}
+                                {isBatchChecking ? 'Đang check bài tập...' : 'Check đạo văn bài tập'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={openPlagiarismConfig}
+                                className="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-gray-600 transition-colors hover:bg-gray-50 hover:text-fpt-orange dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                                title="Cấu hình ngưỡng đạo văn"
+                            >
+                                <SlidersHorizontal className="h-4 w-4" />
+                            </button>
                         </div>
                     </div>
 
@@ -550,7 +784,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                             </tbody>
                         </table>
                     </div>
-                    
+
                     {filteredSubmissions.length > 0 && (
                         <div className="px-6 py-4 border-t border-gray-100 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/10">
                             <Pagination
@@ -579,7 +813,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
-                        
+
                         <div className="p-6">
                             <div className="bg-orange-50 dark:bg-orange-900/10 rounded-xl p-4 mb-6 border border-orange-100 dark:border-orange-900/30 flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-full bg-orange-200 dark:bg-orange-800 flex items-center justify-center font-bold text-orange-700 dark:text-orange-300 text-sm shrink-0">
@@ -598,7 +832,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                                     </div>
                                 )}
                             </div>
-                            
+
                             <div>
                                 <label className="block text-xs font-bold text-gray-700 dark:text-zinc-300 mb-2 uppercase tracking-wider">Nội dung nhận xét</label>
                                 <textarea
@@ -611,7 +845,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                                     disabled={savingComment}
                                 />
                             </div>
-                            
+
                             <div className="flex gap-3 mt-6">
                                 <button onClick={() => { setCommentSubmission(null); setCommentDraft(''); }}
                                     className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 rounded-xl text-sm font-bold transition-colors">
@@ -667,164 +901,327 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                                                 <div>
                                                     <p className="text-xs font-bold uppercase tracking-[0.25em] text-fpt-orange">Decision Layer</p>
                                                     <h4 className="mt-2 text-2xl font-black text-[#001D4A] dark:text-white">
-                                                        {plagiarismResult.plagiarismPercent}% đạo văn
+                                                        {displayPlagiarismPercent}% đạo văn
                                                     </h4>
                                                     <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600 dark:text-zinc-300">
-                                                        Kiểm tra nội bộ trong toàn bộ môn học, dùng feature `text + image + metadata`
-                                                        và decision model `{plagiarismResult.model}`.
+                                                        Kết quả được tách độc lập theo 2 luồng:
+                                                        Text Score {'>='} {Math.round(textThreshold * 100)}% cho tài liệu văn bản
+                                                        và Image Score {'>='} {Math.round(imageThreshold * 100)}% cho hình ảnh.
                                                     </p>
                                                 </div>
-                                                <div className={`rounded-2xl px-4 py-3 text-sm font-black ${getPlagiarismTone(plagiarismResult.plagiarismPercent)}`}>
-                                                    {plagiarismResult.plagiarized ? 'NGHI NGỜ ĐẠO VĂN' : 'ÍT TÍN HIỆU ĐẠO VĂN'}
+                                                <div className={`rounded-2xl px-4 py-3 text-sm font-black ${getPlagiarismTone(displayPlagiarismPercent)}`}>
+                                                    {overallPlagiarized ? 'NGHI NGỜ ĐẠO VĂN' : 'ÍT TÍN HIỆU ĐẠO VĂN'}
                                                 </div>
                                             </div>
 
-                                            <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-                                                <div className="rounded-2xl border border-white/80 bg-white/80 p-4 dark:border-zinc-800 dark:bg-zinc-900/70">
-                                                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Originality</p>
-                                                    <p className="mt-2 text-3xl font-black text-green-600 dark:text-green-400">{plagiarismResult.originalityPercent}%</p>
-                                                </div>
-                                                <div className="rounded-2xl border border-white/80 bg-white/80 p-4 dark:border-zinc-800 dark:bg-zinc-900/70">
-                                                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Xác suất</p>
-                                                    <p className="mt-2 text-3xl font-black text-[#001D4A] dark:text-white">{Math.round(plagiarismResult.probability * 100)}%</p>
-                                                </div>
-                                                <div className="rounded-2xl border border-white/80 bg-white/80 p-4 dark:border-zinc-800 dark:bg-zinc-900/70">
-                                                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Phạm vi</p>
-                                                    <p className="mt-2 text-sm font-bold text-[#001D4A] dark:text-white">{plagiarismResult.courseCode}</p>
-                                                    <p className="mt-1 text-xs text-gray-500 dark:text-zinc-400">{plagiarismResult.className}</p>
-                                                </div>
-                                                <div className="rounded-2xl border border-white/80 bg-white/80 p-4 dark:border-zinc-800 dark:bg-zinc-900/70">
-                                                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">So sánh</p>
-                                                    <p className="mt-2 text-3xl font-black text-[#001D4A] dark:text-white">{plagiarismResult.comparedSubmissionCount}</p>
-                                                    <p className="mt-1 text-xs text-gray-500 dark:text-zinc-400">bài nộp trong cùng môn học</p>
-                                                </div>
+                                            <div className="mt-4 flex flex-wrap gap-3">
+                                                <span className={`rounded-full px-4 py-2 text-xs font-black uppercase tracking-[0.14em] ${getBooleanTone(isTextPlagiarized)}`}>
+                                                    Đạo văn văn bản: {isTextPlagiarized ? 'Nghi ngờ' : 'Không'}
+                                                </span>
+                                                <span className={`rounded-full px-4 py-2 text-xs font-black uppercase tracking-[0.14em] ${getBooleanTone(isImagePlagiarized)}`}>
+                                                    Đạo ảnh: {isImagePlagiarized ? 'Nghi ngờ' : 'Không'}
+                                                </span>
                                             </div>
+
                                         </div>
 
                                         <div className="rounded-3xl border border-gray-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950/60">
-                                            <div className="flex items-center gap-2">
-                                                <Sparkles className="h-4 w-4 text-fpt-orange" />
-                                                <h4 className="text-sm font-black uppercase tracking-[0.18em] text-[#001D4A] dark:text-white">Feature Breakdown</h4>
-                                            </div>
-                                            <div className="mt-5 space-y-4">
-                                                {[
-                                                    { label: 'Text Score', value: plagiarismResult.textScore },
-                                                    { label: 'Image Score', value: plagiarismResult.imageScore },
-                                                    { label: 'Metadata Score', value: plagiarismResult.metadataScore },
-                                                    { label: 'Filename Score', value: plagiarismResult.fileNameScore },
-                                                ].map(item => (
-                                                    <div key={item.label}>
-                                                        <div className="mb-1 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-400">
-                                                            <span>{item.label}</span>
-                                                            <span>{Math.round(item.value * 100)}%</span>
-                                                        </div>
-                                                        <div className="h-2.5 rounded-full bg-gray-100 dark:bg-zinc-800">
-                                                            <div
-                                                                className="h-2.5 rounded-full bg-gradient-to-r from-orange-400 to-fpt-orange"
-                                                                style={{ width: `${Math.max(4, Math.round(item.value * 100))}%` }}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
+                                            <h4 className="text-sm font-black uppercase tracking-[0.18em] text-[#001D4A] dark:text-white">Nhận định AI</h4>
+                                            {plagiarismResult.overallComment && (
+                                                <div className="mt-3 rounded-2xl border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900/30 dark:bg-blue-900/10">
+                                                    <p className="text-sm leading-6 text-blue-900 dark:text-blue-200">{plagiarismResult.overallComment}</p>
+                                                </div>
+                                            )}
 
-                                            <div className="mt-6 rounded-2xl border border-orange-100 bg-orange-50/70 p-4 dark:border-orange-900/30 dark:bg-orange-900/10">
-                                                <p className="text-xs font-black uppercase tracking-[0.18em] text-fpt-orange">Tín hiệu chính</p>
+                                            {uniqueReasonTags.length > 0 && (
                                                 <div className="mt-3 flex flex-wrap gap-2">
-                                                    {plagiarismResult.keySignals.map(signal => (
+                                                    {uniqueReasonTags.map(tag => (
                                                         <span
-                                                            key={signal}
-                                                            className="rounded-full border border-orange-200 bg-white px-3 py-1 text-xs font-semibold text-orange-700 dark:border-orange-900/40 dark:bg-zinc-900 dark:text-orange-300"
+                                                            key={tag}
+                                                            className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 dark:border-orange-900/40 dark:bg-orange-900/10 dark:text-orange-300"
                                                         >
-                                                            {signal}
+                                                            {getReasonTagLabel(tag)}
                                                         </span>
                                                     ))}
                                                 </div>
-                                            </div>
+                                            )}
+
+                                            {!plagiarismResult.overallComment && uniqueReasonTags.length === 0 && (
+                                                <p className="mt-3 text-sm text-gray-500 dark:text-zinc-400">Chưa có dữ liệu nhận định AI.</p>
+                                            )}
                                         </div>
                                     </div>
 
                                     <div className="rounded-3xl border border-gray-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950/60">
-                                        <div className="flex items-center gap-2">
-                                            <ScanSearch className="h-4 w-4 text-fpt-orange" />
-                                            <h4 className="text-sm font-black uppercase tracking-[0.18em] text-[#001D4A] dark:text-white">Các bài tương tự</h4>
+                                        <div className="mb-3 flex items-center justify-between">
+                                            <h4 className="text-sm font-black uppercase tracking-[0.18em] text-[#001D4A] dark:text-white">Những bài tương đồng</h4>
+                                            <span className="text-xs font-semibold text-gray-500 dark:text-zinc-400">
+                                                Ngưỡng text {'>='} {Math.round(textThreshold * 100)}% • image {'>='} {Math.round(imageThreshold * 100)}%
+                                            </span>
                                         </div>
 
-                                        {plagiarismResult.topMatches.length === 0 ? (
-                                            <div className="py-12 text-center text-sm text-gray-500 dark:text-zinc-400">
-                                                Không có bài tương tự đáng kể trong cùng môn học.
-                                            </div>
-                                        ) : (
-                                            <div className="mt-5 space-y-4">
-                                                {plagiarismResult.topMatches.map(match => (
-                                                    <div
-                                                        key={match.submissionId}
-                                                        className="rounded-2xl border border-gray-200 p-5 dark:border-zinc-800"
-                                                    >
-                                                        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                                                            <div>
-                                                                <div className="flex items-center gap-3">
-                                                                    <p className="text-base font-bold text-[#001D4A] dark:text-white">
-                                                                        {match.studentName}
-                                                                    </p>
-                                                                    <span className="font-mono text-xs text-gray-500 dark:text-zinc-400">
-                                                                        {match.studentCode}
-                                                                    </span>
-                                                                </div>
-                                                                <p className="mt-2 text-sm leading-6 text-gray-600 dark:text-zinc-300">
-                                                                    {match.notePreview || 'Không có ghi chú văn bản.'}
-                                                                </p>
-                                                            </div>
-                                                            <div className={`rounded-2xl px-4 py-3 text-center ${getPlagiarismTone(match.plagiarismPercent)}`}>
-                                                                <p className="text-2xl font-black">{match.plagiarismPercent}%</p>
-                                                                <p className="text-[11px] font-bold uppercase tracking-[0.18em]">match</p>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-                                                            {[
-                                                                { label: 'Text', value: match.textScore },
-                                                                { label: 'Image', value: match.imageScore },
-                                                                { label: 'Metadata', value: match.metadataScore },
-                                                                { label: 'Filename', value: match.fileNameScore },
-                                                            ].map(metric => (
-                                                                <div key={metric.label} className="rounded-xl bg-gray-50 px-3 py-3 dark:bg-zinc-900">
-                                                                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">{metric.label}</p>
-                                                                    <p className="mt-1 text-lg font-black text-[#001D4A] dark:text-white">{Math.round(metric.value * 100)}%</p>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-
-                                                        {match.fileNames && match.fileNames.length > 0 && (
-                                                            <div className="mt-4">
-                                                                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">File đính kèm</p>
-                                                                <div className="mt-2 flex flex-wrap gap-2">
-                                                                    {match.fileNames.map(fileName => (
-                                                                        <span key={fileName} className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 dark:bg-zinc-800 dark:text-zinc-300">
-                                                                            {fileName}
-                                                                        </span>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        )}
-
-                                                        <div className="mt-4 flex flex-wrap gap-2">
-                                                            {match.sharedSignals.map(signal => (
-                                                                <span
-                                                                    key={signal}
-                                                                    className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 dark:border-orange-900/40 dark:bg-orange-900/10 dark:text-orange-300"
-                                                                >
-                                                                    {signal}
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
+                                        <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-zinc-800">
+                                            <table className="w-full text-sm">
+                                                <thead>
+                                                    <tr className="bg-gray-50 dark:bg-zinc-800/40">
+                                                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Tên</th>
+                                                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Lớp</th>
+                                                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Bài tập trùng</th>
+                                                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">File đính kèm</th>
+                                                        <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">% đạo văn</th>
+                                                        <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Lý do</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
+                                                    {filteredSimilarMatches.length === 0 ? (
+                                                        <tr>
+                                                            <td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-500 dark:text-zinc-400">
+                                                                Không có bài tương đồng vượt ngưỡng.
+                                                            </td>
+                                                        </tr>
+                                                    ) : (
+                                                        filteredSimilarMatches.map(match => (
+                                                            <tr key={match.submissionId} className="hover:bg-gray-50 dark:hover:bg-zinc-800/30">
+                                                                <td className="px-4 py-3">
+                                                                    <p className="font-semibold text-[#001D4A] dark:text-white">{match.studentName}</p>
+                                                                    <p className="text-xs font-mono text-gray-500 dark:text-zinc-400">{match.studentCode}</p>
+                                                                </td>
+                                                                <td className="px-4 py-3 text-xs text-gray-700 dark:text-zinc-300">
+                                                                    {match.className || plagiarismResult.className || '—'}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-xs text-gray-700 dark:text-zinc-300">
+                                                                    {match.assignmentTitle || plagiarismResult.assignmentTitle || '—'}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-xs text-gray-700 dark:text-zinc-300">
+                                                                    {(match.fileNames || []).length > 0 ? (
+                                                                        <div className="flex flex-wrap gap-1.5">
+                                                                            {(match.fileNames || []).map((fileName, index) => {
+                                                                                const url = match.comparedFileLinks?.[index];
+                                                                                if (!url) {
+                                                                                    return <span key={`${fileName}-${index}`}>{fileName}</span>;
+                                                                                }
+                                                                                return (
+                                                                                    <a
+                                                                                        key={`${fileName}-${index}`}
+                                                                                        href={getViewableFileUrl(url)}
+                                                                                        target="_blank"
+                                                                                        rel="noopener noreferrer"
+                                                                                        className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100 dark:border-blue-900/40 dark:bg-blue-900/10 dark:text-blue-300"
+                                                                                        title={fileName}
+                                                                                    >
+                                                                                        {fileName}
+                                                                                    </a>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    ) : '—'}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-center font-black text-[#001D4A] dark:text-white">
+                                                                    {match.plagiarismPercent ?? 0}%
+                                                                </td>
+                                                                <td className="px-4 py-3 text-xs text-gray-700 dark:text-zinc-300">
+                                                                    <p>{(match.reasonTags || []).map(getReasonTagLabel).join(', ') || 'Cần đối chiếu thủ công'}</p>
+                                                                    <p className="mt-1 text-gray-500 dark:text-zinc-400">{match.reasonSummary || match.matchComment || '—'}</p>
+                                                                </td>
+                                                            </tr>
+                                                        ))
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
                                 </div>
                             ) : null}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showBatchResultModal && (
+                <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/60 p-4">
+                    <div className="w-full max-w-6xl overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+                        <div className="flex items-start justify-between border-b border-gray-100 px-6 py-5 dark:border-zinc-800">
+                            <div>
+                                <h3 className="flex items-center gap-2 text-lg font-bold text-[#001D4A] dark:text-white">
+                                    <ShieldAlert className="h-5 w-5 text-fpt-orange" />
+                                    Kết quả check đạo văn theo bài tập
+                                </h3>
+                                <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
+                                    Tiến trình: {batchDone}/{batchTotal} • Nghi ngờ: {batchSuspectCount} • Lỗi: {batchErrors}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (isBatchChecking) return;
+                                    setShowBatchResultModal(false);
+                                }}
+                                className="rounded-xl border border-gray-200 p-2 text-gray-500 transition-colors hover:bg-gray-50 hover:text-fpt-orange disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                                disabled={isBatchChecking}
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+
+                        <div className="max-h-[80vh] overflow-y-auto p-6">
+                            <div className="mb-4">
+                                <div className="h-2.5 w-full rounded-full bg-gray-100 dark:bg-zinc-800">
+                                    <div
+                                        className="h-2.5 rounded-full bg-gradient-to-r from-orange-400 to-fpt-orange transition-all"
+                                        style={{ width: `${batchTotal > 0 ? Math.round((batchDone / batchTotal) * 100) : 0}%` }}
+                                    />
+                                </div>
+                                <p className="mt-2 text-xs font-semibold text-gray-500 dark:text-zinc-400">
+                                    {batchTotal > 0 ? Math.round((batchDone / batchTotal) * 100) : 0}% hoàn thành
+                                </p>
+                            </div>
+
+                            <div className="mb-4 flex flex-wrap gap-2">
+                                {[
+                                    { id: 'ALL', label: `Tất cả (${batchRows.length})` },
+                                    { id: 'SUSPECT', label: `Nghi ngờ (${batchSuspectCount})` },
+                                    { id: 'ERROR', label: `Lỗi (${batchErrors})` },
+                                ].map(item => (
+                                    <button
+                                        key={item.id}
+                                        type="button"
+                                        onClick={() => setBatchFilter(item.id as BatchCheckFilter)}
+                                        className={`rounded-full px-4 py-1.5 text-xs font-bold transition-colors ${
+                                            batchFilter === item.id
+                                                ? 'bg-fpt-orange text-white'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'
+                                        }`}
+                                    >
+                                        {item.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-zinc-800">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="bg-gray-50 dark:bg-zinc-800/40">
+                                            <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Assignment</th>
+                                            <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Sinh viên</th>
+                                            <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">% đạo văn</th>
+                                            <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-gray-500">Trạng thái</th>
+                                            <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Ghi chú</th>
+                                            <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500">Thời gian</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
+                                        {batchFilteredRows.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-500 dark:text-zinc-400">
+                                                    Chưa có kết quả theo bộ lọc hiện tại.
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            batchFilteredRows.map(row => (
+                                                <tr key={row.key} className="hover:bg-gray-50 dark:hover:bg-zinc-800/30">
+                                                    <td className="px-4 py-3">
+                                                        <p className="font-semibold text-[#001D4A] dark:text-white">#{row.assignmentId}</p>
+                                                        <p className="text-xs text-gray-500 dark:text-zinc-400">{row.assignmentTitle}</p>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <p className="font-semibold text-[#001D4A] dark:text-white">{row.studentName}</p>
+                                                        <p className="text-xs font-mono text-gray-500 dark:text-zinc-400">{row.studentCode}</p>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center font-black text-[#001D4A] dark:text-white">
+                                                        {row.status === 'SUCCESS' ? `${row.plagiarismPercent ?? 0}%` : '—'}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        {row.status === 'ERROR' ? (
+                                                            <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                                                                Lỗi
+                                                            </span>
+                                                        ) : row.plagiarized ? (
+                                                            <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-bold text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
+                                                                Nghi ngờ
+                                                            </span>
+                                                        ) : (
+                                                            <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                                                                Bình thường
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-zinc-300">
+                                                        {row.status === 'ERROR' ? (row.errorMessage || 'Lỗi không xác định') : 'Check thành công'}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-zinc-400">
+                                                        {formatDateTime(row.checkedAt)}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showPlagiarismConfigModal && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4">
+                    <div className="w-full max-w-md overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+                        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-zinc-800">
+                            <h3 className="text-base font-bold text-[#001D4A] dark:text-white">Cấu hình ngưỡng đạo văn</h3>
+                            <button
+                                type="button"
+                                onClick={() => setShowPlagiarismConfigModal(false)}
+                                className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4 p-6">
+                            <div>
+                                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500">Ngưỡng văn bản (%)</label>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    max={100}
+                                    value={configTextThreshold}
+                                    onChange={e => setConfigTextThreshold(e.target.value)}
+                                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500">Ngưỡng hình ảnh (%)</label>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    max={100}
+                                    value={configImageThreshold}
+                                    onChange={e => setConfigImageThreshold(e.target.value)}
+                                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                                />
+                            </div>
+                            <p className="text-xs text-gray-500 dark:text-zinc-400">
+                                Dùng để quyết định kết luận: điểm text/image lớn hơn hoặc bằng ngưỡng sẽ bị đánh dấu nghi ngờ đạo văn, dưới ngưỡng là không đạo văn.
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-zinc-400">Mặc định hệ thống: văn bản 70%, hình ảnh 95%.</p>
+
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPlagiarismConfigModal(false)}
+                                    className="flex-1 rounded-xl bg-gray-100 px-4 py-2.5 text-sm font-bold text-gray-700 transition-colors hover:bg-gray-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                                >
+                                    Hủy
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleSavePlagiarismConfig}
+                                    disabled={savingPlagiarismConfig}
+                                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-fpt-orange px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-orange-600 disabled:opacity-60"
+                                >
+                                    {savingPlagiarismConfig && <Loader2 className="h-4 w-4 animate-spin" />}
+                                    Lưu cấu hình
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

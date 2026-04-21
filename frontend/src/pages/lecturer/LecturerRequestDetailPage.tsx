@@ -38,17 +38,24 @@ export const LecturerRequestDetailPage: React.FC = () => {
         email: user?.email || '---'
     };
 
-    const handleRevokeConfirm = () => {
-        if (request) {
-            setIsRevoking(true);
-            scheduleRequestService.revokeRequest(request.id)
-                .then(() => {
-                    toast.success('Đã thu hồi đơn yêu cầu thành công');
-                    setIsRevokeModalOpen(false);
-                    scheduleRequestService.getRequestById(Number(id)).then(setRequest);
-                })
-                .catch(() => toast.error('Lỗi khi thu hồi đơn yêu cầu'))
-                .finally(() => setIsRevoking(false));
+    const handleRevokeConfirm = async () => {
+        if (!request || isRevoking) {
+            return;
+        }
+
+        setIsRevoking(true);
+        // Close modal immediately to avoid repeated clicks while request is in-flight.
+        setIsRevokeModalOpen(false);
+
+        try {
+            await scheduleRequestService.revokeRequest(request.id);
+            toast.success('Đã thu hồi đơn yêu cầu thành công');
+            const updatedRequest = await scheduleRequestService.getRequestById(Number(id));
+            setRequest(updatedRequest);
+        } catch {
+            toast.error('Lỗi khi thu hồi đơn yêu cầu');
+        } finally {
+            setIsRevoking(false);
         }
     };
 

@@ -16,17 +16,24 @@ export const LecturerRequestPage: React.FC = () => {
     const [revokingRequestId, setRevokingRequestId] = useState<number | null>(null);
     const [isRevoking, setIsRevoking] = useState(false);
 
-    const handleRevokeConfirm = () => {
-        if (revokingRequestId) {
-            setIsRevoking(true);
-            scheduleRequestService.revokeRequest(revokingRequestId)
-                .then(() => {
-                    toast.success('Đã thu hồi đơn yêu cầu thành công');
-                    setRevokingRequestId(null);
-                    fetchRequests();
-                })
-                .catch(() => toast.error('Lỗi khi thu hồi đơn yêu cầu'))
-                .finally(() => setIsRevoking(false));
+    const handleRevokeConfirm = async () => {
+        if (!revokingRequestId || isRevoking) {
+            return;
+        }
+
+        const targetRequestId = revokingRequestId;
+        setIsRevoking(true);
+        // Close modal immediately to prevent repeated confirm clicks while waiting API.
+        setRevokingRequestId(null);
+
+        try {
+            await scheduleRequestService.revokeRequest(targetRequestId);
+            toast.success('Đã thu hồi đơn yêu cầu thành công');
+            await fetchRequests();
+        } catch {
+            toast.error('Lỗi khi thu hồi đơn yêu cầu');
+        } finally {
+            setIsRevoking(false);
         }
     };
 

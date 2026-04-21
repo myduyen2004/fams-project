@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
 import '../controllers/student_grade_controller.dart';
 import '../models/student_grade_model.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 /// Screen 2: Detailed grade breakdown for a specific course/class
 /// Redesigned to have a table-like layout similar to the web version.
@@ -14,49 +16,96 @@ class GradeDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.find<StudentGradeController>();
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: Text(
-          'Chi tiết điểm',
-          style: GoogleFonts.plusJakartaSans(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: AppColors.primaryOrange,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-          onPressed: () => Get.back(),
+    const Color textMain = Color(0xFF1E2A3A);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark 
+            ? Theme.of(context).scaffoldBackgroundColor 
+            : null,
+        gradient: Theme.of(context).brightness == Brightness.dark 
+            ? null 
+            : const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFFFEF3DE),
+                  Colors.white,
+                ],
+                stops: [0.0, 0.3],
+              ),
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Column(
+          children: [
+            // Custom Header Title Row
+            Padding(
+              padding: EdgeInsets.fromLTRB(16.w, 60.h, 16.w, 15.h),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: Icon(SolarIconsOutline.altArrowLeft, color: textMain, size: 24.sp),
+                    onPressed: () => Get.back(),
+                  ),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Chi tiết điểm',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 20.sp,
+                            fontWeight: FontWeight.w800,
+                            color: textMain,
+                          ),
+                        ),
+                        Text(
+                          'Bảng điểm thành phần môn học',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w500,
+                            color: textMain.withOpacity(0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: 48.w), // Balance for back button
+                ],
+              ),
+            ),
+            Expanded(
+              child: Obx(() {
+                if (controller.isLoadingDetail.value) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: AppColors.primaryOrange),
+                  );
+                }
+
+                final detail = controller.gradeDetail.value;
+                if (detail == null) {
+                  return _buildErrorView(controller);
+                }
+
+                return SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildCourseHeader(context, detail),
+                      _buildSummaryHeader(context, detail),
+                      const SizedBox(height: 16),
+                      _buildGradeTable(context, detail, controller),
+                      const SizedBox(height: 40),
+                    ],
+                  ),
+                );
+              }),
+            ),
+          ],
         ),
       ),
-      body: Obx(() {
-        if (controller.isLoadingDetail.value) {
-          return const Center(
-            child: CircularProgressIndicator(color: AppColors.primaryOrange),
-          );
-        }
-
-        final detail = controller.gradeDetail.value;
-        if (detail == null) {
-          return _buildErrorView(controller);
-        }
-
-        return SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildCourseHeader(context, detail),
-              _buildSummaryHeader(context, detail),
-              const SizedBox(height: 16),
-              _buildGradeTable(context, detail, controller),
-              const SizedBox(height: 40),
-            ],
-          ),
-        );
-      }),
     );
   }
 
@@ -64,8 +113,8 @@ class GradeDetailScreen extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
+      decoration: const BoxDecoration(
+        color: Colors.transparent,
       ),
       child: Row(
         children: [

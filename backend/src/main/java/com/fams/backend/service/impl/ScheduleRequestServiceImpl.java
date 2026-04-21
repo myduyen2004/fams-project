@@ -5,6 +5,7 @@ import com.fams.backend.dto.response.ScheduleRequestResponse;
 import com.fams.backend.entity.ClassSection;
 import com.fams.backend.entity.ScheduleRequest;
 import com.fams.backend.entity.User;
+import com.fams.backend.entity.Alert;
 import com.fams.backend.exception.BadRequestException;
 import com.fams.backend.repository.RoomRepository;
 import com.fams.backend.repository.ScheduleRequestRepository;
@@ -45,6 +46,7 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
     private final RoomRepository roomRepository;
     private final SlotTypeRepository slotTypeRepository;
     private final com.fams.backend.repository.EnrollmentRepository enrollmentRepository;
+    private final AlertService alertService;
 
     @Override
     public ScheduleRequestResponse createRequest(CreateScheduleRequest request, Long requesterId) {
@@ -158,6 +160,13 @@ public class ScheduleRequestServiceImpl implements ScheduleRequestService {
             long studentConflictCount = timetableSlotRepository.countStudentConflicts(
                     className, targetDate, targetSlotIndex);
             if (studentConflictCount > 0) {
+                alertService.createAlert(
+                        "Xung đột lịch phức tạp",
+                        String.format("Yêu cầu từ %s gây ra xung đột lịch cho %d sinh viên lớp %s",
+                                requester.getFullName(), studentConflictCount, originalSlot.getClassSection().getCourse().getName()),
+                        Alert.AlertLevel.WARNING,
+                        Alert.AlertType.SCHEDULE,
+                        requester);
                 throw new BadRequestException(
                         String.format("Có %d sinh viên trong lớp bị trùng lịch học vào khung giờ này.",
                                 studentConflictCount));

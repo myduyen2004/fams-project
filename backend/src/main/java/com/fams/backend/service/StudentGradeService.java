@@ -10,6 +10,7 @@ import com.fams.backend.dto.response.StudentResponse;
 import com.fams.backend.entity.*;
 import com.fams.backend.repository.*;
 import com.fams.backend.util.GradeCalculator;
+import com.fams.backend.service.impl.AlertService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,7 @@ public class StudentGradeService {
     private final SpecializationCourseRepository specializationCourseRepository;
     private final SubSpecializationCourseRepository subSpecializationCourseRepository;
     private final StudentAttendanceRepository studentAttendanceRepository;
+    private final AlertService alertService;
 
     /**
      * Get grade overview for a class section
@@ -355,6 +357,22 @@ public class StudentGradeService {
 
         // --- ADDED: Send Notification to Academic Staff ---
         notificationService.notifyAcademicStaffGradesSubmitted(classSection, submittedBy);
+
+        // --- ADDED: Suspicious Publication Alert ---
+        try {
+            GradeOverviewResponse overview = getGradeOverview(className, "ADMIN");
+            if (overview.getPassRate() < 50.0) {
+                alertService.createAlert(
+                        "Tỉ lệ trượt cao bất thường",
+                        String.format("Lớp %s có tỉ lệ đạt chỉ %.1f%% sau khi %s công bố điểm.",
+                                className, overview.getPassRate(), submittedBy.getFullName()),
+                        Alert.AlertLevel.WARNING,
+                        Alert.AlertType.GRADE,
+                        submittedBy);
+            }
+        } catch (Exception e) {
+            log.error("Failed to create grade publication alert", e);
+        }
     }
 
     /**
@@ -619,6 +637,29 @@ public class StudentGradeService {
                     studentGradeRepository.save(grade);
                     successCount++;
                 }
+            }
+        }
+
+        // --- ADDED: Suspicious Import Alert ---
+        if (successCount > 0) {
+            if (deletedCount > 10) {
+                alertService.createAlert(
+                        "Xóa điểm số lượng lớn",
+                        String.format("Người dùng %s đã xóa %d đầu điểm của lớp %s qua file Excel.",
+                                gradedBy.getFullName(), deletedCount, className),
+                        Alert.AlertLevel.CRITICAL,
+                        Alert.AlertType.GRADE,
+                        gradedBy);
+            }
+            
+            if (successCount > enrollments.size() * 0.5) {
+                alertService.createAlert(
+                        "Nhập điểm khối lượng lớn",
+                        String.format("%s đã nhập/cập nhật %d điểm cho lớp %s.",
+                                gradedBy.getFullName(), successCount, className),
+                        Alert.AlertLevel.INFO,
+                        Alert.AlertType.GRADE,
+                        gradedBy);
             }
         }
 

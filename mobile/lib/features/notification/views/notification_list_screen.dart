@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/widgets/app_background.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../controllers/notification_controller.dart';
 import '../models/notification_model.dart';
@@ -337,12 +336,9 @@ class NotificationListScreen extends StatelessWidget {
     final today = DateTime(now.year, now.month, now.day);
     
     return list.where((n) {
-      try {
-        final date = DateFormat('dd/MM/yyyy HH:mm').parse(n.timestamp);
-        return date.isAfter(today);
-      } catch (e) {
-        return false;
-      }
+      final date = n.parsedTimestamp;
+      if (date == null) return false;
+      return date.isAfter(today);
     }).toList();
   }
 
@@ -351,19 +347,23 @@ class NotificationListScreen extends StatelessWidget {
     final today = DateTime(now.year, now.month, now.day);
     
     return list.where((n) {
-      try {
-        final date = DateFormat('dd/MM/yyyy HH:mm').parse(n.timestamp);
-        return date.isBefore(today);
-      } catch (e) {
-        return true;
-      }
+      final date = n.parsedTimestamp;
+      if (date == null) return true; // Keep in list if we can't parse
+      return date.isBefore(today);
     }).toList();
   }
 
   String _getExactTime(String timestamp) {
     try {
-      final date = DateFormat('dd/MM/yyyy HH:mm').parse(timestamp);
-      return DateFormat('HH:mm - dd/MM/yyyy').format(date);
+      // Create a temporary model to parse safely
+      final temp = NotificationModel(
+        id: 0, title: '', description: '', isRead: true, timestamp: timestamp
+      );
+      final date = temp.parsedTimestamp;
+      if (date != null) {
+        return DateFormat('HH:mm - dd/MM/yyyy').format(date);
+      }
+      return timestamp;
     } catch (e) {
       return timestamp;
     }

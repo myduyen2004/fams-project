@@ -16,6 +16,8 @@ export interface AssignmentDTO {
     referenceName?: string; // Keep for backward compatibility
     referenceUrls?: string[];
     referenceNames?: string[];
+    plagiarismTextThreshold?: number;
+    plagiarismImageThreshold?: number;
     status: 'OPEN' | 'CLOSED';
     totalSubmissions: number;
     totalStudents: number;
@@ -65,9 +67,15 @@ export interface SubmitAssignmentRequest {
 }
 
 export interface AssignmentPlagiarismMatchDTO {
+    matchCategory?: 'PLAGIARISM_SUSPECT' | 'TOPIC_SIMILAR' | 'LOW_SIMILARITY';
+    topicSimilarOnly?: boolean;
+    textSuspect?: boolean;
+    imageSuspect?: boolean;
     submissionId: number;
     studentCode: string;
     studentName: string;
+    className?: string;
+    assignmentTitle?: string;
     plagiarismPercent: number;
     probability: number;
     textScore: number;
@@ -78,6 +86,24 @@ export interface AssignmentPlagiarismMatchDTO {
     notePreview?: string;
     fileNames?: string[];
     sharedSignals: string[];
+    matchComment?: string;
+    reasonTags?: string[];
+    reasonSummary?: string;
+    evidenceTop3?: PlagiarismEvidenceItemDTO[];
+    comparedFileLinks?: string[];
+}
+
+export interface PlagiarismEvidenceFragmentDTO {
+    fileName?: string;
+    pageOrChunk?: string;
+    contentPreview?: string;
+}
+
+export interface PlagiarismEvidenceItemDTO {
+    modality?: 'TEXT' | 'IMAGE' | string;
+    similarity?: number;
+    target?: PlagiarismEvidenceFragmentDTO;
+    compared?: PlagiarismEvidenceFragmentDTO;
 }
 
 export interface AssignmentPlagiarismDTO {
@@ -96,6 +122,10 @@ export interface AssignmentPlagiarismDTO {
     originalityPercent: number;
     probability: number;
     plagiarized: boolean;
+    plagiarizedText?: boolean;
+    plagiarizedImage?: boolean;
+    textThreshold?: number;
+    imageThreshold?: number;
     comparedSubmissionCount: number;
     textScore: number;
     imageScore: number;
@@ -103,6 +133,12 @@ export interface AssignmentPlagiarismDTO {
     fileNameScore: number;
     keySignals: string[];
     topMatches: AssignmentPlagiarismMatchDTO[];
+    topTextMatches?: AssignmentPlagiarismMatchDTO[];
+    topImageMatches?: AssignmentPlagiarismMatchDTO[];
+    overallComment?: string;
+    indexCoverage?: number;
+    pendingIndexedSubmissionCount?: number;
+    coverageNote?: string;
 }
 
 export const assignmentService = {
@@ -160,6 +196,18 @@ export const assignmentService = {
     checkSubmissionPlagiarism: async (assignmentId: number, submissionId: number): Promise<AssignmentPlagiarismDTO> => {
         const response = await apiClient.get<AssignmentPlagiarismDTO>(
             `/v1/lecturer/assignments/${assignmentId}/submissions/${submissionId}/plagiarism`
+        );
+        return response.data;
+    },
+
+    updateAssignmentPlagiarismConfig: async (
+        assignmentId: number,
+        textThreshold: number,
+        imageThreshold: number
+    ): Promise<AssignmentDTO> => {
+        const response = await apiClient.put<AssignmentDTO>(
+            `/v1/lecturer/assignments/${assignmentId}/plagiarism-config`,
+            { textThreshold, imageThreshold }
         );
         return response.data;
     },

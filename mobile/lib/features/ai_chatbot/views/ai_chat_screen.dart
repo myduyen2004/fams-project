@@ -89,14 +89,14 @@ class AiChatScreen extends StatelessWidget {
           // Thinking Steps
           Obx(
             () => controller.isThinking.value
-                ? _buildThinkingProcess(controller.thinkingSteps)
+                ? _buildThinkingProcess(context, controller.thinkingSteps)
                 : const SizedBox.shrink(),
           ),
 
           Expanded(
             child: Obx(() {
               if (controller.messages.isEmpty && !controller.isLoading.value) {
-                return _buildWelcomeScreen(controller);
+                return _buildWelcomeScreen(context, controller);
               }
 
               return ListView.builder(
@@ -105,7 +105,7 @@ class AiChatScreen extends StatelessWidget {
                 itemCount: controller.messages.length,
                 itemBuilder: (context, index) {
                   final msg = controller.messages[index];
-                  return _buildMessageBubble(msg);
+                  return _buildMessageBubble(context, msg);
                 },
               );
             }),
@@ -136,13 +136,13 @@ class AiChatScreen extends StatelessWidget {
               ),
             ),
 
-          _buildInputArea(controller, textController),
+          _buildInputArea(context, controller, textController),
         ],
       ),
     );
   }
 
-  Widget _buildWelcomeScreen(AiChatController controller) {
+  Widget _buildWelcomeScreen(BuildContext context, AiChatController controller) {
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(32),
@@ -207,7 +207,7 @@ class AiChatScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildThinkingProcess(List<ThinkingStep> steps) {
+  Widget _buildThinkingProcess(BuildContext context, List<ThinkingStep> steps) {
     if (steps.isEmpty) return const SizedBox.shrink();
     return Container(
       width: double.infinity,
@@ -271,7 +271,7 @@ class AiChatScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMessageBubble(AiChatMessage msg) {
+  Widget _buildMessageBubble(BuildContext context, AiChatMessage msg) {
     final bool isUser = msg.isUser;
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
@@ -376,6 +376,7 @@ class AiChatScreen extends StatelessWidget {
   }
 
   Widget _buildInputArea(
+    BuildContext context,
     AiChatController controller,
     TextEditingController textController,
   ) {

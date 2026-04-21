@@ -1,6 +1,8 @@
 package com.fams.backend.service.impl;
 
-import com.fams.backend.repository.*;
+import com.fams.backend.entity.Alert;
+import com.fams.backend.entity.Semester;
+import com.fams.backend.repository.SemesterRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.openxml4j.opc.OPCPackage;
@@ -41,6 +43,7 @@ public class StagingImportService {
 
     private final JdbcTemplate jdbcTemplate;
     private final SemesterRepository semesterRepository;
+    private final AlertService alertService;
 
     private static final int MAX_SAMPLE_ERRORS = 100;
     private static final int BATCH_SIZE = 1000;
@@ -59,7 +62,7 @@ public class StagingImportService {
             var semester = semesterRepository.findByCode(semesterCode)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy học kỳ: " + semesterCode));
 
-            if (semester.getStatus() != com.fams.backend.entity.Semester.SemesterStatus.UPCOMING) {
+            if (semester.getStatus() != Semester.SemesterStatus.UPCOMING) {
                 throw new RuntimeException("Chỉ có thể nhập lớp học phần khi học kỳ chưa bắt đầu");
             }
 
@@ -89,6 +92,19 @@ public class StagingImportService {
                     buildMessage((int) validationResult.get("validCount"), (int) validationResult.get("errorCount")));
 
             log.info("Fast preview class sections: {} rows in {}ms", rowsCopied, duration);
+
+            // --- ADDED: High Error Alert ---
+            if ((int) validationResult.get("errorCount") > 50) {
+                alertService.createAlert(
+                    "Lỗi import lớp học phần",
+                    String.format("File import lớp học phần của học kỳ %s chứa quá nhiều lỗi (%d lỗi).", 
+                        semesterCode, validationResult.get("errorCount")),
+                    Alert.AlertLevel.WARNING,
+                    Alert.AlertType.SYSTEM,
+                    null
+                );
+            }
+
             return result;
 
         } catch (Exception e) {
@@ -108,7 +124,7 @@ public class StagingImportService {
             var semester = semesterRepository.findById(semesterId)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy học kỳ"));
 
-            if (semester.getStatus() != com.fams.backend.entity.Semester.SemesterStatus.UPCOMING) {
+            if (semester.getStatus() != Semester.SemesterStatus.UPCOMING) {
                 throw new RuntimeException("Chỉ có thể nhập lớp học phần khi học kỳ chưa bắt đầu");
             }
             String insertSql = """
@@ -125,12 +141,12 @@ public class StagingImportService {
                         NOW(),
                         NOW()
                     FROM %s s
-                    JOIN courses c ON UPPER(TRIM(s.course_code)) = UPPER(TRIM(c.code))
-                    LEFT JOIN users u ON UPPER(TRIM(s.lecturer_code)) = UPPER(TRIM(u.username)) AND u.role = 'LECTURER'
+                    JOIN courses c ON TRIM(s.course_code) = TRIM(c.code)
+                    LEFT JOIN users u ON TRIM(s.lecturer_code) = TRIM(u.username) AND u.role = 'LECTURER'
                     WHERE s.error_message IS NULL
                     AND NOT EXISTS (
                         SELECT 1 FROM class_sections cs
-                        WHERE UPPER(TRIM(cs.class_name)) = UPPER(TRIM(s.class_name))
+                        WHERE TRIM(cs.class_name) = TRIM(s.class_name)
                     )
                     """
                     .formatted(stagingTable);
@@ -155,6 +171,19 @@ public class StagingImportService {
                     String.format("Import thành công %d lớp học phần trong %.2f giây", created, duration / 1000.0));
 
             log.info("Import class sections completed: {} created, {} failed in {}ms", created, failed, duration);
+
+            // --- ADDED: Bulk Import Alert ---
+            if (created > 20) {
+                 alertService.createAlert(
+                    "Import lớp học phần số lượng lớn",
+                    String.format("Đã tạo thành công %d lớp học phần mới trong học kỳ %s.", 
+                        created, semester.getCode()),
+                    Alert.AlertLevel.INFO,
+                    Alert.AlertType.SYSTEM,
+                    null // System alert
+                );
+            }
+
             return result;
 
         } catch (Exception e) {
@@ -175,7 +204,7 @@ public class StagingImportService {
             var semester = semesterRepository.findByCode(semesterCode)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy học kỳ: " + semesterCode));
 
-            if (semester.getStatus() != com.fams.backend.entity.Semester.SemesterStatus.UPCOMING) {
+            if (semester.getStatus() != Semester.SemesterStatus.UPCOMING) {
                 throw new RuntimeException("Chỉ có thể nhập lớp học phần khi học kỳ chưa bắt đầu");
             }
 
@@ -221,7 +250,7 @@ public class StagingImportService {
             var semester = semesterRepository.findByCode(semesterCode)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy học kỳ: " + semesterCode));
 
-            if (semester.getStatus() != com.fams.backend.entity.Semester.SemesterStatus.UPCOMING) {
+            if (semester.getStatus() != Semester.SemesterStatus.UPCOMING) {
                 throw new RuntimeException("Chỉ có thể nhập danh sách đăng ký khi học kỳ chưa bắt đầu");
             }
 
@@ -251,6 +280,18 @@ public class StagingImportService {
                 rowsCopied, validationResult.get("validCount"), validationResult.get("errorCount"), duration);
             if ((int)validationResult.get("errorCount") > 0) {
                 log.warn("Sample errors: {}", validationResult.get("sampleErrors"));
+                
+                // --- ADDED: High Error Alert ---
+                if ((int) validationResult.get("errorCount") > 50) {
+                    alertService.createAlert(
+                        "Lỗi import danh sách đăng ký",
+                        String.format("File import danh sách đăng ký của học kỳ %s chứa quá nhiều lỗi (%d lỗi).", 
+                            semesterCode, validationResult.get("errorCount")),
+                        Alert.AlertLevel.WARNING,
+                        Alert.AlertType.SYSTEM,
+                        null
+                    );
+                }
             }
             return result;
 
@@ -271,7 +312,7 @@ public class StagingImportService {
             var semester = semesterRepository.findById(semesterId)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy học kỳ"));
 
-            if (semester.getStatus() != com.fams.backend.entity.Semester.SemesterStatus.UPCOMING) {
+            if (semester.getStatus() != Semester.SemesterStatus.UPCOMING) {
                 throw new RuntimeException("Chỉ có thể nhập danh sách đăng ký khi học kỳ chưa bắt đầu");
             }
 
@@ -287,7 +328,7 @@ public class StagingImportService {
                         NOW(),
                         NOW()
                     FROM %s s
-                    JOIN users u ON UPPER(TRIM(s.student_code)) = UPPER(TRIM(u.code)) AND u.role = 'STUDENT'
+                    JOIN users u ON TRIM(s.student_code) = TRIM(u.code) AND u.role = 'STUDENT'
                     JOIN student_profiles sp ON u.id = sp.user_id
                     JOIN class_sections cs ON s.class_name = cs.class_name AND cs.semester_id = ?
                     WHERE s.error_message IS NULL
@@ -333,6 +374,19 @@ public class StagingImportService {
                     String.format("Import thành công %d đăng ký trong %.2f giây", created, duration / 1000.0));
 
             log.info("Import enrollments completed: {} created, {} failed in {}ms", created, failed, duration);
+
+            // --- ADDED: Bulk Import Alert ---
+            if (created > 100) {
+                alertService.createAlert(
+                    "Import danh sách đăng ký số lượng lớn",
+                    String.format("Đã thêm thành công %d sinh viên vào các lớp trong học kỳ %s.", 
+                        created, semester.getCode()),
+                    Alert.AlertLevel.INFO,
+                    Alert.AlertType.SYSTEM,
+                    null // System alert
+                );
+            }
+
             return result;
 
         } catch (Exception e) {
@@ -451,7 +505,7 @@ public class StagingImportService {
                     handler.flushBatch();
                     
                     // 1. Single-pass CLEANING (Critical for performance)
-                    jdbcTemplate.execute("UPDATE " + stagingTable + " SET class_name = UPPER(TRIM(class_name)), course_code = UPPER(TRIM(course_code)), lecturer_code = UPPER(TRIM(lecturer_code))");
+                    jdbcTemplate.execute("UPDATE " + stagingTable + " SET class_name = TRIM(class_name), course_code = TRIM(course_code), lecturer_code = TRIM(lecturer_code)");
 
                     // 2. Add indices to speed up validation
                     jdbcTemplate.execute("CREATE INDEX ON " + stagingTable + " (class_name)");
@@ -491,7 +545,7 @@ public class StagingImportService {
                     handler.flushBatch();
                     
                     // 1. Single-pass CLEANING (Critical for performance)
-                    jdbcTemplate.execute("UPDATE " + stagingTable + " SET student_code = UPPER(TRIM(student_code)), class_name = UPPER(TRIM(class_name))");
+                    jdbcTemplate.execute("UPDATE " + stagingTable + " SET student_code = TRIM(student_code), class_name = TRIM(class_name)");
 
                     // 2. Add indices to speed up validation
                     jdbcTemplate.execute("CREATE INDEX ON " + stagingTable + " (student_code)");
@@ -552,7 +606,7 @@ public class StagingImportService {
                         WHERE s.class_name != ''
                         AND EXISTS (
                             SELECT 1 FROM class_sections cs
-                            WHERE UPPER(TRIM(cs.class_name)) = UPPER(TRIM(s.class_name))
+                            WHERE TRIM(cs.class_name) = TRIM(s.class_name)
                         )
                         """
                         .formatted(stagingTable));
@@ -612,8 +666,8 @@ public class StagingImportService {
                             SELECT 1 FROM enrollments e
                             JOIN users u ON e.student_id = u.id
                             JOIN class_sections cs ON e.class_name = cs.class_name
-                            WHERE UPPER(TRIM(u.code)) = s.student_code
-                            AND UPPER(TRIM(cs.class_name)) = s.class_name
+                            WHERE TRIM(u.code) = s.student_code
+                            AND TRIM(cs.class_name) = s.class_name
                             AND cs.semester_id = ?
                         )
                         """
@@ -652,8 +706,8 @@ public class StagingImportService {
                         WHERE EXISTS (
                             SELECT 1 FROM users u
                             JOIN student_profiles sp ON sp.user_id = u.id
-                            JOIN class_sections cs ON s.class_name = UPPER(TRIM(cs.class_name)) AND cs.semester_id = ?
-                            WHERE UPPER(TRIM(u.code)) = s.student_code
+                            JOIN class_sections cs ON s.class_name = TRIM(cs.class_name) AND cs.semester_id = ?
+                            WHERE TRIM(u.code) = s.student_code
                             AND u.role = 'STUDENT'
                             AND NOT EXISTS (
                                 SELECT 1 FROM specialization_courses sc

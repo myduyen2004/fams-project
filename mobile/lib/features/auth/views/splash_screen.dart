@@ -100,15 +100,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     _navigateToNext();
   }
 
-  Future<void> _waitForInitialization() async {
-    try {
-      if (_authController.isInitialized.value) return;
-      await interval(_authController.isInitialized, (bool init) {
-        if (init) return;
-      }, time: const Duration(seconds: 5));
-    } catch (_) {}
-  }
-
   void _navigateToNext() {
     if (_authController.isAuthenticated.value) {
       Get.offAllNamed(AppRoutes.home);
