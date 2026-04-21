@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft,
     CheckCircle,
-    XCircle,
     Clock,
     Mail,
     Loader2,

@@ -7,7 +7,6 @@ import {
     XCircle,
     Clock,
     User,
-    Mail,
     GraduationCap,
     Loader2,
     FileText
