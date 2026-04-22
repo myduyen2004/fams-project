@@ -9,6 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -33,11 +34,16 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         private void seedAdminUser() {
-                // Check by both username and email to prevent unique constraint violations
-                boolean existsByUsername = userRepository.findByUsername("admin").isPresent();
-                boolean existsByEmail = userRepository.findByEmail("admin@fams.com").isPresent();
+                // Find existing admin by username or email
+                Optional<User> existingAdmin = userRepository.findByUsername("admin");
+                if (existingAdmin.isEmpty()) {
+                        existingAdmin = userRepository.findByEmail("admin@fams.com");
+                }
+                if (existingAdmin.isEmpty()) {
+                        existingAdmin = userRepository.findByCode("ADMIN001");
+                }
 
-                if (!existsByUsername && !existsByEmail) {
+                if (existingAdmin.isEmpty()) {
                         User admin = User.builder()
                                         .code("ADMIN001")
                                         .username("admin")
@@ -54,17 +60,26 @@ public class DataInitializer implements CommandLineRunner {
                         userRepository.save(admin);
                         log.info("Default admin user created: admin/admin123");
                 } else {
-                        log.info("Admin user already exists, skipping seeding.");
+                        User admin = existingAdmin.get();
+                        admin.setPassword(passwordEncoder.encode("admin123"));
+                        admin.setStatus(User.UserStatus.ACTIVE);
+                        admin.setIsPasswordChanged(true);
+                        userRepository.save(admin);
+                        log.info("Default admin user updated/reset: admin/admin123");
                 }
         }
 
         private void seedAcademicStaffUser() {
-                // Check by username, email, and code to prevent unique constraint violations
-                boolean existsByUsername = userRepository.findByUsername("academic").isPresent();
-                boolean existsByEmail = userRepository.findByEmail("staff@fams.com").isPresent();
-                boolean existsByCode = userRepository.findByCode("STAFF001").isPresent();
+                // Find existing staff by username, email or code
+                Optional<User> existingStaff = userRepository.findByUsername("academic");
+                if (existingStaff.isEmpty()) {
+                        existingStaff = userRepository.findByEmail("staff@fams.com");
+                }
+                if (existingStaff.isEmpty()) {
+                        existingStaff = userRepository.findByCode("STAFF001");
+                }
 
-                if (!existsByUsername && !existsByEmail && !existsByCode) {
+                if (existingStaff.isEmpty()) {
                         User staff = User.builder()
                                         .code("STAFF001")
                                         .username("academic")
@@ -81,7 +96,12 @@ public class DataInitializer implements CommandLineRunner {
                         userRepository.save(staff);
                         log.info("Default academic staff user created: academic/staff123");
                 } else {
-                        log.info("Academic staff user already exists, skipping seeding.");
+                        User staff = existingStaff.get();
+                        staff.setPassword(passwordEncoder.encode("staff123"));
+                        staff.setStatus(User.UserStatus.ACTIVE);
+                        staff.setIsPasswordChanged(true);
+                        userRepository.save(staff);
+                        log.info("Default academic staff user updated/reset: academic/staff123");
                 }
         }
 

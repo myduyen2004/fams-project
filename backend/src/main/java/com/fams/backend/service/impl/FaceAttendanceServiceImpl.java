@@ -40,6 +40,7 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
         private final UploadService uploadService;
         private final SimpMessagingTemplate messagingTemplate;
         private final AttendanceConfigService configService;
+        private final AlertService alertService;
 
         @Override
         @Transactional
@@ -393,7 +394,7 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
 
                         return FaceDTO.FaceCheckInResponse.builder()
                                         .status("FAILED")
-                                        .message(translateAiMessage(verifyResponse.getMessage()))
+                                        .message(translateAiMessage(verifyResponse.getMessage(), studentId))
                                         .attemptNumber(currentAttempt)
                                         .remainingAttempts(remainingAttempts)
                                         .confidence(verifyResponse.getConfidence())
@@ -401,7 +402,7 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
                 }
         }
 
-        private String translateAiMessage(String message) {
+        private String translateAiMessage(String message, Long studentId) {
                 if (message == null)
                         return "Không thể xác thực danh tính.";
 
@@ -415,6 +416,13 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
                 } else if (msg.contains("blur")) {
                         return "Hình ảnh bị nhòe. Vui lòng giữ chắc thiết bị và thử lại.";
                 } else if (msg.contains("spoof") || msg.contains("replay") || msg.contains("fake")) {
+                        alertService.createAlert(
+                                        "Cảnh báo bảo mật",
+                                        "Phát hiện hành vi gian lận điểm danh (giả mạo khuôn mặt) từ sinh viên: "
+                                                        + studentId,
+                                        Alert.AlertLevel.CRITICAL,
+                                        Alert.AlertType.ATTENDANCE,
+                                        userRepository.findById(studentId).orElse(null));
                         return "Hình ảnh không hợp lệ. Vui lòng chụp ảnh trực tiếp, không sử dụng ảnh in hoặc chụp lại qua màn hình thiết bị khác.";
                 } else if (msg.contains("no face")) {
                         return "Không tìm thấy khuôn mặt trong ảnh.";
@@ -744,7 +752,6 @@ public class FaceAttendanceServiceImpl implements FaceAttendanceService {
                 }
         }
 
-        @SuppressWarnings("unchecked")
         private List<Double> deserializeEncoding(byte[] data) {
                 try (ByteArrayInputStream bis = new ByteArrayInputStream(data);
                                 ObjectInputStream ois = new ObjectInputStream(bis)) {

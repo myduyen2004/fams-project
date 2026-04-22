@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:solar_icons/solar_icons.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../auth/controllers/auth_controller.dart';
 import '../../schedule/controllers/schedule_controller.dart';
 import '../controllers/class_list_controller.dart';
 import '../models/class_section_model.dart';
@@ -12,7 +11,6 @@ import 'student_list_screen.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../home/controllers/home_controller.dart';
 import 'widgets/animated_status_badge.dart';
-import '../../../core/widgets/app_background.dart';
 
 class ClassListScreen extends StatelessWidget {
   ClassListScreen({super.key});

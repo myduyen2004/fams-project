@@ -12,8 +12,10 @@ import com.fams.backend.entity.SystemLog;
 import com.fams.backend.entity.User;
 import com.fams.backend.exception.NotFoundException;
 import com.fams.backend.repository.AccessLogRepository;
+import com.fams.backend.repository.AcademicRequestRepository;
 import com.fams.backend.repository.AlertRepository;
 import com.fams.backend.repository.NotificationRepository;
+import com.fams.backend.repository.ScheduleRequestRepository;
 import com.fams.backend.repository.SystemLogRepository;
 import com.fams.backend.repository.UserRepository;
 import com.fams.backend.service.UserNotificationService;
@@ -51,6 +53,10 @@ class DashboardServiceImplTest {
     private NotificationRepository notificationRepository;
     @Mock
     private UserNotificationService notificationService;
+    @Mock
+    private ScheduleRequestRepository scheduleRequestRepository;
+    @Mock
+    private AcademicRequestRepository academicRequestRepository;
 
     @InjectMocks
     private DashboardServiceImpl dashboardService;

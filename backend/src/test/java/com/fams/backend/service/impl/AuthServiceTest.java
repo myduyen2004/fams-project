@@ -58,6 +58,8 @@ class AuthServiceTest {
     private SystemLogService systemLogService;
     @Mock
     private UserPermissionRepository userPermissionRepository;
+    @Mock
+    private AlertService alertService;
 
     private AuthService authService;
 
@@ -79,7 +81,8 @@ class AuthServiceTest {
             emailService,
             redisTemplate,
             systemLogService,
-            userPermissionRepository
+            userPermissionRepository,
+            alertService
         );
 
         activeUser = User.builder()

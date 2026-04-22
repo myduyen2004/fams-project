@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/create_request_models.dart';
-import '../models/schedule_request_model.dart';
 import '../services/schedule_request_service.dart';
 import '../../../core/services/cloudinary_service.dart';
 

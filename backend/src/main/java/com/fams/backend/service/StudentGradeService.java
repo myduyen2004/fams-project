@@ -10,6 +10,7 @@ import com.fams.backend.dto.response.StudentResponse;
 import com.fams.backend.entity.*;
 import com.fams.backend.repository.*;
 import com.fams.backend.util.GradeCalculator;
+import com.fams.backend.service.impl.AlertService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,7 @@ public class StudentGradeService {
     private final SpecializationCourseRepository specializationCourseRepository;
     private final SubSpecializationCourseRepository subSpecializationCourseRepository;
     private final StudentAttendanceRepository studentAttendanceRepository;
+    private final AlertService alertService;
 
     /**
      * Get grade overview for a class section
@@ -195,20 +197,22 @@ public class StudentGradeService {
      */
     @Transactional
     public void updateGrade(UpdateGradeRequest request, Long updatedById) {
+        User updatedBy = userRepository.findById(updatedById)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
         Enrollment enrollment = enrollmentRepository.findById(request.getEnrollmentId())
                 .orElseThrow(() -> new RuntimeException("Enrollment not found"));
 
         // Check if grades are already submitted
         ClassSection classSection = enrollment.getClassSection();
-        if (Boolean.TRUE.equals(classSection.getGradesSubmitted())) {
+        boolean isAcademicStaff = User.UserRole.ACADEMIC_STAFF.equals(updatedBy.getRole());
+        
+        if (!isAcademicStaff && Boolean.TRUE.equals(classSection.getGradesSubmitted())) {
             throw new RuntimeException("Không thể chỉnh sửa điểm. Điểm đã được gửi cho phòng đào tạo.");
         }
 
         GradeComponent gradeComponent = gradeComponentRepository.findById(request.getGradeComponentId())
                 .orElseThrow(() -> new RuntimeException("Grade component not found"));
-
-        User updatedBy = userRepository.findById(updatedById)
-                .orElseThrow(() -> new RuntimeException("User not found"));
 
         StudentGrade grade = studentGradeRepository
                 .findByEnrollmentIdAndGradeComponentId(enrollment.getId(), gradeComponent.getId())
@@ -257,13 +261,15 @@ public class StudentGradeService {
         List<StudentGrade> toSave = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
 
+        boolean isAcademicStaff = User.UserRole.ACADEMIC_STAFF.equals(updatedBy.getRole());
+
         for (UpdateGradeRequest req : requests) {
             Enrollment enrollment = enrollmentMap.get(req.getEnrollmentId());
             if (enrollment == null)
                 continue;
 
             // Check if grades are already submitted
-            if (Boolean.TRUE.equals(enrollment.getClassSection().getGradesSubmitted())) {
+            if (!isAcademicStaff && Boolean.TRUE.equals(enrollment.getClassSection().getGradesSubmitted())) {
                 throw new RuntimeException("Không thể chỉnh sửa điểm. Điểm đã được gửi cho phòng đào tạo.");
             }
 
@@ -350,7 +356,23 @@ public class StudentGradeService {
         notificationService.notifyStudentsGradesPublished(studentsToNotify, course, "COMPONENT", submittedBy);
 
         // --- ADDED: Send Notification to Academic Staff ---
-        notificationService.notifyAcademicStaffGradesSubmitted(className, submittedBy, course);
+        notificationService.notifyAcademicStaffGradesSubmitted(classSection, submittedBy);
+
+        // --- ADDED: Suspicious Publication Alert ---
+        try {
+            GradeOverviewResponse overview = getGradeOverview(className, "ADMIN");
+            if (overview.getPassRate() < 50.0) {
+                alertService.createAlert(
+                        "Tỉ lệ trượt cao bất thường",
+                        String.format("Lớp %s có tỉ lệ đạt chỉ %.1f%% sau khi %s công bố điểm.",
+                                className, overview.getPassRate(), submittedBy.getFullName()),
+                        Alert.AlertLevel.WARNING,
+                        Alert.AlertType.GRADE,
+                        submittedBy);
+            }
+        } catch (Exception e) {
+            log.error("Failed to create grade publication alert", e);
+        }
     }
 
     /**
@@ -615,6 +637,29 @@ public class StudentGradeService {
                     studentGradeRepository.save(grade);
                     successCount++;
                 }
+            }
+        }
+
+        // --- ADDED: Suspicious Import Alert ---
+        if (successCount > 0) {
+            if (deletedCount > 10) {
+                alertService.createAlert(
+                        "Xóa điểm số lượng lớn",
+                        String.format("Người dùng %s đã xóa %d đầu điểm của lớp %s qua file Excel.",
+                                gradedBy.getFullName(), deletedCount, className),
+                        Alert.AlertLevel.CRITICAL,
+                        Alert.AlertType.GRADE,
+                        gradedBy);
+            }
+            
+            if (successCount > enrollments.size() * 0.5) {
+                alertService.createAlert(
+                        "Nhập điểm khối lượng lớn",
+                        String.format("%s đã nhập/cập nhật %d điểm cho lớp %s.",
+                                gradedBy.getFullName(), successCount, className),
+                        Alert.AlertLevel.INFO,
+                        Alert.AlertType.GRADE,
+                        gradedBy);
             }
         }
 

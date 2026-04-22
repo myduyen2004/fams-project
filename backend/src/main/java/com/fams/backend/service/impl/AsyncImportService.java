@@ -4,6 +4,7 @@ import com.fams.backend.dto.response.ImportJobResponse;
 import com.fams.backend.dto.response.UserResponse;
 import com.fams.backend.entity.ImportJob;
 import com.fams.backend.entity.User;
+import com.fams.backend.entity.Alert;
 import com.fams.backend.exception.BadRequestException;
 import com.fams.backend.exception.NotFoundException;
 import com.fams.backend.repository.ImportJobRepository;
@@ -54,6 +55,7 @@ public class AsyncImportService {
     private final StringRedisTemplate redisTemplate;
     private final CacheManager cacheManager;
     private final ObjectMapper objectMapper;
+    private final AlertService alertService;
     private final Set<String> cancelledJobIds = ConcurrentHashMap.newKeySet();
 
     public static final String ACTIVATION_PROGRESS_PREFIX = "fams:activation:progress:";
@@ -101,6 +103,15 @@ public class AsyncImportService {
             job.setErrorMessage(e.getMessage());
             job.setCompletedAt(LocalDateTime.now());
             importJobRepository.save(job); // Save job status before sending final notification
+            
+            alertService.createAlert(
+                    "Thất bại Import dữ liệu",
+                    String.format("Tiến trình import file %s bởi %s đã thất bại: %s",
+                            job.getFilename(), username, e.getMessage()),
+                    Alert.AlertLevel.ERROR,
+                    Alert.AlertType.GRADE,
+                    userRepository.findByUsername(username).orElse(null));
+
             sendJobNotification(username, job, null); // Send final notification for failure
         }
     }

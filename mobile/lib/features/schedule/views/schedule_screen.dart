@@ -2,15 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../auth/controllers/auth_controller.dart';
 import '../controllers/schedule_controller.dart';
 import '../widgets/schedule_calendar.dart';
 import '../widgets/slot_card.dart';
-import 'qr_scanner_screen.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:solar_icons/solar_icons.dart';
-
-import '../../../core/widgets/app_background.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});

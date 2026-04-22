@@ -779,7 +779,7 @@ export const GradeConfigurationPage: React.FC = () => {
             <ImportGradeComponentModal
                 isOpen={showImportModal}
                 onClose={() => setShowImportModal(false)}
-                onSuccess={() => { loadData(); setShowImportModal(false); }}
+                onSuccess={() => { loadData(); }}
                 existingComponents={allComponents}
             />
 

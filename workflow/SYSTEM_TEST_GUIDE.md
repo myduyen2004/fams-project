@@ -8,7 +8,7 @@ System Testing focuses on simulating real End-to-End user flows on both Web and 
 Based on the current project status, the following business flows have been completed (✅) and are ready for system testing:
 
 *   **User & Account Management:** Login, Registration, Profile Update for all roles (Pet Owner, Clinic Staff, Clinic Manager, Admin).
-*   **Pet Management:** Create, edit, and delete pet pro    files by Pet Owners.
+*   **Pet Management:** Create, edit, and delete pet profiles by Pet Owners.
 *   **Booking Management:** 
     *   Pet Owners creating new appointments.
     *   Staff/Managers viewing, confirming, or rejecting appointments.
@@ -60,7 +60,7 @@ System Test cases **MUST NOT ONLY** cover the "Happy Path" (successful workflows
 
 ## 6. Important Rules (Petties Rules)
 *   **Vietnamese-Only UI (100% Vietnamese Rule):** All "Expected Results" related to UI messages, buttons, and validation errors MUST be described in Vietnamese within the Test Report file.
-*   **RolePlatform Matrix:**
+*   **Role-Platform Matrix:**
     *   Pet Owners ONLY test on the Mobile App.
     *   Clinic Managers / Admins ONLY test on the Web.
     *   Staff test on both Web and Mobile.

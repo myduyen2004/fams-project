@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { StudentLayout } from '../../layouts/StudentLayout';
+import { useSearchParams } from 'react-router-dom';
 import { Card } from '../../components/common/Card';
 import { BookOpen, GraduationCap, AlertCircle, Loader2, ChevronDown, Check } from 'lucide-react';
 import { studentMyGradeService, StudentCourseOption, StudentGradeDetailResponse, GradeCategory } from '../../services/api/studentMyGradeService';
@@ -12,6 +13,10 @@ interface SemesterOption {
 }
 
 export const StudentGradesPage: React.FC = () => {
+
+    const [searchParams] = useSearchParams();
+    const urlCourseCode = searchParams.get('courseCode');
+
     const [courses, setCourses] = useState<StudentCourseOption[]>([]);
     const [selectedSemesterId, setSelectedSemesterId] = useState<number | null>(null);
     const [selectedClassName, setSelectedClassName] = useState<string>('');
@@ -76,19 +81,37 @@ export const StudentGradesPage: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        if (semesters.length > 0 && !selectedSemesterId) {
+        if (courses.length > 0 && semesters.length > 0 && !selectedSemesterId) {
+            // Priority 1: From URL
+            if (urlCourseCode) {
+                const targetCourse = courses.find(c => c.courseCode === urlCourseCode);
+                if (targetCourse) {
+                    setSelectedSemesterId(targetCourse.semesterId);
+                    setSelectedClassName(targetCourse.className);
+                    return;
+                }
+            }
+            
+            // Priority 2: Default to first semester
             setSelectedSemesterId(semesters[0].id);
         }
-    }, [semesters, selectedSemesterId]);
+    }, [semesters, courses, selectedSemesterId, urlCourseCode]);
 
     useEffect(() => {
         if (filteredCourses.length > 0) {
-            setSelectedClassName(filteredCourses[0].className);
+            // Only auto-select if we don't already have a valid selection for this semester
+            const currentIsValidForSemester = filteredCourses.some(c => c.className === selectedClassName);
+            if (!currentIsValidForSemester) {
+                // If we have a course from URL, it should already be set above, 
+                // but this handles other cases or switching semesters
+                const targetFromUrl = urlCourseCode ? filteredCourses.find(c => c.courseCode === urlCourseCode) : null;
+                setSelectedClassName(targetFromUrl ? targetFromUrl.className : filteredCourses[0].className);
+            }
         } else {
             setSelectedClassName('');
             setGradeData(null);
         }
-    }, [filteredCourses]);
+    }, [filteredCourses, urlCourseCode]);
 
     useEffect(() => {
         if (selectedClassName) {
@@ -212,7 +235,7 @@ export const StudentGradesPage: React.FC = () => {
 
     return (
         <StudentLayout pageTitle="Bảng Điểm">
-            <div className="space-y-6">
+            <div className="space-y-6 pb-24">
                 {/* Header */}
                 <div>
                     <div className="flex items-center gap-2 text-fpt-orange font-bold text-sm mb-1">
@@ -361,11 +384,15 @@ export const StudentGradesPage: React.FC = () => {
                                         <React.Fragment key={catIndex}>
                                             {category.items.map((item, itemIndex) => {
                                                 const isTotal = item.itemName === 'Total';
+                                                const displayValue = isTotal ? category.totalValue : item.value;
+                                                const isPublished = isTotal 
+                                                    ? (item.isPublished || category.items.some(i => i.itemName !== 'Total' && i.isPublished))
+                                                    : item.isPublished;
 
                                                 return (
                                                     <tr
                                                         key={`${catIndex}-${itemIndex}`}
-                                                        className={`${isTotal ? '' : ''} ${catIndex % 2 === 0 ? 'bg-white dark:bg-zinc-900' : 'bg-white dark:bg-zinc-800/20'}`}
+                                                        className={`${catIndex % 2 === 0 ? 'bg-white dark:bg-zinc-900' : 'bg-white dark:bg-zinc-800/20'}`}
                                                     >
                                                         {itemIndex === 0 && (
                                                             <td
@@ -381,10 +408,10 @@ export const StudentGradesPage: React.FC = () => {
                                                         <td className="px-4 py-3 border-b border-gray-100 dark:border-zinc-700 text-center text-gray-500 dark:text-gray-400">
                                                             {item.weight}%
                                                         </td>
-                                                        <td className={`px-4 py-3 border-b border-gray-100 dark:border-zinc-700 text-center font-bold text-base ${!item.isPublished ? 'text-gray-400' :
-                                                            item.value !== null && item.value < 5 ? 'text-red-500' : 'text-gray-900 dark:text-white'
+                                                        <td className={`px-4 py-3 border-b border-gray-100 dark:border-zinc-700 text-center font-bold text-base ${!isPublished ? 'text-gray-400' :
+                                                            displayValue !== null && displayValue < 5 ? 'text-red-500' : 'text-gray-900 dark:text-white'
                                                             }`}>
-                                                            {formatGrade(item.value, item.isPublished)}
+                                                            {formatGrade(displayValue, isPublished)}
                                                         </td>
                                                         <td className="px-4 py-3 border-b border-gray-100 dark:border-zinc-700 text-gray-500 dark:text-gray-400 text-sm">
                                                             {item.comment || '-'}

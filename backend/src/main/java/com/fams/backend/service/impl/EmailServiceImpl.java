@@ -104,7 +104,7 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
-    @Async
+    @Async("emailExecutor")
     @Override
     public void sendOtpEmail(String to, String otp) {
         if (to == null || to.isEmpty()) {

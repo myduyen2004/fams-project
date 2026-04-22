@@ -169,11 +169,11 @@ export const LecturerGradeManagementPage: React.FC = () => {
         return 'border-gray-200 dark:border-zinc-600';
     };
 
-    // Final grade - green if >= 5, red if < 5
-    const getFinalGradeColor = (score: number | null): string => {
-        if (score === null || score === undefined) return 'text-gray-400 border-gray-200';
-        if (score >= 5.0) return 'text-green-600 bg-green-50 border-green-200';
-        return 'text-red-600 bg-red-50 border-red-200';
+    // Final grade - green if PASSED, red if FAILED based on backend status
+    const getFinalGradeColorByStatus = (status: string | undefined | null): string => {
+        if (status === 'PASSED') return 'text-green-600 bg-green-50 border-green-200';
+        if (status === 'FAILED') return 'text-red-600 bg-red-50 border-red-200';
+        return 'text-gray-400 border-gray-200';
     };
 
     const formatScore = (score: number | null): string => {
@@ -789,9 +789,23 @@ export const LecturerGradeManagementPage: React.FC = () => {
                                                     );
                                                 })}
                                                 <td className="px-2 py-2 text-center">
-                                                    <span className={`inline-block px-2 py-1 rounded-lg font-bold text-sm border ${getFinalGradeColor(student.finalGrade)}`}>
-                                                        {formatScore(student.finalGrade)}
-                                                    </span>
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        {(() => {
+                                                            const computedStatus = student.finalGrade === null ? 'PENDING' : (student.isPassing ? 'PASSED' : 'FAILED');
+                                                            return (
+                                                                <>
+                                                                    <span className={`inline-block min-w-[50px] px-3 py-1 rounded-lg border text-sm font-bold ${getFinalGradeColorByStatus(computedStatus)}`}>
+                                                                        {formatScore(student.finalGrade)}
+                                                                    </span>
+                                                                    {computedStatus !== 'PENDING' && (
+                                                                        <span className={`text-[10px] font-bold uppercase tracking-wider ${computedStatus === 'PASSED' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                                            {computedStatus}
+                                                                        </span>
+                                                                    )}
+                                                                </>
+                                                            );
+                                                        })()}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -842,7 +856,6 @@ export const LecturerGradeManagementPage: React.FC = () => {
                     onClose={() => setShowImportModal(false)}
                     onSuccess={() => {
                         fetchGrades();
-                        setShowImportModal(false);
                     }}
                     className={gradeOverview.className}
                     courseName={gradeOverview.courseName}

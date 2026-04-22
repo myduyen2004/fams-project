@@ -10,6 +10,7 @@ import com.fams.backend.repository.UserRepository;
 import com.fams.backend.repository.UserSessionRepository;
 import com.fams.backend.security.jwt.JwtUtil;
 import com.fams.backend.repository.UserPermissionRepository;
+import com.fams.backend.service.impl.AlertService;
 import com.fams.backend.service.impl.AuthService;
 import com.fams.backend.service.impl.DashboardBroadcastService;
 import com.fams.backend.service.impl.SystemLogService;
@@ -73,6 +74,9 @@ class LoginTest {
     @Mock
     private UserPermissionRepository userPermissionRepository;
 
+    @Mock
+    private AlertService alertService;
+
     private AuthService authService;
 
     private LoginRequest loginRequest;
@@ -94,7 +98,8 @@ class LoginTest {
             emailService,
             redisTemplate,
             systemLogService,
-            userPermissionRepository
+            userPermissionRepository,
+            alertService
         );
 
         loginRequest = new LoginRequest();

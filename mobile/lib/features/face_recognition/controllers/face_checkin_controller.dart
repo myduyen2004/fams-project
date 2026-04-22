@@ -63,7 +63,6 @@ class FaceCheckInController extends GetxController {
 
   // Detection
   bool _isDetecting = false;
-  Face? _lastDetectedFace;
   Timer? _countdownTimer;
   final RxInt captureCountdown = 0.obs;
 
@@ -166,11 +165,9 @@ class FaceCheckInController extends GetxController {
 
       if (faces.isEmpty) {
         isFaceDetected.value = false;
-        _lastDetectedFace = null;
         _cancelCountdown();
       } else {
         isFaceDetected.value = true;
-        _lastDetectedFace = faces.first;
         
         // Start countdown when face is detected
         if (state.value == FaceCheckInState.ready && captureCountdown.value == 0) {

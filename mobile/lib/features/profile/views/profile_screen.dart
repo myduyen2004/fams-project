@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../../core/constants/app_colors.dart';
 import 'personal_info_screen.dart';
-import '../../face_recognition/views/face_registration_view.dart';
 import '../../face_recognition/views/face_registration_guide_screen.dart';
 import '../../face_recognition/views/view_face_info_screen.dart';
 import 'display_mode_screen.dart';

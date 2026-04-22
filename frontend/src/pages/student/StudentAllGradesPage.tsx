@@ -145,7 +145,7 @@ export const StudentAllGradesPage: React.FC = () => {
 
     return (
         <StudentLayout pageTitle="Kết Quả Học Tập">
-            <div className="space-y-6">
+            <div className="space-y-6 pb-24">
                 {/* Header */}
                 <div>
                     <div className="flex items-center gap-2 text-fpt-orange font-bold text-sm mb-1">

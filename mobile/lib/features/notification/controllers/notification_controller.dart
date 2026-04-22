@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../models/notification_model.dart';
 import '../services/notification_service.dart';
@@ -14,8 +15,27 @@ class NotificationController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    fetchNotifications(); // Load initial list
-    fetchUnreadCount();
+    
+    // Set up listener for authentication status
+    final authController = Get.find<AuthController>();
+    
+    // Listen for authentication changes
+    ever(authController.isAuthenticated, (bool authenticated) {
+      if (authenticated) {
+        debugPrint('NotificationController: User authenticated, fetching notifications...');
+        fetchNotifications();
+        fetchUnreadCount();
+      } else {
+        notifications.clear();
+        unreadCount.value = 0;
+      }
+    });
+
+    // Initial fetch if already authenticated
+    if (authController.isAuthenticated.value) {
+      fetchNotifications();
+      fetchUnreadCount();
+    }
   }
 
   Future<void> onNewPushNotification() async {
