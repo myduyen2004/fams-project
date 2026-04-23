@@ -387,7 +387,7 @@ class ScheduleController extends GetxController {
       icsContent.writeln('X-WR-CALNAME:${semester.name}');
 
       for (final slot in slots) {
-        if (slot.startTime == null || slot.endTime == null || slot.date == null)
+        if (slot.startTime == null || slot.endTime == null)
           continue;
 
         final date = DateTime.parse(slot.date.toString());

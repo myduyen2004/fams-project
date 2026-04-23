@@ -8,6 +8,7 @@ import com.fams.backend.exception.BadRequestException;
 import com.fams.backend.exception.NotFoundException;
 import com.fams.backend.repository.UserRepository;
 import com.fams.backend.service.UserService;
+import com.fams.backend.entity.Alert;
 import jakarta.persistence.criteria.Fetch;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
@@ -62,6 +63,7 @@ public class UserServiceImpl implements UserService {
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
     private final com.fams.backend.repository.UserSessionRepository userSessionRepository;
+    private final AlertService alertService;
 
     private static final String CACHE_USERS = "users";
     private static final String CACHE_USER_DETAILS = "user_details";
@@ -590,8 +592,16 @@ public class UserServiceImpl implements UserService {
             }
 
             if (!validationErrors.isEmpty()) {
+                String errorMsg = String.join("\n", validationErrors);
+                alertService.createAlert(
+                        "Lỗi Import dữ liệu",
+                        String.format("Phát hiện %d lỗi validation trong quá trình import người dùng bởi %s",
+                                validationErrors.size(), requester),
+                        Alert.AlertLevel.WARNING,
+                        Alert.AlertType.GRADE, // Using GRADE as there is no USERS type, or I could use SYSTEM
+                        userRepository.findByUsername(requester).orElse(null));
                 sendProgress(progressTopic, "ERROR", 0, 0, "Dữ liệu không hợp lệ");
-                throw new BadRequestException("Dữ liệu file không hợp lệ:\n" + String.join("\n", validationErrors));
+                throw new BadRequestException("Dữ liệu file không hợp lệ:\n" + errorMsg);
             }
 
             int total = validRowData.size();

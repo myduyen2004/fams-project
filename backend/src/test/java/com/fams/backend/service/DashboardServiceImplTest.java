@@ -3,8 +3,10 @@ package com.fams.backend.service;
 import com.fams.backend.dto.response.*;
 import com.fams.backend.dto.response.DashboardNotificationResponse;
 import com.fams.backend.entity.AccessLog;
+import com.fams.backend.entity.AcademicRequest;
 import com.fams.backend.entity.Alert;
 import com.fams.backend.entity.Notification;
+import com.fams.backend.entity.ScheduleRequest;
 import com.fams.backend.entity.SystemLog;
 import com.fams.backend.entity.User;
 import com.fams.backend.repository.*;
@@ -37,6 +39,10 @@ class DashboardServiceImplTest {
     private UserNotificationService notificationService;
     @Mock
     private SystemLogRepository systemLogRepository;
+    @Mock
+    private ScheduleRequestRepository scheduleRequestRepository;
+    @Mock
+    private AcademicRequestRepository academicRequestRepository;
 
     @InjectMocks
     private DashboardServiceImpl dashboardService;
@@ -46,12 +52,17 @@ class DashboardServiceImplTest {
         when(userRepository.countByRole(User.UserRole.STUDENT)).thenReturn(50L);
         when(userRepository.countByRole(User.UserRole.LECTURER)).thenReturn(10L);
         when(userRepository.count()).thenReturn(60L);
+        when(scheduleRequestRepository.countByStatus(ScheduleRequest.RequestStatus.PENDING)).thenReturn(5L);
+        when(academicRequestRepository.countByStatus(AcademicRequest.RequestStatus.PENDING)).thenReturn(3L);
+        when(alertRepository.count()).thenReturn(2L);
 
         DashboardStatsResponse stats = dashboardService.getStatistics();
 
         assertEquals(50, stats.getTotalStudents());
         assertEquals(10, stats.getTotalUsers());
         assertEquals(60, stats.getTotalAccounts());
+        assertEquals(8, stats.getTotalApplications());
+        assertEquals(2, stats.getTotalBehaviors());
     }
 
     @Test

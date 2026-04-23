@@ -4,6 +4,10 @@ import {
     ArrowLeft,
     Printer,
     CheckCircle,
+    XCircle,
+    Clock,
+    User,
+    GraduationCap,
     Loader2,
     FileText
 } from 'lucide-react';
@@ -317,8 +321,8 @@ export const RequestDetailPage = () => {
                             </h3>
 
                             <div className="space-y-8 relative before:absolute before:left-5 before:top-2 before:bottom-2 before:w-px before:bg-gray-100 dark:before:bg-zinc-800">
-                                {/* Approver feedback if processed */}
-                                {request.approverName && (
+                                {/* Processed Step */}
+                                {request.status !== 'PENDING' && request.status !== 'REVOKED' && (
                                     <div className="relative pl-12">
                                         <div className={`absolute left-0 top-0 w-10 h-10 rounded-2xl border-2 flex items-center justify-center z-10 shadow-sm overflow-hidden font-bold text-sm ${approverTheme.avatar}`}>
                                             {showApproverAvatar ? (
@@ -334,8 +338,12 @@ export const RequestDetailPage = () => {
                                         </div>
                                         <div className={`p-5 rounded-2xl border ${approverTheme.card}`}>
                                             <div className="flex items-center justify-between mb-2">
-                                                <p className="font-bold text-sm text-gray-900 dark:text-white uppercase tracking-wide">{request.approverName}</p>
-                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{dayjs(request.approvedAt).format('DD/MM/YYYY - HH:mm')}</span>
+                                                <p className="font-bold text-sm text-gray-900 dark:text-white uppercase tracking-wide">
+                                                    {request.approverName || 'Phòng Đào Tạo'}
+                                                </p>
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                                    {request.approvedAt ? dayjs(request.approvedAt).format('DD/MM/YYYY - HH:mm') : '---'}
+                                                </span>
                                             </div>
                                             <p className={`text-xs font-bold uppercase tracking-widest mb-1 ${approverTheme.action}`}>
                                                 {approverActionText}
@@ -343,6 +351,40 @@ export const RequestDetailPage = () => {
                                             <p className="text-sm text-gray-600 dark:text-zinc-400 italic font-medium">
                                                 Lý do: {approverReasonText}
                                             </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Revoked Step */}
+                                {request.status === 'REVOKED' && (
+                                    <div className="relative pl-12">
+                                        <div className="absolute left-0 top-0 w-10 h-10 rounded-2xl bg-zinc-50 dark:bg-zinc-900 text-zinc-600 border-2 border-zinc-100 dark:border-zinc-800 flex items-center justify-center z-10 shadow-sm">
+                                            <XCircle size={18} />
+                                        </div>
+                                        <div className="bg-zinc-50/50 dark:bg-zinc-800/30 p-5 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <p className="font-bold text-sm text-gray-900 dark:text-white uppercase tracking-wide">Người yêu cầu</p>
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                                    {dayjs(request.createdAt).format('DD/MM/YYYY - HH:mm')}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Đã thu hồi yêu cầu</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Pending Step (Visual indicator for Staff) */}
+                                {request.status === 'PENDING' && (
+                                    <div className="relative pl-12">
+                                        <div className="absolute left-0 top-0 w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-900/20 text-amber-600 border-2 border-amber-100 dark:border-amber-800 flex items-center justify-center z-10 shadow-sm animate-pulse">
+                                            <Clock size={18} />
+                                        </div>
+                                        <div className="bg-amber-50/30 dark:bg-amber-900/10 p-5 rounded-2xl border border-amber-50 dark:border-amber-900/20">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <p className="font-bold text-sm text-gray-900 dark:text-white uppercase tracking-wide">Hệ thống</p>
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Đang chờ</span>
+                                            </div>
+                                            <p className="text-xs font-bold text-amber-600 uppercase tracking-widest">Đang chờ bạn xử lý</p>
                                         </div>
                                     </div>
                                 )}
@@ -380,37 +422,61 @@ export const RequestDetailPage = () => {
                     {/* Sidebar (Right) */}
                     <div className="space-y-6">
                         {/* Requester Info */}
-                        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800">
-                            <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-6">Thông tin {request.requesterRole === 'STUDENT' ? 'sinh viên' : 'giảng viên'}</h3>
-                            <div className="flex flex-col items-center mb-6">
-                                <div className="w-20 h-20 rounded-2xl bg-fpt-orange/10 flex items-center justify-center text-fpt-orange text-2xl font-bold border-2 border-fpt-orange/20 overflow-hidden mb-3 shadow-lg group-hover:scale-105 transition-transform">
-                                    {showRequesterAvatar ? (
-                                        <img
-                                            src={request.requesterAvatar}
-                                            alt={request.requesterName || 'avatar'}
-                                            className="w-full h-full object-cover"
-                                            onError={() => setIsRequesterAvatarBroken(true)}
-                                        />
-                                    ) : (
-                                        <span>{requesterInitial}</span>
-                                    )}
+                        <div className="bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-zinc-800 transition-all hover:shadow-md">
+                            <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-8">Thông tin {request.requesterRole === 'STUDENT' ? 'sinh viên' : 'giảng viên'}</h3>
+                            <div className="flex flex-col items-center mb-8">
+                                <div className="relative group">
+                                    <div className="w-24 h-24 rounded-3xl bg-fpt-orange/10 flex items-center justify-center text-fpt-orange text-3xl font-bold border-2 border-fpt-orange/20 overflow-hidden mb-4 shadow-xl transition-transform group-hover:scale-105 duration-300">
+                                        {showRequesterAvatar ? (
+                                            <img
+                                                src={request.requesterAvatar}
+                                                alt={request.requesterName || 'avatar'}
+                                                className="w-full h-full object-cover"
+                                                onError={() => setIsRequesterAvatarBroken(true)}
+                                            />
+                                        ) : (
+                                            <span>{requesterInitial}</span>
+                                        )}
+                                    </div>
+                                    <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-emerald-500 border-4 border-white dark:border-zinc-900 rounded-full flex items-center justify-center text-white">
+                                        <CheckCircle size={14} />
+                                    </div>
                                 </div>
-                                <h4 className="text-lg font-bold text-gray-900 dark:text-white">{request.requesterName}</h4>
-                                <p className="text-sm font-mono text-gray-500">{request.requesterCode}</p>
+                                <h4 className="text-xl font-black text-gray-900 dark:text-white mb-1 text-center">{request.requesterName}</h4>
+                                <p className="text-sm font-mono font-bold text-fpt-orange bg-orange-50 dark:bg-orange-900/20 px-4 py-1 rounded-full border border-orange-100 dark:border-orange-900/30">
+                                    {request.requesterCode}
+                                </p>
                             </div>
 
-                            <div className="space-y-4 pt-6 border-t border-gray-100 dark:border-zinc-800">
-                                <div className="flex justify-between items-center text-sm">
-                                    <span className="text-gray-500">Vai trò</span>
-                                    <span className="font-semibold text-gray-900 dark:text-white">{request.requesterRole === 'STUDENT' ? 'Sinh viên' : 'Giảng viên'}</span>
+                            <div className="space-y-4 pt-8 border-t border-gray-100 dark:border-zinc-800">
+                                <div className="flex items-center gap-4 text-sm group/item">
+                                    <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-zinc-800/50 flex items-center justify-center text-gray-400 group-hover/item:text-fpt-orange transition-colors">
+                                        <User size={18} />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Vai trò</span>
+                                        <span className="font-bold text-gray-900 dark:text-white">{request.requesterRole === 'STUDENT' ? 'Sinh viên' : 'Giảng viên'}</span>
+                                    </div>
                                 </div>
-                                <div className="flex justify-between items-center text-sm">
-                                    <span className="text-gray-500">Lớp</span>
-                                    <span className="font-semibold text-gray-900 dark:text-white">{request.className || '---'}</span>
+                                
+                                <div className="flex items-center gap-4 text-sm group/item">
+                                    <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-zinc-800/50 flex items-center justify-center text-gray-400 group-hover/item:text-fpt-orange transition-colors">
+                                        <FileText size={18} />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Lớp học</span>
+                                        <span className="font-bold text-gray-900 dark:text-white">{request.className || '---'}</span>
+                                    </div>
                                 </div>
-                                <div className="flex justify-between items-start text-sm">
-                                    <span className="text-gray-500">{request.requesterRole === 'STUDENT' ? 'Ngành' : 'Bộ môn'}</span>
-                                    <span className="font-semibold text-gray-900 dark:text-white text-right max-w-[150px]">{request.requesterMajor || '---'}</span>
+
+                                <div className="flex items-center gap-4 text-sm group/item">
+                                    <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-zinc-800/50 flex items-center justify-center text-gray-400 group-hover/item:text-fpt-orange transition-colors">
+                                        <GraduationCap size={18} />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{request.requesterRole === 'STUDENT' ? 'Ngành học' : 'Bộ môn'}</span>
+                                        <span className="font-bold text-gray-900 dark:text-white">{request.requesterMajor || '---'}</span>
+                                    </div>
                                 </div>
                                 <div className="flex flex-col gap-1 text-sm bg-gray-50 dark:bg-zinc-800/50 p-2.5 rounded-lg border border-gray-100 dark:border-zinc-800 mt-2 min-w-0">
                                     <span className="text-gray-400 text-[10px] font-bold uppercase">Email liên hệ</span>

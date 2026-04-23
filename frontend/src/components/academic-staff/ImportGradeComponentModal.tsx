@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, AlertTriangle } from 'lucide-react';
 import { gradeComponentService, GradeComponent, GradeType } from '../../services/api/gradeComponentService';
 import * as XLSX from 'xlsx';
+import toast from 'react-hot-toast';
 
 // =========================================================================
 // Types
@@ -83,19 +84,21 @@ export const ImportGradeComponentModal: React.FC<ImportGradeComponentModalProps>
     // -----------------------------------------------------------------------
     // File handler
     // -----------------------------------------------------------------------
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const f = e.target.files?.[0];
-        if (f) { setFile(f); setPreviewRows(null); setImportResult(null); }
+        if (f) {
+            setFile(f);
+            setPreviewRows(null);
+            setImportResult(null);
+            // Auto preview
+            await handleAutoPreview(f);
+        }
     };
 
-    // -----------------------------------------------------------------------
-    // Preview (read + validate client-side)
-    // -----------------------------------------------------------------------
-    const handlePreview = async () => {
-        if (!file) return;
+    const handleAutoPreview = async (selectedFile: File) => {
         setLoading(true);
         try {
-            const buffer = await file.arrayBuffer();
+            const buffer = await selectedFile.arrayBuffer();
             const wb = XLSX.read(buffer);
             const sheet = wb.Sheets[wb.SheetNames[0]];
             const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
@@ -120,7 +123,7 @@ export const ImportGradeComponentModal: React.FC<ImportGradeComponentModalProps>
             // Running accumulated weight for valid rows per courseCode
             const accumulatedWeight: Record<string, number> = {};
 
-            const rows: PreviewRow[] = raw.map((r, idx) => {
+            const rows: PreviewRow[] = raw.flatMap((r, idx) => {
                 const rowNumber = idx + 2; // row 1 is header in Excel
                 const errors: string[] = [];
                 const warnings: string[] = [];
@@ -131,6 +134,11 @@ export const ImportGradeComponentModal: React.FC<ImportGradeComponentModalProps>
                 const weightRaw = r['weight'] ?? r['Trọng số'];
                 const description = String(r['description'] ?? r['Mô tả'] ?? '').trim();
                 const weight = parseWeight(weightRaw);
+
+                // --- Skip completely empty rows (e.g. STT only but no real data) ---
+                if (!courseCode && !name && !typeRaw) {
+                    return [];
+                }
 
                 // --- Mandatory fields ---
                 if (!courseCode) errors.push('Thiếu mã môn học (courseCode)');
@@ -187,7 +195,7 @@ export const ImportGradeComponentModal: React.FC<ImportGradeComponentModalProps>
                 if (errors.length > 0) status = 'ERROR';
                 else if (warnings.length > 0) status = 'WARNING';
 
-                return {
+                return [{
                     rowNumber,
                     courseCode,
                     name,
@@ -197,13 +205,14 @@ export const ImportGradeComponentModal: React.FC<ImportGradeComponentModalProps>
                     status,
                     errors,
                     warnings,
-                };
+                }];
             });
 
             setPreviewRows(rows);
         } catch (err) {
             console.error(err);
             setPreviewRows([]);
+            toast.error('Lỗi khi đọc file Excel');
         } finally {
             setLoading(false);
         }
@@ -304,7 +313,7 @@ export const ImportGradeComponentModal: React.FC<ImportGradeComponentModalProps>
     // -----------------------------------------------------------------------
     const modal = (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className={`relative bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl flex flex-col transition-all duration-300 ${hasPreview ? 'w-full max-w-5xl max-h-[92vh]' : 'w-full max-w-lg'}`}>
+            <div className={`relative bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl flex flex-col transition-all duration-300 ${hasResult ? 'w-full max-w-md' : hasPreview ? 'w-full max-w-5xl max-h-[92vh]' : 'w-full max-w-lg'}`}>
 
                 {/* ── Header ── */}
                 <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-zinc-800 shrink-0">
@@ -313,7 +322,9 @@ export const ImportGradeComponentModal: React.FC<ImportGradeComponentModalProps>
                             <FileSpreadsheet size={20} className="text-fpt-orange" />
                         </div>
                         <div>
-                            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Import Thành phần điểm</h2>
+                            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                                {hasResult ? 'Kết quả Import' : 'Import Thành phần điểm'}
+                            </h2>
                             {hasPreview && !hasResult && (
                                 <p className="text-sm text-gray-500 mt-0.5">
                                     Xem trước:&nbsp;
@@ -464,33 +475,45 @@ export const ImportGradeComponentModal: React.FC<ImportGradeComponentModalProps>
 
                     {/* === STEP 3: Import result === */}
                     {hasResult && (
-                        <div className={`rounded-xl p-5 ${importResult!.failed > 0 ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800' : 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'}`}>
-                            <div className="flex items-center gap-2 mb-4">
-                                {importResult!.failed > 0
-                                    ? <AlertCircle size={20} className="text-red-500" />
-                                    : <CheckCircle2 size={20} className="text-green-500" />
-                                }
-                                <span className="font-semibold text-gray-900 dark:text-white text-lg">Kết quả Import</span>
+                        <div className="flex flex-col items-center text-center py-4 animate-in zoom-in-95 duration-300">
+                            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-6">
+                                <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
                             </div>
-                            <div className="grid grid-cols-3 gap-3 mb-3">
-                                <div className="bg-white dark:bg-zinc-800 rounded-lg p-3 text-center">
-                                    <div className="text-2xl font-bold text-green-600">{importResult!.created}</div>
-                                    <div className="text-xs text-gray-500 mt-1">Tạo mới</div>
-                                </div>
-                                <div className="bg-white dark:bg-zinc-800 rounded-lg p-3 text-center">
-                                    <div className="text-2xl font-bold text-blue-600">{importResult!.updated}</div>
-                                    <div className="text-xs text-gray-500 mt-1">Cập nhật</div>
-                                </div>
-                                <div className="bg-white dark:bg-zinc-800 rounded-lg p-3 text-center">
-                                    <div className="text-2xl font-bold text-red-600">{importResult!.failed}</div>
-                                    <div className="text-xs text-gray-500 mt-1">Thất bại</div>
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Hoàn tất nhập liệu</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 font-medium">
+                                Hệ thống đã xử lý xong file của bạn
+                            </p>
+
+                            <div className="w-full bg-gray-50 dark:bg-zinc-800/50 rounded-2xl p-4 mb-6 border border-gray-100 dark:border-zinc-800">
+                                <div className="grid grid-cols-3 gap-2">
+                                    <div>
+                                        <div className="text-xl font-bold text-green-600">{importResult!.created}</div>
+                                        <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Tạo mới</div>
+                                    </div>
+                                    <div className="border-l border-gray-200 dark:border-zinc-700">
+                                        <div className="text-xl font-bold text-blue-600">{importResult!.updated}</div>
+                                        <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Cập nhật</div>
+                                    </div>
+                                    <div className="border-l border-gray-200 dark:border-zinc-700">
+                                        <div className="text-xl font-bold text-red-500">{importResult!.failed}</div>
+                                        <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Thất bại</div>
+                                    </div>
                                 </div>
                             </div>
+
                             {importResult!.errors.length > 0 && (
-                                <div className="max-h-36 overflow-y-auto text-xs text-red-600 dark:text-red-400 space-y-1 bg-white dark:bg-zinc-800 rounded-lg p-3">
+                                <div className="w-full max-h-32 overflow-y-auto text-xs text-red-600 text-left bg-red-50 dark:bg-red-900/10 rounded-lg p-3 mb-6 border border-red-100 dark:border-red-900/30">
+                                    <p className="font-bold mb-1">Chi tiết lỗi:</p>
                                     {importResult!.errors.map((e, i) => <p key={i}>• {e}</p>)}
                                 </div>
                             )}
+
+                            <button
+                                onClick={handleClose}
+                                className="w-full py-3 bg-fpt-orange text-white rounded-xl font-bold shadow-lg shadow-orange-500/25 hover:bg-orange-600 transition-all"
+                            >
+                                Đóng
+                            </button>
                         </div>
                     )}
                 </div>
@@ -498,19 +521,10 @@ export const ImportGradeComponentModal: React.FC<ImportGradeComponentModalProps>
                 {/* ── Footer ── */}
                 <div className="flex items-center justify-between gap-3 p-5 border-t border-gray-100 dark:border-zinc-800 shrink-0">
                     <div className="text-xs text-gray-400">
-                        {hasPreview && !hasResult && previewRows!.length > 0 && (
-                            <>
-                                {validCount > 0 && `${validCount} dòng sẽ được import`}
-                                {warnCount > 0 && ` · ${warnCount} cảnh báo (không import những dòng này)`}
-                                {errorCount > 0 && ` · ${errorCount} lỗi (bị bỏ qua)`}
-                            </>
-                        )}
                     </div>
                     <div className="flex gap-2">
                         {hasResult ? (
-                            <button onClick={handleClose} className="px-5 py-2.5 text-sm font-medium text-white bg-fpt-orange hover:bg-orange-600 rounded-xl transition-colors">
-                                Đóng
-                            </button>
+                            null
                         ) : hasPreview ? (
                             <>
                                 <button onClick={() => setPreviewRows(null)} disabled={loading}
@@ -530,10 +544,6 @@ export const ImportGradeComponentModal: React.FC<ImportGradeComponentModalProps>
                                 <button onClick={handleClose}
                                     className="px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-xl transition-colors">
                                     Hủy
-                                </button>
-                                <button onClick={handlePreview} disabled={!file || loading}
-                                    className="flex items-center gap-2 px-5 py-2.5 bg-fpt-orange text-white rounded-xl text-sm font-medium hover:bg-orange-600 transition-colors disabled:opacity-50">
-                                    {loading ? <><Loader2 size={15} className="animate-spin" /> Đang đọc...</> : <><Upload size={15} /> Xem trước</>}
                                 </button>
                             </>
                         )}

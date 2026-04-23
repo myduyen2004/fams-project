@@ -178,9 +178,10 @@ export const ResitGradeManagementPage: React.FC = () => {
             await examGradeService.publishGrades(selectedCourse, selectedSemester, 'RESIT');
             toast.success('Công bố điểm thi lại thành công!');
             fetchGrades(); // Reload to get updated status
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            toast.error('Lỗi khi công bố điểm thi lại');
+            const errorMessage = error.response?.data?.message || 'Lỗi khi công bố điểm thi lại';
+            toast.error(errorMessage, { duration: 5000 });
         } finally {
             setPublishing(false);
             setShowPublishConfirm(false);
@@ -227,9 +228,10 @@ export const ResitGradeManagementPage: React.FC = () => {
             setIsEditMode(false);
             setEditedGrades({});
             fetchGrades(); // Refresh data
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            toast.error('Lỗi khi lưu điểm');
+            const errorMessage = error.response?.data?.message || 'Lỗi khi lưu điểm';
+            toast.error(errorMessage);
         } finally {
             setSaving(false);
         }
@@ -273,10 +275,10 @@ export const ResitGradeManagementPage: React.FC = () => {
         return 'text-gray-900 dark:text-white';
     };
 
-    const getFinalGradeColor = (score: number | null): string => {
-        if (score === null || score === undefined) return 'text-gray-400 border-gray-200';
-        if (score >= 5.0) return 'text-green-600 bg-green-50 border-green-200';
-        return 'text-red-600 bg-red-50 border-red-200';
+    const getFinalGradeColorByStatus = (status: string | undefined | null): string => {
+        if (status === 'PASSED') return 'text-green-600 bg-green-50 border-green-200';
+        if (status === 'FAILED') return 'text-red-600 bg-red-50 border-red-200';
+        return 'text-gray-400 border-gray-200';
     };
 
     const formatScore = (score: number | null): string => {
@@ -824,9 +826,16 @@ export const ResitGradeManagementPage: React.FC = () => {
                                                     );
                                                 })}
                                                 <td className="px-4 py-2 text-center">
-                                                    <span className={`inline-block min-w-[50px] px-3 py-1.5 rounded-lg border text-sm font-bold ${isSubmitted ? getFinalGradeColor(student.finalGrade) : 'text-gray-400 border-gray-200'}`}>
-                                                        {isSubmitted ? formatScore(student.finalGrade) : '--'}
-                                                    </span>
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        <span className={`inline-block min-w-[50px] px-3 py-1 rounded-lg border text-sm font-bold ${isSubmitted ? getFinalGradeColorByStatus(student.status) : 'text-gray-400 border-gray-200'}`}>
+                                                            {isSubmitted ? formatScore(student.finalGrade) : '--'}
+                                                        </span>
+                                                        {isSubmitted && student.status && student.status !== 'PENDING' && (
+                                                            <span className={`text-[10px] font-bold uppercase tracking-wider ${student.status === 'PASSED' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                                {student.status}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         );
@@ -858,6 +867,7 @@ export const ResitGradeManagementPage: React.FC = () => {
                         courseCode={selectedCourse}
                         semesterCode={selectedSemester}
                         type="RESIT"
+                        existingData={gradeOverview || undefined}
                     />
                 )
             }

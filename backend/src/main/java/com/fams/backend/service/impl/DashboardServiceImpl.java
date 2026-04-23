@@ -6,14 +6,18 @@ import com.fams.backend.dto.response.DashboardStatsResponse;
 import com.fams.backend.dto.response.RecentAccessResponse;
 import com.fams.backend.dto.response.SystemLogResponse;
 import com.fams.backend.entity.AccessLog;
+import com.fams.backend.entity.AcademicRequest;
 import com.fams.backend.entity.Alert;
 import com.fams.backend.entity.Notification;
+import com.fams.backend.entity.ScheduleRequest;
 import com.fams.backend.entity.SystemLog;
 import com.fams.backend.entity.User;
 import com.fams.backend.exception.NotFoundException;
 import com.fams.backend.repository.AccessLogRepository;
+import com.fams.backend.repository.AcademicRequestRepository;
 import com.fams.backend.repository.AlertRepository;
 import com.fams.backend.repository.NotificationRepository;
+import com.fams.backend.repository.ScheduleRequestRepository;
 import com.fams.backend.repository.SystemLogRepository;
 import com.fams.backend.repository.UserRepository;
 import com.fams.backend.service.DashboardService;
@@ -42,6 +46,8 @@ public class DashboardServiceImpl implements DashboardService {
         private final AlertRepository alertRepository;
         private final NotificationRepository notificationRepository;
         private final SystemLogRepository systemLogRepository;
+        private final ScheduleRequestRepository scheduleRequestRepository;
+        private final AcademicRequestRepository academicRequestRepository;
         private final UserNotificationService notificationService;
 
         private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -52,16 +58,19 @@ public class DashboardServiceImpl implements DashboardService {
                 long totalLecturers = userRepository.countByRole(User.UserRole.LECTURER);
                 long totalUsers = userRepository.count();
 
-                int totalAccounts = (int) totalUsers;
-                int totalApplications = 0;
-                int totalBehaviors = 0;
+                // Count pending schedule requests and academic requests as applications
+                long totalScheduleRequests = scheduleRequestRepository
+                                .countByStatus(ScheduleRequest.RequestStatus.PENDING);
+                long totalAcademicRequests = academicRequestRepository
+                                .countByStatus(AcademicRequest.RequestStatus.PENDING);
+                long totalApplications = totalScheduleRequests + totalAcademicRequests;
 
                 return DashboardStatsResponse.builder()
                                 .totalStudents((int) totalStudents)
                                 .totalUsers((int) totalLecturers)
-                                .totalAccounts(totalAccounts)
-                                .totalApplications(totalApplications)
-                                .totalBehaviors(totalBehaviors)
+                                .totalAccounts((int) totalUsers)
+                                .totalApplications((int) totalApplications)
+                                .totalBehaviors((int) alertRepository.count())
                                 .build();
         }
 

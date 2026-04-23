@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 
 class NotificationModel {
   final int id;
@@ -23,6 +24,26 @@ class NotificationModel {
     this.senderAvatar,
     this.attachmentUrls = const [],
   });
+
+  DateTime? get parsedTimestamp {
+    if (timestamp.isEmpty) return null;
+    
+    // 1. Try ISO8601 (most standard)
+    final isoDate = DateTime.tryParse(timestamp);
+    if (isoDate != null) return isoDate;
+
+    // 2. Try dd/MM/yyyy HH:mm (current assumption)
+    try {
+      return DateFormat('dd/MM/yyyy HH:mm').parse(timestamp);
+    } catch (_) {}
+
+    // 3. Try yyyy-MM-dd HH:mm:ss (SQL/Common)
+    try {
+      return DateFormat('yyyy-MM-dd HH:mm:ss').parse(timestamp);
+    } catch (_) {}
+
+    return null;
+  }
 
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
     return NotificationModel(

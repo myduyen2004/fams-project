@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:solar_icons/solar_icons.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_routes.dart';
 import '../controllers/student_grade_controller.dart';
 import '../models/student_grade_model.dart';
 import 'grade_detail_screen.dart';

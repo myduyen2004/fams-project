@@ -6,7 +6,6 @@ import 'package:solar_icons/solar_icons.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_routes.dart';
 import '../../../core/utils/safe_image_decoder.dart';
 import 'package:flutter/services.dart';
@@ -14,10 +13,6 @@ import '../../auth/controllers/auth_controller.dart';
 import '../controllers/home_controller.dart';
 import '../../profile/views/profile_screen.dart';
 import '../../schedule/views/schedule_screen.dart';
-import '../../../core/services/wifi_service.dart';
-import '../../profile/views/profile_screen.dart';
-import '../../schedule/views/schedule_screen.dart';
-import '../../schedule/controllers/schedule_controller.dart';
 import '../../schedule/controllers/schedule_controller.dart';
 import '../../notification/controllers/notification_controller.dart';
 import '../../notification/views/notification_list_screen.dart';
@@ -34,12 +29,9 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AuthController authController = Get.find<AuthController>();
-    final HomeController homeController = Get.find<HomeController>();
     // Integrate ScheduleController for real data
     final ScheduleController scheduleController = Get.find<ScheduleController>();
-    final NewsController newsController = Get.put(NewsController());
-    final NotificationController notifController = Get.find<NotificationController>();
-    final ChatController chatController = Get.find<ChatController>();
+    Get.put(NewsController());
 
     return Scaffold(
       extendBody: true, // Crucial for floating navbar

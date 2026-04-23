@@ -365,7 +365,7 @@ export const RoomDetailTemplate: React.FC<RoomDetailTemplateProps> = ({ Layout, 
                             </div>
                         ) : (
                             /* 3D View */
-                            <div className="w-full h-full min-h-[400px]">
+                            <div className="w-full h-full min-h-[400px] relative">
                                 <Canvas shadows>
                                     <React.Suspense fallback={null}>
                                         <Classroom3D rows={rows} tablesPerRow={tablesPerRow} isComputerLab={isComputerLab} />
@@ -373,7 +373,7 @@ export const RoomDetailTemplate: React.FC<RoomDetailTemplateProps> = ({ Layout, 
                                 </Canvas>
 
                                 {/* 3D Mode Instructions */}
-                                <div className="absolute bottom-4 left-4 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm rounded-lg px-3 py-2 text-xs text-gray-600 dark:text-gray-300">
+                                <div className="absolute bottom-6 left-6 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm rounded-lg px-3 py-2 text-xs text-gray-600 dark:text-gray-300 shadow-sm border border-gray-100 dark:border-zinc-700">
                                     Kéo chuột trái để xoay • Cuộn chuột để zoom • Kéo chuột phải để di chuyển
                                 </div>
                             </div>
@@ -381,47 +381,49 @@ export const RoomDetailTemplate: React.FC<RoomDetailTemplateProps> = ({ Layout, 
                     </div>
                 </div>
 
-                {/* Sidebar - Room Info */}
-                <div className="w-80 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-6 overflow-y-auto">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className={`p-3 rounded-xl ${isComputerLab ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300' : isClassroom ? 'bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-300' : 'bg-emerald-100 dark:bg-emerald-800/50 text-emerald-600 dark:text-emerald-300'}`}>
-                            <DoorOpen className="w-6 h-6" />
+                {/* Sidebar - Room Info - Hidden in 3D mode to prevent overlap and maximize view */}
+                {!is3DMode && (
+                    <div className="w-80 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-6 overflow-y-auto animate-in slide-in-from-right duration-300">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className={`p-3 rounded-xl ${isComputerLab ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300' : isClassroom ? 'bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-300' : 'bg-emerald-100 dark:bg-emerald-800/50 text-emerald-600 dark:text-emerald-300'}`}>
+                                <DoorOpen className="w-6 h-6" />
+                            </div>
+                            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Thông tin phòng</h2>
                         </div>
-                        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Thông tin phòng</h2>
-                    </div>
 
-                    <div className="space-y-4">
-                        {[
-                            { label: 'Mã phòng', val: room.code },
-                            { label: 'Tên phòng', val: room.name },
-                            { label: 'Loại phòng', val: getRoomTypeLabel(room.type), icon: DoorOpen },
-                            { label: 'Tòa nhà', val: room.building, icon: Building2 },
-                            { label: 'Tầng', val: `Tầng ${room.floor}`, icon: Layers },
-                            { label: 'Sức chứa', val: `${room.capacity} người`, icon: Users }
-                        ].map((item, idx) => (
-                            <div key={idx} className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-zinc-800/50 rounded-xl">
-                                {item.icon && (
-                                    <div className="p-2 bg-white dark:bg-zinc-900 rounded-lg">
-                                        <item.icon className="w-5 h-5 text-gray-600 dark:text-zinc-400" />
+                        <div className="space-y-4">
+                            {[
+                                { label: 'Mã phòng', val: room.code },
+                                { label: 'Tên phòng', val: room.name },
+                                { label: 'Loại phòng', val: getRoomTypeLabel(room.type), icon: DoorOpen },
+                                { label: 'Tòa nhà', val: room.building, icon: Building2 },
+                                { label: 'Tầng', val: `Tầng ${room.floor}`, icon: Layers },
+                                { label: 'Sức chứa', val: `${room.capacity} người`, icon: Users }
+                            ].map((item, idx) => (
+                                <div key={idx} className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-zinc-800/50 rounded-xl">
+                                    {item.icon && (
+                                        <div className="p-2 bg-white dark:bg-zinc-900 rounded-lg">
+                                            <item.icon className="w-5 h-5 text-gray-600 dark:text-zinc-400" />
+                                        </div>
+                                    )}
+                                    <div>
+                                        <p className="text-xs text-gray-500 dark:text-zinc-500 mb-1">{item.label}</p>
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{item.val}</p>
                                     </div>
-                                )}
-                                <div>
-                                    <p className="text-xs text-gray-500 dark:text-zinc-500 mb-1">{item.label}</p>
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{item.val}</p>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
 
-                        {room.description && (
-                            <div className="p-4 bg-gray-50 dark:bg-zinc-800/50 rounded-xl">
-                                <p className="text-xs text-gray-500 dark:text-zinc-500 mb-2">Mô tả</p>
-                                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                                    {room.description}
-                                </p>
-                            </div>
-                        )}
+                            {room.description && (
+                                <div className="p-4 bg-gray-50 dark:bg-zinc-800/50 rounded-xl">
+                                    <p className="text-xs text-gray-500 dark:text-zinc-500 mb-2">Mô tả</p>
+                                    <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                                        {room.description}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
         </Layout>
     );

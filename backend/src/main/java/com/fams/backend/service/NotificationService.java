@@ -164,8 +164,11 @@ public class NotificationService {
          * Notify academic staff when grades are submitted for a class
          */
         @Transactional
-        public void notifyAcademicStaffGradesSubmitted(String className, User lecturer,
-                        com.fams.backend.entity.Course course) {
+        public void notifyAcademicStaffGradesSubmitted(com.fams.backend.entity.ClassSection classSection, User lecturer) {
+                com.fams.backend.entity.Course course = classSection.getCourse();
+                com.fams.backend.entity.Semester semester = classSection.getSemester();
+                String className = classSection.getClassName();
+
                 String title = "Điểm lớp " + className + " đã được nộp";
                 String content = String.format(
                                 "Giảng viên %s đã nộp điểm cho môn %s (%s) lớp %s. Vui lòng xem xét và phê duyệt.",
@@ -179,7 +182,10 @@ public class NotificationService {
                                 .content(content)
                                 .type(Notification.NotificationType.GRADE_PUBLISHED)
                                 .targetType(Notification.TargetType.ACADEMIC_STAFF)
-                                .targetUrl("/academic-staff/grades?class=" + className)
+                                .targetUrl(String.format("/academic-staff/exam-grades?courseCode=%s&semesterCode=%s&className=%s",
+                                                course.getCode(),
+                                                semester.getCode(),
+                                                className))
                                 .sentAt(LocalDateTime.now())
                                 .build();
 
@@ -431,6 +437,7 @@ public class NotificationService {
                                 .content(content)
                                 .type(Notification.NotificationType.GRADE_PUBLISHED)
                                 .targetType(Notification.TargetType.USER)
+                                .targetUrl("/student/grades?courseCode=" + course.getCode())
                                 .sentAt(LocalDateTime.now())
                                 .build();
 

@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
-import '../constants/api_constants.dart';
 import 'api_service.dart';
 
 /// Service for uploading files to Cloudinary via Backend proxy

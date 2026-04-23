@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import '../../../core/services/api_service.dart';
 import '../models/notification_model.dart';
 
@@ -10,8 +9,15 @@ class NotificationService {
     try {
       final response = await _apiService.get('/api/dashboard/notifications');
       if (response.statusCode == 200) {
-        final List<dynamic> data = response.data;
-        return data.map((json) => NotificationModel.fromJson(json)).toList();
+        final data = response.data;
+        
+        // Handle both paginated and list responses
+        if (data is Map && data.containsKey('content')) {
+          final List<dynamic> list = data['content'];
+          return list.map((json) => NotificationModel.fromJson(json)).toList();
+        } else if (data is List) {
+          return data.map((json) => NotificationModel.fromJson(json)).toList();
+        }
       }
       return [];
     } catch (e) {

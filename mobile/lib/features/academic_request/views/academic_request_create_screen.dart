@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:solar_icons/solar_icons.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/widgets/app_background.dart';
 import '../controllers/academic_request_controller.dart';
 import '../models/academic_request_model.dart';
 
@@ -66,34 +68,59 @@ class _AcademicRequestCreateScreenState extends State<AcademicRequestCreateScree
   }
 
   Widget _buildHeader(BuildContext context, AcademicRequestController controller) {
-    const Color textMain = Color(0xFF1E2A3A);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+    return Container(
+      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 8.h),
       child: Row(
         children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 24),
-            color: textMain,
-            onPressed: () {
+          InkWell(
+            onTap: () {
               if (controller.selectedType.value != null) {
                 controller.backToTypeSelection();
               } else {
                 Get.back();
               }
             },
+            borderRadius: BorderRadius.circular(12.r),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(SolarIconsOutline.altArrowLeft, color: AppColors.primaryOrange, size: 28.sp),
+                SizedBox(width: 4.w),
+                Text(
+                  'Quay lại',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: AppColors.primaryOrange,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16.sp,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 16.w),
           Expanded(
             child: Obx(() => Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   controller.selectedType.value == null ? 'Chọn loại yêu cầu' : 'Thông tin yêu cầu',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: textMain),
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF1E293B),
+                  ),
                 ),
                 if (controller.selectedType.value != null)
-                  Text(controller.selectedType.value!.label,
-                      style: TextStyle(fontSize: 13, color: textMain.withOpacity(0.6), fontWeight: FontWeight.w500)),
+                  Text(
+                    controller.selectedType.value!.label,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12.sp,
+                      color: Colors.grey[500],
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
               ],
             )),
           ),
@@ -137,65 +164,71 @@ class _TypeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = type.canSubmit;
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: EdgeInsets.only(bottom: 12.h),
       decoration: BoxDecoration(
-        color: enabled ? Theme.of(context).cardColor : (Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : Colors.grey[100]),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: enabled ? (Theme.of(context).brightness == Brightness.dark ? Colors.transparent : Colors.transparent) : (Theme.of(context).brightness == Brightness.dark ? Colors.transparent : Colors.grey[300]!), width: 1),
+        color: enabled ? Theme.of(context).cardColor : Colors.grey.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16.r),
         boxShadow: enabled
-            ? [BoxShadow(color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.04), blurRadius: 8, offset: const Offset(0, 3))]
+            ? [
+                BoxShadow(
+                  color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.04),
+                  blurRadius: 10.r,
+                  offset: Offset(0, 4.h),
+                )
+              ]
             : null,
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16.r),
           onTap: enabled ? onTap : () => controller.selectType(type),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16.w),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: EdgeInsets.all(10.w),
                   decoration: BoxDecoration(
-                    color: enabled ? AppColors.primaryOrange.withOpacity(0.12) : (Theme.of(context).brightness == Brightness.dark ? Colors.grey[700] : Colors.grey[200]),
-                    borderRadius: BorderRadius.circular(10),
+                    color: enabled ? AppColors.primaryOrange.withOpacity(0.12) : Colors.grey.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12.r),
                   ),
-                  child: Icon(Icons.article_outlined,
-                      color: enabled ? AppColors.primaryOrange : Colors.grey[400], size: 20),
+                  child: Icon(SolarIconsOutline.documentText,
+                      color: enabled ? AppColors.primaryOrange : Colors.grey[400], size: 24.sp),
                 ),
-                const SizedBox(width: 14),
+                SizedBox(width: 16.w),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(type.label,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w700,
                             color: enabled ? Theme.of(context).colorScheme.onSurface : Colors.grey[500],
                           )),
                       if (type.dueDate != null) ...[
-                        const SizedBox(height: 3),
+                        SizedBox(height: 4.h),
                         Text(
                           type.canSubmit ? 'Hạn: ${type.dueDate}' : 'Đã hết hạn - ${type.dueDate}',
-                          style: TextStyle(
-                            fontSize: 11,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11.sp,
                             color: type.canSubmit ? Colors.grey[500] : Colors.red[400],
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ] else if (type.startDate != null && !type.canSubmit) ...[
-                        const SizedBox(height: 3),
+                        SizedBox(height: 4.h),
                         Text('Bắt đầu từ: ${type.startDate}',
-                            style: TextStyle(fontSize: 11, color: Colors.blue[400])),
+                            style: GoogleFonts.plusJakartaSans(fontSize: 11.sp, color: Colors.blue[400], fontWeight: FontWeight.w500)),
                       ],
                     ],
                   ),
                 ),
                 if (enabled)
-                  const Icon(Icons.chevron_right_rounded, color: AppColors.primaryOrange),
+                  Icon(SolarIconsOutline.altArrowRight, color: AppColors.primaryOrange, size: 20.sp),
                 if (!enabled)
-                  Icon(Icons.lock_outline_rounded, color: Colors.grey[400], size: 18),
+                  Icon(SolarIconsOutline.lock, color: Colors.grey[400], size: 18.sp),
               ],
             ),
           ),
@@ -204,7 +237,6 @@ class _TypeCard extends StatelessWidget {
     );
   }
 
-  // expose controller to inner widget
   AcademicRequestController get controller => Get.find<AcademicRequestController>();
 }
 
@@ -682,7 +714,7 @@ class _FormStep extends StatelessWidget {
 
   Widget _buildSubmitButton() {
     return Obx(() => Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 16.h),
       color: Colors.transparent,
       child: SizedBox(
         width: double.infinity,
@@ -691,15 +723,17 @@ class _FormStep extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primaryOrange,
             disabledBackgroundColor: Colors.grey[300],
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            padding: EdgeInsets.symmetric(vertical: 16.h),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+            elevation: 0,
+            shadowColor: AppColors.primaryOrange.withOpacity(0.3),
           ),
           child: controller.isSubmitting.value
-              ? const SizedBox(
-                  height: 20, width: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-              : const Text('Gửi yêu cầu',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+              ? SizedBox(
+                  height: 20.w, width: 20.w,
+                  child: const CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : Text('Gửi yêu cầu',
+                  style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16.sp, letterSpacing: 1.1)),
         ),
       ),
     ));
