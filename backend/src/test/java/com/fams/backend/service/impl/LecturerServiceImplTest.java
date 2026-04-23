@@ -6,6 +6,9 @@ import com.fams.backend.entity.LecturerProfile;
 import com.fams.backend.entity.User;
 import com.fams.backend.repository.LecturerProfileRepository;
 import com.fams.backend.repository.UserRepository;
+import com.fams.backend.repository.MajorRepository;
+import com.fams.backend.repository.SpecializationRepository;
+import com.fams.backend.repository.UserSessionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -26,6 +29,15 @@ class LecturerServiceImplTest {
 
     @Mock
     private LecturerProfileRepository lecturerProfileRepository;
+
+    @Mock
+    private MajorRepository majorRepository;
+
+    @Mock
+    private SpecializationRepository specializationRepository;
+
+    @Mock
+    private UserSessionRepository userSessionRepository;
 
     @Mock
     private SystemLogService systemLogService;
@@ -64,7 +76,7 @@ class LecturerServiceImplTest {
         when(lecturerProfileRepository.save(any(LecturerProfile.class))).thenAnswer(i -> i.getArguments()[0]);
 
         // Act
-        LecturerResponse response = lecturerService.updateLecturer(userId, request, null);
+        lecturerService.updateLecturer(userId, request, null);
 
         // Assert
         // 1. Verify Profile is updated

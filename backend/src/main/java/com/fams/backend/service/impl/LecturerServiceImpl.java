@@ -442,9 +442,9 @@ public class LecturerServiceImpl implements LecturerService {
                 // Chỉ đọc Mã GV (B) để tìm User, và update Department/Expertise/Bio
                 // KHÔNG thay đổi thông tin cứng của User (code, email, fullName, phone, status)
                 String code = getCellValueAsString(currentRow.getCell(1)); // Cột B - Mã GV
-                String department = getCellValueAsString(currentRow.getCell(5)); // Cột F - Department
-                String expertise = getCellValueAsString(currentRow.getCell(6)); // Cột G - Expertise
-                String bio = getCellValueAsString(currentRow.getCell(7)); // Cột H - Tiểu sử
+                String majorName = getCellValueAsString(currentRow.getCell(5)); // Cột F - Ngành dạy
+                String expertise = getCellValueAsString(currentRow.getCell(7)); // Cột H - Chuyên môn
+                String bio = getCellValueAsString(currentRow.getCell(8)); // Cột I - Tiểu sử
 
                 // Skip empty rows
                 if (code == null || code.isEmpty()) {
@@ -487,8 +487,8 @@ public class LecturerServiceImpl implements LecturerService {
                     if (existingProfile.isPresent()) {
                         // UPDATE profile nếu đã có - chỉ update các field có giá trị trong file
                         LecturerProfile profile = existingProfile.get();
-                        if (department != null && !department.trim().isEmpty()) {
-                            profile.setDepartment(department.trim());
+                        if (majorName != null && !majorName.trim().isEmpty()) {
+                            profile.setDepartment(majorName.trim());
                         }
                         if (expertise != null && !expertise.trim().isEmpty()) {
                             profile.setExpertise(expertise.trim());
@@ -503,7 +503,7 @@ public class LecturerServiceImpl implements LecturerService {
                         // CREATE profile mới nếu chưa có
                         LecturerProfile profile = LecturerProfile.builder()
                                 .user(user)
-                                .department(department != null ? department.trim() : null)
+                                .department(majorName != null ? majorName.trim() : null)
                                 .expertise(expertise != null ? expertise.trim() : null)
                                 .bio(bio != null ? bio.trim() : null)
                                 .build();

@@ -732,26 +732,30 @@ class LecturerServiceImplFullTest {
             String[][] data = {{"1", "GV001", "Tran Van B", "bvt@fpt.edu.vn", "0912345678", "Software Engineering", "Java", "Expertise", "Bio"}};
             MultipartFile file = createLecturerExcelFile(data);
 
-            com.fams.backend.entity.Major major = new com.fams.backend.entity.Major();
-            major.setId(1L);
+            Major major = new Major();
+            major.setId(100L);
             major.setName("Software Engineering");
             major.setCode("SE");
 
-            com.fams.backend.entity.Specialization spec = new com.fams.backend.entity.Specialization();
-            spec.setId(1L);
+            Specialization spec = new Specialization();
+            spec.setId(100L);
             spec.setName("Java");
             spec.setMajor(major);
 
-            // Use lenient() to avoid UnnecessaryStubbingException if other tests fail to use them
+            // Use lenient() and ensure the name matches exactly for keys
             org.mockito.Mockito.lenient().when(userRepository.findByCode("GV001")).thenReturn(Optional.of(lecturerUser));
             org.mockito.Mockito.lenient().when(majorRepository.findAll()).thenReturn(List.of(major));
             org.mockito.Mockito.lenient().when(specializationRepository.findAll()).thenReturn(List.of(spec));
+            org.mockito.Mockito.lenient().when(specializationRepository.findByNameIgnoreCaseAndMajor(
+                    org.mockito.ArgumentMatchers.eq("Java"), 
+                    org.mockito.ArgumentMatchers.any(Major.class)))
+                .thenReturn(Optional.of(spec));
 
             List<LecturerImportDTO> result = lecturerService.previewImportLecturers(file);
 
             assertNotNull(result);
             assertEquals(1, result.size());
-            assertEquals("VALID", result.get(0).getStatus());
+            assertEquals("VALID", result.get(0).getStatus(), "Expected VALID but got ERROR: " + result.get(0).getErrorMessage());
         }
 
         @Test
