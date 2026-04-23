@@ -62,6 +62,9 @@ class LecturerServiceImplFullTest {
     @Mock
     private SystemLogService systemLogService;
 
+    @Mock
+    private com.fams.backend.repository.UserSessionRepository userSessionRepository;
+
     @InjectMocks
     private LecturerServiceImpl lecturerService;
 
@@ -562,7 +565,7 @@ class LecturerServiceImplFullTest {
             Sheet sheet = workbook.createSheet("Lecturers");
 
             Row headerRow = sheet.createRow(0);
-            String[] headers = {"STT", "Mã GV", "Họ tên", "Email", "SĐT", "Department", "Expertise", "Bio"};
+            String[] headers = {"STT", "Mã GV", "Họ tên", "Email", "SĐT", "Ngành dạy", "Chuyên ngành", "Chuyên môn", "Tiểu sử"};
             for (int i = 0; i < headers.length; i++) {
                 headerRow.createCell(i).setCellValue(headers[i]);
             }
@@ -586,7 +589,7 @@ class LecturerServiceImplFullTest {
         @Test
         @DisplayName("UTCID01 - Normal: Import and update existing profile")
         void importLecturers_updateProfile() throws Exception {
-            String[][] data = {{"1", "GV001", "Tran Van B", "bvt@fpt.edu.vn", "0912345678", "New Dept", "New Exp", "New Bio"}};
+            String[][] data = {{"1", "GV001", "Tran Van B", "bvt@fpt.edu.vn", "0912345678", "Software Engineering", "Java", "New Exp", "New Bio"}};
             MultipartFile file = createLecturerExcelFile(data);
 
             when(userRepository.findByCode("GV001")).thenReturn(Optional.of(lecturerUser));
@@ -608,7 +611,7 @@ class LecturerServiceImplFullTest {
             noProfileUser.setCode("GV003");
             noProfileUser.setRole(User.UserRole.LECTURER);
 
-            String[][] data = {{"1", "GV003", "", "", "", "Dept", "Exp", "Bio"}};
+            String[][] data = {{"1", "GV003", "", "", "", "Major", "Spec", "Exp", "Bio"}};
             MultipartFile file = createLecturerExcelFile(data);
 
             when(userRepository.findByCode("GV003")).thenReturn(Optional.of(noProfileUser));
@@ -624,7 +627,7 @@ class LecturerServiceImplFullTest {
         @Test
         @DisplayName("UTCID03 - Abnormal: Lecturer code not found")
         void importLecturers_codeNotFound() throws Exception {
-            String[][] data = {{"1", "UNKNOWN01", "", "", "", "", "", ""}};
+            String[][] data = {{"1", "UNKNOWN01", "", "", "", "", "", "", ""}};
             MultipartFile file = createLecturerExcelFile(data);
 
             when(userRepository.findByCode("UNKNOWN01")).thenReturn(Optional.empty());
@@ -640,7 +643,7 @@ class LecturerServiceImplFullTest {
         @DisplayName("UTCID04 - Abnormal: User is not a lecturer")
         void importLecturers_notALecturer() throws Exception {
             studentUser.setCode("STU001");
-            String[][] data = {{"1", "STU001", "", "", "", "", "", ""}};
+            String[][] data = {{"1", "STU001", "", "", "", "", "", "", ""}};
             MultipartFile file = createLecturerExcelFile(data);
 
             when(userRepository.findByCode("STU001")).thenReturn(Optional.of(studentUser));
@@ -654,8 +657,8 @@ class LecturerServiceImplFullTest {
         @DisplayName("UTCID05 - Abnormal: Duplicate code in file")
         void importLecturers_duplicateCode() throws Exception {
             String[][] data = {
-                    {"1", "GV001", "", "", "", "Dept1", "", ""},
-                    {"2", "GV001", "", "", "", "Dept2", "", ""}
+                    {"1", "GV001", "", "", "", "M1", "S1", "", ""},
+                    {"2", "GV001", "", "", "", "M2", "S2", "", ""}
             };
             MultipartFile file = createLecturerExcelFile(data);
 
@@ -702,7 +705,7 @@ class LecturerServiceImplFullTest {
             Sheet sheet = workbook.createSheet("Lecturers");
 
             Row headerRow = sheet.createRow(0);
-            String[] headers = {"STT", "Mã GV", "Họ tên", "Email", "SĐT", "Department", "Expertise", "Bio"};
+            String[] headers = {"STT", "Mã GV", "Họ tên", "Email", "SĐT", "Ngành dạy", "Chuyên ngành", "Chuyên môn", "Tiểu sử"};
             for (int i = 0; i < headers.length; i++) {
                 headerRow.createCell(i).setCellValue(headers[i]);
             }
@@ -726,16 +729,23 @@ class LecturerServiceImplFullTest {
         @Test
         @DisplayName("UTCID01 - Normal: Valid lecturer preview")
         void previewImport_success() throws Exception {
-            String[][] data = {{"1", "GV001", "Tran Van B", "bvt@fpt.edu.vn", "0912345678", "Software Engineering", "Java", "Bio"}};
+            String[][] data = {{"1", "GV001", "Tran Van B", "bvt@fpt.edu.vn", "0912345678", "Software Engineering", "Java", "Expertise", "Bio"}};
             MultipartFile file = createLecturerExcelFile(data);
 
-            Major major = new Major();
+            com.fams.backend.entity.Major major = new com.fams.backend.entity.Major();
+            major.setId(1L);
             major.setName("Software Engineering");
             major.setCode("SE");
 
-            when(userRepository.findByCode("GV001")).thenReturn(Optional.of(lecturerUser));
-            when(majorRepository.findAll()).thenReturn(List.of(major));
-            when(specializationRepository.findAll()).thenReturn(List.of());
+            com.fams.backend.entity.Specialization spec = new com.fams.backend.entity.Specialization();
+            spec.setId(1L);
+            spec.setName("Java");
+            spec.setMajor(major);
+
+            // Use lenient() to avoid UnnecessaryStubbingException if other tests fail to use them
+            org.mockito.Mockito.lenient().when(userRepository.findByCode("GV001")).thenReturn(Optional.of(lecturerUser));
+            org.mockito.Mockito.lenient().when(majorRepository.findAll()).thenReturn(List.of(major));
+            org.mockito.Mockito.lenient().when(specializationRepository.findAll()).thenReturn(List.of(spec));
 
             List<LecturerImportDTO> result = lecturerService.previewImportLecturers(file);
 
@@ -747,12 +757,12 @@ class LecturerServiceImplFullTest {
         @Test
         @DisplayName("UTCID02 - Abnormal: Code not found")
         void previewImport_codeNotFound() throws Exception {
-            String[][] data = {{"1", "UNKNOWN", "", "", "", "", "", ""}};
+            String[][] data = {{"1", "UNKNOWN", "", "", "", "", "", "", ""}};
             MultipartFile file = createLecturerExcelFile(data);
 
-            when(userRepository.findByCode("UNKNOWN")).thenReturn(Optional.empty());
-            when(majorRepository.findAll()).thenReturn(List.of());
-            when(specializationRepository.findAll()).thenReturn(List.of());
+            org.mockito.Mockito.lenient().when(userRepository.findByCode("UNKNOWN")).thenReturn(Optional.empty());
+            org.mockito.Mockito.lenient().when(majorRepository.findAll()).thenReturn(List.of());
+            org.mockito.Mockito.lenient().when(specializationRepository.findAll()).thenReturn(List.of());
 
             List<LecturerImportDTO> result = lecturerService.previewImportLecturers(file);
 
@@ -764,14 +774,14 @@ class LecturerServiceImplFullTest {
         @DisplayName("UTCID03 - Abnormal: Duplicate code in file")
         void previewImport_duplicateCode() throws Exception {
             String[][] data = {
-                    {"1", "GV001", "Tran Van B", "bvt@fpt.edu.vn", "0912345678", "", "", ""},
-                    {"2", "GV001", "Dup", "dup@fpt.edu.vn", "", "", "", ""}
+                    {"1", "GV001", "Tran Van B", "bvt@fpt.edu.vn", "0912345678", "", "", "", ""},
+                    {"2", "GV001", "Dup", "dup@fpt.edu.vn", "", "", "", "", ""}
             };
             MultipartFile file = createLecturerExcelFile(data);
 
-            when(userRepository.findByCode("GV001")).thenReturn(Optional.of(lecturerUser));
-            when(majorRepository.findAll()).thenReturn(List.of());
-            when(specializationRepository.findAll()).thenReturn(List.of());
+            org.mockito.Mockito.lenient().when(userRepository.findByCode("GV001")).thenReturn(Optional.of(lecturerUser));
+            org.mockito.Mockito.lenient().when(majorRepository.findAll()).thenReturn(List.of());
+            org.mockito.Mockito.lenient().when(specializationRepository.findAll()).thenReturn(List.of());
 
             List<LecturerImportDTO> result = lecturerService.previewImportLecturers(file);
 
@@ -784,12 +794,12 @@ class LecturerServiceImplFullTest {
         @DisplayName("UTCID04 - Abnormal: Not a lecturer")
         void previewImport_notALecturer() throws Exception {
             studentUser.setCode("STU001");
-            String[][] data = {{"1", "STU001", "", "", "", "", "", ""}};
+            String[][] data = {{"1", "STU001", "", "", "", "", "", "", ""}};
             MultipartFile file = createLecturerExcelFile(data);
 
-            when(userRepository.findByCode("STU001")).thenReturn(Optional.of(studentUser));
-            when(majorRepository.findAll()).thenReturn(List.of());
-            when(specializationRepository.findAll()).thenReturn(List.of());
+            org.mockito.Mockito.lenient().when(userRepository.findByCode("STU001")).thenReturn(Optional.of(studentUser));
+            org.mockito.Mockito.lenient().when(majorRepository.findAll()).thenReturn(List.of());
+            org.mockito.Mockito.lenient().when(specializationRepository.findAll()).thenReturn(List.of());
 
             List<LecturerImportDTO> result = lecturerService.previewImportLecturers(file);
 
@@ -812,12 +822,12 @@ class LecturerServiceImplFullTest {
         @Test
         @DisplayName("UTCID06 - Abnormal: Name mismatch between Excel and DB")
         void previewImport_nameMismatch() throws Exception {
-            String[][] data = {{"1", "GV001", "Wrong Name", "bvt@fpt.edu.vn", "0912345678", "", "", ""}};
+            String[][] data = {{"1", "GV001", "Wrong Name", "bvt@fpt.edu.vn", "0912345678", "", "", "", ""}};
             MultipartFile file = createLecturerExcelFile(data);
 
-            when(userRepository.findByCode("GV001")).thenReturn(Optional.of(lecturerUser));
-            when(majorRepository.findAll()).thenReturn(List.of());
-            when(specializationRepository.findAll()).thenReturn(List.of());
+            org.mockito.Mockito.lenient().when(userRepository.findByCode("GV001")).thenReturn(Optional.of(lecturerUser));
+            org.mockito.Mockito.lenient().when(majorRepository.findAll()).thenReturn(List.of());
+            org.mockito.Mockito.lenient().when(specializationRepository.findAll()).thenReturn(List.of());
 
             List<LecturerImportDTO> result = lecturerService.previewImportLecturers(file);
 
