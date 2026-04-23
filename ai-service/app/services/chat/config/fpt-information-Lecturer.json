@@ -1,0 +1,730 @@
+{
+    "title": "Cẩm nang Giảng viên Đại học FPT – Phiên bản Mở rộng",
+    "version": "Phiên bản Chi tiết Dành cho Giảng viên v2.0",
+    "author": "Phòng Đào tạo & Học vụ FPT – Ban Phát triển Giảng viên",
+    "last_updated": "2025",
+    "intro": "Chào mừng Quý Thầy/Cô đến với môi trường giáo dục FPT. Tài liệu này là bản cập nhật mở rộng, bao gồm đầy đủ quy trình giảng dạy, hệ thống hỗ trợ, chính sách học vụ, đánh giá sinh viên, nghiên cứu khoa học, phát triển chuyên môn, ứng xử sư phạm, và các kênh liên lạc nội bộ. Hy vọng cẩm nang này sẽ đồng hành cùng Quý Thầy/Cô trong hành trình giảng dạy và cống hiến tại FPT.",
+    "quick_contacts": {
+        "title": "Danh bạ Liên hệ Nhanh - Hỗ trợ Giảng viên (Mở rộng)",
+        "description": "Liên hệ đúng đầu mối khi cần hỗ trợ giảng dạy, kỹ thuật, hành chính hoặc tình huống khẩn cấp.",
+        "contacts": [
+            {
+                "department": "Phòng Đào tạo (Academic Affairs)",
+                "handles": "Phân công giảng dạy, lịch học, đăng ký môn, xử lý học vụ sinh viên, NE, khiếu nại điểm",
+                "how": "Email da@fpt.edu.vn hoặc ticket trên hệ thống nội bộ, hotline hỗ trợ giảng viên: 1900 xxxx (giờ hành chính)"
+            },
+            {
+                "department": "Phòng Nhân sự (HR)",
+                "handles": "Hợp đồng, bảo hiểm, lương, thưởng, phúc lợi, nghỉ phép, hồ sơ nhân sự",
+                "how": "Email hr@fpt.edu.vn, cổng thông tin nhân sự, hoặc gặp trực tiếp tại văn phòng HR"
+            },
+            {
+                "department": "Phòng Công nghệ Thông tin (IT Support)",
+                "handles": "Tài khoản LMS, email giảng viên, phần mềm giảng dạy, wifi, VPN, SEB, EOS, máy tính bàn",
+                "how": "Ticket trên FAP (ưu tiên), email it.support@fpt.edu.vn, hoặc tổng đài IT 24/7: 1900 yyyy"
+            },
+            {
+                "department": "Phòng Quản lý Khoa học & Đối ngoại",
+                "handles": "Nghiên cứu khoa học, quỹ tài trợ, hội thảo, hợp tác quốc tế, công bố quốc tế",
+                "how": "Email research@fpt.edu.vn, gặp trực tiếp chuyên viên nghiên cứu"
+            },
+            {
+                "department": "Phòng Công tác Sinh viên (Student Affairs)",
+                "handles": "Tư vấn tâm lý, điểm rèn luyện, hoạt động ngoại khóa, kỷ luật sinh viên, hỗ trợ khó khăn",
+                "how": "Email student.support@fpt.edu.vn, fanpage cơ sở, hoặc gặp chuyên viên tư vấn"
+            },
+            {
+                "department": "Phòng Đảm bảo Chất lượng (QA)",
+                "handles": "Khảo thí, đánh giá giảng dạy (mức độ hài lòng của SV), kiểm định chương trình, rubric chuẩn",
+                "how": "Email qa@fpt.edu.vn, hệ thống đánh giá nội bộ"
+            },
+            {
+                "department": "Đường dây nóng hỗ trợ khẩn cấp (24/7)",
+                "handles": "Sự cố phòng học, mất điện, an ninh, y tế, thiên tai",
+                "how": "Số điện thoại trực ban cơ sở: 024 xxxx xxxx (Hà Nội), 028 xxxx xxxx (TP.HCM), 0236 xxxx xxxx (Đà Nẵng)"
+            }
+        ]
+    },
+    "pillars": [
+        {
+            "id": "I",
+            "name": "GIẢNG DẠY & HỆ THỐNG HỌC TẬP",
+            "color": "🟦",
+            "description": "Quy trình giảng dạy, LMS, chấm điểm, hướng dẫn sinh viên và các công cụ hỗ trợ (bao gồm cả giảng dạy trực tuyến và lai ghép)",
+            "groups": [
+                {
+                    "id": 1,
+                    "title": "Hệ thống LMS & Công cụ Giảng dạy",
+                    "content": "FPT sử dụng hệ thống LMS (Learning Management System) làm nền tảng chính để quản lý môn học, giao bài tập, điểm danh và chấm điểm. Ngoài ra, giảng viên cần nắm vững các công cụ hỗ trợ khác.",
+                    "subsections": [
+                        {
+                            "subtitle": "Các chức năng chính trên LMS",
+                            "details": [
+                                "Tải lên tài liệu môn học (slide, bài đọc, video, link tham khảo)",
+                                "Tạo bài tập, bài kiểm tra, diễn đàn thảo luận (có thể tạo nhóm thảo luận)",
+                                "Chấm điểm và phản hồi bài làm sinh viên (hỗ trợ chấm theo rubric)",
+                                "Quản lý điểm danh từng buổi học (tích hợp với FAP)",
+                                "Gửi thông báo đến toàn bộ lớp hoặc từng sinh viên (kèm file, link)",
+                                "Xem báo cáo thống kê điểm danh, điểm số, tỷ lệ hoàn thành bài tập"
+                            ]
+                        },
+                        {
+                            "subtitle": "Hướng dẫn sử dụng LMS cho giảng viên mới",
+                            "details": [
+                                "Đăng nhập bằng tài khoản giảng viên do IT cấp (username: @fpt.edu.vn)",
+                                "Tham gia khóa tập huấn LMS bắt buộc đầu năm học (có chứng chỉ)",
+                                "Luôn cập nhật tài liệu trước buổi học ít nhất 24h (để sinh viên chuẩn bị)",
+                                "Sử dụng chức năng 'Gradebook' để sinh viên theo dõi điểm thành phần minh bạch",
+                                "Kích hoạt chế độ 'thông báo tự động' khi có bài tập mới hoặc điểm mới"
+                            ]
+                        },
+                        {
+                            "subtitle": "Công cụ giảng dạy trực tuyến & lai ghép",
+                            "details": [
+                                "Microsoft Teams: tổ chức lớp học trực tuyến, ghi hình, chia sẻ màn hình, bảng tương tác",
+                                "Zoom bản quyền: dùng cho lớp đông (>100 sinh viên), có tính năng phòng chờ, khảo sát nhanh",
+                                "Google Meet: dùng cho các buổi thảo luận nhóm nhỏ",
+                                "Mentimeter / Kahoot: tạo câu hỏi tương tác, khảo sát nhanh giữa giờ",
+                                "Whiteboard trực tuyến (Microsoft Whiteboard, Miro): dùng cho brainstorming"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": 2,
+                    "title": "Quy định về Điểm danh & Chuyên cần (Mở rộng)",
+                    "content": "Điểm danh là cơ sở để xác định điều kiện dự thi (NE) và điểm chuyên cần. Giảng viên cần thực hiện đúng quy trình để tránh tranh chấp.",
+                    "subsections": [
+                        {
+                            "subtitle": "Quy định chung",
+                            "details": [
+                                "Sinh viên vắng quá 20% số buổi học (tính trên tổng số buổi lý thuyết + thực hành) sẽ bị NE – không đủ điều kiện dự thi cuối kỳ",
+                                "Đi muộn quá 15 phút tính 0.5 buổi vắng (đi muộn dưới 15 phút vẫn tính đi học nhưng ghi chú)",
+                                "Giảng viên cần cập nhật điểm danh trong vòng 24h sau buổi học (để sinh viên kiểm tra kịp thời)",
+                                "Điểm danh theo danh sách lớp chính thức trên FAP, không tự ý thêm/xóa sinh viên"
+                            ]
+                        },
+                        {
+                            "subtitle": "Xử lý trường hợp đặc biệt (có giấy tờ hợp lệ)",
+                            "details": [
+                                "Sinh viên có giấy nghỉ phép (ốm đau có xác nhận bệnh viện, tang lễ có giấy báo tử của người thân trực hệ) có thể được xem xét miễn vắng",
+                                "Cần lưu giấy tờ minh chứng (scan hoặc ảnh) và cập nhật vào hệ thống LMS mục 'Nghỉ có phép'",
+                                "Trường hợp nghỉ dài ngày do bệnh nặng: báo ngay Phòng Đào tạo để có phương án học bù",
+                                "Không tự ý xóa NE nếu không có phê duyệt từ Phòng Đào tạo (chỉ Phòng Đào tạo mới có quyền điều chỉnh)"
+                            ]
+                        },
+                        {
+                            "subtitle": "Điểm chuyên cần - Cách tính",
+                            "details": [
+                                "Thông thường, điểm chuyên cần chiếm 10% tổng điểm môn (theo đề cương môn học)",
+                                "Mỗi buổi vắng không phép trừ 1 điểm (trên thang 10) hoặc theo rubric cụ thể",
+                                "Đi muộn 3 lần (mỗi lần dưới 15 phút) tính 1 buổi vắng không phép",
+                                "Công bố cách tính điểm chuyên cần trong buổi học đầu tiên và trên LMS"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": 3,
+                    "title": "Chấm điểm & Phản hồi – Quy trình chi tiết",
+                    "content": "Việc chấm điểm cần minh bạch, công bằng, đúng tiến độ và có phản hồi mang tính xây dựng.",
+                    "subsections": [
+                        {
+                            "subtitle": "Cấu trúc điểm môn học (chuẩn FPT)",
+                            "details": [
+                                "Thành phần điểm: Chuyên cần (10%) + Bài tập/Lab/Project (20-30%) + Thi giữa kỳ (PE - 20-30%) + Thi cuối kỳ (FE - 40-50%)",
+                                "Một số môn có thể có thêm điểm thuyết trình, điểm danh dự hội thảo (tùy đề cương)",
+                                "Phải công bố trọng số điểm và rubric chấm chi tiết trong buổi học đầu tiên và đăng tải trên LMS"
+                            ]
+                        },
+                        {
+                            "subtitle": "Thời hạn nhập điểm (nghiêm ngặt)",
+                            "details": [
+                                "Điểm thành phần (bài tập, lab, thuyết trình): trong vòng 7 ngày sau khi sinh viên nộp bài (tốt nhất là 3-5 ngày)",
+                                "Điểm thi giữa kỳ (PE): trong vòng 5 ngày sau khi thi",
+                                "Điểm thi cuối kỳ (FE): trong vòng 72h sau khi thi (ưu tiên 48h để sinh viên kịp phúc tra)",
+                                "Nếu chậm điểm, giảng viên sẽ bị nhắc nhở và ảnh hưởng đến đánh giá giảng dạy"
+                            ]
+                        },
+                        {
+                            "subtitle": "Quy trình phúc tra điểm (khi sinh viên khiếu nại)",
+                            "details": [
+                                "Sinh viên có quyền yêu cầu phúc tra điểm FE trong vòng 3 ngày sau khi công bố điểm",
+                                "Giảng viên nhận yêu cầu qua Phòng Đào tạo, phải chấm lại toàn bộ bài thi (không chỉ phần khiếu nại)",
+                                "Kết quả phúc tra có thể tăng, giảm hoặc giữ nguyên điểm, phải lập biên bản",
+                                "Nếu điểm thay đổi từ 0.5 trở lên, cần có xác nhận của Trưởng bộ môn và Phòng Đào tạo",
+                                "Sinh viên được thông báo kết quả phúc tra trong vòng 5 ngày làm việc"
+                            ]
+                        },
+                        {
+                            "subtitle": "Phản hồi cho sinh viên – Nguyên tắc cần nhớ",
+                            "details": [
+                                "Phản hồi cụ thể, không chung chung (ví dụ: 'Sai công thức ở bước 3' thay vì 'Bài làm chưa tốt')",
+                                "Nêu điểm mạnh trước, sau đó góp ý cải thiện",
+                                "Không dùng lời lẽ miệt thị năng lực hoặc so sánh giữa các sinh viên",
+                                "Khuyến khích sinh viên yếu đến gặp riêng để được hỗ trợ thêm"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": 4,
+                    "title": "Hướng dẫn soạn đề thi & coi thi (online & offline)",
+                    "content": "Đảm bảo tính bảo mật, công bằng và đúng quy chế thi của FPT.",
+                    "subsections": [
+                        {
+                            "subtitle": "Soạn đề thi (PE và FE)",
+                            "details": [
+                                "Đề thi phải bám sát đề cương môn học và mức độ Bloom (nhận biết, thông hiểu, vận dụng, phân tích, đánh giá, sáng tạo)",
+                                "Có ít nhất 2 đề thi tương đương (dự phòng) cho mỗi đợt thi",
+                                "Đề thi được lưu trữ bảo mật trên hệ thống hoặc nộp niêm phong cho Phòng Đào tạo trước 2 tuần",
+                                "Không được tiết lộ nội dung đề thi dưới bất kỳ hình thức nào trước giờ thi"
+                            ]
+                        },
+                        {
+                            "subtitle": "Quy trình coi thi trực tiếp (offline)",
+                            "details": [
+                                "Có mặt tại phòng thi trước 15 phút, kiểm tra danh sách thí sinh, sắp xếp chỗ ngồi",
+                                "Nhắc nhở sinh viên cất điện thoại, tài liệu, chỉ giữ dụng cụ được phép",
+                                "Phát đề, theo dõi phòng thi, xử lý các hành vi gian lận theo quy định",
+                                "Lập biên bản vi phạm (nếu có) và gửi về Phòng Đào tạo trong ngày"
+                            ]
+                        },
+                        {
+                            "subtitle": "Quy trình coi thi trực tuyến (sử dụng SEB/EOS)",
+                            "details": [
+                                "Yêu cầu sinh viên cài đặt và kiểm tra SEB (Safe Exam Browser) trước ngày thi ít nhất 2 ngày",
+                                "Trước giờ thi 10 phút, gửi link phòng thi qua LMS/email, yêu cầu sinh viên bật webcam và chia sẻ màn hình",
+                                "Giám sát qua camera (phát hiện hành vi quay cóp, nhìn sang màn hình khác, có người khác xuất hiện)",
+                                "Khi phát hiện gian lận: chụp màn hình, lưu video, lập biên bản trực tuyến, thông báo Phòng Đào tạo",
+                                "Trong trường hợp mất điện, mất mạng: hướng dẫn sinh viên liên hệ IT và làm bài bù theo quy định"
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "II",
+            "name": "CHÍNH SÁCH & QUY TRÌNH HỌC VỤ (Mở rộng)",
+            "color": "🟧",
+            "description": "Quy định về học vụ, xử lý kỷ luật, bảo lưu, chuyển ngành, chuyển đổi tín chỉ, và các thủ tục hành chính liên quan đến sinh viên",
+            "groups": [
+                {
+                    "id": 5,
+                    "title": "Xử lý Kỷ luật Sinh viên – Bảng chi tiết",
+                    "table": {
+                        "headers": [
+                            "Vi phạm",
+                            "Mức độ",
+                            "Hình thức xử lý",
+                            "Ghi chú cho giảng viên"
+                        ],
+                        "rows": [
+                            [
+                                "Vắng quá 20% số buổi (không phép)",
+                                "Nhẹ",
+                                "NE – Cấm thi, phải học lại môn",
+                                "Tự động trên hệ thống, GV cần báo trước cho SV"
+                            ],
+                            [
+                                "Đi muộn >15 phút từ 3 lần trở lên",
+                                "Nhẹ",
+                                "Trừ điểm chuyên cần (0.5-1 điểm/lần)",
+                                "Ghi nhận trên LMS"
+                            ],
+                            [
+                                "Gian lận thi cử (quay cóp, sử dụng tài liệu cấm)",
+                                "Trung bình",
+                                "Điểm 0 môn, cảnh cáo học vụ, ghi vào học bạ",
+                                "Lập biên bản, gửi Phòng Đào tạo trong 24h"
+                            ],
+                            [
+                                "Đạo văn (Turnitin >20% nhưng dưới 40%)",
+                                "Trung bình",
+                                "Điểm 0 bài nộp, buộc làm lại bài khác",
+                                "GV phải thông báo và giải thích khái niệm đạo văn"
+                            ],
+                            [
+                                "Đạo văn >40% hoặc sao chép toàn bộ",
+                                "Nặng",
+                                "Điểm 0 môn học, cảnh cáo toàn trường",
+                                "Báo cáo Trưởng bộ môn và Phòng Đào tạo"
+                            ],
+                            [
+                                "Gian lận nghiêm trọng (mang thiết bị thu phát, giả mạo giấy tờ)",
+                                "Nặng",
+                                "Đình chỉ học tập 1 kỳ",
+                                "Phối hợp với an ninh trường"
+                            ],
+                            [
+                                "Mua bài / thi hộ / nhờ người thi hộ",
+                                "Rất nặng",
+                                "Buộc thôi học, hủy kết quả các môn đã học",
+                                "Lập hồ sơ kỷ luật, bàn giao cho Phòng Công tác SV"
+                            ]
+                        ]
+                    }
+                },
+                {
+                    "id": 6,
+                    "title": "Quy trình Xử lý Sinh viên NE (Chi tiết các bước)",
+                    "details": [
+                        "Bước 1 – Theo dõi: Giảng viên theo dõi điểm danh trên LMS sau mỗi buổi, hệ thống tự tính % vắng.",
+                        "Bước 2 – Cảnh báo sớm: Khi sinh viên vắng ≥15% số buổi, giảng viên gửi thông báo qua LMS hoặc email nhắc nhở.",
+                        "Bước 3 – Thông báo NE chính thức: Trước kỳ thi ít nhất 1 tuần, giảng viên xác nhận danh sách NE trên hệ thống (không tự động).",
+                        "Bước 4 – Gửi danh sách NE về Phòng Đào tạo (qua FAP hoặc email) kèm lý do chi tiết.",
+                        "Bước 5 – Phòng Đào tạo cập nhật NE vào hệ thống, sinh viên không được dự thi, phải đăng ký học lại.",
+                        "Lưu ý: Không tự ý cho sinh viên NE thi lại hoặc thi bù nếu chưa có phê duyệt ngoại lệ từ Phòng Đào tạo."
+                    ]
+                },
+                {
+                    "id": 7,
+                    "title": "Quy trình xin nghỉ dạy, dạy thay, đổi lịch",
+                    "details": [
+                        "Nghỉ dạy vì lý do bất khả kháng (ốm đau, việc gia đình): báo ngay cho Trưởng bộ môn và Phòng Đào tạo trước ít nhất 2 giờ (nếu có thể).",
+                        "Gửi đề xuất dạy thay (kèm giáo án, slide) hoặc yêu cầu Phòng Đào tạo sắp xếp giảng viên thay.",
+                        "Đối với lịch nghỉ trước (hội thảo, công tác): nộp đơn xin đổi lịch dạy trước 2 tuần, có kế hoạch dạy bù chi tiết.",
+                        "Sau khi được duyệt, cập nhật lịch dạy bù trên LMS và thông báo cho sinh viên.",
+                        "Nếu nghỉ không báo trước hoặc không bố trí dạy thay, giảng viên sẽ bị xem xét kỷ luật lao động."
+                    ]
+                },
+                {
+                    "id": 8,
+                    "title": "Hướng dẫn xử lý các tình huống học vụ thường gặp",
+                    "subsections": [
+                        {
+                            "subtitle": "Sinh viên muốn bảo lưu môn / xin học cải thiện",
+                            "details": [
+                                "Hướng dẫn sinh viên làm đơn gửi Phòng Đào tạo (không tự ý cho phép).",
+                                "Bảo lưu môn chỉ được xét nếu sinh viên có lý do chính đáng (bệnh nặng, tai nạn).",
+                                "Học cải thiện: sinh viên đăng ký lại môn đã đậu nhưng muốn nâng điểm, giảng viên vẫn chấm bình thường."
+                            ]
+                        },
+                        {
+                            "subtitle": "Sinh viên bị sai điểm trên hệ thống",
+                            "details": [
+                                "Kiểm tra lại bài làm gốc (bài thi, bài tập).",
+                                "Nếu sai, lập biên bản điều chỉnh điểm (có xác nhận của Trưởng bộ môn và Phòng Đào tạo).",
+                                "Cập nhật điểm mới trên LMS và thông báo cho sinh viên."
+                            ]
+                        },
+                        {
+                            "subtitle": "Sinh viên khiếu nại về điểm chuyên cần",
+                            "details": [
+                                "Đối chiếu với bảng điểm danh chi tiết từng buổi (có thời gian điểm danh).",
+                                "Nếu do lỗi kỹ thuật (máy tính), báo IT để khôi phục dữ liệu.",
+                                "Không tự ý sửa điểm chuyên cần nếu không có bằng chứng rõ ràng."
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "III",
+            "name": "NGHIÊN CỨU KHOA HỌC & PHÁT TRIỂN CHUYÊN MÔN (Mở rộng)",
+            "color": "🟩",
+            "description": "Hướng dẫn tham gia nghiên cứu, viết bài báo, tổ chức hội thảo, phát triển năng lực giảng viên và lộ trình thăng tiến",
+            "groups": [
+                {
+                    "id": 9,
+                    "title": "Hỗ trợ Nghiên cứu Khoa học từ Trường",
+                    "details": [
+                        "Giảng viên được khuyến khích tham gia nghiên cứu khoa học cấp trường, cấp bộ, cấp quốc gia và quốc tế.",
+                        "Quỹ Phát triển Khoa học FPT (FPT Research Fund) tài trợ tối đa 100 triệu đồng/đề tài cho giảng viên chính.",
+                        "Hỗ trợ công bố bài báo quốc tế (chi phí dịch thuật, phí xuất bản, phí tham dự hội nghị) lên đến 30 triệu đồng/năm/giảng viên.",
+                        "Thư viện trường cấp tài khoản truy cập các cơ sở dữ liệu học thuật: IEEE, ACM, Springer, Scopus, Web of Science.",
+                        "Có chính sách thưởng cho bài báo Scopus/ISI: 10-50 triệu đồng/bài tùy theo quartile (Q1-Q4)."
+                    ]
+                },
+                {
+                    "id": 10,
+                    "title": "Hướng dẫn viết đề xuất nghiên cứu nội bộ",
+                    "details": [
+                        "Đề xuất gồm: tiêu đề, tóm tắt (300 từ), vấn đề nghiên cứu, mục tiêu, phương pháp, kết quả dự kiến, ngân sách, kế hoạch thời gian.",
+                        "Nộp về Phòng Quản lý Khoa học & Đối ngoại theo đợt (tháng 3 và tháng 9 hàng năm).",
+                        "Hội đồng khoa học trường xét duyệt trong vòng 4 tuần, phản hồi bằng văn bản.",
+                        "Các đề xuất được tài trợ phải báo cáo tiến độ 6 tháng/lần và báo cáo tổng kết khi kết thúc."
+                    ]
+                },
+                {
+                    "id": 11,
+                    "title": "Hội thảo, Seminar & Phát triển Chuyên môn",
+                    "details": [
+                        "Mỗi giảng viên cần tham gia ít nhất 1 hội thảo chuyên môn trong nước hoặc quốc tế mỗi năm (có thể trực tuyến).",
+                        "Có thể đề xuất tổ chức seminar nội bộ (chủ đề tự chọn) – được hỗ trợ kinh phí tổ chức và nước uống.",
+                        "Được hỗ trợ 100% phí tham gia các khóa học nâng cao trên Coursera, Udemy, EdX (tối đa 5 khóa/năm).",
+                        "Chương trình 'FPT Faculty Exchange' – giảng viên có thể giảng dạy trao đổi tại các cơ sở FPT khác (Đà Nẵng, Cần Thơ, Hồ Chí Minh) trong 1 kỳ."
+                    ]
+                },
+                {
+                    "id": 12,
+                    "title": "Lộ trình thăng tiến cho giảng viên (Career Path)",
+                    "table": {
+                        "headers": [
+                            "Chức danh",
+                            "Yêu cầu chính",
+                            "Thời gian tối thiểu"
+                        ],
+                        "rows": [
+                            [
+                                "Giảng viên (Lecturer)",
+                                "Thạc sĩ, hoàn thành 2 kỳ giảng dạy, đánh giá SV ≥ 4.0/5",
+                                "0 năm"
+                            ],
+                            [
+                                "Giảng viên chính (Senior Lecturer)",
+                                "Thạc sĩ + 3 năm kinh nghiệm, có ít nhất 1 bài báo Scopus, đánh giá tốt",
+                                "3 năm"
+                            ],
+                            [
+                                "Trưởng bộ môn (Program Head)",
+                                "Tiến sĩ hoặc Thạc sĩ + 5 năm, có nghiên cứu, năng lực quản lý",
+                                "5 năm"
+                            ],
+                            [
+                                "Phó Giáo sư (Associate Professor) – theo tiêu chuẩn nhà nước",
+                                "Tiến sĩ, công bố quốc tế, hướng dẫn nghiên cứu sinh",
+                                "6-8 năm"
+                            ]
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "id": "IV",
+            "name": "HỖ TRỢ SINH VIÊN & CỐ VẤN HỌC TẬP (Mở rộng)",
+            "color": "🟨",
+            "description": "Vai trò cố vấn học tập, hỗ trợ tâm lý, định hướng nghề nghiệp, và các kỹ năng xử lý tình huống khó với sinh viên",
+            "groups": [
+                {
+                    "id": 13,
+                    "title": "Vai trò Cố vấn Học tập (Academic Advisor) – Trách nhiệm cụ thể",
+                    "details": [
+                        "Mỗi giảng viên được phân công làm advisor cho 15-25 sinh viên (tùy cơ sở).",
+                        "Tổ chức ít nhất 2 buổi gặp mặt advisor/sinh viên mỗi kỳ (đầu kỳ và cuối kỳ).",
+                        "Tư vấn lộ trình học tập, đăng ký môn, giải đáp thắc mắc về quy chế tín chỉ.",
+                        "Xử lý cảnh báo học vụ: khi sinh viên có GPA < 1.6 hoặc nợ môn, advisor lập kế hoạch hỗ trợ, họp với phụ huynh (nếu cần).",
+                        "Hỗ trợ sinh viên gặp khó khăn học tập hoặc cá nhân (định hướng, động lực).",
+                        "Cập nhật biên bản tư vấn lên hệ thống sau mỗi lần gặp (làm cơ sở đánh giá công tác advisor)."
+                    ]
+                },
+                {
+                    "id": 14,
+                    "title": "Nhận diện và hỗ trợ sinh viên có vấn đề tâm lý",
+                    "details": [
+                        "Dấu hiệu: vắng học nhiều, điểm sụt giảm bất thường, ít tương tác, thay đổi tính cách, nói về cái chết hoặc tuyệt vọng.",
+                        "Cách tiếp cận: trò chuyện riêng, lắng nghe không phán xét, hỏi câu hỏi mở 'Em có muốn chia sẻ gì thêm không?'.",
+                        "Không tự ý tư vấn tâm lý chuyên sâu (không có chứng chỉ). Hãy giới thiệu sinh viên đến Phòng Công tác Sinh viên hoặc chuyên viên tâm lý của trường.",
+                        "Trường hợp khẩn cấp (có ý định tự hại): báo ngay lãnh đạo khoa và phòng công tác sinh viên, không để sinh viên ở một mình."
+                    ]
+                },
+                {
+                    "id": 15,
+                    "title": "Hỗ trợ sinh viên yếu, sinh viên khuyết tật, sinh viên quốc tế",
+                    "details": [
+                        "Sinh viên yếu (học lại, cảnh báo): xây dựng kế hoạch học bổ trợ (tài liệu bổ sung, giờ gặp riêng, nhóm học cùng).",
+                        "Sinh viên khuyết tật: phối hợp với Trung tâm Hỗ trợ Sinh viên để có phương án giảng dạy phù hợp (tài liệu giọng nói, thời gian làm bài dài hơn).",
+                        "Sinh viên quốc tế (trao đổi, du học): cung cấp slide song ngữ nếu có thể, khuyến khích hòa nhập, kiểm tra định kỳ mức độ hiểu bài."
+                    ]
+                },
+                {
+                    "id": 16,
+                    "title": "Định hướng nghề nghiệp & Kết nối doanh nghiệp",
+                    "details": [
+                        "Giảng viên có thể mời doanh nghiệp đến nói chuyện chuyên đề (qua Phòng Quan hệ Doanh nghiệp).",
+                        "Hướng dẫn sinh viên viết CV, chuẩn bị phỏng vấn, tìm kiếm thực tập (OJT).",
+                        "Đề xuất các dự án thực tế từ doanh nghiệp để sinh viên làm đồ án môn học hoặc Capstone.",
+                        "Tham gia chương trình 'Mentor' – kết nối cựu sinh viên thành công với sinh viên hiện tại."
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "V",
+            "name": "CÔNG NGHỆ & TÀI KHOẢN GIẢNG VIÊN (Mở rộng)",
+            "color": "🟥",
+            "description": "Tài khoản email, phần mềm, VPN, bảo mật, xử lý sự cố và các công cụ giảng dạy số",
+            "groups": [
+                {
+                    "id": 17,
+                    "title": "Danh sách tài khoản & phần mềm được cấp",
+                    "details": [
+                        "Email FPT: @fe.edu.vn (giảng viên cơ hữu) hoặc @fpt.edu.vn (giảng viên thỉnh giảng). Dung lượng 50GB, có thể tạo nhóm và lịch họp.",
+                        "Microsoft 365 A3: Word, Excel, PowerPoint, Teams, OneDrive (1TB), Forms, Sway, Stream.",
+                        "Zoom Pro: tài khoản không giới hạn thời gian họp, tối đa 300 người tham gia.",
+                        "Tài khoản LMS (Canvas hoặc Moodle tùy cơ sở), FAP (hệ thống học vụ), Turnitin (kiểm tra đạo văn).",
+                        "Phần mềm chống đạo văn: Turnitin (quyền giảng viên: tạo bài nộp, xem báo cáo, chấm điểm).",
+                        "Safe Exam Browser (SEB) và EOS (cho thi trực tuyến).",
+                        "Phần mềm thống kê, phân tích: SPSS, R (cấp theo yêu cầu)."
+                    ]
+                },
+                {
+                    "id": 18,
+                    "title": "Hướng dẫn bảo mật & an toàn thông tin",
+                    "details": [
+                        "Không chia sẻ mật khẩu với bất kỳ ai (kể cả IT).",
+                        "Bật xác thực hai yếu tố (2FA) cho email và tài khoản LMS.",
+                        "Không gửi điểm, thông tin cá nhân sinh viên qua email không mã hóa (dùng OneDrive liên kết có giới hạn truy cập).",
+                        "Cảnh giác với email lừa đảo (phishing) giả mạo Phòng Đào tạo yêu cầu cung cấp mật khẩu.",
+                        "Khi dùng máy tính công cộng, luôn đăng xuất và xóa bộ nhớ cache."
+                    ]
+                },
+                {
+                    "id": 19,
+                    "title": "Xử lý sự cố kỹ thuật thường gặp (Checklist)",
+                    "details": [
+                        "Quên mật khẩu FAP/LMS: Dùng chức năng 'Quên mật khẩu' hoặc gửi ticket IT (có hướng dẫn reset trong 15 phút).",
+                        "Không vào được Zoom/Teams: Kiểm tra kết nối mạng, khởi động lại ứng dụng, cập nhật phiên bản mới nhất.",
+                        "Lỗi khi tải file lên LMS: Dung lượng file quá lớn (>500MB) → nén hoặc chia nhỏ; hoặc upload lên OneDrive và chèn link.",
+                        "SEB không chạy: Tắt phần mềm diệt virus tạm thời, chạy với quyền Administrator, cài đúng phiên bản Windows/Mac.",
+                        "Máy chiếu không hoạt động: Kiểm tra cáp, nguồn, chuyển chế độ hiển thị (Win+P). Gọi IT khẩn cấp nếu không xử lý được trong 5 phút.",
+                        "Mất điện trong lớp: Báo ngay phòng bảo vệ, hướng dẫn sinh viên làm việc nhóm trên điện thoại (nếu có thể), sau đó dạy bù."
+                    ]
+                },
+                {
+                    "id": 20,
+                    "title": "Sử dụng AI trong giảng dạy (Quy định mới)",
+                    "details": [
+                        "Giảng viên được khuyến khích sử dụng AI (ChatGPT, Copilot, Gemini) để tạo ý tưởng bài giảng, sinh đề thi mẫu, tóm tắt tài liệu.",
+                        "Không được nhập thông tin bảo mật, đề thi thật, điểm số vào AI công cộng (dùng phiên bản doanh nghiệp nếu có).",
+                        "Hướng dẫn sinh viên sử dụng AI có đạo đức: trích dẫn nguồn, không sao chép y nguyên, sử dụng như công cụ hỗ trợ chứ không thay thế tư duy.",
+                        "Nếu phát hiện sinh viên dùng AI để gian lận (viết toàn bộ bài luận), xử lý theo quy định đạo văn."
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "VI",
+            "name": "ỨNG XỬ SƯ PHẠM & QUY TẮC ĐẠO ĐỨC NGHỀ NGHIỆP",
+            "color": "🟪",
+            "description": "Bộ quy tắc ứng xử, các tình huống nhạy cảm, mối quan hệ với sinh viên và đồng nghiệp",
+            "groups": [
+                {
+                    "id": 21,
+                    "title": "Nguyên tắc ứng xử với sinh viên",
+                    "details": [
+                        "Tôn trọng, không phân biệt đối xử (giới tính, dân tộc, tôn giáo, ngoại hình).",
+                        "Không có hành vi quấy rối tình dục, lời nói khiếm nhã, đụng chạm không phù hợp.",
+                        "Không nhận quà cáp, tiền hoặc lợi ích từ sinh viên để ưu ái điểm số.",
+                        "Khi góp ý, tập trung vào hành vi học tập, không công kích cá nhân.",
+                        "Giữ khoảng cách chuyên môn: không kết bạn qua mạng xã hội cá nhân với sinh viên đang học (có thể dùng group lớp trên LMS).",
+                        "Nếu có mâu thuẫn với sinh viên, báo ngay Trưởng bộ môn hoặc Phòng Công tác SV để hòa giải."
+                    ]
+                },
+                {
+                    "id": 22,
+                    "title": "Xử lý các tình huống khó (Kịch bản mẫu)",
+                    "subsections": [
+                        {
+                            "subtitle": "Tình huống 1: Sinh viên công kích giảng viên trên mạng xã hội",
+                            "details": [
+                                "Chụp màn hình lưu bằng chứng, không cãi nhau trên mạng.",
+                                "Báo cáo Trưởng bộ môn và Phòng Công tác SV.",
+                                "Phòng Công tác SV sẽ mời sinh viên làm việc, xử lý kỷ luật nếu vi phạm quy tắc ứng xử."
+                            ]
+                        },
+                        {
+                            "subtitle": "Tình huống 2: Sinh viên đề nghị nâng điểm vì lý do 'cần học bổng'",
+                            "details": [
+                                "Từ chối thẳng thắn nhưng lịch sự: 'Thầy/cô không thể thay đổi điểm vì lý do cá nhân, em có thể làm bài thi lại nếu có cơ hội.'",
+                                "Giải thích về quy trình phúc tra chính thức.",
+                                "Ghi lại sự việc để phòng ngừa khiếu nại sau này."
+                            ]
+                        },
+                        {
+                            "subtitle": "Tình huống 3: Sinh viên có hành vi đe dọa trong lớp",
+                            "details": [
+                                "Giữ bình tĩnh, không leo thang căng thẳng.",
+                                "Yêu cầu sinh viên ra ngoài hành lang (có giám sát) để nói chuyện riêng, hoặc gọi bảo vệ nếu cần.",
+                                "Báo cáo ngay lãnh đạo khoa và an ninh trường.",
+                                "Lập biên bản sự việc, mời sinh viên lên phòng Công tác SV làm việc."
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": 23,
+                    "title": "Quy tắc đạo đức trong nghiên cứu và công bố",
+                    "details": [
+                        "Không đạo văn, không tự đạo văn (sao chép bài báo cũ của mình không trích dẫn).",
+                        "Không 'ghép tên' đồng tác giả nếu không đóng góp thực chất.",
+                        "Khi nhận tài trợ nghiên cứu, phải công khai minh bạch ngân sách và kết quả.",
+                        "Tuân thủ quy định về đạo đức nghiên cứu (bảo vệ đối tượng nghiên cứu, không làm sai lệch số liệu)."
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "VII",
+            "name": "PHÚC LỢI, ĐÃI NGỘ & CHÍNH SÁCH NHÂN SỰ",
+            "color": "🟫",
+            "description": "Chi tiết về lương, thưởng, bảo hiểm, nghỉ phép, hỗ trợ gia đình và các quyền lợi khác của giảng viên FPT",
+            "groups": [
+                {
+                    "id": 24,
+                    "title": "Lương và các khoản phụ cấp",
+                    "details": [
+                        "Lương cơ bản theo hệ số đại học tư thục, cạnh tranh.",
+                        "Phụ cấp giảng dạy theo giờ chuẩn (vượt giờ được tính thêm).",
+                        "Phụ cấp trách nhiệm (nếu làm chủ nhiệm bộ môn, advisor nhóm đông).",
+                        "Thưởng cuối năm (tối thiểu 1 tháng lương), thưởng thành tích (nghiên cứu, giảng dạy xuất sắc).",
+                        "Hỗ trợ ăn trưa (vé canteen hoặc tiền mặt).",
+                        "Hỗ trợ xăng xe / gửi xe miễn phí."
+                    ]
+                },
+                {
+                    "id": 25,
+                    "title": "Bảo hiểm & chăm sóc sức khỏe",
+                    "details": [
+                        "Bảo hiểm y tế, bảo hiểm xã hội, bảo hiểm thất nghiệp theo luật định.",
+                        "Bảo hiểm sức khỏe Bảo Việt / PTI cho giảng viên chính thức (khám chữa bệnh ngoại trú, nội trú, nha khoa).",
+                        "Khám sức khỏe định kỳ 1 năm/lần tại bệnh viện đối tác.",
+                        "Chính sách hỗ trợ giảng viên bị ốm đau dài ngày, tai nạn lao động."
+                    ]
+                },
+                {
+                    "id": 26,
+                    "title": "Nghỉ phép & chế độ đặc biệt",
+                    "details": [
+                        "Nghỉ hè: 4 tuần/năm (giảng viên cơ hữu) – xếp lịch dạy phù hợp.",
+                        "Nghỉ phép năm: 12 ngày (cộng dồn tối đa 15 ngày).",
+                        "Nghỉ lễ, Tết theo quy định nhà nước và lịch riêng của FPT.",
+                        "Nghỉ ốm, nghỉ cưới, nghỉ tang lễ theo luật lao động và nội quy FPT (có hỗ trợ tiền phúng viếng).",
+                        "Chế độ thai sản cho giảng viên nữ: nghỉ 6 tháng, giữ lương cơ bản, hỗ trợ quà cho con mới sinh."
+                    ]
+                },
+                {
+                    "id": 27,
+                    "title": "Hỗ trợ học tập cho con giảng viên",
+                    "details": [
+                        "Con của giảng viên cơ hữu được giảm 50% học phí khi học tại các cấp (mầm non, phổ thông FPT, đại học FPT).",
+                        "Suất học bổng toàn phần cho con giảng viên có thành tích xuất sắc (top 5% đầu vào).",
+                        "Ưu tiên xét tuyển vào trường ĐH FPT (không cần thi đầu vào nếu đủ điều kiện)."
+                    ]
+                }
+            ]
+        }
+    ],
+    "faq": {
+        "title": "FAQ - Câu hỏi thường gặp từ Giảng viên (Mở rộng)",
+        "questions": [
+            {
+                "q": "Tôi quên mật khẩu LMS/FAP thì phải làm sao?",
+                "a": "Sử dụng chức năng 'Quên mật khẩu' trên trang đăng nhập (có gửi link reset về email dự phòng). Nếu vẫn không được, liên hệ IT Support qua ticket (phản hồi trong 2 giờ làm việc)."
+            },
+            {
+                "q": "Sinh viên khiếu nại điểm số, tôi cần làm gì?",
+                "a": "Kiểm tra lại bài làm và rubric chấm điểm. Nếu điểm đúng quy định, giải thích rõ ràng cho sinh viên (có thể hẹn gặp riêng). Nếu có sai sót, báo Phòng Đào tạo để điều chỉnh theo quy trình phúc tra."
+            },
+            {
+                "q": "Tôi có thể yêu cầu thay đổi lịch dạy không?",
+                "a": "Liên hệ Phòng Đào tạo trước khi kỳ học bắt đầu ít nhất 2 tuần. Các thay đổi sau thời gian này cần có lý do chính đáng (sức khỏe, công tác đột xuất) và phê duyệt đặc biệt của Trưởng khoa."
+            },
+            {
+                "q": "Phần mềm SEB không chạy trên máy tôi, tôi phải làm gì?",
+                "a": "Tải đúng phiên bản SEB từ FAP, tắt phần mềm diệt virus tạm thời, khởi động lại máy. Nếu vẫn lỗi, ghi lại màn hình lỗi và gửi ticket IT Support kèm file log. Có một phòng thi dự phòng với máy tính đã cài sẵn SEB."
+            },
+            {
+                "q": "Tôi muốn đề xuất tổ chức hội thảo chuyên môn thì làm thế nào?",
+                "a": "Gửi đề xuất về Phòng Quản lý Khoa học & Đối ngoại theo mẫu, bao gồm chủ đề, diễn giả, thời gian dự kiến, đối tượng tham gia, và dự trù kinh phí. Đề xuất được xét duyệt trong vòng 2 tuần."
+            },
+            {
+                "q": "Tôi có thể sử dụng ChatGPT để soạn bài giảng không?",
+                "a": "Có, nhưng cần kiểm tra lại tính chính xác và phù hợp với văn hóa FPT. Không được nhập thông tin bảo mật (đề thi, điểm số) vào ChatGPT. Nên dùng phiên bản ChatGPT Enterprise nếu có nhu cầu xử lý dữ liệu nhạy cảm."
+            },
+            {
+                "q": "Làm thế nào để báo cáo một sinh viên có hành vi gian lận nghiêm trọng?",
+                "a": "Lập biên bản chi tiết (có chữ ký của ít nhất 2 giảng viên chứng kiến, kèm ảnh/video nếu có). Gửi biên bản và bằng chứng về Phòng Đào tạo và Phòng Công tác SV trong vòng 24 giờ. Không tự ý xử lý (ví dụ: đuổi sinh viên khỏi phòng thi vĩnh viễn)."
+            },
+            {
+                "q": "Tôi muốn nộp đơn xin tài trợ nghiên cứu từ quỹ FPT, hạn chót khi nào?",
+                "a": "Có 2 đợt/năm: hạn 15/3 và 15/9. Hồ sơ gồm đề xuất nghiên cứu, bảng dự trù kinh phí, CV của nhóm. Kết quả được thông báo sau 4-6 tuần."
+            },
+            {
+                "q": "Nếu tôi bị ốm đột xuất không thể dạy được, ai sẽ thay?",
+                "a": "Phải báo ngay cho Trưởng bộ môn và Phòng Đào tạo trước giờ học ít nhất 2 tiếng (nếu có thể). Phòng Đào tạo sẽ tìm giảng viên thay hoặc sắp xếp dạy bù. Không tự ý nhờ người thay mà không thông qua phòng."
+            },
+            {
+                "q": "Tôi có được hỗ trợ mua laptop hoặc thiết bị giảng dạy không?",
+                "a": "Giảng viên cơ hữu được cấp laptop (mỗi 3 năm đổi mới) hoặc hỗ trợ 50% chi phí mua laptop (tối đa 15 triệu đồng). Bàn phím, chuột, tai nghe được cấp theo yêu cầu qua IT."
+            }
+        ]
+    },
+    "glossary": {
+        "title": "Thuật ngữ dành cho Giảng viên FPT (Mở rộng)",
+        "terms": [
+            {
+                "term": "LMS",
+                "definition": "Learning Management System – Hệ thống quản lý học tập (Canvas hoặc Moodle), nơi giảng viên đăng tải tài liệu, chấm điểm, điểm danh, gửi thông báo."
+            },
+            {
+                "term": "FAP",
+                "definition": "FPT Academic Portal – Cổng thông tin học vụ, quản lý lịch dạy, danh sách lớp, đơn từ, xem bảng điểm sinh viên."
+            },
+            {
+                "term": "NE",
+                "definition": "Not Eligible – Sinh viên không đủ điều kiện dự thi do vắng quá 20% số buổi học."
+            },
+            {
+                "term": "PE",
+                "definition": "Progress Exam – Bài kiểm tra giữa kỳ, thường chiếm 20-30% tổng điểm."
+            },
+            {
+                "term": "FE",
+                "definition": "Final Exam – Bài thi cuối kỳ, chiếm 40-50% tổng điểm."
+            },
+            {
+                "term": "SEB",
+                "definition": "Safe Exam Browser – Phần mềm thi trực tuyến bảo mật, khóa các chức năng khác của máy tính."
+            },
+            {
+                "term": "EOS",
+                "definition": "Exam Online System – Hệ thống tổ chức thi trực tuyến của FPT, tích hợp giám sát qua webcam."
+            },
+            {
+                "term": "Advisor",
+                "definition": "Cố vấn học tập – Giảng viên được phân công theo dõi, tư vấn cho một nhóm sinh viên về học tập và đời sống."
+            },
+            {
+                "term": "Rubric",
+                "definition": "Bảng tiêu chí chấm điểm chi tiết, giúp đánh giá khách quan và minh bạch."
+            },
+            {
+                "term": "Turnitin",
+                "definition": "Phần mềm kiểm tra đạo văn, so sánh bài nộp với cơ sở dữ liệu học thuật và internet."
+            },
+            {
+                "term": "Capstone",
+                "definition": "Đồ án tốt nghiệp – Dự án tổng hợp cuối khóa, sinh viên áp dụng kiến thức vào giải quyết vấn đề thực tế."
+            },
+            {
+                "term": "OJT",
+                "definition": "On-the-Job Training – Kỳ thực tập doanh nghiệp bắt buộc (thường 2-3 tháng)."
+            },
+            {
+                "term": "GPA",
+                "definition": "Grade Point Average – Điểm trung bình tích lũy theo thang 4 hoặc 10."
+            },
+            {
+                "term": "CR",
+                "definition": "Credit – Tín chỉ, đơn vị đo lường khối lượng học tập của môn học."
+            },
+            {
+                "term": "MOOC",
+                "definition": "Massive Open Online Course – Các khóa học trực tuyến mở (Coursera, edX) được FPT khuyến khích giảng viên tham gia."
+            },
+            {
+                "term": "Plagiarism",
+                "definition": "Đạo văn – Sao chép ý tưởng, văn bản mà không trích dẫn nguồn, bị xử lý kỷ luật."
+            },
+            {
+                "term": "FPT Research Fund",
+                "definition": "Quỹ tài trợ nghiên cứu nội bộ của ĐH FPT, hỗ trợ giảng viên thực hiện đề tài khoa học."
+            }
+        ]
+    },
+    "conclusion": "Cảm ơn Quý Thầy/Cô đã đồng hành cùng FPT trong sứ mệnh đào tạo thế hệ trẻ sáng tạo và bản lĩnh. Cẩm nang này sẽ được cập nhật thường xuyên (phiên bản số trên FAP). Mọi góp ý, bổ sung xin gửi về Phòng Đào tạo (da@fpt.edu.vn) hoặc góp ý trực tiếp qua form khảo sát dành cho giảng viên. Chúc Quý Thầy/Cô có những giờ giảng dạy truyền cảm hứng và thành công trong sự nghiệp giáo dục tại FPT!"
+}

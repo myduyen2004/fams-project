@@ -8,7 +8,15 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Set
 
 
-_KNOWLEDGE_PATH = Path(__file__).resolve().parents[1] / "config" / "fptu-information.json"
+_CONFIG_DIR = Path(__file__).resolve().parents[1] / "config"
+
+# ── File paths cho từng role ───────────────────────────────────────────────────
+_KNOWLEDGE_PATH_STUDENT  = _CONFIG_DIR / "fptu-information-Student.json"
+_KNOWLEDGE_PATH_LECTURER = _CONFIG_DIR / "fpt-information-Lecturer.json"
+
+# Legacy path (fallback nếu cần backward-compat với admin endpoint)
+_KNOWLEDGE_PATH = _KNOWLEDGE_PATH_STUDENT
+
 
 _DIRECT_HINTS = (
     "fptu",
@@ -46,6 +54,20 @@ _DIRECT_HINTS = (
     "tot nghiep",
     "chung chi",
     "little uk",
+    # Lecturer-specific hints
+    "giang vien",
+    "lecturer",
+    "cham diem",
+    "diem danh",
+    "lich day",
+    "phan cong",
+    "rubric",
+    "hoi thao",
+    "nghien cuu",
+    "tu van hoc tap",
+    "advisor",
+    "ne",
+    "not eligible",
 )
 
 _PHRASE_BRIDGES: Dict[str, Set[str]] = {
@@ -56,6 +78,8 @@ _PHRASE_BRIDGES: Dict[str, Set[str]] = {
     "ky tuc xa": {"ky tuc xa", "dormitory", "ktx"},
     "global program": {"global program", "trao doi quoc te", "study abroad", "visa"},
     "tot nghiep": {"tot nghiep", "chung chi", "capstone", "do an tot nghiep"},
+    "giang vien": {"giang vien", "lecturer", "cham diem", "lich day", "diem danh"},
+    "nghien cuu": {"nghien cuu", "hoi thao", "bai bao", "phat trien chuyen mon"},
 }
 
 _TOPIC_HINTS: Dict[str, Set[str]] = {
@@ -124,6 +148,21 @@ _TOPIC_HINTS: Dict[str, Set[str]] = {
         "job",
         "thuc tap",
         "part time",
+    },
+    "teaching": {
+        "giang day",
+        "teaching",
+        "lich day",
+        "cham diem",
+        "diem danh",
+        "lms",
+    },
+    "research": {
+        "nghien cuu",
+        "research",
+        "hoi thao",
+        "bai bao",
+        "xuat ban",
     },
 }
 
@@ -257,25 +296,59 @@ def _join_parts(parts: Iterable[str]) -> str:
     return "\n".join(ordered)
 
 
+# ── Loaders riêng cho từng role ───────────────────────────────────────────────
+
 @lru_cache(maxsize=1)
-def _load_knowledge() -> Dict[str, Any]:
-    with _KNOWLEDGE_PATH.open("r", encoding="utf-8") as fp:
+def _load_knowledge_student() -> Dict[str, Any]:
+    with _KNOWLEDGE_PATH_STUDENT.open("r", encoding="utf-8") as fp:
         return json.load(fp)
 
 
+@lru_cache(maxsize=1)
+def _load_knowledge_lecturer() -> Dict[str, Any]:
+    with _KNOWLEDGE_PATH_LECTURER.open("r", encoding="utf-8") as fp:
+        return json.load(fp)
+
+
+def _load_knowledge_for_role(user_role: str) -> Dict[str, Any]:
+    """Trả về knowledge dict phù hợp với role."""
+    if user_role.upper() == "LECTURER":
+        return _load_knowledge_lecturer()
+    # STUDENT, ADMIN, ACADEMIC_STAFF → dùng student handbook
+    return _load_knowledge_student()
+
+
+# Legacy loader (backward-compat với main.py admin endpoint)
+@lru_cache(maxsize=1)
+def _load_knowledge() -> Dict[str, Any]:
+    return _load_knowledge_student()
+
+
 def get_knowledge_path() -> Path:
-    return _KNOWLEDGE_PATH
+    """Legacy: trả về path của student file (dùng cho admin GET/PUT endpoint)."""
+    return _KNOWLEDGE_PATH_STUDENT
+
+
+def get_knowledge_path_for_role(user_role: str) -> Path:
+    if user_role.upper() == "LECTURER":
+        return _KNOWLEDGE_PATH_LECTURER
+    return _KNOWLEDGE_PATH_STUDENT
 
 
 def reload_fptu_knowledge_cache() -> None:
     _load_knowledge.cache_clear()
-    _build_documents.cache_clear()
-    _knowledge_vocabulary.cache_clear()
+    _load_knowledge_student.cache_clear()
+    _load_knowledge_lecturer.cache_clear()
+    _build_documents_student.cache_clear()
+    _build_documents_lecturer.cache_clear()
+    _knowledge_vocabulary_student.cache_clear()
+    _knowledge_vocabulary_lecturer.cache_clear()
 
 
-@lru_cache(maxsize=1)
-def _build_documents() -> List[Dict[str, Any]]:
-    knowledge = _load_knowledge()
+# ── Document builders riêng cho từng role ────────────────────────────────────
+
+def _build_documents_from(knowledge: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Build document index từ bất kỳ knowledge dict nào."""
     documents: List[Dict[str, Any]] = []
 
     def add_doc(path_parts: List[str], payload: Any) -> None:
@@ -295,9 +368,10 @@ def _build_documents() -> List[Dict[str, Any]]:
         )
 
     add_doc(["Giới thiệu"], knowledge.get("intro"))
+    add_doc(["Danh bạ liên hệ"], knowledge.get("quick_contacts"))
 
     for pillar_index, pillar in enumerate(knowledge.get("pillars") or [], start=1):
-        pillar_title = str(pillar.get("title") or f"Pillar {pillar_index}").strip()
+        pillar_title = str(pillar.get("name") or pillar.get("title") or f"Pillar {pillar_index}").strip()
         for group in pillar.get("groups") or []:
             group_title = str(group.get("title") or "").strip()
             if not group_title:
@@ -316,19 +390,82 @@ def _build_documents() -> List[Dict[str, Any]]:
                     continue
                 add_doc([pillar_title, group_title, subtitle], subsection)
 
+    # FAQ
+    faq = knowledge.get("faq")
+    if faq:
+        for q_item in faq.get("questions") or []:
+            q_text = str(q_item.get("q") or "").strip()
+            a_text = str(q_item.get("a") or "").strip()
+            if q_text and a_text:
+                add_doc(["FAQ", q_text], {"content": a_text})
+
+    # Glossary
+    glossary = knowledge.get("glossary")
+    if glossary:
+        for term_item in glossary.get("terms") or []:
+            term = str(term_item.get("term") or "").strip()
+            definition = str(term_item.get("definition") or "").strip()
+            if term and definition:
+                add_doc(["Thuật ngữ", term], {"content": definition})
+
     add_doc(["Kết luận"], knowledge.get("conclusion"))
     return documents
 
 
 @lru_cache(maxsize=1)
-def _knowledge_vocabulary() -> Set[str]:
+def _build_documents_student() -> List[Dict[str, Any]]:
+    return _build_documents_from(_load_knowledge_student())
+
+
+@lru_cache(maxsize=1)
+def _build_documents_lecturer() -> List[Dict[str, Any]]:
+    return _build_documents_from(_load_knowledge_lecturer())
+
+
+def _build_documents_for_role(user_role: str) -> List[Dict[str, Any]]:
+    if user_role.upper() == "LECTURER":
+        return _build_documents_lecturer()
+    return _build_documents_student()
+
+
+# Legacy (backward-compat)
+@lru_cache(maxsize=1)
+def _build_documents() -> List[Dict[str, Any]]:
+    return _build_documents_student()
+
+
+# ── Vocabulary ─────────────────────────────────────────────────────────────────
+
+@lru_cache(maxsize=1)
+def _knowledge_vocabulary_student() -> Set[str]:
     vocab: Set[str] = set()
-    for document in _build_documents():
+    for document in _build_documents_student():
         vocab.update(document["tokens"])
     return vocab
 
 
-def is_fptu_knowledge_question(message: str) -> bool:
+@lru_cache(maxsize=1)
+def _knowledge_vocabulary_lecturer() -> Set[str]:
+    vocab: Set[str] = set()
+    for document in _build_documents_lecturer():
+        vocab.update(document["tokens"])
+    return vocab
+
+
+def _knowledge_vocabulary_for_role(user_role: str) -> Set[str]:
+    if user_role.upper() == "LECTURER":
+        return _knowledge_vocabulary_lecturer()
+    return _knowledge_vocabulary_student()
+
+
+@lru_cache(maxsize=1)
+def _knowledge_vocabulary() -> Set[str]:
+    return _knowledge_vocabulary_student()
+
+
+# ── Public API ─────────────────────────────────────────────────────────────────
+
+def is_fptu_knowledge_question(message: str, user_role: str = "STUDENT") -> bool:
     normalized = _normalize(message)
     if not normalized:
         return False
@@ -340,15 +477,13 @@ def is_fptu_knowledge_question(message: str) -> bool:
     if not query_tokens:
         return False
 
-    vocabulary = _knowledge_vocabulary()
+    vocabulary = _knowledge_vocabulary_for_role(user_role)
     overlap = query_tokens & vocabulary
     return len(overlap) >= 2 or any(token in vocabulary for token in query_tokens if len(token) >= 5)
 
 
-def is_static_fptu_knowledge_question(message: str) -> bool:
-    # Với nguồn handbook tĩnh, mọi câu hỏi có câu trả lời trong file đều được xem là
-    # truy vấn tri thức chung; phần dữ liệu cá nhân thật vẫn sẽ không match context.
-    return is_fptu_knowledge_question(message)
+def is_static_fptu_knowledge_question(message: str, user_role: str = "STUDENT") -> bool:
+    return is_fptu_knowledge_question(message, user_role)
 
 
 def _score_document(normalized_query: str, query_tokens: Set[str], document: Dict[str, Any]) -> int:
@@ -394,8 +529,13 @@ def _score_document(normalized_query: str, query_tokens: Set[str], document: Dic
     return score
 
 
-def get_relevant_fptu_context(message: str, max_sections: int = 3) -> str:
-    if not is_fptu_knowledge_question(message):
+def get_relevant_fptu_context(message: str, max_sections: int = 3, user_role: str = "STUDENT") -> str:
+    """
+    Trả về context FPTU phù hợp với câu hỏi và role của người dùng.
+    - LECTURER → dùng fpt-information-Lecturer.json
+    - STUDENT / ADMIN / ACADEMIC_STAFF → dùng fptu-information-Student.json
+    """
+    if not is_fptu_knowledge_question(message, user_role):
         return "[KHÔNG CÓ TRI THỨC FPTU PHÙ HỢP]"
 
     normalized = _normalize(message)
@@ -403,8 +543,10 @@ def get_relevant_fptu_context(message: str, max_sections: int = 3) -> str:
     if not query_tokens and not any(hint in normalized for hint in _DIRECT_HINTS):
         return "[KHÔNG CÓ TRI THỨC FPTU PHÙ HỢP]"
 
+    documents = _build_documents_for_role(user_role)
+
     scored_documents: List[tuple[int, Dict[str, Any]]] = []
-    for document in _build_documents():
+    for document in documents:
         score = _score_document(normalized, query_tokens, document)
         if score > 0:
             scored_documents.append((score, document))

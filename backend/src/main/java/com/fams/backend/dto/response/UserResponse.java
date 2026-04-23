@@ -35,6 +35,8 @@ public class UserResponse implements Serializable {
     private LocalDateTime createdAt;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updatedAt;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime lastLogin;
 
     // Academic & Profile fields
     private String department;

@@ -61,6 +61,7 @@ public class UserServiceImpl implements UserService {
     private final com.fams.backend.service.impl.EmailQueueService emailQueueService;
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
+    private final com.fams.backend.repository.UserSessionRepository userSessionRepository;
 
     private static final String CACHE_USERS = "users";
     private static final String CACHE_USER_DETAILS = "user_details";
@@ -120,23 +121,54 @@ public class UserServiceImpl implements UserService {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
-        return userRepository.findAll(spec, pageable).map(UserResponse::fromUser);
+        Page<User> users = userRepository.findAll(spec, pageable);
+        List<UserResponse> content = users.getContent().stream()
+                .map(UserResponse::fromUser)
+                .collect(Collectors.toList());
+
+        // Batch fetch last login times
+        List<Long> userIds = users.getContent().stream().map(User::getId).collect(Collectors.toList());
+        if (!userIds.isEmpty()) {
+            Map<Long, LocalDateTime> lastLoginMap = userSessionRepository.findLatestLoginTimesByUserIds(userIds)
+                    .stream()
+                    .collect(Collectors.toMap(
+                            row -> (Long) row[0],
+                            row -> (LocalDateTime) row[1]
+                    ));
+            content.forEach(res -> res.setLastLogin(lastLoginMap.get(res.getId())));
+        }
+
+        return new org.springframework.data.domain.PageImpl<>(content, pageable, users.getTotalElements());
     }
 
     @Override
     @Transactional(readOnly = true)
     public UserResponse getUserById(Long id) {
-        return userRepository.findById(id)
-                .map(UserResponse::fromUser)
+        User user = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
+
+        UserResponse response = UserResponse.fromUser(user);
+
+        // Fetch last login
+        userSessionRepository.findTopByUserIdOrderByLoginTimeDesc(id)
+                .ifPresent(session -> response.setLastLogin(session.getLoginTime()));
+
+        return response;
     }
 
     @Override
     @Transactional(readOnly = true)
     public UserResponse getUserByUsername(String username) {
-        return userRepository.findByUsernameWithProfiles(username)
-                .map(UserResponse::fromUser)
+        User user = userRepository.findByUsernameWithProfiles(username)
                 .orElseThrow(() -> new NotFoundException("User not found: " + username));
+
+        UserResponse response = UserResponse.fromUser(user);
+
+        // Fetch last login
+        userSessionRepository.findTopByUserIdOrderByLoginTimeDesc(user.getId())
+                .ifPresent(session -> response.setLastLogin(session.getLoginTime()));
+
+        return response;
     }
 
     @Override

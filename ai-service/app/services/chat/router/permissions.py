@@ -20,6 +20,7 @@ from enum import Enum
 from typing import Dict, Set, Tuple
 
 from app.services.chat.router.core_tool_inventory import ROLE_CORE_TOOLS
+from app.services.chat.db.tools_loader import tools_loader
 
 
 class Role(str, Enum):
@@ -52,6 +53,9 @@ _TOOL_ALIASES: Dict[str, str] = {
     "get_my_schedule": "get_own_schedule",
     "get_my_schedule_targeted": "get_own_schedule",
     "fptu_knowledge_lookup": "fpt_tool",
+    "count_students": "count_students_by_major",
+    "count_student": "count_students_by_major",
+    "count_attendance": "count_attendance_by_class",
 }
 
 _ADMIN_ALLOW: Set[str] = set(ROLE_CORE_TOOLS["ADMIN"])
@@ -98,6 +102,13 @@ def check_permission(role: str, tool: str) -> Tuple[bool, str]:
         return False, f"Vai trò '{role}' không được nhận dạng trong hệ thống."
 
     if policy.can_use(normalized_tool):
+        return True, ""
+
+    # ✅ FALLBACK: Check dynamic permissions from database (ToolsLoader)
+    # This allows the Admin Tool Management page to override hardcoded roles.
+    dynamic_roles = tools_loader.role_tools
+    allowed_for_tool = dynamic_roles.get(role, set())
+    if normalized_tool in allowed_for_tool:
         return True, ""
 
     label = _ROLE_LABELS.get(role, role)

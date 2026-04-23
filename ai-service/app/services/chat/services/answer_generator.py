@@ -464,7 +464,7 @@ class AnswerGenerator:
             return self._direct_table_response(message, tool_result, tool_name, {})
 
         if intent == "general_chat" or tool_name == "general_offtopic_chat":
-            knowledge_context = get_relevant_fptu_context(message)
+            knowledge_context = get_relevant_fptu_context(message, user_role=user_role)
             prompt = _GENERAL_CHAT_PROMPT.format(
                 user_role=user_role,
                 role_guidance=get_role_guidance(user_role),
@@ -476,12 +476,12 @@ class AnswerGenerator:
                 knowledge_context=knowledge_context,
             )
             response = llm_client.complete(prompt, model)
-            if is_fptu_knowledge_question(message) and knowledge_context == "[KHÔNG CÓ TRI THỨC FPTU PHÙ HỢP]":
+            if is_fptu_knowledge_question(message, user_role=user_role) and knowledge_context == "[KHÔNG CÓ TRI THỨC FPTU PHÙ HỢP]":
                 return "Mình chưa thấy thông tin này trong file tri thức FPTU hiện có."
             return response.strip()
 
         if intent == "knowledge_query" or tool_name in {"fpt_tool", "fptu_knowledge_lookup"}:
-            knowledge_context = get_relevant_fptu_context(message)
+            knowledge_context = get_relevant_fptu_context(message, user_role=user_role)
             if knowledge_context == "[KHÔNG CÓ TRI THỨC FPTU PHÙ HỢP]":
                 return "Mình chưa thấy thông tin này trong file tri thức FPTU hiện có."
             prompt = _FPTU_KNOWLEDGE_PROMPT.format(
@@ -600,7 +600,7 @@ class AnswerGenerator:
             return
 
         if intent == "general_chat" or tool_name == "general_offtopic_chat":
-            knowledge_context = get_relevant_fptu_context(message)
+            knowledge_context = get_relevant_fptu_context(message, user_role=user_role)
             prompt = _GENERAL_CHAT_PROMPT.format(
                 user_role=user_role,
                 role_guidance=get_role_guidance(user_role),
@@ -611,14 +611,14 @@ class AnswerGenerator:
                 today=today,
                 knowledge_context=knowledge_context,
             )
-            if is_fptu_knowledge_question(message) and knowledge_context == "[KHÔNG CÓ TRI THỨC FPTU PHÙ HỢP]":
+            if is_fptu_knowledge_question(message, user_role=user_role) and knowledge_context == "[KHÔNG CÓ TRI THỨC FPTU PHÙ HỢP]":
                 yield "Mình chưa thấy thông tin này trong file tri thức FPTU hiện có."
                 return
             yield llm_client.complete(prompt, model).strip()
             return
 
         if intent == "knowledge_query" or tool_name in {"fpt_tool", "fptu_knowledge_lookup"}:
-            knowledge_context = get_relevant_fptu_context(message)
+            knowledge_context = get_relevant_fptu_context(message, user_role=user_role)
             if knowledge_context == "[KHÔNG CÓ TRI THỨC FPTU PHÙ HỢP]":
                 yield "Mình chưa thấy thông tin này trong file tri thức FPTU hiện có."
                 return

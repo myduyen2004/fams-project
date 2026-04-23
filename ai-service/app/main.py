@@ -17,6 +17,7 @@ from app.services.chat.services.chatbot_service import ChatbotService
 from app.services.chat.services.evaluator_service import evaluator_service
 from app.services.chat.services.fptu_knowledge import (
     get_knowledge_path,
+    get_knowledge_path_for_role,
     reload_fptu_knowledge_cache,
 )
 
@@ -306,7 +307,9 @@ def reload_tools():
 @app.route('/api/chat/admin/fptu-knowledge', methods=['GET'])
 def get_fptu_knowledge():
     try:
-        knowledge_path = get_knowledge_path()
+        # Hỗ trợ query param ?role=LECTURER hoặc ?role=STUDENT (default)
+        role = (request.args.get('role') or 'STUDENT').strip().upper()
+        knowledge_path = get_knowledge_path_for_role(role)
         content = knowledge_path.read_text(encoding='utf-8')
         parsed = json.loads(content)
         return jsonify({
@@ -314,6 +317,7 @@ def get_fptu_knowledge():
             'filename': knowledge_path.name,
             'path': str(knowledge_path),
             'content': content,
+            'role': role,
             'size': len(content.encode('utf-8')),
             'summary': {
                 'title': parsed.get('title'),
@@ -330,6 +334,7 @@ def get_fptu_knowledge():
 def update_fptu_knowledge():
     data = request.json or {}
     content = data.get('content')
+    role = (data.get('role') or 'STUDENT').strip().upper()
     if not isinstance(content, str) or not content.strip():
         return jsonify({'success': False, 'message': 'content is required'}), 400
 
@@ -342,7 +347,7 @@ def update_fptu_knowledge():
         }), 400
 
     try:
-        knowledge_path = get_knowledge_path()
+        knowledge_path = get_knowledge_path_for_role(role)
         formatted = json.dumps(parsed, ensure_ascii=False, indent=2) + "\n"
         knowledge_path.write_text(formatted, encoding='utf-8')
         reload_fptu_knowledge_cache()
@@ -351,6 +356,7 @@ def update_fptu_knowledge():
             'filename': knowledge_path.name,
             'path': str(knowledge_path),
             'content': formatted,
+            'role': role,
             'size': len(formatted.encode('utf-8')),
             'summary': {
                 'title': parsed.get('title'),

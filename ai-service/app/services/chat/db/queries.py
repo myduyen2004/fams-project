@@ -530,19 +530,26 @@ TEMPLATES: dict[str, str] = {
     """,
 
     "get_classmates": """
-        SELECT DISTINCT u_mate.full_name, u_mate.code, u_mate.email,
-               e2.class_name,
+        WITH TargetClasses AS (
+            SELECT class_name FROM class_sections WHERE unaccent(class_name) ILIKE unaccent(%s) AND %s <> ''
+            UNION
+            SELECT e.class_name FROM enrollments e JOIN users u ON e.student_id = u.id WHERE u.code = %s AND %s <> ''
+            UNION
+            SELECT cs.class_name FROM class_sections cs JOIN users u ON cs.lecturer_id = u.id WHERE u.code = %s AND %s <> ''
+        )
+        SELECT DISTINCT u.full_name, u.code, u.email, u.role,
+               tc.class_name,
                COALESCE(sp.gpa, 0) AS gpa,
-               m.name AS major
-        FROM   enrollments e1
-        JOIN   users u ON e1.student_id = u.id
-        JOIN   enrollments e2 ON e1.class_name = e2.class_name
-        JOIN   users u_mate ON e2.student_id = u_mate.id
-        LEFT JOIN student_profiles sp ON u_mate.id = sp.user_id
-        LEFT JOIN majors            m  ON sp.major_id = m.id
-        WHERE  (u.code = %s OR u.full_name ILIKE %s)
-          AND  u_mate.id <> u.id
-        ORDER BY e2.class_name, u_mate.full_name
+               COALESCE(m.name, '') AS major
+        FROM   TargetClasses tc
+        LEFT JOIN enrollments e ON tc.class_name = e.class_name
+        LEFT JOIN class_sections cs ON tc.class_name = cs.class_name
+        JOIN users u ON (u.id = e.student_id OR u.id = cs.lecturer_id)
+        LEFT JOIN student_profiles sp ON u.id = sp.user_id AND u.role = 'STUDENT'
+        LEFT JOIN majors m ON sp.major_id = m.id
+        WHERE (%s = '' OR u.role = %s)
+          AND u.status = 'ACTIVE'
+        ORDER BY tc.class_name, u.role, u.full_name
     """,
 
     # NEW: Timeline hc tp ca mt sinh vin
@@ -613,18 +620,22 @@ TEMPLATES: dict[str, str] = {
         SELECT DISTINCT u.full_name, u.code, u.email,
                COALESCE(lp.expertise,  '') AS expertise,
                COALESCE(lp.department, '') AS department,
-               string_agg(DISTINCT c.name,  ', ') AS courses_taught,
-               COUNT(DISTINCT cs.class_name)       AS total_classes
+               COUNT(DISTINCT cs.class_name) AS total_classes,
+               string_agg(DISTINCT c.name, ', ') AS courses_taught,
+               string_agg(DISTINCT m.name, ', ') AS majors,
+               string_agg(DISTINCT spc.name, ', ') AS specializations
         FROM   users u
-        LEFT JOIN lecturer_profiles lp ON u.id = lp.user_id
-        LEFT JOIN class_sections cs ON cs.lecturer_id = u.id
-        LEFT JOIN courses        c  ON cs.course_id   = c.id
+        JOIN   lecturer_profiles lp ON u.id = lp.user_id
+        LEFT JOIN majors m ON lp.major_id = m.id
+        LEFT JOIN specializations spc ON lp.specialization_id = spc.id
+        LEFT JOIN class_sections cs ON cs.lecturer_id = u.id AND cs.semester_id IN (SELECT id FROM semesters WHERE status = 'ONGOING' OR CURRENT_DATE BETWEEN start_date AND end_date)
+        LEFT JOIN courses c ON cs.course_id = c.id
         WHERE  u.role = 'LECTURER'
           AND  u.status = 'ACTIVE'
-          AND  (unaccent(c.name) ILIKE unaccent(%s)
-             OR unaccent(c.code) ILIKE unaccent(%s)
+          AND  (unaccent(COALESCE(m.name, '')) ILIKE unaccent(%s)
+             OR unaccent(COALESCE(m.code, '')) ILIKE unaccent(%s)
+             OR unaccent(COALESCE(spc.name, '')) ILIKE unaccent(%s)
              OR unaccent(lp.department) ILIKE unaccent(%s)
-             OR unaccent(lp.expertise) ILIKE unaccent(%s)
              OR %s = '')
         GROUP BY u.full_name, u.code, u.email, lp.expertise, lp.department
         ORDER BY total_classes DESC, u.full_name
@@ -641,10 +652,9 @@ TEMPLATES: dict[str, str] = {
         LEFT JOIN courses        c  ON cs.course_id   = c.id
         WHERE  u.role = 'LECTURER'
           AND  u.status = 'ACTIVE'
-          AND  (unaccent(c.name) ILIKE unaccent(%s)
-             OR unaccent(c.code) ILIKE unaccent(%s)
-             OR unaccent(lp.department) ILIKE unaccent(%s)
-             OR unaccent(lp.expertise) ILIKE unaccent(%s))
+          AND  (unaccent(COALESCE(lp.expertise, '')) ILIKE unaccent(%s)
+             OR unaccent(COALESCE(c.name, '')) ILIKE unaccent(%s)
+             OR unaccent(COALESCE(c.code, '')) ILIKE unaccent(%s))
         GROUP BY u.full_name, u.code, u.email, lp.expertise, lp.department
         ORDER BY u.full_name
         LIMIT  30
@@ -667,7 +677,13 @@ TEMPLATES: dict[str, str] = {
         WHERE  u.role = 'LECTURER' AND u.status = 'ACTIVE'
           AND  (%s = '' OR u.code = %s)
           AND  (%s = '' OR unaccent(u.full_name) ILIKE unaccent(%s))
-          AND  (%s <> '' OR %s <> '')
+          AND  (
+                (%s = '' AND sem.status = 'ONGOING')
+             OR (%s <> '' AND (
+                    unaccent(COALESCE(sem.code, '')) ILIKE unaccent(%s)
+                 OR unaccent(COALESCE(sem.name, '')) ILIKE unaccent(%s)
+             ))
+          )
         GROUP BY u.full_name, u.code, lp.department
         ORDER BY total_students DESC
         LIMIT  30
@@ -868,12 +884,15 @@ TEMPLATES: dict[str, str] = {
 
     "get_courses_by_sub_spec": """
         SELECT c.code, c.name, c.credits,
-               ss.name AS sub_spec_name
+               ss.name AS sub_spec_name,
+               spc.name AS specialization_name
         FROM   courses c
         JOIN   sub_specialization_courses ssc ON c.id = ssc.course_id
         JOIN   sub_specializations         ss  ON ssc.sub_specialization_id = ss.id
-        WHERE  (unaccent(ss.name) ILIKE unaccent(%s)
-             OR unaccent(ss.code) ILIKE unaccent(%s)
+        LEFT JOIN specializations         spc ON ss.specialization_id = spc.id
+        WHERE  (unaccent(COALESCE(ss.name, '')) ILIKE unaccent(%s)
+             OR unaccent(COALESCE(ss.code, '')) ILIKE unaccent(%s)
+             OR unaccent(COALESCE(spc.name, '')) ILIKE unaccent(%s)
              OR %s = '')
         ORDER BY c.name
     """,
@@ -963,7 +982,8 @@ TEMPLATES: dict[str, str] = {
         LEFT JOIN users        u   ON cs.lecturer_id = u.id
         LEFT JOIN enrollments  e   ON cs.class_name  = e.class_name
         WHERE  (
-               unaccent(s.code) ILIKE unaccent(%s)
+               (%s = '' AND s.status = 'ONGOING')
+            OR unaccent(s.code) ILIKE unaccent(%s)
             OR unaccent(s.name) ILIKE unaccent(%s)
             OR replace(unaccent(lower(s.name)), ' ', '') ILIKE replace(unaccent(lower(%s)), ' ', '')
             OR replace(unaccent(lower(s.code)), ' ', '') ILIKE replace(unaccent(lower(%s)), ' ', '')
@@ -1034,14 +1054,17 @@ TEMPLATES: dict[str, str] = {
                r.name     AS room,
                r.capacity AS room_capacity,
                st.start_time, st.end_time,
-               ts.status  AS slot_status
+               ts.status  AS slot_status,
+               sem.name   AS semester
         FROM   timetable_slots ts
         JOIN   class_sections  cs ON ts.class_name  = cs.class_name
         JOIN   courses          c  ON cs.course_id   = c.id
+        JOIN   semesters       sem ON cs.semester_id = sem.id
         LEFT JOIN rooms        r  ON ts.room_id      = r.id
         LEFT JOIN slot_types   st ON ts.slot_type_id = st.id
         LEFT JOIN enrollments  e  ON cs.class_name   = e.class_name
         WHERE  (e.student_id = %s OR cs.lecturer_id = %s)
+          AND  sem.status = 'ONGOING'
           AND  ts.date >= CURRENT_DATE
         ORDER BY ts.date, ts.slot_number
     """,
@@ -1064,6 +1087,7 @@ TEMPLATES: dict[str, str] = {
         LEFT JOIN slot_types   st  ON ts.slot_type_id  = st.id
         LEFT JOIN enrollments  e   ON cs.class_name    = e.class_name
         WHERE  (e.student_id = %s OR cs.lecturer_id = %s)
+          AND  sem.status = 'ONGOING'
           AND  (ts.date BETWEEN %s AND %s)
           AND  (unaccent(cs.class_name) ILIKE unaccent(%s) OR %s = '')
         ORDER BY ts.date, ts.slot_number
@@ -1105,6 +1129,7 @@ TEMPLATES: dict[str, str] = {
         WHERE  (%s = '' OR u.code = %s)
           AND  (%s = '' OR unaccent(u.full_name) ILIKE unaccent(%s))
           AND  (%s <> '' OR %s <> '')
+          AND  sem.status = 'ONGOING'
           AND  ts.date BETWEEN %s AND %s
         ORDER BY ts.date, ts.slot_number
     """,
@@ -1127,6 +1152,7 @@ TEMPLATES: dict[str, str] = {
         WHERE  (%s = '' OR u.code = %s)
           AND  (%s = '' OR unaccent(u.full_name) ILIKE unaccent(%s))
           AND  (%s <> '' OR %s <> '')
+          AND  sem.status = 'ONGOING'
           AND  ts.date BETWEEN %s AND %s
         ORDER BY ts.date, ts.slot_number
     """,
@@ -1306,17 +1332,38 @@ TEMPLATES: dict[str, str] = {
     """,
 
     "get_my_attendance_status": """
-        SELECT ts.class_name, c.name AS course_name,
-               ts.date, sa.status, sa.method,
+        SELECT ts.class_name,
+               c.name AS course_name,
+               sem.name AS semester,
+               ts.date,
+               ts.slot_number,
+               COALESCE(
+                   sa.status,
+                   CASE
+                       WHEN CURRENT_TIMESTAMP > (ts.date + st.end_time) THEN 'ABSENT'
+                       ELSE 'PENDING'
+                   END
+               ) AS status,
+               COALESCE(sa.method, 'SYSTEM') AS method,
                ats.opened_at,
                sa.created_at AS checked_at
-        FROM   student_attendances sa
-        JOIN   attendance_sessions ats ON sa.session_id = ats.id
-        JOIN   timetable_slots     ts  ON ats.timetable_slot_id = ts.id
-        JOIN   class_sections      cs  ON ts.class_name = cs.class_name
-        JOIN   courses             c   ON cs.course_id  = c.id
-        WHERE  sa.student_id = %s
-        ORDER BY ts.date DESC, ats.id DESC
+        FROM   enrollments e
+        JOIN   users               u   ON e.student_id = u.id
+        JOIN   class_sections      cs  ON e.class_name = cs.class_name
+        JOIN   semesters           sem ON cs.semester_id = sem.id
+        JOIN   courses             c   ON cs.course_id = c.id
+        JOIN   timetable_slots     ts  ON ts.class_name = cs.class_name
+        JOIN   slot_types          st  ON ts.slot_type_id = st.id
+        LEFT JOIN attendance_sessions ats
+               ON ats.timetable_slot_id = ts.id
+        LEFT JOIN student_attendances sa
+               ON sa.session_id = ats.id
+              AND sa.student_id = e.student_id
+        WHERE  (e.student_id = %s OR u.code = %s)
+          AND  e.status IN ('ENROLLED', 'COMPLETED')
+          AND  ts.status <> 'CANCELLED'
+          AND  ts.date <= CURRENT_DATE
+        ORDER BY ts.date DESC, ts.slot_number DESC
         LIMIT  20
     """,
 
@@ -2168,14 +2215,16 @@ def build_params(
         return tool_name, (like(val), like(val), like(val), like(val), val)
     elif tool_name == "get_lecturers_by_expertise":
         val = e.get("expertise") or e.get("course_name") or e.get("keyword") or ""
-        return "get_lecturers_by_major", (like(val), like(val), like(val), like(val), "NOT_EMPTY_FLAG")
+        return tool_name, (like(val), like(val), like(val))
     elif tool_name == "list_lecturers":
         return "get_lecturers_by_major", ("%", "%", "%", "%", "")
     elif tool_name == "get_lecturer_workload":
         code = _norm_code(e.get("lecturer_code") or e.get("code")) if (e.get("lecturer_code") or e.get("code")) else ""
         full_name = e.get("full_name") or ""
         fuzzy_name = like(full_name) if full_name else ""
-        return tool_name, (code, code, fuzzy_name, fuzzy_name, code, fuzzy_name)
+        semester_val = _semester_search_text()
+        fuzzy_semester = like(semester_val) if semester_val else ""
+        return tool_name, (code, code, fuzzy_name, fuzzy_name, semester_val, semester_val, fuzzy_semester, fuzzy_semester)
 
     #  Rooms 
     elif tool_name == "get_empty_rooms":
@@ -2233,8 +2282,9 @@ def build_params(
         val = e.get("specialization_name") or e.get("major_name", "")
         return tool_name, (like(val), like(val), val)
     elif tool_name == "get_courses_by_sub_spec":
-        val = e.get("sub_specialization_name") or e.get("specialization_name", "")
-        return tool_name, (like(val), like(val), val)
+        val = e.get("sub_specialization_name") or e.get("sub_specialization_code") or e.get("specialization_name", "")
+        spec_val = e.get("specialization_name") or val
+        return tool_name, (like(val), like(val), like(spec_val), val)
 
     #  Courses 
     elif tool_name == "list_courses":
@@ -2358,8 +2408,12 @@ def build_params(
     elif tool_name == "get_graduation_eligible_students":
         params = (e.get('credit_threshold', 120),) # Default 120 if missing
     elif tool_name == "get_classmates":
-        st_code = req('student_code', 'Student Code')
-        params = (st_code, st_code)
+        cls = str(e.get('class_name') or '').strip()
+        code = str(e.get('user_code') or e.get('student_code') or e.get('code') or '').strip().upper()
+        role = str(e.get('role') or '').strip().upper()
+        if not cls and not code:
+            code = str(e.get('student_code', '')).strip().upper()
+        params = (cls, cls, code, code, code, code, role, role)
         
     # --- Category C: Lecturers ---
     elif tool_name == "get_lecturers_teaching_today":
@@ -2410,9 +2464,9 @@ def build_params(
         elif raw_val:
             fuzzy = like(raw_val)
         else:
-            fuzzy = "%"
+            fuzzy = ""
         lec_id = user_id if user_role == "LECTURER" else -1
-        return tool_name, (fuzzy, fuzzy, fuzzy, fuzzy, lec_id, lec_id)
+        return tool_name, (raw_val, fuzzy, fuzzy, fuzzy, fuzzy, lec_id, lec_id)
     elif tool_name == "create_class":
         return tool_name, (
             req("class_name"),
@@ -2464,7 +2518,7 @@ def build_params(
     elif tool_name == "count_unread_notifications":
         return tool_name, (user_id,)
     elif tool_name == "get_my_attendance_status":
-        return tool_name, (user_id,)
+        return tool_name, (user_id, str(e.get("user_code") or "").strip().upper())
     elif tool_name == "get_attendance_report_by_student":
         return tool_name, (user_id,)
     elif tool_name == "get_my_attendance_overview":
@@ -2799,8 +2853,12 @@ def build_params(
     elif tool_name == "get_graduation_eligible_students":
         params = (e.get('credit_threshold', 120),) # Default 120 if missing
     elif tool_name == "get_classmates":
-        st_code = req('student_code', 'Student Code')
-        params = (st_code, st_code)
+        cls = str(e.get('class_name') or '').strip()
+        code = str(e.get('user_code') or e.get('student_code') or e.get('code') or '').strip().upper()
+        role = str(e.get('role') or '').strip().upper()
+        if not cls and not code:
+            code = str(e.get('student_code', '')).strip().upper()
+        params = (cls, cls, code, code, code, code, role, role)
         
     # --- Category C: Lecturers ---
     elif tool_name == "get_lecturers_teaching_today":
@@ -2845,4 +2903,3 @@ def build_params(
         return tool_name, params
 
     raise ValueError(f"Không có param builder cho tool: '{tool_name}'")
-

@@ -37,6 +37,14 @@ _ROUTE_CACHE: OrderedDict[str, Dict] = OrderedDict()
 _ROUTE_CACHE_MAX = 200
 _ROUTE_CACHE_LOCK = threading.Lock()
 
+# Register cache clearing on tool reload (lazy avoid circular import)
+tools_loader.on_reload(lambda: _clear_cache())
+
+def _clear_cache():
+    with _ROUTE_CACHE_LOCK:
+        _ROUTE_CACHE.clear()
+        logger.info("[LightRouter] Global route cache cleared due to tool reload")
+
 _CACHEABLE_INTENTS = {"navigation", "general_chat", "permission_denied", "need_clarification", "tool_locked"}
 _TIME_KEYWORDS = {"hôm nay", "ngày mai", "tuần này", "tuần tới", "tuần sau", "tháng này", "hom nay", "tuan nay", "tuan sau"}
 _AI_ONLY_TOOLS = {"general_offtopic_chat", "fpt_tool", "fptu_knowledge_lookup"}
@@ -305,6 +313,16 @@ def _is_code_in_message(message: str, code_type: str) -> bool:
 
 
 def _set_tool(result: Dict[str, Any], tool_name: str, intent: Optional[str] = None) -> str:
+    # ── is_active check inside _set_tool ──────────────────────────────────
+    # Nếu tool bị khóa, chuyển intent sang tool_locked
+    if tool_name and tool_name not in {"general_offtopic_chat", "fpt_tool", "fptu_knowledge_lookup"}:
+        status = tools_loader.tool_status.get(tool_name)
+        if status is False or tool_name in tools_loader.inactive_tools:
+            result["toolName"] = tool_name
+            result["intent"] = "tool_locked"
+            result["entities"] = {"reason": f"Công cụ '{tool_name}' hiện đang bị vô hiệu hóa."}
+            return tool_name
+
     result["toolName"] = tool_name
     if intent is not None:
         result["intent"] = intent

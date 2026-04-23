@@ -144,7 +144,7 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Toaster position="top-right" />
+      <Toaster position="top-right" containerStyle={{ zIndex: 99999 }} />
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route

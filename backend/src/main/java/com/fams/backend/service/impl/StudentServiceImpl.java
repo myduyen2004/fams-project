@@ -8,6 +8,7 @@ import com.fams.backend.exception.BadRequestException;
 import com.fams.backend.exception.NotFoundException;
 import com.fams.backend.repository.*;
 import com.fams.backend.service.StudentService;
+import java.time.LocalDateTime;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,7 @@ public class StudentServiceImpl implements StudentService {
     private final MajorRepository majorRepository;
     private final SpecializationRepository specializationRepository;
     private final SubSpecializationRepository subSpecializationRepository;
+    private final UserSessionRepository userSessionRepository;
     private final SystemLogService systemLogService;
 
     @Override
@@ -122,10 +124,25 @@ public class StudentServiceImpl implements StudentService {
                     .forEach(p -> profileMap.put(p.getUserId(), p));
         }
 
-        return users.map(user -> {
-            StudentProfile profile = profileMap.get(user.getId());
-            return StudentResponse.fromUserAndProfile(user, profile);
-        });
+        List<StudentResponse> content = users.getContent().stream()
+                .map(user -> {
+                    StudentProfile profile = profileMap.get(user.getId());
+                    return StudentResponse.fromUserAndProfile(user, profile);
+                })
+                .collect(Collectors.toList());
+
+        // Batch fetch last login times
+        if (!userIds.isEmpty()) {
+            Map<Long, LocalDateTime> lastLoginMap = userSessionRepository.findLatestLoginTimesByUserIds(userIds)
+                    .stream()
+                    .collect(Collectors.toMap(
+                            row -> (Long) row[0],
+                            row -> (LocalDateTime) row[1]
+                    ));
+            content.forEach(res -> res.setLastLogin(lastLoginMap.get(res.getId())));
+        }
+
+        return new org.springframework.data.domain.PageImpl<>(content, pageable, users.getTotalElements());
     }
 
     @Override
@@ -141,7 +158,13 @@ public class StudentServiceImpl implements StudentService {
         }
 
         StudentProfile profile = studentProfileRepository.findById(id).orElse(null);
-        return StudentResponse.fromUserAndProfile(user, profile);
+        StudentResponse response = StudentResponse.fromUserAndProfile(user, profile);
+
+        // Fetch last login
+        userSessionRepository.findTopByUserIdOrderByLoginTimeDesc(id)
+                .ifPresent(session -> response.setLastLogin(session.getLoginTime()));
+
+        return response;
     }
 
     @Override

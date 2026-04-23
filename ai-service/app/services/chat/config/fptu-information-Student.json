@@ -1,0 +1,1450 @@
+{
+  "title": "Cẩm nang sinh viên Đại học FPT",
+  "version": "Phiên bản Chi Tiết Mở Rộng v2.0 - Viết bởi Sinh Viên, Dành cho Sinh Viên",
+  "author": "Sinh viên FPT (người đã trải nghiệm)",
+  "last_updated": "2025",
+  "intro": "Xin chào tân sinh viên và các bạn sinh viên FPT! Mình là một sinh viên FPT đã trải qua đủ thứ từ trượt môn, bị Not Eligible (NE), đến lần đầu đi OJT run tay phỏng vấn. Tài liệu này là tổng hợp tất cả những gì mình ước mình được ai đó nói sớm hơn khi mới vào trường. Không phải lý thuyết sách vở, mà là kinh nghiệm thực tế, đầy đủ và chi tiết nhất có thể. Phiên bản 2.0 bổ sung thêm các phần về hệ thống điểm, đăng ký môn, thư viện, y tế, tâm lý, công cụ AI, kênh liên lạc chính thức, FAQ và nhiều nội dung thiết thực khác.",
+  "quick_contacts": {
+    "title": "Danh bạ Liên hệ Nhanh - Ai xử lý việc gì?",
+    "description": "Khi gặp vấn đề, liên hệ đúng đầu mối để tiết kiệm thời gian.",
+    "contacts": [
+      {
+        "department": "Phòng Học vụ (Academic Affairs)",
+        "handles": "Xếp lớp, chuyển ngành, bảo lưu, rejoin, điểm danh, cảnh báo học vụ",
+        "how": "Trực tiếp tại văn phòng hoặc ticket trên FAP"
+      },
+      {
+        "department": "Phòng Tài chính (Finance)",
+        "handles": "Học phí, xác nhận đã đóng tiền, học bổng, hoàn tiền",
+        "how": "Trực tiếp hoặc email kèm ảnh bill giao dịch"
+      },
+      {
+        "department": "Phòng Dịch vụ Sinh viên (Student Services)",
+        "handles": "Thẻ sinh viên, giấy xác nhận, Workshop, CLB, điểm rèn luyện",
+        "how": "Trực tiếp hoặc fanpage chính thức cơ sở"
+      },
+      {
+        "department": "Phòng Quan hệ Doanh nghiệp (Industry Relations)",
+        "handles": "OJT, thực tập, Job Fair, Mock Interview, CV workshop",
+        "how": "Trực tiếp, email hoặc lịch đặt hẹn trên FAP"
+      },
+      {
+        "department": "IT Support / HelpDesk",
+        "handles": "Lỗi FAP, LMS, email, tài khoản Microsoft 365, wifi campus",
+        "how": "Ticket trên FAP hoặc email helpdesk@fpt.edu.vn (tùy cơ sở)"
+      },
+      {
+        "department": "Phòng Y tế",
+        "handles": "Khám bệnh cơ bản, cấp cứu ban đầu, hỗ trợ giấy nghỉ học",
+        "how": "Trực tiếp tại phòng y tế trong campus"
+      },
+      {
+        "department": "Cố vấn Học tập (Advisor)",
+        "handles": "Tư vấn lộ trình học, cảnh báo học vụ, định hướng nghề nghiệp",
+        "how": "Email hoặc đặt lịch qua FAP"
+      },
+      {
+        "department": "Thư viện",
+        "handles": "Mượn/trả sách, phòng học nhóm, tài khoản cơ sở dữ liệu",
+        "how": "Trực tiếp hoặc website thư viện"
+      }
+    ]
+  },
+  "pillars": [
+    {
+      "id": "I",
+      "name": "QUẢN TRỊ HỌC TẬP & CÔNG NGHỆ",
+      "color": "🟦",
+      "description": "Tất cả mọi thứ liên quan đến FAP, hệ thống thi, OJT, và quy định học vụ",
+      "groups": [
+        {
+          "id": 1,
+          "title": "Thủ tục & Đơn từ trên FAP",
+          "content": "FAP (FPT Academic Portal) là cổng thông tin trung tâm của toàn bộ quá trình học tập tại FPT. Từ đăng ký môn học, xem lịch thi, nộp học phí, cho đến các đơn từ hành chính đều xử lý tại đây.",
+          "subsections": [
+            {
+              "subtitle": "Chuyển ngành",
+              "details": [
+                "Điều kiện: Hoàn thành ít nhất 1 học kỳ tại trường, không có nợ môn thuộc chuyên ngành cũ quá nhiều.",
+                "Nộp đơn trên FAP trước 5 tuần khi kỳ mới bắt đầu và đóng phí chuyển ngành theo quy định (thường từ 1-2 triệu đồng).",
+                "Sau khi chuyển ngành, các môn học chung vẫn được công nhận. Một số môn chuyên ngành có thể phải học lại nếu không tương đương."
+              ],
+              "tip": "Trước khi nộp đơn, hãy nhờ cố vấn học tập (Advisor) của ngành mới tư vấn về lộ trình. Đừng chuyển ngành chỉ vì nghe 'ngành kia lương cao' mà chưa hiểu rõ chương trình đào tạo."
+            },
+            {
+              "subtitle": "Chuyển cơ sở",
+              "details": [
+                "Nộp đơn trước 5 tuần, hồ sơ xét duyệt dựa trên chỉ tiêu tại cơ sở đích (ví dụ: từ Hòa Lạc vào TP.HCM).",
+                "Chỉ tiêu có hạn, nên nộp sớm nhất có thể.",
+                "Điểm học lực và hoàn cảnh đặc biệt (gia đình ở xa, lý do sức khỏe) có thể là lợi thế khi xét duyệt."
+              ],
+              "warning": "Sau khi chuyển cơ sở, học phí có thể thay đổi do mỗi cơ sở có mức học phí khác nhau. Hãy kiểm tra kỹ trước khi quyết định."
+            },
+            {
+              "subtitle": "Nhập học trở lại (Rejoin)",
+              "details": [
+                "Làm đơn 'Rejoin' trên FAP trước 10 ngày bắt đầu kỳ mới.",
+                "Trường sẽ sắp xếp lớp tự động dựa trên ngành học và tiến độ còn lại của bạn.",
+                "Nếu đã nghỉ quá 2 kỳ, bạn cần gặp trực tiếp phòng Học vụ để được tư vấn lộ trình phù hợp."
+              ]
+            },
+            {
+              "subtitle": "Bảo lưu học kỳ (Suspend)",
+              "details": [
+                "Nộp đơn 'Suspend one semester' trước 1 tuần khi kỳ mới bắt đầu.",
+                "Học phí đã đóng sẽ được bảo lưu sang kỳ tiếp theo. Nếu đã qua tuần đầu, học phí sẽ không được hoàn lại toàn bộ.",
+                "Mỗi sinh viên được bảo lưu tối đa 2 kỳ trong toàn khóa học (tùy quy định từng năm, hãy xác nhận lại với học vụ)."
+              ],
+              "tip": "Nếu bạn đang gặp vấn đề sức khỏe, tâm lý hoặc gia đình, đừng tự ý bỏ học. Bảo lưu là lựa chọn thông minh hơn để giữ suất học của bạn."
+            },
+            {
+              "subtitle": "Hủy đăng ký học",
+              "details": [
+                "Chỉ thực hiện được trong tuần đầu tiên của kỳ học nếu có lý do chính đáng và được bộ môn phê duyệt.",
+                "Sau tuần đầu tiên, nếu hủy đăng ký, bạn vẫn có thể bị tính học phí một phần."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1b",
+          "title": "Đăng Ký Môn Học - Hướng Dẫn Chi Tiết",
+          "content": "Đăng ký môn học (course registration) là bước quyết định lịch học cả kỳ của bạn. Làm đúng sẽ tiết kiệm thời gian, làm sai sẽ mất cả học phí môn đó.",
+          "subsections": [
+            {
+              "subtitle": "Quy trình đăng ký",
+              "details": [
+                "Thời điểm: FAP mở đăng ký vào một khung giờ cụ thể được thông báo trước ~2 tuần. Đặt lịch nhắc nhở ngay khi thấy thông báo.",
+                "Đăng nhập FAP → Mục 'Course Registration' → Chọn môn học theo curriculum của ngành bạn.",
+                "Ưu tiên đăng ký sớm: Các lớp hot (thầy giỏi, giờ đẹp) thường hết chỗ trong vài phút đầu tiên.",
+                "Kiểm tra điều kiện tiên quyết (prerequisite): Một số môn yêu cầu đã qua môn học trước đó. FAP sẽ tự động khóa nếu chưa đủ điều kiện."
+              ]
+            },
+            {
+              "subtitle": "Lưu ý quan trọng khi đăng ký",
+              "details": [
+                "Tránh đăng ký quá nhiều tín chỉ một kỳ (thông thường 20-24 tín chỉ là tối đa hợp lý). Đăng ký nhiều mà không học được sẽ trượt và mất học phí.",
+                "Để ý slot phòng học: Cùng môn nhưng giờ khác nhau → phòng khác nhau → thiết bị khác nhau.",
+                "Môn học lại (retake): Đăng ký riêng trong phần 'Retake Registration', học phí tính riêng theo tín chỉ hiện tại.",
+                "Môn tự chọn (elective): Hãy đọc kỹ mô tả môn trước khi chọn. Một số elective rất thú vị và thực tiễn hơn bạn nghĩ."
+              ],
+              "tip": "Nhờ anh/chị khóa trên review về giảng viên và độ khó của từng slot trước khi đăng ký. Group Facebook/Discord của ngành thường có thread chia sẻ thông tin này mỗi kỳ."
+            },
+            {
+              "subtitle": "Sau khi đăng ký",
+              "details": [
+                "Tải xuống lịch học (timetable) về máy và lịch điện thoại ngay sau khi đăng ký xong.",
+                "Kiểm tra lại lớp, phòng học, giờ học sau 1-2 ngày vì đôi khi trường điều chỉnh lịch.",
+                "Nếu bị xếp lớp sai hoặc trùng lịch, liên hệ phòng Học vụ trong tuần đầu tiên."
+              ]
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Hệ thống Thi (EOS & SEB)",
+          "content": "FPT sử dụng hệ thống thi trực tuyến qua phần mềm SEB (Safe Exam Browser) kết hợp với cổng EOS để quản lý bài thi. Đây là hệ thống đặc thù mà tân sinh viên cần nắm rõ ngay từ kỳ đầu tiên.",
+          "table": {
+            "headers": [
+              "Vấn đề",
+              "Nguyên nhân phổ biến",
+              "Cách xử lý"
+            ],
+            "rows": [
+              [
+                "Không thấy lịch thi",
+                "Vắng >20%, nợ học phí",
+                "Kiểm tra FAP ngay, liên hệ Học vụ"
+              ],
+              [
+                "SEB bị lỗi khi thi",
+                "Xung đột phần mềm, hết RAM",
+                "Giơ tay báo giám thị ngay, không tự xử"
+              ],
+              [
+                "Máy tính sập nguồn",
+                "Hết pin, lỗi điện",
+                "Báo giám thị để lập biên bản sự cố"
+              ],
+              [
+                "Quên thẻ sinh viên",
+                "Quên mang theo",
+                "Ra phòng Dịch vụ SV xin giấy xác nhận"
+              ],
+              [
+                "SEB không mở được",
+                "Windows update, antivirus chặn",
+                "Tắt antivirus tạm thời, restart máy"
+              ],
+              [
+                "Đăng nhập EOS sai mật khẩu",
+                "Nhập sai tài khoản",
+                "Dùng tài khoản FAP (thường là mã SV + ngày sinh)"
+              ]
+            ]
+          },
+          "details": [
+            "Cài đặt SEB phiên bản đúng: Truy cập mục 'Nâng cấp phần mềm SEB' trên FAP để tải đúng bản yêu cầu (KHÔNG dùng bản SEB tải từ internet thông thường).",
+            "Trước mỗi kỳ thi, nên restart máy tính một lần để tránh xung đột phần mềm nền.",
+            "SEB không cho phép alt+tab, copy/paste từ bên ngoài, hay mở cửa sổ khác. Vi phạm sẽ bị ghi lại log.",
+            "Một số phòng thi cung cấp máy tính của trường. Nếu dùng máy của trường, cần đến sớm để kiểm tra tài khoản đăng nhập."
+          ],
+          "warning": "Tuyệt đối không tắt SEB khi chưa nộp bài xong, kể cả khi bạn đã hoàn thành. Hệ thống ghi nhận thời điểm thoát SEB, và nếu thoát bất thường sẽ bị nghi ngờ gian lận.",
+          "checklist": {
+            "title": "Checklist trước khi thi",
+            "items": [
+              "Kiểm tra lịch thi trên FAP ít nhất 3 ngày trước.",
+              "Sạc đầy pin laptop (ít nhất 80%) và mang theo sạc dự phòng nếu phòng thi có ổ cắm.",
+              "Cài và chạy thử SEB trên máy tính của bạn để đảm bảo không lỗi.",
+              "Mang thẻ sinh viên. Nếu không có, đến phòng Dịch vụ sinh viên từ sớm để xin giấy xác nhận.",
+              "Đến phòng thi trước ít nhất 15 phút để kiểm tra máy và tìm chỗ ngồi.",
+              "Tắt hoặc gỡ cài đặt các phần mềm ảo hóa (VMware, VirtualBox) vì SEB có thể không khởi động."
+            ]
+          }
+        },
+        {
+          "id": "2b",
+          "title": "Hệ thống Điểm Số & GPA - Hiểu Rõ Để Chiến Lược",
+          "content": "GPA quyết định học bổng, OJT, tốt nghiệp và thậm chí cả cơ hội nghề nghiệp. Hiểu hệ thống điểm giúp bạn biết mình đang ở đâu và cần làm gì.",
+          "subsections": [
+            {
+              "subtitle": "Cách tính điểm môn học",
+              "details": [
+                "Cấu trúc điểm thông thường: Attendance (10%) + Assignment/Lab (20-30%) + Midterm - PE (20-30%) + Final Exam - FE (40-50%). Tỷ lệ cụ thể tùy từng môn, xem trong course outline.",
+                "Điểm chữ: A (4.0), B+ (3.5), B (3.0), C+ (2.5), C (2.0), D+ (1.5), D (1.0), F (0).",
+                "Điều kiện đậu môn: Đạt tối thiểu D (1.0) ở thang 4, hoặc 50/100 điểm tùy môn. Một số môn yêu cầu đậu cả PE và FE riêng lẻ.",
+                "Điểm FE phải đạt tối thiểu 4/10 (hoặc theo quy định môn). Nếu FE < 4 thì trượt môn dù điểm thành phần cao."
+              ]
+            },
+            {
+              "subtitle": "Cách tính GPA",
+              "details": [
+                "GPA = Tổng (điểm chữ × số tín chỉ) / Tổng số tín chỉ đã học.",
+                "GPA tích lũy (Cumulative GPA) tính trên toàn bộ các môn đã học từ kỳ 1.",
+                "GPA kỳ (Semester GPA) chỉ tính trong kỳ hiện tại.",
+                "Môn học lại: Điểm mới thay thế điểm cũ trong bảng điểm GPA. Điểm cũ vẫn hiển thị nhưng không tính vào GPA."
+              ]
+            },
+            {
+              "subtitle": "Ngưỡng GPA quan trọng",
+              "table": {
+                "headers": [
+                  "Mức GPA",
+                  "Xếp loại",
+                  "Ý nghĩa thực tế"
+                ],
+                "rows": [
+                  [
+                    "3.6 - 4.0",
+                    "Xuất sắc",
+                    "Học bổng Cóc Vàng, ưu tiên OJT tốt, xin việc lợi thế lớn"
+                  ],
+                  [
+                    "3.2 - 3.59",
+                    "Giỏi",
+                    "Học bổng khuyến học, tốt nghiệp loại Giỏi"
+                  ],
+                  [
+                    "2.5 - 3.19",
+                    "Khá",
+                    "Đủ điều kiện OJT, tốt nghiệp loại Khá"
+                  ],
+                  [
+                    "2.0 - 2.49",
+                    "Trung bình",
+                    "Tốt nghiệp loại Trung bình, chú ý cải thiện"
+                  ],
+                  [
+                    "1.0 - 1.99",
+                    "Yếu - Cảnh báo",
+                    "Cảnh báo học vụ cấp 1, gặp Advisor ngay"
+                  ],
+                  [
+                    "< 1.0",
+                    "Kém - Nguy hiểm",
+                    "Cảnh báo cấp 2, nguy cơ đình chỉ học tập"
+                  ]
+                ]
+              }
+            },
+            {
+              "subtitle": "Chiến lược cải thiện GPA",
+              "details": [
+                "Tập trung vào môn nhiều tín chỉ: Môn 3 tín chỉ ảnh hưởng GPA gấp 3 lần môn 1 tín chỉ.",
+                "Học lại môn điểm thấp: Nâng từ D lên B+ ở môn 3TC có thể tăng GPA đáng kể.",
+                "Không bỏ qua điểm chuyên cần (Attendance): 10% nhỏ nhưng mất không đáng.",
+                "Nộp assignment đúng hạn dù chưa hoàn thiện: Nộp muộn thường bị trừ điểm nặng hoặc không chấp nhận."
+              ],
+              "tip": "Dùng công cụ tính GPA online (hoặc Excel) để mô phỏng: 'Nếu kỳ này mình đạt điểm A tất cả thì GPA tích lũy lên bao nhiêu?' Điều này giúp bạn đặt mục tiêu thực tế."
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "title": "OJT - Thực tập Doanh nghiệp",
+          "content": "OJT (On-the-Job Training) là một trong những giai đoạn quan trọng nhất trong 4 năm đại học tại FPT. Đây không chỉ là yêu cầu tốt nghiệp mà còn là cơ hội thực sự để bạn bước vào môi trường làm việc chuyên nghiệp.",
+          "subsections": [
+            {
+              "subtitle": "Điều kiện đi OJT",
+              "details": [
+                "Hoàn thành các môn cơ sở ngành theo đúng lộ trình (thường sau kỳ 5-6).",
+                "Đạt Level 6 tiếng Anh trong chương trình dự bị ngôn ngữ của FPT.",
+                "Không nợ quá số tín chỉ quy định (thường không quá 10 tín chỉ).",
+                "GPA tổng thể ít nhất đạt mức trung bình (GPA > 2.0 theo thang 4)."
+              ],
+              "tip": "Đừng đợi đến lúc đủ điều kiện mới chuẩn bị CV. Hãy làm CV từ kỳ 3-4, tham gia các sự kiện Job Fair để có cái nhìn thực tế về yêu cầu thị trường."
+            },
+            {
+              "subtitle": "Tự tìm công ty thực tập",
+              "details": [
+                "Bạn được phép tự tìm, nhưng công ty phải được nhà trường thẩm định và ký kết thỏa thuận đào tạo (MOU) trước khi bạn bắt đầu.",
+                "Quy trình: Liên hệ HR công ty → Xác nhận vị trí thực tập → Nộp thông tin về phòng Quan hệ doanh nghiệp để trường xét duyệt → Ký hợp đồng 3 bên (công ty - trường - sinh viên).",
+                "Một số công ty nhỏ hoặc startup chưa có MOU với FPT. Quá trình thẩm định có thể mất 2-4 tuần, nên bắt đầu sớm."
+              ]
+            },
+            {
+              "subtitle": "Những điều cần biết khi đi thực tập",
+              "details": [
+                "Giờ làm việc OJT: Thông thường full-time (8 tiếng/ngày) hoặc theo thỏa thuận với công ty.",
+                "Lương thực tập: Không bắt buộc, nhưng nhiều công ty trả 3-8 triệu/tháng cho intern có kỹ năng tốt.",
+                "Supervisor tại công ty: Người hướng dẫn bạn hàng ngày. Xây dựng mối quan hệ tốt với họ - họ sẽ ký báo cáo cuối kỳ và có thể là người viết reference letter cho bạn.",
+                "Checkin/Checkout: Một số công ty dùng hệ thống chấm công. Trường cũng có thể kiểm tra định kỳ qua báo cáo."
+              ]
+            },
+            {
+              "subtitle": "Báo cáo OJT",
+              "details": [
+                "Nộp báo cáo tiến độ hàng tháng theo template của trường.",
+                "Báo cáo cuối kỳ (Final Report) cần có xác nhận của supervisor tại công ty và đóng dấu công ty.",
+                "Trình bày bảo vệ OJT trước giảng viên phụ trách sau khi kết thúc thực tập."
+              ],
+              "warning": "Nhiều bạn viết báo cáo đối phó và bị trả về. Hãy ghi lại chi tiết công việc hàng tuần ngay từ đầu để việc viết báo cáo cuối kỳ trở nên dễ dàng hơn."
+            }
+          ]
+        },
+        {
+          "id": 11,
+          "title": "Quy định & Kỷ luật",
+          "table": {
+            "headers": [
+              "Vi phạm",
+              "Mức độ",
+              "Hậu quả"
+            ],
+            "rows": [
+              [
+                "Vắng >20% tiết học",
+                "Tự động",
+                "Cấm thi (Not Eligible), học lại môn"
+              ],
+              [
+                "Gian lận thi cử lần 1",
+                "Trung bình",
+                "Điểm 0 môn đó, cảnh cáo học vụ"
+              ],
+              [
+                "Gian lận thi cử lần 2",
+                "Nặng",
+                "Đình chỉ học 1 kỳ"
+              ],
+              [
+                "Gian lận nghiêm trọng",
+                "Rất nặng",
+                "Buộc thôi học"
+              ],
+              [
+                "Đạo văn >20% Turnitin",
+                "Trung bình",
+                "Điểm 0 bài nộp đó"
+              ],
+              [
+                "Mua Assignment/thi hộ",
+                "Rất nặng",
+                "Đuổi học ngay lập tức"
+              ],
+              [
+                "Vi phạm giờ giới nghiêm KTX",
+                "Nhẹ-Trung bình",
+                "Trừ điểm rèn luyện, cảnh cáo KTX"
+              ],
+              [
+                "Mang thức ăn/đồ uống vào phòng thi",
+                "Nhẹ",
+                "Nhắc nhở, tịch thu đồ vật"
+              ]
+            ]
+          },
+          "tip": "Điểm danh trên FAP cập nhật gần như theo thời gian thực. Hãy kiểm tra sau mỗi buổi học để phát hiện sai sót kịp thời. Nếu bạn có mặt nhưng hệ thống ghi vắng, liên hệ giảng viên trong vòng 24 giờ."
+        },
+        {
+          "id": "11b",
+          "title": "Not Eligible (NE) - Hiểu và Phòng Tránh",
+          "content": "NE là trạng thái bị cấm thi do vắng quá 20% số buổi học. Đây là một trong những 'cạm bẫy' phổ biến nhất khiến sinh viên phải học lại và tốn thêm tiền.",
+          "subsections": [
+            {
+              "subtitle": "Cách tính vắng",
+              "details": [
+                "Mỗi môn có số buổi học nhất định (ví dụ: 30 buổi). 20% = 6 buổi. Vắng từ buổi thứ 7 trở đi → NE tự động.",
+                "Đi muộn quá 15 phút thường được tính là vắng nửa buổi. 2 lần đi muộn = 1 lần vắng.",
+                "Nghỉ có phép (bệnh, ma chay...) vẫn tính vào số buổi vắng. Chỉ một số trường hợp đặc biệt có thể được giảng viên xem xét."
+              ]
+            },
+            {
+              "subtitle": "Xử lý khi gần NE",
+              "details": [
+                "Kiểm tra tỷ lệ vắng trên FAP thường xuyên, đặc biệt khi bạn đã nghỉ 3-4 buổi.",
+                "Nếu vắng vì lý do có giấy tờ (nhập viện, tang lễ...), nộp ngay cho giảng viên để được xem xét.",
+                "Nói chuyện thẳng thắn với giảng viên: 'Em đang ở mức X buổi vắng, em có thể làm gì để không NE không?' Một số giảng viên có chính sách linh hoạt."
+              ],
+              "warning": "Khi bị NE, bạn vẫn phải đóng học phí môn đó nhưng không được thi. Điểm cuối kỳ sẽ là F. Hãy theo dõi điểm danh từ buổi đầu tiên, không đợi đến khi gần NE mới lo."
+            }
+          ]
+        },
+        {
+          "id": 17,
+          "title": "Tiếng Anh Dự Bị - Little UK",
+          "content": "Chương trình tiếng Anh dự bị của FPT (thường gọi là Little UK) là một trong những điểm đặc trưng nhất và... gian nan nhất đối với nhiều sinh viên khi mới vào trường.",
+          "details": [
+            "Placement Test: Tân sinh viên bắt buộc làm bài xếp lớp để vào 1 trong 6 level, hoặc được miễn hoàn toàn nếu có IELTS >= 6.0.",
+            "Mỗi level kéo dài 1 học kỳ. Bạn phải hoàn thành cả 6 level (hoặc các level được phân công) để đủ điều kiện làm đồ án tốt nghiệp.",
+            "Trượt level: Phải đóng tiền học lại toàn bộ level đó vào kỳ tiếp theo.",
+            "Jump level: Nếu bạn có chứng chỉ quốc tế (IELTS, TOEFL, Cambridge...) đạt chuẩn trong quá trình học, làm đơn xin nhảy level để tiết kiệm thời gian.",
+            "Giáo trình chính: Top Notch và Summit, kết hợp các hoạt động Presentation, Debate, và Communication Lab.",
+            "Thi cuối level: Gồm các phần Listening, Reading, Writing và Speaking (thường thi riêng với giáo viên bản ngữ hoặc giáo viên được đào tạo)."
+          ],
+          "subsections": [
+            {
+              "subtitle": "Mẹo học tiếng Anh hiệu quả tại Little UK",
+              "details": [
+                "Nghe podcast tiếng Anh hàng ngày 20-30 phút (BBC Learning English, 6 Minute English) để cải thiện Listening.",
+                "Tham gia English Corner hoặc Language Exchange với sinh viên quốc tế tại campus.",
+                "Dùng ứng dụng Anki để học flashcard từ vựng theo unit bài học.",
+                "Không xấu hổ khi nói sai - môi trường Little UK chấp nhận lỗi như một phần của quá trình học."
+              ],
+              "tip": "Môi trường Little UK quy định 100% tiếng Anh. Hãy coi đây là cơ hội thực hành thay vì áp lực. Nhiều sinh viên nhờ giai đoạn này mà tiếng Anh cải thiện vượt bậc chỉ sau 2-3 kỳ."
+            }
+          ]
+        },
+        {
+          "id": 27,
+          "title": "Đồ án Tốt nghiệp (Capstone Project)",
+          "content": "Capstone Project là đỉnh điểm của toàn bộ hành trình học tập tại FPT. Đây là cơ hội để bạn ứng dụng toàn bộ kiến thức đã học vào một sản phẩm/dự án thực tế.",
+          "details": [
+            "Điều kiện: Hoàn thành OJT, đạt chuẩn đầu ra tiếng Anh (Level 6 hoặc tương đương), hoàn thành tất cả môn chuyên ngành bắt buộc.",
+            "Chọn giảng viên hướng dẫn: Hãy liên hệ giảng viên từ sớm (ngay khi hoàn thành OJT). Giảng viên giỏi thường được đặt chỗ rất sớm.",
+            "Thay đổi đề tài: Chỉ được trong 2-4 tuần đầu và phải có sự đồng ý của giảng viên hướng dẫn.",
+            "Mock Defense: Bước bắt buộc để đánh giá chất lượng trước khi ra hội đồng. Hãy chuẩn bị kỹ như thể đây là buổi bảo vệ thật.",
+            "Trượt đồ án: Phải đăng ký lại toàn bộ vào kỳ tiếp theo, thường với đề tài mới.",
+            "Nhóm Capstone: Thường 4-6 người. Phân công rõ ràng vai trò PM, Developer, Tester, Designer từ đầu để tránh xung đột cuối kỳ."
+          ],
+          "warning": "Đừng bắt đầu code/làm sản phẩm trước khi có đề cương rõ ràng và được duyệt. Nhiều nhóm bị yêu cầu làm lại từ đầu do không bám sát yêu cầu ban đầu."
+        },
+        {
+          "id": 35,
+          "title": "Quản lý Rủi ro Học tập",
+          "table": {
+            "headers": [
+              "Tình huống",
+              "Ngưỡng nguy hiểm",
+              "Hành động ngay lập tức"
+            ],
+            "rows": [
+              [
+                "GPA thấp",
+                "GPA < 1.0 → Cảnh báo cấp 1",
+                "Gặp Advisor, đăng ký học lại ngay kỳ tới"
+              ],
+              [
+                "Cảnh báo học vụ liên tiếp",
+                "2 kỳ liên tiếp không cải thiện",
+                "Có thể bị đình chỉ học tập"
+              ],
+              [
+                "Vắng nhiều",
+                "Vắng > 15% đã nguy hiểm",
+                "Kiểm tra FAP, xin phép giảng viên nếu có lý do"
+              ],
+              [
+                "Nợ học phí",
+                "Sau deadline",
+                "Làm đơn gia hạn ngay trên FAP"
+              ],
+              [
+                "Trượt nhiều môn",
+                ">3 môn/kỳ",
+                "Đánh giá lại lịch học, giảm tải số tín chỉ kỳ sau"
+              ]
+            ]
+          },
+          "tip": "Đừng xấu hổ khi tìm đến Advisor. Đó là người được trường phân công để hỗ trợ bạn. Một buổi nói chuyện 30 phút có thể giúp bạn tìm ra hướng đi phù hợp hơn là tự mày mò một mình."
+        },
+        {
+          "id": "NEW1",
+          "title": "Tài khoản & Phần Mềm - Miễn Phí Cho Sinh Viên FPT",
+          "content": "Là sinh viên FPT, bạn được cung cấp nhiều tài khoản và phần mềm miễn phí. Đừng để lãng phí những quyền lợi này!",
+          "subsections": [
+            {
+              "subtitle": "Tài khoản được cấp khi nhập học",
+              "details": [
+                "Email FPT (@fpt.edu.vn hoặc @fe.edu.vn): Dùng để nhận thông báo quan trọng từ trường. PHẢI kiểm tra thường xuyên.",
+                "Tài khoản FAP: Mã sinh viên + mật khẩu mặc định (thường ngày sinh). Đổi ngay khi nhận.",
+                "Microsoft 365 Education: Email FPT cho phép kích hoạt Word, Excel, PowerPoint, Teams, OneDrive 1TB hoàn toàn miễn phí.",
+                "Tài khoản LMS (Learning Management System): Nơi tải tài liệu môn học, nộp assignment và xem thông báo từ giảng viên."
+              ]
+            },
+            {
+              "subtitle": "Phần mềm & dịch vụ miễn phí cho sinh viên IT",
+              "details": [
+                "GitHub Student Developer Pack: Đăng ký tại education.github.com với email FPT → Nhận hàng chục phần mềm, cloud credit, domain miễn phí.",
+                "JetBrains (IntelliJ, PyCharm, WebStorm...): Miễn phí 1 năm, gia hạn được khi còn là sinh viên.",
+                "Azure for Students: $100 credit Azure không cần thẻ tín dụng.",
+                "Canva Education: Tính năng premium miễn phí.",
+                "Figma Education: Dùng đầy đủ tính năng miễn phí cho học sinh/sinh viên."
+              ],
+              "tip": "Đăng ký GitHub Student Pack ngay trong tuần đầu tiên. Nhiều anh chị khóa trên không biết đến quyền lợi này và đã bỏ phí hàng năm trời."
+            },
+            {
+              "subtitle": "Wifi & Mạng campus",
+              "details": [
+                "Mạng wifi: Kết nối bằng tài khoản FAP. SSID thường là 'FPT-Student' hoặc tên cơ sở cụ thể.",
+                "VPN: Một số tài nguyên học thuật yêu cầu kết nối qua VPN của trường. Liên hệ IT Support để được cấp phát.",
+                "Hạn mức dữ liệu: Một số cơ sở có giới hạn lưu lượng hàng tháng cho mỗi tài khoản.",
+                "Lỗi wifi: Báo ngay IT Support kèm vị trí phòng/tòa nhà để được xử lý nhanh nhất."
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "II",
+      "name": "TÀI CHÍNH & HỒ SƠ",
+      "color": "🟧",
+      "description": "Học phí, học bổng, hồ sơ sinh viên và mọi thứ liên quan đến tiền bạc & giấy tờ",
+      "groups": [
+        {
+          "id": 4,
+          "title": "Học phí & Tài chính",
+          "content": "Học phí FPT được tính theo tín chỉ và điều chỉnh hàng năm. Việc quản lý học phí tốt là kỹ năng sống quan trọng không kém gì kỹ năng chuyên môn.",
+          "details": [
+            "Hạn đóng học phí: Thông báo qua email và FAP, thường trước 1-2 tuần khi kỳ mới bắt đầu.",
+            "Đóng muộn: Tài khoản FAP có thể bị khóa một số chức năng như đăng ký môn, xem điểm thi.",
+            "Nộp nhầm học phí: Liên hệ ngay phòng Tài chính kèm theo ảnh chụp bill giao dịch. Quá trình điều chỉnh thường mất 3-5 ngày làm việc.",
+            "Học phí học lại: Tính theo số tín chỉ của môn đó tại thời điểm đăng ký học lại, không phải thời điểm học lần đầu.",
+            "Nộp tiền qua App: Quét mã QR trên FAP để đảm bảo tiền vào đúng mã sinh viên. Chuyển khoản thủ công có nguy cơ sai mã."
+          ],
+          "subsections": [
+            {
+              "subtitle": "Hỗ trợ tài chính và vay vốn",
+              "details": [
+                "Vay vốn Ngân hàng Chính sách Xã hội: Sinh viên thuộc hộ nghèo/cận nghèo có thể vay lãi suất thấp. Cần giấy xác nhận sinh viên từ trường + giấy tờ hộ nghèo từ địa phương.",
+                "Trả góp học phí: Một số kỳ trường cho phép chia 2-3 đợt đóng. Hỏi phòng Tài chính trước kỳ để biết chính sách cụ thể.",
+                "Học bổng từ doanh nghiệp: FPT Software, Viettel, các công ty đối tác thường có học bổng riêng cho sinh viên FPT xuất sắc. Theo dõi thông báo trên FAP và fanpage trường."
+              ],
+              "tip": "Đặt nhắc nhở học phí sớm 2 tuần trước deadline. Nhiều bạn bị khóa tài khoản chỉ vì quên đóng tiền trong kỳ bận rộn làm đồ án."
+            }
+          ]
+        },
+        {
+          "id": 23,
+          "title": "Học bổng & Vinh danh",
+          "content": "FPT có nhiều loại học bổng khác nhau, từ học bổng đầu vào đến học bổng khuyến học hàng kỳ.",
+          "table": {
+            "headers": [
+              "Loại học bổng",
+              "Điều kiện",
+              "Giá trị"
+            ],
+            "rows": [
+              [
+                "Học bổng Cóc Vàng",
+                "Điểm số cao nhất khối ngành/kỳ",
+                "Tiền mặt/Quà tặng giá trị cao"
+              ],
+              [
+                "Học bổng khuyến học",
+                "GPA kỳ trước xuất sắc, không có học bổng đầu vào",
+                "Giảm % học phí kỳ tiếp theo"
+              ],
+              [
+                "Học bổng toàn phần/bán phần",
+                "Thành tích thi đầu vào xuất sắc",
+                "Miễn/giảm học phí toàn khóa"
+              ],
+              [
+                "Học bổng hoàn cảnh",
+                "Khó khăn kinh tế có minh chứng",
+                "Hỗ trợ một phần học phí"
+              ],
+              [
+                "Học bổng doanh nghiệp đối tác",
+                "Tuyển chọn riêng theo tiêu chí công ty",
+                "Tiền mặt + cơ hội việc làm ưu tiên"
+              ]
+            ]
+          },
+          "details": [
+            "Giữ học bổng: Duy trì GPA mức khá/giỏi, không trượt môn nào trong kỳ, không bị kỷ luật từ mức cảnh cáo trở lên.",
+            "Điểm rèn luyện: Yêu cầu để xét vinh danh. Tham gia CLB, Workshop, sự kiện trường là cách tốt nhất để tích lũy.",
+            "Honor Night: Sự kiện vinh danh sinh viên giỏi/xuất sắc mỗi kỳ. Bạn sẽ được nhận giấy khen và quà lưu niệm từ Ban giám hiệu."
+          ]
+        },
+        {
+          "id": "NEW2",
+          "title": "Điểm Rèn Luyện - Hệ Thống Đánh Giá Toàn Diện",
+          "content": "Điểm rèn luyện (ĐRL) không chỉ ảnh hưởng đến vinh danh mà còn quyết định thứ hạng ưu tiên trong nhiều hoạt động của trường.",
+          "subsections": [
+            {
+              "subtitle": "Các nguồn cộng điểm rèn luyện",
+              "table": {
+                "headers": [
+                  "Hoạt động",
+                  "Điểm cộng ước tính",
+                  "Lưu ý"
+                ],
+                "rows": [
+                  [
+                    "Tham gia CLB chính thức",
+                    "5-15 điểm/kỳ",
+                    "Phải có vai trò rõ ràng, có xác nhận CLB"
+                  ],
+                  [
+                    "Ban tổ chức sự kiện trường",
+                    "10-20 điểm/sự kiện",
+                    "Cần giấy xác nhận từ phòng DVSV"
+                  ],
+                  [
+                    "Tham gia Workshop/Seminar",
+                    "2-5 điểm/buổi",
+                    "Check-in đúng giờ, ký danh sách tham dự"
+                  ],
+                  [
+                    "Giải thưởng cuộc thi học thuật",
+                    "10-30 điểm",
+                    "Tùy cấp độ (trường/quốc gia/quốc tế)"
+                  ],
+                  [
+                    "Hoạt động tình nguyện",
+                    "5-10 điểm",
+                    "Cần xác nhận từ tổ chức chủ trì"
+                  ],
+                  [
+                    "Lớp trưởng, ban cán sự lớp",
+                    "10-15 điểm/kỳ",
+                    "Đăng ký qua phòng Học vụ"
+                  ]
+                ]
+              }
+            },
+            {
+              "subtitle": "Các hành vi trừ điểm rèn luyện",
+              "details": [
+                "Vi phạm giờ giới nghiêm KTX: -5 đến -10 điểm tùy số lần.",
+                "Bị kỷ luật học vụ: -10 đến -30 điểm tùy mức độ.",
+                "Không tham gia hoạt động tập thể bắt buộc của lớp: -3 đến -5 điểm.",
+                "Gây mất trật tự, vi phạm nội quy campus: -5 điểm."
+              ],
+              "tip": "Theo dõi điểm rèn luyện trên FAP sau mỗi kỳ. Nếu thấy sai sót (bạn đã tham gia nhưng không được cộng), liên hệ phòng Dịch vụ sinh viên kèm bằng chứng (ảnh, giấy xác nhận) trong vòng 2 tuần sau khi kỳ kết thúc."
+            }
+          ]
+        },
+        {
+          "id": 10,
+          "title": "Hồ sơ Sinh viên",
+          "details": [
+            "Thay đổi số điện thoại/email: Cập nhật tại mục 'Update Profile' trên FAP để không bỏ lỡ thông báo quan trọng từ trường.",
+            "Làm lại thẻ sinh viên: Nộp đơn tại phòng Dịch vụ sinh viên, nộp phí (khoảng 100k-200k) và nhận thẻ mới sau 7-10 ngày làm việc.",
+            "Xin giấy xác nhận sinh viên: Dùng để vay vốn ngân hàng, tạm hoãn nghĩa vụ quân sự, hoặc xin ưu đãi dịch vụ. Đăng ký trên FAP và nhận bản cứng sau 2 ngày.",
+            "Lỗi thông tin cá nhân: Phát hiện sai ngày sinh/quê quán trên hệ thống → báo ngay phòng Học vụ. Tuyệt đối không để đến gần lúc tốt nghiệp mới phát hiện.",
+            "Xác nhận bảng điểm tạm thời: Dùng để nộp hồ sơ xin việc khi chưa có bằng chính thức. Yêu cầu trường cấp qua phòng Học vụ."
+          ],
+          "warning": "Kiểm tra kỹ thông tin cá nhân trên FAP ngay từ kỳ đầu tiên. Sai sót nhỏ như tên đệm, ngày sinh sẽ gây rắc rối rất lớn khi in bằng tốt nghiệp."
+        }
+      ]
+    },
+    {
+      "id": "III",
+      "name": "CHƯƠNG TRÌNH TOÀN CẦU & KỸ NĂNG",
+      "color": "🟩",
+      "description": "Global Exchange, Vovinam, nhạc cụ dân tộc, P2A và kỹ năng mềm",
+      "groups": [
+        {
+          "id": 7,
+          "title": "Global Program - Trao đổi Quốc tế",
+          "content": "Đây là một trong những đặc quyền hiếm có của sinh viên FPT: cơ hội học tập và trao đổi văn hóa tại các trường đại học đối tác trên toàn thế giới.",
+          "details": [
+            "Chi phí: Sinh viên chỉ đóng học phí tại FPTU như bình thường. Chi phí ăn ở và vé máy bay tại nước sở tại là do sinh viên tự chuẩn bị.",
+            "Thời gian: Thường là học kỳ 5 hoặc 7. Theo dõi thông báo 'Global Exchange' được gửi qua email đầu mỗi năm học.",
+            "Điều kiện ngôn ngữ: Tối thiểu Level 6 tiếng Anh hoặc tương đương theo yêu cầu của trường đối tác.",
+            "Hỗ trợ Visa: Nhà trường hỗ trợ thư mời và hướng dẫn chuẩn bị hồ sơ tài chính cho visa du học ngắn hạn.",
+            "Công nhận tín chỉ: Các môn học tại nước ngoài được quy đổi tương đương vào bảng điểm tại Việt Nam nếu đạt yêu cầu.",
+            "Một số đối tác tiêu biểu: Đại học tại Nhật Bản, Hàn Quốc, Úc, Phần Lan, Mỹ... (danh sách cập nhật theo từng năm)."
+          ],
+          "tip": "Chuẩn bị hồ sơ tài chính cho visa (sao kê ngân hàng 3-6 tháng) ngay từ kỳ 3-4 nếu bạn có ý định tham gia Global Program. Đây là yếu tố khiến nhiều bạn bị từ chối visa vào phút chót."
+        },
+        {
+          "id": "NEW3",
+          "title": "P2A - Prove to Advance",
+          "content": "P2A (Prove to Advance) là cơ chế đặc biệt cho phép sinh viên có năng lực vượt trội chứng minh bản thân để rút ngắn thời gian học hoặc bỏ qua một số môn học.",
+          "details": [
+            "Nguyên lý: Sinh viên đăng ký thi thử (prove) một môn học mà mình đã có kiến thức, nếu đạt mức điểm quy định thì được công nhận môn đó (advance) mà không cần học.",
+            "Điều kiện: Thường áp dụng cho các môn kỹ thuật/lập trình có bài thi rõ ràng. Hỏi phòng Học vụ về danh sách môn đủ điều kiện P2A.",
+            "Phí dự thi P2A: Thấp hơn học phí toàn môn nhưng vẫn có phí. Tính toán kỹ để đảm bảo đáng đầu tư.",
+            "Không bắt buộc: P2A là lựa chọn, không phải yêu cầu. Chỉ thử nếu bạn thực sự tự tin với kiến thức của mình."
+          ],
+          "tip": "P2A phù hợp với bạn đã học lập trình từ trước (tự học, học tại trung tâm) và muốn rút ngắn chương trình. Nếu chưa chắc chắn, đừng lãng phí tiền phí dự thi P2A."
+        },
+        {
+          "id": 18,
+          "title": "Vovinam - Võ thuật Truyền thống",
+          "content": "Vovinam là môn bắt buộc độc đáo của FPT University, mang triết lý 'Bàn tay thép trên trái tim từ ái'.",
+          "details": [
+            "Có 3 mức học (cấp độ), mỗi mức kéo dài 1 kỳ. Lên đai vào cuối kỳ, phải thực hiện đủ các bài quyền quy định.",
+            "Võ phục: Trường không cho mượn dài hạn. Bạn nên mua một bộ (khoảng 200k-300k).",
+            "Miễn Vovinam: Chỉ dành cho sinh viên có thương tật vĩnh viễn hoặc bệnh lý nặng. Cần giấy chứng nhận y tế và làm đơn gửi phòng Học vụ.",
+            "Thi lại: Nếu trượt, đóng phí học lại và tham gia lớp học vào kỳ tiếp theo."
+          ],
+          "tip": "Tập Vovinam đều đặn từ buổi đầu thay vì cày dồn cuối kỳ. Kỹ thuật võ thuật cần thời gian rèn giũa, không thể thuộc lòng chỉ trong vài ngày trước thi."
+        },
+        {
+          "id": 19,
+          "title": "Nhạc cụ Dân tộc",
+          "content": "FPT là một trong số ít trường đại học tại Việt Nam yêu cầu sinh viên học nhạc cụ dân tộc.",
+          "details": [
+            "Đây là môn bắt buộc để tốt nghiệp, không thể bỏ qua hay thay thế (trừ trường hợp đặc biệt).",
+            "Bạn sẽ được chọn 1 trong các nhạc cụ truyền thống như đàn tranh, đàn bầu, sáo trúc, trống... Chỉ được đổi trong tuần đầu nếu còn chỗ.",
+            "Không cần mua nhạc cụ ngay: Bạn có thể tập tại phòng nhạc của trường ngoài giờ học.",
+            "Bài thi cuối môn: Thường là biểu diễn nhóm hoặc độc tấu trước hội đồng chuyên môn.",
+            "Cách chọn nhạc cụ phù hợp: Đàn tranh - âm thanh đẹp, cần khéo tay; Sáo trúc - cần hơi tốt; Trống - đơn giản hơn về kỹ thuật ngón tay."
+          ],
+          "tip": "Tham gia CLB Nhạc cụ Dân tộc (FTIC) sau khi hoàn thành môn học. Đây là cơ hội biểu diễn tại các sự kiện lớn của trường và tích lũy điểm rèn luyện."
+        },
+        {
+          "id": 34,
+          "title": "Kỹ năng Mềm & Workshop",
+          "details": [
+            "Không bắt buộc số lượng, nhưng khuyến khích ít nhất 2 buổi/kỳ để lấy điểm rèn luyện.",
+            "Đa số Workshop miễn phí. Một số buổi chuyên sâu có phí nguyên vật liệu.",
+            "Diễn giả: Thường là chuyên gia từ tập đoàn FPT hoặc doanh nghiệp lớn bên ngoài. Cơ hội networking thực sự.",
+            "Đăng ký: Qua link Google Form hoặc app MyFAP. Đến đúng giờ để được điểm danh và nhận Certificate.",
+            "Đề xuất chủ đề: Bạn có thể đề xuất chủ đề Workshop cho phòng Dịch vụ sinh viên.",
+            "Các chủ đề Workshop phổ biến và có giá trị: Phỏng vấn xin việc, Public Speaking, Design Thinking, Startup Pitching, Personal Branding."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "IV",
+      "name": "ĐỜI SỐNG & TIỆN ÍCH CAMPUS",
+      "color": "🟨",
+      "description": "Ký túc xá, câu lạc bộ, an ninh, việc làm bán thời gian, y tế và văn hóa Cóc",
+      "groups": [
+        {
+          "id": 21,
+          "title": "Ký túc xá (Dormitory)",
+          "table": {
+            "headers": [
+              "Hạng mục",
+              "Chi tiết"
+            ],
+            "rows": [
+              [
+                "Đăng ký",
+                "Ưu tiên tân sinh viên và SV ở xa, đăng ký khi làm thủ tục nhập học"
+              ],
+              [
+                "Điện nước",
+                "Thanh toán hàng tháng theo chỉ số công tơ riêng từng phòng"
+              ],
+              [
+                "An ninh",
+                "Bảo vệ và camera 24/24, cần thẻ nội trú khi ra vào"
+              ],
+              [
+                "Vệ sinh",
+                "Sinh viên tự chịu trách nhiệm, trường kiểm tra định kỳ hàng tháng"
+              ],
+              [
+                "Internet",
+                "Có mạng dây và wifi riêng từng khu phòng ở"
+              ],
+              [
+                "Giờ giới nghiêm",
+                "Thường 11h-12h đêm tùy cơ sở, vi phạm có thể bị phạt điểm rèn luyện"
+              ],
+              [
+                "Khách thăm",
+                "Đăng ký tại bảo vệ, chỉ được vào đến khu vực chung, không được qua đêm"
+              ],
+              [
+                "Phòng máy lạnh",
+                "Phụ thu thêm chi phí điện hàng tháng, đặt trước khi hết suất"
+              ]
+            ]
+          },
+          "subsections": [
+            {
+              "subtitle": "Mẹo sống KTX",
+              "details": [
+                "Mua ổ cắm có ít nhất 4-6 cổng và 2 cổng USB: Phòng KTX thường thiếu ổ cắm trầm trọng.",
+                "Mang theo dây mạng Ethernet để kết nối mạng dây khi wifi lag vào giờ cao điểm.",
+                "Thỏa thuận nội quy phòng với roommate ngay từ đầu: giờ tắt đèn, khách khứa, vệ sinh.",
+                "Lưu số bảo vệ KTX và quản lý tòa trong điện thoại để xử lý sự cố nhanh."
+              ],
+              "tip": "Nếu bạn ở KTX, hãy làm quen ngay với các bạn cùng phòng và cùng tầng. Mạng lưới bạn bè trong KTX là nguồn hỗ trợ học tập và tinh thần vô cùng quý giá suốt 4 năm đại học."
+            }
+          ]
+        },
+        {
+          "id": "NEW4",
+          "title": "Thư Viện & Tài Nguyên Học Tập",
+          "content": "Thư viện FPT không chỉ là nơi mượn sách. Đây là một trong những tài nguyên học tập quý giá nhất mà nhiều sinh viên chưa tận dụng hết.",
+          "subsections": [
+            {
+              "subtitle": "Dịch vụ thư viện",
+              "details": [
+                "Mượn sách: Thẻ sinh viên = thẻ thư viện. Mỗi sinh viên được mượn 3-5 cuốn/lần, thời hạn 2-4 tuần tùy loại sách.",
+                "Gia hạn sách: Thực hiện online qua website thư viện trước khi sách đến hạn. Trả muộn bị phạt tiền/điểm.",
+                "Đặt trước sách đang được mượn: Đăng ký vào danh sách chờ (waitlist) trên hệ thống thư viện.",
+                "Phòng học nhóm: Đặt trước qua website hoặc trực tiếp tại quầy thư viện. Thường miễn phí với sinh viên.",
+                "In ấn, scan, photocopy: Có dịch vụ tại thư viện với giá ưu đãi sinh viên."
+              ]
+            },
+            {
+              "subtitle": "Cơ sở dữ liệu học thuật",
+              "details": [
+                "IEEE Xplore: Tài liệu kỹ thuật và công nghệ thông tin hàng đầu thế giới. Truy cập miễn phí qua mạng campus.",
+                "ScienceDirect / Scopus: Nghiên cứu khoa học tổng quát. Đăng nhập bằng email FPT.",
+                "ProQuest: Luận văn và báo cáo nghiên cứu. Hỏi thủ thư để được hướng dẫn truy cập.",
+                "Springer / Wiley: Sách giáo khoa và tài liệu chuyên ngành dạng PDF miễn phí.",
+                "Google Scholar: Miễn phí, kết hợp với Unpaywall extension để tải bài báo miễn phí hợp pháp."
+              ],
+              "tip": "Khi viết báo cáo/đồ án, dùng citation manager như Zotero (miễn phí) để quản lý tài liệu tham khảo tự động. Tiết kiệm hàng giờ so với làm thủ công."
+            },
+            {
+              "subtitle": "Học liệu online được hỗ trợ",
+              "details": [
+                "Coursera for Campus: Một số khóa học Coursera miễn phí với email FPT (tùy từng kỳ trường có hợp tác).",
+                "LinkedIn Learning: Kiểm tra nếu trường có subscription. Hàng nghìn khóa học kỹ năng mềm và kỹ thuật.",
+                "YouTube giáo dục: CS50 (Harvard), MIT OpenCourseWare, freeCodeCamp - miễn phí và chất lượng cao."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "NEW5",
+          "title": "Y Tế Campus & Chăm Sóc Sức Khỏe",
+          "content": "Sức khỏe là nền tảng của việc học. Biết cách sử dụng dịch vụ y tế campus sẽ giúp bạn xử lý tình huống bệnh tật nhanh chóng mà không ảnh hưởng đến học tập.",
+          "subsections": [
+            {
+              "subtitle": "Phòng y tế campus",
+              "details": [
+                "Dịch vụ: Khám bệnh cơ bản (cảm cúm, đau đầu, đau bụng), sơ cứu tai nạn, đo huyết áp, tư vấn sức khỏe.",
+                "Giờ mở cửa: Thường trong giờ hành chính (7h30 - 17h00) các ngày trong tuần. Kiểm tra giờ cụ thể tại cơ sở của bạn.",
+                "Miễn phí: Khám và tư vấn thường miễn phí. Thuốc cơ bản có thể được cấp miễn phí với số lượng giới hạn.",
+                "Giấy nghỉ học vì lý do sức khỏe: Do phòng y tế cấp, cần nộp cho giảng viên trong vòng 24-48 giờ để được xét miễn vắng."
+              ]
+            },
+            {
+              "subtitle": "Bảo hiểm y tế sinh viên",
+              "details": [
+                "Bắt buộc: Sinh viên phải có bảo hiểm y tế (BHYT). Đăng ký khi nhập học hoặc gia hạn mỗi năm.",
+                "Đăng ký BHYT tại đâu: Phòng Tài chính hoặc phòng Học vụ sẽ hướng dẫn. Thường đăng ký hàng loạt đầu năm học.",
+                "Dùng BHYT: Khám tại bệnh viện đúng tuyến. Sinh viên có thể khám bệnh viện cấp quận/huyện nơi đăng ký KT3 hoặc bệnh viện đã đăng ký ban đầu.",
+                "Phòng khám ngoại trú gần campus: Hỏi bảo vệ hoặc nhân viên KTX để biết phòng khám/bệnh viện gần nhất nhận BHYT sinh viên."
+              ]
+            },
+            {
+              "subtitle": "Tình huống khẩn cấp",
+              "details": [
+                "Tai nạn trong campus: Gọi bảo vệ ngay (số điện thoại dán ở các tòa nhà). Bảo vệ sẽ liên hệ y tế và xử lý ban đầu.",
+                "Cấp cứu ngoài giờ: Gọi 115 (cấp cứu) hoặc nhờ bảo vệ KTX hỗ trợ gọi xe.",
+                "Ngất/Sốc nhiệt trong phòng thi: Giơ tay báo giám thị ngay. Giám thị có quy trình xử lý riêng, không tự xử lý hoặc cố gắng tiếp tục thi."
+              ],
+              "tip": "Lưu số điện thoại phòng y tế và bảo vệ campus vào điện thoại ngay từ tuần đầu tiên. Trong lúc hoảng loạn, bạn sẽ không có thời gian tìm kiếm."
+            }
+          ]
+        },
+        {
+          "id": "NEW6",
+          "title": "Hỗ Trợ Tâm Lý & Sức Khỏe Tinh Thần",
+          "content": "Đại học là giai đoạn nhiều áp lực. Căng thẳng, lo âu, cô đơn, mất định hướng là những điều rất nhiều sinh viên trải qua nhưng ít ai nói ra. Bạn không đơn độc.",
+          "details": [
+            "Dịch vụ tư vấn tâm lý: Một số cơ sở FPT có phòng tư vấn tâm lý với chuyên gia hoặc tham vấn viên. Hỏi phòng Dịch vụ sinh viên để biết lịch và cách đặt hẹn.",
+            "Advisor cũng là kênh hỗ trợ: Ngoài học vụ, Advisor được đào tạo để lắng nghe và định hướng sinh viên trong khó khăn cá nhân.",
+            "Cộng đồng online: FPT có các group Facebook/Discord nội bộ nơi sinh viên chia sẻ và hỗ trợ nhau.",
+            "Đường dây hỗ trợ bên ngoài: Nếu cần nói chuyện với ai ngay lập tức, đường dây hỗ trợ sức khỏe tâm thần quốc gia 1800 599 920 (miễn phí, 24/7)."
+          ],
+          "warning": "Đừng tự chịu đựng quá lâu. Nhiều bạn trượt môn, bỏ học không phải vì không đủ thông minh mà vì không được hỗ trợ tâm lý kịp thời. Tìm giúp đỡ là dũng cảm, không phải yếu đuối.",
+          "tip": "Nếu bạn nhận ra bạn bè đang có dấu hiệu stress nặng hoặc trầm cảm, hãy chủ động nói chuyện và gợi ý họ tìm đến Advisor hoặc phòng tư vấn tâm lý. Một người bạn tốt đôi khi cứu cả một hành trình đại học."
+        },
+        {
+          "id": "NEW7",
+          "title": "Ăn Uống & Dịch Vụ Campus",
+          "content": "Ăn uống lành mạnh và tiết kiệm là kỹ năng sống quan trọng trong 4 năm đại học.",
+          "subsections": [
+            {
+              "subtitle": "Canteen & khu ăn uống",
+              "details": [
+                "Canteen chính: Đa dạng món, giá sinh viên (thường 25k-50k/suất). Đến sớm để tránh hết đồ ăn vào giờ cao điểm (11h30-12h30).",
+                "Chuỗi tiện lợi trong campus (7-Eleven, Circle K...): Đồ ăn nhanh, giá cao hơn canteen nhưng mở muộn hơn.",
+                "Xe đẩy bán đồ ăn: Thường có giá tốt hơn, đặc biệt bữa sáng. Cần kiểm tra vệ sinh trước khi mua.",
+                "Nước uống: Máy nước lọc miễn phí hoặc giá rẻ đặt ở nhiều điểm trong campus. Mang bình nước cá nhân để tiết kiệm."
+              ]
+            },
+            {
+              "subtitle": "Tiết kiệm chi phí ăn uống",
+              "details": [
+                "Nấu ăn tại KTX: Nếu phòng có bếp, nấu ăn cùng roommate giúp tiết kiệm 30-50% chi phí ăn uống.",
+                "Mua thực phẩm tại chợ gần campus: Rẻ hơn siêu thị đáng kể. Hỏi các bạn khóa trên về chợ gần trường nhất.",
+                "App giao đồ ăn (ShopeeFood, GrabFood): Tiện nhưng tốn tiền phí giao hàng. Dùng hợp lý, tránh lạm dụng.",
+                "Đặt cơm theo tuần/tháng: Một số hàng cơm gần trường có gói đặt cơm giá ưu đãi cho sinh viên."
+              ],
+              "tip": "Đặt ngân sách ăn uống cố định mỗi ngày (ví dụ: 80k/ngày) và ghi chép chi tiêu. Nhiều sinh viên tiêu quá nhiều vào đồ ăn mà không nhận ra cho đến cuối tháng."
+            }
+          ]
+        },
+        {
+          "id": "NEW8",
+          "title": "Giao Thông & Di Chuyển",
+          "content": "Di chuyển thông minh giúp bạn tiết kiệm thời gian và tiền bạc đáng kể trong 4 năm học.",
+          "subsections": [
+            {
+              "subtitle": "Đến trường",
+              "details": [
+                "Xe buýt: Nhiều tuyến xe buýt công cộng đi qua hoặc gần campus. Dùng Google Maps tra tuyến + giờ. Vé tháng sinh viên rất rẻ.",
+                "Xe máy cá nhân: Thực tế nhất với sinh viên ở TP.HCM và Hà Nội. Cần đăng ký chỗ gửi xe tháng để tiết kiệm (hỏi bảo vệ về phí gửi xe).",
+                "Grab/Be: Tiện nhưng tốn tiền nếu dùng hàng ngày. Phù hợp khi đi xa hoặc khẩn cấp.",
+                "Đi nhờ xe (Carpool): Tìm bạn cùng xóm/khu vực để đi chung, chia tiền xăng. Group chat lớp là nơi tốt để hỏi."
+              ]
+            },
+            {
+              "subtitle": "Dành riêng cho sinh viên Hòa Lạc (FPT Hà Nội)",
+              "details": [
+                "Xe buýt nội bộ: FPT có dịch vụ xe buýt đưa đón giữa campus Hòa Lạc và trung tâm Hà Nội. Đặt vé online, ưu tiên đặt sớm.",
+                "Xe đạp trong campus: Một số khu vực có dịch vụ thuê xe đạp chia sẻ để đi lại trong campus rộng lớn.",
+                "Siêu thị/tiện ích gần campus: Khá hạn chế so với trong nội thành. Lên kế hoạch mua sắm khi về nội thành để tiết kiệm chi phí."
+              ]
+            }
+          ]
+        },
+        {
+          "id": 22,
+          "title": "Câu Lạc Bộ & Hoạt Động Ngoại Khóa",
+          "content": "FPT có hệ sinh thái CLB cực kỳ phong phú, từ CLB kỹ thuật (F-Code, AI Club) đến CLB nghệ thuật, thể thao, tình nguyện...",
+          "details": [
+            "Tuyển thành viên: Các CLB lớn (F-Code, Cóc Sài Gòn...) có quy trình tuyển dụng gắt gao gồm CV, vòng phỏng vấn và thử thách thực tế.",
+            "Thành lập CLB mới: Cần ít nhất 10 thành viên, một giảng viên bảo trợ và phải nộp đề án tại phòng Dịch vụ sinh viên.",
+            "Quỹ CLB: Thành viên đóng góp hàng tháng để duy trì hoạt động. Hãy hỏi rõ mức đóng góp trước khi gia nhập.",
+            "Nghỉ CLB: Thông báo trước ít nhất 2 tuần và bàn giao công việc để không bị trừ điểm rèn luyện.",
+            "CLB tiêu biểu: F-Code (lập trình/cạnh tranh), FAAI (AI/Machine Learning), F-Media (truyền thông), FPTU English Club (tiếng Anh), Cóc Radio (podcast/media), CLB Tình nguyện."
+          ],
+          "tip": "Đừng tham gia quá nhiều CLB một lúc. Tốt hơn là tập trung vào 1-2 CLB phù hợp với định hướng nghề nghiệp và đóng góp thực sự có chất lượng."
+        },
+        {
+          "id": 31,
+          "title": "Việc Làm Bán Thời Gian",
+          "table": {
+            "headers": [
+              "Công việc",
+              "Yêu cầu",
+              "Thu nhập ước tính"
+            ],
+            "rows": [
+              [
+                "CTV Tuyển sinh",
+                "Giao tiếp tốt, hiểu biết về trường",
+                "Hoa hồng + thù lao theo kết quả"
+              ],
+              [
+                "Trực quầy Dịch vụ",
+                "Kiên nhẫn, cẩn thận",
+                "25k-40k/giờ"
+              ],
+              [
+                "Nhân viên Canteen/7-Eleven",
+                "Nhanh nhẹn, đúng giờ",
+                "25k-35k/giờ"
+              ],
+              [
+                "Trợ giảng (Tutor)",
+                "Giỏi môn học, kỹ năng giảng dạy",
+                "100k-200k/buổi tùy môn"
+              ],
+              [
+                "Content Creator / Freelancer",
+                "Kỹ năng thiết kế, viết lách, code",
+                "200k-500k/task hoặc theo dự án"
+              ],
+              [
+                "Gia sư tại nhà",
+                "Giỏi môn học, kiên nhẫn",
+                "150k-300k/buổi"
+              ],
+              [
+                "Nhân viên sự kiện (Event Staff)",
+                "Ngoại hình tốt, năng động",
+                "200k-400k/ca sự kiện"
+              ]
+            ]
+          },
+          "warning": "Chỉ nên làm thêm tối đa 20 giờ/tuần. Nhiều sinh viên vì ham kiếm tiền mà bỏ bê học hành, kết quả là trượt môn và phải mất thêm học phí và thời gian học lại.",
+          "tip": "Ưu tiên việc làm thêm liên quan đến ngành học. 6 tháng thực tập tại startup công nghệ dù lương thấp vẫn tốt hơn 2 năm bán hàng không liên quan khi viết CV xin việc sau tốt nghiệp."
+        },
+        {
+          "id": 29,
+          "title": "Văn hóa Cóc - Bản sắc FPT",
+          "details": [
+            "Linh vật Cóc: Tượng trưng cho sự kiên trì, thông minh và tinh thần 'Cày cuốc' của dân công nghệ FPT.",
+            "F-Camp: Trại tân sinh viên tổ chức đầu mỗi khóa. Đây là nơi bạn gặp OG (Old Generation), học văn hóa trường và kết bạn thân thiết nhất.",
+            "Áo cam FPT: Niềm tự hào của sinh viên. Mặc áo cam vào các ngày lễ hội, sự kiện quan trọng.",
+            "Giải thưởng Cóc Vàng: Vinh dự cao nhất mỗi kỳ. Tên các Cóc Vàng được ghi danh tại bảng vàng của trường.",
+            "Tòa Alpha: Kiến trúc ô vuông độc đáo là địa điểm sống ảo và chụp kỷ yếu được yêu thích nhất campus.",
+            "NG - OG (New Generation - Old Generation): Hệ thống mentor-mentee không chính thức nhưng rất mạnh tại FPT. Tìm một OG tốt từ kỳ đầu tiên có thể thay đổi cả hành trình đại học của bạn."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "V",
+      "name": "GIẢI QUYẾT SỰ CỐ & AI & SỰ NGHIỆP",
+      "color": "🟥",
+      "description": "Hướng dẫn thi, xử lý sự cố FAP/LMS, công cụ AI, tốt nghiệp và sự nghiệp",
+      "groups": [
+        {
+          "id": 12,
+          "title": "Hướng dẫn Thi - Exam Guide Đầy Đủ",
+          "subsections": [
+            {
+              "subtitle": "Trước khi thi",
+              "details": [
+                "Kiểm tra lịch thi, phòng thi và mã đề trên FAP ít nhất 3 ngày trước.",
+                "Sạc đầy pin laptop, mang theo sạc. Cài và test SEB phiên bản mới nhất.",
+                "Đến phòng thi trước 15 phút để kiểm tra máy tính và ổn định tâm lý.",
+                "Mang thẻ sinh viên. Không có thẻ → ra phòng Dịch vụ sinh viên xin giấy xác nhận ngay khi đến trường."
+              ]
+            },
+            {
+              "subtitle": "Trong khi thi",
+              "details": [
+                "Tuyệt đối không trao đổi với người khác dưới bất kỳ hình thức nào.",
+                "Không thoát SEB khi chưa nộp bài xong. Mọi hành động bất thường đều được ghi log.",
+                "Có sự cố kỹ thuật → giơ tay báo giám thị ngay. Tuyệt đối không tự xử lý.",
+                "Quản lý thời gian: Đọc lướt toàn bộ đề trước, ưu tiên câu dễ, để câu khó lại cuối."
+              ]
+            },
+            {
+              "subtitle": "Sau khi thi",
+              "details": [
+                "Kiểm tra trạng thái nộp bài trên EOS trước khi đứng dậy.",
+                "Ký tên vào danh sách dự thi trước khi ra về.",
+                "Quên nộp Assignment: Hệ thống LMS đóng đúng giờ, không có ngoại lệ kỹ thuật. Hãy mail cho giảng viên giải thích lý do."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "NEW9",
+          "title": "Công Cụ AI - Sử Dụng Thông Minh Trong Học Tập",
+          "content": "AI như ChatGPT, Claude, Gemini... là công cụ hỗ trợ học tập mạnh mẽ nếu dùng đúng cách. Nhưng dùng sai có thể dẫn đến đạo văn và kỷ luật nghiêm trọng.",
+          "subsections": [
+            {
+              "subtitle": "Cách dùng AI ĐÚNG trong học tập",
+              "details": [
+                "Giải thích khái niệm: 'Giải thích cho tôi hiểu về [khái niệm] như tôi là người mới bắt đầu' → rất hiệu quả cho việc tự học.",
+                "Gỡ lỗi code: Paste code lỗi + thông báo lỗi vào AI → nhận gợi ý sửa lỗi và giải thích nguyên nhân.",
+                "Brainstorm ý tưởng: Dùng AI để tạo danh sách ý tưởng ban đầu, sau đó tự phát triển theo hướng của mình.",
+                "Kiểm tra lại kiến thức: 'Hãy hỏi tôi 10 câu hỏi về [chủ đề] để tôi ôn tập' → ôn thi hiệu quả.",
+                "Tóm tắt tài liệu dài: Paste đoạn text dài vào AI để tóm tắt ý chính, sau đó tự đọc bản gốc để hiểu sâu hơn."
+              ]
+            },
+            {
+              "subtitle": "Cách dùng AI SAI - Rủi ro kỷ luật",
+              "details": [
+                "Nhờ AI viết toàn bộ assignment rồi nộp nguyên: Đây là đạo văn AI. Turnitin và giảng viên ngày càng nhận ra văn phong AI.",
+                "Nhờ AI giải bài thi take-home và copy nguyên: Vi phạm học thuật nghiêm trọng.",
+                "Dán nguyên kết quả AI vào báo cáo: Dễ bị phát hiện qua kiểm tra Turnitin và kiểm tra phong cách viết.",
+                "Dùng AI trong phòng thi kín: Điện thoại bị thu, SEB chặn internet → không thể và không nên thử."
+              ],
+              "warning": "FPT đang tích cực cập nhật chính sách về sử dụng AI. Hãy hỏi rõ giảng viên về quy định AI cho từng môn học trước khi dùng. Một số môn cho phép dùng AI có trích dẫn, một số cấm hoàn toàn."
+            },
+            {
+              "subtitle": "Công cụ AI hữu ích cho sinh viên FPT",
+              "table": {
+                "headers": [
+                  "Công cụ",
+                  "Dùng cho việc gì",
+                  "Miễn phí không?"
+                ],
+                "rows": [
+                  [
+                    "ChatGPT (GPT-4o)",
+                    "Hỏi đáp, giải thích, brainstorm, code",
+                    "Có giới hạn, Plus 20$/tháng"
+                  ],
+                  [
+                    "Claude (Anthropic)",
+                    "Phân tích văn bản dài, viết lách, giải thích",
+                    "Có giới hạn hàng ngày"
+                  ],
+                  [
+                    "GitHub Copilot",
+                    "Gợi ý code tự động trong IDE",
+                    "Miễn phí với GitHub Student Pack"
+                  ],
+                  [
+                    "Grammarly",
+                    "Kiểm tra ngữ pháp tiếng Anh",
+                    "Cơ bản miễn phí, Premium có phí"
+                  ],
+                  [
+                    "Notion AI",
+                    "Ghi chú thông minh, tóm tắt tài liệu",
+                    "Tích hợp vào Notion, có giới hạn"
+                  ],
+                  [
+                    "Google Bard / Gemini",
+                    "Tìm kiếm có hỗ trợ AI, phân tích",
+                    "Miễn phí"
+                  ],
+                  [
+                    "Perplexity AI",
+                    "Tìm kiếm và tổng hợp thông tin có nguồn",
+                    "Miễn phí cơ bản"
+                  ]
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "NEW10",
+          "title": "Kênh Thông Tin Chính Thức - Theo Dõi Đúng Để Không Bỏ Lỡ",
+          "content": "Thông tin quan trọng về lịch thi, học bổng, sự kiện... được phát tán qua nhiều kênh. Theo dõi đúng kênh giúp bạn không bao giờ bỡ ngỡ vì không biết.",
+          "subsections": [
+            {
+              "subtitle": "Kênh chính thức bắt buộc theo dõi",
+              "details": [
+                "Email FPT (@fpt.edu.vn): NGUỒN QUAN TRỌNG NHẤT. Mọi thông báo học vụ, học phí, thi cử đều qua email này. Kiểm tra ít nhất 1 lần/ngày.",
+                "FAP (fap.fpt.edu.vn): Tra cứu điểm danh, lịch thi, đăng ký môn, đơn từ, học phí. Bookmark ngay.",
+                "LMS (learning.fpt.edu.vn hoặc tương tự): Tài liệu môn học, nộp assignment, thông báo của giảng viên.",
+                "Fanpage Facebook chính thức của cơ sở: Thông báo sự kiện, thay đổi lịch, tin tức trường. Follow và bật thông báo."
+              ]
+            },
+            {
+              "subtitle": "Kênh cộng đồng hữu ích",
+              "details": [
+                "Group Facebook sinh viên FPT (theo cơ sở và ngành): Chia sẻ kinh nghiệm, hỏi đáp, mua bán đồ cũ, tìm nhóm học.",
+                "Discord server của ngành/CLB: Real-time chat, chia sẻ tài liệu, thảo luận bài tập.",
+                "Zalo/Messenger lớp học: Thông báo nội bộ lớp, nhắc lịch học, bài tập. Luôn trong group lớp của bạn.",
+                "Reddit r/FPTUniversity (nếu có): Thảo luận ẩn danh về trải nghiệm học tập, review giảng viên, v.v."
+              ],
+              "warning": "Thông tin từ group cộng đồng đôi khi không chính xác hoặc đã cũ. Luôn xác nhận lại trên FAP hoặc email chính thức trước khi hành động theo thông tin từ group."
+            }
+          ]
+        },
+        {
+          "id": 26,
+          "title": "Giải quyết Sự cố & Khiếu nại",
+          "table": {
+            "headers": [
+              "Sự cố",
+              "Cách xử lý nhanh",
+              "Thời hạn"
+            ],
+            "rows": [
+              [
+                "Lỗi FAP/LMS",
+                "Chụp màn hình, gửi ticket cho IT Support",
+                "Càng sớm càng tốt"
+              ],
+              [
+                "Khiếu nại điểm số",
+                "Làm đơn phúc tra trên FAP hoặc gặp GV",
+                "3 ngày sau khi có điểm FE"
+              ],
+              [
+                "Mất mật khẩu FAP",
+                "Dùng 'Forgot password' → email cá nhân",
+                "Tức thì"
+              ],
+              [
+                "Sự cố nộp tiền",
+                "Giữ ảnh giao dịch, liên hệ phòng Tài chính",
+                "Trong ngày"
+              ],
+              [
+                "Xung đột nhóm",
+                "Liên hệ giảng viên bộ môn để can thiệp",
+                "Trước deadline nhóm"
+              ],
+              [
+                "Điểm danh sai",
+                "Liên hệ giảng viên kèm bằng chứng (ảnh, vé xe...)",
+                "Trong 24 giờ"
+              ],
+              [
+                "Bị xếp lịch thi trùng 2 môn",
+                "Liên hệ Học vụ ngay, không tự giải quyết",
+                "Ngay khi phát hiện"
+              ],
+              [
+                "Máy tính hỏng trước ngày thi",
+                "Liên hệ phòng thi để mượn máy hoặc xin lùi lịch",
+                "Ít nhất 24h trước"
+              ]
+            ]
+          },
+          "warning": "Thời hạn phúc tra điểm rất ngắn (3 ngày). Đừng chờ đợi hay do dự nếu bạn cho rằng điểm của mình có vấn đề."
+        },
+        {
+          "id": 6,
+          "title": "Sự nghiệp & Việc làm",
+          "content": "Bắt đầu chuẩn bị cho sự nghiệp từ năm 2, không phải năm 4.",
+          "details": [
+            "Ngày hội việc làm (Job Fair): Hàng năm với sự tham gia của FPT Software, Viettel, Samsung, VinAI... Dù đang là sinh viên, hãy đến để kết nối và hiểu thị trường.",
+            "Mock Interview: Phòng Quan hệ doanh nghiệp tổ chức các buổi phỏng vấn thử với chuyên gia HR thực sự.",
+            "Thực tập tại FPT Software: Cơ hội trở thành nhân viên chính thức ngay sau OJT với mức thu nhập cạnh tranh.",
+            "CV workshop: Phòng Quan hệ doanh nghiệp thường tổ chức các buổi sửa CV miễn phí.",
+            "Portfolio: Với sinh viên ngành kỹ thuật/thiết kế, portfolio dự án mạnh hơn GPA trong mắt nhà tuyển dụng."
+          ],
+          "subsections": [
+            {
+              "subtitle": "Lộ trình chuẩn bị sự nghiệp theo từng năm",
+              "details": [
+                "Năm 1: Tập trung GPA, chọn CLB đúng định hướng, học kỹ năng cơ bản (Git, Linux, Figma... tùy ngành).",
+                "Năm 2: Tham gia hackathon/cuộc thi, làm side project cá nhân, tạo LinkedIn và GitHub, tìm kiếm internship ngắn hạn.",
+                "Năm 3: OJT, mở rộng network chuyên ngành, tham gia cộng đồng kỹ thuật (meetup, conference).",
+                "Năm 4: Capstone project chất lượng, full-time job hunting, chuẩn bị hồ sơ tốt nghiệp."
+              ],
+              "tip": "LinkedIn không phải là thứ chỉ cần làm khi ra trường. Hãy tạo profile LinkedIn từ năm 2, kết nối với các anh chị alumni FPT và theo dõi các công ty trong lĩnh vực bạn quan tâm."
+            }
+          ]
+        },
+        {
+          "id": 25,
+          "title": "Tốt nghiệp & Chứng chỉ",
+          "table": {
+            "headers": [
+              "Yêu cầu",
+              "Chi tiết",
+              "Thời điểm chuẩn bị"
+            ],
+            "rows": [
+              [
+                "Chứng chỉ tiếng Anh",
+                "Hoàn thành Level 6 hoặc IELTS/TOEFL tương đương",
+                "Trước khi làm đồ án"
+              ],
+              [
+                "Chứng chỉ GDQP",
+                "Hoàn thành kỳ quân sự tại trung tâm liên kết",
+                "Thường kỳ 1-2"
+              ],
+              [
+                "Hoàn thành OJT",
+                "Có biên bản xác nhận từ công ty",
+                "Trước đồ án tốt nghiệp"
+              ],
+              [
+                "Thanh toán học phí",
+                "Không có nợ học phí nào",
+                "Trước khi nhận bằng"
+              ],
+              [
+                "Đăng ký áo cử nhân",
+                "Thuê hoặc mua áo lễ tốt nghiệp",
+                "Trước lễ tốt nghiệp 1 tháng"
+              ],
+              [
+                "Hoàn thành Vovinam",
+                "Qua cả 3 cấp độ Vovinam",
+                "Trong khóa học"
+              ],
+              [
+                "Hoàn thành Nhạc cụ",
+                "Qua môn Nhạc cụ Dân tộc",
+                "Thường kỳ 1-3"
+              ],
+              [
+                "Không nợ môn bắt buộc",
+                "Tất cả môn trong curriculum đều đã qua",
+                "Kiểm tra trước kỳ cuối"
+              ]
+            ]
+          },
+          "tip": "Tạo checklist tốt nghiệp cá nhân trên Notion hoặc Google Sheets và cập nhật theo tiến độ mỗi kỳ. Nhiều bạn phát hiện thiếu điều kiện tốt nghiệp rất trễ vì không theo dõi hệ thống."
+        },
+        {
+          "id": "NEW11",
+          "title": "Mạng Lưới Alumni & Sau Tốt Nghiệp",
+          "content": "Mạng lưới alumni FPT là một tài sản vô giá. Hàng chục nghìn cựu sinh viên FPT đang làm việc tại FPT Software, VNG, Tiki, các công ty nước ngoài và startup khắp nơi.",
+          "details": [
+            "FPT Alumni Network: Trang web và group Facebook chính thức cho cựu sinh viên. Gia nhập ngay khi tốt nghiệp.",
+            "Kết nối khi còn là sinh viên: Tham gia các sự kiện có alumni, LinkedIn là kênh kết nối chuyên nghiệp nhất.",
+            "Hỏi advice từ alumni: Hầu hết alumni FPT rất sẵn lòng tư vấn cho đàn em về định hướng nghề nghiệp và phỏng vấn xin việc.",
+            "Nhờ alumni refer (giới thiệu): Nhiều công ty có chương trình thưởng cho nhân viên giới thiệu ứng viên, nên alumni có động lực giúp bạn nếu CV bạn tốt.",
+            "Đóng góp lại: Khi đã ra trường và thành công, đừng quên trở lại chia sẻ kinh nghiệm với đàn em. Đó là tinh thần FPT."
+          ]
+        }
+      ]
+    }
+  ],
+  "faq": {
+    "title": "FAQ - Câu Hỏi Thường Gặp Nhất",
+    "description": "Tổng hợp các câu hỏi mà mọi sinh viên FPT đều thắc mắc ít nhất một lần.",
+    "questions": [
+      {
+        "q": "Mình bị vắng quá 20% rồi, có cách nào thoát NE không?",
+        "a": "Gần như không có ngoại lệ kỹ thuật cho NE. Tuy nhiên, nếu bạn có giấy tờ hợp lệ (nhập viện, tang gia...) và liên hệ giảng viên sớm, một số GV có thể xem xét. Sau khi NE, hãy đăng ký học lại môn đó ngay kỳ tiếp theo - đừng để nợ môn kéo dài."
+      },
+      {
+        "q": "GPA của mình đang rất thấp (dưới 2.0), phải làm gì?",
+        "a": "Gặp Advisor ngay lập tức - đó là việc đầu tiên. Tiếp theo, đăng ký học lại các môn điểm thấp (ưu tiên môn nhiều tín chỉ), giảm số môn mỗi kỳ để tập trung, và xem xét có cần thay đổi ngành/hướng đi không. Đừng trốn tránh vấn đề vì GPA dưới 2.0 hai kỳ liên tiếp có thể dẫn đến đình chỉ học tập."
+      },
+      {
+        "q": "Mình muốn rút ngắn thời gian học, có cách nào không?",
+        "a": "Có một số cách: (1) Học nhiều tín chỉ mỗi kỳ (nhưng phải đảm bảo không trượt), (2) Dùng P2A để bỏ qua môn đã biết, (3) Sử dụng chứng chỉ ngoại ngữ quốc tế để jump level tiếng Anh, (4) Hoàn thành OJT đúng hạn mà không trễ. Quan trọng là không nên vội đến mức trượt môn vì vậy sẽ tốn thêm thời gian."
+      },
+      {
+        "q": "Học phí FPT đắt, có cách nào giảm không?",
+        "a": "Có: (1) Học bổng đầu vào nếu bạn có điểm cao, (2) Học bổng khuyến học kỳ tiếp nếu GPA xuất sắc, (3) Học bổng hoàn cảnh nếu thuộc diện khó khăn, (4) Vay vốn Ngân hàng Chính sách Xã hội lãi suất thấp, (5) Học bổng từ doanh nghiệp đối tác. Không trượt môn cũng là cách tiết kiệm học phí gián tiếp."
+      },
+      {
+        "q": "Mình không thích ngành đang học, có nên chuyển không?",
+        "a": "Hãy tự hỏi: (1) Bạn không thích vì chưa hiểu đủ hay thực sự sai định hướng? (2) Ngành muốn chuyển bạn đã tìm hiểu kỹ chưa? Gặp Advisor và sinh viên năm trên của ngành mới trước khi quyết định. Nếu chuyển ngành ở kỳ 1-2 chi phí còn thấp; chuyển ở kỳ 4-5 sẽ mất nhiều tín chỉ hơn."
+      },
+      {
+        "q": "SEB bị lỗi trong phòng thi, mình phải làm gì?",
+        "a": "NGAY LẬP TỨC giơ tay báo giám thị. Đừng tự xử lý (tắt máy, restart...) vì sẽ bị ghi là hành vi bất thường. Giám thị sẽ lập biên bản sự cố và bạn có thể được cấp máy tính khác hoặc xin phép thi bù."
+      },
+      {
+        "q": "Làm sao để tìm nhóm làm đồ án tốt?",
+        "a": "Tìm người có kỹ năng bổ sung (không cần tất cả cùng giỏi một thứ), cùng cam kết về deadline, và quan trọng nhất là giao tiếp tốt. Group chat lớp, Discord, hay các anh chị quen biết trong CLB kỹ thuật là nguồn tìm nhóm tốt. Tránh nhóm 'chỉ có bạn thân' nếu bạn thân không có kỹ năng phù hợp."
+      },
+      {
+        "q": "Tiếng Anh mình yếu, học Level 1-2 có qua được không?",
+        "a": "Được, nếu bạn chăm chỉ. Level 1-2 không yêu cầu quá cao. Đến lớp đầy đủ, làm bài tập đúng hạn, và đặc biệt là tích cực nói trong lớp thay vì sợ sai. Nếu thực sự lo lắng, học thêm tại trung tâm tiếng Anh song song. Nhớ: mỗi level trượt = mất một học kỳ + học phí."
+      },
+      {
+        "q": "Mình quên thẻ sinh viên đúng ngày thi, giờ phải làm thế nào?",
+        "a": "Đến ngay phòng Dịch vụ sinh viên TRƯỚC giờ thi để xin giấy xác nhận danh tính tạm thời. Đến sớm ít nhất 30-45 phút trước giờ thi. Đa số cơ sở đều hỗ trợ trường hợp này."
+      },
+      {
+        "q": "Có cần tham gia F-Camp không?",
+        "a": "Không bắt buộc nhưng CỰC KỲ khuyến khích. F-Camp là nơi bạn hiểu văn hóa trường, gặp OG hỗ trợ học tập, và kết bạn thân nhất trong 4 năm đại học. Nhiều mối quan hệ sự nghiệp giá trị nhất của dân FPT cũng bắt đầu từ F-Camp."
+      },
+      {
+        "q": "Làm sao để biết mình có đủ điều kiện tốt nghiệp chưa?",
+        "a": "Trên FAP có mục 'Graduation Progress' hoặc tương tự - kiểm tra định kỳ mỗi kỳ. Ngoài ra: (1) Hoàn thành toàn bộ môn trong curriculum, (2) Qua Level 6 tiếng Anh, (3) Hoàn thành OJT, (4) Qua Vovinam và Nhạc cụ, (5) Có chứng chỉ GDQP, (6) Không nợ học phí. Gặp Advisor để rà soát checklist cụ thể."
+      }
+    ]
+  },
+  "glossary": {
+    "title": "Từ Điển Thuật Ngữ FPT",
+    "description": "Những từ và viết tắt bạn sẽ nghe hoặc đọc hàng ngày tại FPT.",
+    "terms": [
+      {
+        "term": "FAP",
+        "definition": "FPT Academic Portal - cổng thông tin học vụ trung tâm"
+      },
+      {
+        "term": "LMS",
+        "definition": "Learning Management System - nơi tải tài liệu và nộp bài"
+      },
+      {
+        "term": "EOS",
+        "definition": "Hệ thống thi trực tuyến của FPT"
+      },
+      {
+        "term": "SEB",
+        "definition": "Safe Exam Browser - phần mềm thi trực tuyến bảo mật"
+      },
+      {
+        "term": "NE",
+        "definition": "Not Eligible - bị cấm thi do vắng quá 20%"
+      },
+      {
+        "term": "OJT",
+        "definition": "On-the-Job Training - kỳ thực tập tại doanh nghiệp"
+      },
+      {
+        "term": "GPA",
+        "definition": "Grade Point Average - điểm trung bình tích lũy (thang 4)"
+      },
+      {
+        "term": "PE",
+        "definition": "Progress Exam - bài kiểm tra giữa kỳ"
+      },
+      {
+        "term": "FE",
+        "definition": "Final Exam - bài thi cuối kỳ"
+      },
+      {
+        "term": "P2A",
+        "definition": "Prove to Advance - cơ chế thi bỏ môn đã biết"
+      },
+      {
+        "term": "GDQP",
+        "definition": "Giáo dục Quốc phòng - môn học bắt buộc, thường học ở trung tâm liên kết"
+      },
+      {
+        "term": "Little UK",
+        "definition": "Tên gọi dân gian cho chương trình tiếng Anh dự bị của FPT"
+      },
+      {
+        "term": "Capstone",
+        "definition": "Đồ án tốt nghiệp cuối khóa"
+      },
+      {
+        "term": "Advisor",
+        "definition": "Cố vấn học tập - người hỗ trợ sinh viên về học vụ và định hướng"
+      },
+      {
+        "term": "MOU",
+        "definition": "Memorandum of Understanding - thỏa thuận hợp tác giữa trường và doanh nghiệp"
+      },
+      {
+        "term": "OG / NG",
+        "definition": "Old Generation / New Generation - anh/chị khóa trên và tân sinh viên"
+      },
+      {
+        "term": "F-Camp",
+        "definition": "Trại huấn luyện tân sinh viên đầu mỗi khóa học"
+      },
+      {
+        "term": "Cóc Vàng",
+        "definition": "Giải thưởng danh giá nhất cho sinh viên xuất sắc mỗi kỳ"
+      },
+      {
+        "term": "Honor Night",
+        "definition": "Lễ vinh danh sinh viên giỏi/xuất sắc cuối mỗi kỳ"
+      },
+      {
+        "term": "Retake",
+        "definition": "Học lại môn đã trượt"
+      },
+      {
+        "term": "Turnitin",
+        "definition": "Phần mềm kiểm tra đạo văn được dùng phổ biến tại FPT"
+      },
+      {
+        "term": "Tòa Alpha",
+        "definition": "Tòa nhà biểu tượng với kiến trúc ô vuông đặc trưng của campus FPT"
+      },
+      {
+        "term": "ĐRL",
+        "definition": "Điểm Rèn Luyện - điểm đánh giá hoạt động ngoài học tập"
+      },
+      {
+        "term": "KTX",
+        "definition": "Ký Túc Xá - ký túc xá sinh viên trong campus"
+      },
+      {
+        "term": "BHYT",
+        "definition": "Bảo Hiểm Y Tế - bắt buộc với sinh viên"
+      }
+    ]
+  },
+  "conclusion": "4 năm đại học FPT là một hành trình dài, nhiều thử thách nhưng cũng đầy ắp kỷ niệm và cơ hội. Hãy học thật sự, tham gia tích cực vào cộng đồng, và đừng ngại tìm kiếm sự hỗ trợ khi cần. Tài liệu này sẽ được cập nhật liên tục - nếu bạn có thông tin mới hoặc kinh nghiệm muốn đóng góp, hãy chia sẻ với cộng đồng. Chúc bạn thành công trên con đường phía trước -- Cóc ơi, cố lên! 🍀"
+}

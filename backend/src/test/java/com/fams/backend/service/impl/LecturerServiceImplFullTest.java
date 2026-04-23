@@ -109,7 +109,7 @@ class LecturerServiceImplFullTest {
             when(userRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(userPage);
             when(lecturerProfileRepository.findAllByUserIdIn(List.of(1L))).thenReturn(List.of(lecturerProfile));
 
-            Page<LecturerResponse> result = lecturerService.getAllLecturers(null, null, null, null, pageable);
+            Page<LecturerResponse> result = lecturerService.getAllLecturers(null, null, null, null, null, null, pageable);
 
             assertNotNull(result);
             assertEquals(1, result.getTotalElements());
@@ -127,7 +127,7 @@ class LecturerServiceImplFullTest {
             when(userRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(userPage);
             when(lecturerProfileRepository.findAllByUserIdIn(List.of(1L))).thenReturn(List.of(lecturerProfile));
 
-            Page<LecturerResponse> result = lecturerService.getAllLecturers("Tran", null, null, null, pageable);
+            Page<LecturerResponse> result = lecturerService.getAllLecturers("Tran", null, null, null, null, null, pageable);
 
             assertNotNull(result);
             assertEquals(1, result.getTotalElements());
@@ -142,7 +142,7 @@ class LecturerServiceImplFullTest {
             when(userRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(emptyPage);
             when(lecturerProfileRepository.findAllByUserIdIn(List.of())).thenReturn(List.of());
 
-            Page<LecturerResponse> result = lecturerService.getAllLecturers("nonexistent", null, null, null, pageable);
+            Page<LecturerResponse> result = lecturerService.getAllLecturers("nonexistent", null, null, null, null, null, pageable);
 
             assertNotNull(result);
             assertEquals(0, result.getTotalElements());
@@ -157,7 +157,7 @@ class LecturerServiceImplFullTest {
             when(userRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(userPage);
             when(lecturerProfileRepository.findAllByUserIdIn(List.of(1L))).thenReturn(List.of(lecturerProfile));
 
-            Page<LecturerResponse> result = lecturerService.getAllLecturers(null, null, "Software Engineering", null, pageable);
+            Page<LecturerResponse> result = lecturerService.getAllLecturers(null, null, "Software Engineering", null, null, null, pageable);
 
             assertNotNull(result);
             assertEquals(1, result.getTotalElements());
@@ -172,7 +172,7 @@ class LecturerServiceImplFullTest {
             when(userRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(userPage);
             when(lecturerProfileRepository.findAllByUserIdIn(List.of(1L))).thenReturn(List.of(lecturerProfile));
 
-            Page<LecturerResponse> result = lecturerService.getAllLecturers(null, null, "Nonexistent Dept", null, pageable);
+            Page<LecturerResponse> result = lecturerService.getAllLecturers(null, null, "Nonexistent Dept", null, null, null, pageable);
 
             assertNotNull(result);
             assertEquals(0, result.getTotalElements());
@@ -187,7 +187,7 @@ class LecturerServiceImplFullTest {
             when(userRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(userPage);
             when(lecturerProfileRepository.findAllByUserIdIn(List.of(1L))).thenReturn(List.of(lecturerProfile));
 
-            Page<LecturerResponse> result = lecturerService.getAllLecturers(null, null, null, true, pageable);
+            Page<LecturerResponse> result = lecturerService.getAllLecturers(null, null, null, null, null, true, pageable);
 
             assertNotNull(result);
         }
@@ -209,7 +209,7 @@ class LecturerServiceImplFullTest {
             when(userRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(userPage);
             when(lecturerProfileRepository.findAllByUserIdIn(List.of(3L))).thenReturn(List.of());
 
-            Page<LecturerResponse> result = lecturerService.getAllLecturers(null, null, null, null, pageable);
+            Page<LecturerResponse> result = lecturerService.getAllLecturers(null, null, null, null, null, null, pageable);
 
             assertNotNull(result);
             assertEquals(1, result.getTotalElements());
@@ -497,7 +497,7 @@ class LecturerServiceImplFullTest {
             lecturerUser.setLecturerProfile(lecturerProfile);
             when(userRepository.findAllLecturersWithProfiles()).thenReturn(List.of(lecturerUser));
 
-            byte[] result = lecturerService.exportLecturers(null, null);
+            byte[] result = lecturerService.exportLecturers(null, null, null, null);
 
             assertNotNull(result);
             assertTrue(result.length > 0);
@@ -510,7 +510,7 @@ class LecturerServiceImplFullTest {
             lecturerUser.setLecturerProfile(lecturerProfile);
             when(userRepository.findAllLecturersWithProfiles()).thenReturn(List.of(lecturerUser));
 
-            byte[] result = lecturerService.exportLecturers("Software Engineering", null);
+            byte[] result = lecturerService.exportLecturers("Software Engineering", null, null, null);
 
             assertNotNull(result);
             assertTrue(result.length > 0);
@@ -522,7 +522,7 @@ class LecturerServiceImplFullTest {
             lecturerUser.setLecturerProfile(lecturerProfile);
             when(userRepository.findAllLecturersWithProfiles()).thenReturn(List.of(lecturerUser));
 
-            byte[] result = lecturerService.exportLecturers(null, "ACTIVE");
+            byte[] result = lecturerService.exportLecturers(null, null, null, "ACTIVE");
 
             assertNotNull(result);
             assertTrue(result.length > 0);
@@ -533,7 +533,7 @@ class LecturerServiceImplFullTest {
         void exportLecturers_emptyData() {
             when(userRepository.findAllLecturersWithProfiles()).thenReturn(List.of());
 
-            byte[] result = lecturerService.exportLecturers(null, null);
+            byte[] result = lecturerService.exportLecturers(null, null, null, null);
 
             assertNotNull(result);
             assertTrue(result.length > 0);
@@ -545,7 +545,7 @@ class LecturerServiceImplFullTest {
             lecturerUser.setLecturerProfile(lecturerProfile);
             when(userRepository.findAllLecturersWithProfiles()).thenReturn(List.of(lecturerUser));
 
-            byte[] result = lecturerService.exportLecturers("Nonexistent Dept", null);
+            byte[] result = lecturerService.exportLecturers("Nonexistent Dept", null, null, null);
 
             assertNotNull(result);
             // Valid Excel file but no data rows
