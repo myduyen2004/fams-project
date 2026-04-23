@@ -22,7 +22,7 @@ import {
   Activity
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { aiToolService, AITool, AIToolTest, KnowledgeSourcePayload } from '../../services/api/aiToolService';
+import { aiToolService, AITool, AIToolTest } from '../../services/api/aiToolService';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 
 export const AIToolManagement: React.FC = () => {
@@ -53,14 +53,14 @@ export const AIToolManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'PARAMS' | 'BODY' | 'CONSOLE'>('PARAMS');
   const [testLogs, setTestLogs] = useState<string>('');
   const [latency, setLatency] = useState<number | null>(null);
-  const [knowledgeSource, setKnowledgeSource] = useState<KnowledgeSourcePayload | null>(null);
-  const [knowledgeContent, setKnowledgeContent] = useState('');
-  const [knowledgeLoading, setKnowledgeLoading] = useState(true);
-  const [knowledgeSaving, setKnowledgeSaving] = useState(false);
+  // const [knowledgeSource, setKnowledgeSource] = useState<KnowledgeSourcePayload | null>(null);
+  // const [knowledgeContent, setKnowledgeContent] = useState('');
+  // const [knowledgeLoading, setKnowledgeLoading] = useState(true);
+  // const [knowledgeSaving, setKnowledgeSaving] = useState(false);
 
   useEffect(() => {
     fetchTools();
-    fetchKnowledgeSource();
+    // fetchKnowledgeSource();
   }, []);
 
   const fetchTools = async () => {
@@ -86,36 +86,36 @@ export const AIToolManagement: React.FC = () => {
     }
   };
 
-  const fetchKnowledgeSource = async () => {
-    setKnowledgeLoading(true);
-    try {
-      const data = await aiToolService.getKnowledgeSource();
-      setKnowledgeSource(data);
-      setKnowledgeContent(data.content || '');
-    } catch (error) {
-      toast.error('Không thể tải nguồn tri thức FPTU');
-      console.error(error);
-    } finally {
-      setKnowledgeLoading(false);
-    }
-  };
+  // const fetchKnowledgeSource = async () => {
+  //   setKnowledgeLoading(true);
+  //   try {
+  //     const data = await aiToolService.getKnowledgeSource();
+  //     setKnowledgeSource(data);
+  //     setKnowledgeContent(data.content || '');
+  //   } catch (error) {
+  //     toast.error('Không thể tải nguồn tri thức FPTU');
+  //     console.error(error);
+  //   } finally {
+  //     setKnowledgeLoading(false);
+  //   }
+  // };
 
-  const handleSaveKnowledgeSource = async () => {
-    setKnowledgeSaving(true);
-    try {
-      const data = await aiToolService.updateKnowledgeSource(knowledgeContent);
-      if (!data.success) {
-        throw new Error(data.message || 'Không thể lưu nguồn tri thức');
-      }
-      setKnowledgeSource(data);
-      setKnowledgeContent(data.content || knowledgeContent);
-      toast.success('Đã cập nhật fptu-information.json');
-    } catch (error: any) {
-      toast.error(error?.message || 'Lưu nguồn tri thức thất bại');
-    } finally {
-      setKnowledgeSaving(false);
-    }
-  };
+  // const handleSaveKnowledgeSource = async () => {
+  //   setKnowledgeSaving(true);
+  //   try {
+  //     const data = await aiToolService.updateKnowledgeSource(knowledgeContent);
+  //     if (!data.success) {
+  //       throw new Error(data.message || 'Không thể lưu nguồn tri thức');
+  //     }
+  //     setKnowledgeSource(data);
+  //     setKnowledgeContent(data.content || knowledgeContent);
+  //     toast.success('Đã cập nhật fptu-information.json');
+  //   } catch (error: any) {
+  //     toast.error(error?.message || 'Lưu nguồn tri thức thất bại');
+  //   } finally {
+  //     setKnowledgeSaving(false);
+  //   }
+  // };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
