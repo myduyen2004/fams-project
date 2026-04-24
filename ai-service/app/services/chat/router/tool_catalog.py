@@ -507,7 +507,7 @@ EXPLICIT_REQUIRED_FIELDS: Dict[str, List[str]] = {
     "get_class_next_session": ["class_name"],
     "get_class_schedule": ["class_name", "date"],
     "get_classes_by_semester": ["semester_code", "semester_name", "semester"],
-    "get_classmates": ["student_code"],
+    "get_classmates": [],
     "get_consecutive_absences": ["class_name"],
     "get_courses_by_name": ["course_name", "course_code"],
     "get_courses_by_semester": ["semester_code", "semester_name", "semester"],

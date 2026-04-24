@@ -121,6 +121,26 @@ class ReadReceipt {
   }
 }
 
+class MessageReaction {
+  final String emoji;
+  final int count;
+  final bool reactedByMe;
+
+  MessageReaction({
+    required this.emoji,
+    required this.count,
+    required this.reactedByMe,
+  });
+
+  factory MessageReaction.fromJson(Map<String, dynamic> json) {
+    return MessageReaction(
+      emoji: json['emoji']?.toString() ?? '',
+      count: int.tryParse(json['count']?.toString() ?? '0') ?? 0,
+      reactedByMe: json['reactedByMe'] == true,
+    );
+  }
+}
+
 class ChatMessage {
   final int id;
   final int groupId;
@@ -140,6 +160,8 @@ class ChatMessage {
   final String? replyToSenderName;
   final String? replyToType;
   final List<ChatMessage>? imageMessages; // For IMAGE_GROUP
+  final List<MessageReaction> reactions;
+  final bool isSending;
   List<ReadReceipt> readBy;
 
   ChatMessage({
@@ -161,6 +183,8 @@ class ChatMessage {
     this.replyToSenderName,
     this.replyToType,
     this.imageMessages,
+    this.reactions = const [],
+    this.isSending = false,
     List<ReadReceipt>? readBy,
   }) : readBy = readBy ?? [];
 
@@ -186,6 +210,12 @@ class ChatMessage {
       replyToContent: json['replyToContent'],
       replyToSenderName: json['replyToSenderName'],
       replyToType: json['replyToType'],
+      reactions: json['reactions'] != null
+          ? (json['reactions'] as List)
+                .map((r) => MessageReaction.fromJson(r as Map<String, dynamic>))
+                .toList()
+          : const [],
+      isSending: json['isSending'] == true,
       readBy: json['readers'] != null
           ? (json['readers'] as List)
                 .map((r) => ReadReceipt.fromJson(r))

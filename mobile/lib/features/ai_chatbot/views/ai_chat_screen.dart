@@ -3,18 +3,171 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:markdown/markdown.dart' as md;
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../home/controllers/home_controller.dart';
 import '../controllers/ai_chat_controller.dart';
 import '../models/ai_chat_models.dart';
+
+class VerticalTableBuilder extends MarkdownElementBuilder {
+  final BuildContext context;
+  VerticalTableBuilder(this.context);
+
+  @override
+  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    if (element.tag != 'table') return null;
+
+    List<String> headers = [];
+    List<List<String>> dataRows = [];
+
+    // Helper to find all rows in the table
+    void collectRows(md.Element el, {bool isHeader = false}) {
+      if (el.tag == 'tr') {
+        List<String> rowData = [];
+        if (el.children != null) {
+          for (var cell in el.children!) {
+            if (cell is md.Element && (cell.tag == 'th' || cell.tag == 'td')) {
+              rowData.add(cell.textContent.trim());
+            }
+          }
+        }
+        if (isHeader || el.children?.any((c) => c is md.Element && c.tag == 'th') == true) {
+          headers.addAll(rowData);
+        } else {
+          dataRows.add(rowData);
+        }
+      } else if (el.children != null) {
+        for (var child in el.children!) {
+          if (child is md.Element) {
+            collectRows(child, isHeader: el.tag == 'thead');
+          }
+        }
+      }
+    }
+
+    collectRows(element);
+
+    if (dataRows.isEmpty) return null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: dataRows.asMap().entries.map((entry) {
+        final rowIndex = entry.key;
+        final row = entry.value;
+        return Container(
+          width: double.infinity,
+          margin: EdgeInsets.only(bottom: 12.h),
+          padding: EdgeInsets.all(14.r),
+          decoration: BoxDecoration(
+            color: Theme.of(context).brightness == Brightness.dark 
+                ? Colors.grey[850] 
+                : Colors.white,
+            borderRadius: BorderRadius.circular(16.r),
+            border: Border.all(color: AppColors.primaryOrange.withOpacity(0.12)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 5,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryOrange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                    child: Text(
+                      'Mục ${rowIndex + 1}',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10.sp,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primaryOrange,
+                      ),
+                    ),
+                  ),
+                  Icon(Icons.info_outline_rounded, size: 14.sp, color: Colors.grey[400]),
+                ],
+              ),
+              SizedBox(height: 14.h),
+              ...List.generate(row.length, (i) {
+                final header = i < headers.length ? headers[i] : 'Thông tin ${i + 1}';
+                return Container(
+                  width: double.infinity,
+                  margin: EdgeInsets.only(bottom: i == row.length - 1 ? 0 : 8.h),
+                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey[900]?.withOpacity(0.5)
+                        : const Color(0xFFFDFDFD),
+                    borderRadius: BorderRadius.circular(10.r),
+                    border: Border.all(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white.withOpacity(0.05)
+                          : Colors.grey.withOpacity(0.08),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        flex: 4,
+                        child: Text(
+                          header,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 10.sp,
+                            color: Colors.blueGrey[400],
+                          ),
+                        ),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 14.h,
+                        color: Colors.grey.withOpacity(0.1),
+                        margin: EdgeInsets.symmetric(horizontal: 8.w),
+                      ),
+                      Expanded(
+                        flex: 6,
+                        child: Text(
+                          row[i].isEmpty ? '-' : row[i],
+                          textAlign: TextAlign.right,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11.sp,
+                            fontWeight: FontWeight.w700,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.9),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
 
 class AiChatScreen extends StatelessWidget {
   const AiChatScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('AiChatScreen: building screen');
+    if (!Get.isRegistered<AiChatController>()) {
+      Get.put(AiChatController());
+    }
     final AiChatController controller = Get.find<AiChatController>();
-    final TextEditingController textController = TextEditingController();
     final ScrollController scrollController = ScrollController();
 
     return Scaffold(
@@ -27,7 +180,10 @@ class AiChatScreen extends StatelessWidget {
             Icons.arrow_back_ios_new_rounded,
             color: Theme.of(context).iconTheme.color,
           ),
-          onPressed: () => Get.back(),
+          onPressed: () {
+            // Quay lại trang chủ thay vì pop (vì là tab)
+            Get.find<HomeController>().changeTab(0);
+          },
         ),
         title: Obx(
           () => Column(
@@ -37,26 +193,26 @@ class AiChatScreen extends StatelessWidget {
                 style: GoogleFonts.plusJakartaSans(
                   color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.bold,
-                  fontSize: 18,
+                  fontSize: 16.sp,
                 ),
               ),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 8,
-                    height: 8,
+                    width: 6.r,
+                    height: 6.r,
                     decoration: const BoxDecoration(
                       color: Colors.green,
                       shape: BoxShape.circle,
                     ),
                   ),
-                  const SizedBox(width: 4),
+                  SizedBox(width: 4.w),
                   Text(
                     'Online',
                     style: GoogleFonts.plusJakartaSans(
                       color: Colors.green,
-                      fontSize: 12,
+                      fontSize: 10.sp,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -101,6 +257,7 @@ class AiChatScreen extends StatelessWidget {
 
               return ListView.builder(
                 controller: scrollController,
+                reverse: true, // Tự động cuộn xuống dưới
                 padding: const EdgeInsets.all(16),
                 itemCount: controller.messages.length,
                 itemBuilder: (context, index) {
@@ -136,7 +293,7 @@ class AiChatScreen extends StatelessWidget {
               ),
             ),
 
-          _buildInputArea(context, controller, textController),
+          _buildInputArea(context, controller),
         ],
       ),
     );
@@ -177,26 +334,58 @@ class AiChatScreen extends StatelessWidget {
               style: GoogleFonts.plusJakartaSans(fontSize: 14, color: Colors.grey[600]),
             ),
             const SizedBox(height: 32),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
+            Column(
               children: controller.suggestedQuestions
                   .map(
-                    (q) => ActionChip(
-                      label: Text(
-                        q,
-                        style: GoogleFonts.plusJakartaSans(
-                          color: AppColors.primaryOrange,
-                          fontSize: 13,
+                    (q) => Container(
+                      width: double.infinity,
+                      margin: EdgeInsets.only(bottom: 10.h),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(18.r),
+                          onTap: () => controller.sendMessage(q),
+                          child: Ink(
+                            padding: EdgeInsets.all(16.r),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).cardColor,
+                              borderRadius: BorderRadius.circular(18.r),
+                              border: Border.all(
+                                color: AppColors.primaryOrange.withOpacity(0.16),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 34.r,
+                                  height: 34.r,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primaryOrange.withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(12.r),
+                                  ),
+                                  child: const Icon(
+                                    Icons.north_east_rounded,
+                                    color: AppColors.primaryOrange,
+                                    size: 18,
+                                  ),
+                                ),
+                                SizedBox(width: 12.w),
+                                Expanded(
+                                  child: Text(
+                                    q,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      color: Theme.of(context).colorScheme.onSurface,
+                                      fontSize: 12.sp,
+                                      fontWeight: FontWeight.w600,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                      backgroundColor: Theme.of(context).cardColor,
-                      side: const BorderSide(
-                        color: AppColors.primaryOrange,
-                        width: 0.5,
-                      ),
-                      onPressed: () => controller.sendMessage(q),
                     ),
                   )
                   .toList(),
@@ -219,15 +408,18 @@ class AiChatScreen extends StatelessWidget {
           Text(
             'Tiến trình xử lý:',
             style: GoogleFonts.plusJakartaSans(
-              fontSize: 11,
+              fontSize: 11.sp,
               fontWeight: FontWeight.bold,
               color: Colors.grey,
             ),
           ),
-          const SizedBox(height: 4),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(children: steps.map((s) => _buildStepTag(s)).toList()),
+          SizedBox(height: 8.h),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: steps.map((s) => Padding(
+              padding: EdgeInsets.only(bottom: 4.h),
+              child: _buildStepTag(s),
+            )).toList(),
           ),
         ],
       ),
@@ -301,54 +493,77 @@ class AiChatScreen extends StatelessWidget {
                   : CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  width: double.infinity,
+                  padding: EdgeInsets.all(12.r),
                   decoration: BoxDecoration(
+                    gradient: isUser 
+                        ? const LinearGradient(
+                            colors: [AppColors.primaryOrange, Color(0xFFFF8C42)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ) 
+                        : null,
                     color: isUser
-                        ? AppColors.primaryOrange
-                        : (Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : const Color(0xFFF1F0F0)),
+                        ? null
+                        : (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF2C2C2E) : Colors.white),
                     borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(16),
-                      topRight: const Radius.circular(16),
-                      bottomLeft: Radius.circular(isUser ? 16 : 4),
-                      bottomRight: Radius.circular(isUser ? 4 : 16),
+                      topLeft: Radius.circular(20.r),
+                      topRight: Radius.circular(20.r),
+                      bottomLeft: Radius.circular(isUser ? 20.r : 4.r),
+                      bottomRight: Radius.circular(isUser ? 4.r : 20.r),
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      return SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            minWidth: constraints.maxWidth,
-                            maxWidth: isUser ? constraints.maxWidth : 1000,
-                          ),
-                          child: MarkdownBody(
-                            data: msg.content,
-                            selectable: true,
-                            styleSheet: MarkdownStyleSheet(
-                              p: GoogleFonts.plusJakartaSans(
-                                color: isUser ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87),
-                                fontSize: 14,
-                              ),
-                              tableBorder: TableBorder.all(
-                                color: isUser ? Colors.white70 : Colors.black26,
-                                width: 0.5,
-                              ),
-                              tableBody: GoogleFonts.plusJakartaSans(
-                                color: isUser ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87),
-                                fontSize: 12,
-                              ),
-                              tableHead: GoogleFonts.plusJakartaSans(
-                                color: isUser ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87),
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              tableCellsPadding: const EdgeInsets.all(8),
-                            ),
-                          ),
-                        ),
-                      );
+                  child: MarkdownBody(
+                    data: msg.content,
+                    selectable: true,
+                    builders: {
+                      'table': VerticalTableBuilder(context),
                     },
+                    styleSheet: MarkdownStyleSheet(
+                      p: GoogleFonts.plusJakartaSans(
+                        color: isUser ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87),
+                        fontSize: 12.sp,
+                        height: 1.5,
+                      ),
+                      h1: GoogleFonts.plusJakartaSans(
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.w800,
+                        color: isUser ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                      ),
+                      h2: GoogleFonts.plusJakartaSans(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w700,
+                        color: isUser ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                      ),
+                      strong: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w700,
+                        color: isUser ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                      ),
+                      listBullet: GoogleFonts.plusJakartaSans(
+                        color: isUser ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                      ),
+                      tableBorder: TableBorder.all(
+                        color: isUser ? Colors.white70 : Colors.black26,
+                        width: 0.5,
+                      ),
+                      tableBody: GoogleFonts.plusJakartaSans(
+                        color: isUser ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87),
+                        fontSize: 10.sp,
+                      ),
+                      tableHead: GoogleFonts.plusJakartaSans(
+                        color: isUser ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87),
+                        fontSize: 10.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      tableCellsPadding: EdgeInsets.all(6.r),
+                    ),
                   ),
                 ),
                 Padding(
@@ -378,63 +593,95 @@ class AiChatScreen extends StatelessWidget {
   Widget _buildInputArea(
     BuildContext context,
     AiChatController controller,
-    TextEditingController textController,
   ) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : Colors.grey[100],
-                borderRadius: BorderRadius.circular(24),
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return SafeArea(
+      top: false,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: EdgeInsets.fromLTRB(
+          16.w,
+          10.h,
+          16.w,
+          bottomInset > 0 ? 10.h : 18.h,
+        ),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(
+                Theme.of(context).brightness == Brightness.dark ? 0.22 : 0.06,
               ),
-              child: TextField(
-                controller: textController,
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-                decoration: InputDecoration(
-                  hintText: 'Nhập câu hỏi...',
-                  border: InputBorder.none,
-                  hintStyle: TextStyle(fontSize: 14, color: Theme.of(context).brightness == Brightness.dark ? Colors.grey[400] : Colors.grey[600]),
+              blurRadius: 18,
+              offset: const Offset(0, -6),
+            ),
+          ],
+        ),
+        child: Container(
+          padding: EdgeInsets.fromLTRB(14.w, 10.h, 10.w, 10.h),
+          decoration: BoxDecoration(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.grey[850]
+                : const Color(0xFFF9FAFB),
+            borderRadius: BorderRadius.circular(24.r),
+            border: Border.all(
+              color: AppColors.primaryOrange.withOpacity(0.10),
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: controller.textController,
+                  minLines: 1,
+                  maxLines: 4,
+                  textInputAction: TextInputAction.newline,
+                  style: GoogleFonts.plusJakartaSans(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 14.sp,
+                    height: 1.45,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Hỏi FAMS AI điều bạn cần...',
+                    border: InputBorder.none,
+                    isCollapsed: true,
+                    hintStyle: GoogleFonts.plusJakartaSans(
+                      fontSize: 13.sp,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.grey[400]
+                          : Colors.grey[600],
+                    ),
+                  ),
                 ),
-                onSubmitted: (val) {
-                  if (val.isNotEmpty) {
-                    controller.sendMessage(val);
-                    textController.clear();
-                  }
-                },
               ),
-            ),
+              SizedBox(width: 10.w),
+              Material(
+                color: AppColors.primaryOrange,
+                borderRadius: BorderRadius.circular(18.r),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(18.r),
+                  onTap: () {
+                    if (controller.textController.text.trim().isNotEmpty) {
+                      controller.sendMessage(controller.textController.text.trim());
+                      controller.textController.clear();
+                    }
+                  },
+                  child: Container(
+                    width: 44.r,
+                    height: 44.r,
+                    alignment: Alignment.center,
+                    child: Icon(
+                      Icons.send_rounded,
+                      color: Colors.white,
+                      size: 20.sp,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          Container(
-            decoration: const BoxDecoration(
-              color: AppColors.primaryOrange,
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.send_rounded, color: Colors.white),
-              onPressed: () {
-                if (textController.text.isNotEmpty) {
-                  controller.sendMessage(textController.text);
-                  textController.clear();
-                }
-              },
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -25,6 +25,7 @@ from loguru import logger # type: ignore
 
 from app.services.chat.router.hard_router import hard_router, IntentResult
 from app.services.chat.router.core_tool_inventory import is_kept_tool
+from app.services.chat.db.tools_loader import tools_loader
 from app.services.chat.router.light_router import light_router
 from app.services.chat.router.ml_intent_classifier import ml_intent_classifier
 from app.services.chat.router.query_preprocessor import query_preprocessor
@@ -528,6 +529,9 @@ class ChatbotService:
         pending_entities: Optional[Dict[str, Any]] = None,
         continuation: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        # ✅ Ensure fresh tool status from DB (lazy reload)
+        tools_loader.maybe_reload(min_interval_seconds=10.0)
+
         steps: List[Dict[str, Any]] = []
         t_start = time.time()
         is_continuation_request = bool(continuation and isinstance(continuation, dict))
@@ -811,6 +815,34 @@ class ChatbotService:
                 None,
                 agent=cast(Optional[str], intent_data.get("agent")) or detect_agent(message),
             )
+
+        # ── is_active check: chặn tool bị tắt từ bất kỳ router nào ──────
+        if current_tool_name and current_tool_name not in _AI_ONLY_TOOLS:
+            tool_active_status = tools_loader.tool_status.get(current_tool_name)
+            is_tool_inactive = (tool_active_status is False) or (current_tool_name in tools_loader.inactive_tools)
+            if is_tool_inactive:
+                steps.append(_make_step(3, "Tool Executor", "Bỏ qua (tool đang bị tắt bởi Admin)."))
+                steps.append(_make_step(4, "Answer Generator", "Thông báo tool bị vô hiệu hóa."))
+                answer = answer_generator.generate(
+                    corrected_message,
+                    {
+                        "intent": "tool_locked",
+                        "toolName": current_tool_name,
+                        "entities": {"reason": f"Công cụ '{current_tool_name}' hiện đang bị vô hiệu hóa bởi quản trị viên."},
+                    },
+                    None,
+                    history,
+                    answer_model,
+                    today=datetime.now().strftime("%Y-%m-%d"),
+                    user_role=user_role,
+                )
+                return _build_response(
+                    answer,
+                    steps,
+                    None,
+                    None,
+                    agent=cast(Optional[str], intent_data.get("agent")) or detect_agent(message, current_tool_name),
+                )
 
         # ── Permission check ──────────────────────────────────────────────
         tool_name = (intent_data.get("toolName") or "").strip()
@@ -1297,6 +1329,21 @@ class ChatbotService:
             yield {"type": "step", "step": steps[-1]}
             yield {"type": "answer", "chunk": _ERR_UNSUPPORTED}
             return
+
+        # ── is_active check (stream): chặn tool bị tắt ───────────────────
+        if current_tool_name and current_tool_name not in _AI_ONLY_TOOLS:
+            tool_active_status = tools_loader.tool_status.get(current_tool_name)
+            is_tool_inactive = (tool_active_status is False) or (current_tool_name in tools_loader.inactive_tools)
+            if is_tool_inactive:
+                steps.append(_make_step(3, "Tool Executor", "Bỏ qua (tool đang bị tắt bởi Admin)."))
+                yield {"type": "step", "step": steps[-1]}
+                steps.append(_make_step(4, "Answer Generator", "Thông báo tool bị vô hiệu hóa."))
+                yield {"type": "step", "step": steps[-1]}
+                yield {
+                    "type": "answer",
+                    "chunk": f"🔒 Công cụ **{current_tool_name}** hiện đang bị vô hiệu hóa bởi quản trị viên. Vui lòng liên hệ Admin để được hỗ trợ.",
+                }
+                return
 
         # ── Step 7: Tool (DB) ───────────────────────────────────────────────
         tool_result = None

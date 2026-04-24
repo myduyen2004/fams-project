@@ -18,14 +18,14 @@ export const ManagerLecturersPage = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [departmentFilter, setDepartmentFilter] = useState('all');
-  const [departments, setDepartments] = useState<string[]>([]);
+  const [majorFilter, setMajorFilter] = useState('all');
+  const [specializationFilter, setSpecializationFilter] = useState('all');
   const [totalElements, setTotalElements] = useState(0);
   const [selectedLecturers, setSelectedLecturers] = useState<number[]>([]);
 
   // Use custom pagination hook - auto resets to page 0 when filters change
   const { page, setPage } = usePagination({
-    resetDependencies: [statusFilter, departmentFilter, search]
+    resetDependencies: [statusFilter, majorFilter, specializationFilter, search]
   });
 
   const [isExporting, setIsExporting] = useState(false);
@@ -37,26 +37,14 @@ export const ManagerLecturersPage = () => {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedLecturer, setSelectedLecturer] = useState<LecturerResponse | null>(null);
 
-  // Fetch departments
-  useEffect(() => {
-    const fetchDepartments = async () => {
-      try {
-        const data = await academicStaffService.getDepartments();
-        setDepartments(data);
-      } catch (error) {
-        console.error('Failed to fetch departments');
-      }
-    };
-    fetchDepartments();
-  }, []);
 
   const fetchLecturers = useCallback(async () => {
     try {
       setLoading(true);
       const data = await academicStaffService.getLecturers({
-        // Hiển thị tất cả giảng viên (không filter theo hasProfile)
         status: statusFilter === 'all' ? undefined : statusFilter,
-        department: departmentFilter === 'all' ? undefined : departmentFilter,
+        major: majorFilter === 'all' ? undefined : majorFilter,
+        specialization: specializationFilter === 'all' ? undefined : specializationFilter,
         search,
         page,
         size: 50,
@@ -69,7 +57,7 @@ export const ManagerLecturersPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, departmentFilter, search, page]);
+  }, [statusFilter, majorFilter, specializationFilter, search, page]);
 
   useEffect(() => {
     fetchLecturers();
@@ -101,7 +89,8 @@ export const ManagerLecturersPage = () => {
     try {
       setIsExporting(true);
       const blob = await academicStaffService.exportLecturers({
-        department: departmentFilter === 'all' ? undefined : departmentFilter,
+        major: majorFilter === 'all' ? undefined : majorFilter,
+        specialization: specializationFilter === 'all' ? undefined : specializationFilter,
         status: statusFilter === 'all' ? undefined : statusFilter
       });
 
@@ -121,7 +110,7 @@ export const ManagerLecturersPage = () => {
     } finally {
       setIsExporting(false);
     }
-  }, [departmentFilter, statusFilter]);
+  }, [majorFilter, specializationFilter, statusFilter]);
 
   const handleAddSuccess = useCallback(() => {
     setIsAddModalOpen(false);
@@ -150,16 +139,18 @@ export const ManagerLecturersPage = () => {
           onSearchChange={setSearch}
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
-
           showImportButton={true}
-          showDepartmentFilter={true}
+          showMajorFilter={true}
           showExportButton={true}
-          departments={departments}
-          departmentFilter={departmentFilter}
-          onDepartmentFilterChange={setDepartmentFilter}
+          majorFilter={majorFilter}
+          onMajorFilterChange={(val) => {
+            setMajorFilter(val);
+            setSpecializationFilter('all');
+          }}
+          specializationFilter={specializationFilter}
+          onSpecializationFilterChange={setSpecializationFilter}
           onExportClick={handleExport}
           onImportClick={() => setIsImportModalOpen(true)}
-
           isExporting={isExporting}
         />
 
@@ -189,7 +180,7 @@ export const ManagerLecturersPage = () => {
                   Mã GV
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">
-                  Chuyên khoa
+                  Ngành / Chuyên ngành
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">
                   Trạng thái

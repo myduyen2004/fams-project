@@ -51,10 +51,45 @@ class ChatController extends GetxController {
 
   @override
   void onClose() {
-    _wsService.disconnect();
     _typingTimer?.cancel();
     _markAsReadDebounce?.cancel();
     super.onClose();
+  }
+
+  AuthController? get _authController {
+    try {
+      return Get.find<AuthController>();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String get _currentUserName {
+    final user = _authController?.currentUser.value;
+    if (user == null) return '';
+    return user.fullName.isNotEmpty ? user.fullName : user.username;
+  }
+
+  String get _currentUserRole {
+    return _authController?.currentUser.value?.role ?? '';
+  }
+
+  void _sortGroups() {
+    final sorted = groups.toList()
+      ..sort((a, b) {
+        DateTime parseTimestamp(String? value) {
+          if (value == null || value.isEmpty) {
+            return DateTime.fromMillisecondsSinceEpoch(0);
+          }
+          return DateTime.tryParse(value) ??
+              DateTime.fromMillisecondsSinceEpoch(0);
+        }
+
+        final aTime = parseTimestamp(a.lastMessage?.sentAt ?? a.createdAt);
+        final bTime = parseTimestamp(b.lastMessage?.sentAt ?? b.createdAt);
+        return bTime.compareTo(aTime);
+      });
+    groups.assignAll(sorted);
   }
 
   // ── Groups ──
@@ -64,6 +99,7 @@ class ChatController extends GetxController {
     try {
       final result = await _chatService.getMyGroups();
       groups.assignAll(result);
+      _sortGroups();
       _applyFilters();
       _updateTotalUnread();
       _initWebSocket();
@@ -121,6 +157,7 @@ class ChatController extends GetxController {
               onMessage: (data) => _handleNewMessage(data, group.id),
               onReadReceipt: (data) => _handleReadReceipt(data, group.id),
               onDelete: (data) => _handleDelete(data, group.id),
+              onReaction: (data) => _handleReaction(data, group.id),
             );
           }
           // Subscribe to user notifications
@@ -169,17 +206,24 @@ class ChatController extends GetxController {
         firstUnreadMessageId: groups[groupIdx].firstUnreadMessageId,
       );
       groups.refresh();
+      _sortGroups();
       _applyFilters();
       _updateTotalUnread();
     }
 
     // If viewing this group, add message
     if (selectedGroup.value?.id == groupId) {
-      // Remove optimistic message if it's our own
-      if (msg.isOwn) {
-        messages.removeWhere((m) => m.id < 0 && m.content == msg.content);
-      }
-      messages.insert(0, msg);
+      messages.removeWhere((m) {
+        if (m.id == msg.id) return true;
+        if (!msg.isOwn || !m.isSending) return false;
+        if (m.type != msg.type) return false;
+        if (msg.type == 'TEXT' || msg.type == 'LINK') {
+          return m.content == msg.content;
+        }
+        return m.attachmentName == msg.attachmentName;
+      });
+      messages.add(msg);
+      messages.sort((a, b) => a.sentAt.compareTo(b.sentAt));
 
       // Clear typing for sender
       typingUsers.remove(msg.senderName);
@@ -187,6 +231,40 @@ class ChatController extends GetxController {
       // Mark as read
       _triggerMarkAsRead(groupId);
     }
+  }
+
+  void _handleReaction(Map<String, dynamic> data, int groupId) {
+    if (selectedGroup.value?.id != groupId) return;
+
+    final updated = _setOwnFlag(ChatMessage.fromJson(data));
+    final idx = messages.indexWhere((m) => m.id == updated.id);
+    if (idx == -1) return;
+
+    final current = messages[idx];
+    messages[idx] = ChatMessage(
+      id: current.id,
+      groupId: current.groupId,
+      senderId: current.senderId,
+      senderName: current.senderName,
+      senderRole: current.senderRole,
+      senderAvatarUrl: current.senderAvatarUrl,
+      content: current.content,
+      type: current.type,
+      attachmentUrl: current.attachmentUrl,
+      attachmentName: current.attachmentName,
+      isOwn: current.isOwn,
+      sentAt: current.sentAt,
+      deleted: current.deleted,
+      replyToId: current.replyToId,
+      replyToContent: current.replyToContent,
+      replyToSenderName: current.replyToSenderName,
+      replyToType: current.replyToType,
+      imageMessages: current.imageMessages,
+      reactions: updated.reactions,
+      readBy: current.readBy,
+      isSending: current.isSending,
+    );
+    messages.refresh();
   }
 
   void _handleReadReceipt(Map<String, dynamic> data, int groupId) {
@@ -299,6 +377,7 @@ class ChatController extends GetxController {
           firstUnreadMessageId: group.firstUnreadMessageId,
         );
         groups.refresh();
+        _sortGroups();
         _applyFilters();
       }
     }
@@ -324,10 +403,23 @@ class ChatController extends GetxController {
             firstUnreadMessageId: null,
           );
           groups.refresh();
+          _sortGroups();
           _applyFilters();
           _updateTotalUnread();
         }
       }
+    } else if (data['type'] == 'GROUP_CREATED' &&
+        data['group'] is Map<String, dynamic>) {
+      final incoming = ChatGroup.fromJson(data['group'] as Map<String, dynamic>);
+      final idx = groups.indexWhere((g) => g.id == incoming.id);
+      if (idx == -1) {
+        groups.add(incoming);
+      } else {
+        groups[idx] = incoming;
+      }
+      _sortGroups();
+      _applyFilters();
+      _updateTotalUnread();
     } else {
       // Refresh groups for other notification types
       loadGroups();
@@ -361,6 +453,11 @@ class ChatController extends GetxController {
     } else {
       _subscribeToTyping(group.id);
     }
+
+    final refreshedGroup = groups.firstWhereOrNull((g) => g.id == group.id);
+    if (refreshedGroup != null) {
+      selectedGroup.value = refreshedGroup;
+    }
   }
 
   void _subscribeToTyping(int groupId) {
@@ -368,17 +465,21 @@ class ChatController extends GetxController {
 
     // Subscribe to typing for the currently opened group
     _wsService.subscribeToTyping(groupId, (data) {
-      final senderName = data['senderName'] as String? ?? '';
-      final senderId = data['senderId'];
-      if (senderId != _currentUserId && senderName.isNotEmpty) {
-        if (!typingUsers.contains(senderName)) {
-          typingUsers.add(senderName);
+      final username = data['username']?.toString() ?? '';
+      final isTyping = data['isTyping'] == true;
+      if (username.isEmpty || username == _currentUserName) return;
+
+      if (isTyping) {
+        if (!typingUsers.contains(username)) {
+          typingUsers.add(username);
         }
         // Clear after 3 seconds
         _typingTimer?.cancel();
         _typingTimer = Timer(const Duration(seconds: 3), () {
-          typingUsers.remove(senderName);
+          typingUsers.remove(username);
         });
+      } else {
+        typingUsers.remove(username);
       }
     });
   }
@@ -425,6 +526,9 @@ class ChatController extends GetxController {
       replyToContent: msg.replyToContent,
       replyToSenderName: msg.replyToSenderName,
       replyToType: msg.replyToType,
+      imageMessages: msg.imageMessages,
+      reactions: msg.reactions,
+      isSending: msg.isSending,
       readBy: msg.readBy,
     );
   }
@@ -433,9 +537,9 @@ class ChatController extends GetxController {
     isLoadingMessages.value = true;
     try {
       final result = await _chatService.getMessages(groupId);
-      // Backend returns oldest -> newest. Mobile UI uses reverse ListView,
-      // so keep the in-memory list newest -> oldest.
-      messages.assignAll(result.reversed.map((m) => _setOwnFlag(m)).toList());
+      final normalized = result.map((m) => _setOwnFlag(m)).toList()
+        ..sort((a, b) => a.sentAt.compareTo(b.sentAt));
+      messages.assignAll(normalized);
     } catch (e) {
       debugPrint('Failed to load messages: $e');
     } finally {
@@ -458,8 +562,8 @@ class ChatController extends GetxController {
       id: -DateTime.now().millisecondsSinceEpoch,
       groupId: groupId,
       senderId: _currentUserId,
-      senderName: 'Bạn',
-      senderRole: '',
+      senderName: _currentUserName.isNotEmpty ? _currentUserName : 'Bạn',
+      senderRole: _currentUserRole,
       content: content.trim(),
       type: type,
       isOwn: true,
@@ -467,9 +571,12 @@ class ChatController extends GetxController {
       replyToId: replyId,
       replyToContent: replyingTo.value?.content,
       replyToSenderName: replyingTo.value?.senderName,
+      replyToType: replyingTo.value?.type,
+      isSending: true,
       readBy: [],
     );
-    messages.insert(0, optimisticMsg);
+    messages.add(optimisticMsg);
+    messages.sort((a, b) => a.sentAt.compareTo(b.sentAt));
     final previousReply = replyingTo.value;
     replyingTo.value = null;
     
@@ -544,6 +651,24 @@ class ChatController extends GetxController {
     }
   }
 
+  Future<void> toggleReaction(int messageId, String emoji) async {
+    final group = selectedGroup.value;
+    if (group == null) return;
+
+    try {
+      await _chatService.toggleReaction(group.id, messageId, emoji);
+    } catch (e) {
+      debugPrint('Failed to toggle reaction: $e');
+      Get.snackbar(
+        'Lỗi cảm xúc',
+        'Không thể cập nhật cảm xúc cho tin nhắn.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent.withOpacity(0.8),
+        colorText: Colors.white,
+      );
+    }
+  }
+
   void setReplyTo(ChatMessage message) {
     replyingTo.value = message;
   }
@@ -555,8 +680,13 @@ class ChatController extends GetxController {
   // ── Typing ──
 
   void sendTypingIndicator() {
-    if (selectedGroup.value != null) {
-      _wsService.sendTyping(selectedGroup.value!.id);
+    final group = selectedGroup.value;
+    if (group != null && _currentUserName.isNotEmpty) {
+      _wsService.sendTyping(
+        group.id,
+        username: _currentUserName,
+        isTyping: true,
+      );
     }
   }
 
@@ -566,11 +696,16 @@ class ChatController extends GetxController {
     _markAsReadDebounce?.cancel();
     _markAsReadDebounce = Timer(const Duration(seconds: 2), () async {
       try {
-        await _chatService.markAsRead(groupId);
+        if (_wsService.isConnected) {
+          _wsService.sendMarkAsRead(groupId);
+        } else {
+          await _chatService.markAsRead(groupId);
+        }
         // Update local unread count
         final idx = groups.indexWhere((g) => g.id == groupId);
         if (idx != -1) {
           groups[idx].unreadCount = 0;
+          groups[idx].firstUnreadMessageId = null;
           groups.refresh();
           _applyFilters();
           _updateTotalUnread();

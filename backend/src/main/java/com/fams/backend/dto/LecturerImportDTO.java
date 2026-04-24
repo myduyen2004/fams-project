@@ -16,6 +16,8 @@ public class LecturerImportDTO {
     private String email;
     private String phone;
     private String department;
+    private String major;
+    private String specialization;
     private String expertise;
     private String bio;
     private String status; // VALID, ERROR

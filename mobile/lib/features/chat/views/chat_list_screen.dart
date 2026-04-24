@@ -7,13 +7,41 @@ import 'chat_detail_screen.dart';
 import 'package:solar_icons/solar_icons.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-class ChatListScreen extends StatelessWidget {
+class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final controller = Get.find<ChatController>();
+  State<ChatListScreen> createState() => _ChatListScreenState();
+}
 
+class _ChatListScreenState extends State<ChatListScreen>
+    with WidgetsBindingObserver {
+  ChatController get controller => Get.find<ChatController>();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.loadGroups();
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      controller.loadGroups();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Container(
@@ -33,8 +61,11 @@ class ChatListScreen extends StatelessWidget {
                   stops: [0.0, 0.3],
                 ),
         ),
+        child: RefreshIndicator(
+        color: const Color(0xFFF26F21),
+        onRefresh: () => controller.loadGroups(),
         child: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
         slivers: [
           // 1. Unified Header (Aligned with Home)
           SliverPadding(
@@ -164,7 +195,7 @@ class ChatListScreen extends StatelessWidget {
             }),
           ),
         ],
-      ),
+      )),
      ),
     );
   }
@@ -191,9 +222,12 @@ class ChatListScreen extends StatelessWidget {
 
   Widget _buildPremiumGroupTile(BuildContext context, ChatGroup group, ChatController controller) {
     return InkWell(
-      onTap: () {
-        controller.selectGroup(group);
-        Get.to(() => const ChatDetailScreen(), transition: Transition.cupertino);
+      onTap: () async {
+        await controller.selectGroup(group);
+        await Get.to(() => const ChatDetailScreen(), transition: Transition.cupertino);
+        if (mounted) {
+          await controller.loadGroups();
+        }
       },
       child: Container(
         margin: EdgeInsets.only(bottom: 12.h),
@@ -205,11 +239,7 @@ class ChatListScreen extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Container(
-              width: 56.r, height: 56.r,
-              decoration: BoxDecoration(color: const Color(0xFFFFF1E7), borderRadius: BorderRadius.circular(18.r)),
-              child: Center(child: Icon(SolarIconsBold.chatLine, color: const Color(0xFFF26F21), size: 24.sp)),
-            ),
+            _buildClassGroupAvatar(size: 56.r, iconSize: 24.sp),
             SizedBox(width: 16.w),
             Expanded(
               child: Column(
@@ -218,9 +248,40 @@ class ChatListScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(group.name, style: GoogleFonts.plusJakartaSans(fontSize: 15.sp, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface)),
-                      if (group.lastMessage != null)
-                        Text(_formatTime(group.lastMessage!.sentAt), style: GoogleFonts.plusJakartaSans(fontSize: 11.sp, color: Colors.grey.shade400)),
+                      Expanded(
+                        child: Text(
+                          group.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.plusJakartaSans(fontSize: 15.sp, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface),
+                        ),
+                      ),
+                      SizedBox(width: 8.w),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (group.lastMessage != null)
+                            Text(_formatTime(group.lastMessage!.sentAt), style: GoogleFonts.plusJakartaSans(fontSize: 11.sp, color: Colors.grey.shade400)),
+                          if (group.unreadCount > 0) ...[
+                            SizedBox(width: 8.w),
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 3.h),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF26F21),
+                                borderRadius: BorderRadius.circular(999.r),
+                              ),
+                              child: Text(
+                                group.unreadCount > 99 ? '99+' : '${group.unreadCount}',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                     ],
                   ),
                   SizedBox(height: 4.h),
@@ -257,5 +318,26 @@ class ChatListScreen extends StatelessWidget {
       if (diff.inDays < 1) return '${diff.inHours}h';
       return '${date.day}/${date.month}';
     } catch (_) { return ''; }
+  }
+
+  Widget _buildClassGroupAvatar({
+    required double size,
+    required double iconSize,
+  }) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF1E7),
+        borderRadius: BorderRadius.circular(size * 0.32),
+      ),
+      child: Center(
+        child: Icon(
+          SolarIconsBold.chatLine,
+          color: const Color(0xFFF26F21),
+          size: iconSize,
+        ),
+      ),
+    );
   }
 }

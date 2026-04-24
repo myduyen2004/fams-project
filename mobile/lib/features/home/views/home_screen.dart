@@ -22,6 +22,7 @@ import '../../news/controllers/news_controller.dart';
 import '../../news/views/news_list_screen.dart';
 import '../../news/models/news_model.dart';
 import '../../news/views/news_detail_screen.dart';
+import '../../ai_chatbot/views/ai_chat_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -47,6 +48,8 @@ class HomeScreen extends StatelessWidget {
                 return _buildModernHome(context, authController, controller, scheduleController);
               case 1:
                 return const ScheduleScreen(); 
+              case 2:
+                return const AiChatScreen();
               case 3:
                 return const ChatListScreen(); 
               case 4:
@@ -86,11 +89,13 @@ class HomeScreen extends StatelessWidget {
       ? [
           {"icon": SolarIconsBold.usersGroupRounded, "title": "Lớp học"},
           {"icon": SolarIconsBold.documentText, "title": "Đơn từ"},
+          {"icon": SolarIconsBold.stars, "title": "Chatbot AI"},
         ]
       : [
           {"icon": SolarIconsBold.verifiedCheck, "title": "Điểm danh"},
           {"icon": SolarIconsBold.graphUp, "title": "Bảng điểm"},
           {"icon": SolarIconsBold.documentText, "title": "Đơn từ"},
+          {"icon": SolarIconsBold.stars, "title": "Chatbot AI"},
         ];
 
     return RefreshIndicator(
@@ -443,6 +448,8 @@ class HomeScreen extends StatelessWidget {
                       }
                     } else if (feature["title"] == "Lớp học") {
                       Get.toNamed(AppRoutes.lecturerClasses);
+                    } else if (feature["title"] == "Chatbot AI") {
+                      homeController.changeTab(2); // Dẫn về tab Chat AI thay vì màn mới
                     }
                   },
                   child: _buildMinimalFeatureItem(
@@ -705,6 +712,7 @@ class HomeScreen extends StatelessWidget {
           children: [
             _buildNavBtn(context, controller, 0, SolarIconsOutline.home2, SolarIconsBold.home2, "Trang chủ"),
             _buildNavBtn(context, controller, 1, SolarIconsOutline.checklist, SolarIconsBold.checklist, attendanceLabel),
+            _buildNavBtn(context, controller, 2, SolarIconsOutline.stars, SolarIconsBold.stars, "AI Chat"),
             _buildNavBtn(context, controller, 3, SolarIconsOutline.chatLine, SolarIconsBold.chatLine, "Tin nhắn"),
             _buildNavBtn(context, controller, 4, SolarIconsOutline.user, SolarIconsBold.user, "Tôi"),
           ],

@@ -8,6 +8,8 @@ export interface LecturerResponse extends UserResponse {
     bio?: string;
     startDate?: string;
     yearsOfExperience?: number;
+    major?: string;
+    specialization?: string;
 }
 
 export interface ScheduleRequestResponse {
@@ -64,6 +66,8 @@ export interface LecturerRequest extends Omit<UserRequest, 'role'> {
     department?: string;
     expertise?: string;
     bio?: string;
+    major?: string;
+    specialization?: string;
 }
 
 export interface SystemLogItem {
@@ -120,7 +124,7 @@ export const academicStaffService = {
     },
 
     // Lecturers APIs
-    getLecturers: async (params: { search?: string; status?: string; department?: string; hasProfile?: boolean; page?: number; size?: number; sort?: string }) => {
+    getLecturers: async (params: { search?: string; status?: string; department?: string; major?: string; specialization?: string; hasProfile?: boolean; page?: number; size?: number; sort?: string }) => {
         const response = await apiClient.get<PageResponse<LecturerResponse>>('/v1/academic-staff/lecturers', { params });
         return response.data;
     },
@@ -205,7 +209,7 @@ export const academicStaffService = {
         return response.data;
     },
 
-    exportLecturers: async (params?: { department?: string; status?: string }): Promise<Blob> => {
+    exportLecturers: async (params?: { department?: string; major?: string; specialization?: string; status?: string }): Promise<Blob> => {
         const response = await apiClient.get('/v1/academic-staff/lecturers/export', {
             params,
             responseType: 'blob'
@@ -364,9 +368,11 @@ export interface LecturerImportDTO {
     fullName: string | null;
     email: string | null;
     phone?: string;
-    department: string;
-    expertise: string;
-    bio: string;
+    department?: string;
+    major?: string;
+    specialization?: string;
+    expertise?: string;
+    bio?: string;
     status: 'VALID' | 'ERROR';
     errorMessage?: string;
 }

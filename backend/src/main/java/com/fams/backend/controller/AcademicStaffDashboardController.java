@@ -128,11 +128,13 @@ public class AcademicStaffDashboardController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String department,
+            @RequestParam(required = false) String major,
+            @RequestParam(required = false) String specialization,
             @RequestParam(required = false) Boolean hasProfile,
             Pageable pageable) {
-        log.info("GET /academic-staff/lecturers | search={}, status={}, department={}, hasProfile={}", search, status,
-                department, hasProfile);
-        return ResponseEntity.ok(lecturerService.getAllLecturers(search, status, department, hasProfile, pageable));
+        log.info("GET /academic-staff/lecturers | search={}, status={}, department={}, major={}, spec={}, hasProfile={}",
+                search, status, department, major, specialization, hasProfile);
+        return ResponseEntity.ok(lecturerService.getAllLecturers(search, status, department, major, specialization, hasProfile, pageable));
     }
 
     @GetMapping("/lecturers/{id}")
@@ -346,9 +348,12 @@ public class AcademicStaffDashboardController {
     @Operation(summary = "Xuất danh sách giảng viên ra Excel")
     public ResponseEntity<byte[]> exportLecturers(
             @RequestParam(required = false) String department,
+            @RequestParam(required = false) String major,
+            @RequestParam(required = false) String specialization,
             @RequestParam(required = false) String status) {
-        log.info("GET /academic-staff/lecturers/export | department={}, status={}", department, status);
-        byte[] data = lecturerService.exportLecturers(department, status);
+        log.info("GET /academic-staff/lecturers/export | department={}, major={}, specialization={}, status={}",
+                department, major, specialization, status);
+        byte[] data = lecturerService.exportLecturers(department, major, specialization, status);
         return ResponseEntity.ok()
                 .header("Content-Disposition", "attachment; filename=lecturers.xlsx")
                 .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")

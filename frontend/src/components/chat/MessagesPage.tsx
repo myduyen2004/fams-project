@@ -1896,7 +1896,6 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                                 ref={(el) => (messageRefs.current[msg.id] = el)}
                                 className={`flex ${msg.isOwn ? "justify-end" : "justify-start"
                                   } ${isFirstInSequence ? "mt-4" : "mt-0"
-                                  } ${msg.reactions && msg.reactions.length > 0 ? "mb-4" : "mb-0"
                                   } w-full relative z-0`}
                               >
                                 <div
@@ -2104,38 +2103,35 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
                                           )}
                                         </div>
                                       )}
-                                      {!msg.isDeleted &&
-                                        msg.reactions &&
-                                        msg.reactions.length > 0 && (
-                                          <div className="absolute -bottom-3 -right-2 flex flex-wrap gap-1 z-[40] scale-90 origin-bottom-right max-w-[150px] justify-end">
-                                            {msg.reactions.map(
-                                              (r: any, ri: number) => (
-                                                <div
-                                                  key={ri}
-                                                  className={`px-2 py-0.5 rounded-full shadow-md border flex items-center gap-1 cursor-pointer transition-all duration-200 hover:scale-110 ${r.reactedByMe
-                                                    ? "bg-orange-50 border-orange-200 text-orange-600"
-                                                    : "bg-white border-gray-100 text-gray-700"
-                                                    }`}
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleSelectReaction(
-                                                      msg.id,
-                                                      r.emoji
-                                                    );
-                                                  }}
-                                                >
-                                                  <span className="text-xs">
-                                                    {r.emoji}
-                                                  </span>
-                                                  <span className="text-[10px] font-bold">
-                                                    {r.count}
-                                                  </span>
-                                                </div>
-                                              )
-                                            )}
-                                          </div>
-                                        )}
+
                                     </div>
+                                    {!msg.isDeleted &&
+                                      msg.reactions &&
+                                      msg.reactions.length > 0 && (
+                                        <div
+                                          className={`flex items-center gap-1.5 mt-1 px-2 py-0.5 rounded-full border shadow-sm w-fit cursor-pointer transition-all duration-200 hover:scale-105 ${msg.reactions.some((r: any) => r.reactedByMe)
+                                            ? "bg-orange-50 border-orange-200 text-orange-600"
+                                            : "bg-white border-gray-100 text-gray-700"
+                                            }`}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            // Mặc định click vào pill sẽ toggle reaction đầu tiên hoặc reaction mà user đã thả
+                                            const myReaction = msg.reactions.find((r: any) => r.reactedByMe) || msg.reactions[0];
+                                            handleSelectReaction(msg.id, myReaction.emoji);
+                                          }}
+                                        >
+                                          <div className="flex items-center -space-x-1">
+                                            {msg.reactions.map((r: any, ri: number) => (
+                                              <span key={ri} className="text-xs leading-none drop-shadow-sm bg-white rounded-full">
+                                                {r.emoji}
+                                              </span>
+                                            ))}
+                                          </div>
+                                          <span className="text-[10px] font-bold leading-none ml-1">
+                                            {msg.reactions.reduce((sum: number, r: any) => sum + r.count, 0)}
+                                          </span>
+                                        </div>
+                                      )}
                                     {!msg.isDeleted &&
                                       (expandedMessageId === msg.id ||
                                         index ===

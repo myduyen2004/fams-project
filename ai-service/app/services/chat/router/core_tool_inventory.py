@@ -128,6 +128,14 @@ ROLE_CORE_TOOLS: Dict[str, Set[str]] = {
         "list_notifications",
         "send_email",
         "create_notification",
+        "count_students_by_major",
+        "count_students_by_class",
+        "count_attendance_by_class",
+        "count_courses_by_semester",
+        "count_lecturers_by_department",
+        "count_grades_by_class",
+        "count_users_by_name",
+        "count_enrollments_by_class",
     }
     | GENERAL_AI_TOOLS,
     "LECTURER": _LECTURER_VIEW_TOOLS

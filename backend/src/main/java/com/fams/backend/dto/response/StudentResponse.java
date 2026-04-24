@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 @Data
 @Builder
@@ -32,8 +33,12 @@ public class StudentResponse implements Serializable {
     private User.FaceDataStatus faceDataStatus;
     private String avatar;
     private Boolean isPasswordChanged;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updatedAt;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime lastLogin;
 
     // StudentProfile fields
     private String major;

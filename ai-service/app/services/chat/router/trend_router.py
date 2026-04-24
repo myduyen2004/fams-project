@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, List, Optional
 
+from app.services.chat.db.tools_loader import tools_loader
 from app.services.chat.router.core_tool_inventory import is_kept_tool
 from app.services.chat.router.tool_catalog import get_tool_agent
 from app.services.chat.services.fptu_knowledge import is_fptu_knowledge_question
@@ -108,7 +109,7 @@ def _extract_major_name(message: str) -> Optional[str]:
     return _extract_named_value(
         message,
         re.compile(
-            r"(?:ngành|nganh)\s+([A-Za-zÀ-ỹ][A-Za-zÀ-ỹ0-9\s]+?)(?=$|[,.!?]|\s+(?:đang|dang|hiện|hien|có|co|gồm|gom|là|la|nào|nao)\b)",
+            r"(?:ngành|nganh)(?:\s+(?:là|la))?\s+([A-Za-zÀ-ỹ][A-Za-zÀ-ỹ0-9\s]+?)(?=$|[,.!?]|\s+(?:đang|dang|hiện|hien|có|co|gồm|gom|là|la|nào|nao)\b)",
             re.IGNORECASE,
         ),
     )
@@ -148,7 +149,7 @@ def _extract_expertise(message: str) -> Optional[str]:
     return _extract_named_value(
         message,
         re.compile(
-            r"(?:chuyên môn|chuyen mon)\s+([A-Za-zÀ-ỹ][A-Za-zÀ-ỹ0-9\s]+?)(?=$|[,.!?]|\s+(?:thuộc|thuoc|của|cua|trong|ngành|nganh)\b)",
+            r"(?:chuyên môn|chuyen mon)(?:\s+(?:là|la))?\s+([A-Za-zÀ-ỹ][A-Za-zÀ-ỹ0-9\s]+?)(?=$|[,.!?]|\s+(?:thuộc|thuoc|của|cua|trong|ngành|nganh)\b)",
             re.IGNORECASE,
         ),
     )
@@ -273,8 +274,15 @@ class TrendRouter:
         entities = _extract_entities(text)
         entities.update(_extract_title_or_content(text))
 
-        if _ACTIVE_SEMESTER_RE.search(msg_lower) or (
-            "học kỳ" in msg_lower and ("đang hoạt động" in msg_lower or "dang hoat dong" in msg_lower or "active" in msg_lower)
+        if (
+            _ACTIVE_SEMESTER_RE.search(msg_lower)
+            or ("học kỳ" in msg_lower and ("đang hoạt động" in msg_lower or "dang hoat dong" in msg_lower or "active" in msg_lower))
+        ) and not (
+            "lớp" in msg_lower
+            or "lop" in msg_lower
+            or _SCHEDULE_RE.search(msg_lower)
+            or _TEACHING_RE.search(msg_lower)
+            or _WORKLOAD_RE.search(msg_lower)
         ):
             return self._result("data_query", "get_active_semester", entities)
 
@@ -355,7 +363,11 @@ class TrendRouter:
             if "mức độ sử dụng" in msg_lower or "usage" in msg_lower:
                 return self._result("data_query", "get_room_usage_weekly", entities)
             if entities.get("date") in {"TODAY", None} and (
-                "phòng nào" in msg_lower or "phòng nào đang có thể sử dụng" in msg_lower or "rooms today" in msg_lower
+                "phòng nào" in msg_lower
+                or "phòng nào đang có thể sử dụng" in msg_lower
+                or "rooms today" in msg_lower
+                or "tất cả phòng" in msg_lower
+                or "toàn bộ phòng" in msg_lower
             ):
                 entities.setdefault("date", "TODAY")
                 return self._result("data_query", "get_all_rooms_today", entities)
@@ -390,6 +402,12 @@ class TrendRouter:
                 return self._result("data_query", "count_unread_notifications", entities)
             if _OWN_PRONOUN_RE.search(msg_lower):
                 return self._result("data_query", "get_my_notifications", entities)
+
+        if user_role == "LECTURER" and (
+            ("tôi đang dạy" in msg_lower or "toi dang day" in msg_lower or "lớp tôi đang dạy" in msg_lower or "lop toi dang day" in msg_lower)
+            and ("lớp" in msg_lower or "lop" in msg_lower)
+        ):
+            return self._result("navigation", "view_teaching_classes", entities)
 
         if user_role in {"STUDENT", "LECTURER"}:
             target_student_code = str(entities.get("student_code") or "").upper()
@@ -429,14 +447,31 @@ class TrendRouter:
                 tool_name = "get_enrollments_by_class" if user_role == "LECTURER" else "get_students_by_class"
                 return self._result("data_query", tool_name, entities)
 
-        if ("lớp" in msg_lower or "lop" in msg_lower) and entities.get("semester_code"):
+        if (
+            ("lớp" in msg_lower or "lop" in msg_lower)
+            and (
+                entities.get("semester_code")
+                or "học kỳ này" in msg_lower
+                or "hoc ky nay" in msg_lower
+                or "kỳ này" in msg_lower
+                or "ky nay" in msg_lower
+            )
+        ):
             return self._result("data_query", "get_classes_by_semester", entities)
 
-        if _CLASSMATE_RE.search(msg_lower) and entities.get("student_code"):
+        if user_role == "ACADEMIC_STAFF" and _CLASSMATE_RE.search(msg_lower) and entities.get("student_code"):
             return self._result("data_query", "get_classmates", entities)
 
         if user_role == "ACADEMIC_STAFF":
-            if _WORKLOAD_RE.search(msg_lower) and entities.get("lecturer_code"):
+            if _WORKLOAD_RE.search(msg_lower) and (
+                entities.get("lecturer_code")
+                or entities.get("full_name")
+                or "từng giảng viên" in msg_lower
+                or "tung giang vien" in msg_lower
+                or "giảng viên" in msg_lower
+                or "giang vien" in msg_lower
+                or "gv" in msg_lower
+            ):
                 return self._result("data_query", "get_lecturer_workload", entities)
             if _EXPERTISE_RE.search(msg_lower):
                 expertise = _extract_expertise(text)
@@ -453,7 +488,7 @@ class TrendRouter:
                     entities["major_name"] = major_name
                     entities.setdefault("department", major_name)
                 return self._result("data_query", "get_lecturers_by_expertise", entities)
-            if ("giảng viên" in msg_lower or "giang vien" in msg_lower) and _MAJOR_RE.search(msg_lower):
+            if ("giảng viên" in msg_lower or "giang vien" in msg_lower or "gv" in msg_lower) and _MAJOR_RE.search(msg_lower):
                 major_name = _extract_major_name(text)
                 if major_name:
                     entities["major_name"] = major_name
@@ -556,6 +591,18 @@ class TrendRouter:
 
     @staticmethod
     def _result(intent: str, tool_name: str, entities: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        # ── is_active check ──────────────────────────────────────────────────
+        if tool_name and tool_name not in {"general_offtopic_chat", "fpt_tool", "fptu_knowledge_lookup"}:
+            status = tools_loader.tool_status.get(tool_name)
+            if status is False or tool_name in tools_loader.inactive_tools:
+                return {
+                    "intent": "tool_locked",
+                    "toolName": tool_name,
+                    "entities": {"reason": f"Công cụ '{tool_name}' hiện đang bị vô hiệu hóa."},
+                    "confidence": "high",
+                    "agent": get_tool_agent(tool_name),
+                }
+
         return {
             "intent": intent,
             "toolName": tool_name,

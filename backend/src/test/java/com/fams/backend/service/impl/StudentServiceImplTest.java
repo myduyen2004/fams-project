@@ -58,6 +58,9 @@ class StudentServiceImplTest {
     @Mock
     private SystemLogService systemLogService;
 
+    @Mock
+    private com.fams.backend.repository.UserSessionRepository userSessionRepository;
+
     @InjectMocks
     private StudentServiceImpl studentService;
 

@@ -198,6 +198,15 @@ class HardRouter:
         self._cache: OrderedDict[str, IntentResult] = OrderedDict()
         # ✅ FIX: Thread-safe lock cho LRU cache
         self._lock  = threading.Lock()
+        
+        # Register cache clearing on tool reload
+        tools_loader.on_reload(self.clear_cache)
+
+    def clear_cache(self) -> None:
+        """Xóa sạch cache khi tools được reload."""
+        with self._lock:
+            self._cache.clear()
+            logger.info("[HardRouter] Cache cleared due to tool reload")
 
     # ✅ FIX: Semantic match với early exit và threshold 0.72 (giảm từ 0.8)
     @staticmethod
@@ -269,6 +278,13 @@ class HardRouter:
                 self._cache_set(message, result)
                 return result
 
+        # 6.5 Defer data-heavy taxonomy/course questions to Trend/LLM instead of nav semantic fallback
+        if re.search(r"(môn|mon|course).*(chuyên ngành hẹp|chuyen nganh hep|chuyên ngành|chuyen nganh)", msg_lower) or re.search(
+            r"(chuyên ngành hẹp|chuyen nganh hep).*(môn|mon|course)", msg_lower
+        ):
+            logger.debug(f"[HardRouter] taxonomy defer: '{message}'")
+            return None
+
         # 7. Semantic navigation fallback (chạy sau exact match để tránh cướp tool)
         if best_nav := self._find_best_match(msg_core, _NAV_CANDIDATES, threshold=0.72):
             logger.debug(f"[HardRouter] Semantic match: '{message}' → {best_nav}")
@@ -290,6 +306,8 @@ class HardRouter:
             entities = {}
             if class_match:
                 entities["class_name"] = class_match.group(1).upper()
+            if _is_locked("create_group_chat"):
+                return _locked_result("create_group_chat")
             return IntentResult(
                 intent="action",
                 tool_name="create_group_chat",
@@ -361,6 +379,8 @@ class HardRouter:
                 if fallback and not generic_boilerplate:
                     entities["content"] = fallback
 
+            if _is_locked("create_notification"):
+                return _locked_result("create_notification")
             return IntentResult(
                 intent="action",
                 tool_name="create_notification",
@@ -372,18 +392,15 @@ class HardRouter:
         major_match = _MAJOR_QUERY_RE.search(message)
         if major_match and re.search(r"(sinh viên|học sinh|sv)", msg_lower):
             major_name = major_match.group(1).strip()
-            if re.search(r"(bao nhiêu|đếm|tổng số|có mấy)", msg_lower):
-                return IntentResult(
-                    intent="data_query",
-                    tool_name="count_students_by_major",
-                    entities={"major_name": major_name},
-                )
-            if re.search(r"(danh sách|ds|liệt kê|cho xem|xem các|toàn bộ)", msg_lower) or re.search(r"\b(sinh viên|học sinh|sv)\b.*\b(ngành|nghành|nganh|nhành)\b", msg_lower):
-                return IntentResult(
-                    intent="data_query",
-                    tool_name="get_students_by_major",
-                    entities={"major_name": major_name},
-                )
+            major_tool = "count_students_by_major" if re.search(r"(bao nhiêu|đếm|tổng số|có mấy)", msg_lower) else "get_students_by_major"
+            
+            if _is_locked(major_tool):
+                return _locked_result(major_tool)
+            return IntentResult(
+                intent="data_query",
+                tool_name=major_tool,
+                entities={"major_name": major_name},
+            )
 
         # 8.8 Direct attendance routing for student-scoped queries
         student_code_match = re.search(r"\b(SE\d{5,6}|HE\d{5,6}|IA\d{5,6})\b", message, re.IGNORECASE)
@@ -400,6 +417,8 @@ class HardRouter:
             elif re.search(r"(tổng quan|chuyên cần của|điểm danh của)", msg_lower):
                 tool_name = "get_my_attendance_overview"
 
+            if _is_locked(tool_name):
+                return _locked_result(tool_name)
             return IntentResult(
                 intent="data_query",
                 tool_name=tool_name,

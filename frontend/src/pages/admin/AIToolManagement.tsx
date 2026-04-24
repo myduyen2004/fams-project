@@ -22,7 +22,7 @@ import {
   Activity
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { aiToolService, AITool, AIToolTest, KnowledgeSourcePayload } from '../../services/api/aiToolService';
+import { aiToolService, AITool, AIToolTest } from '../../services/api/aiToolService';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 
 export const AIToolManagement: React.FC = () => {
@@ -53,14 +53,14 @@ export const AIToolManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'PARAMS' | 'BODY' | 'CONSOLE'>('PARAMS');
   const [testLogs, setTestLogs] = useState<string>('');
   const [latency, setLatency] = useState<number | null>(null);
-  const [knowledgeSource, setKnowledgeSource] = useState<KnowledgeSourcePayload | null>(null);
-  const [knowledgeContent, setKnowledgeContent] = useState('');
-  const [knowledgeLoading, setKnowledgeLoading] = useState(true);
-  const [knowledgeSaving, setKnowledgeSaving] = useState(false);
+  // const [knowledgeSource, setKnowledgeSource] = useState<KnowledgeSourcePayload | null>(null);
+  // const [knowledgeContent, setKnowledgeContent] = useState('');
+  // const [knowledgeLoading, setKnowledgeLoading] = useState(true);
+  // const [knowledgeSaving, setKnowledgeSaving] = useState(false);
 
   useEffect(() => {
     fetchTools();
-    fetchKnowledgeSource();
+    // fetchKnowledgeSource();
   }, []);
 
   const fetchTools = async () => {
@@ -86,36 +86,36 @@ export const AIToolManagement: React.FC = () => {
     }
   };
 
-  const fetchKnowledgeSource = async () => {
-    setKnowledgeLoading(true);
-    try {
-      const data = await aiToolService.getKnowledgeSource();
-      setKnowledgeSource(data);
-      setKnowledgeContent(data.content || '');
-    } catch (error) {
-      toast.error('Không thể tải nguồn tri thức FPTU');
-      console.error(error);
-    } finally {
-      setKnowledgeLoading(false);
-    }
-  };
+  // const fetchKnowledgeSource = async () => {
+  //   setKnowledgeLoading(true);
+  //   try {
+  //     const data = await aiToolService.getKnowledgeSource();
+  //     setKnowledgeSource(data);
+  //     setKnowledgeContent(data.content || '');
+  //   } catch (error) {
+  //     toast.error('Không thể tải nguồn tri thức FPTU');
+  //     console.error(error);
+  //   } finally {
+  //     setKnowledgeLoading(false);
+  //   }
+  // };
 
-  const handleSaveKnowledgeSource = async () => {
-    setKnowledgeSaving(true);
-    try {
-      const data = await aiToolService.updateKnowledgeSource(knowledgeContent);
-      if (!data.success) {
-        throw new Error(data.message || 'Không thể lưu nguồn tri thức');
-      }
-      setKnowledgeSource(data);
-      setKnowledgeContent(data.content || knowledgeContent);
-      toast.success('Đã cập nhật fptu-information.json');
-    } catch (error: any) {
-      toast.error(error?.message || 'Lưu nguồn tri thức thất bại');
-    } finally {
-      setKnowledgeSaving(false);
-    }
-  };
+  // const handleSaveKnowledgeSource = async () => {
+  //   setKnowledgeSaving(true);
+  //   try {
+  //     const data = await aiToolService.updateKnowledgeSource(knowledgeContent);
+  //     if (!data.success) {
+  //       throw new Error(data.message || 'Không thể lưu nguồn tri thức');
+  //     }
+  //     setKnowledgeSource(data);
+  //     setKnowledgeContent(data.content || knowledgeContent);
+  //     toast.success('Đã cập nhật fptu-information.json');
+  //   } catch (error: any) {
+  //     toast.error(error?.message || 'Lưu nguồn tri thức thất bại');
+  //   } finally {
+  //     setKnowledgeSaving(false);
+  //   }
+  // };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -521,7 +521,7 @@ export const AIToolManagement: React.FC = () => {
             </table>
           </div>
         </div>
-        <div className="bg-white rounded-[24px] shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100/80 p-6 space-y-5">
+        {/* <div className="bg-white rounded-[24px] shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100/80 p-6 space-y-5">
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-[11px] font-bold uppercase tracking-widest">
@@ -551,30 +551,30 @@ export const AIToolManagement: React.FC = () => {
                 {knowledgeSaving ? 'Đang lưu...' : 'Lưu JSON'}
               </button>
             </div>
-          </div>
+          // </div> */}
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
-              <div className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Tệp nguồn</div>
-              <div className="text-[14px] font-bold text-slate-800 mt-2">{knowledgeSource?.filename || 'fptu-information.json'}</div>
-            </div>
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
-              <div className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Phiên bản</div>
-              <div className="text-[14px] font-bold text-slate-800 mt-2">{knowledgeSource?.summary?.version || '-'}</div>
-            </div>
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
-              <div className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Số Pillar</div>
-              <div className="text-[14px] font-bold text-slate-800 mt-2">{knowledgeSource?.summary?.pillarCount ?? '-'}</div>
-            </div>
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
-              <div className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Dung lượng</div>
-              <div className="text-[14px] font-bold text-slate-800 mt-2">{knowledgeSource?.size ? `${knowledgeSource.size.toLocaleString()} bytes` : '-'}</div>
-            </div>
-          </div>
+        {/* // <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          //   <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+          //     <div className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Tệp nguồn</div>
+          //     <div className="text-[14px] font-bold text-slate-800 mt-2">{knowledgeSource?.filename || 'fptu-information.json'}</div>
+          //   </div>
+          //   <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+          //     <div className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Phiên bản</div>
+          //     <div className="text-[14px] font-bold text-slate-800 mt-2">{knowledgeSource?.summary?.version || '-'}</div>
+          //   </div>
+          //   <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+          //     <div className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Số Pillar</div>
+          //     <div className="text-[14px] font-bold text-slate-800 mt-2">{knowledgeSource?.summary?.pillarCount ?? '-'}</div>
+          //   </div>
+          //   <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+          //     <div className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Dung lượng</div>
+          //     <div className="text-[14px] font-bold text-slate-800 mt-2">{knowledgeSource?.size ? `${knowledgeSource.size.toLocaleString()} bytes` : '-'}</div>
+          //   </div>
+          // </div> */}
 
 
 
-          <textarea
+        {/* <textarea
             value={knowledgeContent}
             onChange={(e) => setKnowledgeContent(e.target.value)}
             rows={18}
@@ -589,7 +589,7 @@ export const AIToolManagement: React.FC = () => {
               `fpt_tool` và `fptu_knowledge_lookup` sẽ đọc nội dung mới ngay sau khi lưu. Backend quản lý tool giờ cũng cho phép admin nhìn thấy và chỉnh cấu hình các tool tri thức này trong cùng màn hình.
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Create/Edit Modal */}
         {isModalOpen && (
@@ -730,246 +730,246 @@ export const AIToolManagement: React.FC = () => {
         {isTestModalOpen && testingTool && createPortal((
           <div className="fixed inset-0 z-[9999] bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
             <div className="flex min-h-screen items-center justify-center p-4">
-            <div className="bg-white w-full max-w-5xl rounded-[24px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-gray-100 flex flex-col max-h-[90vh]">
+              <div className="bg-white w-full max-w-5xl rounded-[24px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-gray-100 flex flex-col max-h-[90vh]">
 
-              <div className="px-6 py-5 bg-white border-b border-gray-100 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-100">
-                    <Globe size={14} className="text-blue-500" />
-                    <span className="text-[11px] font-black text-blue-600 uppercase tracking-widest">Tool Test Lab</span>
+                <div className="px-6 py-5 bg-white border-b border-gray-100 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-100">
+                      <Globe size={14} className="text-blue-500" />
+                      <span className="text-[11px] font-black text-blue-600 uppercase tracking-widest">Tool Test Lab</span>
+                    </div>
+                    <div className="space-y-0.5">
+                      <h3 className="text-[18px] font-bold text-slate-900 tracking-tight">
+                        Kiểm thử <span className="text-blue-600">{testingTool.name}</span>
+                      </h3>
+                      <p className="text-[13px] text-slate-500">
+                        Chạy mô phỏng nhanh với tham số đầu vào và theo dõi log xử lý theo thời gian thực.
+                      </p>
+                    </div>
                   </div>
-                  <div className="space-y-0.5">
-                    <h3 className="text-[18px] font-bold text-slate-900 tracking-tight">
-                      Kiểm thử <span className="text-blue-600">{testingTool.name}</span>
-                    </h3>
-                    <p className="text-[13px] text-slate-500">
-                      Chạy mô phỏng nhanh với tham số đầu vào và theo dõi log xử lý theo thời gian thực.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setIsTestModalOpen(false)}
-                  className="w-9 h-9 hover:bg-slate-100 rounded-xl flex items-center justify-center transition-colors text-slate-400 hover:text-slate-700"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className="px-6 py-4 bg-slate-50/80 border-b border-gray-100 flex items-center gap-3 shrink-0">
-                <div className="bg-emerald-50 text-emerald-600 text-[11px] font-black px-3 py-2 rounded-md border border-emerald-100">POST</div>
-                <div className="flex-1 flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-[13px] font-mono text-slate-500">
-                  <span className="opacity-50">/api/v1/admin/ai-tools/</span>
-                  <span className="text-blue-600 font-bold">{testingTool.id}</span>
-                  <span className="opacity-50">/test</span>
-                </div>
-                <button
-                  onClick={handleRunTest}
-                  disabled={isTesting}
-                  className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 text-white font-bold px-6 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-blue-600/20 active:scale-95 shrink-0 min-w-[132px] justify-center"
-                >
-                  {isTesting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                  <span>{isTesting ? 'Đang chạy...' : 'Chạy test'}</span>
-                </button>
-              </div>
-
-              <div className="px-6 py-4 bg-white border-b border-gray-100 grid grid-cols-1 md:grid-cols-4 gap-3 shrink-0">
-                <div className="rounded-2xl border border-gray-100 bg-slate-50/60 px-4 py-3">
-                  <div className="text-[10px] uppercase tracking-widest font-black text-slate-400">Loại tool</div>
-                  <div className="mt-1 text-[13px] font-bold text-slate-700">{testingTool.type}</div>
-                </div>
-                <div className="rounded-2xl border border-gray-100 bg-slate-50/60 px-4 py-3">
-                  <div className="text-[10px] uppercase tracking-widest font-black text-slate-400">Tham số bắt buộc</div>
-                  <div className="mt-1 text-[13px] font-bold text-slate-700">
-                    {testingTool.requiredFields ? testingTool.requiredFields.split(',').length : 0}
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-gray-100 bg-slate-50/60 px-4 py-3">
-                  <div className="text-[10px] uppercase tracking-widest font-black text-slate-400">Tham số ra (Contract)</div>
-                  <div className="mt-1 text-[13px] font-bold text-slate-700">
-                    {testingTool.requiredRespFields ? testingTool.requiredRespFields.split(',').length : 0}
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-gray-100 bg-slate-50/60 px-4 py-3">
-                  <div className="text-[10px] uppercase tracking-widest font-black text-slate-400">Độ tin cậy</div>
-                  <div className="mt-1 text-[13px] font-bold text-slate-700">{testingTool.accuracyPercentage}%</div>
-                </div>
-                <div className="rounded-2xl border border-gray-100 bg-slate-50/60 px-4 py-3">
-                  <div className="text-[10px] uppercase tracking-widest font-black text-slate-400">Trạng thái</div>
-                  <div className={`mt-1 text-[13px] font-bold ${testingTool.isActive ? 'text-emerald-600' : 'text-slate-500'}`}>
-                    {testingTool.isActive ? 'Đang hoạt động' : 'Đã khóa'}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-hidden flex flex-col">
-                <div className="px-6 pt-2 bg-white border-b border-gray-100 flex items-center gap-6 shrink-0">
-                  {[
-                    { id: 'PARAMS', label: 'Params', icon: <Filter size={14} /> },
-                    { id: 'BODY', label: 'Preview', icon: <Layers size={14} /> },
-                    { id: 'CONSOLE', label: 'Logs', icon: <Activity size={14} /> }
-                  ].map(tab => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id as any)}
-                      className={`pb-3 text-[12px] font-bold tracking-wide transition-all flex items-center gap-2 border-b-2 ${activeTab === tab.id
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-slate-500 hover:text-slate-700'
-                        }`}
-                    >
-                      {tab.icon}
-                      {tab.label}
-                      {tab.id === 'PARAMS' && testingTool.requiredFields && (
-                        <span className="w-4 h-4 rounded-full bg-blue-50 text-blue-600 text-[9px] flex items-center justify-center border border-blue-100">
-                          {testingTool.requiredFields.split(',').length}
-                        </span>
-                      )}
-                    </button>
-                  ))}
+                  <button
+                    onClick={() => setIsTestModalOpen(false)}
+                    className="w-9 h-9 hover:bg-slate-100 rounded-xl flex items-center justify-center transition-colors text-slate-400 hover:text-slate-700"
+                  >
+                    <X size={18} />
+                  </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto bg-slate-50/50 p-6 custom-scrollbar">
-                  {activeTab === 'PARAMS' && (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Thông số kiểm thử</span>
-                          <p className="mt-1 text-[13px] text-slate-500">Nhập đúng định dạng để mô phỏng gần nhất với runtime thật.</p>
+                <div className="px-6 py-4 bg-slate-50/80 border-b border-gray-100 flex items-center gap-3 shrink-0">
+
+                  <div className="flex-1 flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-[13px] font-mono text-slate-500">
+                    <span className="opacity-50">/api/v1/admin/ai-tools/</span>
+                    <span className="text-blue-600 font-bold">{testingTool.id}</span>
+                    <span className="opacity-50">/test</span>
+                  </div>
+                  <button
+                    onClick={handleRunTest}
+                    disabled={isTesting}
+                    className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-300 text-white font-bold px-6 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-blue-600/20 active:scale-95 shrink-0 min-w-[132px] justify-center"
+                  >
+                    {isTesting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                    <span>{isTesting ? 'Đang chạy...' : 'Chạy test'}</span>
+                  </button>
+                </div>
+
+                <div className="px-6 py-4 bg-white border-b border-gray-100 grid grid-cols-1 md:grid-cols-4 gap-3 shrink-0">
+                  <div className="rounded-2xl border border-gray-100 bg-slate-50/60 px-4 py-3">
+                    <div className="text-[10px] uppercase tracking-widest font-black text-slate-400">Loại tool</div>
+                    <div className="mt-1 text-[13px] font-bold text-slate-700">{testingTool.type}</div>
+                  </div>
+                  <div className="rounded-2xl border border-gray-100 bg-slate-50/60 px-4 py-3">
+                    <div className="text-[10px] uppercase tracking-widest font-black text-slate-400">Tham số bắt buộc</div>
+                    <div className="mt-1 text-[13px] font-bold text-slate-700">
+                      {testingTool.requiredFields ? testingTool.requiredFields.split(',').length : 0}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-gray-100 bg-slate-50/60 px-4 py-3">
+                    <div className="text-[10px] uppercase tracking-widest font-black text-slate-400">Tham số ra (Contract)</div>
+                    <div className="mt-1 text-[13px] font-bold text-slate-700">
+                      {testingTool.requiredRespFields ? testingTool.requiredRespFields.split(',').length : 0}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-gray-100 bg-slate-50/60 px-4 py-3">
+                    <div className="text-[10px] uppercase tracking-widest font-black text-slate-400">Độ tin cậy</div>
+                    <div className="mt-1 text-[13px] font-bold text-slate-700">{testingTool.accuracyPercentage}%</div>
+                  </div>
+                  <div className="rounded-2xl border border-gray-100 bg-slate-50/60 px-4 py-3">
+                    <div className="text-[10px] uppercase tracking-widest font-black text-slate-400">Trạng thái</div>
+                    <div className={`mt-1 text-[13px] font-bold ${testingTool.isActive ? 'text-emerald-600' : 'text-slate-500'}`}>
+                      {testingTool.isActive ? 'Đang hoạt động' : 'Đã khóa'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-hidden flex flex-col">
+                  <div className="px-6 pt-2 bg-white border-b border-gray-100 flex items-center gap-6 shrink-0">
+                    {[
+                      { id: 'PARAMS', label: 'Params', icon: <Filter size={14} /> },
+                      { id: 'BODY', label: 'Preview', icon: <Layers size={14} /> },
+                      { id: 'CONSOLE', label: 'Logs', icon: <Activity size={14} /> }
+                    ].map(tab => (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id as any)}
+                        className={`pb-3 text-[12px] font-bold tracking-wide transition-all flex items-center gap-2 border-b-2 ${activeTab === tab.id
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-slate-500 hover:text-slate-700'
+                          }`}
+                      >
+                        {tab.icon}
+                        {tab.label}
+                        {tab.id === 'PARAMS' && testingTool.requiredFields && (
+                          <span className="w-4 h-4 rounded-full bg-blue-50 text-blue-600 text-[9px] flex items-center justify-center border border-blue-100">
+                            {testingTool.requiredFields.split(',').length}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto bg-slate-50/50 p-6 custom-scrollbar">
+                    {activeTab === 'PARAMS' && (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Thông số kiểm thử</span>
+                            <p className="mt-1 text-[13px] text-slate-500">Nhập đúng định dạng để mô phỏng gần nhất với runtime thật.</p>
+                          </div>
                         </div>
-                      </div>
-                      <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white">
-                        <table className="w-full text-left text-[13px]">
-                          <thead className="bg-slate-50 border-b border-gray-100">
-                            <tr>
-                              <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest w-[40%]">Trường</th>
-                              <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Giá trị</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-100">
-                            {testingTool.requiredFields ? (
-                              testingTool.requiredFields.split(',').map((field) => {
-                                const key = field.trim();
-                                return (
-                                  <tr key={key}>
-                                    <td className="px-4 py-3 font-mono text-slate-700 bg-slate-50/70">{key}</td>
-                                    <td className="px-0 py-0">
-                                      <input
-                                        type="text"
-                                        value={testParams[key] || ''}
-                                        onChange={(e) => handleParamChange(key, e.target.value)}
-                                        placeholder={`Nhập ${key}...`}
-                                        className="w-full bg-transparent px-4 py-3 border-none focus:ring-2 focus:ring-blue-500/10 outline-none text-slate-700 font-medium placeholder:text-slate-400"
-                                      />
-                                    </td>
-                                  </tr>
-                                );
-                              })
-                            ) : (
+                        <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white">
+                          <table className="w-full text-left text-[13px]">
+                            <thead className="bg-slate-50 border-b border-gray-100">
                               <tr>
-                                <td colSpan={2} className="px-4 py-8 text-center text-slate-500 italic">
-                                  Tool này không yêu cầu tham số bắt buộc.
-                                </td>
+                                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest w-[40%]">Trường</th>
+                                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Giá trị</th>
                               </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-
-                  {activeTab === 'BODY' && (
-                    <div className="h-full flex flex-col space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Payload preview</span>
-                          <p className="mt-1 text-[13px] text-slate-500">Xem nhanh dữ liệu sẽ được gửi tới service test.</p>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              {testingTool.requiredFields ? (
+                                testingTool.requiredFields.split(',').map((field) => {
+                                  const key = field.trim();
+                                  return (
+                                    <tr key={key}>
+                                      <td className="px-4 py-3 font-mono text-slate-700 bg-slate-50/70">{key}</td>
+                                      <td className="px-0 py-0">
+                                        <input
+                                          type="text"
+                                          value={testParams[key] || ''}
+                                          onChange={(e) => handleParamChange(key, e.target.value)}
+                                          placeholder={`Nhập ${key}...`}
+                                          className="w-full bg-transparent px-4 py-3 border-none focus:ring-2 focus:ring-blue-500/10 outline-none text-slate-700 font-medium placeholder:text-slate-400"
+                                        />
+                                      </td>
+                                    </tr>
+                                  );
+                                })
+                              ) : (
+                                <tr>
+                                  <td colSpan={2} className="px-4 py-8 text-center text-slate-500 italic">
+                                    Tool này không yêu cầu tham số bắt buộc.
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
                         </div>
-                        <span className="text-[11px] text-slate-500 font-mono">application/json</span>
                       </div>
-                      <textarea
-                        value={JSON.stringify(testParams, null, 2)}
-                        readOnly
-                        className="flex-1 min-h-[320px] bg-white border border-gray-200 rounded-2xl p-6 font-mono text-[14px] text-slate-600 outline-none"
-                      />
-                    </div>
-                  )}
+                    )}
 
-                  {activeTab === 'CONSOLE' && (
-                    <div className="h-full flex flex-col space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Nhật ký thực thi</span>
-                          {isTesting && (
-                            <div className="flex items-center gap-2">
-                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                              <span className="text-[10px] text-blue-500/80 font-bold animate-pulse uppercase tracking-wider">Đang xử lý...</span>
+                    {activeTab === 'BODY' && (
+                      <div className="h-full flex flex-col space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Payload preview</span>
+                            <p className="mt-1 text-[13px] text-slate-500">Xem nhanh dữ liệu sẽ được gửi tới service test.</p>
+                          </div>
+                          <span className="text-[11px] text-slate-500 font-mono">application/json</span>
+                        </div>
+                        <textarea
+                          value={JSON.stringify(testParams, null, 2)}
+                          readOnly
+                          className="flex-1 min-h-[320px] bg-white border border-gray-200 rounded-2xl p-6 font-mono text-[14px] text-slate-600 outline-none"
+                        />
+                      </div>
+                    )}
+
+                    {activeTab === 'CONSOLE' && (
+                      <div className="h-full flex flex-col space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Nhật ký thực thi</span>
+                            {isTesting && (
+                              <div className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                                <span className="text-[10px] text-blue-500/80 font-bold animate-pulse uppercase tracking-wider">Đang xử lý...</span>
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => setTestLogs('')}
+                            className="text-[10px] font-black text-slate-500 hover:text-slate-700 uppercase tracking-widest bg-white px-3 py-1.5 rounded-md border border-gray-200 transition-colors"
+                          >
+                            Xóa log
+                          </button>
+                        </div>
+                        <div className="flex-1 min-h-[320px] bg-[#0F172A] rounded-2xl p-6 font-mono text-[13px] text-emerald-300 overflow-y-auto border border-slate-800 relative group custom-scrollbar shadow-inner">
+                          <pre className="whitespace-pre-wrap leading-relaxed">
+                            <span className="text-slate-500 mr-2">$ evaluator --tool-id {testingTool.id}</span>
+                            <br />
+                            {testLogs || 'Sẵn sàng chạy kiểm thử...'}
+                          </pre>
+                          {!isTesting && testLogs && (
+                            <div className="absolute top-4 right-4 flex flex-col items-end gap-2 opacity-40 group-hover:opacity-100 transition-opacity">
+                              <span className="text-[10px] bg-white/10 px-2.5 py-1 rounded-md border border-white/10 text-slate-200 font-bold uppercase tracking-widest flex items-center gap-2">
+                                <Check size={12} className="text-green-500" />
+                                Hoàn tất
+                              </span>
                             </div>
                           )}
                         </div>
-                        <button
-                          onClick={() => setTestLogs('')}
-                          className="text-[10px] font-black text-slate-500 hover:text-slate-700 uppercase tracking-widest bg-white px-3 py-1.5 rounded-md border border-gray-200 transition-colors"
-                        >
-                          Xóa log
-                        </button>
                       </div>
-                      <div className="flex-1 min-h-[320px] bg-[#0F172A] rounded-2xl p-6 font-mono text-[13px] text-emerald-300 overflow-y-auto border border-slate-800 relative group custom-scrollbar shadow-inner">
-                        <pre className="whitespace-pre-wrap leading-relaxed">
-                          <span className="text-slate-500 mr-2">$ evaluator --tool-id {testingTool.id}</span>
-                          <br />
-                          {testLogs || 'Sẵn sàng chạy kiểm thử...'}
-                        </pre>
-                        {!isTesting && testLogs && (
-                          <div className="absolute top-4 right-4 flex flex-col items-end gap-2 opacity-40 group-hover:opacity-100 transition-opacity">
-                            <span className="text-[10px] bg-white/10 px-2.5 py-1 rounded-md border border-white/10 text-slate-200 font-bold uppercase tracking-widest flex items-center gap-2">
-                              <Check size={12} className="text-green-500" />
-                              Hoàn tất
-                            </span>
-                          </div>
-                        )}
+                    )}
+                  </div>
+                </div>
+
+                <div className="px-6 py-3 bg-white border-t border-gray-100 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-8">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${latency !== null ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-gray-300'}`} />
+                      <div className="flex flex-col">
+                        <span className="text-[9px] text-slate-500 font-black uppercase tracking-tighter">Latency</span>
+                        <span className="text-[12px] font-mono text-slate-700">{latency !== null ? `${latency}ms` : '--'}</span>
                       </div>
                     </div>
-                  )}
+                    <div className="flex items-center gap-3">
+                      <Activity size={14} className="text-slate-500" />
+                      <div className="flex flex-col">
+                        <span className="text-[9px] text-slate-500 font-black uppercase tracking-tighter">Status</span>
+                        <span className={`text-[12px] font-mono font-bold ${testLogs.includes('[ERROR]') ? 'text-red-500' : 'text-blue-600'}`}>
+                          {isTesting ? 'BUSY' : testLogs ? (testLogs.includes('[ERROR]') ? 'FAILED' : 'SUCCESS') : 'IDLE'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Clock size={14} className="text-slate-500" />
+                      <div className="flex flex-col">
+                        <span className="text-[9px] text-slate-500 font-black uppercase tracking-tighter">Accuracy Score</span>
+                        <span className="text-[12px] font-mono text-slate-700 font-bold">{testingTool.accuracyPercentage}%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setIsTestModalOpen(false)}
+                      className="px-4 py-2 rounded-md text-[12px] font-bold text-slate-500 hover:text-slate-700 transition-colors"
+                    >
+                      Đóng
+                    </button>
+                  </div>
                 </div>
+
               </div>
-
-              <div className="px-6 py-3 bg-white border-t border-gray-100 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-8">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${latency !== null ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-gray-300'}`} />
-                    <div className="flex flex-col">
-                      <span className="text-[9px] text-slate-500 font-black uppercase tracking-tighter">Latency</span>
-                      <span className="text-[12px] font-mono text-slate-700">{latency !== null ? `${latency}ms` : '--'}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Activity size={14} className="text-slate-500" />
-                    <div className="flex flex-col">
-                      <span className="text-[9px] text-slate-500 font-black uppercase tracking-tighter">Status</span>
-                      <span className={`text-[12px] font-mono font-bold ${testLogs.includes('[ERROR]') ? 'text-red-500' : 'text-blue-600'}`}>
-                        {isTesting ? 'BUSY' : testLogs ? (testLogs.includes('[ERROR]') ? 'FAILED' : 'SUCCESS') : 'IDLE'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Clock size={14} className="text-slate-500" />
-                    <div className="flex flex-col">
-                      <span className="text-[9px] text-slate-500 font-black uppercase tracking-tighter">Accuracy Score</span>
-                      <span className="text-[12px] font-mono text-slate-700 font-bold">{testingTool.accuracyPercentage}%</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setIsTestModalOpen(false)}
-                    className="px-4 py-2 rounded-md text-[12px] font-bold text-slate-500 hover:text-slate-700 transition-colors"
-                  >
-                    Đóng
-                  </button>
-                </div>
-              </div>
-
-            </div>
             </div>
           </div>
         ), document.body)}

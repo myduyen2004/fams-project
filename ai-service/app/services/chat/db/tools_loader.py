@@ -33,6 +33,12 @@ class ToolsLoader:
             "STUDENT": set()
         }
         self._last_reload_ts: float = 0.0
+        self._on_reload_listeners = []
+
+    def on_reload(self, listener):
+        """Đăng ký callback gọi khi reload xong."""
+        self._on_reload_listeners.append(listener)
+        return listener
 
     def reload(self):
         """Tải lại tất cả tool từ database."""
@@ -109,9 +115,10 @@ class ToolsLoader:
                         
                     new_all_tools_formatted[name] = f"{prefix}{desc}{entities_str}"
                     
-                    role_list = sorted(allowed_roles_for_tool(name))
-                    if not role_list and roles:
-                        role_list = [r.strip() for r in roles.split(',') if r.strip()]
+                    core_roles = set(allowed_roles_for_tool(name))
+                    db_roles = {r.strip() for r in (roles or "").split(',') if r.strip()}
+                    role_list = sorted(core_roles | db_roles)
+                    
                     for r in role_list:
                         if r in new_role_tools:
                             new_role_tools[r].add(name)
@@ -147,6 +154,13 @@ class ToolsLoader:
                 logger.info(f"[ToolsLoader] Loaded {len(rows)} tools from database "
                             f"(SQL: {len(self.templates)}, Backend: {len(self.backend_actions)}, Nav: {len(self.navigate_only)}, "
                             f"Active: {len(self.active_tools)}, Inactive: {len(self.inactive_tools)})")
+                
+                # Notify listeners
+                for listener in self._on_reload_listeners:
+                    try:
+                        listener()
+                    except Exception as le:
+                        logger.error(f"[ToolsLoader] Listener failed: {le}")
         except Exception as e:
             logger.error(f"[ToolsLoader] Failed to load tools from database: {e}")
 
