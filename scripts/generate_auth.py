@@ -1,4 +1,6 @@
-<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36" version="29.6.6">
+import re
+
+xml_data = """<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36" version="29.6.6">
   <diagram name="Authentication Class Diagram" id="auth">
     <mxGraphModel dx="1442" dy="562" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="3000" pageHeight="4000" math="0" shadow="0">
       <root>
@@ -734,3 +736,14 @@
     </mxGraphModel>
   </diagram>
 </mxfile>
+"""
+
+# Now write it
+xml_data = re.sub(r'fillColor=#[0-9a-fA-F]{6};?', 'fillColor=#ffffff;', xml_data)
+xml_data = re.sub(r'strokeColor=#[0-9a-fA-F]{6};?', 'strokeColor=#000000;', xml_data)
+
+out_path = r'd:\fams-project\docs\authentication_class_diagram.drawio'
+with open(out_path, 'w', encoding='utf-8') as out:
+    out.write(xml_data)
+
+print(f"Successfully generated authentic class diagram")

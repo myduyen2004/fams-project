@@ -1,0 +1,137 @@
+
+CLASS: <<RestController>>
+DashboardController
+   - dashboardService : DashboardService
+   - notificationService : UserNotificationService
+   + getStats() : DashboardStatsResponse
+   + getRecentAccess() : List<RecentAccessResponse>
+   + getAlerts() : List<AlertResponse>
+   + getSystemLogs() : List<SystemLogResponse>
+
+CLASS: <<RestController>>
+AcadStaffDashboardController
+   - dashboardService : AcademicStaffDashboardService
+   + getDashboardData() : AcadStaffDashboardResponse
+
+CLASS: <<interface>>
+DashboardService
+   + getStatistics() : DashboardStatsResponse
+   + getRecentAccess() : List<RecentAccessResponse>
+   + getAlerts() : List<AlertResponse>
+   + getSystemLogs() : List<SystemLogResponse>
+
+CLASS: <<Service>>
+DashboardServiceImpl
+   - userRepo : UserRepository
+   - classSectionRepo : ClassSectionRepository
+   - systemLogRepo : SystemLogRepository
+   - alertRepo : AlertRepository
+   - accessLogRepo : AccessLogRepository
+   + getStatistics() : DashboardStatsResponse
+   + getAlerts() : List
+   + getRecentAccess() : List
+   + getSystemLogs() : List
+
+CLASS: <<Service>>
+SystemLogService
+   - persistenceService : SystemLogPersistenceService
+   + logInfo(title, desc, source, ...) : void
+   + logSuccess(...) : void
+   + logWarning(...) : void
+   + logError(...) : void
+   + log(title, desc, type, ...) : void
+
+CLASS: <<Service>>
+SystemLogPersistenceService
+   - systemLogRepo : SystemLogRepository
+   + saveLogEntry(...) : void
+
+CLASS: <<Service>>
+AcademicStaffDashboardService
+   + getDashboardData() : AcadStaffDashboardResponse
+
+CLASS: <<Service>>
+DashboardBroadcastService
+   - messagingTemplate : SimpMessagingTemplate
+   + broadcastStats(DashboardStatsResponse) : void
+
+CLASS: <<DTO>>
+DashboardStatsResponse
+   - totalStudents : Integer
+   - totalUsers : Integer
+   - totalAccounts : Integer
+   - totalApplications : Integer
+   - totalBehaviors : Integer
+
+CLASS: <<DTO>>
+AlertResponse
+   - id : Long
+   - title : String
+   - message : String
+   - severity : String
+   - timestamp : LocalDateTime
+
+CLASS: <<DTO>>
+SystemLogResponse
+   - id : Long
+   - title : String
+   - description : String
+   - type : String
+   - source : String
+   - performer : String
+   - timestamp : LocalDateTime
+
+CLASS: <<DTO>>
+AcadStaffDashboardResponse
+   - semesterSummary : Map
+   - enrollmentTrends : List
+   - attendanceOverview : Map
+
+CLASS: <<Entity>>
+SystemLog
+   - id : Long
+   - title : String
+   - description : String
+   - type : LogType
+   - source : String
+   - ipAddress : String
+   - userAgent : String
+   - performerUsername : String
+   - createdAt : LocalDateTime
+
+CLASS: <<Entity>>
+AccessLog
+   - id : Long
+   - userId : Long
+   - ipAddress : String
+   - userAgent : String
+   - loginAt : LocalDateTime
+
+CLASS: <<Entity>>
+Alert
+   - id : Long
+   - title : String
+   - message : String
+   - severity : AlertSeverity
+   - isActive : Boolean
+   - createdAt : LocalDateTime
+
+CLASS: <<interface>>
+SystemLogRepository
+   + findByOrderByCreatedAtDesc() : List
+
+CLASS: <<interface>>
+AlertRepository
+   + findByIsActiveTrueOrderByCreatedAtDesc() : List
+
+CLASS: <<interface>>
+AccessLogRepository
+   + findByUserId(Long) : List
+   + findByOrderByLoginAtDesc(Pageable) : Page
+
+CLASS: <<DTO>>
+RecentAccessResponse
+   - id : Long
+   - ipAddress : String
+   - userAgent : String
+   - loginAt : LocalDateTime

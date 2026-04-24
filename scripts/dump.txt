@@ -1,0 +1,37 @@
+
+CLASS: <<RestController>>
+AIChatController
+  - aiChatService : AIChatService
+  + createSession() : AIChatSession
++ getUserSessions() : List<AIChatSession>
++ getSessionMessages(Long sessionId) : List<AIChatMessage>
++ sendMessage(sessionId, Map request) : Map<String, Object>
++ uploadFile(sessionId, MultipartFile, Map) : Map<String, Object>
++ deleteSession(Long sessionId) : void
+
+CLASS: <<interface>>
+AIChatService
+  + createSession(User) : AIChatSession
++ getUserSessions(User) : List<AIChatSession>
++ sendMessage(sessionId, message, routingModel, answerModel) : Map
++ streamMessage(sessionId, message, routingModel, answerModel) : Flux
++ uploadFile(sessionId, file, routingModel, answerModel) : Map
++ deleteSession(Long sessionId) : void
+
+CLASS: <<Entity>>
+AIChatSession
+  - id : Long
+- user : User
+- title : String
+- startedAt : LocalDateTime
+
+CLASS: <<Entity>>
+AIChatMessage
+  - id : Long
+- session : AIChatSession
+- sender : UserRole (USER/AI)
+- content : String
+- sentAt : LocalDateTime
+
+CLASS: <<External Entity>>
+User
