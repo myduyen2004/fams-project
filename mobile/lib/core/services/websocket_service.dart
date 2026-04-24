@@ -9,7 +9,8 @@ import 'api_service.dart';
 /// WebSocket service using STOMP — mirrors web's initWebSocket()
 class WebSocketService extends GetxService {
   StompClient? _stompClient;
-  final Map<String, void Function(Map<String, dynamic>)> _onMessageCallbacks = {};
+  final Map<String, void Function(Map<String, dynamic>)> _onMessageCallbacks =
+      {};
   final Map<String, StompUnsubscribe> _subscriptions = {};
   bool _isConnected = false;
   Timer? _reconnectTimer;
@@ -48,33 +49,43 @@ class WebSocketService extends GetxService {
           _isConnected = true;
           _reconnectTimer?.cancel();
           debugPrint('[WS] Connected');
-          
+
           // Re-subscribe to all topics
-          final topics = Map<String, void Function(Map<String, dynamic>)>.from(_onMessageCallbacks);
+          final topics = Map<String, void Function(Map<String, dynamic>)>.from(
+            _onMessageCallbacks,
+          );
           _subscriptions.clear();
           topics.forEach((destination, callback) {
             _doSubscribe(destination, callback);
           });
 
-          if (!_connectionCompleter!.isCompleted) _connectionCompleter!.complete();
+          if (!_connectionCompleter!.isCompleted) {
+            _connectionCompleter!.complete();
+          }
           onConnected?.call();
         },
         onDisconnect: (StompFrame frame) {
           _isConnected = false;
+          _connectionCompleter = null;
           debugPrint('[WS] Disconnected');
           _scheduleReconnect(onConnected: onConnected, onError: onError);
         },
         onStompError: (StompFrame frame) {
           _isConnected = false;
+          _connectionCompleter = null;
           debugPrint('[WS] STOMP Error: ${frame.body}');
-          if (!_connectionCompleter!.isCompleted)
+          if (!_connectionCompleter!.isCompleted) {
             _connectionCompleter!.completeError(frame.body ?? 'STOMP Error');
+          }
           onError?.call(frame.body ?? 'STOMP Error');
         },
         onWebSocketError: (dynamic error) {
           _isConnected = false;
+          _connectionCompleter = null;
           debugPrint('[WS] WebSocket Error: $error');
-          if (!_connectionCompleter!.isCompleted) _connectionCompleter!.completeError(error.toString());
+          if (!_connectionCompleter!.isCompleted) {
+            _connectionCompleter!.completeError(error.toString());
+          }
           _scheduleReconnect(onConnected: onConnected, onError: onError);
         },
         reconnectDelay: const Duration(seconds: 0),
@@ -107,7 +118,10 @@ class WebSocketService extends GetxService {
     _doSubscribe(destination, onMessage);
   }
 
-  void _doSubscribe(String destination, void Function(Map<String, dynamic> data) onMessage) {
+  void _doSubscribe(
+    String destination,
+    void Function(Map<String, dynamic> data) onMessage,
+  ) {
     // Unsubscribe existing if any
     _subscriptions[destination]?.call(unsubscribeHeaders: {});
 
@@ -149,10 +163,12 @@ class WebSocketService extends GetxService {
     required void Function(Map<String, dynamic>) onMessage,
     required void Function(Map<String, dynamic>) onReadReceipt,
     required void Function(Map<String, dynamic>) onDelete,
+    required void Function(Map<String, dynamic>) onReaction,
   }) {
     subscribe('/topic/chat/$groupId', onMessage);
     subscribe('/topic/chat/$groupId/read', onReadReceipt);
     subscribe('/topic/chat/$groupId/delete', onDelete);
+    subscribe('/topic/chat/$groupId/reaction', onReaction);
   }
 
   /// Subscribe to typing indicator for a group
@@ -176,8 +192,15 @@ class WebSocketService extends GetxService {
   }
 
   /// Send typing indicator
-  void sendTyping(int groupId) {
-    send('/app/chat.typing/$groupId');
+  void sendTyping(
+    int groupId, {
+    required String username,
+    required bool isTyping,
+  }) {
+    send(
+      '/app/chat.typing/$groupId',
+      body: {'username': username, 'isTyping': isTyping},
+    );
   }
 
   /// Send mark-as-read
@@ -197,5 +220,6 @@ class WebSocketService extends GetxService {
     _stompClient?.deactivate();
     _stompClient = null;
     _isConnected = false;
+    _connectionCompleter = null;
   }
 }

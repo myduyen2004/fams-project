@@ -41,6 +41,9 @@ import 'features/notification/controllers/notification_controller.dart';
 import 'core/constants/api_constants.dart';
 import 'core/services/api_service.dart';
 import 'core/services/websocket_service.dart';
+import 'features/ai_chatbot/views/ai_chat_screen.dart';
+import 'features/ai_chatbot/bindings/ai_chat_binding.dart';
+import 'features/ai_chatbot/controllers/ai_chat_controller.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -87,6 +90,7 @@ class InitialBinding extends Bindings {
     Get.put(ChatController(), permanent: true);
     Get.put(ScheduleController(), permanent: true);
     Get.put(NotificationController(), permanent: true);
+    Get.put(AiChatController(), permanent: true);
 
     // Initialize FcmService
     Get.put(FcmService(), permanent: true);
@@ -200,6 +204,11 @@ class MyApp extends StatelessWidget {
               name: AppRoutes.studentGradeDetail,
               page: () => const GradeDetailScreen(),
               binding: StudentGradeBinding(),
+            ),
+            GetPage(
+              name: AppRoutes.aiChat,
+              page: () => const AiChatScreen(),
+              binding: AiChatBinding(),
             ),
           ],
         );

@@ -27,6 +27,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final _textController = TextEditingController();
   final _scrollController = ScrollController();
   final _focusNode = FocusNode();
+  Worker? _messagesWorker;
   ChatController get controller => Get.find<ChatController>();
 
   @override
@@ -34,7 +35,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     super.initState();
     final controller = Get.find<ChatController>();
     // Register once here — NOT inside build() which re-registers on every rebuild
-    ever(controller.messages, (_) => _scrollToBottom());
+    _messagesWorker = ever(controller.messages, (_) => _scrollToBottom());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToBottomNow();
+      Future.delayed(const Duration(milliseconds: 120), _scrollToBottomNow);
+    });
   }
 
   @override
@@ -42,6 +47,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     _textController.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
+    _messagesWorker?.dispose();
     super.dispose();
   }
 
@@ -49,10 +55,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
-          0.0,
+          _scrollController.position.maxScrollExtent,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
+      }
+    });
+  }
+
+  void _scrollToBottomNow() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
       }
     });
   }
@@ -98,7 +112,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 final List<ChatMessage> processedMessages = _groupMessages(controller.messages);
                 return ListView.builder(
                   controller: _scrollController,
-                  reverse: true,
                   padding: EdgeInsets.symmetric(
                     horizontal: 12.w,
                     vertical: 8.h,
@@ -107,21 +120,19 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   itemBuilder: (context, index) {
                     final msg = processedMessages[index];
 
-                    final isOldest = index == processedMessages.length - 1;
-                    final chronologicalPrev = isOldest
+                    final chronologicalPrev = index == 0
                         ? null
-                        : processedMessages[index + 1];
+                        : processedMessages[index - 1];
 
                     final showDate =
-                        isOldest ||
+                        index == 0 ||
                         _shouldShowDate(chronologicalPrev!.sentAt, msg.sentAt);
 
                     final showSender =
                         !msg.isOwn &&
-                        (isOldest ||
-                            chronologicalPrev!.senderId != msg.senderId);
+                        (index == 0 || chronologicalPrev!.senderId != msg.senderId);
 
-                    final isNewest = index == 0;
+                    final isNewest = index == processedMessages.length - 1;
 
                     return Column(
                       children: [
@@ -250,95 +261,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         if (group == null) return const SizedBox.shrink();
         return Row(
           children: [
-            Builder(
-              builder: (context) {
-                final studentMembers =
-                    group.members?.where((m) => m.role == 'STUDENT').toList() ??
-                    [];
-                final avatarsToDisplay = studentMembers.take(2).toList();
-
-                if (avatarsToDisplay.isEmpty) {
-                  return Container(
-                    width: 38.r,
-                    height: 38.r,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFFF1E7),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Icon(
-                        Icons.people_rounded,
-                        color: const Color(0xFFFF8C33),
-                        size: 20.sp,
-                      ),
-                    ),
-                  );
-                }
-
-                return SizedBox(
-                  width: avatarsToDisplay.length > 1
-                      ? 54.0.w
-                      : 38.0.w, // 38 + 16 = 54
-                  height: 38.h,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: avatarsToDisplay
-                        .asMap()
-                        .entries
-                        .map((entry) {
-                          final idx = entry.key;
-                          final member = entry.value;
-
-                          return Positioned(
-                            left: idx * 16.0.w, // Adjust overlap distance
-                            child: Container(
-                              width: 38.r,
-                              height: 38.r,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 2.w,
-                                ),
-                                color: idx == 0
-                                    ? Colors.white
-                                    : const Color(0xFFFFD8B2),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.08),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: ClipOval(
-                                child:
-                                    member.avatarUrl != null &&
-                                        member.avatarUrl!.isNotEmpty
-                                    ? CachedNetworkImage(
-                                        imageUrl: member.avatarUrl!,
-                                        fit: BoxFit.cover,
-                                        errorWidget: (context, url, error) =>
-                                            _buildInitialAvatarForHeader(
-                                              member.fullName,
-                                            ),
-                                        placeholder: (context, url) =>
-                                            Container(color: Colors.grey[200]),
-                                      )
-                                    : _buildInitialAvatarForHeader(
-                                        member.fullName,
-                                      ),
-                              ),
-                            ),
-                          );
-                        })
-                        .toList()
-                        .reversed
-                        .toList(), // Reverse to make first index on top
-                  ),
-                );
-              },
-            ),
+            _buildClassGroupAvatar(size: 40.r, iconSize: 20.sp),
             SizedBox(width: 12.w),
             Expanded(
               child: Column(
@@ -629,23 +552,40 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   // Time + Read receipts — OUTSIDE the bubble so always visible
                   Padding(
                     padding: const EdgeInsets.only(top: 3, left: 2, right: 2),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: isOwn
-                          ? MainAxisAlignment.end
-                          : MainAxisAlignment.start,
+                    child: Column(
+                      crossAxisAlignment: isOwn
+                          ? CrossAxisAlignment.end
+                          : CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          _formatTime(msg.sentAt),
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey[400],
+                        if (msg.reactions.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: _buildReactionBar(
+                              msg: msg,
+                              controller: controller,
+                              isOwn: isOwn,
+                            ),
                           ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: isOwn
+                              ? MainAxisAlignment.end
+                              : MainAxisAlignment.start,
+                          children: [
+                            if (isNewest)
+                              Text(
+                                _formatTime(msg.sentAt),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.grey[400],
+                                ),
+                              ),
+                            if (isNewest && msg.readBy.isNotEmpty) ...[
+                              const SizedBox(width: 6),
+                              _buildReadReceipts(msg.readBy),
+                            ],
+                          ],
                         ),
-                        if (isNewest && msg.readBy.isNotEmpty) ...[
-                          const SizedBox(width: 6),
-                          _buildReadReceipts(msg.readBy),
-                        ],
                       ],
                     ),
                   ),
@@ -1114,6 +1054,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       _showReadDetails(msg);
                     },
                   ),
+                if (!msg.deleted)
+                  ListTile(
+                    leading: const Icon(
+                      Icons.emoji_emotions_outlined,
+                      color: AppColors.primaryOrange,
+                    ),
+                    title: Text('Bày tỏ cảm xúc', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _showReactionPicker(context, msg, controller);
+                    },
+                  ),
                 if (msg.isOwn && !msg.deleted)
                   ListTile(
                     leading: const Icon(
@@ -1412,18 +1364,22 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     }
   }
 
-  Widget _buildInitialAvatarForHeader(String fullName) {
-    final initial = fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U';
+  Widget _buildClassGroupAvatar({
+    required double size,
+    required double iconSize,
+  }) {
     return Container(
-      color: const Color(0xFFFFEEDD),
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF1E7),
+        borderRadius: BorderRadius.circular(size * 0.32),
+      ),
       child: Center(
-        child: Text(
-          initial,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFFFF8C33),
-          ),
+        child: Icon(
+          SolarIconsBold.chatLine,
+          color: const Color(0xFFF26F21),
+          size: iconSize,
         ),
       ),
     );
@@ -1435,8 +1391,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final List<ChatMessage> processed = [];
     int i = 0;
 
-    // Messages are in reverse order: newest at index 0
-    // So "chronologically previous" is at index i + 1
     while (i < messages.length) {
       final current = messages[i];
 
@@ -1448,7 +1402,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           final next = messages[j];
           final currentAt = DateTime.parse(messages[j - 1].sentAt);
           final nextAt = DateTime.parse(next.sentAt);
-          final timeDiff = currentAt.difference(nextAt).inMinutes.abs();
+          final timeDiff = nextAt.difference(currentAt).inMinutes.abs();
 
           if (next.type == 'IMAGE' &&
               !next.deleted &&
@@ -1473,7 +1427,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             type: 'IMAGE_GROUP',
             isOwn: current.isOwn,
             sentAt: current.sentAt,
-            imageMessages: group.reversed.toList(), // Maintain chronological order in grid
+            imageMessages: group,
+            reactions: current.reactions,
             readBy: current.readBy,
           ));
           i = j;
@@ -1488,6 +1443,140 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     }
 
     return processed;
+  }
+
+  Widget _buildReactionBar({
+    required ChatMessage msg,
+    required ChatController controller,
+    required bool isOwn,
+  }) {
+    final hasReactedByMe = msg.reactions.any((reaction) => reaction.reactedByMe);
+    final totalCount = msg.reactions.fold<int>(
+      0,
+      (sum, reaction) => sum + reaction.count,
+    );
+
+    return Align(
+      alignment: isOwn ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: hasReactedByMe
+                ? AppColors.primaryOrange
+                : Colors.grey.shade300,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildReactionIcons(msg, controller),
+            const SizedBox(width: 6),
+            Text(
+              '$totalCount',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: hasReactedByMe
+                    ? AppColors.primaryOrange
+                    : Colors.grey[700],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReactionIcons(ChatMessage msg, ChatController controller) {
+    const double iconSize = 16;
+    const double overlap = 4;
+    final width = iconSize + ((msg.reactions.length - 1) * (iconSize - overlap));
+
+    return SizedBox(
+      width: width,
+      height: iconSize,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: List.generate(msg.reactions.length, (index) {
+          final reaction = msg.reactions[index];
+          return Positioned(
+            left: index * (iconSize - overlap),
+            child: GestureDetector(
+              onTap: () => controller.toggleReaction(msg.id, reaction.emoji),
+              child: Container(
+                width: iconSize,
+                height: iconSize,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Theme.of(context).cardColor,
+                ),
+                child: Text(
+                  reaction.emoji,
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  void _showReactionPicker(
+    BuildContext context,
+    ChatMessage msg,
+    ChatController controller,
+  ) {
+    const emojis = ['👍', '❤️', '😂', '😮', '😢', '👏'];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 12,
+              runSpacing: 12,
+              children: emojis.map((emoji) {
+                return InkWell(
+                  borderRadius: BorderRadius.circular(999),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    controller.toggleReaction(msg.id, emoji);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Text(emoji, style: const TextStyle(fontSize: 24)),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        );
+      },
+    );
   }
 }
 

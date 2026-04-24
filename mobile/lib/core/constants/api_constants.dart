@@ -14,7 +14,7 @@ class ApiConstants {
       'http://10.0.14.210:8080'; // Real device via WiFi
 
   // --- THIET LAP KET NOI (Team FAMS) ---
-  static String _activeBaseUrl = baseUrlUsb;
+  static String _activeBaseUrl = baseUrlLocal; // Mac dinh dung localhost cho emulator
 
   /// Current Backend URL
   static String get baseUrl {
@@ -24,21 +24,37 @@ class ApiConstants {
     return _activeBaseUrl;
   }
 
-  /// Automatically detect which connection to use: USB (localhost) or Ngrok
+  /// Automatically detect which connection to use: USB (localhost), Emulator, or Ngrok
   static Future<void> findBestConnection() async {
     print('[FAMS] Dang kiem tra ket noi...');
+    
+    if (Platform.isIOS) {
+      _activeBaseUrl = baseUrlNgrok;
+      print('[FAMS] iOS detect: Dung Ngrok: $_activeBaseUrl');
+      return;
+    }
+
+    // Thu localhost (Device that is connected via USB and has adb reverse)
     try {
-      // Thu ket noi den localhost:8080 (USB / adb reverse)
-      // Thoi gian cho 1 giay de phat hien
-      final socket = await Socket.connect('127.0.0.1', 8080, timeout: const Duration(seconds: 1));
+      final socket = await Socket.connect('127.0.0.1', 8080, timeout: const Duration(milliseconds: 500));
       socket.destroy();
       _activeBaseUrl = baseUrlUsb;
-      print('[FAMS] Ket noi USB duoc phat hien! Dung: $_activeBaseUrl');
-    } catch (_) {
-      // Neu khong co ket noi USB, mac dinh dung Ngrok
-      _activeBaseUrl = baseUrlNgrok;
-      print('[FAMS] Khong tim thay USB. Tu dong dung Ngrok: $_activeBaseUrl');
-    }
+      print('[FAMS] Ket noi USB (127.0.0.1) duoc phat hien! Dung: $_activeBaseUrl');
+      return;
+    } catch (_) {}
+
+    // Thu Android Emulator loopback
+    try {
+      final socket = await Socket.connect('10.0.2.2', 8080, timeout: const Duration(milliseconds: 500));
+      socket.destroy();
+      _activeBaseUrl = baseUrlLocal;
+      print('[FAMS] Ket noi Emulator (10.0.2.2) duoc phat hien! Dung: $_activeBaseUrl');
+      return;
+    } catch (_) {}
+
+    // Neu khong co ket noi nao tren, mac dinh dung Ngrok
+    _activeBaseUrl = baseUrlNgrok;
+    print('[FAMS] Khong tim thay localhost. Tu dong dung Ngrok: $_activeBaseUrl');
   }
 
   // Auth Endpoints

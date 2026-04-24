@@ -15,6 +15,7 @@ class AiChatController extends GetxController {
   final RxList<ThinkingStep> thinkingSteps = <ThinkingStep>[].obs;
   final RxBool isLoading = false.obs;
   final RxBool isThinking = false.obs;
+  final TextEditingController textController = TextEditingController();
 
   @override
   void onInit() {
@@ -73,6 +74,9 @@ class AiChatController extends GetxController {
       sessions.assignAll(data);
       if (data.isNotEmpty && currentSession.value == null) {
         selectSession(data.first);
+      } else if (data.isEmpty) {
+        // Tự động tạo session mới nếu chưa có lịch sử
+        handleNewChat();
       }
     } catch (e) {
       debugPrint('Error loading AI sessions: $e');
@@ -86,7 +90,7 @@ class AiChatController extends GetxController {
     try {
       isLoading.value = true;
       final msgs = await _chatService.getMessages(session.id);
-      messages.assignAll(msgs);
+      messages.assignAll(msgs.reversed.toList());
       thinkingSteps.clear();
     } catch (e) {
       debugPrint('Error loading AI messages: $e');
@@ -127,7 +131,7 @@ class AiChatController extends GetxController {
       role: 'USER',
       createdAt: DateTime.now(),
     );
-    messages.add(userMsg);
+    messages.insert(0, userMsg);
 
     try {
       isThinking.value = true;
@@ -135,17 +139,20 @@ class AiChatController extends GetxController {
 
       final response = await _chatService.sendMessage(sessionId, text);
 
-      // Update thinking steps and add assistant message
-      thinkingSteps.assignAll(response.thinkingSteps);
+      // If response contains a redirectPath, add a notice that it's web-only for now
+      String finalAnswer = response.answer;
+      if (response.redirectPath != null && response.redirectPath!.isNotEmpty) {
+        finalAnswer += '\n\n> ⚠️ **Lưu ý:** Tính năng tự động chuyển trang hiện chỉ hỗ trợ trên phiên bản Web. Bạn có thể tự truy cập vào mục tương ứng trên ứng dụng.';
+      }
 
       final assistantMsg = AiChatMessage(
         id: DateTime.now().millisecondsSinceEpoch + 1,
-        content: response.answer,
+        content: finalAnswer,
         role: 'ASSISTANT',
         createdAt: DateTime.now(),
         redirectPath: response.redirectPath,
       );
-      messages.add(assistantMsg);
+      messages.insert(0, assistantMsg);
     } catch (e) {
       Get.snackbar(
         'Lỗi',
@@ -178,5 +185,11 @@ class AiChatController extends GetxController {
         colorText: Colors.white,
       );
     }
+  }
+
+  @override
+  void onClose() {
+    textController.dispose();
+    super.onClose();
   }
 }

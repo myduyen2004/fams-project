@@ -9,6 +9,12 @@ import '../../lecturer/models/class_section_model.dart';
 class ChatService {
   final ApiService _api = ApiService();
 
+  /// POST /api/v1/chat-groups/class/{className}
+  Future<ChatGroup> createGroupForClass(String className) async {
+    final response = await _api.post('${ApiConstants.chatGroups}/class/$className');
+    return ChatGroup.fromJson(response.data);
+  }
+
   /// GET /api/v1/chat-groups
   Future<List<ChatGroup>> getMyGroups() async {
     final response = await _api.get(ApiConstants.chatGroups);
@@ -38,7 +44,7 @@ class ChatService {
   Future<List<ChatMessage>> getMessages(
     int groupId, {
     int page = 0,
-    int size = 50,
+    int size = 100,
   }) async {
     final response = await _api.get(
       '${ApiConstants.chatGroups}/$groupId/messages',
@@ -101,6 +107,18 @@ class ChatService {
   /// POST /api/v1/chat-messages/groups/{groupId}/read
   Future<void> markAsRead(int groupId) async {
     await _api.post('${ApiConstants.chatMessages}/groups/$groupId/read');
+  }
+
+  /// POST /api/v1/chat-messages/{groupId}/{messageId}/toggle-reaction?emoji=
+  Future<ChatMessage> toggleReaction(
+    int groupId,
+    int messageId,
+    String emoji,
+  ) async {
+    final response = await _api.post(
+      '${ApiConstants.chatMessages}/$groupId/$messageId/toggle-reaction?emoji=${Uri.encodeQueryComponent(emoji)}',
+    );
+    return ChatMessage.fromJson(response.data);
   }
 
   /// GET /api/v1/students/{studentCode}/info (maps to the info endpoint in StudentGradeController)

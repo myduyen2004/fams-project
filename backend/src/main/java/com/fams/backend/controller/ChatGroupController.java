@@ -2,6 +2,7 @@ package com.fams.backend.controller;
 
 import com.fams.backend.dto.response.ChatGroupResponse;
 import com.fams.backend.dto.response.ChatMessageResponse;
+import com.fams.backend.repository.UserRepository;
 import com.fams.backend.service.ChatGroupService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -10,8 +11,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -23,12 +26,16 @@ import java.util.Map;
 public class ChatGroupController {
 
     private final ChatGroupService chatGroupService;
+    private final SimpMessagingTemplate messagingTemplate;
+    private final UserRepository userRepository;
 
     @PostMapping("/class/{className}")
     @Operation(summary = "Create chat group for class", description = "Create a new chat group for a class section, adding lecturer and all students as members")
     public ResponseEntity<ChatGroupResponse> createGroupForClass(@PathVariable String className) {
         log.info("POST /api/v1/chat-groups/class/{}", className);
-        return ResponseEntity.ok(chatGroupService.createGroupForClass(className));
+        ChatGroupResponse response = chatGroupService.createGroupForClass(className);
+        broadcastGroupCreated(response);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping
@@ -60,5 +67,28 @@ public class ChatGroupController {
             Pageable pageable) {
         log.info("GET /api/v1/chat-groups/{}/messages", groupId);
         return ResponseEntity.ok(chatGroupService.getMessages(groupId, pageable));
+    }
+
+    private void broadcastGroupCreated(ChatGroupResponse groupResponse) {
+        if (groupResponse == null || groupResponse.getMembers() == null || groupResponse.getMembers().isEmpty()) {
+            return;
+        }
+
+        for (ChatGroupResponse.ChatMemberDTO member : groupResponse.getMembers()) {
+            if (member == null || member.getUserId() == null) {
+                continue;
+            }
+
+            userRepository.findById(member.getUserId()).ifPresent(user -> {
+                Map<String, Object> payload = new HashMap<>();
+                payload.put("type", "GROUP_CREATED");
+                payload.put("group", groupResponse);
+
+                messagingTemplate.convertAndSendToUser(
+                        user.getUsername(),
+                        "/queue/chat-notifications",
+                        payload);
+            });
+        }
     }
 }
