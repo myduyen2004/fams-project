@@ -14,6 +14,7 @@ import { timetableService } from '../../services/api/timetableService';
 import { useNavigate } from 'react-router-dom';
 import attendanceService, { StudentAttendanceSummaryResponse } from '../../services/api/attendanceService';
 import { lecturerClassService } from '../../services/api/LecturerClass';
+
 import apiClient from '../../services/api/authService';
 import { AllGradesSummaryResponse } from './StudentAllGradesPage';
 import { GpaTrendChart } from '../../components/student/dashboard/GpaTrendChart';
@@ -27,12 +28,14 @@ export const StudentDashboard: React.FC = () => {
     const [isScheduleHidden, setIsScheduleHidden] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [attendanceSummaries, setAttendanceSummaries] = useState<StudentAttendanceSummaryResponse | null>(null);
+
     const [gradesSummary, setGradesSummary] = useState<AllGradesSummaryResponse | null>(null);
 
     useEffect(() => {
         fetchMonthlySlotCounts();
         fetchDaySchedule(new Date());
         fetchAttendanceData();
+
         fetchGradesSummary();
 
         const timer = setInterval(() => {
@@ -90,6 +93,8 @@ export const StudentDashboard: React.FC = () => {
             console.error('Failed to fetch grades summary:', error);
         }
     };
+
+
 
     const isToday = selectedDate.toDateString() === new Date().toDateString();
 
@@ -330,7 +335,8 @@ export const StudentDashboard: React.FC = () => {
                         <GpaTrendChart courses={gradesSummary?.courses || []} currentGpa={gradesSummary?.gpa4 || null} />
                     </div>
                     <div className="lg:col-span-4">
-                        <CourseStatsWidget
+                        <CourseStatsWidget 
+
                             courses={gradesSummary?.courses || []}
                             totalCourses={gradesSummary?.totalCourses || 0}
                             passedCourses={gradesSummary?.passedCourses || 0}

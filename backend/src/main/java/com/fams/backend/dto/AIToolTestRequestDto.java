@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AIToolTestRequestDto {
+
     private String toolName;
     private String toolType;
     private String sqlTemplate;

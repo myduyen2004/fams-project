@@ -192,3 +192,7 @@ app:
   base-url: ${APP_BASE_URL:http://localhost:8080}
   firebase:
     config-path: ${FIREBASE_CONFIG_PATH:}
+  discord:
+    webhook-url: ${DISCORD_WEBHOOK_URL:}
+    enabled: ${APP_DISCORD_ENABLED:false}
+  environment: ${APP_ENVIRONMENT:local}
