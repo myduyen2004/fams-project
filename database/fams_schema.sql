@@ -48,8 +48,13 @@ CREATE TABLE lecturer_profiles (
     user_id    BIGINT PRIMARY KEY REFERENCES users(id),
     department VARCHAR(100),
     expertise  VARCHAR(100),
-    bio        TEXT
+    bio        TEXT,
+    major_id   BIGINT,
+    specialization_id BIGINT
 );
+
+ALTER TABLE lecturer_profiles ADD CONSTRAINT fk_lp_major FOREIGN KEY (major_id) REFERENCES majors(id);
+ALTER TABLE lecturer_profiles ADD CONSTRAINT fk_lp_spec FOREIGN KEY (specialization_id) REFERENCES specializations(id);
 
 -- Lecturer Grade OTP (1:1 with users)
 CREATE TABLE lecturer_grade_otps (
@@ -546,6 +551,8 @@ CREATE TABLE assignments (
     reference_url    VARCHAR(500),
     reference_name   VARCHAR(255),
     reminder_sent    BOOLEAN NOT NULL DEFAULT FALSE,
+    plagiarism_text_threshold DOUBLE PRECISION NOT NULL DEFAULT 0.70,
+    plagiarism_image_threshold DOUBLE PRECISION NOT NULL DEFAULT 0.95,
     created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -884,3 +891,114 @@ CREATE TABLE import_jobs (
 -- =====================================================================
 -- END OF SCHEMA
 -- =====================================================================
+
+
+-- =====================================================================
+-- 11. AI TOOLS & PLAGIARISM MODULE
+-- =====================================================================
+
+-- AI Tools (Chatbot Admin)
+CREATE TABLE ai_tools (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    type VARCHAR(50) NOT NULL CHECK (type IN (''SQL_TEMPLATE'', ''BACKEND_ACTION'', ''NAVIGATE_ONLY'')),
+    description TEXT,
+    sql_template TEXT,
+    accuracy_percentage DOUBLE PRECISION,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    allowed_roles TEXT DEFAULT ''ADMIN,ACADEMIC_STAFF,LECTURER,STUDENT'',
+    required_fields TEXT,
+    required_resp_fields TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_ai_tools_is_active ON ai_tools (is_active);
+
+-- AI Tool Tests
+CREATE TABLE ai_tool_tests (
+    id BIGSERIAL PRIMARY KEY,
+    tool_id BIGINT NOT NULL REFERENCES ai_tools (id) ON DELETE CASCADE,
+    is_passed BOOLEAN NOT NULL DEFAULT FALSE,
+    test_query TEXT,
+    test_result_summary TEXT,
+    logs TEXT,
+    execution_time_ms BIGINT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_ai_tool_tests_tool_id ON ai_tool_tests (tool_id);
+
+-- Assignment Plagiarism Checks
+CREATE TABLE assignment_plagiarism_checks (
+    id BIGSERIAL PRIMARY KEY,
+    assignment_id BIGINT NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
+    target_submission_id BIGINT NOT NULL REFERENCES assignment_submissions(id) ON DELETE CASCADE,
+    compared_submission_id BIGINT REFERENCES assignment_submissions(id) ON DELETE SET NULL,
+    checker_lecturer_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    scope VARCHAR(100) NOT NULL,
+    model_name VARCHAR(120) NOT NULL,
+    strategy VARCHAR(255) NOT NULL,
+    text_score DOUBLE PRECISION,
+    image_score DOUBLE PRECISION,
+    metadata_score DOUBLE PRECISION,
+    file_name_score DOUBLE PRECISION,
+    probability DOUBLE PRECISION,
+    plagiarism_percent INTEGER,
+    plagiarized BOOLEAN,
+    target_text_length INTEGER,
+    compared_text_length INTEGER,
+    content_based BOOLEAN NOT NULL DEFAULT TRUE,
+    plagiarized_text BOOLEAN,
+    plagiarized_image BOOLEAN,
+    text_threshold DOUBLE PRECISION,
+    image_threshold DOUBLE PRECISION,
+    overall_comment TEXT,
+    match_comment TEXT,
+    reason_tags VARCHAR(500),
+    index_coverage DOUBLE PRECISION,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_apc_assignment ON assignment_plagiarism_checks(assignment_id);
+CREATE INDEX idx_apc_target_submission ON assignment_plagiarism_checks(target_submission_id);
+
+-- Assignment Submission Vector Index
+CREATE TABLE assignment_submission_vector_index (
+    id BIGSERIAL PRIMARY KEY,
+    submission_id BIGINT NOT NULL UNIQUE REFERENCES assignment_submissions(id) ON DELETE CASCADE,
+    course_id BIGINT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    status VARCHAR(20) NOT NULL,
+    error_message TEXT,
+    indexed_at TIMESTAMP,
+    attempt_count INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Vector embeddings
+CREATE TABLE assignment_text_embeddings (
+    id BIGSERIAL PRIMARY KEY,
+    submission_id BIGINT NOT NULL REFERENCES assignment_submissions(id) ON DELETE CASCADE,
+    assignment_id BIGINT NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
+    course_id BIGINT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    student_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    file_name VARCHAR(255),
+    page_or_chunk VARCHAR(120),
+    content_preview TEXT,
+    embedding vector NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE assignment_image_embeddings (
+    id BIGSERIAL PRIMARY KEY,
+    submission_id BIGINT NOT NULL REFERENCES assignment_submissions(id) ON DELETE CASCADE,
+    assignment_id BIGINT NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
+    course_id BIGINT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    student_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    file_name VARCHAR(255),
+    page_or_chunk VARCHAR(120),
+    content_preview TEXT,
+    embedding vector NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

@@ -4,7 +4,6 @@ import {
   Home,
   Settings,
   Newspaper,
-  Bell,
   AlertTriangle,
   Clock,
   LogOut,
@@ -58,12 +57,6 @@ export const AdminSidebar: React.FC = () => {
       label: 'Quản lý tin tức',
       icon: <Newspaper size={20} />,
       path: '/admin/news-management'
-    },
-    {
-      id: 'notification-management',
-      label: 'Quản lý thông báo',
-      icon: <Bell size={20} />,
-      path: '/admin/notification-management'
     },
     {
       id: 'alerts',
@@ -221,8 +214,8 @@ export const AdminSidebar: React.FC = () => {
                       key={subItem.id}
                       onClick={() => handleSubmenuClick(subItem.path)}
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 group ${isActive(subItem.path)
-                        ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange font-medium'
-                        : 'text-gray-600 dark:text-gray-400 hover:bg-fpt-orange hover:text-white'
+                        ? 'bg-fpt-orange text-white font-medium'
+                        : 'text-fpt-orange dark:text-fpt-orange hover:bg-fpt-orange hover:text-white'
                         }`}
                     >
                       <div className={`w-1.5 h-1.5 rounded-full transition-colors duration-200 ${isActive(subItem.path) ? 'bg-current' : 'bg-fpt-orange group-hover:bg-white'}`}></div>
@@ -239,7 +232,10 @@ export const AdminSidebar: React.FC = () => {
         <div className="border-t border-gray-200 dark:border-zinc-800 p-2 space-y-1">
           <button
             onClick={() => navigate('/admin/settings')}
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-fpt-orange dark:text-fpt-orange hover:bg-fpt-orange hover:text-white transition-all duration-200 group"
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group ${location.pathname.startsWith('/admin/settings')
+              ? 'bg-fpt-orange text-white'
+              : 'text-fpt-orange dark:text-fpt-orange hover:bg-fpt-orange hover:text-white'
+              }`}
             title={!isExpanded ? 'Cài đặt' : ''}
           >
             <div className={`flex-shrink-0 transition-colors duration-200 ${location.pathname.startsWith('/admin/settings') ? 'text-white' : 'text-fpt-orange group-hover:text-white'}`}>

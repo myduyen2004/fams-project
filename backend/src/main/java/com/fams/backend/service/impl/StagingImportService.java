@@ -53,7 +53,8 @@ public class StagingImportService {
     /**
      * Fast preview class sections using staging table
      */
-    public Map<String, Object> fastPreviewClassSections(@org.springframework.lang.NonNull String semesterCode, @org.springframework.lang.NonNull MultipartFile file) {
+    public Map<String, Object> fastPreviewClassSections(@org.springframework.lang.NonNull String semesterCode,
+            @org.springframework.lang.NonNull MultipartFile file) {
         long startTime = System.currentTimeMillis();
         String stagingTable = "staging_cs_" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
 
@@ -96,13 +97,12 @@ public class StagingImportService {
             // --- ADDED: High Error Alert ---
             if ((int) validationResult.get("errorCount") > 50) {
                 alertService.createAlert(
-                    "Lỗi import lớp học phần",
-                    String.format("File import lớp học phần của học kỳ %s chứa quá nhiều lỗi (%d lỗi).", 
-                        semesterCode, validationResult.get("errorCount")),
-                    Alert.AlertLevel.WARNING,
-                    Alert.AlertType.SYSTEM,
-                    null
-                );
+                        "Lỗi import lớp học phần",
+                        String.format("File import lớp học phần của học kỳ %s chứa quá nhiều lỗi (%d lỗi).",
+                                semesterCode, validationResult.get("errorCount")),
+                        Alert.AlertLevel.WARNING,
+                        Alert.AlertType.SYSTEM,
+                        null);
             }
 
             return result;
@@ -117,7 +117,8 @@ public class StagingImportService {
     /**
      * Import class sections from staging table
      */
-    public Map<String, Object> importClassSectionsFromStaging(@org.springframework.lang.NonNull String stagingTable, @org.springframework.lang.NonNull Long semesterId) {
+    public Map<String, Object> importClassSectionsFromStaging(@org.springframework.lang.NonNull String stagingTable,
+            @org.springframework.lang.NonNull Long semesterId) {
         long startTime = System.currentTimeMillis();
 
         try {
@@ -174,13 +175,13 @@ public class StagingImportService {
 
             // --- ADDED: Bulk Import Alert ---
             if (created > 20) {
-                 alertService.createAlert(
-                    "Import lớp học phần số lượng lớn",
-                    String.format("Đã tạo thành công %d lớp học phần mới trong học kỳ %s.", 
-                        created, semester.getCode()),
-                    Alert.AlertLevel.INFO,
-                    Alert.AlertType.SYSTEM,
-                    null // System alert
+                alertService.createAlert(
+                        "Import lớp học phần số lượng lớn",
+                        String.format("Đã tạo thành công %d lớp học phần mới trong học kỳ %s.",
+                                created, semester.getCode()),
+                        Alert.AlertLevel.INFO,
+                        Alert.AlertType.SYSTEM,
+                        null // System alert
                 );
             }
 
@@ -196,7 +197,8 @@ public class StagingImportService {
     /**
      * Full import flow: preview + import in one step
      */
-    public Map<String, Object> bulkImportClassSections(@org.springframework.lang.NonNull String semesterCode, @org.springframework.lang.NonNull MultipartFile file) {
+    public Map<String, Object> bulkImportClassSections(@org.springframework.lang.NonNull String semesterCode,
+            @org.springframework.lang.NonNull MultipartFile file) {
         long startTime = System.currentTimeMillis();
         String stagingTable = "staging_cs_" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
 
@@ -242,7 +244,8 @@ public class StagingImportService {
     /**
      * Fast preview enrollments using staging table
      */
-    public Map<String, Object> fastPreviewEnrollments(@org.springframework.lang.NonNull String semesterCode, @org.springframework.lang.NonNull MultipartFile file) {
+    public Map<String, Object> fastPreviewEnrollments(@org.springframework.lang.NonNull String semesterCode,
+            @org.springframework.lang.NonNull MultipartFile file) {
         long startTime = System.currentTimeMillis();
         String stagingTable = "staging_enr_" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
 
@@ -276,21 +279,20 @@ public class StagingImportService {
             result.put("message",
                     buildMessage((int) validationResult.get("validCount"), (int) validationResult.get("errorCount")));
 
-            log.info("Fast preview enrollments: {} rows ({} valid, {} errors) in {}ms", 
-                rowsCopied, validationResult.get("validCount"), validationResult.get("errorCount"), duration);
-            if ((int)validationResult.get("errorCount") > 0) {
+            log.info("Fast preview enrollments: {} rows ({} valid, {} errors) in {}ms",
+                    rowsCopied, validationResult.get("validCount"), validationResult.get("errorCount"), duration);
+            if ((int) validationResult.get("errorCount") > 0) {
                 log.warn("Sample errors: {}", validationResult.get("sampleErrors"));
-                
+
                 // --- ADDED: High Error Alert ---
                 if ((int) validationResult.get("errorCount") > 50) {
                     alertService.createAlert(
-                        "Lỗi import danh sách đăng ký",
-                        String.format("File import danh sách đăng ký của học kỳ %s chứa quá nhiều lỗi (%d lỗi).", 
-                            semesterCode, validationResult.get("errorCount")),
-                        Alert.AlertLevel.WARNING,
-                        Alert.AlertType.SYSTEM,
-                        null
-                    );
+                            "Lỗi import danh sách đăng ký",
+                            String.format("File import danh sách đăng ký của học kỳ %s chứa quá nhiều lỗi (%d lỗi).",
+                                    semesterCode, validationResult.get("errorCount")),
+                            Alert.AlertLevel.WARNING,
+                            Alert.AlertType.SYSTEM,
+                            null);
                 }
             }
             return result;
@@ -305,7 +307,8 @@ public class StagingImportService {
     /**
      * Import enrollments from staging table
      */
-    public Map<String, Object> importEnrollmentsFromStaging(@org.springframework.lang.NonNull String stagingTable, @org.springframework.lang.NonNull Long semesterId) {
+    public Map<String, Object> importEnrollmentsFromStaging(@org.springframework.lang.NonNull String stagingTable,
+            @org.springframework.lang.NonNull Long semesterId) {
         long startTime = System.currentTimeMillis();
 
         try {
@@ -347,9 +350,9 @@ public class StagingImportService {
                     UPDATE class_sections cs
                     SET current_enrollment = cs.current_enrollment + counts.added
                     FROM (
-                        SELECT class_name, COUNT(*) as added 
-                        FROM %s 
-                        WHERE error_message IS NULL 
+                        SELECT class_name, COUNT(*) as added
+                        FROM %s
+                        WHERE error_message IS NULL
                         GROUP BY class_name
                     ) counts
                     WHERE cs.class_name = counts.class_name
@@ -378,12 +381,12 @@ public class StagingImportService {
             // --- ADDED: Bulk Import Alert ---
             if (created > 100) {
                 alertService.createAlert(
-                    "Import danh sách đăng ký số lượng lớn",
-                    String.format("Đã thêm thành công %d sinh viên vào các lớp trong học kỳ %s.", 
-                        created, semester.getCode()),
-                    Alert.AlertLevel.INFO,
-                    Alert.AlertType.SYSTEM,
-                    null // System alert
+                        "Import danh sách đăng ký số lượng lớn",
+                        String.format("Đã thêm thành công %d sinh viên vào các lớp trong học kỳ %s.",
+                                created, semester.getCode()),
+                        Alert.AlertLevel.INFO,
+                        Alert.AlertType.SYSTEM,
+                        null // System alert
                 );
             }
 
@@ -399,7 +402,8 @@ public class StagingImportService {
     /**
      * Full import flow for enrollments
      */
-    public Map<String, Object> bulkImportEnrollments(@org.springframework.lang.NonNull String semesterCode, @org.springframework.lang.NonNull MultipartFile file) {
+    public Map<String, Object> bulkImportEnrollments(@org.springframework.lang.NonNull String semesterCode,
+            @org.springframework.lang.NonNull MultipartFile file) {
         long startTime = System.currentTimeMillis();
         String stagingTable = "staging_enr_" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
 
@@ -480,7 +484,8 @@ public class StagingImportService {
      * Stream Excel to staging table for class sections
      * Uses SAX parser - only processes one row at a time
      */
-    private long streamExcelToStagingClassSection(@org.springframework.lang.NonNull MultipartFile file, @org.springframework.lang.NonNull String stagingTable) throws Exception {
+    private long streamExcelToStagingClassSection(@org.springframework.lang.NonNull MultipartFile file,
+            @org.springframework.lang.NonNull String stagingTable) throws Exception {
         AtomicInteger rowCount = new AtomicInteger(0);
         List<String[]> batch = Collections.synchronizedList(new ArrayList<>());
 
@@ -503,9 +508,10 @@ public class StagingImportService {
                     xmlReader.parse(new InputSource(sheetStream));
 
                     handler.flushBatch();
-                    
+
                     // 1. Single-pass CLEANING (Critical for performance)
-                    jdbcTemplate.execute("UPDATE " + stagingTable + " SET class_name = TRIM(class_name), course_code = TRIM(course_code), lecturer_code = TRIM(lecturer_code)");
+                    jdbcTemplate.execute("UPDATE " + stagingTable
+                            + " SET class_name = TRIM(class_name), course_code = TRIM(course_code), lecturer_code = TRIM(lecturer_code)");
 
                     // 2. Add indices to speed up validation
                     jdbcTemplate.execute("CREATE INDEX ON " + stagingTable + " (class_name)");
@@ -520,7 +526,8 @@ public class StagingImportService {
     /**
      * Stream Excel to staging table for enrollments
      */
-    private long streamExcelToStagingEnrollment(@org.springframework.lang.NonNull MultipartFile file, @org.springframework.lang.NonNull String stagingTable) throws Exception {
+    private long streamExcelToStagingEnrollment(@org.springframework.lang.NonNull MultipartFile file,
+            @org.springframework.lang.NonNull String stagingTable) throws Exception {
         AtomicInteger rowCount = new AtomicInteger(0);
         List<String[]> batch = Collections.synchronizedList(new ArrayList<>());
 
@@ -543,7 +550,7 @@ public class StagingImportService {
                     xmlReader.parse(new InputSource(sheetStream));
 
                     handler.flushBatch();
-                    
+
                     // 1. Single-pass CLEANING (Critical for performance)
                     jdbcTemplate.execute("UPDATE " + stagingTable + " SET student_code = UPPER(TRIM(student_code)), class_name = TRIM(class_name)");
 
@@ -559,7 +566,8 @@ public class StagingImportService {
 
     // ==================== VALIDATION USING SQL ====================
 
-    private Map<String, Object> validateClassSectionsInStaging(@org.springframework.lang.NonNull String stagingTable, @org.springframework.lang.NonNull Long semesterId) {
+    private Map<String, Object> validateClassSectionsInStaging(@org.springframework.lang.NonNull String stagingTable,
+            @org.springframework.lang.NonNull Long semesterId) {
         // Mark rows with missing class_name
         jdbcTemplate.update("""
                 UPDATE %s SET error_message = 'Mã lớp không được để trống'
@@ -577,7 +585,7 @@ public class StagingImportService {
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Không tìm thấy môn học: ' || s.course_code
                         WHERE s.course_code != ''
-                        AND NOT EXISTS (SELECT 1 FROM courses c WHERE s.course_code = c.code)
+                        AND NOT EXISTS (SELECT 1 FROM courses c WHERE TRIM(UPPER(s.course_code)) = TRIM(UPPER(c.code)))
                         """
                         .formatted(stagingTable));
 
@@ -586,7 +594,7 @@ public class StagingImportService {
                 .update("""
                         UPDATE %s s SET error_message = COALESCE(error_message || '; ', '') || 'Không tìm thấy giảng viên: ' || s.lecturer_code
                         WHERE s.lecturer_code != ''
-                        AND NOT EXISTS (SELECT 1 FROM users u WHERE s.lecturer_code = u.username AND u.role = 'LECTURER')
+                        AND NOT EXISTS (SELECT 1 FROM users u WHERE TRIM(UPPER(s.lecturer_code)) = TRIM(UPPER(u.username)) AND u.role = 'LECTURER')
                         """
                         .formatted(stagingTable));
 
@@ -614,7 +622,8 @@ public class StagingImportService {
         return getValidationResult(stagingTable, "class_name", "course_code");
     }
 
-    private Map<String, Object> validateEnrollmentsInStaging(@org.springframework.lang.NonNull String stagingTable, @org.springframework.lang.NonNull Long semesterId) {
+    private Map<String, Object> validateEnrollmentsInStaging(@org.springframework.lang.NonNull String stagingTable,
+            @org.springframework.lang.NonNull Long semesterId) {
         // Mark rows with missing student_code
         jdbcTemplate.update("""
                 UPDATE %s SET error_message = 'MSSV không được để trống'
@@ -727,7 +736,8 @@ public class StagingImportService {
         return getValidationResult(stagingTable, "student_code", "class_name");
     }
 
-    private Map<String, Object> getValidationResult(@org.springframework.lang.NonNull String stagingTable, @org.springframework.lang.NonNull String field1, @org.springframework.lang.NonNull String field2) {
+    private Map<String, Object> getValidationResult(@org.springframework.lang.NonNull String stagingTable,
+            @org.springframework.lang.NonNull String field1, @org.springframework.lang.NonNull String field2) {
         Integer validCountResult = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM " + stagingTable + " WHERE error_message IS NULL",
                 Integer.class);
@@ -826,7 +836,8 @@ public class StagingImportService {
             int col = cellReferenceToColumn(cellReference);
             if (col >= 0 && col < 4) {
                 String val = formattedValue != null ? formattedValue.trim() : "";
-                // Keep original case from file for staging, but comparisons will be case-insensitive
+                // Keep original case from file for staging, but comparisons will be
+                // case-insensitive
                 currentRow[col] = val;
             }
         }
@@ -911,7 +922,8 @@ public class StagingImportService {
             int col = cellReferenceToColumn(cellReference);
             if (col >= 0 && col < 2) {
                 String val = formattedValue != null ? formattedValue.trim() : "";
-                // Keep original case from file for staging, but comparisons will be case-insensitive
+                // Keep original case from file for staging, but comparisons will be
+                // case-insensitive
                 currentRow[col] = val;
             }
         }
