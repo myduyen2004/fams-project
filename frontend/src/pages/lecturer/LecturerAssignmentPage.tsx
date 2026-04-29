@@ -9,10 +9,12 @@ import { uploadFile } from '../../services/utils/fileUploadService';
 import { getViewableFileUrl } from '../../services/utils/fileViewerUtils';
 import { Pagination } from '../../components/common/Pagination';
 import {
-    Clock, Search, FileText, Loader2, Plus, X, BookOpen, Lock, Edit3, AlertCircle, Trash2, Download
+    Clock, Search, FileText, Loader2, Plus, X, BookOpen, Edit3, Trash2, Download
 } from 'lucide-react';
 import toast from "@utils/toast";
 import { CustomSelect } from '../../components/common/CustomSelect';
+import { CustomDateTimePicker } from '../../components/common/CustomDateTimePicker';
+import { SelectionActionBar } from '../../components/academic-staff/SelectionActionBar';
 
 export const LecturerAssignmentPage: React.FC = () => {
     const user = authService.getUser();
@@ -38,7 +40,6 @@ export const LecturerAssignmentPage: React.FC = () => {
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [showBatchEditDialog, setShowBatchEditDialog] = useState(false);
     const [batchEditing, setBatchEditing] = useState(false);
-    const [batchWarning, setBatchWarning] = useState('');
     const [editAssignmentId, setEditAssignmentId] = useState<number | null>(null);
     const [editTitle, setEditTitle] = useState('');
     const [editDescription, setEditDescription] = useState('');
@@ -97,24 +98,7 @@ export const LecturerAssignmentPage: React.FC = () => {
         fetchSemesters();
     }, []);
 
-    // Load classes when semester changes
-    useEffect(() => {
-        if (selectedSemester && user?.id) {
-            fetchClasses();
-        }
-    }, [selectedSemester, user?.id]);
-
-    // Load ALL slots + assignments when classes are loaded (auto-load on semester change)
-    useEffect(() => {
-        if (selectedSemester && user?.id && classes.length > 0) {
-            fetchAllData();
-        } else if (classes.length === 0 && selectedSemester) {
-            setSlots([]);
-            setAssignments([]);
-        }
-    }, [classes, selectedSemester, user?.id]);
-
-    const fetchClasses = async () => {
+    const fetchClasses = useCallback(async () => {
         try {
             const data = await lecturerClassService.getTeachingClasses(selectedSemester, {
                 lecturerId: user?.id,
@@ -125,7 +109,7 @@ export const LecturerAssignmentPage: React.FC = () => {
         } catch (error) {
             console.error("Failed to fetch classes", error);
         }
-    };
+    }, [selectedSemester, user?.id]);
 
     // Fetch ALL slots and assignments across all classes for the selected semester
     const fetchAllData = useCallback(async () => {
@@ -163,6 +147,24 @@ export const LecturerAssignmentPage: React.FC = () => {
             setLoadingAssignments(false);
         }
     }, [selectedSemester, user?.id, classes]);
+
+    // Load classes when semester changes
+    useEffect(() => {
+        if (selectedSemester && user?.id) {
+            fetchClasses();
+        }
+    }, [fetchClasses]);
+
+    // Load ALL slots + assignments when classes are loaded (auto-load on semester change)
+    useEffect(() => {
+        if (selectedSemester && user?.id && classes.length > 0) {
+            fetchAllData();
+        } else if (classes.length === 0 && selectedSemester) {
+            setSlots([]);
+            setAssignments([]);
+        }
+    }, [classes, selectedSemester, user?.id, fetchAllData]);
+
 
     // Fetch slots for selected class in create modal
     useEffect(() => {
@@ -302,49 +304,45 @@ export const LecturerAssignmentPage: React.FC = () => {
         return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
     };
 
-    // Build a merged list: each assignment + its linked slot (if any)
-    const slotById = new Map<number, TimetableSlotDTO>();
-    slots.forEach(s => slotById.set(s.id, s));
+    // Build a merged list: each assignment + its linked slot (if any) — memoized
+    const { filteredRows, totalPages, paginatedRows, assignmentIdsOnPage, allOnPageSelected } = React.useMemo(() => {
+        const slotById = new Map<number, TimetableSlotDTO>();
+        slots.forEach(s => slotById.set(s.id, s));
 
-    const assignmentRows = assignments.map(assignment => ({
-        assignment,
-        slot: assignment.timetableSlotId ? slotById.get(assignment.timetableSlotId) || null : null
-    }));
+        const assignmentRows = assignments.map(assignment => ({
+            assignment,
+            slot: assignment.timetableSlotId ? slotById.get(assignment.timetableSlotId) || null : null
+        }));
 
-    // Filter: class + status + search
-    const filteredRows = assignmentRows.filter(row => {
-        // Class filter (optional)
-        if (selectedClass && row.slot?.className !== selectedClass) return false;
-        // Status filter
-        if (statusFilter === 'OPEN' && row.assignment.status !== 'OPEN') return false;
-        if (statusFilter === 'CLOSED' && row.assignment.status !== 'CLOSED') return false;
-        // Search filter
-        if (searchTerm) {
-            const term = searchTerm.toLowerCase();
-            const matchSlot = (row.slot?.courseName || '').toLowerCase().includes(term)
-                || (row.slot?.roomCode || '').toLowerCase().includes(term)
-                || (row.slot?.className || '').toLowerCase().includes(term);
-            const matchAssignment = row.assignment.title.toLowerCase().includes(term)
-                || (row.assignment.description || '').toLowerCase().includes(term);
-            return matchSlot || matchAssignment;
-        }
-        return true;
-    });
+        const filteredRows = assignmentRows.filter(row => {
+            if (selectedClass && row.slot?.className !== selectedClass) return false;
+            if (statusFilter === 'OPEN' && row.assignment.status !== 'OPEN') return false;
+            if (statusFilter === 'CLOSED' && row.assignment.status !== 'CLOSED') return false;
+            if (searchTerm) {
+                const term = searchTerm.toLowerCase();
+                const matchSlot = (row.slot?.courseName || '').toLowerCase().includes(term)
+                    || (row.slot?.roomCode || '').toLowerCase().includes(term)
+                    || (row.slot?.className || '').toLowerCase().includes(term);
+                const matchAssignment = row.assignment.title.toLowerCase().includes(term)
+                    || (row.assignment.description || '').toLowerCase().includes(term);
+                return matchSlot || matchAssignment;
+            }
+            return true;
+        });
+
+        const totalPages = Math.ceil(filteredRows.length / PAGE_SIZE);
+        const paginatedRows = filteredRows.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+        const assignmentIdsOnPage = paginatedRows.map(r => r.assignment.id);
+        const allOnPageSelected = assignmentIdsOnPage.length > 0 && assignmentIdsOnPage.every(id => selectedIds.has(id));
+
+        return { filteredRows, totalPages, paginatedRows, assignmentIdsOnPage, allOnPageSelected };
+    }, [slots, assignments, selectedClass, statusFilter, searchTerm, currentPage, selectedIds]);
 
     // Reset page & selection when filters change
     useEffect(() => {
         setCurrentPage(0);
         setSelectedIds(new Set());
-        setBatchWarning('');
     }, [selectedClass, statusFilter, searchTerm]);
-
-    // Paginate filtered rows
-    const totalPages = Math.ceil(filteredRows.length / PAGE_SIZE);
-    const paginatedRows = filteredRows.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
-
-    // Multi-select helpers
-    const assignmentIdsOnPage = paginatedRows.map(r => r.assignment.id);
-    const allOnPageSelected = assignmentIdsOnPage.length > 0 && assignmentIdsOnPage.every(id => selectedIds.has(id));
 
     const toggleSelect = (assignmentId: number) => {
         setSelectedIds(prev => {
@@ -353,7 +351,6 @@ export const LecturerAssignmentPage: React.FC = () => {
             else next.add(assignmentId);
             return next;
         });
-        setBatchWarning('');
     };
 
     const toggleSelectAll = () => {
@@ -363,19 +360,12 @@ export const LecturerAssignmentPage: React.FC = () => {
                 assignmentIdsOnPage.forEach(id => next.delete(id));
                 return next;
             });
-            setBatchWarning('');
         } else {
             setSelectedIds(prev => {
                 const next = new Set(prev);
                 assignmentIdsOnPage.forEach(id => next.add(id));
                 return next;
             });
-            const hasClosedOnPage = paginatedRows.some(r => r.assignment && r.assignment.status === 'CLOSED');
-            if (hasClosedOnPage) {
-                setBatchWarning('Lưu ý: Không thể xóa bài tập đã đóng. Bạn vẫn có thể chỉnh sửa.');
-            } else {
-                setBatchWarning('');
-            }
         }
     };
 
@@ -460,11 +450,6 @@ export const LecturerAssignmentPage: React.FC = () => {
 
     const handleBatchDeleteClick = () => {
         if (selectedIds.size === 0) { toast.error('Vui lòng chọn ít nhất một bài tập'); return; }
-        const hasClosedAssignment = assignments.some(a => selectedIds.has(a.id) && a.status === 'CLOSED');
-        if (hasClosedAssignment) {
-            setBatchWarning('Không thể xóa bài tập đã đóng. Vui lòng chỉ chọn bài tập đang mở để xóa.');
-            return;
-        }
         setShowDeleteDialog(true);
     };
 
@@ -640,55 +625,37 @@ export const LecturerAssignmentPage: React.FC = () => {
                     </div>
                 ) : (
                     <>
-                        {/* Batch warning */}
-                        {batchWarning && (
-                            <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl text-sm text-amber-700 dark:text-amber-400">
-                                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                                {batchWarning}
-                            </div>
-                        )}
+                        {/* Selection Action Bar - Standard pattern */}
+                        <SelectionActionBar
+                            selectedCount={selectedIds.size}
+                            showDeactivate={Array.from(selectedIds).some(id => {
+                                const row = filteredRows.find(r => r.assignment.id === id);
+                                return row?.assignment.status === 'OPEN';
+                            })}
+                            itemLabel="bài tập"
+                            deactivateLabel="Đóng bài tập"
+                            activateLabel="Mở bài tập"
+                            onUpdate={selectedIds.size === 1 ? handleBatchEditOpen : undefined}
+                            onDelete={handleBatchDeleteClick}
+                            onStatusChange={(status) => {
+                                if (status === 'ACTIVE') return; // Open not supported by API yet
 
-                        {/* Batch toolbar */}
-                        {selectedIds.size > 0 && (
-                            <div className="flex items-center justify-between px-4 py-2.5 bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800 rounded-xl">
-                                <span className="text-sm text-orange-700 dark:text-orange-400 font-medium">
-                                    Đã chọn {selectedIds.size} bài tập
-                                </span>
-                                <div className="flex items-center gap-2">
-                                    {selectedIds.size === 1 && (
-                                        <button onClick={handleBatchEditOpen}
-                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-medium transition-colors">
-                                            <Edit3 className="w-3.5 h-3.5" /> Chỉnh sửa bài tập
-                                        </button>
-                                    )}
-                                    {Array.from(selectedIds).some(id => {
-                                        const row = filteredRows.find(r => r.assignment.id === id);
-                                        return row?.assignment.status === 'OPEN';
-                                    }) && (
-                                            <button onClick={() => {
-                                                const openIds = Array.from(selectedIds).filter(id => {
-                                                    const row = filteredRows.find(r => r.assignment.id === id);
-                                                    return row?.assignment.status === 'OPEN';
-                                                });
-                                                Promise.all(openIds.map(id => assignmentService.closeAssignment(id)))
-                                                    .then(() => {
-                                                        toast.success(`Đã đóng ${openIds.length} bài tập`);
-                                                        setSelectedIds(new Set());
-                                                        fetchAllData();
-                                                    })
-                                                    .catch((err: any) => toast.error(err.response?.data?.message || 'Không thể đóng bài tập'));
-                                            }}
-                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors">
-                                                <Lock className="w-3.5 h-3.5" /> Đóng
-                                            </button>
-                                        )}
-                                    <button onClick={handleBatchDeleteClick}
-                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-medium transition-colors">
-                                        <Trash2 className="w-3.5 h-3.5" /> Xóa
-                                    </button>
-                                </div>
-                            </div>
-                        )}
+                                const targetIds = Array.from(selectedIds).filter(id => {
+                                    const row = filteredRows.find(r => r.assignment.id === id);
+                                    return row?.assignment.status === 'OPEN';
+                                });
+                                
+                                if (targetIds.length === 0) return;
+
+                                Promise.all(targetIds.map(id => assignmentService.closeAssignment(id)))
+                                .then(() => {
+                                    toast.success(`Đã đóng ${targetIds.length} bài tập`);
+                                    setSelectedIds(new Set());
+                                    fetchAllData();
+                                })
+                                .catch((err: any) => toast.error(err.response?.data?.message || 'Không thể đóng bài tập'));
+                            }}
+                        />
 
                         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 overflow-hidden shadow-sm">
                             <div className="overflow-x-auto">
@@ -699,13 +666,13 @@ export const LecturerAssignmentPage: React.FC = () => {
                                                 <input type="checkbox" checked={allOnPageSelected} onChange={toggleSelectAll}
                                                     className="w-4 h-4 rounded border-white/50 text-orange-600 focus:ring-orange-500 accent-orange-600" />
                                             </th>
-                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Lớp</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Ngày</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Slot</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Phòng</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Bài tập</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Trạng thái</th>
-                                            <th className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">Nộp</th>
+                                            <th className="text-left px-4 py-4 font-bold text-white text-[10px] uppercase tracking-widest">Lớp</th>
+                                            <th className="text-left px-4 py-4 font-bold text-white text-[10px] uppercase tracking-widest">Ngày</th>
+                                            <th className="text-left px-4 py-4 font-bold text-white text-[10px] uppercase tracking-widest">Slot</th>
+                                            <th className="text-left px-4 py-4 font-bold text-white text-[10px] uppercase tracking-widest">Phòng</th>
+                                            <th className="text-left px-4 py-4 font-bold text-white text-[10px] uppercase tracking-widest">Bài tập</th>
+                                            <th className="text-left px-4 py-4 font-bold text-white text-[10px] uppercase tracking-widest">Trạng thái</th>
+                                            <th className="text-left px-4 py-4 font-bold text-white text-[10px] uppercase tracking-widest">Nộp</th>
 
                                         </tr>
                                     </thead>
@@ -756,16 +723,16 @@ export const LecturerAssignmentPage: React.FC = () => {
                                                             })()}
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-3">
-                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ${assignment.status === 'OPEN'
-                                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                            : 'bg-gray-100 text-gray-500 dark:bg-zinc-800 dark:text-zinc-400'
+                                                    <td className="px-4 py-4">
+                                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${assignment.status === 'OPEN'
+                                                            ? 'bg-green-50 text-green-600 border border-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800/50'
+                                                            : 'bg-gray-50 text-gray-400 border border-gray-100 dark:bg-zinc-800/50 dark:text-zinc-500 dark:border-zinc-700/50'
                                                             }`}>
                                                             {assignment.status === 'OPEN' ? 'Đang mở' : 'Đã đóng'}
                                                         </span>
                                                     </td>
-                                                    <td className="px-4 py-3 text-gray-700 dark:text-zinc-300">
-                                                        {`${assignment.totalSubmissions}/${assignment.totalStudents}`}
+                                                    <td className="px-4 py-4 text-gray-900 dark:text-white font-bold">
+                                                        {assignment.totalSubmissions}<span className="text-gray-400 font-medium mx-1">/</span>{assignment.totalStudents}
                                                     </td>
 
                                                 </tr>
@@ -819,11 +786,11 @@ export const LecturerAssignmentPage: React.FC = () => {
                                     className="w-full px-4 py-3 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white text-sm font-medium focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 resize-none" />
                             </div>
                             <div>
-                                <label className="block text-[10px] uppercase font-bold tracking-widest text-gray-400 mb-2 ml-1">
-                                    <Clock className="w-3.5 h-3.5 inline mr-1 mb-0.5" /> Hạn nộp bài
-                                </label>
-                                <input type="datetime-local" value={editDueDate} onChange={e => setEditDueDate(e.target.value)}
-                                    className="w-full px-4 h-[52px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white text-sm font-bold focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40" />
+                                <CustomDateTimePicker
+                                    label="Hạn nộp bài"
+                                    value={editDueDate}
+                                    onChange={setEditDueDate}
+                                />
                             </div>
                             <div>
                                 <label className="block text-[10px] uppercase font-bold tracking-widest text-gray-400 mb-2 ml-1">
@@ -963,11 +930,11 @@ export const LecturerAssignmentPage: React.FC = () => {
 
                             {/* Deadline */}
                             <div>
-                                <label className="block text-[10px] uppercase font-bold tracking-widest text-gray-400 mb-2 ml-1">
-                                    <Clock className="w-3.5 h-3.5 inline mr-1 mb-0.5" /> Hạn nộp bài <span className="text-red-500">*</span>
-                                </label>
-                                <input type="datetime-local" value={newDueDate} onChange={e => setNewDueDate(e.target.value)}
-                                    className="w-full px-4 h-[52px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white text-sm font-bold focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40" />
+                                <CustomDateTimePicker
+                                    label="Hạn nộp bài *"
+                                    value={newDueDate}
+                                    onChange={setNewDueDate}
+                                />
                             </div>
 
                             {/* Reference File */}

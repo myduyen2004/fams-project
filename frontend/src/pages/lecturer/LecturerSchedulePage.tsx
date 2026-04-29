@@ -1,4 +1,13 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
+
+// Static keyframes injected once at module level — avoids dangerouslySetInnerHTML per cell
+const PULSE_GLOW_CSS = `@keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 5px rgba(255,102,0,0.2); border-color: rgba(255,102,0,0.8); } 50% { box-shadow: 0 0 18px rgba(255,102,0,0.4); border-color: rgba(255,102,0,1); } }`;
+if (typeof document !== 'undefined' && !document.getElementById('pulse-glow-style')) {
+    const styleEl = document.createElement('style');
+    styleEl.id = 'pulse-glow-style';
+    styleEl.textContent = PULSE_GLOW_CSS;
+    document.head.appendChild(styleEl);
+}
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { Card } from '../../components/common/Card';
 import {
@@ -135,9 +144,9 @@ export const LecturerSchedulePage: React.FC = () => {
         return `${year}-${month}-${day}`;
     };
 
-    // Generate weeks for the entire selected year
-    const generateWeeks = () => {
-        const weeks = [];
+    // Generate weeks for the entire selected year — memoized to avoid 53 object allocations per render
+    const weeks = useMemo(() => {
+        const weeks: { value: string; label: string; isCurrent: boolean }[] = [];
         const d = new Date(selectedYear, 0, 1);
         const startOfFirstWeek = getStartOfWeek(d);
 
@@ -157,9 +166,7 @@ export const LecturerSchedulePage: React.FC = () => {
             });
         }
         return weeks;
-    };
-
-    const weeks = generateWeeks();
+    }, [selectedYear]);
 
     const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const year = Number(e.target.value);
@@ -656,7 +663,7 @@ export const LecturerSchedulePage: React.FC = () => {
                                                                     onClick={() => setSelectedSlot(slotData)}
                                                                     className={`relative group rounded-md p-2.5 shadow-sm transition-all cursor-pointer h-[110px] w-full flex flex-col justify-between ${borderClass} ${bgClass} ${isOngoing ? 'ring-1 ring-fpt-orange/30 shadow-[0_0_15px_rgba(255,102,0,0.2)] animate-[pulse-glow_2s_infinite_ease-in-out]' : 'hover:shadow-md'}`}
                                                                 >
-                                                                    {isOngoing && <style dangerouslySetInnerHTML={{ __html: `@keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 5px rgba(255,102,0,0.2); border-color: rgba(255,102,0,0.8); } 50% { box-shadow: 0 0 18px rgba(255,102,0,0.4); border-color: rgba(255,102,0,1); } }` }} />}
+                                                                    {isOngoing && <div className="absolute inset-0 rounded-md pointer-events-none ring-1 ring-fpt-orange/30" />}
                                                                     <div>
                                                                         <div className="flex items-center justify-between mb-1.5">
                                                                             <span className="font-extrabold text-[#001D4A] dark:text-white text-sm leading-tight truncate pr-1" title={slotData.courseName}>{slotData.courseCode}</span>

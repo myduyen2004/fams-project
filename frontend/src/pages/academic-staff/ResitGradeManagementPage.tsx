@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { lecturerClassService, SemesterResponse } from '../../services/api/LecturerClass';
 import { courseService } from '../../services/api/courseService';
@@ -72,21 +72,7 @@ export const ResitGradeManagementPage: React.FC = () => {
         fetchCourses();
     }, []);
 
-    // Load grades when semester and course are selected
-    useEffect(() => {
-        if (selectedSemester && selectedCourse) {
-            fetchGrades();
-        } else {
-            setGradeOverview(null);
-        }
-    }, [selectedSemester, selectedCourse]);
-
-    // Reset selected class when grades change
-    useEffect(() => {
-        setSelectedClass('');
-    }, [gradeOverview]);
-
-    const fetchGrades = async () => {
+    const fetchGrades = useCallback(async () => {
         setLoadingGrades(true);
         try {
             const data = await examGradeService.getExamGradeOverview(selectedCourse, selectedSemester, 'RESIT');
@@ -97,7 +83,21 @@ export const ResitGradeManagementPage: React.FC = () => {
         } finally {
             setLoadingGrades(false);
         }
-    };
+    }, [selectedCourse, selectedSemester]);
+
+    // Load grades when semester and course are selected
+    useEffect(() => {
+        if (selectedSemester && selectedCourse) {
+            fetchGrades();
+        } else {
+            setGradeOverview(null);
+        }
+    }, [fetchGrades]);
+
+    // Reset selected class when grades change
+    useEffect(() => {
+        setSelectedClass('');
+    }, [gradeOverview]);
 
     const handleExport = async () => {
         if (!selectedCourse || !selectedSemester) return;
@@ -209,18 +209,16 @@ export const ResitGradeManagementPage: React.FC = () => {
         return Array.from(classes).sort();
     }, [gradeOverview]);
 
-    const resitEligibleStudents = React.useMemo(() => {
-        if (!gradeOverview) return [];
-        return gradeOverview.studentGrades;
-    }, [gradeOverview]);
-
-    const filteredStudents = resitEligibleStudents.filter(student => {
-        const matchesSearch = student.studentCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            student.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            student.className.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesClass = selectedClass ? student.className === selectedClass : true;
-        return matchesSearch && matchesClass;
-    });
+    const filteredStudents = useMemo(() => {
+        const students = gradeOverview?.studentGrades ?? [];
+        return students.filter(student => {
+            const matchesSearch = student.studentCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                student.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                student.className.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesClass = selectedClass ? student.className === selectedClass : true;
+            return matchesSearch && matchesClass;
+        });
+    }, [gradeOverview, searchTerm, selectedClass]);
 
     const getScoreColor = (score: number | null): string => {
         if (score === null || score === undefined) return 'text-gray-400';
@@ -364,7 +362,7 @@ export const ResitGradeManagementPage: React.FC = () => {
                                         <div className="flex items-center gap-3 mt-1.5 text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wider">
                                             <span className="flex items-center gap-2">
                                                 <Users size={14} />
-                                                {resitEligibleStudents.length} sinh viên đủ điều kiện
+                                                {gradeOverview.studentGrades.length} sinh viên đủ điều kiện
                                             </span>
                                             <span className="text-gray-300">•</span>
                                             <span>{gradeOverview.gradeComponents.length} cấu phần điểm</span>

@@ -49,7 +49,7 @@ export const ImportSpecializationModal: React.FC<ImportSpecializationModalProps>
             }
             setPreviewData(data);
             if (data.length === 0) {
-                toast('File không có dữ liệu hợp lệ', { icon: '⚠️' });
+                toast.warning('File không có dữ liệu hợp lệ', { icon: '⚠️' });
             } else {
                 toast.success(`Đã đọc ${data.length} dòng`);
             }

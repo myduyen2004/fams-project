@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { useSearchParams } from 'react-router-dom';
 import { lecturerClassService, SemesterResponse } from '../../services/api/LecturerClass';
@@ -83,25 +83,7 @@ export const ExamGradeManagementPage: React.FC = () => {
         fetchCourses();
     }, []);
 
-    // Load grades when semester and course are selected
-    useEffect(() => {
-        if (selectedSemester && selectedCourse) {
-            fetchGrades();
-        } else {
-            setGradeOverview(null);
-        }
-    }, [selectedSemester, selectedCourse]);
-
-    // Reset selected class when grades change, unless it came from URL
-    useEffect(() => {
-        if (gradeOverview && urlClassName) {
-            setSelectedClass(urlClassName);
-        } else {
-            setSelectedClass('');
-        }
-    }, [gradeOverview, urlClassName]);
-
-    const fetchGrades = async () => {
+    const fetchGrades = useCallback(async () => {
         setLoadingGrades(true);
         try {
             const data = await examGradeService.getExamGradeOverview(selectedCourse, selectedSemester, 'EXAM');
@@ -112,7 +94,16 @@ export const ExamGradeManagementPage: React.FC = () => {
         } finally {
             setLoadingGrades(false);
         }
-    };
+    }, [selectedCourse, selectedSemester]);
+
+    // Load grades when semester and course are selected
+    useEffect(() => {
+        if (selectedSemester && selectedCourse) {
+            fetchGrades();
+        } else {
+            setGradeOverview(null);
+        }
+    }, [fetchGrades]);
 
     const handleExport = async () => {
         if (!selectedCourse || !selectedSemester) return;
@@ -126,6 +117,15 @@ export const ExamGradeManagementPage: React.FC = () => {
             setExporting(false);
         }
     };
+
+    // Reset selected class when grades change, unless it came from URL
+    useEffect(() => {
+        if (gradeOverview && urlClassName) {
+            setSelectedClass(urlClassName);
+        } else {
+            setSelectedClass('');
+        }
+    }, [gradeOverview, urlClassName]);
 
     const handleImportSuccess = () => {
         fetchGrades();
@@ -222,13 +222,15 @@ export const ExamGradeManagementPage: React.FC = () => {
         return Array.from(classes).sort();
     }, [gradeOverview]);
 
-    const filteredStudents = gradeOverview?.studentGrades.filter(student => {
-        const matchesSearch = student.studentCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            student.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            student.className.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesClass = selectedClass ? student.className === selectedClass : true;
-        return matchesSearch && matchesClass;
-    }) || [];
+    const filteredStudents = useMemo(() => {
+        return (gradeOverview?.studentGrades ?? []).filter(student => {
+            const matchesSearch = student.studentCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                student.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                student.className.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesClass = selectedClass ? student.className === selectedClass : true;
+            return matchesSearch && matchesClass;
+        });
+    }, [gradeOverview, searchTerm, selectedClass]);
 
     const getScoreColor = (score: number | null): string => {
         if (score === null || score === undefined) return 'text-gray-400';

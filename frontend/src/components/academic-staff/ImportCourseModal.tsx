@@ -44,7 +44,7 @@ export const ImportCourseModal: React.FC<ImportCourseModalProps> = ({ isOpen, on
             const data = await courseService.previewImportCourses(file);
             setPreviewData(data);
             if (data.length === 0) {
-                toast('File không có dữ liệu hợp lệ', { icon: '⚠️' });
+                toast.warning('File không có dữ liệu hợp lệ', { icon: '⚠️' });
             } else {
                 toast.success(`Đã đọc ${data.length} dòng`);
             }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     Plus, Edit2, Trash2, ChevronLeft,
@@ -89,20 +89,19 @@ export const GradeConfigurationPage: React.FC = () => {
         loadData();
     }, [loadData]);
 
-    const mainComponents = allComponents.filter(c => !c.isResit);
-    const totalWeight = mainComponents.reduce((sum, c) => sum + c.weight, 0);
-    const isValidConfig = Math.abs(totalWeight - 100) < 0.01;
-
-    // Ordered list for display using centralized sorting utility
-    const sortedComponents = sortGradeComponents(allComponents);
-
-    // Calculate total weight for each type for visualization (progress bar and legend)
-    const weightByType = allComponents.reduce((acc, curr) => {
-        if (!curr.isResit) {
-            acc[curr.type] = (acc[curr.type] || 0) + curr.weight;
-        }
-        return acc;
-    }, {} as Record<string, number>);
+    const { mainComponents, totalWeight, isValidConfig, sortedComponents, weightByType } = useMemo(() => {
+        const mainComponents = allComponents.filter(c => !c.isResit);
+        const totalWeight = mainComponents.reduce((sum, c) => sum + c.weight, 0);
+        const isValidConfig = Math.abs(totalWeight - 100) < 0.01;
+        const sortedComponents = sortGradeComponents(allComponents);
+        const weightByType = allComponents.reduce((acc, curr) => {
+            if (!curr.isResit) {
+                acc[curr.type] = (acc[curr.type] || 0) + curr.weight;
+            }
+            return acc;
+        }, {} as Record<string, number>);
+        return { mainComponents, totalWeight, isValidConfig, sortedComponents, weightByType };
+    }, [allComponents]);
 
     // Modal handlers
     const openAddModal = () => {

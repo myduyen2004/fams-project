@@ -231,7 +231,7 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
                     }));
 
             if (targets.length === 0) {
-                toast('Không có bài nộp hợp lệ để check trong bài tập này');
+                toast.info('Không có bài nộp hợp lệ để check trong bài tập này');
                 return;
             }
 

@@ -25,7 +25,7 @@ export const LecturerCreateRequestPage: React.FC = () => {
     const [newDate, setNewDate] = useState<string>('');
     const [newSlot, setNewSlot] = useState<number | null>(null);
     const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-    const [dateError, setDateError] = useState<string>('');
+
     const [reason, setReason] = useState<string>('');
     const [requestType] = useState<string>('RESCHEDULE');
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -43,20 +43,7 @@ export const LecturerCreateRequestPage: React.FC = () => {
     };
 
     // Handle date change with validation (must be tomorrow or later)
-    const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const selectedDate = e.target.value;
-        const tomorrow = getTomorrowString();
 
-        if (selectedDate && selectedDate < tomorrow) {
-            setDateError('Ngày thay đổi phải từ ngày mai trở đi');
-            setNewDate('');
-        } else {
-            setDateError('');
-            setNewDate(selectedDate);
-            // Reset selected room when date changes
-            setSelectedRoom(null);
-        }
-    };
 
     // Handle file upload
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

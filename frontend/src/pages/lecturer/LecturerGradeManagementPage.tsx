@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { lecturerClassService, SemesterResponse, ClassSectionResponse } from '../../services/api/LecturerClass';
 import { studentGradeService, GradeOverviewResponse, GradeComponentInfo } from '../../services/api/studentGradeService';
@@ -90,23 +90,7 @@ export const LecturerGradeManagementPage: React.FC = () => {
         fetchSemesters();
     }, []);
 
-    // Load classes when semester changes
-    useEffect(() => {
-        if (selectedSemester && user?.id) {
-            fetchClasses();
-        }
-    }, [selectedSemester, user?.id]);
-
-    // Load grades when class changes
-    useEffect(() => {
-        if (selectedClass) {
-            fetchGrades();
-        } else {
-            setGradeOverview(null);
-        }
-    }, [selectedClass]);
-
-    const fetchClasses = async () => {
+    const fetchClasses = useCallback(async () => {
         try {
             const data = await lecturerClassService.getTeachingClasses(selectedSemester, {
                 lecturerId: user?.id,
@@ -115,9 +99,6 @@ export const LecturerGradeManagementPage: React.FC = () => {
             setClasses(data.content);
             // Reset selected class when semester changes, if not matching state
             if (!state?.className || state.className !== selectedClass) {
-                // Keep the current selectedClass if it was already set (e.g. via state)
-                // but if we are here because of a manual semester change, we might want to reset
-                // For now, let's only reset if the current selectedClass is NOT in the new classes list
                 if (!data.content.find(c => c.className === selectedClass)) {
                     setSelectedClass('');
                 }
@@ -125,9 +106,9 @@ export const LecturerGradeManagementPage: React.FC = () => {
         } catch (error) {
             console.error("Failed to fetch classes", error);
         }
-    };
+    }, [selectedSemester, user?.id, selectedClass, state?.className]);
 
-    const fetchGrades = async () => {
+    const fetchGrades = useCallback(async () => {
         setLoadingGrades(true);
         try {
             const data = await studentGradeService.getGradeOverview(selectedClass);
@@ -137,7 +118,24 @@ export const LecturerGradeManagementPage: React.FC = () => {
         } finally {
             setLoadingGrades(false);
         }
-    };
+    }, [selectedClass]);
+
+    // Load classes when semester changes
+    useEffect(() => {
+        if (selectedSemester && user?.id) {
+            fetchClasses();
+        }
+    }, [fetchClasses]);
+
+    // Load grades when class changes
+    useEffect(() => {
+        if (selectedClass) {
+            fetchGrades();
+        } else {
+            setGradeOverview(null);
+        }
+    }, [fetchGrades]);
+
 
     // Regular score - always black text, no background
     const getScoreColor = (score: number | null): string => {
@@ -405,6 +403,16 @@ export const LecturerGradeManagementPage: React.FC = () => {
         return Math.round((passingStudents / totalStudents) * 100);
     }, [gradeOverview]);
 
+    const filteredStudents = useMemo(() =>
+        (gradeOverview?.studentGrades ?? []).filter(student => {
+            if (!searchTerm.trim()) return true;
+            const term = searchTerm.toLowerCase();
+            return student.studentName.toLowerCase().includes(term) ||
+                student.studentCode.toLowerCase().includes(term);
+        }),
+        [gradeOverview, searchTerm]
+    );
+
     return (
         <LecturerLayout pageTitle="Quản lý điểm số">
             <div className="mt-5 ml-10 mr-10 space-y-6">
@@ -635,13 +643,7 @@ export const LecturerGradeManagementPage: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50 dark:divide-zinc-800">
-                                    {gradeOverview.studentGrades
-                                        .filter(student => {
-                                            if (!searchTerm.trim()) return true;
-                                            const term = searchTerm.toLowerCase();
-                                            return student.studentName.toLowerCase().includes(term) ||
-                                                student.studentCode.toLowerCase().includes(term);
-                                        })
+                                    {filteredStudents
                                         .map((student, index) => (
                                             <tr key={student.enrollmentId} className="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
                                                 <td className="px-4 py-2 text-center text-sm text-gray-500 dark:text-zinc-400">

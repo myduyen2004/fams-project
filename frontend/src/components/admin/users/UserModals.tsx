@@ -683,7 +683,7 @@ export const ImportUserModal: React.FC<{ onClose: () => void; onSuccess: () => v
       const preview = await userService.previewImport(formData);
       setPreviewData(preview);
       if (preview.totalRows === 0) {
-        toast('File không có dữ liệu hợp lệ', { icon: '⚠️' });
+        toast.warning('File không có dữ liệu hợp lệ', { icon: '⚠️' });
       } else {
         toast.success(`Đã đọc ${preview.totalRows} dòng`);
       }
