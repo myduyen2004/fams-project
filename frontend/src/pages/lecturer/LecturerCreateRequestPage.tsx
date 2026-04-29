@@ -2,12 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Upload, Info, Check, Trash2 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 // requestType is always 'RESCHEDULE'
 import { scheduleRequestService, ClassSlotResponse, CreateScheduleRequestPayload, ConflictCheckResponse } from '../../services/api/scheduleRequestService';
 import { RoomSelectionCard } from '../../components/lecturer/request/RoomSelectionCard';
 import { Room } from '../../types/room';
 import { uploadFile } from '../../services/utils/fileUploadService';
+import { CustomSelect } from '../../components/common/CustomSelect';
+import { CustomDatePicker } from '../../components/common/CustomDatePicker';
 
 export const LecturerCreateRequestPage: React.FC = () => {
     const navigate = useNavigate();
@@ -284,20 +286,19 @@ export const LecturerCreateRequestPage: React.FC = () => {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">LỚP HỌC</label>
-                                <select
-                                    className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all text-slate-700 dark:text-slate-200"
+                                <label className="block text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">LỚP HỌC</label>
+                                <CustomSelect
                                     value={selectedClass}
-                                    onChange={(e) => setSelectedClass(e.target.value)}
-                                >
-                                    <option value="">Chọn lớp học</option>
-                                    {classes.map((cls) => (
-                                        <option key={cls} value={cls}>{cls}</option>
-                                    ))}
-                                </select>
+                                    onChange={setSelectedClass}
+                                    options={[
+                                        { value: '', label: 'Chọn lớp học' },
+                                        ...classes.map(cls => ({ value: cls, label: cls }))
+                                    ]}
+                                    className="bg-slate-50 dark:bg-zinc-800/50 border-transparent"
+                                />
                             </div>
                             <div>
-                                <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">LOẠI YÊU CẦU</label>
+                                <label className="block text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">LOẠI YÊU CẦU</label>
                                 <div className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm text-slate-700 dark:text-slate-200 min-h-[46px] flex items-center">
                                     Đổi lịch
                                 </div>
@@ -311,99 +312,80 @@ export const LecturerCreateRequestPage: React.FC = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
                             {/* NGÀY BAN ĐẦU - First (filter dates >= tomorrow) */}
                             <div>
-                                <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">NGÀY BAN ĐẦU</label>
-                                <select
-                                    className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all text-slate-700 dark:text-slate-200 font-bold"
+                                <label className="block text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">NGÀY BAN ĐẦU</label>
+                                <CustomSelect
                                     value={selectedOriginalDate}
-                                    onChange={(e) => {
-                                        const date = e.target.value;
+                                    onChange={(date) => {
                                         setSelectedOriginalDate(date);
-                                        // Reset slot selection when date changes
                                         setSelectedSlotId('');
                                         setSelectedSlot(null);
                                     }}
                                     disabled={!selectedClass}
-                                >
-                                    <option value="">Chọn ngày</option>
-                                    {(() => {
-                                        const tomorrow = getTomorrowString();
-                                        // Get unique dates that are >= tomorrow
-                                        const uniqueDates = Array.from(new Set(
-                                            slots
-                                                .filter(s => s.date >= tomorrow)
-                                                .map(s => s.date)
-                                        )).sort();
-
-                                        return uniqueDates.map(date => (
-                                            <option key={date} value={date}>
-                                                {formatDateDDMMYYYY(date)}
-                                            </option>
-                                        ));
-                                    })()}
-                                </select>
+                                    options={[
+                                        { value: '', label: 'Chọn ngày' },
+                                        ...(() => {
+                                            const tomorrow = getTomorrowString();
+                                            const uniqueDates = Array.from(new Set(
+                                                slots.filter(s => s.date >= tomorrow).map(s => s.date)
+                                            )).sort();
+                                            return uniqueDates.map(date => ({ value: date, label: formatDateDDMMYYYY(date) }));
+                                        })()
+                                    ]}
+                                    className="bg-slate-50 dark:bg-zinc-800/50 border-transparent font-normal"
+                                />
                             </div>
                             {/* SLOT BAN ĐẦU - Second (shows slots for selected date) */}
                             <div>
-                                <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">SLOT BAN ĐẦU</label>
-                                <select
-                                    className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all text-slate-700 dark:text-slate-200 font-bold"
+                                <label className="block text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">SLOT BAN ĐẦU</label>
+                                <CustomSelect
                                     value={selectedSlotId}
-                                    onChange={(e) => {
-                                        const slotId = e.target.value;
+                                    onChange={(slotId) => {
                                         setSelectedSlotId(slotId);
                                         const found = slots.find(s => s.id.toString() === slotId) || null;
                                         setSelectedSlot(found);
                                     }}
                                     disabled={!selectedOriginalDate}
-                                >
-                                    <option value="">Chọn slot</option>
-                                    {selectedOriginalDate && slots
-                                        .filter(s => s.date === selectedOriginalDate)
-                                        .sort((a, b) => a.slotNumber - b.slotNumber)
-                                        .map(slot => (
-                                            <option key={slot.id} value={slot.id}>
-                                                Slot {slot.slotNumber}
-                                            </option>
-                                        ))}
-                                </select>
+                                    options={[
+                                        { value: '', label: 'Chọn slot' },
+                                        ...(selectedOriginalDate ? slots
+                                            .filter(s => s.date === selectedOriginalDate)
+                                            .sort((a, b) => a.slotNumber - b.slotNumber)
+                                            .map(slot => ({ value: slot.id.toString(), label: `Slot ${slot.slotNumber}` })) : [])
+                                    ]}
+                                    className="bg-slate-50 dark:bg-zinc-800/50 border-transparent font-normal"
+                                />
                             </div>
                             {/* PHÒNG BAN ĐẦU - Third (auto-display) */}
                             <div>
-                                <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">PHÒNG BAN ĐẦU</label>
-                                <div className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm text-slate-700 dark:text-slate-200 font-bold min-h-[46px] flex items-center">
+                                <label className="block text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">PHÒNG BAN ĐẦU</label>
+                                <div className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm text-slate-700 dark:text-slate-200 font-normal min-h-[46px] flex items-center">
                                     {selectedSlot ? selectedSlot.roomName : '-'}
                                 </div>
                             </div>
+                            <CustomDatePicker
+                                label="NGÀY CẦN ĐỔI"
+                                value={newDate}
+                                min={getTomorrowString()}
+                                onChange={(value) => setNewDate(value)}
+                                className="w-full"
+                            />
                             <div>
-                                <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">NGÀY CẦN ĐỔI</label>
-                                <input
-                                    className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all text-slate-700 dark:text-slate-200 font-bold"
-                                    type="date"
-                                    value={newDate}
-                                    min={getTomorrowString()}
-                                    onChange={handleDateChange}
-                                />
-                                {dateError && (
-                                    <p className="text-xs text-red-500 mt-1">{dateError}</p>
-                                )}
-                            </div>
-                            <div>
-                                <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">SLOT MỚI</label>
-                                <select
-                                    className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all text-slate-700 dark:text-slate-200 font-bold"
-                                    value={newSlot || ''}
-                                    onChange={(e) => {
-                                        setNewSlot(e.target.value ? parseInt(e.target.value) : null);
-                                        // Reset selected room when new slot changes
+                                <label className="block text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">SLOT MỚI</label>
+                                <CustomSelect
+                                    value={newSlot?.toString() || ''}
+                                    onChange={(value) => {
+                                        setNewSlot(value ? parseInt(value) : null);
                                         setSelectedRoom(null);
                                     }}
-                                >
-                                    <option value="">Chọn slot mới</option>
-                                    <option value="1">Slot 1</option>
-                                    <option value="2">Slot 2</option>
-                                    <option value="3">Slot 3</option>
-                                    <option value="4">Slot 4</option>
-                                </select>
+                                    options={[
+                                        { value: '', label: 'Chọn slot mới' },
+                                        { value: '1', label: 'Slot 1' },
+                                        { value: '2', label: 'Slot 2' },
+                                        { value: '3', label: 'Slot 3' },
+                                        { value: '4', label: 'Slot 4' }
+                                    ]}
+                                    className="bg-slate-50 dark:bg-zinc-800/50 border-transparent font-normal"
+                                />
                             </div>
                         </div>
                     </section>
@@ -462,7 +444,7 @@ export const LecturerCreateRequestPage: React.FC = () => {
                         )}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div>
-                                <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">LÝ DO THAY ĐỔI <span className="text-red-500">*</span></label>
+                                <label className="block text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">LÝ DO THAY ĐỔI <span className="text-red-500">*</span></label>
                                 <textarea
                                     className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all text-slate-700 dark:text-slate-200"
                                     placeholder="Nhập lý do chi tiết..."
@@ -474,7 +456,7 @@ export const LecturerCreateRequestPage: React.FC = () => {
                                 ></textarea>
                             </div>
                             <div>
-                                <label className="block text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">TỆP ĐÍNH KÈM</label>
+                                <label className="block text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">TỆP ĐÍNH KÈM</label>
                                 <div
                                     className={`flex justify-center px-6 pt-5 pb-6 border-2 border-slate-200 dark:border-slate-800 border-dashed rounded-lg transition-colors h-[190px] flex-col ${hasConflict ? 'cursor-not-allowed opacity-60' : 'hover:border-fpt-orange cursor-pointer group'}`}
                                     onClick={() => {
@@ -584,3 +566,4 @@ export const LecturerCreateRequestPage: React.FC = () => {
         </LecturerLayout>
     );
 };
+

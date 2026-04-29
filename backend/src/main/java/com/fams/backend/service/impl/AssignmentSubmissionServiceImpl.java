@@ -44,9 +44,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -66,7 +63,7 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
     private static final double DEFAULT_IMAGE_THRESHOLD = 0.95d;
     private static final String INTERNAL_PLAGIARISM_MODEL = "logistic-regression-v1";
     private static final String PLAGIARISM_MODEL_RESOURCE = "ml/assignment-plagiarism-model.json";
-    private static final int MIN_TEXT_ANALYSIS_LENGTH = 40;
+    // private static final int MIN_TEXT_ANALYSIS_LENGTH = 40;
     private static final int IMAGE_HASH_SIZE = 8;
 
     private final AssignmentRepository assignmentRepository;
@@ -1183,7 +1180,8 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
             // Update submission summary
             submissionRepository.findById(response.getSubmissionId()).ifPresent(sub -> {
                 sub.setPlagiarismPercent(response.getPlagiarismPercent());
-                sub.setPlagiarismStatus((response.getPlagiarized() != null && response.getPlagiarized()) ? "SUSPECT" : "SAFE");
+                sub.setPlagiarismStatus(
+                        (response.getPlagiarized() != null && response.getPlagiarized()) ? "SUSPECT" : "SAFE");
                 submissionRepository.save(sub);
             });
         } catch (Exception e) {

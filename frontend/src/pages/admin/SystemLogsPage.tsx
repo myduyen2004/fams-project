@@ -3,15 +3,16 @@ import { useRoleAwareNavigate } from '../../hooks/useRoleAwareNavigate';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { dashboardService } from '../../services/api/dashboardService';
 import { SystemLog } from '../../types/dashboard';
-import { 
-  Loader2, Search, Info, 
-  CheckCircle2, AlertCircle, XCircle, 
-  ChevronLeft, ChevronRight, Calendar,
-  Filter, ChevronDown, ChevronUp, User, Monitor, Globe, Database, History,
-  ArrowLeft
+import {
+    Loader2, Search, Info,
+    CheckCircle2, AlertCircle, XCircle,
+    ChevronLeft, ChevronRight, Calendar,
+    Filter, ChevronDown, ChevronUp, User, Monitor, Globe, Database, History,
+    ArrowLeft
 } from 'lucide-react';
-import toast from 'react-hot-toast';
-
+import toast from "@utils/toast";
+import { CustomSelect } from '../../components/common/CustomSelect';
+import { CustomDatePicker } from '../../components/common/CustomDatePicker';
 export const SystemLogsPage: React.FC = () => {
     const navigate = useRoleAwareNavigate();
     const [logs, setLogs] = useState<SystemLog[]>([]);
@@ -20,13 +21,13 @@ export const SystemLogsPage: React.FC = () => {
     const [totalPages, setTotalPages] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
     const [showFilters, setShowFilters] = useState(false);
-    
+
     // Filters state
     const [typeFilter, setTypeFilter] = useState<string>('');
     const [roleFilter, setRoleFilter] = useState<string>('');
     const [startDate, setStartDate] = useState<string>('');
     const [endDate, setEndDate] = useState<string>('');
-    
+
     // Expanded logs state
     const [expandedLogs, setExpandedLogs] = useState<number[]>([]);
 
@@ -63,7 +64,7 @@ export const SystemLogsPage: React.FC = () => {
     }, [searchTerm, typeFilter, roleFilter, startDate, endDate]);
 
     const toggleExpand = (id: number) => {
-        setExpandedLogs(prev => 
+        setExpandedLogs(prev =>
             prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
         );
     };
@@ -77,31 +78,31 @@ export const SystemLogsPage: React.FC = () => {
     };
 
     const typeConfig: Record<string, { color: string; bg: string; border: string; accent: string; label: string }> = {
-        info: { 
-            color: 'text-blue-600', 
-            bg: 'bg-blue-50 dark:bg-blue-500/10', 
-            border: 'border-blue-100 dark:border-blue-500/20', 
+        info: {
+            color: 'text-blue-600',
+            bg: 'bg-blue-50 dark:bg-blue-500/10',
+            border: 'border-blue-100 dark:border-blue-500/20',
             accent: 'border-l-blue-500',
             label: 'Thông tin'
         },
-        success: { 
-            color: 'text-emerald-600', 
-            bg: 'bg-emerald-50 dark:bg-emerald-500/10', 
-            border: 'border-emerald-100 dark:border-emerald-500/20', 
+        success: {
+            color: 'text-emerald-600',
+            bg: 'bg-emerald-50 dark:bg-emerald-500/10',
+            border: 'border-emerald-100 dark:border-emerald-500/20',
             accent: 'border-l-emerald-500',
             label: 'Thành công'
         },
-        warning: { 
-            color: 'text-amber-600', 
-            bg: 'bg-amber-50 dark:bg-amber-500/10', 
-            border: 'border-amber-100 dark:border-amber-500/20', 
+        warning: {
+            color: 'text-amber-600',
+            bg: 'bg-amber-50 dark:bg-amber-500/10',
+            border: 'border-amber-100 dark:border-amber-500/20',
             accent: 'border-l-amber-500',
             label: 'Cảnh báo'
         },
-        error: { 
-            color: 'text-red-600', 
-            bg: 'bg-red-50 dark:bg-red-500/10', 
-            border: 'border-red-100 dark:border-red-500/20', 
+        error: {
+            color: 'text-red-600',
+            bg: 'bg-red-50 dark:bg-red-500/10',
+            border: 'border-red-100 dark:border-red-500/20',
             accent: 'border-l-red-500',
             label: 'Lỗi'
         },
@@ -111,7 +112,7 @@ export const SystemLogsPage: React.FC = () => {
         <AdminLayout pageTitle="Nhật ký hệ thống">
             <div className="max-w-6xl mx-auto space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {/* Back Button */}
-                <button 
+                <button
                     onClick={() => navigate(-1)}
                     className="group flex items-center gap-2 text-gray-500 hover:text-fpt-orange transition-all duration-200"
                 >
@@ -128,21 +129,21 @@ export const SystemLogsPage: React.FC = () => {
                             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Toàn bộ Nhật ký</h1>
                             <p className="text-sm text-gray-500 dark:text-zinc-400 mt-1">Hệ thống ghi nhận chi tiết mọi hoạt động thay đổi dữ liệu và truy cập.</p>
                         </div>
-                        
+
                         <div className="flex items-center gap-3">
                             <div className="relative flex-1 md:flex-none">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                <input 
+                                <input
                                     type="text"
                                     placeholder="Tìm kiếm theo tiêu đề, nội dung..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="pl-10 pr-4 py-2 bg-gray-50 dark:bg-zinc-800 border-none rounded-xl text-sm focus:ring-2 focus:ring-fpt-orange transition-all w-full md:w-64"
+                                    className="pl-10 pr-4 h-[52px] bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all w-full md:w-72 hover:border-fpt-orange/40 hover:shadow-lg hover:shadow-fpt-orange/5"
                                 />
                             </div>
-                            <button 
+                            <button
                                 onClick={() => setShowFilters(!showFilters)}
-                                className={`p-2 rounded-xl border transition-all flex items-center gap-2 text-sm font-medium ${showFilters ? 'bg-fpt-orange text-white border-fpt-orange' : 'bg-white dark:bg-zinc-800 border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-zinc-300 hover:bg-gray-50'}`}
+                                className={`px-4 h-[52px] rounded-2xl border-2 transition-all flex items-center gap-2 text-sm font-bold ${showFilters ? 'bg-fpt-orange text-white border-fpt-orange' : 'bg-white dark:bg-zinc-800 border-gray-100 dark:border-zinc-700 text-gray-600 dark:text-zinc-300 hover:border-fpt-orange/40 hover:shadow-lg hover:shadow-fpt-orange/5'}`}
                             >
                                 <Filter className="w-4 h-4" />
                                 <span className="hidden sm:inline">Bộ lọc</span>
@@ -154,55 +155,55 @@ export const SystemLogsPage: React.FC = () => {
                     {showFilters && (
                         <div className="mt-4 pt-4 border-t border-gray-100 dark:border-zinc-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 animate-in slide-in-from-top-2 duration-300">
                             <div>
-                                <label className="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1.5 ml-1">Loại nhật ký</label>
-                                <select 
+                                <label className="block text-[10px] uppercase tracking-wider text-gray-400 mb-1.5 ml-1">Loại nhật ký</label>
+                                <CustomSelect
                                     value={typeFilter}
-                                    onChange={(e) => setTypeFilter(e.target.value)}
-                                    className="w-full py-2 px-3 bg-gray-50 dark:bg-zinc-800 border-none rounded-xl text-sm focus:ring-2 focus:ring-fpt-orange"
-                                >
-                                    <option value="">Tất cả loại</option>
-                                    <option value="INFO">Thông tin</option>
-                                    <option value="SUCCESS">Thành công</option>
-                                    <option value="WARNING">Cảnh báo</option>
-                                    <option value="ERROR">Lỗi hệ thống</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1.5 ml-1">Vai trò thực hiện</label>
-                                <select 
-                                    value={roleFilter}
-                                    onChange={(e) => setRoleFilter(e.target.value)}
-                                    className="w-full py-2 px-3 bg-gray-50 dark:bg-zinc-800 border-none rounded-xl text-sm focus:ring-2 focus:ring-fpt-orange"
-                                >
-                                    <option value="">Tất cả vai trò</option>
-                                    <option value="ADMIN">Quản trị viên</option>
-                                    <option value="ACADEMIC_STAFF">Giáo vụ</option>
-                                    <option value="LECTURER">Giảng viên</option>
-                                    <option value="STUDENT">Sinh viên</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1.5 ml-1">Từ ngày</label>
-                                <input 
-                                    type="date" 
-                                    value={startDate}
-                                    onChange={(e) => setStartDate(e.target.value)}
-                                    className="w-full py-2 px-3 bg-gray-50 dark:bg-zinc-800 border-none rounded-xl text-sm focus:ring-2 focus:ring-fpt-orange"
+                                    onChange={(value) => setTypeFilter(value)}
+                                    options={[
+                                        { value: '', label: 'Tất cả loại' },
+                                        { value: 'INFO', label: 'Thông tin' },
+                                        { value: 'SUCCESS', label: 'Thành công' },
+                                        { value: 'WARNING', label: 'Cảnh báo' },
+                                        { value: 'ERROR', label: 'Lỗi hệ thống' }
+                                    ]}
+                                    className="w-full"
                                 />
                             </div>
                             <div>
-                                <label className="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1.5 ml-1">Đến ngày</label>
-                                <input 
-                                    type="date" 
+                                <label className="block text-[10px] uppercase tracking-wider text-gray-400 mb-1.5 ml-1">Vai trò thực hiện</label>
+                                <CustomSelect
+                                    value={roleFilter}
+                                    onChange={(value) => setRoleFilter(value)}
+                                    options={[
+                                        { value: '', label: 'Tất cả vai trò' },
+                                        { value: 'ADMIN', label: 'Quản trị viên' },
+                                        { value: 'ACADEMIC_STAFF', label: 'Giáo vụ' },
+                                        { value: 'LECTURER', label: 'Giảng viên' },
+                                        { value: 'STUDENT', label: 'Sinh viên' }
+                                    ]}
+                                    className="w-full"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] uppercase tracking-wider text-gray-400 mb-1.5 ml-1">Từ ngày</label>
+                                <CustomDatePicker
+                                    value={startDate}
+                                    onChange={(value) => setStartDate(value)}
+                                    className="w-full"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] uppercase tracking-wider text-gray-400 mb-1.5 ml-1">Đến ngày</label>
+                                <CustomDatePicker
                                     value={endDate}
-                                    onChange={(e) => setEndDate(e.target.value)}
-                                    className="w-full py-2 px-3 bg-gray-50 dark:bg-zinc-800 border-none rounded-xl text-sm focus:ring-2 focus:ring-fpt-orange"
+                                    onChange={(value) => setEndDate(value)}
+                                    className="w-full"
                                 />
                             </div>
                             <div className="flex items-end">
-                                <button 
+                                <button
                                     onClick={resetFilters}
-                                    className="w-full py-2 px-4 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-600 dark:text-zinc-300 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                                    className="w-full h-[52px] bg-gray-100 dark:bg-zinc-800 border-2 border-transparent hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-600 dark:text-zinc-300 rounded-2xl text-sm font-semibold transition-colors flex items-center justify-center gap-2"
                                 >
                                     <History className="w-4 h-4" />
                                     Đặt lại
@@ -225,15 +226,15 @@ export const SystemLogsPage: React.FC = () => {
                                 const config = typeConfig[log.type] || typeConfig.info;
                                 const isSystem = !log.performerName || log.performerName === 'Hệ thống';
                                 const isExpanded = expandedLogs.includes(log.id);
-                                
+
                                 return (
                                     <div key={log.id} className="p-0 hover:bg-gray-50/30 transition-colors">
                                         <div className="p-5 flex items-start gap-4">
                                             {/* Performer Avatar */}
                                             <div className="flex-shrink-0 relative">
                                                 {log.performerAvatar ? (
-                                                    <img 
-                                                        src={log.performerAvatar} 
+                                                    <img
+                                                        src={log.performerAvatar}
                                                         alt={log.performerName}
                                                         className="w-12 h-12 rounded-full object-cover border-2 border-white dark:border-zinc-800 shadow-sm"
                                                     />
@@ -268,7 +269,7 @@ export const SystemLogsPage: React.FC = () => {
                                                             <Calendar className="w-3 h-3" />
                                                             <span className="text-[11px] font-medium">{log.timestamp}</span>
                                                         </div>
-                                                        <button 
+                                                        <button
                                                             onClick={() => toggleExpand(log.id)}
                                                             className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg text-gray-400 transition-colors"
                                                             title="Xem chi tiết kỹ thuật"
@@ -277,7 +278,7 @@ export const SystemLogsPage: React.FC = () => {
                                                         </button>
                                                     </div>
                                                 </div>
-                                                
+
                                                 <p className="text-sm text-gray-600 dark:text-zinc-400 mt-1.5 leading-relaxed">
                                                     {log.description}
                                                 </p>
@@ -295,7 +296,7 @@ export const SystemLogsPage: React.FC = () => {
                                                         <Globe className="w-3.5 h-3.5 opacity-60" />
                                                         <span>{log.source || 'Hệ thống'}</span>
                                                     </div>
-                                                    
+
                                                     {log.ipAddress && (
                                                         <div className="flex items-center gap-1.5 text-[11px] text-gray-400 font-medium border-l border-gray-200 dark:border-zinc-800 pl-4">
                                                             <Monitor className="w-3.5 h-3.5 opacity-60" />
@@ -318,7 +319,7 @@ export const SystemLogsPage: React.FC = () => {
                                                                     {log.userAgent || 'Không có thông tin UA'}
                                                                 </div>
                                                             </div>
-                                                            
+
                                                             {/* Data Changes */}
                                                             <div className="space-y-3">
                                                                 <div className="flex items-center gap-2 text-xs font-bold text-zinc-400 uppercase tracking-widest">
@@ -356,7 +357,7 @@ export const SystemLogsPage: React.FC = () => {
                             </div>
                             <p className="text-lg font-bold text-gray-600 dark:text-zinc-300">Không tìm thấy kết quả</p>
                             <p className="text-sm mt-1 max-w-xs">Hãy thử thay đổi từ khóa hoặc xóa các bộ lọc để có thêm kết quả.</p>
-                            <button 
+                            <button
                                 onClick={resetFilters}
                                 className="mt-4 text-sm font-semibold text-fpt-orange hover:underline"
                             >
@@ -406,3 +407,4 @@ export const SystemLogsPage: React.FC = () => {
         </AdminLayout>
     );
 };
+

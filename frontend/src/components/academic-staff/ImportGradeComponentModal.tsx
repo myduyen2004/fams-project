@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, AlertTriangle } from 'lucide-react';
 import { gradeComponentService, GradeComponent, GradeType } from '../../services/api/gradeComponentService';
 import * as XLSX from 'xlsx';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 
 // =========================================================================
 // Types
@@ -335,7 +335,7 @@ export const ImportGradeComponentModal: React.FC<ImportGradeComponentModalProps>
                             )}
                         </div>
                     </div>
-                    <button onClick={handleClose} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-xl transition-colors">
+                    <button onClick={handleClose} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-xl transition-all active:scale-95">
                         <X size={20} className="text-gray-500" />
                     </button>
                 </div>
@@ -347,7 +347,7 @@ export const ImportGradeComponentModal: React.FC<ImportGradeComponentModalProps>
                     {!hasPreview && !hasResult && (
                         <>
                             {/* Format guide */}
-                            <div className="p-4 bg-blue-50 dark:bg-blue-900/10 text-blue-800 dark:text-blue-300 rounded-xl text-sm mb-4">
+                            <div className="p-4 bg-blue-50 dark:bg-blue-900/10 text-blue-800 dark:text-blue-300 rounded-2xl text-sm mb-4 border border-blue-100 dark:border-blue-900/20">
                                 <div className="flex items-center gap-2 font-bold mb-2">
                                     <AlertCircle size={16} className="text-blue-600 dark:text-blue-400" />
                                     <span>Hướng dẫn quan trọng:</span>
@@ -364,14 +364,14 @@ export const ImportGradeComponentModal: React.FC<ImportGradeComponentModalProps>
                                 type="button"
                                 onClick={handleDownloadTemplate}
                                 disabled={loading}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-xl hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors font-semibold"
+                                className="w-full flex items-center justify-center gap-2 h-[44px] bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-2xl hover:bg-green-100 dark:hover:bg-green-900/30 transition-all font-bold active:scale-95"
                             >
                                 <FileSpreadsheet size={18} />
                                 Tải file mẫu Excel
                             </button>
 
                             {/* Dropzone */}
-                            <div className="border-2 border-dashed border-gray-300 dark:border-zinc-700 rounded-lg p-6 flex flex-col items-center text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors relative">
+                            <div className="border-2 border-dashed border-gray-300 dark:border-zinc-700 rounded-2xl p-6 flex flex-col items-center text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors relative">
                                 <input type="file" accept=".xlsx, .xls" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileChange} />
                                 <Upload size={32} className="text-fpt-orange mb-2" />
                                 {file ? (
@@ -395,7 +395,7 @@ export const ImportGradeComponentModal: React.FC<ImportGradeComponentModalProps>
                                     <p className="text-sm">File không có dữ liệu hợp lệ</p>
                                 </div>
                             ) : (
-                                <div className="border border-gray-200 dark:border-zinc-700 rounded-xl overflow-hidden">
+                                <div className="border border-gray-200 dark:border-zinc-700 rounded-2xl overflow-hidden shadow-sm">
                                     <table className="w-full text-sm text-left">
                                         <thead className="bg-gray-50 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 text-xs font-semibold uppercase tracking-wider border-b border-gray-200 dark:border-zinc-700">
                                             <tr>
@@ -510,7 +510,7 @@ export const ImportGradeComponentModal: React.FC<ImportGradeComponentModalProps>
 
                             <button
                                 onClick={handleClose}
-                                className="w-full py-3 bg-fpt-orange text-white rounded-xl font-bold shadow-lg shadow-orange-500/25 hover:bg-orange-600 transition-all"
+                                className="h-[44px] px-8 bg-fpt-orange text-white rounded-2xl font-bold shadow-lg shadow-orange-500/25 hover:bg-orange-600 transition-all active:scale-95"
                             >
                                 Đóng
                             </button>
@@ -528,11 +528,11 @@ export const ImportGradeComponentModal: React.FC<ImportGradeComponentModalProps>
                         ) : hasPreview ? (
                             <>
                                 <button onClick={() => setPreviewRows(null)} disabled={loading}
-                                    className="px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-xl transition-colors disabled:opacity-50">
+                                    className="h-[44px] px-6 text-sm font-bold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-2xl transition-all active:scale-95 disabled:opacity-50">
                                     Quay lại
                                 </button>
                                 <button onClick={handleConfirmImport} disabled={loading || validCount === 0}
-                                    className="flex items-center gap-2 px-5 py-2.5 bg-fpt-orange text-white rounded-xl text-sm font-medium hover:bg-orange-600 transition-colors disabled:opacity-50">
+                                    className="flex items-center gap-2 h-[44px] px-8 bg-fpt-orange text-white rounded-2xl text-sm font-bold hover:bg-orange-600 transition-all shadow-lg shadow-fpt-orange/20 disabled:opacity-50 active:scale-95">
                                     {loading ? <><Loader2 size={15} className="animate-spin" /> Đang import...</> : <>
                                         <CheckCircle2 size={15} />
                                         Xác nhận Import ({validCount} dòng)
@@ -542,7 +542,7 @@ export const ImportGradeComponentModal: React.FC<ImportGradeComponentModalProps>
                         ) : (
                             <>
                                 <button onClick={handleClose}
-                                    className="px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-xl transition-colors">
+                                    className="h-[44px] px-6 text-sm font-bold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-2xl transition-all active:scale-95">
                                     Hủy
                                 </button>
                             </>
@@ -555,3 +555,4 @@ export const ImportGradeComponentModal: React.FC<ImportGradeComponentModalProps>
 
     return createPortal(modal, document.body);
 };
+

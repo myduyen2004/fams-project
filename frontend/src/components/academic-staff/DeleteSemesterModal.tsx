@@ -149,3 +149,4 @@ export const DeleteSemesterModal: React.FC<DeleteSemesterModalProps> = ({
     </div>
   );
 };
+

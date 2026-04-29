@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
-import { Plus, Loader2, Edit2, Trash2, GripVertical, Maximize2, Users, Check, ChevronDown } from 'lucide-react';
+import { Plus, Loader2, Edit2, Trash2, GripVertical, Maximize2, Users, Check, ChevronDown, Search } from 'lucide-react';
 import { roomService } from '../../services/api/roomService';
 import { Room } from '../../types/room';
 import { AddRoomModal, EditRoomModal } from '../../components/academic-staff/rooms/RoomModals';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { ROOM_TYPE_OPTIONS, getRoomTypeDisplayLabel } from '../../utils/roomUtils';
 import { RoomCard } from '../../components/shared/RoomCard';
 
@@ -182,6 +182,7 @@ export const RoomManagement: React.FC = () => {
     const [isEditMode, setIsEditMode] = useState(false);
     const [draggedRoom, setDraggedRoom] = useState<Room | null>(null);
     const [saving, setSaving] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
     const [inUseRoomIds, setInUseRoomIds] = useState<Set<number>>(new Set());
 
     // Dropdown states
@@ -310,15 +311,26 @@ export const RoomManagement: React.FC = () => {
         return Object.keys(building.floors).map(Number).sort((a, b) => a - b);
     }, [selectedBuilding]);
 
-    // Reset floor when building changes
+    // Reset floor and search term when building changes
     useEffect(() => {
-        if (selectedBuilding !== 'ALL' && availableFloors.length > 0 && !availableFloors.includes(selectedFloor)) {
-            setSelectedFloor(availableFloors[0]);
+        if (selectedBuilding !== 'ALL') {
+            setSearchTerm('');
+            if (availableFloors.length > 0 && !availableFloors.includes(selectedFloor)) {
+                setSelectedFloor(availableFloors[0]);
+            }
         }
     }, [selectedBuilding, availableFloors, selectedFloor]);
 
     const filteredRooms = useMemo(() => {
         let result = rooms;
+
+        if (searchTerm) {
+            const lowerSearch = searchTerm.toLowerCase();
+            result = result.filter(r => 
+                r.name.toLowerCase().includes(lowerSearch) || 
+                r.building.toLowerCase().includes(lowerSearch)
+            );
+        }
 
         if (selectedBuilding !== 'ALL') {
             result = result.filter(r => r.building === selectedBuilding && r.floor === selectedFloor);
@@ -339,7 +351,7 @@ export const RoomManagement: React.FC = () => {
         }
 
         return result;
-    }, [rooms, selectedBuilding, selectedFloor, selectedRoomType, selectedStatus, inUseRoomIds]);
+    }, [rooms, searchTerm, selectedBuilding, selectedFloor, selectedRoomType, selectedStatus, inUseRoomIds]);
 
     // Rooms positioned on grid (only relevant for map view of specific building/floor)
     const positionedRooms = useMemo(() => {
@@ -539,39 +551,62 @@ export const RoomManagement: React.FC = () => {
             <div className="flex gap-6 h-[calc(100vh-120px)]">
                 {/* Main Content - Floor Plan Grid */}
                 <div className="flex-1 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-6 overflow-auto">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                        <div className="flex items-center gap-6">
-                            {/* Building Select - Custom Dropdown */}
-                            <div className="flex items-center gap-2 relative">
-                                <span className="text-xs font-medium text-gray-500 dark:text-zinc-500">Tòa nhà:</span>
+                    <div className="flex flex-col lg:flex-row justify-between items-center gap-6 mb-8">
+                        <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto">
+                            {/* Search Input - Only show in ALL mode */}
+                            {selectedBuilding === 'ALL' && (
+                                <div className="w-full sm:w-64">
+                                    <label className="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-2 ml-1">
+                                        Tìm kiếm
+                                    </label>
+                                    <div className="relative">
+                                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <input
+                                            type="text"
+                                            placeholder="Tìm phòng..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="w-full h-[52px] pl-12 pr-4 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-900 text-gray-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Building Select */}
+                            <div className="flex-1 min-w-[140px]">
+                                <label className="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-2 ml-1">
+                                    Tòa nhà
+                                </label>
                                 <div className="relative">
                                     <button
                                         onClick={() => setIsBuildingFilterOpen(!isBuildingFilterOpen)}
-                                        className="flex items-center gap-2 rounded-lg border border-gray-300 py-2 pl-3 pr-2 text-sm bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 min-w-[120px]"
+                                        className="flex h-[52px] items-center justify-between w-full gap-3 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 text-left focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40"
                                     >
-                                        <span className="flex-1 text-left">{selectedBuilding === 'ALL' ? 'Tất cả' : selectedBuilding}</span>
-                                        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isBuildingFilterOpen ? 'rotate-180' : ''}`} />
+                                        <span className="text-sm font-semibold text-gray-700 dark:text-white truncate">
+                                            {selectedBuilding === 'ALL' ? 'Tất cả' : selectedBuilding}
+                                        </span>
+                                        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isBuildingFilterOpen ? 'rotate-180 text-fpt-orange' : ''}`} />
                                     </button>
 
                                     {isBuildingFilterOpen && (
                                         <>
                                             <div className="fixed inset-0 z-10" onClick={() => setIsBuildingFilterOpen(false)}></div>
-                                            <div className="absolute left-0 top-full mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg py-1 z-20 dark:border-zinc-700 dark:bg-zinc-800">
+                                            <div className="absolute left-0 top-full mt-2 w-full min-w-[160px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl p-1.5 z-20 animate-in fade-in zoom-in-95 duration-200">
                                                 <button
                                                     onClick={() => { setSelectedBuilding('ALL'); setIsBuildingFilterOpen(false); }}
-                                                    className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center justify-between ${selectedBuilding === 'ALL' ? 'text-fpt-orange bg-orange-50 dark:bg-orange-900/10' : 'text-gray-700 dark:text-gray-200'}`}
+                                                    className={`flex w-full items-center justify-between px-4 py-3 rounded-xl text-left hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors ${selectedBuilding === 'ALL' ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange' : 'text-gray-700 dark:text-gray-300'}`}
                                                 >
-                                                    <span>Tất cả</span>
-                                                    {selectedBuilding === 'ALL' && <Check className="h-4 w-4" />}
+                                                    <span className="text-sm font-semibold">Tất cả</span>
+                                                    {selectedBuilding === 'ALL' && <Check size={16} />}
                                                 </button>
                                                 {BUILDINGS.map(b => (
                                                     <button
                                                         key={b}
                                                         onClick={() => { setSelectedBuilding(b); setIsBuildingFilterOpen(false); }}
-                                                        className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center justify-between ${selectedBuilding === b ? 'text-fpt-orange bg-orange-50 dark:bg-orange-900/10' : 'text-gray-700 dark:text-gray-200'}`}
+                                                        className={`flex w-full items-center justify-between px-4 py-3 rounded-xl text-left hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors ${selectedBuilding === b ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange' : 'text-gray-700 dark:text-gray-300'}`}
                                                     >
-                                                        <span>{b}</span>
-                                                        {selectedBuilding === b && <Check className="h-4 w-4" />}
+                                                        <span className="text-sm font-semibold">{b}</span>
+                                                        {selectedBuilding === b && <Check size={16} />}
                                                     </button>
                                                 ))}
                                             </div>
@@ -581,38 +616,40 @@ export const RoomManagement: React.FC = () => {
                             </div>
 
                             {/* Room Type Filter */}
-                            <div className="flex items-center gap-2 relative">
-                                <span className="text-xs font-medium text-gray-500 dark:text-zinc-500">Loại phòng:</span>
+                            <div className="flex-1 min-w-[160px]">
+                                <label className="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-2 ml-1">
+                                    Loại phòng
+                                </label>
                                 <div className="relative">
                                     <button
                                         onClick={() => setIsRoomTypeFilterOpen(!isRoomTypeFilterOpen)}
-                                        className="flex items-center gap-2 rounded-lg border border-gray-300 py-2 pl-3 pr-2 text-sm bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 min-w-[140px]"
+                                        className="flex h-[52px] items-center justify-between w-full gap-3 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 text-left focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40"
                                     >
-                                        <span className="flex-1 text-left">
+                                        <span className="text-sm font-semibold text-gray-700 dark:text-white truncate">
                                             {getRoomTypeDisplayLabel(selectedRoomType)}
                                         </span>
-                                        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isRoomTypeFilterOpen ? 'rotate-180' : ''}`} />
+                                        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isRoomTypeFilterOpen ? 'rotate-180 text-fpt-orange' : ''}`} />
                                     </button>
 
                                     {isRoomTypeFilterOpen && (
                                         <>
                                             <div className="fixed inset-0 z-10" onClick={() => setIsRoomTypeFilterOpen(false)}></div>
-                                            <div className="absolute left-0 top-full mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg py-1 z-20 dark:border-zinc-700 dark:bg-zinc-800 transition-all duration-200">
+                                            <div className="absolute left-0 top-full mt-2 w-full min-w-[180px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl p-1.5 z-20 animate-in fade-in zoom-in-95 duration-200">
                                                 <button
                                                     onClick={() => { setSelectedRoomType('ALL'); setIsRoomTypeFilterOpen(false); }}
-                                                    className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center justify-between ${selectedRoomType === 'ALL' ? 'text-fpt-orange bg-orange-50 dark:bg-orange-900/10' : 'text-gray-700 dark:text-gray-200'}`}
+                                                    className={`flex w-full items-center justify-between px-4 py-3 rounded-xl text-left hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors ${selectedRoomType === 'ALL' ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange' : 'text-gray-700 dark:text-gray-300'}`}
                                                 >
-                                                    <span>Tất cả</span>
-                                                    {selectedRoomType === 'ALL' && <Check className="h-4 w-4" />}
+                                                    <span className="text-sm font-semibold">Tất cả loại</span>
+                                                    {selectedRoomType === 'ALL' && <Check size={16} />}
                                                 </button>
                                                 {ROOM_TYPE_OPTIONS.map(type => (
                                                     <button
                                                         key={type.value}
                                                         onClick={() => { setSelectedRoomType(type.value); setIsRoomTypeFilterOpen(false); }}
-                                                        className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center justify-between ${selectedRoomType === type.value ? 'text-fpt-orange bg-orange-50 dark:bg-orange-900/10' : 'text-gray-700 dark:text-gray-200'}`}
+                                                        className={`flex w-full items-center justify-between px-4 py-3 rounded-xl text-left hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors ${selectedRoomType === type.value ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange' : 'text-gray-700 dark:text-gray-300'}`}
                                                     >
-                                                        <span>{type.label}</span>
-                                                        {selectedRoomType === type.value && <Check className="h-4 w-4" />}
+                                                        <span className="text-sm font-semibold">{type.label}</span>
+                                                        {selectedRoomType === type.value && <Check size={16} />}
                                                     </button>
                                                 ))}
                                             </div>
@@ -621,37 +658,39 @@ export const RoomManagement: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Status Filter - Only functional in ALL mode */}
+                            {/* Status Filter */}
                             {selectedBuilding === 'ALL' && (
-                                <div className="flex items-center gap-2 relative">
-                                    <span className="text-xs font-medium text-gray-500 dark:text-zinc-500">Trạng thái:</span>
+                                <div className="flex-1 min-w-[150px]">
+                                    <label className="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-2 ml-1">
+                                        Trạng thái
+                                    </label>
                                     <div className="relative">
                                         <button
                                             onClick={() => setIsStatusFilterOpen(!isStatusFilterOpen)}
-                                            className="flex items-center gap-2 rounded-lg border border-gray-300 py-2 pl-3 pr-2 text-sm bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 min-w-[130px]"
+                                            className="flex h-[52px] items-center justify-between w-full gap-3 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 text-left focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40"
                                         >
-                                            <span className="flex-1 text-left">
-                                                {selectedStatus === 'ALL' ? 'Tất cả' : selectedStatus === 'IN_USE' ? 'Đang học' : 'Trống'}
+                                            <span className="text-sm font-semibold text-gray-700 dark:text-white truncate">
+                                                {selectedStatus === 'ALL' ? 'Tất cả trạng thái' : selectedStatus === 'IN_USE' ? 'Đang học' : 'Trống'}
                                             </span>
-                                            <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isStatusFilterOpen ? 'rotate-180' : ''}`} />
+                                            <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isStatusFilterOpen ? 'rotate-180 text-fpt-orange' : ''}`} />
                                         </button>
 
                                         {isStatusFilterOpen && (
                                             <>
                                                 <div className="fixed inset-0 z-10" onClick={() => setIsStatusFilterOpen(false)}></div>
-                                                <div className="absolute left-0 top-full mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg py-1 z-20 dark:border-zinc-700 dark:bg-zinc-800 transition-all duration-200">
+                                                <div className="absolute left-0 top-full mt-2 w-full min-w-[160px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl p-1.5 z-20 animate-in fade-in zoom-in-95 duration-200">
                                                     {[
-                                                        { value: 'ALL', label: 'Tất cả' },
+                                                        { value: 'ALL', label: 'Tất cả trạng thái' },
                                                         { value: 'IN_USE', label: 'Đang học' },
                                                         { value: 'EMPTY', label: 'Trống' }
                                                     ].map(option => (
                                                         <button
                                                             key={option.value}
                                                             onClick={() => { setSelectedStatus(option.value as any); setIsStatusFilterOpen(false); }}
-                                                            className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center justify-between ${selectedStatus === option.value ? 'text-fpt-orange bg-orange-50 dark:bg-orange-900/10' : 'text-gray-700 dark:text-gray-200'}`}
+                                                            className={`flex w-full items-center justify-between px-4 py-3 rounded-xl text-left hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors ${selectedStatus === option.value ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange' : 'text-gray-700 dark:text-gray-300'}`}
                                                         >
-                                                            <span>{option.label}</span>
-                                                            {selectedStatus === option.value && <Check className="h-4 w-4" />}
+                                                            <span className="text-sm font-semibold">{option.label}</span>
+                                                            {selectedStatus === option.value && <Check size={16} />}
                                                         </button>
                                                     ))}
                                                 </div>
@@ -661,31 +700,33 @@ export const RoomManagement: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* Floor Filters - Only show if not ALL */}
+                            {/* Floor Filter */}
                             {selectedBuilding !== 'ALL' && (
-                                <div className="flex items-center gap-2 relative">
-                                    <span className="text-xs font-medium text-gray-500 dark:text-zinc-500">Tầng:</span>
-                                    <div className="relative w-48">
+                                <div className="flex-1 min-w-[140px]">
+                                    <label className="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-2 ml-1">
+                                        Tầng
+                                    </label>
+                                    <div className="relative">
                                         <button
                                             onClick={() => setIsFloorFilterOpen(!isFloorFilterOpen)}
-                                            className="flex items-center gap-2 rounded-lg border border-gray-300 py-2 pl-3 pr-2 text-sm bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 w-full"
+                                            className="flex h-[52px] items-center justify-between w-full gap-3 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 text-left focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40"
                                         >
-                                            <span className="flex-1 text-left">Tầng {selectedFloor}</span>
-                                            <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isFloorFilterOpen ? 'rotate-180' : ''}`} />
+                                            <span className="text-sm font-semibold text-gray-700 dark:text-white truncate">Tầng {selectedFloor}</span>
+                                            <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isFloorFilterOpen ? 'rotate-180 text-fpt-orange' : ''}`} />
                                         </button>
 
                                         {isFloorFilterOpen && (
                                             <>
                                                 <div className="fixed inset-0 z-10" onClick={() => setIsFloorFilterOpen(false)}></div>
-                                                <div className="absolute left-0 top-full mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg py-1 z-20 dark:border-zinc-700 dark:bg-zinc-800 max-h-60 overflow-y-auto">
+                                                <div className="absolute left-0 top-full mt-2 w-full min-w-[140px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl p-1.5 z-20 max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
                                                     {availableFloors.map(floor => (
                                                         <button
                                                             key={floor}
                                                             onClick={() => { setSelectedFloor(floor); setIsFloorFilterOpen(false); }}
-                                                            className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center justify-between ${selectedFloor === floor ? 'text-fpt-orange bg-orange-50 dark:bg-orange-900/10' : 'text-gray-700 dark:text-gray-200'}`}
+                                                            className={`flex w-full items-center justify-between px-4 py-3 rounded-xl text-left hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors ${selectedFloor === floor ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange' : 'text-gray-700 dark:text-gray-300'}`}
                                                         >
-                                                            <span>Tầng {floor}</span>
-                                                            {selectedFloor === floor && <Check className="h-4 w-4" />}
+                                                            <span className="text-sm font-semibold">Tầng {floor}</span>
+                                                            {selectedFloor === floor && <Check size={16} />}
                                                         </button>
                                                     ))}
                                                 </div>
@@ -696,24 +737,25 @@ export const RoomManagement: React.FC = () => {
                             )}
                         </div>
 
-                        <div className="flex items-center gap-2">
-                            {/* Hide edit mode toggle if ALL */}
+                        <div className="flex items-center gap-3 w-full lg:w-auto">
                             {selectedBuilding !== 'ALL' && (
                                 <button
                                     onClick={() => setIsEditMode(!isEditMode)}
-                                    className={`px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors ${isEditMode
-                                        ? 'bg-green-500 text-white'
-                                        : 'bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-400'
+                                    className={`h-[52px] px-6 rounded-2xl flex items-center gap-2 text-sm font-bold transition-all ${isEditMode
+                                        ? 'bg-fpt-orange text-white shadow-lg shadow-fpt-orange/20'
+                                        : 'bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 text-gray-600 dark:text-gray-300 hover:border-fpt-orange/40'
                                         }`}
                                 >
-                                    <GripVertical size={18} /> {isEditMode ? 'Đang chỉnh sửa' : 'Chế độ kéo thả'}
+                                    <GripVertical size={18} /> 
+                                    <span>{isEditMode ? 'Đang chỉnh sửa' : 'Chế độ kéo thả'}</span>
                                 </button>
                             )}
                             <button
                                 onClick={() => setIsAddModalOpen(true)}
-                                className="bg-fpt-orange text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-orange-600 transition-colors text-sm font-medium"
+                                className="h-[52px] bg-fpt-orange text-white px-6 rounded-2xl flex items-center gap-2 hover:bg-orange-600 hover:shadow-lg hover:shadow-fpt-orange/20 transition-all text-sm font-bold whitespace-nowrap"
                             >
-                                <Plus size={18} /> Thêm phòng
+                                <Plus size={20} /> 
+                                <span>Thêm phòng</span>
                             </button>
                         </div>
                     </div>
@@ -866,7 +908,7 @@ export const RoomManagement: React.FC = () => {
 
                 {/* Sidebar - Room List (Hidden in ALL mode) */}
                 {selectedBuilding !== 'ALL' && (
-                    <div className="w-80 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-4 overflow-auto">
+                    <div className="w-80 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-6 overflow-auto">
                         <div className="mb-4">
                             <h3 className="font-bold text-gray-900 dark:text-white">
                                 Danh sách phòng
@@ -982,3 +1024,4 @@ export const RoomManagement: React.FC = () => {
         </AcademicStaffLayout>
     );
 };
+

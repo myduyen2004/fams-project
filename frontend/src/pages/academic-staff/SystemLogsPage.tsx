@@ -9,7 +9,9 @@ import {
   Filter, ChevronDown, ChevronUp, User, Monitor, Globe, Database, History,
   ArrowLeft
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
+import { CustomSelect } from '../../components/common/CustomSelect';
+import { CustomDatePicker } from '../../components/common/CustomDatePicker';
 
 export const SystemLogsPage: React.FC = () => {
     const navigate = useRoleAwareNavigate();
@@ -129,19 +131,19 @@ export const SystemLogsPage: React.FC = () => {
                         </div>
                         
                         <div className="flex items-center gap-3">
-                            <div className="relative flex-1 md:flex-none">
+                            <div className="relative flex-1 md:max-w-[280px]">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                 <input 
                                     type="text"
                                     placeholder="Tìm kiếm theo tiêu đề, nội dung..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="pl-10 pr-4 py-2 bg-gray-50 dark:bg-zinc-800 border-none rounded-xl text-sm focus:ring-2 focus:ring-fpt-orange transition-all w-full md:w-64"
+                                    className="pl-10 pr-4 h-[52px] bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all w-full md:w-72 hover:border-fpt-orange/40 hover:shadow-lg hover:shadow-fpt-orange/5"
                                 />
                             </div>
                             <button 
                                 onClick={() => setShowFilters(!showFilters)}
-                                className={`p-2 rounded-xl border transition-all flex items-center gap-2 text-sm font-medium ${showFilters ? 'bg-fpt-orange text-white border-fpt-orange' : 'bg-white dark:bg-zinc-800 border-gray-200 dark:border-zinc-700 text-gray-600 dark:text-zinc-300 hover:bg-gray-50'}`}
+                                className={`px-4 h-[52px] rounded-2xl border-2 transition-all flex items-center gap-2 text-sm font-bold ${showFilters ? 'bg-fpt-orange text-white border-fpt-orange' : 'bg-white dark:bg-zinc-800 border-gray-100 dark:border-zinc-700 text-gray-600 dark:text-zinc-300 hover:border-fpt-orange/40 hover:shadow-lg hover:shadow-fpt-orange/5'}`}
                             >
                                 <Filter className="w-4 h-4" />
                                 <span className="hidden sm:inline">Bộ lọc</span>
@@ -153,55 +155,49 @@ export const SystemLogsPage: React.FC = () => {
                     {showFilters && (
                         <div className="mt-4 pt-4 border-t border-gray-100 dark:border-zinc-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 animate-in slide-in-from-top-2 duration-300">
                             <div>
-                                <label className="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1.5 ml-1">Loại nhật ký</label>
-                                <select 
+                                <label className="block text-[10px] uppercase tracking-wider text-gray-400 mb-1.5 ml-1">Loại nhật ký</label>
+                                <CustomSelect
                                     value={typeFilter}
-                                    onChange={(e) => setTypeFilter(e.target.value)}
-                                    className="w-full py-2 px-3 bg-gray-50 dark:bg-zinc-800 border-none rounded-xl text-sm focus:ring-2 focus:ring-fpt-orange"
-                                >
-                                    <option value="">Tất cả loại</option>
-                                    <option value="INFO">Thông tin</option>
-                                    <option value="SUCCESS">Thành công</option>
-                                    <option value="WARNING">Cảnh báo</option>
-                                    <option value="ERROR">Lỗi hệ thống</option>
-                                </select>
+                                    onChange={(val) => setTypeFilter(val as string)}
+                                    options={[
+                                        { value: '', label: 'Tất cả loại' },
+                                        { value: 'INFO', label: 'Thông tin' },
+                                        { value: 'SUCCESS', label: 'Thành công' },
+                                        { value: 'WARNING', label: 'Cảnh báo' },
+                                        { value: 'ERROR', label: 'Lỗi hệ thống' }
+                                    ]}
+                                />
                             </div>
                             <div>
-                                <label className="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1.5 ml-1">Vai trò thực hiện</label>
-                                <select 
+                                <label className="block text-[10px] uppercase tracking-wider text-gray-400 mb-1.5 ml-1">Vai trò thực hiện</label>
+                                <CustomSelect
                                     value={roleFilter}
-                                    onChange={(e) => setRoleFilter(e.target.value)}
-                                    className="w-full py-2 px-3 bg-gray-50 dark:bg-zinc-800 border-none rounded-xl text-sm focus:ring-2 focus:ring-fpt-orange"
-                                >
-                                    <option value="">Tất cả vai trò</option>
-                                    <option value="ADMIN">Quản trị viên</option>
-                                    <option value="ACADEMIC_STAFF">Giáo vụ</option>
-                                    <option value="LECTURER">Giảng viên</option>
-                                    <option value="STUDENT">Sinh viên</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1.5 ml-1">Từ ngày</label>
-                                <input 
-                                    type="date" 
-                                    value={startDate}
-                                    onChange={(e) => setStartDate(e.target.value)}
-                                    className="w-full py-2 px-3 bg-gray-50 dark:bg-zinc-800 border-none rounded-xl text-sm focus:ring-2 focus:ring-fpt-orange"
+                                    onChange={(val) => setRoleFilter(val as string)}
+                                    options={[
+                                        { value: '', label: 'Tất cả vai trò' },
+                                        { value: 'ADMIN', label: 'Quản trị viên' },
+                                        { value: 'ACADEMIC_STAFF', label: 'Giáo vụ' },
+                                        { value: 'LECTURER', label: 'Giảng viên' },
+                                        { value: 'STUDENT', label: 'Sinh viên' }
+                                    ]}
                                 />
                             </div>
-                            <div>
-                                <label className="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1.5 ml-1">Đến ngày</label>
-                                <input 
-                                    type="date" 
-                                    value={endDate}
-                                    onChange={(e) => setEndDate(e.target.value)}
-                                    className="w-full py-2 px-3 bg-gray-50 dark:bg-zinc-800 border-none rounded-xl text-sm focus:ring-2 focus:ring-fpt-orange"
-                                />
-                            </div>
+                            <CustomDatePicker
+                                label="Từ ngày"
+                                value={startDate}
+                                onChange={(value) => setStartDate(value)}
+                                className="w-full"
+                            />
+                            <CustomDatePicker
+                                label="Đến ngày"
+                                value={endDate}
+                                onChange={(value) => setEndDate(value)}
+                                className="w-full"
+                            />
                             <div className="flex items-end">
                                 <button 
                                     onClick={resetFilters}
-                                    className="w-full py-2 px-4 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-600 dark:text-zinc-300 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                                    className="w-full h-[52px] bg-gray-100 dark:bg-zinc-800 border-2 border-transparent hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-600 dark:text-zinc-300 rounded-2xl text-sm font-semibold transition-colors flex items-center justify-center gap-2"
                                 >
                                     <History className="w-4 h-4" />
                                     Đặt lại
@@ -405,3 +401,4 @@ export const SystemLogsPage: React.FC = () => {
         </AcademicStaffLayout>
     );
 };
+

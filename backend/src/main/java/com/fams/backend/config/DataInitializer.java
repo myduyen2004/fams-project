@@ -54,6 +54,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .dob(LocalDate.of(2000, 1, 1))
                                         .role(User.UserRole.ADMIN)
                                         .status(User.UserStatus.ACTIVE)
+                                        .avatar("/assets/images/fams-logo.png")
                                         .faceDataStatus(User.FaceDataStatus.NOT_REGISTERED)
                                         .isPasswordChanged(true)
                                         .build();
@@ -63,6 +64,7 @@ public class DataInitializer implements CommandLineRunner {
                         User admin = existingAdmin.get();
                         admin.setPassword(passwordEncoder.encode("admin123"));
                         admin.setStatus(User.UserStatus.ACTIVE);
+                        admin.setAvatar("/assets/images/fams-logo.png");
                         admin.setIsPasswordChanged(true);
                         userRepository.save(admin);
                         log.info("Default admin user updated/reset: admin/admin123");
@@ -90,6 +92,7 @@ public class DataInitializer implements CommandLineRunner {
                                         .dob(LocalDate.of(1995, 5, 15))
                                         .role(User.UserRole.ACADEMIC_STAFF)
                                         .status(User.UserStatus.ACTIVE)
+                                        .avatar("/assets/images/fams-logo.png")
                                         .faceDataStatus(User.FaceDataStatus.NOT_REGISTERED)
                                         .isPasswordChanged(true)
                                         .build();
@@ -99,6 +102,7 @@ public class DataInitializer implements CommandLineRunner {
                         User staff = existingStaff.get();
                         staff.setPassword(passwordEncoder.encode("staff123"));
                         staff.setStatus(User.UserStatus.ACTIVE);
+                        staff.setAvatar("/assets/images/fams-logo.png");
                         staff.setIsPasswordChanged(true);
                         userRepository.save(staff);
                         log.info("Default academic staff user updated/reset: academic/staff123");

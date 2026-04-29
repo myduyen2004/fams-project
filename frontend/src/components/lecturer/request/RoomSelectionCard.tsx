@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Building2, Users, Calendar, AlertCircle } from 'lucide-react';
 import { roomService, RoomWithAvailability } from '../../../services/api/roomService';
 import { Room } from '../../../types/room';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 
 const BUILDINGS = ['Alpha', 'Gamma'];
 
@@ -286,3 +286,4 @@ export const RoomSelectionCard: React.FC<RoomSelectionCardProps> = ({
         </section>
     );
 };
+

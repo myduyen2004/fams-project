@@ -1,13 +1,11 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { StudentLayout } from '../../layouts/StudentLayout';
 import { Card } from '../../components/common/Card';
 import { useLocation } from 'react-router-dom';
-import { 
+import {
     CalendarCheck,
-    ChevronDown, 
-    Check, 
-    Loader2, 
-    AlertCircle, 
+    Loader2,
+    AlertCircle,
     Search,
     ChevronLeft,
     Clock,
@@ -18,11 +16,12 @@ import {
     XCircle,
     HelpCircle
 } from 'lucide-react';
-import attendanceService, { 
-    StudentAttendanceSummaryResponse, 
+import attendanceService, {
+    StudentAttendanceSummaryResponse,
     IndividualAttendanceDetail,
 } from '../../services/api/attendanceService';
 import { lecturerClassService } from '../../services/api/LecturerClass';
+import { CustomSelect } from '../../components/common/CustomSelect';
 
 interface SemesterOption {
     id: number;
@@ -67,15 +66,13 @@ export const StudentAttendancePage: React.FC = () => {
     const [summary, setSummary] = useState<StudentAttendanceSummaryResponse | null>(null);
     const [detailData, setDetailData] = useState<IndividualAttendanceDetail | null>(null);
     const [selectedClassName, setSelectedClassName] = useState<string | null>(null);
-    
+
     const [loading, setLoading] = useState(true);
     const [detailLoading, setDetailLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
 
     // UI State
-    const [isSemesterOpen, setIsSemesterOpen] = useState(false);
-    const semesterDropdownRef = useRef<HTMLDivElement>(null);
     const location = useLocation();
 
     // Handle incoming navigation state
@@ -86,15 +83,9 @@ export const StudentAttendancePage: React.FC = () => {
         }
     }, [location]);
 
-    // Close dropdown on outside click
+    // Initial load
     useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (semesterDropdownRef.current && !semesterDropdownRef.current.contains(event.target as Node)) {
-                setIsSemesterOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        fetchSemesters();
     }, []);
 
     // Initial load
@@ -106,7 +97,7 @@ export const StudentAttendancePage: React.FC = () => {
     useEffect(() => {
         if (selectedSemesterCode) {
             fetchSummary(selectedSemesterCode);
-            
+
             // Only reset if we didn't just come from navigation with a specific class
             if (!location.state?.selectedClassName) {
                 setSelectedClassName(null);
@@ -128,7 +119,7 @@ export const StudentAttendancePage: React.FC = () => {
             const data = await lecturerClassService.getSemesters();
             const options = data.map(s => ({ id: s.id, name: s.name, code: s.code, status: s.status }));
             setSemesters(options);
-            
+
             // Default to ongoing semester, or first if no ongoing
             if (options.length > 0) {
                 const ongoing = options.find(s => s.status === 'ONGOING');
@@ -169,7 +160,7 @@ export const StudentAttendancePage: React.FC = () => {
 
     const filteredSummaries = useMemo(() => {
         if (!summary) return [];
-        return summary.classSummaries.filter(cs => 
+        return summary.classSummaries.filter(cs =>
             cs.className.toLowerCase().includes(searchQuery.toLowerCase()) ||
             cs.courseName.toLowerCase().includes(searchQuery.toLowerCase()) ||
             cs.courseCode.toLowerCase().includes(searchQuery.toLowerCase())
@@ -214,43 +205,13 @@ export const StudentAttendancePage: React.FC = () => {
                     </div>
 
                     {!selectedClassName && (
-                        <div className="w-full md:w-64" ref={semesterDropdownRef}>
-                            <div className="relative">
-                                    <button
-                                        onClick={() => setIsSemesterOpen(!isSemesterOpen)}
-                                        className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-fpt-orange/20 transition-all shadow-sm group hover:border-fpt-orange/30 min-w-[140px] justify-between"
-                                    >
-                                        <div className="flex flex-col text-left">
-                                            <span className="text-sm font-bold text-gray-900 dark:text-white truncate">
-                                                {semesters.find(s => s.code === selectedSemesterCode)?.name || 'Chọn học kỳ'}
-                                            </span>
-                                        </div>
-                                        <ChevronDown className={`h-4 w-4 text-gray-400 group-hover:text-fpt-orange transition-transform duration-300 ${isSemesterOpen ? 'rotate-180' : ''}`} />
-                                    </button>
-
-                                {isSemesterOpen && (
-                                    <div className="absolute z-30 mt-2 w-full rounded-xl border border-gray-100 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-xl max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
-                                        <div className="p-1">
-                                            {semesters.map((s) => (
-                                                <button
-                                                    key={s.code}
-                                                    onClick={() => {
-                                                        setSelectedSemesterCode(s.code);
-                                                        setIsSemesterOpen(false);
-                                                    }}
-                                                    className={`flex w-full items-center justify-between px-4 py-2 rounded-lg text-left transition-colors ${selectedSemesterCode === s.code
-                                                        ? 'bg-orange-50 dark:bg-orange-900/10 text-fpt-orange font-bold'
-                                                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800/50'
-                                                        }`}
-                                                >
-                                                    <span className="text-sm">{s.name}</span>
-                                                    {selectedSemesterCode === s.code && <Check size={16} strokeWidth={3} />}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                        <div className="w-full md:w-80">
+                            <CustomSelect
+                                label="Học kỳ"
+                                value={selectedSemesterCode}
+                                onChange={(val) => setSelectedSemesterCode(val)}
+                                options={semesters.map(s => ({ label: s.name, value: s.code }))}
+                            />
                         </div>
                     )}
                 </div>
@@ -264,7 +225,7 @@ export const StudentAttendancePage: React.FC = () => {
                             { label: 'Số buổi vắng', value: stats.absent, icon: XCircle, color: 'red' },
                             { label: 'Tỉ lệ tham gia', value: `${stats.percent.toFixed(1)}%`, icon: PieChart, color: 'blue' }
                         ].map((item, i) => (
-                            <div key={i} className="bg-white dark:bg-zinc-900 p-3 rounded-xl border border-gray-100 dark:border-zinc-800 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
+                            <div key={i} className="bg-white dark:bg-zinc-900 p-3 rounded-2xl border border-gray-100 dark:border-zinc-800 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
                                 <div className={`w-8 h-8 rounded-lg bg-${item.color}-50 dark:bg-${item.color}-900/10 flex items-center justify-center text-${item.color}-500`}>
                                     <item.icon size={16} />
                                 </div>
@@ -291,14 +252,14 @@ export const StudentAttendancePage: React.FC = () => {
                     <div className="space-y-6">
                         {/* Filters & Stats */}
                         <div className="flex flex-col md:flex-row gap-4">
-                            <div className="relative flex-1 max-w-xs">
+                            <div className="relative flex-1 max-w-sm">
                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                                <input 
+                                <input
                                     type="text"
                                     placeholder="Tìm kiếm môn học, mã lớp..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-fpt-orange/20 transition-all shadow-sm text-sm"
+                                    className="w-full pl-12 pr-4 h-[52px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange/40 transition-all hover:border-fpt-orange/40 hover:shadow-lg hover:shadow-fpt-orange/5 text-sm font-medium"
                                 />
                             </div>
                         </div>
@@ -320,8 +281,8 @@ export const StudentAttendancePage: React.FC = () => {
                                     <tbody className="divide-y divide-gray-50 dark:divide-zinc-800">
                                         {filteredSummaries.length > 0 ? (
                                             filteredSummaries.map((cs) => (
-                                                <tr 
-                                                    key={cs.className} 
+                                                <tr
+                                                    key={cs.className}
                                                     onClick={() => setSelectedClassName(cs.className)}
                                                     className="hover:bg-gray-100/80 dark:hover:bg-zinc-800/80 transition-all cursor-pointer group border-b border-gray-50 dark:border-zinc-800/50 last:border-none"
                                                 >
@@ -356,7 +317,7 @@ export const StudentAttendancePage: React.FC = () => {
                                                                 {cs.attendancePercentage}%
                                                             </span>
                                                             <div className="w-16 h-1.5 bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                                                                <div 
+                                                                <div
                                                                     className={`h-full rounded-full ${cs.absentPercentage >= 20 ? 'bg-red-500' : 'bg-fpt-orange'}`}
                                                                     style={{ width: `${cs.attendancePercentage}%` }}
                                                                 />
@@ -381,7 +342,7 @@ export const StudentAttendancePage: React.FC = () => {
                     /* DETAIL MODE */
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                         {/* Back button */}
-                        <button 
+                        <button
                             onClick={() => setSelectedClassName(null)}
                             className="flex items-center gap-2 text-gray-500 hover:text-fpt-orange transition-colors font-semibold text-sm"
                         >
@@ -442,7 +403,7 @@ export const StudentAttendancePage: React.FC = () => {
                                 <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                     <Clock size={18} className="text-fpt-orange" /> Nhật ký điểm danh
                                 </h3>
-                                
+
                                 {detailLoading ? (
                                     <div className="flex items-center justify-center p-12">
                                         <Loader2 className="w-8 h-8 animate-spin text-fpt-orange" />
@@ -499,3 +460,4 @@ export const StudentAttendancePage: React.FC = () => {
 };
 
 export default StudentAttendancePage;
+

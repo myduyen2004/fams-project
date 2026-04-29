@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { authService } from '../../services/api/authService';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 
 type Step = 'email' | 'otp' | 'reset' | 'success';
 
@@ -145,7 +145,7 @@ export const ForgotPasswordPage: React.FC = () => {
           <div className="w-10 h-10 bg-fpt-orange rounded-xl flex items-center justify-center p-2 shadow-lg shadow-orange-500/20">
             <img src="/assets/images/fams-logo.png" alt="Logo" className="w-full h-full object-contain brightness-0 invert" />
           </div>
-          <span className="text-xl font-bold text-gray-900 dark:text-white">FAMS</span>
+          <span className="text-xl font-semibold text-gray-900 dark:text-white">FAMS</span>
         </div>
 
         {/* Card */}
@@ -165,7 +165,7 @@ export const ForgotPasswordPage: React.FC = () => {
 
           {/* Heading */}
           <div className="text-center mb-10">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">
+            <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 dark:text-white mb-2 tracking-tight">
               {step === 'email' && 'Quên mật khẩu?'}
               {step === 'otp' && 'Nhập mã xác thực'}
               {step === 'reset' && 'Đặt lại mật khẩu'}
@@ -199,7 +199,7 @@ export const ForgotPasswordPage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-fpt-orange hover:bg-orange-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-orange-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full bg-fpt-orange hover:bg-orange-600 text-white font-semibold py-4 rounded-2xl shadow-lg shadow-orange-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {loading ? <Loader2 size={24} className="animate-spin" /> : 'Gửi Email'}
                 </button>
@@ -216,13 +216,13 @@ export const ForgotPasswordPage: React.FC = () => {
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
                     placeholder="••••••"
-                    className="w-full px-6 py-4 bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:border-fpt-orange/50 focus:ring-4 focus:ring-fpt-orange/5 text-gray-900 dark:text-white placeholder:text-gray-300 transition-all text-center text-3xl font-bold tracking-[10px]"
+                    className="w-full px-6 py-4 bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:border-fpt-orange/50 focus:ring-4 focus:ring-fpt-orange/5 text-gray-900 dark:text-white placeholder:text-gray-300 transition-all text-center text-3xl font-semibold tracking-[10px]"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-fpt-orange hover:bg-orange-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-orange-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full bg-fpt-orange hover:bg-orange-600 text-white font-semibold py-4 rounded-2xl shadow-lg shadow-orange-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {loading ? <Loader2 size={24} className="animate-spin" /> : 'Xác thực'}
                 </button>
@@ -270,7 +270,7 @@ export const ForgotPasswordPage: React.FC = () => {
                           ))}
                        </div>
                        <p className="text-[10px] text-gray-400">
-                         Độ mạnh mật khẩu: <span className={`font-bold ${passwordStrength > 0 ? strength.color.replace('bg-', 'text-') : ''}`}>{strength.label === 'Weak' ? 'Yếu' : strength.label === 'Medium' ? 'Trung bình' : strength.label === 'Strong' ? 'Mạnh' : 'Tuyệt vời'}</span>
+                         Độ mạnh mật khẩu: <span className={`font-semibold ${passwordStrength > 0 ? strength.color.replace('bg-', 'text-') : ''}`}>{strength.label === 'Weak' ? 'Yếu' : strength.label === 'Medium' ? 'Trung bình' : strength.label === 'Strong' ? 'Mạnh' : 'Tuyệt vời'}</span>
                        </p>
                     </div>
                   </div>
@@ -292,7 +292,7 @@ export const ForgotPasswordPage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-fpt-orange hover:bg-orange-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-orange-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full bg-fpt-orange hover:bg-orange-600 text-white font-semibold py-4 rounded-2xl shadow-lg shadow-orange-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {loading ? <Loader2 size={24} className="animate-spin" /> : 'Đặt lại mật khẩu'}
                 </button>
@@ -303,7 +303,7 @@ export const ForgotPasswordPage: React.FC = () => {
               <div className="text-center">
                  <button
                    onClick={() => navigate('/login')}
-                   className="w-full bg-fpt-orange hover:bg-orange-600 text-white font-bold py-4 rounded-2xl shadow-xl shadow-orange-500/30 transition-all hover:-translate-y-0.5"
+                   className="w-full bg-fpt-orange hover:bg-orange-600 text-white font-semibold py-4 rounded-2xl shadow-xl shadow-orange-500/30 transition-all hover:-translate-y-0.5"
                  >
                    Quay lại đăng nhập
                  </button>
@@ -338,3 +338,4 @@ export const ForgotPasswordPage: React.FC = () => {
     </div>
   );
 };
+

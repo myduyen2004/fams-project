@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Loader2 } from 'lucide-react';
 
 interface ConfirmModalProps {
@@ -64,8 +65,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   const styles = getStyles();
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+  return createPortal(
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 sm:p-6">
       {/* Backdrop with blur */}
       <div
         className="absolute inset-0 bg-zinc-900/60 backdrop-blur-sm transition-opacity duration-300"
@@ -93,7 +94,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
         {/* Body */}
         <div className="p-6">
-          <p className="text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
+          <p className="text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap font-medium">
             {message}
           </p>
         </div>
@@ -105,7 +106,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
               <button
                 onClick={onClose}
                 disabled={isBusy}
-                className="flex-1 px-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700 transition-all duration-200 disabled:opacity-50"
+                className="flex-1 h-[44px] px-4 rounded-2xl bg-gray-100 text-gray-700 font-bold hover:bg-gray-200 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700 transition-all active:scale-95 disabled:opacity-50"
               >
                 {cancelLabel}
               </button>
@@ -114,7 +115,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
               <button
                 onClick={handleConfirm}
                 disabled={isBusy}
-                className={`flex-1 px-4 py-2.5 rounded-xl text-white font-semibold shadow-lg active:scale-95 transition-all duration-200 ${styles.buttonBg} disabled:opacity-70 flex items-center justify-center gap-2`}
+                className={`flex-1 h-[44px] px-4 rounded-2xl text-white font-bold shadow-lg active:scale-95 transition-all ${styles.buttonBg} disabled:opacity-70 flex items-center justify-center gap-2`}
               >
                 {isBusy && <Loader2 className="w-4 h-4 animate-spin" />}
                 {isBusy ? 'Đang xử lý...' : confirmLabel}
@@ -123,6 +124,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
+

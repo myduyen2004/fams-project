@@ -9,7 +9,7 @@ import {
     ArrowLeft, BookOpen, FileText, Upload,
     Loader2, Trash2, Paperclip, Calendar, MessageSquare, Download
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { timetableService, TimetableSlotDTO } from '../../services/api/timetableService';
 
 export const StudentAssignmentDetailPage: React.FC = () => {
@@ -551,3 +551,4 @@ export const StudentAssignmentDetailPage: React.FC = () => {
 };
 
 export default StudentAssignmentDetailPage;
+

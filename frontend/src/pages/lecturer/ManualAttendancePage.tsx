@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { ArrowLeft, Users, User, Loader2, Clock, MapPin, Camera } from 'lucide-react';
 import attendanceService, { SessionDetailResponse } from '../../services/api/attendanceService';
-import { toast } from 'react-hot-toast';
+import toast from "@utils/toast";
 import dayjs from 'dayjs';
 
 export const ManualAttendancePage: React.FC = () => {
@@ -289,4 +289,5 @@ export const ManualAttendancePage: React.FC = () => {
 };
 
 export default ManualAttendancePage;
+
 

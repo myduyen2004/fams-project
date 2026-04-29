@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Loader2, Check, ChevronDown, Users, DoorOpen } from 'lucide-react';
+import { Loader2, DoorOpen, Users } from 'lucide-react';
 import { roomService } from '../../services/api/roomService';
 import { Room } from '../../types/room';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { BUILDING_CONFIG, getFloorElements, getRoomTypeLabel, FloorElement, ROOM_TYPE_OPTIONS, getRoomTypeDisplayLabel } from '../../utils/roomUtils';
+import { BUILDING_CONFIG, getFloorElements, getRoomTypeLabel, FloorElement, ROOM_TYPE_OPTIONS } from '../../utils/roomUtils';
 import { RoomCard } from './RoomCard';
+import { CustomSelect } from '../common/CustomSelect';
 
 const BUILDINGS = Object.keys(BUILDING_CONFIG);
 
@@ -22,11 +23,6 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
     const [selectedFloor, setSelectedFloor] = useState<number>(1);
     const [inUseRoomIds, setInUseRoomIds] = useState<Set<number>>(new Set());
 
-    // Dropdown states
-    const [isBuildingFilterOpen, setIsBuildingFilterOpen] = useState(false);
-    const [isFloorFilterOpen, setIsFloorFilterOpen] = useState(false);
-    const [isRoomTypeFilterOpen, setIsRoomTypeFilterOpen] = useState(false);
-    const [isStatusFilterOpen, setIsStatusFilterOpen] = useState(false);
     const [selectedRoomType, setSelectedRoomType] = useState<string>('ALL');
     const [selectedStatus, setSelectedStatus] = useState<'ALL' | 'IN_USE' | 'EMPTY'>('ALL');
     const [searchParams, setSearchParams] = useSearchParams();
@@ -206,165 +202,71 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
             <div className="flex gap-6 h-[calc(100vh-120px)]">
                 {/* Main Content - Floor Plan Grid */}
                 <div className="flex-1 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 p-6 overflow-auto">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                        <div className="flex items-center gap-6">
+                    <div className="flex flex-col gap-6 mb-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                             {/* Building Select */}
-                            <div className="flex items-center gap-2 relative">
-                                <span className="text-xs font-medium text-gray-500 dark:text-zinc-500">Tòa nhà:</span>
-                                <div className="relative">
-                                    <button
-                                        onClick={() => setIsBuildingFilterOpen(!isBuildingFilterOpen)}
-                                        className="flex items-center gap-2 rounded-lg border border-gray-300 py-2 pl-3 pr-2 text-sm bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 min-w-[120px]"
-                                    >
-                                        <span className="flex-1 text-left">{selectedBuilding === 'ALL' ? 'Tất cả' : selectedBuilding}</span>
-                                        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isBuildingFilterOpen ? 'rotate-180' : ''}`} />
-                                    </button>
-
-                                    {isBuildingFilterOpen && (
-                                        <>
-                                            <div className="fixed inset-0 z-10" onClick={() => setIsBuildingFilterOpen(false)}></div>
-                                            <div className="absolute left-0 top-full mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg py-1 z-20 dark:border-zinc-700 dark:bg-zinc-800">
-                                                <button
-                                                    onClick={() => { setSelectedBuilding('ALL'); setIsBuildingFilterOpen(false); }}
-                                                    className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center justify-between ${selectedBuilding === 'ALL' ? 'text-fpt-orange bg-orange-50 dark:bg-orange-900/10' : 'text-gray-700 dark:text-gray-200'}`}
-                                                >
-                                                    <span>Tất cả</span>
-                                                    {selectedBuilding === 'ALL' && <Check className="h-4 w-4" />}
-                                                </button>
-                                                {BUILDINGS.map(b => (
-                                                    <button
-                                                        key={b}
-                                                        onClick={() => { setSelectedBuilding(b); setIsBuildingFilterOpen(false); }}
-                                                        className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center justify-between ${selectedBuilding === b ? 'text-fpt-orange bg-orange-50 dark:bg-orange-900/10' : 'text-gray-700 dark:text-gray-200'}`}
-                                                    >
-                                                        <span>{b}</span>
-                                                        {selectedBuilding === b && <Check className="h-4 w-4" />}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
+                            <CustomSelect
+                                label="Tòa nhà"
+                                value={selectedBuilding}
+                                onChange={(val) => {
+                                    setSelectedBuilding(val);
+                                    if (val !== 'ALL') {
+                                        // Reset floor when building changes
+                                        const building = BUILDING_CONFIG[val as keyof typeof BUILDING_CONFIG];
+                                        if (building) {
+                                            const floors = Object.keys(building.floors).map(Number).sort((a, b) => a - b);
+                                            if (floors.length > 0) setSelectedFloor(floors[0]);
+                                        }
+                                    }
+                                }}
+                                options={[
+                                    { label: 'Tất cả', value: 'ALL' },
+                                    ...BUILDINGS.map(b => ({ label: b, value: b }))
+                                ]}
+                            />
 
                             {/* Room Type Filter */}
-                            <div className="flex items-center gap-2 relative">
-                                <span className="text-xs font-medium text-gray-500 dark:text-zinc-500">Loại phòng:</span>
-                                <div className="relative">
-                                    <button
-                                        onClick={() => setIsRoomTypeFilterOpen(!isRoomTypeFilterOpen)}
-                                        className="flex items-center gap-2 rounded-lg border border-gray-300 py-2 pl-3 pr-2 text-sm bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 min-w-[140px]"
-                                    >
-                                        <span className="flex-1 text-left">
-                                            {getRoomTypeDisplayLabel(selectedRoomType)}
-                                        </span>
-                                        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isRoomTypeFilterOpen ? 'rotate-180' : ''}`} />
-                                    </button>
-
-                                    {isRoomTypeFilterOpen && (
-                                        <>
-                                            <div className="fixed inset-0 z-10" onClick={() => setIsRoomTypeFilterOpen(false)}></div>
-                                            <div className="absolute left-0 top-full mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg py-1 z-20 dark:border-zinc-700 dark:bg-zinc-800 transition-all duration-200">
-                                                <button
-                                                    onClick={() => { setSelectedRoomType('ALL'); setIsRoomTypeFilterOpen(false); }}
-                                                    className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center justify-between ${selectedRoomType === 'ALL' ? 'text-fpt-orange bg-orange-50 dark:bg-orange-900/10' : 'text-gray-700 dark:text-gray-200'}`}
-                                                >
-                                                    <span>Tất cả</span>
-                                                    {selectedRoomType === 'ALL' && <Check className="h-4 w-4" />}
-                                                </button>
-                                                {ROOM_TYPE_OPTIONS.map(type => (
-                                                    <button
-                                                        key={type.value}
-                                                        onClick={() => { setSelectedRoomType(type.value); setIsRoomTypeFilterOpen(false); }}
-                                                        className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center justify-between ${selectedRoomType === type.value ? 'text-fpt-orange bg-orange-50 dark:bg-orange-900/10' : 'text-gray-700 dark:text-gray-200'}`}
-                                                    >
-                                                        <span>{type.label}</span>
-                                                        {selectedRoomType === type.value && <Check className="h-4 w-4" />}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
+                            <CustomSelect
+                                label="Loại phòng"
+                                value={selectedRoomType}
+                                onChange={setSelectedRoomType}
+                                options={[
+                                    { label: 'Tất cả', value: 'ALL' },
+                                    ...ROOM_TYPE_OPTIONS.map(type => ({ label: type.label, value: type.value }))
+                                ]}
+                            />
 
                             {/* Status Filter - Only functional in ALL mode */}
-                            {selectedBuilding === 'ALL' && (
-                                <div className="flex items-center gap-2 relative">
-                                    <span className="text-xs font-medium text-gray-500 dark:text-zinc-500">Trạng thái:</span>
-                                    <div className="relative">
-                                        <button
-                                            onClick={() => setIsStatusFilterOpen(!isStatusFilterOpen)}
-                                            className="flex items-center gap-2 rounded-lg border border-gray-300 py-2 pl-3 pr-2 text-sm bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 min-w-[130px]"
-                                        >
-                                            <span className="flex-1 text-left">
-                                                {selectedStatus === 'ALL' ? 'Tất cả' : selectedStatus === 'IN_USE' ? 'Đang học' : 'Trống'}
-                                            </span>
-                                            <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isStatusFilterOpen ? 'rotate-180' : ''}`} />
-                                        </button>
-
-                                        {isStatusFilterOpen && (
-                                            <>
-                                                <div className="fixed inset-0 z-10" onClick={() => setIsStatusFilterOpen(false)}></div>
-                                                <div className="absolute left-0 top-full mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg py-1 z-20 dark:border-zinc-700 dark:bg-zinc-800 transition-all duration-200">
-                                                    {[
-                                                        { value: 'ALL', label: 'Tất cả' },
-                                                        { value: 'IN_USE', label: 'Đang học' },
-                                                        { value: 'EMPTY', label: 'Trống' }
-                                                    ].map(option => (
-                                                        <button
-                                                            key={option.value}
-                                                            onClick={() => { setSelectedStatus(option.value as any); setIsStatusFilterOpen(false); }}
-                                                            className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center justify-between ${selectedStatus === option.value ? 'text-fpt-orange bg-orange-50 dark:bg-orange-900/10' : 'text-gray-700 dark:text-gray-200'}`}
-                                                        >
-                                                            <span>{option.label}</span>
-                                                            {selectedStatus === option.value && <Check className="h-4 w-4" />}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
+                            {selectedBuilding === 'ALL' ? (
+                                <CustomSelect
+                                    label="Trạng thái"
+                                    value={selectedStatus}
+                                    onChange={(val) => setSelectedStatus(val as any)}
+                                    options={[
+                                        { value: 'ALL', label: 'Tất cả' },
+                                        { value: 'IN_USE', label: 'Đang học' },
+                                        { value: 'EMPTY', label: 'Trống' }
+                                    ]}
+                                />
+                            ) : (
+                                /* Floor Filter */
+                                <CustomSelect
+                                    label="Tầng"
+                                    value={selectedFloor.toString()}
+                                    onChange={(val) => setSelectedFloor(Number(val))}
+                                    options={availableFloors.map(floor => ({
+                                        label: `Tầng ${floor}`,
+                                        value: floor.toString()
+                                    }))}
+                                />
                             )}
 
-                            {/* Floor Filters */}
-                            {selectedBuilding !== 'ALL' && (
-                                <div className="flex items-center gap-2 relative">
-                                    <span className="text-xs font-medium text-gray-500 dark:text-zinc-500">Tầng:</span>
-                                    <div className="relative w-48">
-                                        <button
-                                            onClick={() => setIsFloorFilterOpen(!isFloorFilterOpen)}
-                                            className="flex items-center gap-2 rounded-lg border border-gray-300 py-2 pl-3 pr-2 text-sm bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 w-full"
-                                        >
-                                            <span className="flex-1 text-left">Tầng {selectedFloor}</span>
-                                            <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isFloorFilterOpen ? 'rotate-180' : ''}`} />
-                                        </button>
-
-                                        {isFloorFilterOpen && (
-                                            <>
-                                                <div className="fixed inset-0 z-10" onClick={() => setIsFloorFilterOpen(false)}></div>
-                                                <div className="absolute left-0 top-full mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg py-1 z-20 dark:border-zinc-700 dark:bg-zinc-800 max-h-60 overflow-y-auto">
-                                                    {availableFloors.map(floor => (
-                                                        <button
-                                                            key={floor}
-                                                            onClick={() => { setSelectedFloor(floor); setIsFloorFilterOpen(false); }}
-                                                            className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 flex items-center justify-between ${selectedFloor === floor ? 'text-fpt-orange bg-orange-50 dark:bg-orange-900/10' : 'text-gray-700 dark:text-gray-200'}`}
-                                                        >
-                                                            <span>Tầng {floor}</span>
-                                                            {selectedFloor === floor && <Check className="h-4 w-4" />}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
+                            {/* Summary Info */}
+                            <div className="flex items-end pb-1 px-2">
+                                <div className="text-sm text-gray-500 dark:text-zinc-400 font-medium">
+                                    Hiển thị <span className="text-fpt-orange font-bold text-lg">{filteredRooms.length}</span> phòng
                                 </div>
-                            )}
-                        </div>
-
-                        <div className="text-sm text-gray-500 dark:text-zinc-400">
-                            Hiển thị <span className="font-semibold text-fpt-orange">{filteredRooms.length}</span> phòng
+                            </div>
                         </div>
                     </div>
 
@@ -558,3 +460,4 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
         </Layout>
     );
 };
+

@@ -7,7 +7,7 @@ import { StudentLayout } from '../layouts/StudentLayout';
 import { authService } from '../services/api/authService';
 import { newsService } from '../services/api/newsService';
 import { NewsItem } from '../types/news';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { Calendar, Tag } from 'lucide-react';
 
 const roleLayouts = {
@@ -199,3 +199,4 @@ export const NewsDetailUserPage = () => {
 };
 
 export default NewsDetailUserPage;
+

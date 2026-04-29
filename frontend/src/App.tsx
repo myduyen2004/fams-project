@@ -1,11 +1,11 @@
 import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { PublicRoute } from './components/common/PublicRoute';
 import { PermissionProtectedRoute } from './components/common/PermissionProtectedRoute';
 import { FloatingChatWidget } from './components/common/FloatingChatWidget';
+import { PopupNotification } from './components/shared/PopupNotification';
 // Lazy load pages
 const Login = lazy(() => import('./pages/auth/Login').then(m => ({ default: m.Login })));
 const ChangePasswordPage = lazy(() => import('./pages/auth/ChangePasswordPage').then(m => ({ default: m.ChangePasswordPage })));
@@ -144,7 +144,7 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Toaster position="top-right" containerStyle={{ zIndex: 99999 }} />
+      <PopupNotification />
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route
@@ -664,3 +664,4 @@ function App() {
 }
 
 export default App;
+

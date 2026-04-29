@@ -2,13 +2,14 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Upload, ArrowLeft, Loader2, CheckCircle2, XCircle, Trash2 } from 'lucide-react';
 import { uploadFile } from '../../services/utils/fileUploadService';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { notificationService, AdminNotification } from '../../services/api/notificationService';
 import { NotificationStatus, TargetType } from '../../types/notification';
+import { CustomSelect } from '../../components/common/CustomSelect';
 
 interface NotificationForm {
   title: string;
@@ -486,30 +487,32 @@ export const EditNotificationPage = () => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Đối tượng nhận
                 </label>
-                <select
-                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none text-gray-900 dark:text-white"
+                <CustomSelect
                   value={formData.targetType}
-                  onChange={(e) => setFormData({ ...formData, targetType: e.target.value as TargetType })}
-                >
-                  <option value={TargetType.ALL}>Toàn trường</option>
-                  <option value={TargetType.STUDENT}>Sinh viên</option>
-                  <option value={TargetType.LECTURER}>Giảng viên</option>
-                </select>
+                  onChange={(value) => setFormData({ ...formData, targetType: value as TargetType })}
+                  options={[
+                      { value: TargetType.ALL, label: 'Toàn trường' },
+                      { value: TargetType.STUDENT, label: 'Sinh viên' },
+                      { value: TargetType.LECTURER, label: 'Giảng viên' }
+                  ]}
+                  className="bg-gray-50 dark:bg-zinc-800 border-gray-200 dark:border-zinc-700"
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Trạng thái
                 </label>
-                <select
-                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none text-gray-900 dark:text-white"
+                <CustomSelect
                   value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value as NotificationStatus })}
-                >
-                  <option value={NotificationStatus.DRAFT}>Lưu nháp</option>
-                  <option value={NotificationStatus.SENT}>Gửi ngay</option>
-                  <option value={NotificationStatus.SCHEDULED}>Lên lịch gửi</option>
-                </select>
+                  onChange={(value) => setFormData({ ...formData, status: value as NotificationStatus })}
+                  options={[
+                      { value: NotificationStatus.DRAFT, label: 'Lưu nháp' },
+                      { value: NotificationStatus.SENT, label: 'Gửi ngay' },
+                      { value: NotificationStatus.SCHEDULED, label: 'Lên lịch gửi' }
+                  ]}
+                  className="bg-gray-50 dark:bg-zinc-800 border-gray-200 dark:border-zinc-700"
+                />
               </div>
             </div>
 
@@ -575,3 +578,4 @@ export const EditNotificationPage = () => {
 };
 
 export default EditNotificationPage;
+

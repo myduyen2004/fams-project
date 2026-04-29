@@ -8,7 +8,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Link } from 'react-router-dom';
 import { chatService, AIChatMessage, AIChatSession, ContinuationRequest, MissingField } from '../../services/api/chatService';
-import { toast } from 'react-hot-toast';
+import toast from "@utils/toast";
 import { format } from 'date-fns';
 
 // ─── Mini Message Item ────────────────────────────────────────────────────────
@@ -366,12 +366,12 @@ export const FloatingChatWidget: React.FC = () => {
                 }}
             >
                 <div
-                    className="bg-white rounded-[26px] shadow-2xl shadow-black/20 overflow-hidden border border-gray-100"
-                    style={{ maxHeight: 'min(720px, calc(100vh - 120px))' }}
+                    className="bg-white rounded-[26px] shadow-2xl shadow-black/20 overflow-hidden border border-gray-100 flex flex-col"
+                    style={{ height: 'min(640px, calc(100vh - 120px))' }}
                 >
 
                     {/* Header */}
-                    <div className="bg-fpt-orange px-4 py-3.5 flex items-center gap-3">
+                    <div className="bg-fpt-orange px-4 py-3.5 flex items-center gap-3 flex-shrink-0">
                         <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
                             <Bot className="w-5 h-5 text-white" />
                         </div>
@@ -410,10 +410,8 @@ export const FloatingChatWidget: React.FC = () => {
                     </div>
 
                     {/* Messages */}
-                    {/* Messages */}
                     <div
-                        className="overflow-y-auto px-3 py-2.5 space-y-2.5 bg-gray-50"
-                        style={{ height: 'min(520px, calc(100vh - 248px))' }}
+                        className="flex-1 overflow-y-auto px-3 py-2.5 space-y-2.5 bg-gray-50"
                     >
                         {messages.length === 0 && !isLoading && (
                             <div className="h-full flex flex-col items-center justify-center text-center space-y-3 py-6">
@@ -511,7 +509,7 @@ export const FloatingChatWidget: React.FC = () => {
                     </div>
 
                     {/* Input Area */}
-                    <div className="bg-white border-t border-gray-100 px-3.5 pb-6 pt-2.5 relative">
+                    <div className="bg-white border-t border-gray-100 px-3.5 pb-6 pt-2.5 relative flex-shrink-0">
                         <div className="flex items-center gap-2 rounded-full bg-gray-50/80 px-2 py-1.5 transition-all duration-200 focus-within:bg-white focus-within:ring-2 focus-within:ring-gray-100">
                             <div className="min-w-0 flex-1 rounded-full bg-white px-3 shadow-sm ring-1 ring-gray-200/60 transition-all focus-within:ring-gray-400">
                                 <input
@@ -572,3 +570,4 @@ export const FloatingChatWidget: React.FC = () => {
         </>
     );
 };
+

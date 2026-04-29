@@ -48,3 +48,4 @@ export const usePagination = (options: UsePaginationOptions = {}): UsePagination
 };
 
 export default usePagination;
+

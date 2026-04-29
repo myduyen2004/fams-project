@@ -124,7 +124,6 @@ export const AcademicStaffSidebar: React.FC = () => {
 
   const isActive = (path?: string) => {
     if (!path) return false;
-    // Special case for news management to be active on sub-routes keys like 'edit' or 'create'
     if (path === '/academic-staff/news-management' && location.pathname.startsWith('/academic-staff/news/')) {
       return true;
     }
@@ -146,8 +145,7 @@ export const AcademicStaffSidebar: React.FC = () => {
 
   return (
     <div
-      className={`fixed left-0 top-0 h-screen bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-800 transition-all duration-300 z-50 ${isExpanded ? 'w-64' : 'w-16'
-        }`}
+      className={`fixed left-0 top-0 h-screen bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-800 transition-all duration-300 z-[50] ${isExpanded ? 'w-64' : 'w-16'}`}
       onMouseEnter={() => setIsExpanded(true)}
       onMouseLeave={() => {
         setIsExpanded(false);
@@ -207,8 +205,7 @@ export const AcademicStaffSidebar: React.FC = () => {
                     {item.submenu && (
                       <ChevronDown
                         size={16}
-                        className={`transition-transform duration-200 ${openSubmenu === item.id ? 'rotate-180' : ''
-                          }`}
+                        className={`transition-transform duration-200 ${openSubmenu === item.id ? 'rotate-180' : ''}`}
                       />
                     )}
                   </>
@@ -250,8 +247,6 @@ export const AcademicStaffSidebar: React.FC = () => {
             {isExpanded && <span className={`text-sm font-medium whitespace-nowrap ${location.pathname === '/academic-staff/profile' ? 'text-white' : ''}`}>Hồ sơ cá nhân</span>}
           </button>
 
-
-
           <button
             onClick={() => setShowLogoutModal(true)}
             className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-fpt-orange hover:bg-fpt-orange hover:text-white transition-all duration-200 group"
@@ -278,3 +273,4 @@ export const AcademicStaffSidebar: React.FC = () => {
     </div>
   );
 };
+

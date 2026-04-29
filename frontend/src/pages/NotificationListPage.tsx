@@ -9,7 +9,7 @@ import { dashboardService } from '../services/api/dashboardService';
 import { authService } from '../services/api/authService';
 import { AppNotification } from '../types/dashboard';
 import { Loader2, Search, Bell, CheckCircle2, User, ArrowLeft } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { usePagination } from '../hooks/usePagination';
 
 type FilterType = 'all' | 'unread' | 'system';
@@ -376,14 +376,14 @@ export const NotificationListPage: React.FC = () => {
             </nav>
 
             {/* Search Bar */}
-            <div className="relative w-full md:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <div className="relative w-full md:w-72">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
                 placeholder="Tìm kiếm thông báo..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange transition-all"
+                className="w-full pl-10 pr-4 h-[52px] bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 hover:shadow-lg hover:shadow-fpt-orange/5 text-gray-900 dark:text-white"
               />
             </div>
           </div>
@@ -508,3 +508,4 @@ export const NotificationListPage: React.FC = () => {
     </LayoutComponent>
   );
 };
+

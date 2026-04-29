@@ -3,7 +3,7 @@ import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { REQUEST_TYPE_LABELS } from '../../types/requestType';
 import { Eye, Loader2, ArrowLeft, XCircle, CheckCircle, FileText } from 'lucide-react';
 import { scheduleRequestService, ScheduleRequest } from '../../services/api/scheduleRequestService';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { Link } from 'react-router-dom';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 
@@ -304,3 +304,4 @@ export const LecturerRequestPage: React.FC = () => {
         </LecturerLayout>
     );
 };
+

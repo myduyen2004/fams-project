@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Edit2, Save, X, Camera, Eye, EyeOff, Lock, Key, Loader2 } from 'lucide-react';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { userService } from '../../services/api/userService';
-import toast from 'react-hot-toast';
+import { CustomDatePicker } from '../../components/common/CustomDatePicker';
+import toast from "@utils/toast";
 
 interface UserProfile {
   id: number;
@@ -197,8 +198,8 @@ export const LecturerProfilePage: React.FC = () => {
     <LecturerLayout pageTitle="Hồ sơ cá nhân">
       <div className="max-w-4xl mx-auto p-6 space-y-6">
         {/* Profile Card */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg overflow-hidden">
-          <div className="h-32 bg-gradient-to-r from-fpt-orange via-orange-500 to-orange-400"></div>
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg">
+          <div className="h-32 bg-gradient-to-r from-fpt-orange via-orange-500 to-orange-400 rounded-t-2xl"></div>
 
           <div className="relative px-8 pb-8">
             {/* Avatar */}
@@ -342,11 +343,10 @@ export const LecturerProfilePage: React.FC = () => {
                     Ngày sinh
                   </label>
                   {isEditing ? (
-                    <input
-                      type="date"
+                    <CustomDatePicker
                       value={displayProfile.dob || ''}
-                      onChange={(e) => handleChange('dob', e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-fpt-orange focus:border-transparent"
+                      onChange={(value) => handleChange('dob', value)}
+                      className="w-full"
                     />
                   ) : (
                     <p className="text-gray-900 dark:text-white font-medium">
@@ -478,3 +478,4 @@ export const LecturerProfilePage: React.FC = () => {
     </LecturerLayout>
   );
 };
+

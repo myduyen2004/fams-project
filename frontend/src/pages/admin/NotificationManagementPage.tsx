@@ -11,7 +11,7 @@ import {
   AdminNotification
 } from '../../services/api/notificationService';
 import { NotificationStatus, TargetType } from '../../types/notification';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import {
   NotificationFilters,
@@ -262,3 +262,4 @@ export const NotificationManagementPage = () => {
     </Layout>
   );
 };
+

@@ -47,3 +47,4 @@ export const ClassSectionRedirect: React.FC = () => {
         </div>
     );
 };
+

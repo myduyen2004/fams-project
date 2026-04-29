@@ -12,7 +12,7 @@ import { Users, Clock, ArrowLeft, FileText, ChevronDown, ChevronUp, ExternalLink
 import { ViewStudentModal } from '../../components/academic-staff/students/StudentModals';
 import { StudentResponse } from '../../services/api/academicStaffService';
 import { studentGradeService } from '../../services/api/studentGradeService';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 
 export const LeturerClassDetailPage: React.FC = () => {
     const { className } = useParams<{ className: string }>();
@@ -305,10 +305,10 @@ export const LeturerClassDetailPage: React.FC = () => {
                             <div className="flex flex-col">
                                 <div className="flex items-center gap-2 mb-1.5">
                                     <span className={`px-3 py-0.5 rounded-full text-[9px] font-bold tracking-widest uppercase shadow-sm border ${detail?.status === 'UPCOMING'
-                                            ? 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-900/40'
-                                            : detail?.status === 'OPEN' || detail?.status === 'ONGOING'
-                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-900/40'
-                                                : 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700'
+                                        ? 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-900/40'
+                                        : detail?.status === 'OPEN' || detail?.status === 'ONGOING'
+                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-900/40'
+                                            : 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700'
                                         }`}>
                                         {detail?.status === 'UPCOMING' ? 'SẮP DIỄN RA' :
                                             detail?.status === 'OPEN' || detail?.status === 'ONGOING' ? 'ĐANG DIỄN RA' :

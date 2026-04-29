@@ -4,12 +4,14 @@ import { AdminLayout } from '../../components/admin/AdminLayout';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { newsService } from '../../services/api/newsService';
 import { NewsRequest, NewsTargetType, NewsType, NewsStatus } from '../../types/news';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { CloudUpload, Loader2, Trash2 } from 'lucide-react';
+import { CloudUpload, Loader2, Trash2, Calendar, Clock } from 'lucide-react';
 import apiClient from '../../services/api/authService';
 import axios from 'axios';
+import { CustomSelect } from '../../components/common/CustomSelect';
+import { CustomDateTimePicker } from '../../components/common/CustomDateTimePicker';
 
 export const CreateNewsPage = () => {
   const navigate = useNavigate();
@@ -240,7 +242,7 @@ export const CreateNewsPage = () => {
 
               {/* Tiêu đề bài viết */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2 ml-1">
                   Tiêu đề bài viết <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -248,18 +250,18 @@ export const CreateNewsPage = () => {
                   placeholder="Nhập tiêu đề tin tức..."
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-900 focus:ring-2 focus:ring-fpt-orange/20 transition-all outline-none"
+                  className="w-full h-[52px] px-4 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 outline-none text-gray-900 dark:text-white font-medium shadow-sm"
                 />
               </div>
 
-              {/* Nội dung chi tiết (thay thế tóm tắt ngắn) */}
+              {/* Nội dung chi tiết */}
               <div className="flex-1 flex flex-col">
-                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2 ml-1">
                   Nội dung <span className="text-red-500">*</span>
                 </label>
-                <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 flex-1 flex flex-col">
+                <div className="rounded-2xl overflow-hidden border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex-1 flex flex-col shadow-sm">
                   {uploadingContentImg && (
-                    <div className="flex items-center gap-2 px-4 py-2 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-sm border-b border-gray-200 dark:border-zinc-700">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 text-xs border-b border-gray-200 dark:border-zinc-700">
                       <Loader2 className="w-4 h-4 animate-spin" />
                       Đang tải ảnh lên, vui lòng chờ...
                     </div>
@@ -270,7 +272,6 @@ export const CreateNewsPage = () => {
                     value={form.content}
                     onChange={(val) => {
                       const newForm = { ...form, content: val };
-                      // Tự động lấy ảnh Cloudinary đầu tiên làm ảnh bìa nếu chưa có
                       if (!form.thumbnailImage) {
                         const cloudImgRe = new RegExp('<img[^>]+src="(https://[^"]+)"');
                         const match = val.match(cloudImgRe);
@@ -292,46 +293,45 @@ export const CreateNewsPage = () => {
           </div>
 
           {/* CỘT PHẢI - CÀI ĐẶT */}
-          <div className="lg:col-span-1 space-y-6 sticky top-6 h-fit">
+          <div className="lg:col-span-1 space-y-6 sticky top-6 h-fit pb-10">
             <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-zinc-800 space-y-6">
 
               {/* Ảnh bìa */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-3 ml-1">
                   Ảnh bìa (Thumbnail)
                 </label>
 
-                {/* Khung Kéo thả / Xem chi tiết ảnh */}
-                <div className="border-2 border-dashed border-gray-200 dark:border-zinc-700 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 p-2 flex flex-col items-center justify-center text-center relative overflow-hidden mb-3 min-h-[200px]">
+                <div className="border-2 border-dashed border-gray-100 dark:border-zinc-800 rounded-2xl bg-gray-50/50 dark:bg-zinc-800/30 p-2 flex flex-col items-center justify-center text-center relative overflow-hidden mb-4 min-h-[180px] group transition-all hover:border-fpt-orange/40">
                   {uploadingImg ? (
                     <div className="flex flex-col items-center justify-center p-8">
                       <Loader2 className="w-8 h-8 text-fpt-orange animate-spin mb-2" />
-                      <span className="text-sm">Đang tải ảnh lên...</span>
+                      <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Đang tải...</span>
                     </div>
                   ) : form.thumbnailImage ? (
                     <div className="relative w-full h-full group flex items-center justify-center">
-                      <img src={form.thumbnailImage} alt="Thumbnail preview" className="max-w-full object-contain rounded-xl" style={{ maxHeight: '200px' }} />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
+                      <img src={form.thumbnailImage} alt="Thumbnail preview" className="max-w-full object-contain rounded-xl shadow-md" style={{ maxHeight: '180px' }} />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl backdrop-blur-[2px]">
                         <button
                           onClick={handleRemoveImage}
-                          className="px-4 py-2 bg-red-500 text-white font-medium rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2 shadow-lg"
+                          className="px-4 py-2 bg-red-500 text-white font-bold text-xs rounded-xl hover:bg-red-600 transition-all flex items-center gap-2 shadow-lg active:scale-95"
                         >
-                          <Trash2 size={16} /> Xóa ảnh
+                          <Trash2 size={14} /> XÓA ẢNH
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <div className="p-8 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors w-full h-full"
+                    <div className="p-8 flex flex-col items-center justify-center cursor-pointer transition-colors w-full h-full"
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => { e.preventDefault(); handleUploadImage(e.dataTransfer.files?.[0]); }}
                     >
-                      <div className="w-14 h-14 bg-orange-100 dark:bg-orange-900/20 text-fpt-orange rounded-full flex items-center justify-center mb-4 transition-transform hover:scale-110">
-                        <CloudUpload className="w-7 h-7" />
+                      <div className="w-12 h-12 bg-orange-50 dark:bg-orange-950/20 text-fpt-orange rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 group-hover:rotate-6 shadow-sm">
+                        <CloudUpload className="w-6 h-6" />
                       </div>
-                      <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-3">
-                        Kéo thả ảnh vào đây<br />hoặc
+                      <p className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">
+                        Kéo thả ảnh hoặc chọn file
                       </p>
-                      <label className="px-5 py-2.5 bg-fpt-orange text-white text-sm font-medium rounded-xl cursor-pointer hover:bg-[#e06912] transition-colors shadow-sm inline-block">
+                      <label className="px-6 py-2.5 bg-fpt-orange text-white text-[11px] font-black uppercase tracking-widest rounded-xl cursor-pointer hover:bg-orange-600 transition-all shadow-lg shadow-fpt-orange/20 inline-block active:scale-95">
                         Chọn file
                         <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUploadImage(e.target.files?.[0])} />
                       </label>
@@ -339,134 +339,113 @@ export const CreateNewsPage = () => {
                   )}
                 </div>
 
-                {/* Hoặc nhập URL */}
                 <input
                   type="text"
                   placeholder="Hoặc nhập URL hình ảnh..."
                   value={form.thumbnailImage || ''}
                   onChange={(e) => setForm({ ...form, thumbnailImage: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-900 focus:ring-2 focus:ring-fpt-orange/20 transition-all text-sm outline-none"
+                  className="w-full h-[48px] px-4 rounded-xl border-2 border-gray-50 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-800/30 focus:bg-white dark:focus:bg-zinc-900 focus:border-fpt-orange transition-all text-sm outline-none font-medium"
                 />
               </div>
 
-              {/* Hình thức & Danh mục */}
+              {/* Danh mục */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                  Danh mục
-                </label>
-                <select
-                  value={form.type}
-                  onChange={(e) => setForm({ ...form, type: e.target.value as NewsType })}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-900 focus:ring-2 focus:ring-fpt-orange/20 outline-none mb-6 text-sm"
-                >
-                  <option value={NewsType.EVENT}>Sự kiện</option>
-                  <option value={NewsType.FEATURED}>Sự kiện nổi bật</option>
-                  <option value={NewsType.IMPORTANT}>Thông báo quan trọng</option>
-                  <option value={NewsType.OTHER}>Khác</option>
-                </select>
-
+                <CustomSelect
+                  label="Danh mục tin tức"
+                  value={form.type as string}
+                  onChange={(val) => setForm({ ...form, type: val as NewsType })}
+                  options={[
+                    { value: NewsType.EVENT, label: 'Sự kiện' },
+                    { value: NewsType.FEATURED, label: 'Sự kiện nổi bật' },
+                    { value: NewsType.IMPORTANT, label: 'Thông báo quan trọng' },
+                    { value: NewsType.OTHER, label: 'Khác' }
+                  ]}
+                />
                 {form.type === NewsType.FEATURED && (
-                  <p className="text-sm text-red-500 -mt-4 mb-6">* Sự kiện này sẽ được đặt ở mục nổi bật</p>
+                  <p className="text-[11px] font-bold text-orange-500 mt-2 ml-1 uppercase tracking-wider flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                    Sẽ xuất hiện tại mục nổi bật
+                  </p>
                 )}
+              </div>
 
-                {/* Đối tượng */}
-                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                  Đối tượng người nhận
+              {/* Đối tượng */}
+              <div>
+                <CustomSelect
+                  label="Đối tượng người nhận"
+                  value={form.targetType as string}
+                  onChange={(val) => setForm({ ...form, targetType: val as NewsTargetType })}
+                  options={[
+                    { value: NewsTargetType.ALL, label: 'Toàn trường' },
+                    { value: NewsTargetType.STUDENT, label: 'Tất cả sinh viên' },
+                    { value: NewsTargetType.LECTURER, label: 'Tất cả giảng viên' }
+                  ]}
+                />
+              </div>
+
+              {/* Hình thức gửi */}
+              <div className="space-y-3 pt-2">
+                <label className="block text-[10px] uppercase font-bold tracking-widest text-gray-400 dark:text-zinc-500 ml-1">
+                  Phương thức xuất bản
                 </label>
-                <select
-                  value={form.targetType}
-                  onChange={(e) => setForm({ ...form, targetType: e.target.value as NewsTargetType })}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 focus:bg-white dark:focus:bg-zinc-900 focus:ring-2 focus:ring-fpt-orange/20 outline-none mb-6 text-sm"
-                >
-                  <option value={NewsTargetType.ALL}>Toàn trường</option>
-                  <option value={NewsTargetType.STUDENT}>Tất cả sinh viên</option>
-                  <option value={NewsTargetType.LECTURER}>Tất cả giảng viên</option>
-                </select>
-
-                {/* Lịch gửi */}
-                <div className="space-y-4 mt-4">
-                  <label className="flex items-center gap-3 cursor-pointer group">
-                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${sendType === 'NOW' ? 'border-fpt-orange' : 'border-gray-300 dark:border-zinc-600'}`}>
-                      {sendType === 'NOW' && <div className="w-3 h-3 bg-fpt-orange rounded-full" />}
-                    </div>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
-                      Gửi ngay
-                    </span>
-                    <input
-                      type="radio"
-                      name="sendType"
-                      className="hidden"
-                      checked={sendType === 'NOW'}
-                      onChange={() => setSendType('NOW')}
-                    />
-                  </label>
-
-                  <label className="flex items-center gap-3 cursor-pointer group">
-                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${sendType === 'DRAFT' ? 'border-fpt-orange' : 'border-gray-300 dark:border-zinc-600'}`}>
-                      {sendType === 'DRAFT' && <div className="w-3 h-3 bg-fpt-orange rounded-full" />}
-                    </div>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
-                      Lưu nháp
-                    </span>
-                    <input
-                      type="radio"
-                      name="sendType"
-                      className="hidden"
-                      checked={sendType === 'DRAFT'}
-                      onChange={() => setSendType('DRAFT')}
-                    />
-                  </label>
-
-                  <div className="flex flex-col gap-2">
-                    <label className="flex items-center gap-3 cursor-pointer group">
-                      <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${sendType === 'SCHEDULED' ? 'border-fpt-orange' : 'border-gray-300 dark:border-zinc-600'}`}>
-                        {sendType === 'SCHEDULED' && <div className="w-3 h-3 bg-fpt-orange rounded-full" />}
+                
+                <div className="grid grid-cols-1 gap-2">
+                  {[
+                    { id: 'NOW', label: 'Xuất bản ngay', icon: <Calendar size={14} /> },
+                    { id: 'DRAFT', label: 'Lưu bản nháp', icon: <Trash2 size={14} /> },
+                    { id: 'SCHEDULED', label: 'Lên lịch gửi', icon: <Clock size={14} /> }
+                  ].map((type) => (
+                    <button
+                      key={type.id}
+                      type="button"
+                      onClick={() => setSendType(type.id as any)}
+                      className={`
+                        flex items-center gap-3 px-4 h-[48px] rounded-xl text-sm font-bold transition-all border-2
+                        ${sendType === type.id 
+                          ? 'bg-orange-50 dark:bg-orange-950/10 border-fpt-orange text-fpt-orange shadow-sm' 
+                          : 'bg-white dark:bg-zinc-900 border-gray-100 dark:border-zinc-800 text-gray-500 dark:text-zinc-400 hover:border-gray-200'}
+                      `}
+                    >
+                      <div className={`
+                        w-6 h-6 rounded-lg flex items-center justify-center
+                        ${sendType === type.id ? 'bg-fpt-orange text-white' : 'bg-gray-100 dark:bg-zinc-800'}
+                      `}>
+                        {type.icon}
                       </div>
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
-                        Lên lịch gửi
-                      </span>
-                      <input
-                        type="radio"
-                        name="sendType"
-                        className="hidden"
-                        checked={sendType === 'SCHEDULED'}
-                        onChange={() => setSendType('SCHEDULED')}
-                      />
-                    </label>
-
-                    {sendType === 'SCHEDULED' && (
-                      <div className="pl-8 animate-in slide-in-from-top-2 fade-in duration-200 mt-2">
-                        <input
-                          type="datetime-local"
-                          value={scheduledDate}
-                          onChange={(e) => setScheduledDate(e.target.value)}
-                          className="w-full px-4 py-2 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm bg-gray-50 dark:bg-zinc-800 outline-none focus:ring-2 focus:ring-fpt-orange/20"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Vui lòng chọn thời gian xuất bản trong tương lai.
-                        </p>
-                      </div>
-                    )}
-                  </div>
+                      {type.label}
+                    </button>
+                  ))}
                 </div>
+
+                {sendType === 'SCHEDULED' && (
+                  <div className="animate-in slide-in-from-top-2 fade-in duration-300 mt-4">
+                    <CustomDateTimePicker
+                      label="Thời gian lên lịch"
+                      value={scheduledDate}
+                      onChange={setScheduledDate}
+                    />
+                    <p className="text-[10px] text-gray-400 mt-2 ml-1 uppercase font-bold tracking-wider italic">
+                      Chọn thời gian trong tương lai
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* BUTTONS XUỐNG DƯỚI GÓC PHẢI */}
-            <div className="flex flex-wrap items-center justify-end gap-3 mt-4">
-              <button
-                onClick={() => navigate(`${basePath}/news-management`)}
-                className="px-5 py-2.5 rounded-xl border border-gray-300 dark:border-zinc-700 font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-sm"
-              >
-                Hủy
-              </button>
-
+            <div className="flex flex-col gap-3">
               <button
                 disabled={submitting}
                 onClick={() => handleSave(sendType === 'DRAFT' ? NewsStatus.DRAFT : sendType === 'SCHEDULED' ? NewsStatus.SCHEDULED : NewsStatus.SENT)}
-                className="px-5 py-2.5 rounded-xl bg-fpt-orange hover:bg-[#e06912] text-white font-medium shadow-sm shadow-orange-500/20 transition-colors flex items-center gap-2 text-sm disabled:opacity-70"
+                className="h-[52px] w-full bg-fpt-orange hover:bg-orange-600 text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-fpt-orange/20 transition-all flex items-center justify-center gap-3 disabled:opacity-70 active:scale-[0.98]"
               >
-                {submitting ? 'Đang xử lý...' : sendType === 'DRAFT' ? 'Lưu nháp' : sendType === 'SCHEDULED' ? 'Lên lịch gửi' : 'Xuất bản tin tức'}
+                {submitting ? <Loader2 size={18} className="animate-spin" /> : sendType === 'DRAFT' ? 'Lưu bản nháp' : sendType === 'SCHEDULED' ? 'Xác nhận lịch gửi' : 'Xuất bản ngay'}
+              </button>
+              
+              <button
+                onClick={() => navigate(`${basePath}/news-management`)}
+                className="h-[52px] w-full bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-widest rounded-2xl hover:bg-gray-50 dark:hover:bg-zinc-800 transition-all text-xs active:scale-[0.98]"
+              >
+                Hủy bỏ
               </button>
             </div>
           </div>
@@ -478,3 +457,4 @@ export const CreateNewsPage = () => {
 };
 
 export default CreateNewsPage;
+

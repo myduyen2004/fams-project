@@ -100,3 +100,4 @@ export const AnalyticalCards: React.FC<{ stats?: any }> = ({ stats }) => {
     </div>
   );
 };
+

@@ -23,6 +23,7 @@ public class DashboardController {
     private final DashboardService dashboardService;
     private final UserNotificationService notificationService;
     private final com.fams.backend.repository.SystemLogRepository systemLogRepository;
+    private final com.fams.backend.repository.AlertRepository alertRepository;
 
     @GetMapping("/stats")
     @Operation(summary = "Lấy thống kê trang dashboard")
@@ -124,6 +125,47 @@ public class DashboardController {
                 .newValue(logEntry.getNewValue())
                 .build());
         
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/alerts/paginated")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Lấy danh sách cảnh báo (phân trang)")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public ResponseEntity<org.springframework.data.domain.Page<com.fams.backend.dto.response.AlertResponse>> getAlertsPaginated(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) com.fams.backend.entity.Alert.AlertLevel level,
+            @RequestParam(required = false) com.fams.backend.entity.Alert.AlertType type,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime startDate,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime endDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "15") int size) {
+        log.info("GET /api/dashboard/alerts/paginated | search={}, level={}, type={}, page={}, size={}", search, level, type, page, size);
+
+        String searchParam = (search != null && !search.trim().isEmpty())
+                ? "%" + search.trim().toLowerCase() + "%"
+                : null;
+
+        org.springframework.data.domain.Page<com.fams.backend.entity.Alert> alerts = alertRepository.findAllByFilters(
+                searchParam,
+                level,
+                type,
+                startDate,
+                endDate,
+                org.springframework.data.domain.PageRequest.of(page, size, org.springframework.data.domain.Sort.by("createdAt").descending())
+        );
+
+        org.springframework.data.domain.Page<com.fams.backend.dto.response.AlertResponse> response =
+                alerts.map(alert -> com.fams.backend.dto.response.AlertResponse.builder()
+                        .id(alert.getId())
+                        .title(alert.getTitle())
+                        .description(alert.getDescription())
+                        .level(alert.getLevel().name())
+                        .type(alert.getType().name())
+                        .timestamp(alert.getCreatedAt().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")))
+                        .isResolved(false) // Assuming all are active for now or add field
+                        .build());
+
         return ResponseEntity.ok(response);
     }
 }

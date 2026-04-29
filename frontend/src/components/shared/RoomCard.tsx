@@ -176,3 +176,4 @@ export const RoomCard: React.FC<RoomCardProps> = ({ room, inUse, onClick, onEdit
         </div>
     );
 };
+

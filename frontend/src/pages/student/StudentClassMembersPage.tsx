@@ -5,7 +5,7 @@ import { lecturerClassService, ClassDetailResponse } from '../../services/api/Le
 import { chatGroupService } from '../../services/api/chatGroupService';
 import { studentGradeService } from '../../services/api/studentGradeService';
 import { Users, ArrowLeft, MessageCircle, Loader2 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 
 export const StudentClassMembersPage: React.FC = () => {
     const { className } = useParams<{ className: string }>();
@@ -175,15 +175,15 @@ export const StudentClassMembersPage: React.FC = () => {
                             <h4 className="text-xl font-bold text-gray-900 dark:text-white">Danh sách sinh viên</h4>
                             <p className="text-xs text-gray-500 font-medium mt-1">Tổng số {filteredEnrollments.length} thành viên lớp</p>
                         </div>
-                        <div className="relative w-full sm:w-72">
+                        <div className="relative w-full sm:w-80">
                             <input
                                 type="text"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Tìm sinh viên..."
-                                className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-xl text-xs font-medium transition-all shadow-sm outline-none focus:border-fpt-orange/50"
+                                className="w-full pl-12 pr-4 h-[52px] bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm font-medium transition-all shadow-sm outline-none focus:border-fpt-orange/40"
                             />
-                            <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                            <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                         </div>
                     </div>
 
@@ -264,3 +264,4 @@ export const StudentClassMembersPage: React.FC = () => {
         </StudentLayout>
     );
 };
+

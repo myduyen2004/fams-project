@@ -497,3 +497,4 @@ export const LecturerDashboard: React.FC = () => {
         </LecturerLayout>
     );
 };
+

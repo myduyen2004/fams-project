@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Users, ArrowRight } from 'lucide-react';
 import { Pagination } from '../../components/common/Pagination';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { userService, UserResponse } from '../../services/api/userService';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { UserTableRow } from '../../components/admin/users/UserTableRow';
 import { UserFilters } from '../../components/admin/users/UserFilters';
 import { BulkActions } from '../../components/admin/users/BulkActions';
@@ -57,12 +57,8 @@ export const UsersPage = () => {
   });
 
   // WebSocket for real-time updates during import
-
   useWebSocket(`/topic/import-progress/${authService.getUser()?.username}`, (data) => {
-    console.log('Received WebSocket message:', data);
     if (data.newUsers && data.newUsers.length > 0) {
-      console.log('Users update received:', data.newUsers.length);
-
       setUsers(prev => {
         const next = [...prev];
         let hasChanges = false;
@@ -70,7 +66,6 @@ export const UsersPage = () => {
         data.newUsers.forEach((updatedUser: UserResponse) => {
           const index = next.findIndex(u => u.id === updatedUser.id);
           
-          // Ensure roleName exists so the table column isn't shockingly blank right after import
           if (!updatedUser.roleName && updatedUser.role) {
             const roleMap: Record<string, string> = {
               'ADMIN': 'Quản trị viên',
@@ -82,11 +77,9 @@ export const UsersPage = () => {
           }
 
           if (index !== -1) {
-            // Update existing user (e.g. background avatar upload)
             next[index] = { ...next[index], ...updatedUser };
             hasChanges = true;
           } else {
-            // Prepend new user only if it matches current filter
             if (roleFilter === 'all' || updatedUser.role === roleFilter) {
               next.unshift(updatedUser);
               setTotalElements(total => total + 1);
@@ -99,39 +92,29 @@ export const UsersPage = () => {
       });
     }
 
-    // Definitive Fix: Refresh the whole list when the job is fully completed
-    // This catches any final avatar updates and ensures cache consistency.
     if (data.status === 'COMPLETED') {
-      console.log('Import job COMPLETED - triggering silent refresh');
       setTimeout(() => {
         fetchUsers(true);
-      }, 500); // Small delay to allow DB consistency
+      }, 500);
     }
   });
 
   useWebSocket(`/topic/activation-progress/${authService.getUser()?.username}`, (data) => {
     setActivationProgress(data);
 
-    // 1. Process Batch Removals (Real-time Filter)
     if (data.activatedUserIds && data.activatedUserIds.length > 0) {
       const activatedSet = new Set(data.activatedUserIds.map(Number));
-      
       setUsers(prev => prev.filter(u => !activatedSet.has(Number(u.id))));
       setTotalElements(prev => Math.max(0, prev - data.activatedUserIds.length));
     }
 
-    // 2. Handle Completion (Cleanup & Resync)
     if (data.status === 'COMPLETED') {
         setIsActivating(false);
-        // Force list to empty if this was a total activation
         if (data.current === data.total && data.total > 0) {
             setUsers([]);
             setTotalElements(0);
         }
-        
-        // Final sync with database (silent) to ensure UI is perfectly clean
         setTimeout(() => fetchUsers(true), 1000);
-
         setTimeout(() => {
             setActivationProgress(null);
         }, 5000);
@@ -167,8 +150,6 @@ export const UsersPage = () => {
 
   useEffect(() => {
     fetchUsers();
-
-    // Check for existing activation progress on mount (F5 resilience)
     const checkInitialProgress = async () => {
       try {
         const progress = await userService.getActivationProgress();
@@ -183,12 +164,10 @@ export const UsersPage = () => {
     checkInitialProgress();
   }, [fetchUsers]);
 
-  // Reset page when filters change
   useEffect(() => {
     setPage(0);
   }, [debouncedSearch, roleFilter]);
 
-  // Handlers optimized with useCallback
   const handleSelectAll = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
       setSelectedUsers(users.map(u => u.id));
@@ -206,8 +185,8 @@ export const UsersPage = () => {
   const handleBulkDelete = useCallback(async () => {
     setConfirmModal({
       isOpen: true,
-      title: 'Xác nhận xóa',
-      message: 'Bạn có chắc chắn muốn xóa các tài khoản đã chọn?',
+      title: 'Xác nhận xóa tài khoản',
+      message: `Bạn có chắc chắn muốn xóa ${selectedUsers.length} tài khoản đang chờ kích hoạt? Hành động này không thể hoàn tác.`,
       type: 'danger',
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
@@ -261,7 +240,7 @@ export const UsersPage = () => {
     setConfirmModal({
       isOpen: true,
       title: 'Kích hoạt toàn bộ',
-      message: 'Bạn có chắc chắn muốn kích hoạt TOÀN BỘ tài khoản chưa kích hoạt?\nHệ thống sẽ gửi email thông báo cho từng người dùng.',
+      message: 'Bạn có chắc chắn muốn kích hoạt TOÀN BỘ tài khoản chưa kích hoạt? Hệ thống sẽ gửi email thông báo cho từng người dùng.',
       type: 'success',
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
@@ -293,82 +272,73 @@ export const UsersPage = () => {
     setIsEditModalOpen(false);
     setIsImportModalOpen(false);
     if (isImport === true) {
-      // Delay fetching to allow DB sync while keeping the websocket data visible
       setTimeout(() => fetchUsers(true), 2500);
     } else {
       fetchUsers();
     }
   }, [fetchUsers]);
 
-  // Memoized date formatter to avoid re-creating it
   const formatDateTime = useCallback((date: any) => {
     if (!date) return '---';
-
     try {
       let d: Date;
       if (Array.isArray(date)) {
         const [year, month, day, hour = 0, minute = 0, second = 0] = date;
         d = new Date(year, month - 1, day, hour, minute, second);
       } else if (typeof date === 'string') {
-        // Safari fix: Replace space with 'T' to make it a valid ISO string
         d = new Date(date.replace(' ', 'T'));
       } else {
         d = new Date(date);
       }
-
       if (isNaN(d.getTime())) return '---';
       return d.toLocaleString('vi-VN', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
       });
-    } catch (e) {
-      return '---';
-    }
+    } catch (e) { return '---'; }
   }, []);
 
   return (
     <AdminLayout pageTitle="Tài khoản chưa kích hoạt">
-      <div className="p-6 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800">
-
+      <div className="space-y-6">
+        {/* Progress Tracker */}
         {activationProgress && (
-          <div className="mb-6 p-5 bg-green-50 dark:bg-green-950/20 border border-green-100 dark:border-green-900/30 rounded-2xl animate-in fade-in slide-in-from-top-4">
+          <div className="p-5 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-2xl animate-in fade-in slide-in-from-top-4 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <div className="flex flex-col">
-                <h4 className="text-sm font-bold text-green-900 dark:text-green-100 flex items-center gap-2">
+                <h4 className="text-sm font-black text-emerald-900 dark:text-emerald-100 flex items-center gap-2 uppercase tracking-tight">
                   Tiến trình kích hoạt hệ thống
                   {activationProgress.status !== 'COMPLETED' && (
-                    <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                   )}
                 </h4>
-                <p className="text-xs text-green-700 dark:text-green-400 mt-0.5">
+                <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-1 font-medium">
                   {activationProgress.message}
                 </p>
               </div>
               <div className="text-right">
-                <span className="text-lg font-black text-green-700 dark:text-green-300">
+                <span className="text-2xl font-black text-emerald-700 dark:text-emerald-300">
                   {activationProgress.percentage}%
                 </span>
-                <p className="text-[10px] font-bold text-green-600/60 dark:text-green-400/50 uppercase tracking-tighter">
-                  {activationProgress.current} / {activationProgress.total} users
+                <p className="text-[10px] font-bold text-emerald-600/60 dark:text-emerald-400/50 uppercase tracking-tighter">
+                  {activationProgress.current} / {activationProgress.total} tài khoản
                 </p>
               </div>
             </div>
-            <div className="w-full bg-green-100 dark:bg-green-900/30 rounded-full h-3 overflow-hidden p-0.5 border border-green-200/30 dark:border-green-800/20">
+            <div className="w-full bg-emerald-100 dark:bg-emerald-900/30 rounded-full h-3 overflow-hidden p-0.5 border border-emerald-200/30 dark:border-emerald-800/20">
               <div
-                className="bg-green-500 h-full transition-all duration-150 ease-out rounded-full shadow-[0_0_12px_rgba(34,197,94,0.3)] relative overflow-hidden"
+                className="bg-emerald-500 h-full transition-all duration-300 ease-out rounded-full shadow-[0_0_12px_rgba(16,185,129,0.3)] relative overflow-hidden"
                 style={{ width: `${activationProgress.percentage}%` }}
               >
                 {activationProgress.percentage < 100 && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" style={{ backgroundSize: '200% 100%' }} />
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" style={{ backgroundSize: '200% 100%' }} />
                 )}
               </div>
             </div>
           </div>
         )}
 
+        {/* Filters and Search */}
         <UserFilters
           search={search}
           onSearchChange={setSearch}
@@ -380,6 +350,7 @@ export const UsersPage = () => {
           showActivateAll={totalElements > 0}
         />
 
+        {/* Bulk Selection Actions */}
         <BulkActions
           selectedCount={selectedUsers.length}
           onDelete={handleBulkDelete}
@@ -388,60 +359,72 @@ export const UsersPage = () => {
           isActivating={isActivating}
         />
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-fpt-orange text-white">
-                <th className="px-4 py-3 text-left rounded-tl-lg">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 rounded border-white/20 text-white focus:ring-0 focus:ring-offset-0 bg-transparent cursor-pointer"
-                    onChange={handleSelectAll}
-                    checked={users.length > 0 && selectedUsers.length === users.length}
-                  />
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Họ và tên</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Mã số</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Role</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Ngày sinh</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider rounded-tr-lg">Ngày tạo</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="py-10 text-center text-gray-400">
-                    <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-                    Đang tải dữ liệu...
-                  </td>
+        {/* Data Table Section */}
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 overflow-hidden animate-in fade-in duration-700">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-fpt-orange text-white">
+                  <th className="px-4 py-4 text-left w-12">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 rounded border-white/20 text-white focus:ring-0 focus:ring-offset-0 bg-transparent cursor-pointer"
+                      onChange={handleSelectAll}
+                      checked={users.length > 0 && selectedUsers.length === users.length}
+                    />
+                  </th>
+                  <th className="px-4 py-4 text-left text-xs font-medium uppercase tracking-widest">Thông tin tài khoản</th>
+                  <th className="px-4 py-4 text-left text-xs font-medium uppercase tracking-widest">Mã số</th>
+                  <th className="px-4 py-4 text-left text-xs font-medium uppercase tracking-widest">Vai trò</th>
+                  <th className="px-4 py-4 text-left text-xs font-medium uppercase tracking-widest">Ngày sinh</th>
+                  <th className="px-4 py-4 text-left text-xs font-medium uppercase tracking-widest">Ngày tạo</th>
                 </tr>
-              ) : users.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-10 text-center text-gray-400">Không có tài khoản nào chờ kích hoạt</td>
-                </tr>
-              ) : (
-                users.map((user) => (
-                  <UserTableRow
-                    key={user.id}
-                    user={user}
-                    isSelected={selectedUsers.includes(user.id)}
-                    onSelect={handleSelectUser}
-                    onView={handleView}
-                    formatDateTime={formatDateTime}
-                  />
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-gray-50 dark:divide-zinc-800">
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="py-24 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <Loader2 className="w-12 h-12 animate-spin text-fpt-orange" />
+                        <p className="text-sm font-black text-gray-400 uppercase tracking-widest">Đang tải dữ liệu...</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : users.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-32 text-center">
+                        <div className="flex flex-col items-center gap-4 opacity-10">
+                            <Users size={64} />
+                            <p className="text-xl font-black uppercase tracking-tighter">Hệ thống hiện tại sạch bóng tài khoản chưa kích hoạt</p>
+                        </div>
+                    </td>
+                  </tr>
+                ) : (
+                  users.map((user) => (
+                    <UserTableRow
+                      key={user.id}
+                      user={user}
+                      isSelected={selectedUsers.includes(user.id)}
+                      onSelect={handleSelectUser}
+                      onView={handleView}
+                      formatDateTime={formatDateTime}
+                    />
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
 
-        <Pagination
-          currentPage={page}
-          totalPages={Math.ceil(totalElements / 20)}
-          totalElements={totalElements}
-          pageSize={20}
-          onPageChange={setPage}
-        />
+          <div className="px-6 py-4 bg-gray-50 dark:bg-zinc-900/50 border-t border-gray-100 dark:border-zinc-800">
+            <Pagination
+              currentPage={page}
+              totalPages={Math.ceil(totalElements / 20)}
+              totalElements={totalElements}
+              pageSize={20}
+              onPageChange={setPage}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Modals */}
@@ -452,6 +435,16 @@ export const UsersPage = () => {
           user={selectedUserData} 
           onClose={() => setIsViewModalOpen(false)} 
           onEdit={() => handleEdit(selectedUserData)}
+          secondaryAction={{
+            label: 'Kích hoạt ngay',
+            icon: <ArrowRight size={16} />,
+            onClick: () => {
+              setIsViewModalOpen(false);
+              setSelectedUsers([selectedUserData.id]);
+              handleBulkActivate();
+            },
+            className: 'bg-emerald-600 text-white shadow-emerald-500/20 hover:bg-emerald-700'
+          }}
         />
       )}
       {isImportModalOpen && <ImportUserModal onClose={() => setIsImportModalOpen(false)} onSuccess={() => handleModalSuccess(true)} />}
@@ -469,3 +462,4 @@ export const UsersPage = () => {
     </AdminLayout>
   );
 };
+

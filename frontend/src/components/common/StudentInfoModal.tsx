@@ -190,3 +190,4 @@ export const StudentInfoModal: React.FC<StudentInfoModalProps> = ({ isOpen, onCl
         </div>
     );
 };
+

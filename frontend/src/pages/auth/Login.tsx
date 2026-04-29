@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Moon, Sun, User, Lock } from "lucide-react";
 import { authService } from "../../services/api/authService";
-import toast from "react-hot-toast";
+import toast from "@utils/toast";
 import COLORS from "../../config/colors";
 
 export const Login: React.FC = () => {
@@ -274,3 +274,4 @@ export const Login: React.FC = () => {
     </div>
   );
 };
+

@@ -134,3 +134,4 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
     </AnimatePresence>
   );
 };
+

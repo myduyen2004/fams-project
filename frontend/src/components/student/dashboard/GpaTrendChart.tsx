@@ -181,3 +181,4 @@ export const GpaTrendChart: React.FC<GpaTrendChartProps> = ({ courses, currentGp
 };
 
 export default GpaTrendChart;
+

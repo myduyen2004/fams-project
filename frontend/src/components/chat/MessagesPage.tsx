@@ -35,7 +35,7 @@ import {
 import { getViewableFileUrl } from "../../services/utils/fileViewerUtils";
 import { Client } from "@stomp/stompjs";
 import { WS_URL } from "../../services/api/config";
-import { toast } from "react-hot-toast";
+import toast from "@utils/toast";
 import { ConfirmModal } from "../common/ConfirmModal";
 
 interface MessagesPageProps {
@@ -2815,3 +2815,4 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ role }) => {
 };
 
 export default MessagesPage;
+

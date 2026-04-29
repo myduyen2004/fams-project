@@ -1,26 +1,24 @@
-import React, { useEffect, useState, useMemo, Fragment } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { StudentLayout } from '../../layouts/StudentLayout';
 import { Card } from '../../components/common/Card';
 import {
-    Clock,
-    MapPin,
-    Download,
-    Calendar as CalendarIcon,
-    Loader2,
-    X,
-    User,
-    BookOpen,
     ChevronLeft,
     ChevronRight,
-    Lock,
     FileText,
-    Check,
-    ChevronDown
+    Loader2,
+    Calendar as CalendarIcon,
+    Download,
+    MapPin,
+    Clock,
+    Lock,
+    X,
+    BookOpen,
+    User
 } from 'lucide-react';
+import { CustomSelect } from '../../components/common/CustomSelect';
 import axios from 'axios';
-import { Listbox, Transition } from '@headlessui/react';
-import { toast } from 'react-hot-toast';
+import toast from "@utils/toast";
 import apiClient from '../../services/api/authService';
 import timetableService, { WeeklyTimetableDTO, TimetableSlotDTO } from '../../services/api/timetableService';
 
@@ -317,127 +315,58 @@ export const StudentSchedulePage: React.FC = () => {
             <div className="space-y-6">
                 <div className="flex flex-col gap-4">
                     <div>
-                        <div className="flex items-center gap-2 text-fpt-orange font-bold text-sm mb-1">
+                        <div className="flex items-center gap-2 text-fpt-orange font-medium text-sm mb-1">
                             <CalendarIcon size={16} /> Năm học {selectedYear}-{selectedYear + 1}
                         </div>
                         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Lịch học theo tuần</h1>
                     </div>
 
-                    <div className="flex items-center justify-between gap-4 p-2 rounded-xl">
-                        <div className="flex items-center gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full lg:w-3/4">
                             {/* Year Selector */}
-                            <div className="relative">
-                                <Listbox value={selectedYear} onChange={(val) => handleYearChange({ target: { value: val } } as any)}>
-                                    <div className="relative">
-                                        <Listbox.Button className="flex items-center gap-2 bg-orange-50 dark:bg-orange-900/20 px-3 py-2 rounded-lg border border-orange-100 dark:border-orange-800 text-fpt-orange font-bold text-sm transition-all hover:bg-orange-100 dark:hover:bg-orange-900/30">
-                                            <span className="text-gray-500 dark:text-gray-400 font-medium flex items-center gap-1 whitespace-nowrap">
-                                                Lọc:
-                                            </span>
-                                            <span>{selectedYear}</span>
-                                            <ChevronDown size={14} className="text-fpt-orange" />
-                                        </Listbox.Button>
-                                        <Transition
-                                            as={Fragment}
-                                            leave="transition ease-in duration-100"
-                                            leaveFrom="opacity-100"
-                                            leaveTo="opacity-0"
-                                        >
-                                            <Listbox.Options className="absolute z-30 mt-1 max-h-60 w-full overflow-auto rounded-xl bg-white dark:bg-zinc-800 py-1 text-sm shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm border border-gray-100 dark:border-zinc-700">
-                                                {YEARS.map((year) => (
-                                                    <Listbox.Option
-                                                        key={year}
-                                                        className={({ active }) =>
-                                                            `relative cursor-default select-none py-2 pl-10 pr-4 ${
-                                                                active ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange' : 'text-gray-900 dark:text-gray-200'
-                                                            }`
-                                                        }
-                                                        value={year}
-                                                    >
-                                                        {({ selected }) => (
-                                                            <>
-                                                                <span className={`block truncate ${selected ? 'font-bold' : 'font-normal'}`}>
-                                                                    {year}
-                                                                </span>
-                                                                {selected ? (
-                                                                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-fpt-orange">
-                                                                        <Check className="h-4 w-4" aria-hidden="true" />
-                                                                    </span>
-                                                                ) : null}
-                                                            </>
-                                                        )}
-                                                    </Listbox.Option>
-                                                ))}
-                                            </Listbox.Options>
-                                        </Transition>
-                                    </div>
-                                </Listbox>
-                            </div>
+                            <CustomSelect
+                                label="Năm học"
+                                value={selectedYear.toString()}
+                                onChange={(val) => handleYearChange({ target: { value: val } } as any)}
+                                options={YEARS.map(year => ({ label: year.toString(), value: year.toString() }))}
+                            />
 
-                            <div className="flex items-center gap-1">
-                                <button onClick={handlePrevWeek} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg text-fpt-orange transition-colors">
+                            {/* Week Selector */}
+                            <CustomSelect
+                                label="Tuần"
+                                value={getCurrentWeekValue()}
+                                onChange={(val) => handleWeekChange({ target: { value: val } } as any)}
+                                options={weeks.map(week => ({ label: week.label, value: week.value }))}
+                                className="md:col-span-1 lg:col-span-1"
+                            />
+
+                            <div className="flex items-end gap-2 h-full pb-1">
+                                <button
+                                    onClick={handlePrevWeek}
+                                    className="h-[52px] w-[52px] flex items-center justify-center rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-fpt-orange hover:border-fpt-orange/40 hover:shadow-lg transition-all active:scale-95"
+                                    title="Tuần trước"
+                                >
                                     <ChevronLeft size={20} />
                                 </button>
-                                
-                                {/* Week Selector */}
-                                <div className="relative min-w-[260px]">
-                                    <Listbox value={getCurrentWeekValue()} onChange={(val) => handleWeekChange({ target: { value: val } } as any)}>
-                                        <div className="relative">
-                                            <Listbox.Button className="flex items-center justify-between w-full gap-2 bg-white dark:bg-zinc-800 px-3 py-2 rounded-lg border border-fpt-orange/50 shadow-sm text-gray-700 dark:text-gray-200 font-medium text-sm transition-all hover:border-fpt-orange focus:ring-2 ring-fpt-orange/20">
-                                                <span className="truncate">{weeks.find(w => w.value === getCurrentWeekValue())?.label || 'Chọn tuần'}</span>
-                                                <ChevronDown size={14} className="text-gray-400" />
-                                            </Listbox.Button>
-                                            <Transition
-                                                as={Fragment}
-                                                leave="transition ease-in duration-100"
-                                                leaveFrom="opacity-100"
-                                                leaveTo="opacity-0"
-                                            >
-                                                <Listbox.Options className="absolute z-30 mt-1 max-h-60 w-full overflow-auto rounded-xl bg-white dark:bg-zinc-800 py-1 text-sm shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm border border-gray-100 dark:border-zinc-700">
-                                                    {weeks.map((week) => (
-                                                        <Listbox.Option
-                                                            key={week.value}
-                                                            className={({ active }) =>
-                                                                `relative cursor-default select-none py-2 pl-10 pr-4 ${
-                                                                    active ? 'bg-orange-50 dark:bg-orange-900/20 text-fpt-orange' : 'text-gray-900 dark:text-gray-200'
-                                                                }`
-                                                            }
-                                                            value={week.value}
-                                                        >
-                                                            {({ selected }) => (
-                                                                <>
-                                                                    <span className={`block truncate ${selected ? 'font-bold' : 'font-normal'}`}>
-                                                                        {week.label}
-                                                                    </span>
-                                                                    {selected ? (
-                                                                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-fpt-orange">
-                                                                            <Check className="h-4 w-4" aria-hidden="true" />
-                                                                        </span>
-                                                                    ) : null}
-                                                                </>
-                                                            )}
-                                                        </Listbox.Option>
-                                                    ))}
-                                                </Listbox.Options>
-                                            </Transition>
-                                        </div>
-                                    </Listbox>
-                                </div>
-
-                                <button onClick={handleNextWeek} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg text-fpt-orange transition-colors">
+                                <button
+                                    onClick={handleNextWeek}
+                                    className="h-[52px] w-[52px] flex items-center justify-center rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-fpt-orange hover:border-fpt-orange/40 hover:shadow-lg transition-all active:scale-95"
+                                    title="Tuần sau"
+                                >
                                     <ChevronRight size={20} />
                                 </button>
                             </div>
                         </div>
 
-                        <button
-                            onClick={handleExport}
-                            disabled={exporting}
-                            className={`flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white rounded-xl font-medium text-sm shadow-md shadow-orange-500/20 hover:bg-orange-600 transition-colors ${exporting ? 'opacity-70 cursor-not-allowed' : ''}`}
-                        >
-                            {exporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-                            <span>{exporting ? 'Đang xuất...' : 'Xuất file'}</span>
-                        </button>
-                    </div>
+                        <div className="flex items-end pb-1">
+                            <button
+                                onClick={handleExport}
+                                disabled={exporting}
+                                className={`flex h-[52px] items-center gap-2 px-8 bg-fpt-orange text-white rounded-2xl font-bold text-sm shadow-lg shadow-fpt-orange/20 hover:bg-orange-600 transition-all active:scale-95 ${exporting ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            >
+                                {exporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+                                <span>{exporting ? 'Đang xuất...' : 'Xuất file'}</span>
+                            </button>
+                        </div>
                 </div>
 
                 <Card className="min-w-full overflow-hidden border-none shadow-sm dark:shadow-none bg-white dark:bg-zinc-900">
@@ -753,3 +682,4 @@ export const StudentSchedulePage: React.FC = () => {
         </StudentLayout>
     );
 };
+

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Wifi, Signal, Trash2, Star, MapPin } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import apiClient from '../../services/api/authService';
+import { CustomSelect } from '../common/CustomSelect';
 
 // Types
 interface WiFiAccessPoint {
@@ -204,18 +205,17 @@ export const RoomAPAssignment: React.FC<Props> = ({ roomId }) => {
                                 <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1">
                                     Chọn Access Point
                                 </label>
-                                <select
-                                    value={selectedApId}
-                                    onChange={(e) => setSelectedApId(e.target.value ? Number(e.target.value) : '')}
-                                    className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-1 focus:ring-fpt-orange focus:border-fpt-orange"
-                                >
-                                    <option value="">-- Chọn AP --</option>
-                                    {unassignedAPs.map(ap => (
-                                        <option key={ap.id} value={ap.id}>
-                                            {ap.name} ({ap.bssid})
-                                        </option>
-                                    ))}
-                                </select>
+                                <CustomSelect
+                                    value={String(selectedApId)}
+                                    onChange={(val) => setSelectedApId(val ? Number(val) : '')}
+                                    options={[
+                                        { value: '', label: '-- Chọn AP --' },
+                                        ...unassignedAPs.map(ap => ({
+                                            value: String(ap.id),
+                                            label: `${ap.name} (${ap.bssid})`
+                                        }))
+                                    ]}
+                                />
                             </div>
                         ) : (
                             <div className="bg-white/50 dark:bg-zinc-800/50 p-2 rounded-lg border border-gray-100 dark:border-zinc-700">
@@ -385,3 +385,4 @@ export const RoomAPAssignment: React.FC<Props> = ({ roomId }) => {
         </div>
     );
 };
+

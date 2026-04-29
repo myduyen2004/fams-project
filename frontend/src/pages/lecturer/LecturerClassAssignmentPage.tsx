@@ -15,3 +15,4 @@ export const LecturerClassAssignmentPage: React.FC = () => {
 
     return null;
 };
+

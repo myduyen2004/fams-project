@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Wifi } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { Plus, Search, Wifi, Loader2 } from 'lucide-react';
+import toast from "@utils/toast";
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { StatusFilter, Pagination, SelectionActionBar } from '../../components/academic-staff';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
@@ -82,142 +82,134 @@ const WiFiApFormModal: React.FC<{
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl dark:bg-zinc-900">
-                <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-                    {mode === 'view' ? 'Chi tiết Access Point' : mode === 'edit' ? 'Chỉnh sửa Access Point' : 'Thêm Access Point mới'}
-                </h2>
-                {mode !== 'view' && (
-                    <p className="mb-4 text-sm text-gray-500 dark:text-zinc-400 italic">
-                        Những thông tin có <span className="text-red-500">*</span> là thông tin bắt buộc.
-                    </p>
-                )}
-                {mode === 'view' ? (
-                    <div className="space-y-3 py-1">
-                        {/* Status & Name Banner */}
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="p-3 rounded-xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800">
-                                <label className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">Tên Access Point</label>
-                                <h3 className="text-sm font-bold text-gray-900 dark:text-white mt-0.5 truncate">{editingAp?.name}</h3>
-                            </div>
-                            <div className="p-3 rounded-xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800">
-                                <label className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 block">Trạng thái</label>
-                                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold border ${
-                                    editingAp?.status === 'ACTIVE' 
-                                    ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900/30'
-                                    : 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-900/30'
-                                }`}>
-                                    <span className={`w-1.5 h-1.5 rounded-full ${editingAp?.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                                    {editingAp?.status === 'ACTIVE' ? 'Hoạt động' : 'Ngừng hoạt động'}
-                                </span>
-                            </div>
-                        </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="p-6 border-b border-gray-50 dark:border-zinc-800 flex items-center justify-between">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                        {mode === 'view' ? 'Chi tiết Access Point' : mode === 'edit' ? 'Chỉnh sửa Access Point' : 'Thêm Access Point mới'}
+                    </h2>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+                        <Plus className="w-6 h-6 rotate-45" />
+                    </button>
+                </div>
 
-                        {/* Network Details */}
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="p-3 rounded-xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800">
-                                <label className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">SSID (Tên WiFi)</label>
-                                <p className="text-sm font-medium text-gray-700 dark:text-zinc-300 mt-0.5 truncate">{editingAp?.ssid}</p>
-                            </div>
-                            <div className="p-3 rounded-xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800">
-                                <label className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">Địa chỉ MAC (BSSID)</label>
-                                <p className="text-sm font-mono text-gray-700 dark:text-zinc-300 mt-0.5 truncate">{editingAp?.bssid}</p>
-                            </div>
-                        </div>
+                <div className="p-6">
+                    {mode !== 'view' && (
+                        <p className="mb-6 text-sm text-gray-500 dark:text-zinc-400 italic">
+                            Những thông tin có <span className="text-red-500">*</span> là thông tin bắt buộc.
+                        </p>
+                    )}
 
-                        {/* Location & Capacity */}
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="p-3 rounded-xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800">
-                                <label className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">Vị trí lắp đặt</label>
-                                <p className="text-sm font-medium text-gray-700 dark:text-zinc-300 mt-0.5 truncate">{editingAp?.location || 'Chưa xác định'}</p>
+                    {mode === 'view' ? (
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Tên Access Point</label>
+                                    <p className="text-sm font-bold text-gray-900 dark:text-white">{editingAp?.name}</p>
+                                </div>
+                                <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Trạng thái</label>
+                                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold border ${editingAp?.status === 'ACTIVE'
+                                        ? 'bg-green-50 text-green-700 border-green-200'
+                                        : 'bg-red-50 text-red-700 border-red-200'
+                                        }`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${editingAp?.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                                        {editingAp?.status === 'ACTIVE' ? 'Hoạt động' : 'Ngừng hoạt động'}
+                                    </span>
+                                </div>
                             </div>
-                            <div className="p-3 rounded-xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800">
-                                <label className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">Số lượng phòng kết nối</label>
-                                <p className="text-sm font-medium text-gray-700 dark:text-zinc-300 mt-0.5 truncate">{editingAp?.roomCount || 0} phòng học</p>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">SSID (Tên WiFi)</label>
+                                    <p className="text-sm font-medium text-gray-700 dark:text-zinc-300 truncate">{editingAp?.ssid}</p>
+                                </div>
+                                <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">BSSID (MAC)</label>
+                                    <p className="text-sm font-mono font-medium text-gray-700 dark:text-zinc-300">{editingAp?.bssid}</p>
+                                </div>
+                            </div>
+
+                            <div className="p-4 rounded-2xl bg-gray-50 dark:bg-zinc-800/50 border border-gray-100 dark:border-zinc-800">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Vị trí lắp đặt</label>
+                                <p className="text-sm font-medium text-gray-700 dark:text-zinc-300">{editingAp?.location || 'Chưa xác định'}</p>
                             </div>
                         </div>
-                    </div>
-                ) : (
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
-                                    Tên Access Point <span className="text-red-500">*</span>
-                                </label>
+                    ) : (
+                        <form onSubmit={handleSubmit} className="space-y-5">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Tên Access Point <span className="text-red-500">*</span></label>
                                 <input
                                     type="text"
                                     value={form.name}
                                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                                     placeholder="VD: AP-BE-T3"
-                                    className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-fpt-orange focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                                    className="w-full h-[52px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 px-4 text-sm focus:outline-none focus:border-fpt-orange focus:ring-4 focus:ring-fpt-orange/10 transition-all dark:bg-zinc-800 dark:text-white"
                                 />
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
-                                    SSID <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={form.ssid}
-                                    onChange={(e) => setForm({ ...form, ssid: e.target.value })}
-                                    placeholder="VD: FPTU-WiFi"
-                                    className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-fpt-orange focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
-                                />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">SSID <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        value={form.ssid}
+                                        onChange={(e) => setForm({ ...form, ssid: e.target.value })}
+                                        placeholder="VD: FPTU-WiFi"
+                                        className="w-full h-[52px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 px-4 text-sm focus:outline-none focus:border-fpt-orange focus:ring-4 focus:ring-fpt-orange/10 transition-all dark:bg-zinc-800 dark:text-white"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">BSSID <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        value={form.bssid}
+                                        onChange={(e) => setForm({ ...form, bssid: e.target.value.toUpperCase() })}
+                                        placeholder="MAC Address"
+                                        className="w-full h-[52px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 px-4 text-sm font-mono focus:outline-none focus:border-fpt-orange focus:ring-4 focus:ring-fpt-orange/10 transition-all dark:bg-zinc-800 dark:text-white"
+                                    />
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
-                                    BSSID (MAC Address) <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={form.bssid}
-                                    onChange={(e) => setForm({ ...form, bssid: e.target.value.toUpperCase() })}
-                                    placeholder="VD: AC:23:3F:88:91:A2"
-                                    className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 text-sm font-mono focus:border-fpt-orange focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
-                                    Vị trí
-                                </label>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Vị trí lắp đặt</label>
                                 <input
                                     type="text"
                                     value={form.location}
                                     onChange={(e) => setForm({ ...form, location: e.target.value })}
-                                    placeholder="VD: Beta - Tầng 3, Hành lang T3, gần BE-301"
-                                    className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-fpt-orange focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                                    placeholder="VD: Beta - Tầng 3"
+                                    className="w-full h-[52px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 px-4 text-sm focus:outline-none focus:border-fpt-orange focus:ring-4 focus:ring-fpt-orange/10 transition-all dark:bg-zinc-800 dark:text-white"
                                 />
                             </div>
                         </form>
                     )}
+                </div>
 
-                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-zinc-800 mt-6">
+                <div className="p-6 bg-gray-50 dark:bg-zinc-800/50 flex justify-end gap-3">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="h-[52px] px-8 rounded-2xl text-sm font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-all active:scale-95"
+                    >
+                        {mode === 'view' ? 'Đóng' : 'Hủy'}
+                    </button>
+                    {mode === 'view' ? (
                         <button
                             type="button"
-                            onClick={onClose}
-                            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                            onClick={onEdit}
+                            className="h-[52px] px-8 rounded-2xl bg-fpt-orange text-white text-sm font-bold shadow-lg shadow-fpt-orange/20 hover:bg-orange-600 transition-all active:scale-95"
                         >
-                            {mode === 'view' ? 'Đóng' : 'Hủy'}
+                            Chỉnh sửa
                         </button>
-                        {mode === 'view' && (
-                            <button
-                                type="button"
-                                onClick={onEdit}
-                                className="rounded-lg bg-fpt-orange px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
-                            >
-                                Cập nhật
-                            </button>
-                        )}
-                        {mode !== 'view' && (
-                            <button
-                                type="button"
-                                onClick={handleSubmit}
-                                disabled={saving}
-                                className="rounded-lg bg-fpt-orange px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-50"
-                            >
-                                {saving ? 'Đang lưu...' : mode === 'edit' ? 'Cập nhật' : 'Tạo mới'}
-                            </button>
-                        )}
-                    </div>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={handleSubmit}
+                            disabled={saving}
+                            className="h-[52px] px-8 rounded-2xl bg-fpt-orange text-white text-sm font-bold shadow-lg shadow-fpt-orange/20 hover:bg-orange-600 disabled:opacity-50 transition-all active:scale-95"
+                        >
+                            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : (mode === 'edit' ? 'Lưu thay đổi' : 'Tạo mới')}
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -257,8 +249,7 @@ export const WiFiAPManagement: React.FC = () => {
         try {
             const response = await apiClient.get('/wifi-access-points');
             let data = (response.data as WiFiAccessPoint[]).sort((a, b) => a.id - b.id);
-            
-            // Client-side filtering
+
             if (searchTerm) {
                 const term = searchTerm.toLowerCase();
                 data = data.filter(ap =>
@@ -268,13 +259,9 @@ export const WiFiAPManagement: React.FC = () => {
                     (ap.location && ap.location.toLowerCase().includes(term))
                 );
             }
-            
-            // Apply status filter
+
             data = data.filter(ap => ap.status === status);
-            
             setTotalElements(data.length);
-            
-            // Pagination
             const start = page * 10;
             setAccessPoints(data.slice(start, start + 10));
         } catch (error) {
@@ -299,44 +286,26 @@ export const WiFiAPManagement: React.FC = () => {
         setIsFormOpen(true);
     };
 
-
     const handleSelectOne = (id: number) => {
-        if (selectedIds.includes(id)) {
-            setSelectedIds(selectedIds.filter(itemId => itemId !== id));
-        } else {
-            setSelectedIds([...selectedIds, id]);
-        }
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
     };
-
 
     const handleBulkDelete = () => {
         if (selectedIds.length === 0) return;
-
-        const selectedAps = accessPoints.filter(ap => selectedIds.includes(ap.id));
-        const apsWithRooms = selectedAps.filter(ap => (ap.roomCount || 0) > 0);
-
-        let title = 'Xóa Access Point';
-        let message = `Bạn có chắc chắn muốn xóa ${selectedIds.length} Access Point đã chọn?`;
-
-        if (apsWithRooms.length > 0) {
-            title = 'Xác nhận xóa Access Point có liên kết';
-            message = `${apsWithRooms.length} Access Point đang được gán vào phòng học, bạn có chắc chắn muốn xóa không?`;
-        }
-
         setConfirmModal({
             isOpen: true,
-            title: title,
-            message: message,
+            title: 'Xác nhận xóa',
+            message: `Bạn có chắc chắn muốn xóa ${selectedIds.length} Access Point đã chọn?`,
             type: 'danger',
             confirmLabel: 'Xóa',
             onConfirm: async () => {
                 try {
                     await Promise.all(selectedIds.map(id => apiClient.delete(`/wifi-access-points/${id}`)));
-                    toast.success('Xóa các Access Point thành công');
+                    toast.success('Xóa thành công');
                     setSelectedIds([]);
                     fetchData();
                     closeConfirmModal();
-                } catch (error: any) {
+                } catch {
                     toast.error('Có lỗi xảy ra khi xóa');
                     closeConfirmModal();
                 }
@@ -346,178 +315,158 @@ export const WiFiAPManagement: React.FC = () => {
 
     const handleBulkStatusChange = async (newStatus: 'ACTIVE' | 'INACTIVE') => {
         if (selectedIds.length === 0) return;
-
         try {
-            await apiClient.patch('/wifi-access-points/bulk-status', {
-                ids: selectedIds,
-                status: newStatus
-            });
-            toast.success(newStatus === 'ACTIVE' ? 'Mở hoạt động các Access Point thành công' : 'Ngừng hoạt động các Access Point thành công');
+            await apiClient.patch('/wifi-access-points/bulk-status', { ids: selectedIds, status: newStatus });
+            toast.success('Cập nhật trạng thái thành công');
             setSelectedIds([]);
             fetchData();
-        } catch (error: any) {
-            toast.error('Có lỗi xảy ra khi cập nhật trạng thái');
-            console.error('Status update failed:', error);
+        } catch {
+            toast.error('Có lỗi xảy ra khi cập nhật');
         }
     };
 
     return (
         <AcademicStaffLayout pageTitle="Quản lý hạ tầng mạng">
-            <div className="space-y-6">
-                {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div>
-                        <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
-                            Quản lý các WiFi Access Point trong hệ thống
-                        </p>
+            <div className="space-y-6 pb-8">
+
+                {/* Header & Filter Card */}
+                <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-zinc-800 p-8 shadow-sm animate-in fade-in duration-500">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
+                        <div>
+                            <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Quản lý Access Point</h1>
+                            <p className="text-sm text-gray-500 dark:text-zinc-400 mt-1 font-medium">Quản lý danh sách các WiFi Access Point trong hệ thống</p>
+                        </div>
+                        <button
+                            onClick={() => { setEditingAp(null); setModalMode('create'); setIsFormOpen(true); }}
+                            className="flex h-[52px] items-center gap-2 rounded-2xl bg-fpt-orange px-8 text-sm font-bold text-white hover:bg-orange-600 hover:shadow-lg hover:shadow-fpt-orange/20 transition-all whitespace-nowrap active:scale-95"
+                        >
+                            <Plus className="h-[20px] w-[20px]" strokeWidth={3} />
+                            Thêm AP mới
+                        </button>
                     </div>
-                    <button
-                        onClick={() => { setEditingAp(null); setModalMode('create'); setIsFormOpen(true); }}
-                        className="flex items-center gap-2 rounded-lg bg-fpt-orange px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
-                    >
-                        <Plus className="h-4 w-4" />
-                        Thêm AP mới
-                    </button>
-                </div>
 
-                {/* Section Title */}
-                <div className="flex items-center gap-2 text-fpt-orange">
-                    <Wifi className="h-5 w-5" />
-                    <h2 className="text-lg font-semibold">DANH SÁCH ACCESS-POINT</h2>
-                </div>
-
-                <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-                    <div className="mb-4 flex flex-col gap-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                            <div className="relative flex-1 max-w-md">
-                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+                        <div className="flex-1 md:max-w-[320px]">
+                            <label className="text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-2.5 ml-1 block">Tìm kiếm</label>
+                            <div className="relative group">
+                                <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 group-focus-within:text-fpt-orange transition-colors" />
                                 <input
                                     type="text"
-                                    placeholder="Tìm kiếm theo tên, MAC, vị trí..."
+                                    placeholder="Tìm theo tên, MAC, vị trí..."
                                     value={searchTerm}
                                     onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }}
-                                    className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-fpt-orange focus:outline-none focus:ring-1 focus:ring-fpt-orange dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                                    className="w-full h-[52px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 pl-12 pr-4 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 text-gray-900 dark:text-white shadow-sm"
                                 />
                             </div>
-                            <StatusFilter value={status} onChange={(v) => { setStatus(v); setPage(0); }} isOpen={isFilterOpen} onToggle={() => setIsFilterOpen(prev => !prev)} />
                         </div>
-
-                        <SelectionActionBar
-                            selectedCount={selectedIds.length}
-                            showDeactivate={showDeactivate}
-                            onDelete={handleBulkDelete}
-                            onStatusChange={handleBulkStatusChange}
-                            canDelete={true}
-                            itemLabel="Access Point"
-                        />
+                        <StatusFilter value={status} onChange={(v) => { setStatus(v); setPage(0); }} isOpen={isFilterOpen} onToggle={() => setIsFilterOpen(prev => !prev)} />
+                    </div>
+                </div>
+                <SelectionActionBar
+                    selectedCount={selectedIds.length}
+                    showDeactivate={showDeactivate}
+                    onDelete={handleBulkDelete}
+                    onStatusChange={handleBulkStatusChange}
+                    onUpdate={() => {
+                        const selectedAp = accessPoints.find(ap => ap.id === selectedIds[0]);
+                        if (selectedAp) handleView(selectedAp);
+                    }}
+                    canDelete={true}
+                    itemLabel="Access Point"
+                />
+                {/* Table Card */}
+                <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-zinc-800 shadow-xl overflow-hidden animate-in fade-in duration-700">
+                    <div className="overflow-x-auto">
+                        <table className="w-full border-collapse">
+                            <thead>
+                                <tr className="bg-fpt-orange text-white">
+                                    <th className="px-6 py-5 w-16 text-center rounded-tl-2xl">
+                                        <input
+                                            type="checkbox"
+                                            className="w-5 h-5 rounded-lg border-white/30 bg-transparent text-white focus:ring-0 cursor-pointer accent-white transition-all"
+                                            checked={accessPoints.length > 0 && selectedIds.length === accessPoints.length}
+                                            onChange={() => setSelectedIds(selectedIds.length === accessPoints.length ? [] : accessPoints.map(ap => ap.id))}
+                                        />
+                                    </th>
+                                    <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-widest">Tên & SSID</th>
+                                    <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-widest">BSSID & IP</th>
+                                    <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-widest">Vị trí</th>
+                                    <th className="px-6 py-5 text-center text-[11px] font-black uppercase tracking-widest">Phòng</th>
+                                    <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-widest rounded-tr-2xl">Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50 dark:divide-zinc-800">
+                                {loading && accessPoints.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6} className="py-20 text-center">
+                                            <Loader2 className="h-10 w-10 animate-spin text-fpt-orange mx-auto mb-3" />
+                                            <p className="text-sm font-bold text-gray-500 uppercase tracking-widest">Đang tải dữ liệu...</p>
+                                        </td>
+                                    </tr>
+                                ) : accessPoints.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6} className="py-20 text-center">
+                                            <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Không tìm thấy Access Point nào</p>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    accessPoints.map((ap) => (
+                                        <tr
+                                            key={ap.id}
+                                            onClick={() => handleView(ap)}
+                                            className={`group hover:bg-orange-50/30 dark:hover:bg-orange-900/5 transition-all cursor-pointer border-l-4 border-transparent ${selectedIds.includes(ap.id) ? 'bg-orange-50/50 dark:bg-orange-900/10 border-l-fpt-orange' : 'hover:border-l-fpt-orange/30'}`}
+                                        >
+                                            <td className="px-6 py-5 text-center" onClick={(e) => e.stopPropagation()}>
+                                                <input
+                                                    type="checkbox"
+                                                    className="w-5 h-5 rounded-lg border-gray-300 text-fpt-orange focus:ring-fpt-orange dark:border-zinc-700 cursor-pointer accent-fpt-orange transition-all"
+                                                    checked={selectedIds.includes(ap.id)}
+                                                    onChange={() => handleSelectOne(ap.id)}
+                                                />
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <div className="font-black text-gray-900 dark:text-white text-sm group-hover:text-fpt-orange transition-colors">{ap.name}</div>
+                                                <div className="flex items-center gap-1.5 text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest mt-1.5">
+                                                    <Wifi className="h-3 w-3" />
+                                                    <span>{ap.ssid}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <div className="font-mono text-xs font-bold text-gray-700 dark:text-zinc-300 bg-gray-100 dark:bg-zinc-800 px-2 py-1 rounded-lg w-fit">{ap.bssid}</div>
+                                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1.5 ml-1">192.168.10.101</div>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <div className="text-xs font-bold text-gray-600 dark:text-zinc-400 max-w-[200px] leading-relaxed italic">
+                                                    {ap.location || '—'}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-5 text-center">
+                                                <span className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-xs font-black text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30">
+                                                    {ap.roomCount || 0}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold border ${ap.status === 'ACTIVE'
+                                                    ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-900/30'
+                                                    : 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-900/30'
+                                                    }`}>
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${ap.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                                                    {ap.status === 'ACTIVE' ? 'Hoạt động' : 'Ngừng hoạt động'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
                     </div>
 
-                    {/* Table Header */}
-                    <div className="grid grid-cols-[40px_1.5fr_1.5fr_2fr_100px_140px] items-center gap-4 py-4 px-2 bg-fpt-orange text-white rounded-t-lg shadow-sm">
-                        <div className="flex items-center justify-center">
-                            <input
-                                type="checkbox"
-                                className="w-4 h-4 rounded border-white/50 bg-white/20 text-fpt-orange focus:ring-white/50 cursor-pointer accent-white"
-                                checked={accessPoints.length > 0 && selectedIds.length === accessPoints.length}
-                                onChange={() => {
-                                    if (selectedIds.length === accessPoints.length) {
-                                        setSelectedIds([]);
-                                    } else {
-                                        setSelectedIds(accessPoints.map(ap => ap.id));
-                                    }
-                                }}
-                            />
-                        </div>
-                        <div className="text-xs font-bold uppercase tracking-wider">Tên & SSID</div>
-                        <div className="text-xs font-bold uppercase tracking-wider">BSSID & IP</div>
-                        <div className="text-xs font-bold uppercase tracking-wider">Vị trí</div>
-                        <div className="text-xs font-bold uppercase tracking-wider text-center">Phòng học</div>
-                        <div className="text-xs font-bold uppercase tracking-wider">Trạng thái</div>
-                    </div>
-
-                    {/* List View - Fixed Grid Alignment */}
-                    <div className="flex flex-col min-h-[400px]">
-                        <div className="flex-1 divide-y divide-gray-100 dark:divide-zinc-800">
-                            {loading && accessPoints.length === 0 ? (
-                                <div className="py-10 text-center text-gray-400">
-                                    <div className="flex justify-center mb-2">
-                                        <svg className="h-8 w-8 animate-spin text-fpt-orange" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                    </div>
-                                    Đang tải dữ liệu...
-                                </div>
-                            ) : accessPoints.length === 0 ? (
-                                <div className="py-10 text-center text-gray-400">
-                                    Không có Access Point nào
-                                </div>
-                            ) : (
-                                accessPoints.map((ap) => (
-                                    <div
-                                        key={ap.id}
-                                        onClick={() => handleView(ap)}
-                                        className={`grid grid-cols-[40px_1.5fr_1.5fr_2fr_100px_140px] items-center gap-4 py-4 px-2 cursor-pointer transition-colors ${selectedIds.includes(ap.id) ? 'bg-orange-50 dark:bg-orange-900/20' : 'hover:bg-gray-50 dark:hover:bg-zinc-800/50'}`}
-                                    >
-                                        {/* Checkbox */}
-                                        <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                                            <input
-                                                type="checkbox"
-                                                className="w-4 h-4 rounded border-gray-300 text-fpt-orange focus:ring-fpt-orange dark:border-zinc-600 dark:bg-zinc-700 cursor-pointer"
-                                                checked={selectedIds.includes(ap.id)}
-                                                onChange={() => handleSelectOne(ap.id)}
-                                            />
-                                        </div>
-
-                                        {/* Name & SSID */}
-                                        <div className="min-w-0">
-                                            <div className="font-semibold text-gray-900 dark:text-white truncate">{ap.name}</div>
-                                            <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-zinc-400">
-                                                <Wifi className="h-3 w-3 shrink-0" />
-                                                <span className="truncate">{ap.ssid}</span>
-                                            </div>
-                                        </div>
-
-                                        {/* BSSID & IP */}
-                                        <div className="min-w-0">
-                                            <div className="font-mono text-sm text-gray-700 dark:text-zinc-300 truncate">{ap.bssid}</div>
-                                            <div className="text-xs text-gray-400">192.168.10.101</div>
-                                        </div>
-
-                                        {/* Location */}
-                                        <div className="min-w-0">
-                                            <div className="text-sm text-gray-700 dark:text-zinc-300 truncate">{ap.location || 'Chưa xác định'}</div>
-                                        </div>
-
-                                        {/* Room Count Badge */}
-                                        <div className="text-center">
-                                            <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30">
-                                                {ap.roomCount || 0} phòng
-                                            </span>
-                                        </div>
-
-                                        {/* Status */}
-                                        <div className="flex justify-start">
-                                            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium border ${
-                                                ap.status === 'ACTIVE' 
-                                                ? 'bg-green-50 text-green-700 border-green-100 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900/30'
-                                                : 'bg-red-50 text-red-700 border-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-900/30'
-                                            }`}>
-                                                <span className={`w-1.5 h-1.5 rounded-full ${ap.status === 'ACTIVE' ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                                                {ap.status === 'ACTIVE' ? 'Hoạt động' : 'Ngừng hoạt động'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-
+                    <div className="px-8 py-8 border-t border-gray-50 dark:border-zinc-800/50 bg-gray-50/30">
                         <Pagination page={page} totalElements={totalElements} pageSize={10} onPageChange={setPage} itemLabel="Access Point" />
                     </div>
                 </div>
             </div>
 
-            {/* Form Modal */}
             <WiFiApFormModal
                 isOpen={isFormOpen}
                 onClose={() => setIsFormOpen(false)}
@@ -527,7 +476,6 @@ export const WiFiAPManagement: React.FC = () => {
                 mode={modalMode}
             />
 
-            {/* Confirm Modal */}
             <ConfirmModal
                 isOpen={confirmModal.isOpen}
                 onClose={closeConfirmModal}
@@ -540,3 +488,4 @@ export const WiFiAPManagement: React.FC = () => {
         </AcademicStaffLayout>
     );
 };
+

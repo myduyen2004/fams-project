@@ -9,7 +9,7 @@ import { Pagination } from '../../components/common/Pagination';
 import {
     ArrowLeft, Clock, ExternalLink, Search, Loader2, BookOpen, Lock, X, Download, MessageSquare, ShieldAlert, SlidersHorizontal
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 
 const PAGE_SIZE = 30;
 const BATCH_CHECK_CONCURRENCY = 3;
@@ -1231,3 +1231,4 @@ export const LecturerAssignmentDetailPage: React.FC = () => {
 };
 
 export default LecturerAssignmentDetailPage;
+

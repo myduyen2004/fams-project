@@ -44,6 +44,7 @@ public class StagingImportService {
     private final JdbcTemplate jdbcTemplate;
     private final SemesterRepository semesterRepository;
     private final AlertService alertService;
+    private final SystemLogService systemLogService;
 
     private static final int MAX_SAMPLE_ERRORS = 100;
     private static final int BATCH_SIZE = 1000;
@@ -94,7 +95,7 @@ public class StagingImportService {
 
             log.info("Fast preview class sections: {} rows in {}ms", rowsCopied, duration);
 
-            // --- ADDED: High Error Alert ---
+            // --- High Error Alert ---
             if ((int) validationResult.get("errorCount") > 50) {
                 alertService.createAlert(
                         "Lỗi import lớp học phần",
@@ -173,15 +174,23 @@ public class StagingImportService {
 
             log.info("Import class sections completed: {} created, {} failed in {}ms", created, failed, duration);
 
-            // --- ADDED: Bulk Import Alert ---
-            if (created > 20) {
+            // Log to system logs
+            systemLogService.logInfo(
+                    "Import lớp học phần",
+                    String.format("Xử lý import lớp học phần cho học kỳ %s: %d thành công, %d thất bại.",
+                            semester.getCode(), created, failed),
+                    "BulkImport"
+            );
+
+            // --- Alert only if there are failures ---
+            if (failed > 0) {
                 alertService.createAlert(
-                        "Import lớp học phần số lượng lớn",
-                        String.format("Đã tạo thành công %d lớp học phần mới trong học kỳ %s.",
-                                created, semester.getCode()),
-                        Alert.AlertLevel.INFO,
+                        "Lỗi import lớp học phần",
+                        String.format("Quá trình import lớp học phần cho học kỳ %s có %d dòng lỗi không thể xử lý.",
+                                semester.getCode(), failed),
+                        Alert.AlertLevel.WARNING,
                         Alert.AlertType.SYSTEM,
-                        null // System alert
+                        null
                 );
             }
 
@@ -378,15 +387,23 @@ public class StagingImportService {
 
             log.info("Import enrollments completed: {} created, {} failed in {}ms", created, failed, duration);
 
-            // --- ADDED: Bulk Import Alert ---
-            if (created > 100) {
+            // Log to system logs
+            systemLogService.logInfo(
+                    "Import danh sách đăng ký",
+                    String.format("Xử lý import danh sách đăng ký cho học kỳ %s: %d thành công, %d thất bại.",
+                            semester.getCode(), created, failed),
+                    "BulkImport"
+            );
+
+            // --- Alert only if there are failures ---
+            if (failed > 0) {
                 alertService.createAlert(
-                        "Import danh sách đăng ký số lượng lớn",
-                        String.format("Đã thêm thành công %d sinh viên vào các lớp trong học kỳ %s.",
-                                created, semester.getCode()),
-                        Alert.AlertLevel.INFO,
+                        "Lỗi import danh sách đăng ký",
+                        String.format("Quá trình import danh sách đăng ký cho học kỳ %s có %d dòng lỗi không được xử lý.",
+                                semester.getCode(), failed),
+                        Alert.AlertLevel.WARNING,
                         Alert.AlertType.SYSTEM,
-                        null // System alert
+                        null
                 );
             }
 

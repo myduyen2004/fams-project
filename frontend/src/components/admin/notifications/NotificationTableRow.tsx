@@ -146,3 +146,4 @@ export const NotificationTableRow: React.FC<NotificationTableRowProps> = React.m
 });
 
 NotificationTableRow.displayName = 'NotificationTableRow';
+

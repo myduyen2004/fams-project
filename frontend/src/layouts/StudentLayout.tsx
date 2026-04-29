@@ -37,3 +37,4 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ children, pageTitl
         </div>
     );
 };
+

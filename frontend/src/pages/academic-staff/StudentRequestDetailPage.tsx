@@ -14,7 +14,7 @@ import {
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { academicRequestService, AcademicRequest } from '../../services/api/academicRequestService';
 import dayjs from 'dayjs';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 
 export const StudentRequestDetailPage = () => {
     const { id } = useParams<{ id: string }>();
@@ -464,3 +464,4 @@ export const StudentRequestDetailPage = () => {
         </AcademicStaffLayout>
     );
 };
+

@@ -104,3 +104,4 @@ export const DARK_MODE = {
 
 // Export for easy import
 export default COLORS;
+

@@ -10,7 +10,7 @@ import { ViewStudentModal } from '../../components/academic-staff/students/Stude
 import attendanceService, { ClassAttendanceReportResponse } from '../../services/api/attendanceService';
 
 import { Users, ArrowLeft, Mail, Phone, BarChart3 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 
 export const AcademicStaffClassDetailPage: React.FC = () => {
     const { className } = useParams<{ className: string }>();
@@ -201,7 +201,8 @@ export const AcademicStaffClassDetailPage: React.FC = () => {
                             <h4 className="text-xl font-bold text-gray-900 dark:text-white">Danh sách sinh viên</h4>
                             <p className="text-xs text-gray-500 font-medium mt-1">Tổng số {detail?.enrollments.length || 0} sinh viên chính thức</p>
                         </div>
-                        <div className="relative w-full sm:w-72">
+                        <div className="relative w-full sm:w-[320px]">
+                            <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                             <input
                                 type="text"
                                 value={searchQuery}
@@ -210,23 +211,22 @@ export const AcademicStaffClassDetailPage: React.FC = () => {
                                     setPagination(p => ({ ...p, page: 0 }));
                                 }}
                                 placeholder="Tìm sinh viên..."
-                                className="w-full pl-10 pr-4 py-2 bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-xl text-xs font-medium transition-all shadow-sm outline-none focus:border-fpt-orange/50"
+                                className="w-full h-[52px] pl-12 pr-4 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm font-medium transition-all shadow-sm outline-none focus:border-fpt-orange focus:ring-4 focus:ring-fpt-orange/10 hover:border-fpt-orange/40"
                             />
-                            <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                         </div>
                     </div>
 
-                    <div className="bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden">
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden animate-in fade-in duration-700">
                         <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead>
                                     <tr className="bg-fpt-orange text-white">
-                                        <th className="px-4 py-3 text-center text-[11px] font-bold uppercase tracking-widest w-16">STT</th>
-                                        <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-widest">Sinh viên</th>
-                                        <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-widest">Liên hệ</th>
-                                        <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-widest">Chuyên ngành</th>
-                                        <th className="px-4 py-3 text-center text-[11px] font-bold uppercase tracking-widest w-24">Vắng (%)</th>
-                                        <th className="px-4 py-3 text-center text-[11px] font-bold uppercase tracking-widest w-32">Trạng thái</th>
+                                        <th className="px-6 py-5 text-center text-[11px] font-bold uppercase tracking-widest w-16">STT</th>
+                                        <th className="px-6 py-5 text-left text-[11px] font-bold uppercase tracking-widest">Sinh viên</th>
+                                        <th className="px-6 py-5 text-left text-[11px] font-bold uppercase tracking-widest">Liên hệ</th>
+                                        <th className="px-6 py-5 text-left text-[11px] font-bold uppercase tracking-widest">Chuyên ngành</th>
+                                        <th className="px-6 py-5 text-center text-[11px] font-bold uppercase tracking-widest w-24">Vắng (%)</th>
+                                        <th className="px-6 py-5 text-center text-[11px] font-bold uppercase tracking-widest w-32">Trạng thái</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50 dark:divide-zinc-800/50">
@@ -243,12 +243,12 @@ export const AcademicStaffClassDetailPage: React.FC = () => {
                                                 <tr key={student.studentCode}
                                                     onClick={() => handleViewStudentDetail(student.studentCode)}
                                                     className="hover:bg-gray-50/80 dark:hover:bg-zinc-800/40 transition-colors cursor-pointer group">
-                                                    <td className="px-4 py-3 text-center text-sm text-gray-500 dark:text-zinc-400 font-medium font-mono">
+                                                    <td className="px-4 py-5 text-center text-sm text-gray-500 dark:text-zinc-400 font-medium font-mono">
                                                         {(pagination.page * pagination.size + index + 1).toString().padStart(2, '0')}
                                                     </td>
-                                                    <td className="px-4 py-3">
+                                                    <td className="px-4 py-5">
                                                         <div className="flex items-center gap-2.5">
-                                                            <div className="w-8 h-8 rounded-full border border-orange-100 dark:border-orange-900/30 bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-fpt-orange font-bold text-xs uppercase shadow-sm">
+                                                            <div className="w-10 h-10 rounded-full border border-orange-100 dark:border-orange-900/30 bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-fpt-orange font-bold text-xs uppercase shadow-sm">
                                                                 {student.avatar ? (
                                                                     <img
                                                                         src={getViewableFileUrl(student.avatar)}
@@ -265,24 +265,24 @@ export const AcademicStaffClassDetailPage: React.FC = () => {
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-3 text-[13px] text-gray-600 dark:text-gray-400">
+                                                    <td className="px-4 py-5 text-[13px] text-gray-600 dark:text-gray-400">
                                                         <div className="flex flex-col gap-0.5">
-                                                            <div className="flex items-center gap-1.5 font-medium">
+                                                            <div className="flex items-center gap-1.5 font-bold text-gray-800 dark:text-zinc-300">
                                                                 <Mail size={12} className="text-gray-400" />
                                                                 <span>{maskValue(student.email, 4)}</span>
                                                             </div>
-                                                            <div className="flex items-center gap-1.5">
+                                                            <div className="flex items-center gap-1.5 text-xs text-gray-400">
                                                                 <Phone size={12} className="text-gray-400" />
                                                                 <span>{maskValue(student.phone, 3)}</span>
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-3 text-[13px] text-gray-600 dark:text-gray-400">
+                                                    <td className="px-4 py-5 text-[13px] text-gray-600 dark:text-gray-400">
                                                         <div className="flex flex-col">
-                                                            <div className="font-bold text-gray-800 dark:text-zinc-300">{student.majorName}</div>
+                                                            <div className="font-bold text-gray-800 dark:text-zinc-300 uppercase tracking-tight">{student.majorName}</div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-3 text-center">
+                                                    <td className="px-4 py-5 text-center">
                                                         <span className={`text-sm font-bold font-mono ${
                                                             absentPercentage >= 20 
                                                                 ? 'text-red-500' 
@@ -293,7 +293,7 @@ export const AcademicStaffClassDetailPage: React.FC = () => {
                                                             {absentPercentage.toFixed(1)}%
                                                         </span>
                                                     </td>
-                                                    <td className="px-4 py-3 text-center">
+                                                    <td className="px-4 py-5 text-center">
                                                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black tracking-widest uppercase whitespace-nowrap ${student.status === 'ENROLLED'
                                                                 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30'
                                                                 : 'bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-400 border border-gray-200 dark:border-zinc-700'
@@ -375,3 +375,4 @@ export const AcademicStaffClassDetailPage: React.FC = () => {
         </AcademicStaffLayout>
     );
 };
+

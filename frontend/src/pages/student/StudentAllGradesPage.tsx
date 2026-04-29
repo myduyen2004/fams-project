@@ -354,3 +354,4 @@ export const StudentAllGradesPage: React.FC = () => {
 };
 
 export default StudentAllGradesPage;
+

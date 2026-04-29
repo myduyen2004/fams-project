@@ -4,7 +4,7 @@ import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { ArrowLeft, Users, BookOpen, Download } from 'lucide-react';
 import attendanceService, { ClassAttendanceReportResponse } from '../../services/api/attendanceService';
-import { toast } from 'react-hot-toast';
+import toast from "@utils/toast";
 import { ViewStudentModal } from '../../components/academic-staff/students/StudentModals';
 import { studentGradeService } from '../../services/api/studentGradeService';
 import { StudentResponse } from '../../services/api/academicStaffService';
@@ -328,3 +328,4 @@ export const ClassAttendanceReportPage: React.FC = () => {
         </Layout>
     );
 };
+

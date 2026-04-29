@@ -185,3 +185,4 @@ export const SemesterListTemplate: React.FC<SemesterListTemplateProps> = ({ Layo
         </Layout>
     );
 };
+

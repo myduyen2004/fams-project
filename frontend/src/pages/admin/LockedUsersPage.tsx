@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { userService, UserResponse } from '../../services/api/userService';
 import { ViewUserModal, EditUserModal } from '../../components/admin/users/UserModals';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { useNavigate } from 'react-router-dom';
 import { Pagination } from '../../components/common/Pagination';
 import { usePagination } from '../../hooks/usePagination';
@@ -180,7 +180,7 @@ export const LockedUsersPage: React.FC = () => {
             <input
               type="text"
               placeholder="Tìm kiếm tài khoản bị khóa..."
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-full text-sm outline-none focus:ring-2 focus:ring-fpt-orange/20"
+              className="w-full pl-10 pr-4 h-[52px] bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 hover:shadow-lg hover:shadow-fpt-orange/5 text-gray-900 dark:text-white"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -188,16 +188,29 @@ export const LockedUsersPage: React.FC = () => {
         </div>
 
         {selectedUsers.length > 0 && (
-          <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/20 rounded-lg flex items-center justify-between animate-in fade-in slide-in-from-top-2">
-            <span className="text-sm font-medium text-green-600">Đã chọn {selectedUsers.length} tài khoản</span>
-            <button
-              onClick={handleBulkUnlock}
-              disabled={isUnlocking}
-              className="px-4 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
-            >
-              {isUnlocking && <Loader2 size={14} className="animate-spin" />}
-              Mở khóa hàng loạt
-            </button>
+          <div className="mb-6 p-3 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/30 rounded-2xl flex items-center justify-between animate-in slide-in-from-top-4 duration-300 shadow-sm">
+            <div className="flex items-center gap-3 ml-2">
+                <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center text-red-600">
+                    <Unlock size={16} />
+                </div>
+                <span className="text-sm font-bold text-red-700 dark:text-red-400">Đã chọn {selectedUsers.length} tài khoản</span>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setSelectedUsers([])}
+                className="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+              >
+                Hủy chọn
+              </button>
+              <button
+                onClick={handleBulkUnlock}
+                disabled={isUnlocking}
+                className="h-[44px] px-8 text-sm bg-green-600 text-white rounded-2xl font-bold hover:bg-green-700 transition-all shadow-lg shadow-green-600/20 flex items-center gap-2 disabled:opacity-50 active:scale-95"
+              >
+                {isUnlocking ? <Loader2 size={16} className="animate-spin" /> : <Unlock size={16} />}
+                <span>Mở khóa ngay</span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -324,3 +337,4 @@ export const LockedUsersPage: React.FC = () => {
     </AdminLayout>
   );
 };
+

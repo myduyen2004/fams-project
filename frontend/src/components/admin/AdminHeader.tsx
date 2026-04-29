@@ -126,7 +126,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
   };
 
   return (
-    <header className="h-16 bg-white dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-800 flex items-center justify-between px-6">
+    <header className="relative z-[40] h-16 bg-white dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-800 flex items-center justify-between px-6">
       {/* Page Title */}
       <div>
         <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -254,3 +254,4 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title }) => {
     </header>
   );
 };
+

@@ -39,3 +39,4 @@ export const AcademicStaffLayout: React.FC<AcademicStaffLayoutProps> = ({ childr
     </div>
   );
 };
+

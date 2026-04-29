@@ -4,7 +4,7 @@ import { AdminLayout } from '../../components/admin/AdminLayout';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { newsService } from '../../services/api/newsService';
 import { NewsItem, NewsStatus } from '../../types/news';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { Calendar, Send, Edit3, Tag } from 'lucide-react';
 
 export const NewsDetailPage = () => {
@@ -218,3 +218,4 @@ export const NewsDetailPage = () => {
 };
 
 export default NewsDetailPage;
+

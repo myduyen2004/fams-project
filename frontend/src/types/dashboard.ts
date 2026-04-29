@@ -25,6 +25,7 @@ export interface Alert {
     level: string;
     isResolved: boolean;
     timestamp: string;
+    type?: string;
 }
 
 export interface AppNotification {
@@ -113,3 +114,4 @@ export interface AcademicStaffDashboardResponse {
         absencePercentage: number;
     }[];
 }
+

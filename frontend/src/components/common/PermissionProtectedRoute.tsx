@@ -91,3 +91,4 @@ export const PermissionProtectedRoute: React.FC<PermissionProtectedRouteProps> =
 
   return <>{children}</>;
 };
+

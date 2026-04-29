@@ -1,17 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    Plus, Download, Edit2, Trash2, ChevronLeft,
-    Info, CheckCircle2, AlertCircle, Loader2, Upload, BookOpen
+    Plus, Edit2, Trash2, ChevronLeft,
+    Info, CheckCircle2, AlertCircle, Loader2, BookOpen
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
-import { gradeComponentService, GradeComponent, GradeType, GradeComponentRequest } from '../../services/api/gradeComponentService';
+import { gradeComponentService, GradeComponent } from '../../services/api/gradeComponentService';
 import { courseService } from '../../services/api/courseService';
 import { Course, CoursePrerequisite } from '../../types/course';
 import { ImportGradeComponentModal } from '../../components/academic-staff/ImportGradeComponentModal';
 import { PrerequisiteSelectionModal } from '../../components/academic-staff/PrerequisiteSelectionModal';
 import { sortGradeComponents } from '../../utils/gradeSortUtils';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
+import { GradeComponentFormModal } from '../../components/academic-staff/GradeComponentFormModal';
 
 // Type colors mapping
 const typeColors: Record<string, { bg: string; text: string; label: string; bar: string }> = {
@@ -29,26 +31,7 @@ const typeColors: Record<string, { bg: string; text: string; label: string; bar:
     'OTHER': { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-700 dark:text-gray-400', label: 'Other', bar: 'bg-gray-500' },
 };
 
-
-
-// Grade type options for the modal
-const gradeTypeOptions: { value: GradeType; label: string }[] = [
-    { value: 'PARTICIPATION', label: 'Participation' },
-    { value: 'PROGRESS_TEST', label: 'Progress Test' },
-    { value: 'QUIZ', label: 'Quiz' },
-    { value: 'WORKSHOP', label: 'Workshop' },
-    { value: 'ASSIGNMENT', label: 'Assignment' },
-    { value: 'MID_TERM', label: 'Midterm Exam' },
-    { value: 'PRACTICAL_EXAM', label: 'Practical Exam' },
-    { value: 'FINAL_EXAM', label: 'Final Exam' },
-    { value: 'PROJECT', label: 'Project' },
-    { value: 'PRESENTATION', label: 'Presentation' },
-    { value: 'RESIT', label: 'Resit' },
-    { value: 'OTHER', label: 'Other' },
-];
-
-import { GradeTypeSelector } from '../../components/academic-staff/GradeTypeSelector';
-import { ConfirmModal } from '../../components/common/ConfirmModal';
+// Grade type options - moved to modal
 
 export const GradeConfigurationPage: React.FC = () => {
     const { courseId } = useParams<{ courseId: string }>();
@@ -57,7 +40,6 @@ export const GradeConfigurationPage: React.FC = () => {
     const [course, setCourse] = useState<Course | null>(null);
     const [allComponents, setAllComponents] = useState<GradeComponent[]>([]);
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
 
     // Prerequisite state
@@ -68,15 +50,7 @@ export const GradeConfigurationPage: React.FC = () => {
 
     // Modal state
     const [showModal, setShowModal] = useState(false);
-    const [isTypeSelectorOpen, setIsTypeSelectorOpen] = useState(false);
     const [editingComponent, setEditingComponent] = useState<GradeComponent | null>(null);
-    const [formData, setFormData] = useState<GradeComponentRequest | any>({
-        name: '',
-        description: '',
-        type: 'ASSIGNMENT',
-        weight: '',
-        isResit: false,
-    });
 
     // Confirm Modal
     const [confirmModal, setConfirmModal] = useState({
@@ -130,112 +104,15 @@ export const GradeConfigurationPage: React.FC = () => {
         return acc;
     }, {} as Record<string, number>);
 
-    // Better sort: All components sorted by ID, but maybe keep Final Exam and Resit together?
-    // User requested "Resit linked to FE". 
-    // Let's just sort by ID for now as that usually reflects creation order. 
-    // Or if user wants to see types grouped, we can sort by Type.
-
-    // Let's stick to: Type matches Name as user requested.
-
     // Modal handlers
     const openAddModal = () => {
         setEditingComponent(null);
-        setFormData({
-            name: 'Assignment', // Default name matches default type
-            description: '',
-            type: 'ASSIGNMENT',
-            weight: '',
-            isResit: false,
-        });
         setShowModal(true);
     };
 
     const openEditModal = (component: GradeComponent) => {
         setEditingComponent(component);
-        setFormData({
-            name: component.name,
-            description: component.description || '',
-            type: component.type,
-            weight: component.weight,
-            isResit: component.isResit,
-            referenceComponentId: component.referenceComponentId,
-        });
         setShowModal(true);
-    };
-
-    const handleSave = async () => {
-        if (!courseId) return;
-
-        // Rounding Logic: Round to nearest integer, 0.5 rounds down (3.5 -> 3)
-        // Math.ceil(x - 0.5) achieves this: 3.5-0.5=3->3, 3.6-0.5=3.1->4, 3.4-0.5=2.9->3
-        const weightValue = Number(formData.weight) || 0;
-        const roundedWeight = Math.ceil(weightValue - 0.5);
-
-        // Create processed data object to ensure consistency
-        const processedData = {
-            ...formData,
-            weight: roundedWeight,
-            name: formData.name.trim()
-        };
-
-        // Validation
-        if (!processedData.name) {
-            toast.error('Tên đầu điểm không được để trống');
-            return;
-        }
-
-        // 1. Check if name is ONLY numbers (must contain at least one non-digit)
-        if (/^\d+$/.test(processedData.name)) {
-            toast.error('Tên đầu điểm không được chỉ chứa mỗi số');
-            return;
-        }
-
-        // 2. Check for duplicate names
-        const isDuplicate = allComponents.some(c =>
-            c.name.toLowerCase() === processedData.name.toLowerCase() &&
-            c.id !== editingComponent?.id
-        );
-        if (isDuplicate) {
-            toast.error('Tên đầu điểm đã tồn tại');
-            return;
-        }
-
-        // 3. Weight Validation
-        if (processedData.weight <= 0) {
-            toast.error('Trọng số phải lớn hơn 0%');
-            return;
-        }
-
-        // 4. Total Weight Validation (Only for main components)
-        if (!processedData.isResit) {
-            const currentTotal = mainComponents
-                .filter(c => c.id !== editingComponent?.id)
-                .reduce((sum, c) => sum + c.weight, 0);
-
-            // Check if adding this weight exceeds 100
-            if (currentTotal + processedData.weight > 100) {
-                toast.error(`Tổng trọng số không được vượt quá 100%`);
-                return;
-            }
-        }
-
-        setSaving(true);
-        try {
-            if (editingComponent) {
-                await gradeComponentService.updateGradeComponent(editingComponent.id, processedData);
-                toast.success('Đã cập nhật thành phần điểm');
-            } else {
-                await gradeComponentService.createGradeComponent(parseInt(courseId), processedData);
-                toast.success('Đã thêm thành phần điểm');
-            }
-            setShowModal(false);
-            loadData();
-        } catch (error) {
-            console.error('Failed to save:', error);
-            toast.error('Không thể lưu thành phần điểm');
-        } finally {
-            setSaving(false);
-        }
     };
 
     const handleDeleteComponent = (component: GradeComponent) => {
@@ -260,12 +137,6 @@ export const GradeConfigurationPage: React.FC = () => {
         });
     };
 
-
-    const handleExport = () => {
-        toast.success('Xuất cấu hình điểm (Tính năng đang phát triển)');
-    };
-
-    // Handlers for prerequisites
     const handleAddPrerequisites = async (selectedIds: number[]) => {
         if (!course) return;
         setPrereqAdding(true);
@@ -343,7 +214,7 @@ export const GradeConfigurationPage: React.FC = () => {
 
                     <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-4">
                         <div className="flex items-center gap-4 flex-wrap flex-1 min-w-0">
-                            <h1 className="text-2xl font-bold text-gray-900 dark:text-white line-clamp-2 break-words">
+                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white line-clamp-2 break-words">
                                 {course.name} ({course.code})
                             </h1>
 
@@ -375,22 +246,8 @@ export const GradeConfigurationPage: React.FC = () => {
 
                         <div className="flex flex-wrap items-center gap-3 shrink-0">
                             <button
-                                onClick={handleExport}
-                                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-zinc-700 transition-all duration-200 shadow-sm whitespace-nowrap"
-                            >
-                                <Download className="w-4 h-4" />
-                                Xuất file
-                            </button>
-                            <button
-                                onClick={() => setShowImportModal(true)}
-                                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-fpt-orange bg-orange-50 dark:bg-orange-900/20 text-fpt-orange text-sm font-medium hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-all duration-200 shadow-sm whitespace-nowrap"
-                            >
-                                <Upload className="w-4 h-4" />
-                                Import thành phần điểm
-                            </button>
-                            <button
                                 onClick={openAddModal}
-                                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-fpt-orange to-orange-500 text-white text-sm font-medium hover:from-orange-600 hover:to-orange-600 transition-all duration-200 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 whitespace-nowrap"
+                                className="flex h-[52px] items-center gap-2 px-6 rounded-2xl bg-fpt-orange text-white text-sm font-bold hover:bg-orange-600 hover:shadow-lg hover:shadow-fpt-orange/20 transition-all whitespace-nowrap shadow-lg shadow-fpt-orange/20 active:scale-95"
                             >
                                 <Plus className="w-4 h-4" />
                                 Thêm thành phần điểm
@@ -494,16 +351,16 @@ export const GradeConfigurationPage: React.FC = () => {
                         <table className="w-full">
                             <thead>
                                 <tr className="bg-fpt-orange text-white">
-                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider rounded-tl-lg">Loại</th>
-                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider">Tên</th>
-                                    <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider">Trọng số (%)</th>
-                                    <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider rounded-tr-lg">Hành động</th>
+                                    <th className="px-5 py-5 text-left text-xs font-bold uppercase tracking-widest">Loại</th>
+                                    <th className="px-5 py-5 text-left text-xs font-bold uppercase tracking-widest">Tên</th>
+                                    <th className="px-5 py-5 text-center text-xs font-bold uppercase tracking-widest">Trọng số (%)</th>
+                                    <th className="px-5 py-5 text-right text-xs font-bold uppercase tracking-widest">Hành động</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
                                 {sortedComponents.length === 0 ? (
                                     <tr>
-                                        <td colSpan={5} className="px-5 py-8 text-center text-sm text-gray-400 dark:text-zinc-500">
+                                        <td colSpan={4} className="px-5 py-8 text-center text-sm text-gray-400 dark:text-zinc-500">
                                             Chưa có thành phần điểm nào. Click "Thêm thành phần điểm" để thêm.
                                         </td>
                                     </tr>
@@ -534,8 +391,8 @@ export const GradeConfigurationPage: React.FC = () => {
                                                         )}
                                                     </div>
                                                 </td>
-                                                <td className="px-5 py-4 text-center">
-                                                    <span className={`text-sm font-semibold ${component.isResit ? 'text-gray-400' : 'text-gray-900 dark:text-white'}`}>
+                                                <td className="px-5 py-5 text-center">
+                                                    <span className={`text-sm font-bold ${component.isResit ? 'text-gray-400' : 'text-gray-900 dark:text-white'}`}>
                                                         {component.weight}%
                                                     </span>
                                                 </td>
@@ -575,123 +432,18 @@ export const GradeConfigurationPage: React.FC = () => {
                 </div>
 
                 {/* Modal */}
-                {
-                    showModal && (
-                        <div className="fixed inset-0 z-50 overflow-y-auto">
-                            <div className="flex min-h-full items-center justify-center p-4">
-                                <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={() => setShowModal(false)} />
-                                <div className="relative bg-white dark:bg-zinc-900 rounded-2xl shadow-xl max-w-md w-full p-6">
-                                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                                        {editingComponent ? 'Chỉnh sửa thành phần điểm' : 'Thêm thành phần điểm'}
-                                    </h2>
+                <GradeComponentFormModal
+                    isOpen={showModal}
+                    onClose={() => setShowModal(false)}
+                    onSuccess={loadData}
+                    courseId={parseInt(courseId!)}
+                    editingComponent={editingComponent}
+                    existingComponents={allComponents}
+                />
 
-                                    <div className="space-y-4">
-                                        <div>
-                                            <GradeTypeSelector
-                                                value={formData.type}
-                                                isOpen={isTypeSelectorOpen}
-                                                onToggle={() => setIsTypeSelectorOpen(!isTypeSelectorOpen)}
-                                                options={gradeTypeOptions
-                                                    .filter(opt => opt.value !== 'RESIT') // Hide RESIT
-                                                    .filter(opt => {
-                                                        // Hide FINAL_EXAM if it already exists (unless we are editing the FE itself)
-                                                        if (opt.value === 'FINAL_EXAM') {
-                                                            const hasFE = allComponents.some(c => c.type === 'FINAL_EXAM');
-                                                            if (hasFE && (!editingComponent || editingComponent.type !== 'FINAL_EXAM')) {
-                                                                return false;
-                                                            }
-                                                        }
-                                                        return true;
-                                                    })
-                                                }
-                                                onChange={(newType) => {
-                                                    const currentTypeLabel = gradeTypeOptions.find(opt => opt.value === formData.type)?.label;
-                                                    const newTypeLabel = gradeTypeOptions.find(opt => opt.value === newType)?.label;
-
-                                                    // Logic: If user hasn't changed name manually (matches label), update it
-                                                    let newName = formData.name;
-                                                    if (!newName || newName === currentTypeLabel) {
-                                                        newName = newTypeLabel || '';
-                                                    }
-
-                                                    setFormData({
-                                                        ...formData,
-                                                        type: newType,
-                                                        name: newName,
-                                                        isResit: false
-                                                    });
-                                                }}
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
-                                                Tên *
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={formData.name}
-                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                                className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-fpt-orange focus:border-transparent"
-                                                placeholder="e.g., Final Exam"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
-                                                Mô tả
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={formData.description || ''}
-                                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                                className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-fpt-orange focus:border-transparent"
-                                                placeholder="Mô tả ngắn gọn"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
-                                                Trọng số (%) *
-                                            </label>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                max="100"
-                                                step="0.1"
-                                                value={formData.weight}
-                                                onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                                                className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-fpt-orange focus:border-transparent"
-                                            />
-                                        </div>
-
-                                    </div>
-
-                                    <div className="flex justify-end gap-3 mt-6">
-                                        <button
-                                            onClick={() => setShowModal(false)}
-                                            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-                                        >
-                                            Hủy
-                                        </button>
-                                        <button
-                                            onClick={handleSave}
-                                            disabled={saving || !formData.name || Number(formData.weight) < 0}
-                                            className="px-4 py-2 text-sm font-medium text-white bg-fpt-orange hover:bg-orange-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                        >
-                                            {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                                            {editingComponent ? 'Cập nhật' : 'Thêm'}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )
-                }
                 {/* Prerequisites Section */}
-                <div className="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-                    {/* Section header */}
-                    <div className="flex items-center justify-between border-b border-gray-100 p-4 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-900/50">
+                <div className="rounded-2xl border-2 border-gray-100 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900 overflow-hidden">
+                    <div className="flex items-center justify-between border-b border-gray-100 p-6 dark:border-zinc-800 bg-gray-50/50 dark:bg-zinc-900/50">
                         <div className="flex items-center gap-2">
                             <BookOpen className="h-5 w-5 text-fpt-orange" />
                             <h2 className="text-base font-semibold text-gray-900 dark:text-white">
@@ -703,73 +455,78 @@ export const GradeConfigurationPage: React.FC = () => {
                         </div>
                         <button
                             onClick={() => setIsPrereqModalOpen(true)}
-                            className="flex items-center gap-2 rounded-lg bg-fpt-orange px-3 py-2 text-sm font-medium text-white hover:bg-orange-600 transition-colors"
+                            className="flex h-[48px] sm:h-[52px] items-center gap-2 rounded-2xl bg-fpt-orange px-6 text-sm font-bold text-white hover:bg-orange-600 transition-all shadow-lg shadow-fpt-orange/20 active:scale-95"
                         >
-                            <Plus className="h-4 w-4" />
+                            <Plus className="h-[18px] w-[18px]" strokeWidth={3} />
                             Thêm từ kho
                         </button>
                     </div>
 
-                    {/* Info banner */}
                     <div className="px-4 pt-3">
                         <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2 text-xs text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300">
                             Sinh viên phải hoàn thành (pass) các môn dưới đây trước khi được đăng ký môn <strong>{course.code}</strong>.
                         </div>
                     </div>
 
-                    <div className="overflow-x-auto p-4">
+                    <div className="overflow-x-auto p-4 pt-2">
                         {prerequisites.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-10 text-center">
-                                <BookOpen className="h-10 w-10 text-gray-300 dark:text-zinc-600 mb-3" />
-                                <p className="text-sm text-gray-500 dark:text-zinc-400">
-                                    Chưa có môn tiên quyết nào.
+                            <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-50/50 dark:bg-zinc-800/30 rounded-2xl border-2 border-dashed border-gray-100 dark:border-zinc-800">
+                                <div className="p-4 bg-white dark:bg-zinc-800 rounded-2xl shadow-sm mb-4">
+                                    <BookOpen className="h-8 w-8 text-gray-300 dark:text-zinc-600" />
+                                </div>
+                                <p className="text-sm font-bold text-gray-500 dark:text-zinc-400">
+                                    Chưa có môn tiên quyết nào
                                 </p>
                                 <button
                                     onClick={() => setIsPrereqModalOpen(true)}
-                                    className="mt-3 flex items-center gap-1.5 text-sm text-fpt-orange hover:text-orange-600 font-medium"
+                                    className="mt-4 flex items-center gap-2 text-sm text-fpt-orange hover:text-orange-600 font-bold px-4 py-2 rounded-xl hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-all"
                                 >
-                                    <Plus className="h-4 w-4" />
-                                    Thêm môn tiên quyết
+                                    <Plus className="h-4 w-4 stroke-[3]" />
+                                    Thêm ngay
                                 </button>
                             </div>
                         ) : (
-                            <table className="w-full">
-                                <thead>
-                                    <tr className="bg-fpt-orange text-white">
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider rounded-tl-lg">Mã môn</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Tên môn học</th>
-                                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider rounded-tr-lg w-24">Thao tác</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
-                                    {prerequisites.map((prereq) => (
-                                        <tr key={prereq.id} className="group hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
-                                            <td className="px-4 py-3">
-                                                <span className="inline-flex items-center rounded-md bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
-                                                    {prereq.code}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-zinc-300">
-                                                {prereq.name}
-                                            </td>
-                                            <td className="px-4 py-3 text-center">
-                                                <button
-                                                    onClick={() => handleRemovePrerequisite(prereq.id)}
-                                                    disabled={prereqRemoving === prereq.id}
-                                                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg bg-white hover:bg-red-50 text-gray-400 hover:text-red-600 shadow-sm border border-gray-100 hover:border-red-100 transition-all duration-200 disabled:opacity-50"
-                                                    title="Xóa khỏi môn tiên quyết"
-                                                >
-                                                    {prereqRemoving === prereq.id ? (
-                                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                                    ) : (
-                                                        <Trash2 className="h-4 w-4" />
-                                                    )}
-                                                </button>
-                                            </td>
+                            <div className="rounded-2xl border border-gray-100 dark:border-zinc-800 overflow-hidden shadow-sm">
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="bg-gray-50 dark:bg-zinc-800/50">
+                                            <th className="px-6 py-4 text-left text-[11px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest">Mã môn</th>
+                                            <th className="px-6 py-4 text-left text-[11px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest">Tên môn học</th>
+                                            <th className="px-6 py-4 text-center text-[11px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest w-24">Thao tác</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50 dark:divide-zinc-800/50">
+                                        {prerequisites.map((prereq) => (
+                                            <tr key={prereq.id} className="group hover:bg-gray-50/50 dark:hover:bg-zinc-800/30 transition-colors">
+                                                <td className="px-6 py-4">
+                                                    <span className="inline-flex items-center rounded-xl bg-orange-100 px-3 py-1 text-xs font-bold text-fpt-orange dark:bg-orange-950/40">
+                                                        {prereq.code}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <p className="text-sm font-bold text-gray-700 dark:text-zinc-300">
+                                                        {prereq.name}
+                                                    </p>
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <button
+                                                        onClick={() => handleRemovePrerequisite(prereq.id)}
+                                                        disabled={prereqRemoving === prereq.id}
+                                                        className="p-2 rounded-xl bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 dark:bg-zinc-800 dark:hover:bg-red-950/30 transition-all active:scale-95 disabled:opacity-50"
+                                                        title="Xóa khỏi môn tiên quyết"
+                                                    >
+                                                        {prereqRemoving === prereq.id ? (
+                                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                                        ) : (
+                                                            <Trash2 className="h-4 w-4" />
+                                                        )}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -806,3 +563,4 @@ export const GradeConfigurationPage: React.FC = () => {
         </AcademicStaffLayout >
     );
 };
+

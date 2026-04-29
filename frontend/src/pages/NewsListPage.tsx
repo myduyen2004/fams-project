@@ -8,7 +8,7 @@ import { authService } from '../services/api/authService';
 import { newsService } from '../services/api/newsService';
 import { NewsItem } from '../types/news';
 import { Loader2, Newspaper, ChevronRight, ChevronLeft, Star } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 
 const roleLayouts = {
   STUDENT: StudentLayout,
@@ -369,3 +369,4 @@ export const NewsListPage = () => {
 };
 
 export default NewsListPage;
+

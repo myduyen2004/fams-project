@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { mapService, type ProvinceOnlineData } from '../../../services/api/mapService';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import { useWebSocket } from '../../../hooks/useWebSocket';
 
 // Fix Leaflet default icon issue
@@ -178,4 +178,5 @@ export const VietnamMap: React.FC = () => {
     </div>
   );
 };
+
 

@@ -91,3 +91,4 @@ export const AlertsSection: React.FC<AlertsSectionProps> = ({ alerts, isDashboar
   );
 };
 
+

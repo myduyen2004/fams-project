@@ -11,7 +11,7 @@ import {
 } from '../../services/api/permissionService';
 import { authService } from '../../services/api/authService';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
-import { toast } from 'react-hot-toast';
+import toast from "@utils/toast";
 
 // Updated metadata: Removed individual icons, using central orange theme
 const PERMISSION_METADATA: Record<string, { desc: string }> = {
@@ -223,11 +223,11 @@ export const PermissionsPage: React.FC = () => {
             <h3 className="text-sm font-bold text-fpt-orange uppercase tracking-wider">Danh sách giảng viên</h3>
             
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input
                 type="text"
                 placeholder="Tìm giảng viên..."
-                className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-zinc-800 border-none rounded-xl text-sm outline-none focus:ring-1 focus:ring-fpt-orange/30 transition-all placeholder-gray-400"
+                className="w-full pl-10 pr-4 h-[52px] bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 hover:shadow-lg hover:shadow-fpt-orange/5 text-gray-900 dark:text-white"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -411,3 +411,4 @@ export const PermissionsPage: React.FC = () => {
     </Layout>
   );
 };
+

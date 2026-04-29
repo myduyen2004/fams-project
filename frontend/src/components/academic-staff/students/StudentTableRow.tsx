@@ -88,3 +88,4 @@ export const StudentTableRow: React.FC<StudentTableRowProps> = React.memo(({
 });
 
 StudentTableRow.displayName = 'StudentTableRow';
+

@@ -4,7 +4,7 @@ import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { Loader2 } from 'lucide-react';
 import { academicStaffService } from '../../services/api/academicStaffService';
 import { AcademicStaffDashboardResponse } from '../../types/dashboard';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 
 // New Components
 import { AnalyticalCards } from '../../components/academic-staff/dashboard/AnalyticalCards';
@@ -177,7 +177,7 @@ export const AcademicStaffDashboard: React.FC = () => {
 
         {/* Row 2: Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-          <div className="lg:col-span-8 h-full">
+          <div className="lg:col-span-7 h-full">
             <AttendanceFrequencyChart
               data={data?.weeklyAttendance}
               loading={weeklyLoading}
@@ -186,7 +186,7 @@ export const AcademicStaffDashboard: React.FC = () => {
               onNextWeek={handleNextWeek}
             />
           </div>
-          <div className="lg:col-span-4 h-full">
+          <div className="lg:col-span-5 h-full">
             <DailyAttendanceDonut stats={data?.attendanceStats} />
           </div>
         </div>
@@ -204,3 +204,4 @@ export const AcademicStaffDashboard: React.FC = () => {
     </AcademicStaffLayout>
   );
 };
+

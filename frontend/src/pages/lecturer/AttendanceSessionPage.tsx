@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 
 import attendanceService, { SessionDetailResponse } from '../../services/api/attendanceService';
-import { toast } from 'react-hot-toast';
+import toast from "@utils/toast";
 import { Loader2, ArrowLeft, Users } from 'lucide-react';
 
 export const AttendanceSessionPage: React.FC = () => {
@@ -165,3 +165,4 @@ export const AttendanceSessionPage: React.FC = () => {
         </LecturerLayout>
     );
 };
+

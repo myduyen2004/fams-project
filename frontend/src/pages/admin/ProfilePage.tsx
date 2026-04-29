@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Edit2, Save, X, Camera, Eye, EyeOff, Lock, Key, Loader2 } from 'lucide-react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { userService } from '../../services/api/userService';
-import toast from 'react-hot-toast';
+import { CustomDatePicker } from '../../components/common/CustomDatePicker';
+import toast from "@utils/toast";
 
 interface UserProfile {
   id: number;
@@ -199,9 +200,9 @@ export const ProfilePage: React.FC = () => {
     <AdminLayout pageTitle="Hồ sơ cá nhân">
       <div className="max-w-4xl mx-auto p-6 space-y-6">
         {/* Profile Card */}
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg overflow-hidden">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg">
           {/* Gradient Header */}
-          <div className="h-32 bg-gradient-to-r from-fpt-orange via-orange-500 to-orange-400"></div>
+          <div className="h-32 bg-gradient-to-r from-fpt-orange via-orange-500 to-orange-400 rounded-t-2xl"></div>
 
           {/* Profile Content */}
           <div className="relative px-8 pb-8">
@@ -248,7 +249,7 @@ export const ProfilePage: React.FC = () => {
               {!isEditing ? (
                 <button
                   onClick={handleEdit}
-                  className="flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white rounded-lg hover:bg-orange-600 transition-colors"
+                  className="h-[44px] flex items-center gap-2 px-6 bg-fpt-orange text-white rounded-2xl hover:bg-orange-600 transition-all font-bold shadow-lg shadow-fpt-orange/20 active:scale-95"
                 >
                   <Edit2 size={18} />
                   Chỉnh sửa
@@ -257,7 +258,7 @@ export const ProfilePage: React.FC = () => {
                 <>
                   <button
                     onClick={handleCancel}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-zinc-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-zinc-600 transition-colors"
+                    className="h-[44px] flex items-center gap-2 px-6 bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 rounded-2xl hover:bg-gray-200 dark:hover:bg-zinc-700 transition-all font-bold active:scale-95"
                   >
                     <X size={18} />
                     Hủy
@@ -265,7 +266,7 @@ export const ProfilePage: React.FC = () => {
                   <button
                     onClick={handleSave}
                     disabled={isUploadingAvatar}
-                    className="flex items-center gap-2 px-4 py-2 bg-fpt-orange text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50"
+                    className="h-[44px] flex items-center gap-2 px-8 bg-fpt-orange text-white rounded-2xl hover:bg-orange-600 transition-all font-bold shadow-lg shadow-fpt-orange/20 disabled:opacity-50 active:scale-95"
                   >
                     {isUploadingAvatar ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
                     Lưu
@@ -287,7 +288,7 @@ export const ProfilePage: React.FC = () => {
                       type="text"
                       value={displayProfile.fullName}
                       onChange={(e) => handleChange('fullName', e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-fpt-orange focus:border-transparent"
+                      className="w-full px-4 h-[44px] border-2 border-gray-100 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-900 text-gray-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40"
                     />
                   ) : (
                     <p className="text-gray-900 dark:text-white font-medium">
@@ -330,7 +331,7 @@ export const ProfilePage: React.FC = () => {
                         if (val.length <= 11) handleChange('phone', val);
                       }}
                       placeholder="Ví dụ: 0912345678"
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-fpt-orange focus:border-transparent"
+                      className="w-full h-[52px] px-4 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 text-gray-900 dark:text-white font-medium"
                     />
                   ) : (
                     <p className="text-gray-900 dark:text-white font-medium">
@@ -347,11 +348,10 @@ export const ProfilePage: React.FC = () => {
                     Ngày sinh
                   </label>
                   {isEditing ? (
-                    <input
-                      type="date"
+                    <CustomDatePicker
                       value={displayProfile.dob || ''}
-                      onChange={(e) => handleChange('dob', e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-fpt-orange focus:border-transparent"
+                      onChange={(value) => handleChange('dob', value)}
+                      className="w-full"
                     />
                   ) : (
                     <p className="text-gray-900 dark:text-white font-medium">
@@ -403,7 +403,7 @@ export const ProfilePage: React.FC = () => {
                   type={showPasswords.current ? 'text' : 'password'}
                   value={passwordData.currentPassword}
                   onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                  className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-fpt-orange focus:border-transparent"
+                  className="w-full h-[52px] pl-12 pr-10 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 text-gray-900 dark:text-white font-medium"
                   placeholder="Nhập mật khẩu hiện tại"
                 />
                 <button
@@ -433,7 +433,7 @@ export const ProfilePage: React.FC = () => {
                   type={showPasswords.new ? 'text' : 'password'}
                   value={passwordData.newPassword}
                   onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                  className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-fpt-orange focus:border-transparent"
+                  className="w-full h-[52px] pl-12 pr-10 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 text-gray-900 dark:text-white font-medium"
                   placeholder="Nhập mật khẩu mới (tối thiểu 8 ký tự)"
                 />
                 <button
@@ -463,7 +463,7 @@ export const ProfilePage: React.FC = () => {
                   type={showPasswords.confirm ? 'text' : 'password'}
                   value={passwordData.confirmPassword}
                   onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                  className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-fpt-orange focus:border-transparent"
+                  className="w-full h-[52px] pl-12 pr-10 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 text-gray-900 dark:text-white font-medium"
                   placeholder="Nhập lại mật khẩu mới"
                 />
                 <button
@@ -483,12 +483,12 @@ export const ProfilePage: React.FC = () => {
             <button
               type="submit"
               disabled={isChangingPassword}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-fpt-orange text-white rounded-lg hover:bg-orange-600 transition-colors font-medium disabled:opacity-50"
+              className="w-full h-[52px] flex items-center justify-center gap-2 px-4 bg-fpt-orange text-white rounded-2xl hover:bg-orange-600 transition-all font-bold shadow-lg shadow-fpt-orange/20 disabled:opacity-50 active:scale-95"
             >
               {isChangingPassword ? (
-                <Loader2 size={18} className="animate-spin" />
+                <Loader2 size={20} className="animate-spin" />
               ) : (
-                <Lock size={18} />
+                <Lock size={20} />
               )}
               {isChangingPassword ? 'Đang cập nhật...' : 'Đổi mật khẩu'}
             </button>
@@ -498,3 +498,4 @@ export const ProfilePage: React.FC = () => {
     </AdminLayout>
   );
 };
+

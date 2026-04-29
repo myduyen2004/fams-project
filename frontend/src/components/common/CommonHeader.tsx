@@ -143,7 +143,7 @@ export const CommonHeader: React.FC<CommonHeaderProps> = ({
   };
 
   return (
-    <header className="h-16 bg-white dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-800 flex items-center justify-between px-6">
+    <header className="relative z-[40] h-16 flex-shrink-0 bg-white dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-800 flex items-center justify-between px-6">
       {/* Page Title */}
       <div>
         <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -195,12 +195,12 @@ export const CommonHeader: React.FC<CommonHeaderProps> = ({
             {/* Avatar */}
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-fpt-orange to-orange-600 flex items-center justify-center overflow-hidden">
               {user?.avatar && !avatarError ? (
-                <img 
-                  src={user.avatar.startsWith('data:') 
-                    ? user.avatar 
+                <img
+                  src={user.avatar.startsWith('data:')
+                    ? user.avatar
                     : `${user.avatar}${user.avatar.includes('?') ? '&' : '?'}t=${new Date().getTime()}`
-                  } 
-                  alt={user.fullName} 
+                  }
+                  alt={user.fullName}
                   className="w-full h-full object-cover"
                   onError={() => setAvatarError(true)}
                 />
@@ -277,3 +277,4 @@ export const CommonHeader: React.FC<CommonHeaderProps> = ({
     </header>
   );
 };
+

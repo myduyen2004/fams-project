@@ -2,13 +2,14 @@ import { useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Upload, ArrowLeft, Loader2, CheckCircle2, XCircle, Trash2 } from 'lucide-react';
 import { uploadFile } from '../../services/utils/fileUploadService';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { notificationService } from '../../services/api/notificationService';
 import { NotificationStatus, TargetType } from '../../types/notification';
+import { CustomSelect } from '../../components/common/CustomSelect';
 
 interface NotificationForm {
   title: string;
@@ -278,7 +279,7 @@ export const CreateNotificationPage = () => {
               </label>
               <input
                 type="text"
-                className={`w-full px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 border rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none transition-all text-gray-900 dark:text-white ${errors.title ? 'border-red-300' : 'border-gray-200 dark:border-zinc-700'
+                className={`w-full h-[52px] px-4 bg-white dark:bg-zinc-900 border-2 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all text-gray-900 dark:text-white font-medium ${errors.title ? 'border-red-300' : 'border-gray-100 dark:border-zinc-800'
                   }`}
                 placeholder="Nhập tiêu đề thông báo..."
                 value={formData.title}
@@ -401,30 +402,32 @@ export const CreateNotificationPage = () => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Đối tượng nhận
                 </label>
-                <select
-                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none text-gray-900 dark:text-white"
+                <CustomSelect
                   value={formData.targetType}
-                  onChange={(e) => setFormData({ ...formData, targetType: e.target.value as TargetType })}
-                >
-                  <option value={TargetType.ALL}>Toàn trường</option>
-                  <option value={TargetType.STUDENT}>Sinh viên</option>
-                  <option value={TargetType.LECTURER}>Giảng viên</option>
-                </select>
+                  onChange={(value) => setFormData({ ...formData, targetType: value as TargetType })}
+                  options={[
+                      { value: TargetType.ALL, label: 'Toàn trường' },
+                      { value: TargetType.STUDENT, label: 'Sinh viên' },
+                      { value: TargetType.LECTURER, label: 'Giảng viên' }
+                  ]}
+                  className="bg-gray-50 dark:bg-zinc-800 border-gray-200 dark:border-zinc-700"
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Trạng thái
                 </label>
-                <select
-                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm focus:ring-2 focus:ring-fpt-orange/20 outline-none text-gray-900 dark:text-white"
+                <CustomSelect
                   value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value as NotificationStatus })}
-                >
-                  <option value={NotificationStatus.DRAFT}>Lưu nháp</option>
-                  <option value={NotificationStatus.SENT}>Gửi ngay</option>
-                  <option value={NotificationStatus.SCHEDULED}>Lên lịch gửi</option>
-                </select>
+                  onChange={(value) => setFormData({ ...formData, status: value as NotificationStatus })}
+                  options={[
+                      { value: NotificationStatus.DRAFT, label: 'Lưu nháp' },
+                      { value: NotificationStatus.SENT, label: 'Gửi ngay' },
+                      { value: NotificationStatus.SCHEDULED, label: 'Lên lịch gửi' }
+                  ]}
+                  className="bg-gray-50 dark:bg-zinc-800 border-gray-200 dark:border-zinc-700"
+                />
               </div>
             </div>
 
@@ -456,9 +459,9 @@ export const CreateNotificationPage = () => {
                 <button
                   onClick={() => handleSubmit(true)}
                   disabled={isSubmitting || attachedFiles.some(f => f.status === 'uploading')}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-600 rounded-lg transition-colors disabled:opacity-50"
+                  className="h-[44px] px-6 text-sm font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700 rounded-2xl transition-all disabled:opacity-50 active:scale-95"
                 >
-                  {isSubmitting ? 'Đang lưu...' : 'Lưu nháp'}
+                  {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : 'Lưu nháp'}
                 </button>
               )}
 
@@ -466,9 +469,9 @@ export const CreateNotificationPage = () => {
                 <button
                   onClick={() => handleSubmit(false)}
                   disabled={isSubmitting || attachedFiles.some(f => f.status === 'uploading')}
-                  className="px-4 py-2 text-sm font-medium text-white bg-fpt-orange hover:bg-fpt-orange-dark rounded-lg transition-colors disabled:opacity-50"
+                  className="h-[44px] px-8 text-sm font-bold text-white bg-fpt-orange hover:bg-orange-600 rounded-2xl shadow-lg shadow-fpt-orange/20 transition-all disabled:opacity-50 active:scale-95"
                 >
-                  {isSubmitting ? 'Đang xử lý...' : 'Gửi ngay'}
+                  {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : 'Gửi ngay'}
                 </button>
               )}
 
@@ -476,9 +479,9 @@ export const CreateNotificationPage = () => {
                 <button
                   onClick={() => handleSubmit(false)}
                   disabled={isSubmitting || attachedFiles.some(f => f.status === 'uploading')}
-                  className="px-4 py-2 text-sm font-medium text-white bg-fpt-orange hover:bg-fpt-orange-dark rounded-lg transition-colors disabled:opacity-50"
+                  className="h-[44px] px-8 text-sm font-bold text-white bg-fpt-orange hover:bg-orange-600 rounded-2xl shadow-lg shadow-fpt-orange/20 transition-all disabled:opacity-50 active:scale-95"
                 >
-                  {isSubmitting ? 'Đang xử lý...' : 'Lưu lịch gửi'}
+                  {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : 'Lên lịch gửi'}
                 </button>
               )}
             </div>

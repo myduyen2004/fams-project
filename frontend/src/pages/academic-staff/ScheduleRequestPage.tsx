@@ -4,7 +4,7 @@ import { Loader2, Clock, CheckCircle, FileText, User } from 'lucide-react';
 import { AcademicStaffLayout } from '../../layouts/AcademicStaffLayout';
 import { academicStaffService, ScheduleRequestResponse } from '../../services/api/academicStaffService';
 import { academicRequestService, AcademicRequest } from '../../services/api/academicRequestService';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import RequestFilters from '../../components/academic-staff/request/RequestFilters';
 import RequestTableRow from '../../components/academic-staff/request/RequestTableRow';
 import StudentRequestTableRow from '../../components/academic-staff/request/StudentRequestTableRow';
@@ -363,4 +363,5 @@ export const ScheduleRequestPage = () => {
 };
 
 export default ScheduleRequestPage;
+
 

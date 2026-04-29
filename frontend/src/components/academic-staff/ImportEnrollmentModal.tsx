@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Upload, Loader2, Download, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 import apiClient from '../../services/api/authService';
 
 // Preview response from fast-preview endpoint
@@ -173,7 +173,7 @@ export const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                         <h3 className="text-xl font-bold text-gray-900 dark:text-white">Import danh sách đăng ký</h3>
                         <p className="text-sm text-gray-500 mt-1">Học kỳ: <span className="font-medium text-orange-600">{semesterCode}</span></p>
                     </div>
-                    <button onClick={handleClose}><X size={20} className="text-gray-400 hover:text-gray-600" /></button>
+                    <button onClick={handleClose} className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all active:scale-95"><X size={20} className="text-gray-400 hover:text-gray-600" /></button>
                 </div>
 
                 {/* Content */}
@@ -182,7 +182,7 @@ export const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                     {/* Step 1: Upload Form */}
                     {!previewResult && !importResult && (
                         <form onSubmit={handlePreview} className="space-y-4">
-                            <div className="p-4 bg-blue-50 dark:bg-blue-900/10 text-blue-800 dark:text-blue-300 rounded-lg text-sm">
+                            <div className="p-4 bg-blue-50 dark:bg-blue-900/10 text-blue-800 dark:text-blue-300 rounded-2xl text-sm border border-blue-100 dark:border-blue-900/20">
                                 <p className="font-semibold mb-1">Hướng dẫn:</p>
                                 <ul className="list-disc pl-4 space-y-1">
                                     <li>Hỗ trợ file Excel lớn (đến <strong>300,000+ dòng</strong>)</li>
@@ -196,12 +196,12 @@ export const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                             <button
                                 type="button"
                                 onClick={handleDownloadTemplate}
-                                className="w-full px-4 py-2 border border-orange-200 rounded-lg text-sm font-medium text-orange-600 bg-orange-50 hover:bg-orange-100 transition-colors flex items-center justify-center gap-2"
+                                className="w-full h-[44px] border-2 border-orange-200 rounded-2xl text-sm font-bold text-orange-600 bg-orange-50/50 hover:bg-orange-100 transition-all flex items-center justify-center gap-2"
                             >
                                 <Download size={16} /> Tải xuống file mẫu
                             </button>
 
-                            <div className="border-2 border-dashed border-gray-300 dark:border-zinc-700 rounded-lg p-6 flex flex-col items-center text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors relative">
+                            <div className="border-2 border-dashed border-gray-300 dark:border-zinc-700 rounded-2xl p-6 flex flex-col items-center text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors relative">
                                 <input required type="file" accept=".xlsx, .xls" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileChange} />
                                 <Upload size={32} className="text-fpt-orange mb-2" />
                                 {file ? (
@@ -218,8 +218,8 @@ export const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                             </div>
 
                             <div className="flex justify-end gap-3 mt-6">
-                                <button type="button" onClick={handleClose} className="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Hủy</button>
-                                <button type="submit" disabled={loading || !file} className="px-6 py-2 bg-fpt-orange text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center gap-2">
+                                <button type="button" onClick={handleClose} className="h-[44px] px-6 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-bold text-gray-600 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-all active:scale-95">Hủy</button>
+                                <button type="submit" disabled={loading || !file} className="flex items-center justify-center gap-2 h-[44px] px-6 rounded-2xl bg-fpt-orange text-sm font-bold text-white hover:bg-orange-600 shadow-lg shadow-fpt-orange/20 transition-all active:scale-95 disabled:opacity-50">
                                     {loading && <Loader2 size={16} className="animate-spin" />} Kiểm tra file
                                 </button>
                             </div>
@@ -231,15 +231,15 @@ export const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                         <div className="space-y-4">
                             {/* Summary Cards */}
                             <div className="grid grid-cols-3 gap-4">
-                                <div className="bg-gray-50 dark:bg-zinc-800 rounded-xl p-4 text-center">
+                                <div className="bg-gray-50 dark:bg-zinc-800 rounded-2xl p-4 text-center border border-gray-100 dark:border-zinc-800 shadow-sm">
                                     <p className="text-2xl font-bold text-gray-900 dark:text-white">{previewResult.totalRows.toLocaleString()}</p>
                                     <p className="text-sm text-gray-500">Tổng số dòng</p>
                                 </div>
-                                <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 text-center">
+                                <div className="bg-green-50 dark:bg-green-900/20 rounded-2xl p-4 text-center border border-green-100 dark:border-green-900/10 shadow-sm">
                                     <p className="text-2xl font-bold text-green-600">{previewResult.validRows.toLocaleString()}</p>
                                     <p className="text-sm text-green-700 dark:text-green-400">Hợp lệ</p>
                                 </div>
-                                <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 text-center">
+                                <div className="bg-red-50 dark:bg-red-900/20 rounded-2xl p-4 text-center border border-red-100 dark:border-red-900/10 shadow-sm">
                                     <p className="text-2xl font-bold text-red-600">{previewResult.errorRows.toLocaleString()}</p>
                                     <p className="text-sm text-red-700 dark:text-red-400">Lỗi</p>
                                 </div>
@@ -247,7 +247,7 @@ export const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
 
                             {/* Status Message */}
                             {previewResult.canImport ? (
-                                <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 rounded-lg">
+                                <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 rounded-2xl border border-green-100 dark:border-green-900/30 shadow-sm">
                                     <CheckCircle size={24} />
                                     <div>
                                         <p className="font-semibold">Sẵn sàng import!</p>
@@ -255,7 +255,7 @@ export const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                                     </div>
                                 </div>
                             ) : (
-                                <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 rounded-lg">
+                                <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 rounded-2xl border border-red-100 dark:border-red-900/30 shadow-sm">
                                     <XCircle size={24} />
                                     <div>
                                         <p className="font-semibold">Không thể import</p>
@@ -267,11 +267,11 @@ export const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                             {/* Sample Errors */}
                             {previewResult.sampleErrors && previewResult.sampleErrors.length > 0 && (
                                 <div className="space-y-2">
-                                    <p className="font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                                    <p className="font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2 text-sm">
                                         <AlertTriangle size={16} className="text-red-500" />
                                         Một số lỗi mẫu (hiển thị tối đa 100):
                                     </p>
-                                    <div className="max-h-60 overflow-y-auto border rounded-lg border-gray-200 dark:border-zinc-700">
+                                    <div className="max-h-60 overflow-y-auto border rounded-2xl border-gray-200 dark:border-zinc-700 shadow-sm">
                                         <table className="w-full text-sm">
                                             <thead className="bg-gray-50 dark:bg-zinc-800 sticky top-0">
                                                 <tr>
@@ -283,9 +283,9 @@ export const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                                             </thead>
                                             <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
                                                 {previewResult.sampleErrors.map((err, idx) => (
-                                                    <tr key={idx} className="bg-red-50/50 dark:bg-red-900/10">
+                                                    <tr key={idx} className="bg-red-50/50 dark:bg-red-900/10 hover:bg-red-100/50 transition-colors">
                                                         <td className="px-3 py-2 text-gray-600">{err.row}</td>
-                                                        <td className="px-3 py-2 font-medium text-gray-900">{err.studentCode || '---'}</td>
+                                                        <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">{err.studentCode || '---'}</td>
                                                         <td className="px-3 py-2 font-medium text-orange-600">{err.className || '---'}</td>
                                                         <td className="px-3 py-2 text-red-600 text-xs">{err.errors.join('; ')}</td>
                                                     </tr>
@@ -303,15 +303,15 @@ export const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
 
                             {/* Actions */}
                             <div className="flex justify-between items-center pt-4 border-t border-gray-100 dark:border-zinc-800">
-                                <button onClick={handleReset} className="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2">
+                                <button onClick={handleReset} className="h-[44px] px-6 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-bold text-gray-600 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-all active:scale-95 flex items-center gap-2">
                                     <Upload size={16} className="rotate-180" /> Chọn file khác
                                 </button>
                                 <div className="flex gap-3">
-                                    <button onClick={handleClose} className="px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Hủy</button>
+                                    <button onClick={handleClose} className="h-[44px] px-6 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-bold text-gray-600 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-all active:scale-95">Hủy</button>
                                     <button
                                         onClick={handleConfirmImport}
                                         disabled={loading || !previewResult.canImport}
-                                        className="px-6 py-2 bg-fpt-orange text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center gap-2"
+                                        className="flex items-center justify-center gap-2 h-[44px] px-6 rounded-2xl bg-fpt-orange text-sm font-bold text-white hover:bg-orange-600 shadow-lg shadow-fpt-orange/20 transition-all active:scale-95 disabled:opacity-50"
                                     >
                                         {loading && <Loader2 size={16} className="animate-spin" />}
                                         {previewResult.canImport ? `Import ${previewResult.validRows.toLocaleString()} dòng` : 'Không thể import'}
@@ -326,7 +326,9 @@ export const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                         <div className="space-y-4 text-center py-8">
                             {importResult.created > 0 ? (
                                 <>
-                                    <CheckCircle size={64} className="text-green-500 mx-auto" />
+                                    <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <CheckCircle size={32} className="text-green-500" />
+                                    </div>
                                     <h4 className="text-xl font-bold text-green-600">Import thành công!</h4>
                                     <p className="text-gray-600 dark:text-gray-400">{importResult.message}</p>
                                     <p className="text-sm text-gray-400">
@@ -335,13 +337,15 @@ export const ImportEnrollmentModal: React.FC<ImportEnrollmentModalProps> = ({
                                 </>
                             ) : (
                                 <>
-                                    <XCircle size={64} className="text-red-500 mx-auto" />
+                                    <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <XCircle size={32} className="text-red-500" />
+                                    </div>
                                     <h4 className="text-xl font-bold text-red-600">Import thất bại</h4>
                                     <p className="text-gray-600 dark:text-gray-400">{importResult.message}</p>
                                 </>
                             )}
 
-                            <button onClick={handleClose} className="mt-4 px-8 py-2 bg-fpt-orange text-white text-sm font-medium rounded-lg hover:bg-orange-600 transition-colors">
+                            <button onClick={handleClose} className="mt-4 px-8 h-[44px] rounded-2xl bg-fpt-orange text-sm font-bold text-white hover:bg-orange-600 shadow-lg shadow-fpt-orange/20 transition-all active:scale-95">
                                 Đóng
                             </button>
                         </div>

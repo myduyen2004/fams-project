@@ -91,7 +91,7 @@ export const StudentGradesPage: React.FC = () => {
                     return;
                 }
             }
-            
+
             // Priority 2: Default to first semester
             setSelectedSemesterId(semesters[0].id);
         }
@@ -251,7 +251,7 @@ export const StudentGradesPage: React.FC = () => {
                     <div className="flex flex-col md:flex-row gap-4">
                         {/* Semester Selector */}
                         <div className="flex-1" ref={semesterDropdownRef}>
-                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Học kỳ
                             </label>
                             <div className="relative">
@@ -259,7 +259,7 @@ export const StudentGradesPage: React.FC = () => {
                                     onClick={() => setIsSemesterOpen(!isSemesterOpen)}
                                     className="flex items-center justify-between w-full rounded-lg border border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 px-3 py-2 text-left focus:outline-none focus:ring-2 focus:ring-fpt-orange transition-all"
                                 >
-                                    <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                    <span className="text-sm font-normal text-gray-900 dark:text-white truncate">
                                         {getSelectedSemesterName()}
                                     </span>
                                     <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isSemesterOpen ? 'rotate-180' : ''}`} />
@@ -279,7 +279,7 @@ export const StudentGradesPage: React.FC = () => {
                                                     : 'text-gray-900 dark:text-white'
                                                     }`}
                                             >
-                                                <span className="text-sm font-medium">{semester.name}</span>
+                                                <span className="text-sm font-normal">{semester.name}</span>
                                                 {selectedSemesterId === semester.id && <Check size={16} />}
                                             </button>
                                         ))}
@@ -290,7 +290,7 @@ export const StudentGradesPage: React.FC = () => {
 
                         {/* Course Selector */}
                         <div className="flex-1" ref={courseDropdownRef}>
-                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Lớp học
                             </label>
                             <div className="relative">
@@ -302,7 +302,7 @@ export const StudentGradesPage: React.FC = () => {
                                         : 'bg-gray-50 dark:bg-zinc-800 text-gray-900 dark:text-white'
                                         }`}
                                 >
-                                    <span className="text-sm font-medium truncate">
+                                    <span className="text-sm font-normal truncate">
                                         {getSelectedCourseName()}
                                     </span>
                                     <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isCourseOpen ? 'rotate-180' : ''}`} />
@@ -322,7 +322,7 @@ export const StudentGradesPage: React.FC = () => {
                                                     : 'text-gray-900 dark:text-white'
                                                     }`}
                                             >
-                                                <span className="text-sm font-medium">{course.className} - {course.courseName}</span>
+                                                <span className="text-sm font-normal">{course.className} - {course.courseName}</span>
                                                 {selectedClassName === course.className && <Check size={16} />}
                                             </button>
                                         ))}
@@ -385,7 +385,7 @@ export const StudentGradesPage: React.FC = () => {
                                             {category.items.map((item, itemIndex) => {
                                                 const isTotal = item.itemName === 'Total';
                                                 const displayValue = isTotal ? category.totalValue : item.value;
-                                                const isPublished = isTotal 
+                                                const isPublished = isTotal
                                                     ? (item.isPublished || category.items.some(i => i.itemName !== 'Total' && i.isPublished))
                                                     : item.isPublished;
 
@@ -473,3 +473,4 @@ export const StudentGradesPage: React.FC = () => {
 };
 
 export default StudentGradesPage;
+

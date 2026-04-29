@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Shield, Lock, KeyRound, AlertCircle, Loader2, Check, ChevronRight } from 'lucide-react';
 import { lecturerOtpService } from '../../services/api/lecturerOtpService';
-import toast from 'react-hot-toast';
+import toast from "@utils/toast";
 
 interface OtpChangeModalProps {
     isOpen: boolean;
@@ -367,3 +367,4 @@ export const OtpChangeModal: React.FC<OtpChangeModalProps> = ({
         </div>
     );
 };
+
