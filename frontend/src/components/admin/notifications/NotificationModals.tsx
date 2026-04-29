@@ -10,6 +10,7 @@ import {
   NotificationStatus,
   NotificationType,
   NotificationPriority,
+  TargetType,
   getStatusLabel,
   getStatusColor,
   getTargetTypeLabel,
