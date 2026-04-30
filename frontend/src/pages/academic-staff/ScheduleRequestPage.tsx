@@ -250,22 +250,22 @@ export const ScheduleRequestPage = () => {
                             <table className="w-full">
                                 <thead>
                                     <tr className="bg-gray-50/50 dark:bg-zinc-800/50">
-                                        <th className="px-6 py-4 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                             Người gửi
                                         </th>
-                                        <th className="px-6 py-4 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                             Vai trò
                                         </th>
-                                        <th className="px-6 py-4 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                             {activeTab === 'LECTURER' ? 'Lớp / Nhóm' : 'Tiêu đề'}
                                         </th>
-                                        <th className="px-6 py-4 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                             Loại yêu cầu
                                         </th>
-                                        <th className="px-6 py-4 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                             Ngày gửi
                                         </th>
-                                        <th className="px-6 py-4 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">
+                                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                             Trạng thái
                                         </th>
                                     </tr>
@@ -363,5 +363,6 @@ export const ScheduleRequestPage = () => {
 };
 
 export default ScheduleRequestPage;
+
 
 

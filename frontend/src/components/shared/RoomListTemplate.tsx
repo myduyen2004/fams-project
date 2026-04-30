@@ -49,7 +49,7 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
             setLoading(true);
             const data = await roomService.getAllRooms();
             setRooms(data);
-            
+
             // Fetch real-time occupancy based on actual slot times from database
             try {
                 const occupiedIds = await roomService.getCurrentlyInUseRoomIds();
@@ -91,7 +91,7 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
         const params: Record<string, string> = {};
         if (selectedBuilding === 'ALL') params.building = 'ALL';
         if (selectedStatus !== 'ALL') params.status = selectedStatus;
-        
+
         // Only set params if we have something to set
         if (Object.keys(params).length > 0) {
             setSearchParams(params, { replace: true });
@@ -261,12 +261,6 @@ export const RoomListTemplate: React.FC<RoomListTemplateProps> = ({ Layout, base
                                 />
                             )}
 
-                            {/* Summary Info */}
-                            <div className="flex items-end pb-1 px-2">
-                                <div className="text-sm text-gray-500 dark:text-zinc-400 font-medium">
-                                    Hiển thị <span className="text-fpt-orange font-bold text-lg">{filteredRooms.length}</span> phòng
-                                </div>
-                            </div>
                         </div>
                     </div>
 

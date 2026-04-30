@@ -193,13 +193,13 @@ export const ForgotPasswordPage: React.FC = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Ví dụ: username@fpt.edu.vn"
-                    className="w-full px-6 py-4 bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:border-fpt-orange/50 focus:ring-4 focus:ring-fpt-orange/5 text-gray-900 dark:text-white placeholder:text-gray-300 transition-all text-sm"
+                    className="w-full px-6 h-[52px] bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:border-fpt-orange/50 focus:ring-4 focus:ring-fpt-orange/10 text-gray-900 dark:text-white placeholder:text-gray-300 transition-all text-sm font-medium"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-fpt-orange hover:bg-orange-600 text-white font-semibold py-4 rounded-2xl shadow-lg shadow-orange-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full h-[52px] bg-fpt-orange hover:bg-orange-600 text-white font-bold rounded-2xl shadow-lg shadow-orange-500/20 transition-all hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {loading ? <Loader2 size={24} className="animate-spin" /> : 'Gửi Email'}
                 </button>
@@ -216,13 +216,13 @@ export const ForgotPasswordPage: React.FC = () => {
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
                     placeholder="••••••"
-                    className="w-full px-6 py-4 bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:border-fpt-orange/50 focus:ring-4 focus:ring-fpt-orange/5 text-gray-900 dark:text-white placeholder:text-gray-300 transition-all text-center text-3xl font-semibold tracking-[10px]"
+                    className="w-full px-6 h-[52px] bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:border-fpt-orange/50 focus:ring-4 focus:ring-fpt-orange/10 text-gray-900 dark:text-white placeholder:text-gray-300 transition-all text-center text-3xl font-bold tracking-[10px]"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-fpt-orange hover:bg-orange-600 text-white font-semibold py-4 rounded-2xl shadow-lg shadow-orange-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full h-[52px] bg-fpt-orange hover:bg-orange-600 text-white font-bold rounded-2xl shadow-lg shadow-orange-500/20 transition-all hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {loading ? <Loader2 size={24} className="animate-spin" /> : 'Xác thực'}
                 </button>
@@ -248,7 +248,7 @@ export const ForgotPasswordPage: React.FC = () => {
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         placeholder="••••••••"
-                        className="w-full px-6 py-4 bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:border-fpt-orange/50 focus:ring-4 focus:ring-fpt-orange/5 text-gray-900 dark:text-white placeholder:text-gray-300 transition-all text-sm pr-12"
+                        className="w-full px-6 h-[52px] bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:border-fpt-orange/50 focus:ring-4 focus:ring-fpt-orange/10 text-gray-900 dark:text-white placeholder:text-gray-300 transition-all text-sm pr-12 font-medium"
                       />
                       <button 
                         type="button" 
@@ -285,14 +285,14 @@ export const ForgotPasswordPage: React.FC = () => {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full px-6 py-4 bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:border-fpt-orange/50 focus:ring-4 focus:ring-fpt-orange/5 text-gray-900 dark:text-white placeholder:text-gray-300 transition-all text-sm"
+                      className="w-full px-6 h-[52px] bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:border-fpt-orange/50 focus:ring-4 focus:ring-fpt-orange/10 text-gray-900 dark:text-white placeholder:text-gray-300 transition-all text-sm font-medium"
                     />
                   </div>
                 </div>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-fpt-orange hover:bg-orange-600 text-white font-semibold py-4 rounded-2xl shadow-lg shadow-orange-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full h-[52px] bg-fpt-orange hover:bg-orange-600 text-white font-bold rounded-2xl shadow-lg shadow-orange-500/20 transition-all hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {loading ? <Loader2 size={24} className="animate-spin" /> : 'Đặt lại mật khẩu'}
                 </button>
@@ -303,7 +303,7 @@ export const ForgotPasswordPage: React.FC = () => {
               <div className="text-center">
                  <button
                    onClick={() => navigate('/login')}
-                   className="w-full bg-fpt-orange hover:bg-orange-600 text-white font-semibold py-4 rounded-2xl shadow-xl shadow-orange-500/30 transition-all hover:-translate-y-0.5"
+                   className="w-full h-[52px] bg-fpt-orange hover:bg-orange-600 text-white font-bold rounded-2xl shadow-xl shadow-orange-500/30 transition-all hover:-translate-y-0.5 active:scale-[0.98]"
                  >
                    Quay lại đăng nhập
                  </button>

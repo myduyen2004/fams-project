@@ -23,6 +23,7 @@ public class AssignmentPlagiarismMatchResponse {
     private Long submissionId;
     private String studentCode;
     private String studentName;
+    private String avatar;
     private String className;
     private String assignmentTitle;
     private Integer plagiarismPercent;

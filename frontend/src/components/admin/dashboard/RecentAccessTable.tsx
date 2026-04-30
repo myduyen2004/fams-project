@@ -39,19 +39,19 @@ export const RecentAccessTable: React.FC<RecentAccessTableProps> = ({ data, isDa
         <table className="w-full">
           <thead>
             <tr className="bg-gray-50/50 dark:bg-zinc-800/30">
-              <th className="px-6 py-4 text-left text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">
+              <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                 Người dùng
               </th>
-              <th className="px-6 py-4 text-left text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">
+              <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                 Vai trò
               </th>
-              <th className="px-6 py-4 text-left text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">
+              <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                 Thời gian
               </th>
-              <th className="px-6 py-4 text-left text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">
+              <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                 Địa điểm
               </th>
-              <th className="px-6 py-4 text-left text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">
+              <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                 Trạng thái
               </th>
             </tr>
@@ -103,5 +103,6 @@ export const RecentAccessTable: React.FC<RecentAccessTableProps> = ({ data, isDa
     </div>
   );
 };
+
 
 

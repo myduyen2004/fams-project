@@ -388,11 +388,11 @@ export const WiFiAPManagement: React.FC = () => {
                                             onChange={() => setSelectedIds(selectedIds.length === accessPoints.length ? [] : accessPoints.map(ap => ap.id))}
                                         />
                                     </th>
-                                    <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-widest">Tên & SSID</th>
-                                    <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-widest">BSSID & IP</th>
-                                    <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-widest">Vị trí</th>
-                                    <th className="px-6 py-5 text-center text-[11px] font-black uppercase tracking-widest">Phòng</th>
-                                    <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-widest rounded-tr-2xl">Trạng thái</th>
+                                    <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tên & SSID</th>
+                                    <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">BSSID & IP</th>
+                                    <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Vị trí</th>
+                                    <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Phòng</th>
+                                    <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap rounded-tr-2xl">Trạng thái</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50 dark:divide-zinc-800">
@@ -488,4 +488,5 @@ export const WiFiAPManagement: React.FC = () => {
         </AcademicStaffLayout>
     );
 };
+
 

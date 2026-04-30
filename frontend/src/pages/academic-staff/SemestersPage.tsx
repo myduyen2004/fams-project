@@ -217,12 +217,12 @@ export const SemestersPage: React.FC = () => {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-fpt-orange text-white">
-                  <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-widest rounded-tl-2xl">Mã học kỳ</th>
-                  <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-widest">Tên học kỳ</th>
-                  <th className="px-6 py-5 text-center text-[11px] font-black uppercase tracking-widest">Ngày bắt đầu</th>
-                  <th className="px-6 py-5 text-center text-[11px] font-black uppercase tracking-widest">Ngày kết thúc</th>
-                  <th className="px-6 py-5 text-center text-[11px] font-black uppercase tracking-widest">Trạng thái</th>
-                  <th className="px-6 py-5 text-center text-[11px] font-black uppercase tracking-widest rounded-tr-2xl">Thao tác</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap rounded-tl-2xl">Mã học kỳ</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tên học kỳ</th>
+                  <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Ngày bắt đầu</th>
+                  <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Ngày kết thúc</th>
+                  <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                  <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap rounded-tr-2xl">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-zinc-800">
@@ -343,4 +343,5 @@ export const SemestersPage: React.FC = () => {
     </AcademicStaffLayout>
   );
 };
+
 

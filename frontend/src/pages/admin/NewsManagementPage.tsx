@@ -210,11 +210,11 @@ export const NewsManagementPage = () => {
                       className="w-5 h-5 rounded-lg border-white/30 bg-transparent text-white focus:ring-0 cursor-pointer accent-white transition-all"
                     />
                   </th>
-                  <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-widest">Tiêu đề</th>
-                  <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-widest">Danh mục</th>
-                  <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-widest">Đối tượng</th>
-                  <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-widest">Trạng thái</th>
-                  <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-widest rounded-tr-2xl">Ngày tạo</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tiêu đề</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Danh mục</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Đối tượng</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap rounded-tr-2xl">Ngày tạo</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-zinc-800">
@@ -323,4 +323,5 @@ export const NewsManagementPage = () => {
 };
 
 export default NewsManagementPage;
+
 

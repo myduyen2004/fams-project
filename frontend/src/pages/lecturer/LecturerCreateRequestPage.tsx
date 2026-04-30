@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { LecturerLayout } from '../../layouts/LecturerLayout';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Upload, Info, Check, Trash2 } from 'lucide-react';
+import { ArrowLeft, Upload, Info, Check, Trash2, FileText, AlertCircle, Calendar, Clock, MapPin, Loader2 } from 'lucide-react';
 import toast from "@utils/toast";
-// requestType is always 'RESCHEDULE'
 import { scheduleRequestService, ClassSlotResponse, CreateScheduleRequestPayload, ConflictCheckResponse } from '../../services/api/scheduleRequestService';
 import { RoomSelectionCard } from '../../components/lecturer/request/RoomSelectionCard';
 import { Room } from '../../types/room';
@@ -27,13 +26,11 @@ export const LecturerCreateRequestPage: React.FC = () => {
     const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
 
     const [reason, setReason] = useState<string>('');
-    const [requestType] = useState<string>('RESCHEDULE');
+
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [conflictResult, setConflictResult] = useState<ConflictCheckResponse | null>(null);
     const [checkingConflict, setCheckingConflict] = useState(false);
     const hasConflict = conflictResult?.hasConflict === true;
-
-
 
     // Get tomorrow's date in YYYY-MM-DD format
     const getTomorrowString = () => {
@@ -41,9 +38,6 @@ export const LecturerCreateRequestPage: React.FC = () => {
         tomorrow.setDate(tomorrow.getDate() + 1);
         return tomorrow.toISOString().split('T')[0];
     };
-
-    // Handle date change with validation (must be tomorrow or later)
-
 
     // Handle file upload
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,12 +50,10 @@ export const LecturerCreateRequestPage: React.FC = () => {
         const files = e.target.files;
         if (files) {
             const newFiles = Array.from(files).filter(file => {
-                // Check file size (max 10MB)
                 if (file.size > 10 * 1024 * 1024) {
                     toast.error(`File ${file.name} vượt quá 10MB`);
                     return false;
                 }
-                // Check if file already exists
                 if (uploadedFiles.some(f => f.name === file.name)) {
                     toast.error(`File ${file.name} đã được thêm`);
                     return false;
@@ -70,14 +62,9 @@ export const LecturerCreateRequestPage: React.FC = () => {
             });
             setUploadedFiles(prev => [...prev, ...newFiles]);
         }
-        // Reset input value to allow re-uploading same file
         if (e.target) e.target.value = '';
     };
 
-
-
-
-    // Format Date: dd/MM/yyyy
     const formatDateDDMMYYYY = (dateString: string) => {
         if (!dateString) return '';
         const date = new Date(dateString);
@@ -87,19 +74,13 @@ export const LecturerCreateRequestPage: React.FC = () => {
         return `${day}/${month}/${year}`;
     };
 
-    // Fetch classes on mount
     useEffect(() => {
         const fetchClasses = async () => {
             try {
-                console.log('[DEBUG] Fetching classes from API...');
                 const data = await scheduleRequestService.getClasses();
-                console.log('[DEBUG] Classes API response:', data);
-                console.log('[DEBUG] Classes count:', data?.length);
-                console.log('[DEBUG] Classes type:', typeof data, Array.isArray(data));
                 setClasses(data);
-            } catch (error: any) {
-                console.error("[DEBUG] Error fetching classes:", error);
-                console.error("[DEBUG] Error response:", error?.response?.status, error?.response?.data);
+            } catch (error) {
+                console.error("Error fetching classes:", error);
                 toast.error("Không thể tải danh sách lớp học");
             }
         };
@@ -112,10 +93,8 @@ export const LecturerCreateRequestPage: React.FC = () => {
                 try {
                     const data = await scheduleRequestService.getSlotsForClass(selectedClass);
                     setSlots(data);
-                    // Reset slot selection when class changes
                     setSelectedSlotId('');
                     setSelectedSlot(null);
-
                 } catch (error) {
                     console.error("Error fetching slots:", error);
                     toast.error("Không thể tải danh sách slot cho lớp này");
@@ -126,29 +105,23 @@ export const LecturerCreateRequestPage: React.FC = () => {
             setSlots([]);
             setSelectedSlotId('');
             setSelectedSlot(null);
-
         }
     }, [selectedClass]);
 
-    // Check for conflicts when date/slot changes
     useEffect(() => {
         const checkConflict = async () => {
-            console.log('Checking conflicts:', { selectedClass, selectedSlotId, newDate, newSlot });
-
             if (!selectedClass || !selectedSlotId || !newDate || !newSlot) {
                 setConflictResult(null);
                 return;
             }
             try {
                 setCheckingConflict(true);
-                console.log('Calling checkConflicts API...');
                 const result = await scheduleRequestService.checkConflicts(
                     selectedClass,
                     newDate,
                     newSlot,
                     parseInt(selectedSlotId)
                 );
-                console.log('Conflict result:', result);
                 setConflictResult(result);
             } catch (error) {
                 console.error('Error checking conflicts:', error);
@@ -163,40 +136,13 @@ export const LecturerCreateRequestPage: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Validation - Thông tin ban đầu
-        if (!selectedClass) {
-            toast.error('Vui lòng chọn lớp học');
-            return;
-        }
-        if (!requestType) {
-            toast.error('Vui lòng chọn loại yêu cầu');
-            return;
-        }
-        if (!selectedSlotId || !selectedSlot) {
-            toast.error('Vui lòng chọn ngày và slot ban đầu');
-            return;
-        }
-        // Phòng ban đầu tự động hiển thị từ selectedSlot.roomName
+        if (!selectedClass) { toast.error('Vui lòng chọn lớp học'); return; }
+        if (!selectedSlotId || !selectedSlot) { toast.error('Vui lòng chọn ngày và slot ban đầu'); return; }
+        if (!newDate) { toast.error('Vui lòng chọn ngày cần đổi'); return; }
+        if (!newSlot) { toast.error('Vui lòng chọn slot mới'); return; }
+        if (!selectedRoom) { toast.error('Vui lòng chọn phòng học mới'); return; }
+        if (!reason.trim()) { toast.error('Vui lòng nhập lý do thay đổi'); return; }
 
-        // Validation - Thông tin thay đổi
-        if (!newDate) {
-            toast.error('Vui lòng chọn ngày cần đổi');
-            return;
-        }
-        if (!newSlot) {
-            toast.error('Vui lòng chọn slot mới');
-            return;
-        }
-        if (!selectedRoom) {
-            toast.error('Vui lòng chọn phòng học mới');
-            return;
-        }
-        if (!reason.trim()) {
-            toast.error('Vui lòng nhập lý do thay đổi');
-            return;
-        }
-
-        // Strict Conflict Check
         if (conflictResult?.hasConflict) {
             toast.error('Không thể tạo yêu cầu khi có xung đột lịch. Vui lòng chọn ngày hoặc slot khác.');
             return;
@@ -204,20 +150,12 @@ export const LecturerCreateRequestPage: React.FC = () => {
 
         setSubmitting(true);
         try {
-            // Upload ALL files to Cloudinary
             let fileUrls: string[] = [];
             if (uploadedFiles.length > 0) {
-                try {
-                    for (const file of uploadedFiles) {
-                        const uploadResult = await uploadFile(file);
-                        const url = uploadResult.url || uploadResult.secure_url;
-                        if (url) fileUrls.push(url);
-                    }
-                } catch (uploadError) {
-                    console.error('File upload failed:', uploadError);
-                    toast.error('Không thể upload file. Vui lòng thử lại.');
-                    setSubmitting(false);
-                    return;
+                for (const file of uploadedFiles) {
+                    const uploadResult = await uploadFile(file);
+                    const url = uploadResult.url || uploadResult.secure_url;
+                    if (url) fileUrls.push(url);
                 }
             }
 
@@ -245,35 +183,44 @@ export const LecturerCreateRequestPage: React.FC = () => {
 
     return (
         <LecturerLayout pageTitle="Tạo yêu cầu mới">
-            <div className="max-w-[1440px] mx-auto w-full">
+            <div className="max-w-[1440px] mx-auto w-full p-6 animate-in fade-in duration-500">
                 {/* Header Back Link */}
-                <div className="mb-6 mt-4">
-                    <Link to="/lecturer/requests" className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-fpt-orange transition-colors mb-2">
-                        <ArrowLeft size={18} className="mr-1" />
-                        Quay lại danh sách
+                <div className="mb-8 space-y-4">
+                    <Link to="/lecturer/requests" className="inline-flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-fpt-orange transition-all group w-fit">
+                        <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+                        QUAY LẠI DANH SÁCH
                     </Link>
-                    <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Tạo yêu cầu thay đổi lịch dạy</h2>
+                    <div className="flex items-center gap-4">
+                        <div>
+                            <h2 className="text-3xl font-bold text-[#001D4A] dark:text-white tracking-tight">Tạo yêu cầu thay đổi lịch dạy</h2>
+                            <p className="text-gray-500 dark:text-zinc-400 font-medium">Hoàn thiện các thông tin dưới đây để gửi yêu cầu cho Ban đào tạo</p>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Warning/Info Box */}
-                <div className="p-4 bg-orange-50 dark:bg-orange-900/10 rounded-xl mb-8 border border-orange-100 dark:border-orange-900/30">
-                    <div className="flex items-start gap-3">
-                        <Info className="text-orange-500 text-xl flex-shrink-0" />
-                        <p className="text-sm text-orange-800 dark:text-orange-200 leading-relaxed">
-                            Vui lòng kiểm tra kỹ thông tin trước khi gửi. Yêu cầu của bạn sẽ được Ban đào tạo xem xét trong vòng 24h làm việc.
+                <div className="p-6 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/10 dark:to-amber-900/10 rounded-[24px] mb-8 border-2 border-orange-100 dark:border-orange-900/30 flex items-start gap-4">
+                    <div className="p-2 bg-white dark:bg-zinc-900 rounded-xl shadow-sm text-fpt-orange">
+                        <Info size={24} />
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-orange-900 dark:text-orange-200 uppercase text-xs tracking-widest mb-1">Lưu ý quan trọng</h4>
+                        <p className="text-sm text-orange-800/80 dark:text-orange-200/70 leading-relaxed font-medium">
+                            Vui lòng kiểm tra kỹ thông tin trước khi gửi. Mọi yêu cầu sẽ được Ban đào tạo xem xét và phản hồi trong vòng 24h làm việc qua hệ thống và email.
                         </p>
                     </div>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-8 pb-12">
                     {/* General Info */}
-                    <section className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-8">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Thông tin chung</h3>
+                    <section className="bg-white dark:bg-zinc-900 rounded-[32px] border-2 border-gray-100 dark:border-zinc-800 p-8 shadow-sm transition-all hover:shadow-md">
+                        <div className="flex items-center gap-3 mb-8">
+                            <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
+                            <h3 className="text-xl font-bold text-[#001D4A] dark:text-white tracking-tight">Thông tin chung</h3>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label className="block text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">LỚP HỌC</label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-3">
+                                <label className="block text-[11px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-[0.2em] ml-1">LỚP HỌC <span className="text-fpt-orange">*</span></label>
                                 <CustomSelect
                                     value={selectedClass}
                                     onChange={setSelectedClass}
@@ -281,83 +228,101 @@ export const LecturerCreateRequestPage: React.FC = () => {
                                         { value: '', label: 'Chọn lớp học' },
                                         ...classes.map(cls => ({ value: cls, label: cls }))
                                     ]}
-                                    className="bg-slate-50 dark:bg-zinc-800/50 border-transparent"
+                                    className="h-[52px] rounded-2xl bg-gray-50/50 dark:bg-zinc-800/50 border-gray-100 dark:border-zinc-700 hover:border-fpt-orange transition-all"
                                 />
                             </div>
-                            <div>
-                                <label className="block text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">LOẠI YÊU CẦU</label>
-                                <div className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm text-slate-700 dark:text-slate-200 min-h-[46px] flex items-center">
-                                    Đổi lịch
+                            <div className="space-y-3">
+                                <label className="block text-[11px] font-black text-gray-400 dark:text-zinc-500 tracking-[0.2em] ml-1">LOẠI YÊU CẦU</label>
+                                <div className="w-full bg-gray-50 dark:bg-zinc-800/50 border-2 border-transparent rounded-2xl px-5 h-[52px] flex items-center text-sm font-bold text-gray-700 dark:text-zinc-300">
+                                    <Check size={18} className="mr-2 text-emerald-500" /> Đổi lịch dạy (Reschedule)
                                 </div>
                             </div>
                         </div>
                     </section>
 
                     {/* Change Details */}
-                    <section className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-8">
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Chi tiết thay đổi</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-                            {/* NGÀY BAN ĐẦU - First (filter dates >= tomorrow) */}
-                            <div>
-                                <label className="block text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">NGÀY BAN ĐẦU</label>
-                                <CustomSelect
-                                    value={selectedOriginalDate}
-                                    onChange={(date) => {
-                                        setSelectedOriginalDate(date);
-                                        setSelectedSlotId('');
-                                        setSelectedSlot(null);
-                                    }}
-                                    disabled={!selectedClass}
-                                    options={[
-                                        { value: '', label: 'Chọn ngày' },
-                                        ...(() => {
-                                            const tomorrow = getTomorrowString();
-                                            const uniqueDates = Array.from(new Set(
-                                                slots.filter(s => s.date >= tomorrow).map(s => s.date)
-                                            )).sort();
-                                            return uniqueDates.map(date => ({ value: date, label: formatDateDDMMYYYY(date) }));
-                                        })()
-                                    ]}
-                                    className="bg-slate-50 dark:bg-zinc-800/50 border-transparent font-normal"
-                                />
-                            </div>
-                            {/* SLOT BAN ĐẦU - Second (shows slots for selected date) */}
-                            <div>
-                                <label className="block text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">SLOT BAN ĐẦU</label>
-                                <CustomSelect
-                                    value={selectedSlotId}
-                                    onChange={(slotId) => {
-                                        setSelectedSlotId(slotId);
-                                        const found = slots.find(s => s.id.toString() === slotId) || null;
-                                        setSelectedSlot(found);
-                                    }}
-                                    disabled={!selectedOriginalDate}
-                                    options={[
-                                        { value: '', label: 'Chọn slot' },
-                                        ...(selectedOriginalDate ? slots
-                                            .filter(s => s.date === selectedOriginalDate)
-                                            .sort((a, b) => a.slotNumber - b.slotNumber)
-                                            .map(slot => ({ value: slot.id.toString(), label: `Slot ${slot.slotNumber}` })) : [])
-                                    ]}
-                                    className="bg-slate-50 dark:bg-zinc-800/50 border-transparent font-normal"
-                                />
-                            </div>
-                            {/* PHÒNG BAN ĐẦU - Third (auto-display) */}
-                            <div>
-                                <label className="block text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">PHÒNG BAN ĐẦU</label>
-                                <div className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm text-slate-700 dark:text-slate-200 font-normal min-h-[46px] flex items-center">
-                                    {selectedSlot ? selectedSlot.roomName : '-'}
+                    <section className="bg-white dark:bg-zinc-900 rounded-[32px] border-2 border-gray-100 dark:border-zinc-800 p-8 shadow-sm transition-all hover:shadow-md relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full -mr-16 -mt-16" />
+
+                        <div className="flex items-center gap-3 mb-8 relative z-10">
+                            <div className="w-1.5 h-6 bg-fpt-orange rounded-full" />
+                            <h3 className="text-xl font-bold text-[#001D4A] dark:text-white tracking-tight">Chi tiết thay đổi</h3>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 relative z-10">
+                            {/* NGÀY BAN ĐẦU */}
+                            <div className="space-y-3">
+                                <label className="block text-[11px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-[0.2em] ml-1">NGÀY BAN ĐẦU</label>
+                                <div className="relative">
+                                    <CustomSelect
+                                        value={selectedOriginalDate}
+                                        onChange={(date) => {
+                                            setSelectedOriginalDate(date);
+                                            setSelectedSlotId('');
+                                            setSelectedSlot(null);
+                                        }}
+                                        disabled={!selectedClass}
+                                        options={[
+                                            { value: '', label: 'Chọn ngày' },
+                                            ...(() => {
+                                                const tomorrow = getTomorrowString();
+                                                const uniqueDates = Array.from(new Set(
+                                                    slots.filter(s => s.date >= tomorrow).map(s => s.date)
+                                                )).sort();
+                                                return uniqueDates.map(date => ({ value: date, label: formatDateDDMMYYYY(date) }));
+                                            })()
+                                        ]}
+                                        className="h-[52px] rounded-2xl bg-gray-50/50 dark:bg-zinc-800/50 border-gray-100 dark:border-zinc-700 font-bold"
+                                    />
+                                    <Calendar size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" />
                                 </div>
                             </div>
-                            <CustomDatePicker
-                                label="NGÀY CẦN ĐỔI"
-                                value={newDate}
-                                min={getTomorrowString()}
-                                onChange={(value) => setNewDate(value)}
-                                className="w-full"
-                            />
-                            <div>
-                                <label className="block text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">SLOT MỚI</label>
+
+                            {/* SLOT BAN ĐẦU */}
+                            <div className="space-y-3">
+                                <label className="block text-[11px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-[0.2em] ml-1">SLOT BAN ĐẦU</label>
+                                <div className="relative">
+                                    <CustomSelect
+                                        value={selectedSlotId}
+                                        onChange={(slotId) => {
+                                            setSelectedSlotId(slotId);
+                                            const found = slots.find(s => s.id.toString() === slotId) || null;
+                                            setSelectedSlot(found);
+                                        }}
+                                        disabled={!selectedOriginalDate}
+                                        options={[
+                                            { value: '', label: 'Chọn slot' },
+                                            ...(selectedOriginalDate ? slots
+                                                .filter(s => s.date === selectedOriginalDate)
+                                                .sort((a, b) => a.slotNumber - b.slotNumber)
+                                                .map(slot => ({ value: slot.id.toString(), label: `Slot ${slot.slotNumber}` })) : [])
+                                        ]}
+                                        className="h-[52px] rounded-2xl bg-gray-50/50 dark:bg-zinc-800/50 border-gray-100 dark:border-zinc-700 font-bold"
+                                    />
+                                    <Clock size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none" />
+                                </div>
+                            </div>
+
+                            {/* PHÒNG BAN ĐẦU */}
+                            <div className="space-y-3">
+                                <label className="block text-[11px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-[0.2em] ml-1">PHÒNG BAN ĐẦU</label>
+                                <div className="w-full bg-gray-100/50 dark:bg-zinc-800/30 border-2 border-transparent rounded-2xl px-5 h-[52px] flex items-center text-sm font-bold text-gray-500 dark:text-zinc-500 italic">
+                                    <MapPin size={18} className="mr-2 opacity-50" /> {selectedSlot ? selectedSlot.roomName : '—'}
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <label className="block text-[11px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-[0.2em] ml-1">NGÀY CẦN ĐỔI <span className="text-fpt-orange">*</span></label>
+                                <CustomDatePicker
+                                    value={newDate}
+                                    min={getTomorrowString()}
+                                    onChange={(value) => setNewDate(value)}
+                                    className="h-[52px] rounded-2xl bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-700 shadow-sm"
+                                />
+                            </div>
+
+                            <div className="space-y-3">
+                                <label className="block text-[11px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-[0.2em] ml-1">SLOT MỚI <span className="text-fpt-orange">*</span></label>
                                 <CustomSelect
                                     value={newSlot?.toString() || ''}
                                     onChange={(value) => {
@@ -371,7 +336,7 @@ export const LecturerCreateRequestPage: React.FC = () => {
                                         { value: '3', label: 'Slot 3' },
                                         { value: '4', label: 'Slot 4' }
                                     ]}
-                                    className="bg-slate-50 dark:bg-zinc-800/50 border-transparent font-normal"
+                                    className="h-[52px] rounded-2xl bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-700 shadow-sm font-black text-fpt-orange"
                                 />
                             </div>
                         </div>
@@ -379,86 +344,82 @@ export const LecturerCreateRequestPage: React.FC = () => {
 
                     {/* Conflict Warnings */}
                     {hasConflict && (
-                        <div className="p-4 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-200 dark:border-red-900/30">
-                            <div className="flex items-start gap-3">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                </svg>
+                        <div className="p-6 bg-rose-50 dark:bg-rose-900/10 rounded-[24px] border-2 border-rose-100 dark:border-rose-900/30 animate-in slide-in-from-top-4 duration-300">
+                            <div className="flex items-start gap-4">
+                                <div className="p-2 bg-white dark:bg-zinc-900 rounded-xl shadow-sm text-rose-500">
+                                    <AlertCircle size={24} />
+                                </div>
                                 <div className="flex-1">
-                                    <p className="text-sm font-bold text-red-700 dark:text-red-400 mb-2">Phát hiện xung đột lịch học!</p>
-                                    <ul className="space-y-1">
+                                    <h4 className="font-black text-rose-900 dark:text-rose-200 uppercase text-xs tracking-widest mb-3">Phát hiện xung đột lịch học!</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {conflictResult.conflicts.map((conflict, index) => (
-                                            <li key={index} className="text-sm text-red-600 dark:text-red-300 flex items-center gap-2">
-                                                <span className="w-1.5 h-1.5 bg-red-500 rounded-full flex-shrink-0"></span>
-                                                {conflict.message}
-                                            </li>
+                                            <div key={index} className="flex items-center gap-3 bg-white/50 dark:bg-zinc-900/50 p-3 rounded-xl border border-rose-100 dark:border-rose-900/20">
+                                                <div className="w-1.5 h-1.5 bg-rose-500 rounded-full flex-shrink-0" />
+                                                <span className="text-sm text-rose-800 dark:text-rose-300 font-bold">{conflict.message}</span>
+                                            </div>
                                         ))}
-                                    </ul>
-                                    <p className="text-xs text-red-500 dark:text-red-400 mt-3 italic">
-                                        Vui lòng chọn ngày hoặc slot khác để tránh xung đột.
+                                    </div>
+                                    <p className="text-xs text-rose-500 dark:text-rose-400 mt-4 italic font-medium flex items-center gap-1">
+                                        <Info size={12} /> Vui lòng chọn ngày hoặc slot khác để đảm bảo không bị trùng lịch dạy/học.
                                     </p>
                                 </div>
                             </div>
                         </div>
                     )}
+
                     {checkingConflict && (
-                        <div className="p-4 bg-slate-50 dark:bg-zinc-800/50 rounded-xl border border-slate-200 dark:border-zinc-700 flex items-center gap-2">
-                            <svg className="animate-spin h-4 w-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            <span className="text-sm text-slate-500">Đang kiểm tra xung đột...</span>
+                        <div className="p-4 bg-gray-50/50 dark:bg-zinc-800/50 rounded-2xl border-2 border-dashed border-gray-200 dark:border-zinc-700 flex items-center justify-center gap-3">
+                            <Loader2 className="animate-spin text-fpt-orange" size={20} />
+                            <span className="text-sm font-bold text-gray-500 uppercase tracking-widest">Đang kiểm tra xung đột...</span>
                         </div>
                     )}
 
-                    {/* Room Selection - Hidden when conflicts exist */}
+                    {/* Room Selection */}
                     {!conflictResult?.hasConflict && (
-                        <RoomSelectionCard
-                            selectedRoom={selectedRoom}
-                            onRoomSelect={setSelectedRoom}
-                            selectedDate={newDate}
-                            selectedSlot={newSlot}
-                        />
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <RoomSelectionCard
+                                selectedRoom={selectedRoom}
+                                onRoomSelect={setSelectedRoom}
+                                selectedDate={newDate}
+                                selectedSlot={newSlot}
+                            />
+                        </div>
                     )}
 
                     {/* Content & Docs */}
-                    <section className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-8">
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Nội dung & Tài liệu</h3>
+                    <section className="bg-white dark:bg-zinc-900 rounded-[32px] border-2 border-gray-100 dark:border-zinc-800 p-8 shadow-sm transition-all hover:shadow-md">
+                        <div className="flex items-center gap-3 mb-8">
+                            <div className="w-1.5 h-6 bg-emerald-500 rounded-full" />
+                            <h3 className="text-xl font-black text-[#001D4A] dark:text-white uppercase tracking-tight">Nội dung & Tài liệu</h3>
+                        </div>
+
                         {hasConflict && (
-                            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/10 dark:text-amber-300">
-                                Phần này đang bị khóa do phát hiện xung đột lịch học. Vui lòng đổi ngày hoặc slot trước khi nhập lý do và tải tài liệu.
+                            <div className="mb-6 rounded-[20px] border-2 border-dashed border-amber-200 bg-amber-50/50 p-6 text-center text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/10 dark:text-amber-300 font-bold">
+                                Phần này đang được khóa để bảo vệ dữ liệu. Vui lòng giải quyết xung đột lịch trước.
                             </div>
                         )}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div>
-                                <label className="block text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">LÝ DO THAY ĐỔI <span className="text-red-500">*</span></label>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                            <div className="space-y-4">
+                                <label className="block text-[11px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-[0.2em] ml-1">LÝ DO THAY ĐỔI <span className="text-fpt-orange">*</span></label>
                                 <textarea
-                                    className="w-full bg-slate-50 dark:bg-zinc-800/50 border-transparent rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-fpt-orange/20 focus:border-fpt-orange outline-none transition-all text-slate-700 dark:text-slate-200"
-                                    placeholder="Nhập lý do chi tiết..."
-                                    rows={8}
+                                    className={`w-full bg-gray-50 dark:bg-zinc-800/50 border-2 border-gray-100 dark:border-zinc-700 rounded-[24px] px-6 py-5 text-sm font-medium focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange outline-none transition-all text-gray-700 dark:text-zinc-200 min-h-[220px] ${hasConflict ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    placeholder="Ví dụ: Nghỉ ốm (có giấy xác nhận), Công tác đột xuất của trường,..."
                                     value={reason}
                                     onChange={(e) => setReason(e.target.value)}
                                     disabled={hasConflict}
                                     required
                                 ></textarea>
                             </div>
-                            <div>
-                                <label className="block text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">TỆP ĐÍNH KÈM</label>
+                            <div className="space-y-4">
+                                <label className="block text-[11px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-[0.2em] ml-1">TỆP ĐÍNH KÈM (MINH CHỨNG)</label>
                                 <div
-                                    className={`flex justify-center px-6 pt-5 pb-6 border-2 border-slate-200 dark:border-slate-800 border-dashed rounded-lg transition-colors h-[190px] flex-col ${hasConflict ? 'cursor-not-allowed opacity-60' : 'hover:border-fpt-orange cursor-pointer group'}`}
-                                    onClick={() => {
-                                        if (!hasConflict) {
-                                            fileInputRef.current?.click();
-                                        }
-                                    }}
+                                    className={`flex justify-center px-6 pt-10 pb-10 border-2 border-gray-200 dark:border-zinc-700 border-dashed rounded-[24px] transition-all min-h-[220px] flex-col relative group ${hasConflict ? 'cursor-not-allowed opacity-50 bg-gray-50/50' : 'hover:border-fpt-orange hover:bg-orange-50/5 cursor-pointer'}`}
+                                    onClick={() => !hasConflict && fileInputRef.current?.click()}
                                     onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
                                     onDrop={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        if (hasConflict) {
-                                            toast.error('Không thể tải tài liệu khi đang có xung đột lịch học');
-                                            return;
-                                        }
+                                        e.preventDefault(); e.stopPropagation();
+                                        if (hasConflict) { toast.error('Không thể tải tài liệu khi đang có xung đột lịch học'); return; }
                                         const files = e.dataTransfer.files;
                                         if (files.length) {
                                             const event = { target: { files, value: '' } } as unknown as React.ChangeEvent<HTMLInputElement>;
@@ -466,62 +427,66 @@ export const LecturerCreateRequestPage: React.FC = () => {
                                         }
                                     }}
                                 >
-                                    <div className="space-y-1 text-center">
-                                        <Upload className="mx-auto h-10 w-10 text-slate-400 group-hover:text-fpt-orange transition-colors" />
-                                        <div className="flex text-sm text-slate-600 dark:text-slate-400 justify-center">
-                                            <span className="font-medium text-fpt-orange hover:underline">Tải tệp lên</span>
-                                            <p className="pl-1">hoặc kéo và thả vào đây</p>
+                                    <div className="space-y-3 text-center">
+                                        <div className="w-16 h-16 bg-gray-50 dark:bg-zinc-800 rounded-2xl flex items-center justify-center mx-auto text-gray-400 group-hover:text-fpt-orange group-hover:scale-110 transition-all duration-300 shadow-sm border border-gray-100 dark:border-zinc-700">
+                                            <Upload size={28} />
                                         </div>
-                                        <p className="text-xs text-slate-500">PNG, JPG, PDF lên đến 10MB</p>
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-black text-gray-700 dark:text-zinc-200">
+                                                Tải tệp lên <span className="text-fpt-orange">hoặc kéo thả</span>
+                                            </p>
+                                            <p className="text-xs text-gray-400 font-medium tracking-tight">Hỗ trợ PNG, JPG, PDF (Tối đa 10MB)</p>
+                                        </div>
                                     </div>
+                                    <input
+                                        ref={fileInputRef}
+                                        className="hidden"
+                                        type="file"
+                                        multiple
+                                        accept="image/*,.pdf"
+                                        onChange={handleFileChange}
+                                        disabled={hasConflict}
+                                    />
                                 </div>
-                                <input
-                                    ref={fileInputRef}
-                                    className="hidden"
-                                    type="file"
-                                    multiple
-                                    accept="image/*,.pdf"
-                                    onChange={handleFileChange}
-                                    disabled={hasConflict}
-                                />
 
                                 {/* Display uploaded files */}
                                 {uploadedFiles.length > 0 && (
-                                    <div className="mt-4 space-y-2 max-h-[150px] overflow-y-auto pr-2">
+                                    <div className="grid grid-cols-1 gap-3 mt-4 animate-in slide-in-from-top-2">
                                         {uploadedFiles.map((file, index) => (
                                             <div
                                                 key={index}
-                                                className="flex items-center justify-between p-3 bg-slate-50 dark:bg-zinc-800/50 rounded-xl border border-slate-100 dark:border-slate-800/50 hover:border-fpt-orange/50 transition-colors group"
+                                                className="flex items-center justify-between p-4 bg-white dark:bg-zinc-800 shadow-sm rounded-2xl border-2 border-gray-100 dark:border-zinc-700 hover:border-fpt-orange/50 transition-all group"
                                             >
-                                                <div className="flex flex-col min-w-0 pr-4">
-                                                    <span className="text-xs font-bold text-slate-800 dark:text-gray-100 truncate mb-1" title={file.name}>
-                                                        {file.name}
-                                                    </span>
-                                                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
-                                                        {(file.size / 1024).toFixed(2)} KB
-                                                    </span>
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-500 rounded-lg">
+                                                        <FileText size={18} />
+                                                    </div>
+                                                    <div className="flex flex-col min-w-0">
+                                                        <span className="text-sm font-black text-gray-900 dark:text-white truncate" title={file.name}>
+                                                            {file.name}
+                                                        </span>
+                                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                                            {(file.size / 1024).toFixed(1)} KB
+                                                        </span>
+                                                    </div>
                                                 </div>
 
-                                                <div className="flex items-center gap-3 flex-shrink-0">
-                                                    <div className="flex items-center justify-center w-5 h-5 rounded-full border border-green-500 text-green-500 bg-green-50 dark:bg-green-900/10">
-                                                        <Check size={12} strokeWidth={3} />
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 flex items-center justify-center shadow-inner">
+                                                        <Check size={14} strokeWidth={3} />
                                                     </div>
                                                     <button
                                                         type="button"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            if (hasConflict) {
-                                                                return;
-                                                            }
                                                             const newFiles = [...uploadedFiles];
                                                             newFiles.splice(index, 1);
                                                             setUploadedFiles(newFiles);
                                                         }}
-                                                        className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded-md hover:bg-slate-200 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        className="w-8 h-8 rounded-full bg-gray-50 dark:bg-zinc-700 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all flex items-center justify-center"
                                                         title="Xóa file"
-                                                        disabled={hasConflict}
                                                     >
-                                                        <Trash2 size={16} />
+                                                        <Trash2 size={14} />
                                                     </button>
                                                 </div>
                                             </div>
@@ -532,19 +497,28 @@ export const LecturerCreateRequestPage: React.FC = () => {
                         </div>
                     </section>
 
-                    <div className="flex pt-4 mb-12 justify-end">
+                    <div className="flex pt-8 mb-12 justify-end gap-4 border-t border-gray-100 dark:border-zinc-800">
+                        <Link
+                            to="/lecturer/requests"
+                            className="flex h-[52px] items-center px-8 bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-800 text-gray-700 dark:text-gray-200 font-bold rounded-2xl transition-all hover:border-gray-300 dark:hover:border-zinc-600 active:scale-95 uppercase tracking-widest text-xs"
+                        >
+                            Hủy bỏ
+                        </Link>
                         <button
                             type="submit"
                             disabled={submitting || hasConflict}
-                            className={`w-auto min-w-[200px] px-8 bg-fpt-orange hover:bg-orange-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-500/20 transition-all active:scale-[0.95] flex items-center justify-center gap-2 text-base uppercase tracking-wider ${(submitting || hasConflict) ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            className={`flex h-[52px] items-center gap-3 px-10 bg-fpt-orange hover:bg-orange-600 text-white font-bold rounded-2xl shadow-lg shadow-fpt-orange/20 transition-all active:scale-95 uppercase tracking-widest text-sm ${submitting || hasConflict ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
                         >
                             {submitting ? (
                                 <>
-                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    <Loader2 className="animate-spin" size={20} />
                                     Đang gửi...
                                 </>
                             ) : (
-                                "Gửi yêu cầu"
+                                <>
+                                    Gửi yêu cầu ngay
+                                    <Check size={20} strokeWidth={3} />
+                                </>
                             )}
                         </button>
                     </div>
@@ -553,4 +527,3 @@ export const LecturerCreateRequestPage: React.FC = () => {
         </LecturerLayout>
     );
 };
-

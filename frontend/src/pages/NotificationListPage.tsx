@@ -71,11 +71,25 @@ const parseDateTime = (timestamp: string): Date | null => {
   const date = new Date(timestamp);
   if (!isNaN(date.getTime())) return date;
 
+  // Handle "yyyy-MM-dd HH:mm:ss"
+  const isoLikeMatch = timestamp.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})$/);
+  if (isoLikeMatch) {
+    const [_, y, m, d, h, min, s] = isoLikeMatch;
+    return new Date(parseInt(y), parseInt(m) - 1, parseInt(d), parseInt(h), parseInt(min), parseInt(s));
+  }
+
   // Custom parsing for "dd/MM/yyyy HH:mm"
   const match = timestamp.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})$/);
   if (match) {
     const [_, day, month, year, hours, minutes] = match;
     return new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes));
+  }
+
+  // Handle simple date "dd/MM/yyyy"
+  const simpleMatch = timestamp.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (simpleMatch) {
+    const [_, day, month, year] = simpleMatch;
+    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
   }
 
   return null;

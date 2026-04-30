@@ -504,30 +504,35 @@ export const LecturerSchedulePage: React.FC = () => {
     return (
         <LecturerLayout pageTitle="Lịch giảng dạy">
             <div className="space-y-6">
-                <div className="flex flex-col gap-4">
-                    <div>
-                        <div className="flex items-center gap-2 text-fpt-orange font-bold text-sm mb-1">
-                            <CalendarIcon size={16} /> Năm học {selectedYear}-{selectedYear + 1}
+                {/* Header */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-zinc-800">
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-3">
+                            <div className="w-2 h-8 bg-fpt-orange rounded-full" />
+                            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Lịch giảng dạy theo tuần</h1>
                         </div>
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                            Lịch giảng dạy theo tuần
-                        </h1>
+                        <p className="text-gray-500 dark:text-gray-400 font-medium ml-5 flex items-center gap-2">
+                            <CalendarIcon size={16} className="text-fpt-orange" /> Năm học {selectedYear}-{selectedYear + 1}
+                        </p>
                     </div>
+                </div>
 
-                    <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 w-full">
-                        <div className="flex flex-wrap items-end gap-4">
-                            {/* Year Selector */}
-                            <div className="w-full sm:w-40">
-                                <CustomSelect
-                                    label="Năm học"
-                                    value={selectedYear.toString()}
-                                    onChange={(val) => handleYearChange({ target: { value: val } } as any)}
-                                    options={YEARS.map(year => ({ label: year.toString(), value: year.toString() }))}
-                                />
-                            </div>
+                {/* Filters & Actions */}
+                <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-zinc-800">
+                    <div className="flex flex-wrap items-end gap-6">
+                        {/* Year Selector */}
+                        <div className="w-full md:w-48">
+                            <CustomSelect
+                                label="Năm học"
+                                value={selectedYear.toString()}
+                                onChange={(val) => handleYearChange({ target: { value: val } } as any)}
+                                options={YEARS.map(year => ({ label: year.toString(), value: year.toString() }))}
+                            />
+                        </div>
 
-                            {/* Week Navigation */}
-                            <div className="flex items-end gap-2 flex-1 sm:flex-initial">
+                        {/* Week Navigation */}
+                        <div className="flex items-end gap-2">
+                            <div className="flex items-end gap-2 pb-0.5">
                                 <button
                                     onClick={handlePrevWeek}
                                     className="h-[52px] w-[52px] flex items-center justify-center rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-fpt-orange hover:border-fpt-orange/40 hover:shadow-lg transition-all active:scale-95 shrink-0"
@@ -535,8 +540,7 @@ export const LecturerSchedulePage: React.FC = () => {
                                 >
                                     <ChevronLeft size={20} />
                                 </button>
-
-                                <div className="w-full sm:w-80">
+                                <div className="w-full md:w-80">
                                     <CustomSelect
                                         label="Tuần"
                                         value={getCurrentWeekValue()}
@@ -544,7 +548,6 @@ export const LecturerSchedulePage: React.FC = () => {
                                         options={weeks.map(week => ({ label: week.label, value: week.value }))}
                                     />
                                 </div>
-
                                 <button
                                     onClick={handleNextWeek}
                                     className="h-[52px] w-[52px] flex items-center justify-center rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-fpt-orange hover:border-fpt-orange/40 hover:shadow-lg transition-all active:scale-95 shrink-0"
@@ -554,27 +557,27 @@ export const LecturerSchedulePage: React.FC = () => {
                                 </button>
                             </div>
                         </div>
-
-                        {!isScheduleHidden && (
-                            <div className="flex items-end gap-3">
-                                <button
-                                    onClick={handleOpenDownloadDialog}
-                                    className="flex h-[52px] items-center gap-2 px-6 bg-white dark:bg-zinc-900 text-fpt-orange border-2 border-fpt-orange/20 rounded-2xl font-bold text-sm hover:border-fpt-orange hover:shadow-lg transition-all active:scale-95 whitespace-nowrap"
-                                >
-                                    <Download size={18} />
-                                    <span>Bài nộp</span>
-                                </button>
-                                <button
-                                    onClick={handleExport}
-                                    disabled={exporting}
-                                    className={`flex h-[52px] items-center gap-2 px-8 bg-fpt-orange text-white rounded-2xl font-bold text-sm shadow-lg shadow-fpt-orange/20 hover:bg-orange-600 transition-all active:scale-95 whitespace-nowrap ${exporting ? 'opacity-70 cursor-not-allowed' : ''}`}
-                                >
-                                    {exporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-                                    <span>{exporting ? 'Đang xuất...' : 'Xuất file'}</span>
-                                </button>
-                            </div>
-                        )}
                     </div>
+
+                    {!isScheduleHidden && (
+                        <div className="flex items-end gap-3 pb-0.5">
+                            <button
+                                onClick={handleOpenDownloadDialog}
+                                className="flex h-[52px] items-center gap-2 px-6 bg-white dark:bg-zinc-900 text-fpt-orange border-2 border-fpt-orange/20 rounded-2xl font-bold text-sm hover:border-fpt-orange hover:shadow-lg transition-all active:scale-95 whitespace-nowrap"
+                            >
+                                <Download size={18} />
+                                <span>Bài nộp</span>
+                            </button>
+                            <button
+                                onClick={handleExport}
+                                disabled={exporting}
+                                className={`flex h-[52px] items-center gap-2 px-8 bg-fpt-orange text-white rounded-2xl font-bold text-sm shadow-lg shadow-fpt-orange/20 hover:bg-orange-600 transition-all active:scale-95 whitespace-nowrap ${exporting ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            >
+                                {exporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+                                <span>{exporting ? 'Đang xuất...' : 'Xuất file'}</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 <Card className="min-w-full overflow-hidden border-none shadow-sm dark:shadow-none bg-white dark:bg-zinc-900">
@@ -597,7 +600,7 @@ export const LecturerSchedulePage: React.FC = () => {
                             <table className="w-full border-collapse min-w-[1000px] table-fixed">
                                 <thead>
                                     <tr className="bg-gray-50 dark:bg-zinc-800/50">
-                                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-zinc-800 w-[14%]">
+                                        <th className="px-4 py-5 text-black dark:text-white text-left w-[14%] text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                             Thứ / Ngày
                                         </th>
                                         {SLOTS.map((slot) => {
@@ -609,10 +612,10 @@ export const LecturerSchedulePage: React.FC = () => {
                                                     key={slot.id}
                                                     className="text-center px-4 py-3 border-b border-l border-gray-100 dark:border-zinc-800 w-[21.5%]"
                                                 >
-                                                    <div className="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider">
+                                                    <div className="text-xs font-bold text-black dark:text-white uppercase tracking-wider">
                                                         {slot.label}
                                                     </div>
-                                                    <div className="text-[11px] text-gray-400 mt-1 font-medium">
+                                                    <div className="text-[11px] text-black dark:text-white/80 mt-1 font-medium">
                                                         {timeRange}
                                                     </div>
                                                 </th>
@@ -992,4 +995,5 @@ export const LecturerSchedulePage: React.FC = () => {
         </LecturerLayout>
     );
 };
+
 

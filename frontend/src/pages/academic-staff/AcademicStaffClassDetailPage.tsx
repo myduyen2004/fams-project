@@ -221,12 +221,12 @@ export const AcademicStaffClassDetailPage: React.FC = () => {
                             <table className="w-full">
                                 <thead>
                                     <tr className="bg-fpt-orange text-white">
-                                        <th className="px-6 py-5 text-center text-[11px] font-bold uppercase tracking-widest w-16">STT</th>
-                                        <th className="px-6 py-5 text-left text-[11px] font-bold uppercase tracking-widest">Sinh viên</th>
-                                        <th className="px-6 py-5 text-left text-[11px] font-bold uppercase tracking-widest">Liên hệ</th>
-                                        <th className="px-6 py-5 text-left text-[11px] font-bold uppercase tracking-widest">Chuyên ngành</th>
-                                        <th className="px-6 py-5 text-center text-[11px] font-bold uppercase tracking-widest w-24">Vắng (%)</th>
-                                        <th className="px-6 py-5 text-center text-[11px] font-bold uppercase tracking-widest w-32">Trạng thái</th>
+                                        <th className="px-4 py-5 text-center w-16 text-xs font-bold uppercase tracking-widest whitespace-nowrap">STT</th>
+                                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Sinh viên</th>
+                                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Liên hệ</th>
+                                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Chuyên ngành</th>
+                                        <th className="px-4 py-5 text-center w-24 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Vắng (%)</th>
+                                        <th className="px-4 py-5 text-center w-32 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50 dark:divide-zinc-800/50">
@@ -375,4 +375,5 @@ export const AcademicStaffClassDetailPage: React.FC = () => {
         </AcademicStaffLayout>
     );
 };
+
 

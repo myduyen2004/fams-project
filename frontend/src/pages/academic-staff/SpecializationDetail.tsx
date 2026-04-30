@@ -549,12 +549,12 @@ export const SpecializationDetail: React.FC = () => {
                                 <tr className="bg-gray-50 dark:bg-zinc-800/50">
                                     <th className="px-6 py-4 text-left w-10"></th>
                                     <th className="px-6 py-4 text-left w-10"></th>
-                                    <th className="px-6 py-4 text-left text-[11px] font-black text-black-400 dark:text-zinc-500 uppercase tracking-widest whitespace-nowrap">Mã</th>
-                                    <th className="px-6 py-4 text-left text-[11px] font-black text-black-400 dark:text-zinc-500 uppercase tracking-widest whitespace-nowrap">Tên môn học</th>
-                                    <th className="px-6 py-4 text-center text-[11px] font-black text-black-400 dark:text-zinc-500 uppercase tracking-widest whitespace-nowrap">Số tín chỉ</th>
-                                    <th className="px-6 py-4 text-center text-[11px] font-black text-black-400 dark:text-zinc-500 uppercase tracking-widest whitespace-nowrap">Học kỳ</th>
-                                    <th className="px-6 py-4 text-center text-[11px] font-black text-black-400 dark:text-zinc-500 uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
-                                    <th className="px-6 py-4 text-center text-[11px] font-black text-black-400 dark:text-zinc-500 uppercase tracking-widest whitespace-nowrap w-24">Thao tác</th>
+                                    <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Mã</th>
+                                    <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tên môn học</th>
+                                    <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Số tín chỉ</th>
+                                    <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Học kỳ</th>
+                                    <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                                    <th className="px-4 py-5 text-center w-24 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50 dark:divide-zinc-800/50">
@@ -797,12 +797,12 @@ export const SpecializationDetail: React.FC = () => {
                                     <tr className="bg-gray-50 dark:bg-zinc-800/50">
                                         <th className="px-6 py-4 text-left w-10"></th>
                                         <th className="px-6 py-4 text-left w-10"></th>
-                                        <th className="px-6 py-4 text-left text-[11px] font-black text-black-400 dark:text-zinc-500 uppercase tracking-widest whitespace-nowrap">Mã môn</th>
-                                        <th className="px-6 py-4 text-left text-[11px] font-black text-black-400 dark:text-zinc-500 uppercase tracking-widest whitespace-nowrap">Tên môn học</th>
-                                        <th className="px-6 py-4 text-center text-[11px] font-black text-black-400 dark:text-zinc-500 uppercase tracking-widest whitespace-nowrap">Số tín chỉ</th>
-                                        <th className="px-6 py-4 text-center text-[11px] font-black text-black-400 dark:text-zinc-500 uppercase tracking-widest whitespace-nowrap">Học kỳ</th>
-                                        <th className="px-6 py-4 text-center text-[11px] font-black text-black-400 dark:text-zinc-500 uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
-                                        <th className="px-6 py-4 text-center text-[11px] font-black text-black-400 dark:text-zinc-500 uppercase tracking-widest whitespace-nowrap w-24">Thao tác</th>
+                                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Mã môn</th>
+                                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tên môn học</th>
+                                        <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Số tín chỉ</th>
+                                        <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Học kỳ</th>
+                                        <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                                        <th className="px-4 py-5 text-center w-24 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50 dark:divide-zinc-800/50">
@@ -899,4 +899,5 @@ export const SpecializationDetail: React.FC = () => {
         </AcademicStaffLayout >
     );
 };
+
 

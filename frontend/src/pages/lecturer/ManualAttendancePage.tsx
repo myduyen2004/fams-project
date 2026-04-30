@@ -189,13 +189,13 @@ export const ManualAttendancePage: React.FC = () => {
                         <table className="w-full">
                             <thead>
                                 <tr className="bg-fpt-orange text-white">
-                                    <th className="px-8 py-3 text-center text-[11px] font-black uppercase tracking-widest w-16">STT</th>
-                                    <th className="px-4 py-3 text-center text-[11px] font-black uppercase tracking-widest w-20">Avatar</th>
-                                    <th className="px-4 py-3 text-left text-[11px] font-black uppercase tracking-widest">Họ và tên</th>
-                                    <th className="px-4 py-3 text-left text-[11px] font-black uppercase tracking-widest">Mã số SV</th>
-                                    <th className="px-4 py-3 text-center text-[11px] font-black uppercase tracking-widest">Trạng thái</th>
-                                    <th className="px-4 py-3 text-center text-[11px] font-black uppercase tracking-widest">Thời gian</th>
-                                    <th className="px-8 py-3 text-center text-[11px] font-black uppercase tracking-widest w-24">Có mặt</th>
+                                    <th className="px-4 py-5 text-center w-16 text-xs font-bold uppercase tracking-widest whitespace-nowrap">STT</th>
+                                    <th className="px-4 py-5 text-center w-20 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Avatar</th>
+                                    <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Họ và tên</th>
+                                    <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Mã số SV</th>
+                                    <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                                    <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Thời gian</th>
+                                    <th className="px-4 py-5 text-center w-24 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Có mặt</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
@@ -289,5 +289,6 @@ export const ManualAttendancePage: React.FC = () => {
 };
 
 export default ManualAttendancePage;
+
 
 

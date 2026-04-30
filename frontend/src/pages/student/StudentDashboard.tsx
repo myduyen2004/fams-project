@@ -335,7 +335,7 @@ export const StudentDashboard: React.FC = () => {
                         <GpaTrendChart courses={gradesSummary?.courses || []} currentGpa={gradesSummary?.gpa4 || null} />
                     </div>
                     <div className="lg:col-span-4">
-                        <CourseStatsWidget 
+                        <CourseStatsWidget
 
                             courses={gradesSummary?.courses || []}
                             totalCourses={gradesSummary?.totalCourses || 0}

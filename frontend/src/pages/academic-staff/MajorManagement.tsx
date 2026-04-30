@@ -123,7 +123,7 @@ const ImportMajorModal: React.FC<ImportMajorModalProps> = ({ isOpen, onClose, on
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
             <div className={`relative bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl flex flex-col transition-all duration-300 ${previewData ? 'w-full max-w-5xl max-h-[92vh]' : 'w-full max-w-lg'}`}>
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800 shrink-0">
@@ -894,9 +894,9 @@ export const MajorManagement: React.FC = () => {
                                     </th>
                                     <th className="px-4 py-5 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Mã ngành</th>
                                     <th className="px-4 py-5 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tên ngành</th>
-                                    <th className="px-4 py-5 text-xs font-bold uppercase tracking-widest whitespace-nowrap text-center">Thời gian đào tạo</th>
-                                    <th className="px-4 py-5 text-xs font-bold uppercase tracking-widest whitespace-nowrap text-center">Trạng thái</th>
-                                    <th className="px-4 py-5 text-xs font-bold uppercase tracking-widest whitespace-nowrap text-center">Số chuyên ngành</th>
+                                    <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Thời gian đào tạo</th>
+                                    <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                                    <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Số chuyên ngành</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
@@ -1005,4 +1005,5 @@ export const MajorManagement: React.FC = () => {
 };
 
 export default MajorManagement;
+
 

@@ -194,26 +194,18 @@ export const StudentAttendancePage: React.FC = () => {
         <StudentLayout pageTitle="Điểm danh">
             <div className="space-y-6 pb-10">
                 {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <div className="flex items-center gap-2 text-fpt-orange font-bold text-sm mb-1 uppercase tracking-wider">
-                            <CalendarCheck size={16} /> Quản lý chuyên cần
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-zinc-800">
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-3">
+                            {/* <div className="w-2 h-8 bg-fpt-orange rounded-full" /> */}
+                            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+                                {selectedClassName ? 'Chi tiết điểm danh' : 'Kết quả điểm danh'}
+                            </h1>
                         </div>
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                            {selectedClassName ? 'Chi tiết điểm danh' : 'Kết quả điểm danh'}
-                        </h1>
+                        <p className="text-gray-500 dark:text-gray-400 font-medium ml-5 flex items-center gap-2">
+                            <CalendarCheck size={16} className="text-fpt-orange" /> Quản lý chuyên cần và lịch sử điểm danh
+                        </p>
                     </div>
-
-                    {!selectedClassName && (
-                        <div className="w-full md:w-80">
-                            <CustomSelect
-                                label="Học kỳ"
-                                value={selectedSemesterCode}
-                                onChange={(val) => setSelectedSemesterCode(val)}
-                                options={semesters.map(s => ({ label: s.name, value: s.code }))}
-                            />
-                        </div>
-                    )}
                 </div>
 
                 {/* Statistics Simplified */}
@@ -251,17 +243,33 @@ export const StudentAttendancePage: React.FC = () => {
                 {!selectedClassName ? (
                     <div className="space-y-6">
                         {/* Filters & Stats */}
-                        <div className="flex flex-col md:flex-row gap-4">
-                            <div className="relative flex-1 max-w-sm">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                                <input
-                                    type="text"
-                                    placeholder="Tìm kiếm môn học, mã lớp..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-12 pr-4 h-[52px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange/40 transition-all hover:border-fpt-orange/40 hover:shadow-lg hover:shadow-fpt-orange/5 text-sm font-medium"
-                                />
+                        <div className="flex flex-col md:flex-row items-end gap-4">
+                            <div className="relative flex-1 max-w-sm w-full">
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-gray-600 dark:text-gray-400 mb-2 ml-1">
+                                    Tìm kiếm môn học
+                                </label>
+                                <div className="relative">
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                    <input
+                                        type="text"
+                                        placeholder="Tìm kiếm môn học, mã lớp..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full pl-12 pr-4 h-[52px] rounded-2xl border-2 border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange/40 transition-all hover:border-fpt-orange/40 hover:shadow-lg hover:shadow-fpt-orange/5 text-sm font-medium"
+                                    />
+                                </div>
                             </div>
+
+                            {!selectedClassName && (
+                                <div className="w-full md:w-80">
+                                    <CustomSelect
+                                        label="Học kỳ"
+                                        value={selectedSemesterCode}
+                                        onChange={(val) => setSelectedSemesterCode(val)}
+                                        options={semesters.map(s => ({ label: s.name, value: s.code }))}
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         {/* Attendance Summary Table */}
@@ -270,12 +278,12 @@ export const StudentAttendancePage: React.FC = () => {
                                 <table className="w-full text-sm text-left">
                                     <thead>
                                         <tr className="bg-fpt-orange">
-                                            <th className="px-6 py-4 font-bold text-white uppercase tracking-wider text-[11px]">Thông tin Lớp/Môn</th>
-                                            <th className="px-4 py-4 font-bold text-white uppercase tracking-wider text-[11px] text-center">Tổng buổi</th>
-                                            <th className="px-4 py-4 font-bold text-white uppercase tracking-wider text-[11px] text-center">Đã học</th>
-                                            <th className="px-4 py-4 font-bold text-white uppercase tracking-wider text-[11px] text-center">Có mặt</th>
-                                            <th className="px-4 py-4 font-bold text-white uppercase tracking-wider text-[11px] text-center">Vắng</th>
-                                            <th className="px-4 py-4 font-bold text-white uppercase tracking-wider text-[11px] text-center">Chuyên cần</th>
+                                            <th className="px-4 py-5 text-white text-xs font-bold uppercase tracking-widest whitespace-nowrap">Thông tin Lớp/Môn</th>
+                                            <th className="px-4 py-5 text-center text-white text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tổng buổi</th>
+                                            <th className="px-4 py-5 text-center text-white text-xs font-bold uppercase tracking-widest whitespace-nowrap">Đã học</th>
+                                            <th className="px-4 py-5 text-center text-white text-xs font-bold uppercase tracking-widest whitespace-nowrap">Có mặt</th>
+                                            <th className="px-4 py-5 text-center text-white text-xs font-bold uppercase tracking-widest whitespace-nowrap">Vắng</th>
+                                            <th className="px-4 py-5 text-center text-white text-xs font-bold uppercase tracking-widest whitespace-nowrap">Chuyên cần</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-50 dark:divide-zinc-800">
@@ -414,11 +422,11 @@ export const StudentAttendancePage: React.FC = () => {
                                             <table className="w-full text-sm text-left">
                                                 <thead>
                                                     <tr className="bg-fpt-orange">
-                                                        <th className="px-6 py-4 font-bold text-white uppercase tracking-wider text-[11px] w-16">Slot</th>
-                                                        <th className="px-4 py-4 font-bold text-white uppercase tracking-wider text-[11px]">Ngày</th>
-                                                        <th className="px-4 py-4 font-bold text-white uppercase tracking-wider text-[11px]">Giờ học</th>
-                                                        <th className="px-4 py-4 font-bold text-white uppercase tracking-wider text-[11px]">Phòng</th>
-                                                        <th className="px-6 py-4 font-bold text-white uppercase tracking-wider text-[11px] text-center">Trạng thái</th>
+                                                        <th className="px-4 py-5 text-white w-16 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Slot</th>
+                                                        <th className="px-4 py-5 text-white text-xs font-bold uppercase tracking-widest whitespace-nowrap">Ngày</th>
+                                                        <th className="px-4 py-5 text-white text-xs font-bold uppercase tracking-widest whitespace-nowrap">Giờ học</th>
+                                                        <th className="px-4 py-5 text-white text-xs font-bold uppercase tracking-widest whitespace-nowrap">Phòng</th>
+                                                        <th className="px-4 py-5 text-center text-white text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-50 dark:divide-zinc-800">
@@ -460,4 +468,5 @@ export const StudentAttendancePage: React.FC = () => {
 };
 
 export default StudentAttendancePage;
+
 

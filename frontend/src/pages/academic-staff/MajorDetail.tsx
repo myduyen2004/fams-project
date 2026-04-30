@@ -82,7 +82,7 @@ const SpecializationCreateModal: React.FC<SpecializationCreateModalProps> = ({ i
 
     if (!isOpen) return null;
     return createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800">
                 <div className="flex items-center justify-between border-b border-gray-100 p-6 dark:border-zinc-800">
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">Tạo chuyên ngành mới</h2>
@@ -215,7 +215,7 @@ const SpecializationUpdateModal: React.FC<SpecializationUpdateModalProps> = ({ i
     if (!isOpen) return null;
 
     return createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800">
                 <div className="flex items-center justify-between border-b border-gray-100 p-6 dark:border-zinc-800">
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">Cập nhật chuyên ngành</h2>
@@ -639,10 +639,10 @@ export const MajorDetail: React.FC = () => {
                                                 checked={specializations.length > 0 && selectedIds.length === specializations.length}
                                             />
                                         </th>
-                                        <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Mã chuyên ngành</th>
-                                        <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tên chuyên ngành</th>
-                                        <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tổng số tín chỉ</th>
-                                        <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Mã chuyên ngành</th>
+                                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tên chuyên ngành</th>
+                                        <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tổng số tín chỉ</th>
+                                        <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
@@ -744,4 +744,5 @@ export const MajorDetail: React.FC = () => {
 };
 
 export default MajorDetail;
+
 

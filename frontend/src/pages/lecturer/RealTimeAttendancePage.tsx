@@ -258,11 +258,11 @@ export const RealTimeAttendancePage: React.FC = () => {
                         <table className="w-full">
                             <thead>
                                 <tr className="bg-fpt-orange text-white">
-                                    <th className="px-8 py-3 text-left text-[11px] font-black uppercase tracking-widest">Họ và tên</th>
-                                    <th className="px-4 py-3 text-center text-[11px] font-black uppercase tracking-widest w-48">Mã số sinh viên</th>
-                                    <th className="px-4 py-3 text-center text-[11px] font-black uppercase tracking-widest w-32">Phương thức</th>
-                                    <th className="px-4 py-3 text-center text-[11px] font-black uppercase tracking-widest w-32">Ảnh check-in</th>
-                                    <th className="px-8 py-3 text-right text-[11px] font-black uppercase tracking-widest w-40">Thời gian</th>
+                                    <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Họ và tên</th>
+                                    <th className="px-4 py-5 text-center w-48 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Mã số sinh viên</th>
+                                    <th className="px-4 py-5 text-center w-32 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Phương thức</th>
+                                    <th className="px-4 py-5 text-center w-32 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Ảnh check-in</th>
+                                    <th className="px-4 py-5 text-right w-40 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Thời gian</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50 dark:divide-zinc-800/50">
@@ -404,7 +404,7 @@ export const RealTimeAttendancePage: React.FC = () => {
             {/* Zoom Image Overlay */}
             {zoomedImage && (
                 <div 
-                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 cursor-zoom-out"
+                    className="fixed inset-0 z-[500] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 cursor-zoom-out"
                     onClick={() => setZoomedImage(null)}
                 >
                     <div 
@@ -428,4 +428,5 @@ export const RealTimeAttendancePage: React.FC = () => {
         </Layout>
     );
 };
+
 

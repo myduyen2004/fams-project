@@ -6,7 +6,7 @@ import { Course } from '../../types/course';
 import { examGradeService, ExamGradeOverviewResponse } from '../../services/api/examGradeService';
 import {
     Download, FileSpreadsheet, Users, TrendingUp, Award,
-    Loader2, Search, Check, RefreshCw, Save, Edit3, Send, ShieldCheck, AlertCircle
+    Loader2, Search, Check, RefreshCw, Save, Edit3, Send, ShieldCheck, AlertCircle, X
 } from 'lucide-react';
 import { ImportExamGradeModal } from '../../components/academic-staff/ImportExamGradeModal';
 import { StudentInfoModal } from '../../components/common/StudentInfoModal';
@@ -288,6 +288,7 @@ export const ResitGradeManagementPage: React.FC = () => {
                                 onChange={(val) => setSelectedCourse(val)}
                                 options={courses.map(c => ({ label: `${c.code} - ${c.name}`, value: c.code }))}
                                 placeholder="-- Chọn môn học --"
+                                isSearchable
                             />
                         </div>
 
@@ -423,18 +424,20 @@ export const ResitGradeManagementPage: React.FC = () => {
                             <div className="flex items-center gap-3 w-full sm:w-auto">
                                 {isEditMode ? (
                                     <>
-                                        <button onClick={handleCancelEdit} className="flex-1 sm:flex-none h-[52px] px-6 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm text-gray-600 font-bold hover:bg-gray-50 transition-all">Hủy</button>
-                                        <button onClick={handleSaveGrades} className="flex-1 sm:flex-none h-[52px] px-6 bg-green-600 text-white rounded-2xl text-sm font-bold hover:bg-green-700 transition-all shadow-lg shadow-green-500/20" disabled={saving}>
+                                        <button onClick={handleCancelEdit} className="flex-1 sm:flex-none h-[52px] flex items-center justify-center gap-2 px-6 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm text-gray-600 font-bold hover:bg-gray-50 transition-all active:scale-95">
+                                            <X size={18} /> Hủy
+                                        </button>
+                                        <button onClick={handleSaveGrades} className="flex-1 sm:flex-none h-[52px] flex items-center justify-center gap-2 px-6 bg-green-600 text-white rounded-2xl text-sm font-bold hover:bg-green-700 transition-all shadow-lg shadow-green-500/20 active:scale-95" disabled={saving}>
                                             {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />} Lưu thay đổi
                                         </button>
                                     </>
                                 ) : (
                                     <>
-                                        <button onClick={handleStartEdit} className="flex-1 sm:flex-none h-[52px] px-6 bg-blue-600 text-white rounded-2xl text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20" disabled={gradeOverview.resitGradesPublished || !gradeOverview.anyGradesSubmitted}>
+                                        <button onClick={handleStartEdit} className="flex-1 sm:flex-none h-[52px] flex items-center justify-center gap-2 px-6 bg-blue-600 text-white rounded-2xl text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-95" disabled={gradeOverview.resitGradesPublished || !gradeOverview.anyGradesSubmitted}>
                                             <Edit3 size={18} /> Chỉnh sửa
                                         </button>
                                         {!gradeOverview.resitGradesPublished && gradeOverview.anyGradesSubmitted && (
-                                            <button onClick={() => setShowPublishConfirm(true)} className="flex-1 sm:flex-none h-[52px] px-6 bg-green-600 text-white rounded-2xl text-sm font-bold hover:bg-green-700 transition-all shadow-lg shadow-green-500/20">
+                                            <button onClick={() => setShowPublishConfirm(true)} className="flex-1 sm:flex-none h-[52px] flex items-center justify-center gap-2 px-6 bg-green-600 text-white rounded-2xl text-sm font-bold hover:bg-green-700 transition-all shadow-lg shadow-green-500/20 active:scale-95">
                                                 <Send size={18} /> Công bố điểm
                                             </button>
                                         )}
@@ -462,10 +465,10 @@ export const ResitGradeManagementPage: React.FC = () => {
                             <table className="w-full">
                                 <thead>
                                     <tr className="bg-fpt-orange text-white">
-                                        <th className="px-4 py-4 text-center text-xs font-semibold uppercase tracking-wider w-16">STT</th>
-                                        <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider min-w-[200px]">Thông tin sinh viên</th>
-                                        <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider min-w-[120px]">Mã SV</th>
-                                        <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider">Lớp</th>
+                                        <th className="px-4 py-5 text-center w-16 text-xs font-bold uppercase tracking-widest whitespace-nowrap">STT</th>
+                                        <th className="px-4 py-5 text-left w-[200px] text-xs font-bold uppercase tracking-widest whitespace-nowrap">Thông tin sinh viên</th>
+                                        <th className="px-4 py-5 text-left w-[120px] text-xs font-bold uppercase tracking-widest whitespace-nowrap">Mã SV</th>
+                                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Lớp</th>
                                         {sortedGradeComponents.map((component) => (
                                             <th key={component.id} className={`px-2 py-3 text-center text-xs font-semibold uppercase tracking-wider min-w-[60px] ${component.type === 'RESIT' ? 'bg-orange-600' : ''}`}>
                                                 <div className="cursor-help flex items-center justify-center gap-1" title={`${component.name} (${component.weight}%)${component.type === 'RESIT' ? ' - Có thể nhập điểm' : ' - Chỉ xem'}`}>
@@ -475,7 +478,7 @@ export const ResitGradeManagementPage: React.FC = () => {
                                                 <div className="text-orange-200 font-normal mt-0.5 text-[10px]">{component.weight}%</div>
                                             </th>
                                         ))}
-                                        <th className="px-4 py-4 text-center text-xs font-semibold uppercase tracking-wider min-w-[100px]">
+                                        <th className="px-4 py-5 text-center w-[100px] text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                             <div>Điểm TB</div>
                                             <div className="text-orange-200 font-normal mt-1">Tổng kết</div>
                                         </th>
@@ -554,7 +557,7 @@ export const ResitGradeManagementPage: React.FC = () => {
             )}
 
             {showPublishConfirm && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] animate-in fade-in duration-300 p-4">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[500] animate-in fade-in duration-300 p-4">
                     <div className="bg-white dark:bg-zinc-900 rounded-[32px] w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-300 border-2 border-gray-100 dark:border-zinc-800 overflow-hidden">
                         <div className="p-8">
                             <div className="w-20 h-20 bg-green-50 dark:bg-green-900/30 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm">
@@ -593,3 +596,4 @@ export const ResitGradeManagementPage: React.FC = () => {
         </AcademicStaffLayout>
     );
 };
+

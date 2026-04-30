@@ -203,24 +203,24 @@ export const ClassAttendanceReportPage: React.FC = () => {
                         <table className="w-full text-left border-separate border-spacing-0 table-fixed">
                             <thead>
                                 <tr className="bg-fpt-orange text-white">
-                                    <th className="px-4 py-3 text-[11px] font-bold uppercase tracking-widest bg-fpt-orange sticky left-0 z-20 w-[100px] min-w-[100px] border-none">
+                                    <th className="px-4 py-5 w-[100px] text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                         Mã SV
                                     </th>
-                                    <th className="px-6 py-3 text-[11px] font-bold uppercase tracking-widest bg-fpt-orange sticky left-[100px] z-20 w-[200px] min-w-[200px] border-none shadow-[1px_0_0_0_rgba(255,255,255,0.1)]">
+                                    <th className="px-4 py-5 w-[200px] text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                         Họ và tên
                                     </th>
                                     {loading ? (
                                         [...Array(10)].map((_, i) => (
-                                            <th key={i} className="px-3 py-3 text-center text-[11px] font-bold uppercase tracking-widest whitespace-nowrap w-[75px] min-w-[75px]">
+                                            <th key={i} className="px-4 py-5 text-center w-[75px] text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                                 Slot {i + 1}
                                             </th>
                                         ))
                                     ) : report?.slots?.map((slot) => (
-                                        <th key={slot.slotId} className="px-3 py-3 text-center text-[11px] font-bold uppercase tracking-widest whitespace-nowrap w-[75px] min-w-[75px]">
+                                        <th key={slot.slotId} className="px-4 py-5 text-center w-[75px] text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                             Slot {slot.slotIndex}
                                         </th>
                                     ))}
-                                    <th className="px-4 py-3 text-center text-[11px] font-bold uppercase tracking-widest whitespace-nowrap sticky right-0 z-20 bg-fpt-orange w-[90px] min-w-[90px]">
+                                    <th className="px-4 py-5 text-center w-[90px] text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                         % Absent
                                     </th>
                                 </tr>
@@ -318,7 +318,7 @@ export const ClassAttendanceReportPage: React.FC = () => {
             )}
             
             {isFetchingStudent && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
+                <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
                     <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl shadow-xl flex items-center gap-3">
                         <div className="w-5 h-5 border-2 border-fpt-orange border-t-transparent rounded-full animate-spin"></div>
                         <span className="text-sm font-medium">Đang tải thông tin...</span>
@@ -328,4 +328,5 @@ export const ClassAttendanceReportPage: React.FC = () => {
         </Layout>
     );
 };
+
 

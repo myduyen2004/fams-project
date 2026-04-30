@@ -1180,7 +1180,7 @@ export const SchedulePage: React.FC = () => {
                 <table className="w-full border-collapse min-w-[900px]">
                   <thead>
                     <tr className="bg-gray-50">
-                      <th className="text-left px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-gray-200 w-40">
+                      <th className="px-4 py-5 text-left w-40 text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                         Phòng học
                       </th>
                       {slotTimes.map(({ slot, start, end }) => (
@@ -1282,7 +1282,7 @@ export const SchedulePage: React.FC = () => {
       {/* Slot Detail Popup */}
       {selectedSlot && (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-[100] animate-in fade-in duration-300"
+          className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-[500] animate-in fade-in duration-300"
           onClick={() => setSelectedSlot(null)}
         >
           <div
@@ -1509,4 +1509,5 @@ export const SchedulePage: React.FC = () => {
 };
 
 export default SchedulePage;
+
 

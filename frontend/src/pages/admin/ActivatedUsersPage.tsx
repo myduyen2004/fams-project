@@ -415,12 +415,12 @@ export const ActivatedUsersPage: React.FC = () => {
                       checked={users.length > 0 && selectedUsers.length === users.length}
                     />
                   </th>
-                  <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest">Họ và tên</th>
-                  <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest">Mã số</th>
-                  <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest">Vai trò</th>
-                  <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest">Khuôn mặt</th>
-                  <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest">Trạng thái</th>
-                  <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest">Ngày tạo</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Họ và tên</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Mã số</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Vai trò</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Khuôn mặt</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Ngày tạo</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-zinc-800">
@@ -555,4 +555,5 @@ export const ActivatedUsersPage: React.FC = () => {
     </AdminLayout>
   );
 };
+
 

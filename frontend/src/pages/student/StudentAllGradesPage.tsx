@@ -147,19 +147,25 @@ export const StudentAllGradesPage: React.FC = () => {
         <StudentLayout pageTitle="Kết Quả Học Tập">
             <div className="space-y-6 pb-24">
                 {/* Header */}
-                <div>
-                    <div className="flex items-center gap-2 text-fpt-orange font-bold text-sm mb-1">
-                        <GraduationCap size={16} /> Bảng điểm tổng hợp
-                    </div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                        Kết Quả Học Tập
-                    </h1>
-                    {(data.specializationName || data.majorName) && (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                            {data.majorName && <span>{data.majorName}</span>}
-                            {data.majorName && data.specializationName && <span className="mx-2 text-gray-300 dark:text-gray-600">•</span>}
-                            {data.specializationName && <span className="font-medium text-fpt-orange">{data.specializationName}</span>}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-zinc-800">
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-3">
+                            <div className="w-2 h-8 bg-fpt-orange rounded-full" />
+                            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Kết Quả Học Tập</h1>
+                        </div>
+                        <p className="text-gray-500 dark:text-gray-400 font-medium ml-5 flex items-center gap-2">
+                            <GraduationCap size={16} className="text-fpt-orange" /> Bảng điểm tổng hợp của sinh viên
                         </p>
+                    </div>
+
+                    {(data.specializationName || data.majorName) && (
+                        <div className="bg-orange-50 dark:bg-orange-900/10 px-4 py-2 rounded-xl border border-orange-100 dark:border-orange-900/30">
+                            <p className="text-sm font-bold text-fpt-orange">
+                                {data.majorName && <span>{data.majorName}</span>}
+                                {data.majorName && data.specializationName && <span className="mx-2 opacity-30">|</span>}
+                                {data.specializationName && <span>{data.specializationName}</span>}
+                            </p>
+                        </div>
                     )}
                 </div>
 
@@ -221,17 +227,17 @@ export const StudentAllGradesPage: React.FC = () => {
                     <div className="overflow-x-auto">
                         <table className="w-full min-w-[900px] border-collapse">
                             <thead>
-                                <tr className="bg-gradient-to-r from-fpt-orange to-orange-500 text-white">
-                                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider whitespace-nowrap w-12">STT</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider whitespace-nowrap w-20">Kỳ thứ</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider whitespace-nowrap w-28">Học kỳ</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider whitespace-nowrap w-28">Mã môn</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider whitespace-nowrap w-36">Môn tiên quyết</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider whitespace-nowrap">Tên môn học</th>
-                                    <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap w-20">Tín chỉ</th>
-                                    <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap w-20">Điểm</th>
-                                    <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap w-28">Trạng thái</th>
-                                    <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap w-20">Tính GPA</th>
+                                <tr className="bg-gradient-to-r from-fpt-orange to-orange-500">
+                                    <th className="px-4 py-5 text-white text-left w-12 text-xs font-bold uppercase tracking-widest whitespace-nowrap">STT</th>
+                                    <th className="px-4 py-5 text-white text-left w-20 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Kỳ thứ</th>
+                                    <th className="px-4 py-5 text-white text-left w-28 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Học kỳ</th>
+                                    <th className="px-4 py-5 text-white text-left w-28 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Mã môn</th>
+                                    <th className="px-4 py-5 text-white text-left w-36 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Môn tiên quyết</th>
+                                    <th className="px-4 py-5 text-white text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tên môn học</th>
+                                    <th className="px-4 py-5 text-white text-center w-20 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tín chỉ</th>
+                                    <th className="px-4 py-5 text-white text-center w-20 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Điểm</th>
+                                    <th className="px-4 py-5 text-white text-center w-28 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                                    <th className="px-4 py-5 text-white text-center w-20 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tính GPA</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -354,4 +360,5 @@ export const StudentAllGradesPage: React.FC = () => {
 };
 
 export default StudentAllGradesPage;
+
 

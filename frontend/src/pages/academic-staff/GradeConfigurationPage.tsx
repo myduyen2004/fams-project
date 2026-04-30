@@ -350,10 +350,10 @@ export const GradeConfigurationPage: React.FC = () => {
                         <table className="w-full">
                             <thead>
                                 <tr className="bg-fpt-orange text-white">
-                                    <th className="px-5 py-5 text-left text-xs font-bold uppercase tracking-widest">Loại</th>
-                                    <th className="px-5 py-5 text-left text-xs font-bold uppercase tracking-widest">Tên</th>
-                                    <th className="px-5 py-5 text-center text-xs font-bold uppercase tracking-widest">Trọng số (%)</th>
-                                    <th className="px-5 py-5 text-right text-xs font-bold uppercase tracking-widest">Hành động</th>
+                                    <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Loại</th>
+                                    <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tên</th>
+                                    <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trọng số (%)</th>
+                                    <th className="px-4 py-5 text-right text-xs font-bold uppercase tracking-widest whitespace-nowrap">Hành động</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
@@ -489,9 +489,9 @@ export const GradeConfigurationPage: React.FC = () => {
                                 <table className="w-full">
                                     <thead>
                                         <tr className="bg-gray-50 dark:bg-zinc-800/50">
-                                            <th className="px-6 py-4 text-left text-[11px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest">Mã môn</th>
-                                            <th className="px-6 py-4 text-left text-[11px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest">Tên môn học</th>
-                                            <th className="px-6 py-4 text-center text-[11px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest w-24">Thao tác</th>
+                                            <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Mã môn</th>
+                                            <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tên môn học</th>
+                                            <th className="px-4 py-5 text-center w-24 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Thao tác</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-50 dark:divide-zinc-800/50">
@@ -562,4 +562,5 @@ export const GradeConfigurationPage: React.FC = () => {
         </AcademicStaffLayout >
     );
 };
+
 

@@ -143,7 +143,7 @@ export const ManagerLecturersPage = () => {
               <button
                 onClick={handleExport}
                 disabled={isExporting}
-                className="flex h-[52px] items-center gap-2 rounded-2xl border-2 border-fpt-orange/20 bg-orange-50 dark:bg-orange-900/10 px-6 text-sm font-bold text-fpt-orange hover:bg-orange-100 dark:hover:bg-orange-900/20 hover:border-fpt-orange/40 transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                className="flex h-[52px] items-center gap-2 px-6 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm text-gray-700 dark:text-gray-200 font-bold hover:border-fpt-orange/40 hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
               >
                 {isExporting ? <Loader2 className="h-[18px] w-[18px] animate-spin" /> : <GraduationCap className="h-[18px] w-[18px]" />}
                 {isExporting ? 'Đang xuất...' : 'Xuất Excel'}
@@ -185,22 +185,22 @@ export const ManagerLecturersPage = () => {
             <table className="w-full">
               <thead>
                 <tr className="bg-fpt-orange text-white">
-                  <th className="px-6 py-5 text-left text-xs font-bold uppercase tracking-widest">
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                     Giảng viên
                   </th>
-                  <th className="px-6 py-5 text-left text-xs font-bold uppercase tracking-widest">
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                     Mã GV
                   </th>
-                  <th className="px-6 py-5 text-left text-xs font-bold uppercase tracking-widest">
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                     Ngành / Chuyên ngành
                   </th>
-                  <th className="px-6 py-5 text-left text-xs font-bold uppercase tracking-widest">
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                     Trạng thái
                   </th>
-                  <th className="px-6 py-5 text-left text-xs font-bold uppercase tracking-widest">
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                     Tiểu sử
                   </th>
-                  <th className="px-6 py-5 text-center text-xs font-bold uppercase tracking-widest w-24">
+                  <th className="px-4 py-5 text-center w-24 text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                     Thao tác
                   </th>
                 </tr>
@@ -323,4 +323,5 @@ export const ManagerLecturersPage = () => {
 };
 
 export default ManagerLecturersPage;
+
 

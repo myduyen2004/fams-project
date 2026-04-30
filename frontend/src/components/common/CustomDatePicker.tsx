@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, X, ChevronDown } from 'lucide-react';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isSameMonth, isSameDay, eachDayOfInterval, isToday, parseISO, isValid, startOfDay } from 'date-fns';
@@ -41,9 +41,11 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
 
     const [isOpen, setIsOpen] = useState(false);
     const [viewDate, setViewDate] = useState(parseValue(value));
-    const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0, placement: 'bottom' as 'top' | 'bottom' | 'left' | 'right' });
+    const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, placement: 'bottom' as 'top' | 'bottom' });
     const containerRef = useRef<HTMLDivElement>(null);
     const triggerRef = useRef<HTMLDivElement>(null);
+    const portalRef = useRef<HTMLDivElement>(null);
+    const rafRef = useRef<number | null>(null);
 
     // Sync viewDate when value changes externally
     useEffect(() => {
@@ -52,10 +54,13 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
         }
     }, [value]);
 
-    // Handle click outside
+    // Handle click outside — also exclude portal so month nav buttons don't close the picker
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+            const target = event.target as Node;
+            const insideTrigger = containerRef.current?.contains(target);
+            const insidePortal = portalRef.current?.contains(target);
+            if (!insideTrigger && !insidePortal) {
                 setIsOpen(false);
             }
         };
@@ -63,66 +68,68 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Calculate position
-    const updatePosition = () => {
-        if (triggerRef.current && isOpen) {
-            const rect = triggerRef.current.getBoundingClientRect();
-            const dropdownHeight = 440;
-            const dropdownWidth = 320;
-            const margin = 8;
+    /**
+     * Compute popup position from current trigger rect.
+     * Prefers bottom; flips to top only when there's not enough space below AND more space above.
+     */
+    const computePos = useCallback(() => {
+        if (!triggerRef.current) return null;
 
-            const spaceBelow = window.innerHeight - rect.bottom - margin;
-            const spaceAbove = rect.top - margin;
+        const rect = triggerRef.current.getBoundingClientRect();
+        const popupWidth = 320;
+        const margin = 8;
 
-            let placement: 'top' | 'bottom' = 'bottom';
-            let top = 0;
-            let left = rect.left;
+        // Use actual rendered height when popup is mounted; fall back to estimate
+        const actualHeight = portalRef.current?.offsetHeight ?? 400;
 
-            if (spaceBelow > dropdownHeight || spaceBelow > spaceAbove) {
-                placement = 'bottom';
-                top = rect.bottom + margin;
-            } else {
-                placement = 'top';
-                top = rect.top - dropdownHeight - margin;
-            }
+        const spaceBelow = window.innerHeight - rect.bottom - margin;
+        const spaceAbove = rect.top - margin;
 
-            // Boundary checks
-            if (left + dropdownWidth > window.innerWidth - 10) {
-                left = window.innerWidth - dropdownWidth - 10;
-            }
-            if (left < 10) left = 10;
+        // Prefer bottom; flip to top only when bottom is insufficient AND there's more room above
+        const placement: 'top' | 'bottom' =
+            spaceBelow >= actualHeight || spaceBelow >= spaceAbove ? 'bottom' : 'top';
 
-            if (placement === 'top' && top < 10) top = 10;
+        let left = rect.left;
+        if (left + popupWidth > window.innerWidth - 10) left = window.innerWidth - popupWidth - 10;
+        if (left < 10) left = 10;
 
-            setDropdownPos({
-                top: top,
-                left: left,
-                width: rect.width,
-                placement
-            });
+        // bottom: popup top-edge = trigger bottom + margin
+        // top:    anchor at rect.top - margin; translateY(-100%) moves it flush above trigger
+        const top = placement === 'bottom'
+            ? rect.bottom + margin
+            : rect.top - margin;
+
+        return { top, left, placement };
+    }, []);
+
+    /**
+     * rAF loop — re-computes position every frame while open so the popup
+     * follows the trigger on scroll and resize without any listener juggling.
+     */
+    const startTracking = useCallback(() => {
+        const loop = () => {
+            const pos = computePos();
+            if (pos) setDropdownPos(pos);
+            rafRef.current = requestAnimationFrame(loop);
+        };
+        rafRef.current = requestAnimationFrame(loop);
+    }, [computePos]);
+
+    const stopTracking = useCallback(() => {
+        if (rafRef.current !== null) {
+            cancelAnimationFrame(rafRef.current);
+            rafRef.current = null;
         }
-    };
+    }, []);
 
     useEffect(() => {
-        if (isOpen && triggerRef.current) {
-            updatePosition();
-
-            const observer = new ResizeObserver(() => {
-                updatePosition();
-            });
-            observer.observe(triggerRef.current);
-            observer.observe(document.body);
-
-            window.addEventListener('scroll', updatePosition, true);
-            window.addEventListener('resize', updatePosition);
-
-            return () => {
-                observer.disconnect();
-                window.removeEventListener('scroll', updatePosition, true);
-                window.removeEventListener('resize', updatePosition);
-            };
+        if (isOpen) {
+            startTracking();
+        } else {
+            stopTracking();
         }
-    }, [isOpen]);
+        return stopTracking;
+    }, [isOpen, startTracking, stopTracking]);
 
     const days = useMemo(() => {
         const start = startOfWeek(startOfMonth(viewDate), { weekStartsOn: 1 });
@@ -172,7 +179,17 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
 
             <div
                 ref={triggerRef}
-                onClick={() => !disabled && setIsOpen(!isOpen)}
+                onClick={() => {
+                    if (disabled) return;
+                    if (isOpen) {
+                        setIsOpen(false);
+                    } else {
+                        // Compute synchronously first to avoid flash, then rAF takes over
+                        const pos = computePos();
+                        if (pos) setDropdownPos(pos);
+                        setIsOpen(true);
+                    }
+                }}
                 className={`
                     group relative flex items-center bg-white dark:bg-zinc-900 border-2 rounded-2xl px-4 h-[52px] 
                     transition-all duration-300 cursor-pointer select-none
@@ -211,19 +228,23 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                 <AnimatePresence>
                     {isOpen && (
                         <motion.div
-                            initial={{ opacity: 0, x: dropdownPos.placement === 'right' ? -15 : (dropdownPos.placement === 'left' ? 15 : 0), y: dropdownPos.placement === 'bottom' ? -15 : (dropdownPos.placement === 'top' ? 15 : 0), scale: 0.95 }}
-                            animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, x: dropdownPos.placement === 'right' ? -10 : (dropdownPos.placement === 'left' ? 10 : 0), y: dropdownPos.placement === 'bottom' ? -10 : (dropdownPos.placement === 'top' ? 10 : 0), scale: 0.95 }}
-                            transition={{ type: "spring", damping: 25, stiffness: 400 }}
+                            ref={portalRef}
+                            initial={{ opacity: 0, y: dropdownPos.placement === 'bottom' ? -10 : 10, scale: 0.97 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: dropdownPos.placement === 'bottom' ? -10 : 10, scale: 0.97 }}
+                            transition={{ duration: 0.15, ease: 'easeOut' }}
                             style={{
                                 position: 'fixed',
                                 top: dropdownPos.top,
                                 left: dropdownPos.left,
                                 width: '320px',
-                                zIndex: 30,
+                                // 'top' placement: translateY(-100%) moves popup's bottom edge
+                                // flush against trigger's top — works for any actual popup height.
+                                transform: dropdownPos.placement === 'top' ? 'translateY(-100%)' : 'none',
+                                zIndex: 35,
                                 pointerEvents: 'auto'
                             }}
-                            className="bg-white dark:bg-zinc-900 rounded-[24px] shadow-[0_25px_70px_rgba(0,0,0,0.18)] dark:shadow-[0_25px_70_rgba(0,0,0,0.4)] border border-gray-100 dark:border-zinc-800 p-5 overflow-hidden"
+                            className="bg-white dark:bg-zinc-900 rounded-[24px] shadow-[0_25px_70px_rgba(0,0,0,0.18)] dark:shadow-[0_25px_70px_rgba(0,0,0,0.4)] border border-gray-100 dark:border-zinc-800 p-5 overflow-hidden"
                         >
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex flex-col">
@@ -301,4 +322,3 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
         </div>
     );
 };
-

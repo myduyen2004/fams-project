@@ -799,9 +799,9 @@ export const SlotTypePage: React.FC = () => {
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="bg-gray-50 dark:bg-zinc-800/50 border-b border-gray-100 dark:border-zinc-800">
-                        <th className="px-6 py-3 text-left text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-zinc-500 w-24">STT</th>
-                        <th className="px-6 py-3 text-left text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-zinc-500">Giờ bắt đầu</th>
-                        <th className="px-6 py-3 text-left text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-zinc-500">Giờ kết thúc (Auto)</th>
+                        <th className="px-4 py-5 text-left w-24 text-xs font-bold uppercase tracking-widest whitespace-nowrap">STT</th>
+                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Giờ bắt đầu</th>
+                        <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Giờ kết thúc (Auto)</th>
                         <th className="px-6 py-3 w-20"></th>
                       </tr>
                     </thead>
@@ -911,10 +911,10 @@ export const SlotTypePage: React.FC = () => {
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-zinc-800/50 border-b border-gray-100 dark:border-zinc-800">
-                    <th className="px-6 py-3 text-left text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-zinc-500 w-24">STT</th>
-                    <th className="px-6 py-3 text-left text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-zinc-500 w-64">Ngày nghỉ</th>
-                    <th className="px-6 py-3 text-left text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-zinc-500">Lý do / Mô tả</th>
-                    <th className="px-6 py-3 text-right text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-zinc-500 w-24">Thao tác</th>
+                    <th className="px-4 py-5 text-left w-24 text-xs font-bold uppercase tracking-widest whitespace-nowrap">STT</th>
+                    <th className="px-4 py-5 text-left w-64 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Ngày nghỉ</th>
+                    <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Lý do / Mô tả</th>
+                    <th className="px-4 py-5 text-right w-24 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50 dark:divide-zinc-800">
@@ -999,4 +999,5 @@ export const SlotTypePage: React.FC = () => {
     </AcademicStaffLayout>
   );
 };
+
 

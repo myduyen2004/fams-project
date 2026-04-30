@@ -609,19 +609,19 @@ export const LecturerGradeManagementPage: React.FC = () => {
                             <table className="w-full">
                                 <thead>
                                     <tr className="bg-fpt-orange text-white">
-                                        <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider w-16 text-center">
+                                        <th className="px-4 py-5 text-left w-16 text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                             STT
                                         </th>
-                                        <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider min-w-[200px]">
+                                        <th className="px-4 py-5 text-left w-[200px] text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                             Thông tin sinh viên
                                         </th>
-                                        <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider min-w-[120px]">
+                                        <th className="px-4 py-5 text-left w-[120px] text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                             Mã SV
                                         </th>
                                         {sortedGradeComponents.map((component) => (
                                             <th
                                                 key={component.id}
-                                                className="px-2 py-3 text-center text-xs font-semibold uppercase tracking-wider min-w-[60px]"
+                                                className="px-4 py-5 text-center w-[60px] text-xs font-bold uppercase tracking-widest whitespace-nowrap"
                                             >
                                                 <div
                                                     className="cursor-help"
@@ -634,7 +634,7 @@ export const LecturerGradeManagementPage: React.FC = () => {
                                                 </div>
                                             </th>
                                         ))}
-                                        <th className="px-4 py-4 text-center text-xs font-semibold uppercase tracking-wider min-w-[100px]">
+                                        <th className="px-4 py-5 text-center w-[100px] text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                                             <div>Điểm TB</div>
                                             <div className="text-orange-200 font-normal mt-1">
                                                 Tổng kết
@@ -788,7 +788,7 @@ export const LecturerGradeManagementPage: React.FC = () => {
 
             {/* Submit Confirmation Modal */}
             {showSubmitConfirm && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] animate-in fade-in duration-300 p-4">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[500] animate-in fade-in duration-300 p-4">
                     <div className="bg-white dark:bg-zinc-900 rounded-[32px] w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-300 border-2 border-gray-100 dark:border-zinc-800 overflow-hidden">
                         <div className="p-8">
                             <div className="w-20 h-20 bg-green-50 dark:bg-green-900/30 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm">
@@ -850,5 +850,6 @@ export const LecturerGradeManagementPage: React.FC = () => {
         </LecturerLayout>
     );
 };
+
 
 

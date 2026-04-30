@@ -155,7 +155,7 @@ export const ChangePasswordPage: React.FC = () => {
                 type="password"
                 required
                 placeholder="Nhập mật khẩu hiện tại"
-                className="w-full px-6 py-4 bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:border-fpt-orange/50 focus:ring-4 focus:ring-fpt-orange/5 text-gray-900 dark:text-white placeholder:text-gray-300 transition-all text-sm"
+                className="w-full px-6 h-[52px] bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:border-fpt-orange/50 focus:ring-4 focus:ring-fpt-orange/10 text-gray-900 dark:text-white placeholder:text-gray-300 transition-all text-sm font-medium"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
               />
@@ -170,7 +170,7 @@ export const ChangePasswordPage: React.FC = () => {
                   type={showPassword ? "text" : "password"}
                   required
                   placeholder="Tối thiểu 8 ký tự"
-                  className="w-full px-6 py-4 bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:border-fpt-orange/50 focus:ring-4 focus:ring-fpt-orange/5 text-gray-900 dark:text-white placeholder:text-gray-300 transition-all text-sm pr-12"
+                  className="w-full px-6 h-[52px] bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:border-fpt-orange/50 focus:ring-4 focus:ring-fpt-orange/10 text-gray-900 dark:text-white placeholder:text-gray-300 transition-all text-sm pr-12 font-medium"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
@@ -207,7 +207,7 @@ export const ChangePasswordPage: React.FC = () => {
                 type="password"
                 required
                 placeholder="Xác nhận mật khẩu mới"
-                className="w-full px-6 py-4 bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:border-fpt-orange/50 focus:ring-4 focus:ring-fpt-orange/5 text-gray-900 dark:text-white placeholder:text-gray-300 transition-all text-sm"
+                className="w-full px-6 h-[52px] bg-white dark:bg-zinc-800 border-2 border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:border-fpt-orange/50 focus:ring-4 focus:ring-fpt-orange/10 text-gray-900 dark:text-white placeholder:text-gray-300 transition-all text-sm font-medium"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
@@ -216,10 +216,10 @@ export const ChangePasswordPage: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-fpt-orange hover:bg-orange-600 text-white font-semibold py-4 rounded-2xl shadow-lg shadow-orange-500/20 transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full h-[52px] bg-fpt-orange hover:bg-orange-600 text-white font-bold rounded-2xl shadow-lg shadow-orange-500/20 transition-all hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? <Loader2 size={24} className="animate-spin" /> : 
-                  <span className="flex items-center gap-2">Xác nhận <ArrowRight size={20}/></span>
+                  <span className="flex items-center gap-2 text-base">Xác nhận <ArrowRight size={20}/></span>
               }
             </button>
           </form>

@@ -21,6 +21,7 @@ public class AssignmentPlagiarismResponse {
     private String courseName;
     private String studentCode;
     private String studentName;
+    private String avatar;
     private String scope;
     private String model;
     private String strategy;

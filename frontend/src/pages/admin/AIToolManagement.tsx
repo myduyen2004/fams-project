@@ -397,13 +397,13 @@ export const AIToolManagement: React.FC = () => {
             <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead>
                 <tr className="border-b border-gray-100">
-                  <th className="px-8 py-5 text-[10px] uppercase font-bold text-slate-400 tracking-widest w-[18%]">Công cụ AI / Định danh</th>
-                  <th className="px-6 py-5 text-[10px] uppercase font-bold text-slate-400 tracking-widest w-[22%]">Mô tả chức năng</th>
-                  <th className="px-6 py-5 text-[10px] uppercase font-bold text-slate-400 tracking-widest w-[20%]">Tham số bắt buộc</th>
-                  <th className="px-6 py-5 text-[10px] uppercase font-bold text-slate-400 tracking-widest w-[18%]">Quyền truy cập</th>
-                  <th className="px-6 py-5 text-[10px] uppercase font-bold text-slate-400 tracking-widest">Độ tin cậy</th>
-                  <th className="px-6 py-5 text-[10px] uppercase font-bold text-slate-400 tracking-widest">Trạng thái</th>
-                  <th className="px-8 py-5 text-[10px] uppercase font-bold text-slate-400 tracking-widest text-right">Quản lý</th>
+                  <th className="px-4 py-5 w-[18%] text-xs font-bold uppercase tracking-widest whitespace-nowrap">Công cụ AI / Định danh</th>
+                  <th className="px-4 py-5 w-[22%] text-xs font-bold uppercase tracking-widest whitespace-nowrap">Mô tả chức năng</th>
+                  <th className="px-4 py-5 w-[20%] text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tham số bắt buộc</th>
+                  <th className="px-4 py-5 w-[18%] text-xs font-bold uppercase tracking-widest whitespace-nowrap">Quyền truy cập</th>
+                  <th className="px-4 py-5 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Độ tin cậy</th>
+                  <th className="px-4 py-5 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                  <th className="px-4 py-5 text-right text-xs font-bold uppercase tracking-widest whitespace-nowrap">Quản lý</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50/80">
@@ -841,8 +841,8 @@ export const AIToolManagement: React.FC = () => {
                           <table className="w-full text-left text-[13px]">
                             <thead className="bg-slate-50 border-b border-gray-100">
                               <tr>
-                                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest w-[40%]">Trường</th>
-                                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Giá trị</th>
+                                <th className="px-4 py-5 w-[40%] text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trường</th>
+                                <th className="px-4 py-5 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Giá trị</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -978,4 +978,5 @@ export const AIToolManagement: React.FC = () => {
     </AdminLayout>
   );
 };
+
 

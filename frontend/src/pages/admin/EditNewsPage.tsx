@@ -11,7 +11,7 @@ import { CloudUpload, Loader2, Trash2, Calendar, Clock } from 'lucide-react';
 import apiClient from '../../services/api/authService';
 import axios from 'axios';
 import { CustomSelect } from '../../components/common/CustomSelect';
-import { CustomDateTimePicker } from '../../components/common/CustomDateTimePicker';
+import { StaticDateTimePicker } from '../../components/common/StaticDateTimePicker';
 
 export const EditNewsPage = () => {
   const navigate = useNavigate();
@@ -400,26 +400,26 @@ export const EditNewsPage = () => {
                   Phương thức xuất bản
                 </label>
                 
-                <div className="grid grid-cols-1 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {[
-                    { id: 'NOW', label: 'Xuất bản ngay', icon: <Calendar size={14} /> },
-                    { id: 'DRAFT', label: 'Lưu bản nháp', icon: <Trash2 size={14} /> },
-                    { id: 'SCHEDULED', label: 'Lên lịch gửi', icon: <Clock size={14} /> }
+                    { id: 'NOW', label: 'Ngay', icon: <Calendar size={14} />, color: 'fpt-orange', bg: 'orange-50', darkBg: 'orange-950/20' },
+                    { id: 'DRAFT', label: 'Nháp', icon: <Trash2 size={14} />, color: 'green-500', bg: 'green-50', darkBg: 'green-950/20' },
+                    { id: 'SCHEDULED', label: 'Lịch', icon: <Clock size={14} />, color: 'blue-500', bg: 'blue-50', darkBg: 'blue-950/20' }
                   ].map((type) => (
                     <button
                       key={type.id}
                       type="button"
                       onClick={() => setSendType(type.id as any)}
                       className={`
-                        flex items-center gap-3 px-4 h-[48px] rounded-xl text-sm font-bold transition-all border-2
+                        flex flex-col items-center justify-center gap-2 p-3 rounded-2xl text-[11px] font-bold transition-all border-2
                         ${sendType === type.id 
-                          ? 'bg-orange-50 dark:bg-orange-950/10 border-fpt-orange text-fpt-orange shadow-sm' 
+                          ? `bg-${type.bg} dark:bg-${type.darkBg} border-${type.color} text-${type.color} shadow-sm` 
                           : 'bg-white dark:bg-zinc-900 border-gray-100 dark:border-zinc-800 text-gray-500 dark:text-zinc-400 hover:border-gray-200'}
                       `}
                     >
                       <div className={`
-                        w-6 h-6 rounded-lg flex items-center justify-center
-                        ${sendType === type.id ? 'bg-fpt-orange text-white' : 'bg-gray-100 dark:bg-zinc-800'}
+                        w-8 h-8 rounded-xl flex items-center justify-center
+                        ${sendType === type.id ? `bg-${type.color} text-white` : 'bg-gray-100 dark:bg-zinc-800'}
                       `}>
                         {type.icon}
                       </div>
@@ -430,7 +430,7 @@ export const EditNewsPage = () => {
 
                 {sendType === 'SCHEDULED' && (
                   <div className="animate-in slide-in-from-top-2 fade-in duration-300 mt-4">
-                    <CustomDateTimePicker
+                    <StaticDateTimePicker
                       label="Thời gian lên lịch"
                       value={scheduledDate}
                       onChange={setScheduledDate}

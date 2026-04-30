@@ -237,6 +237,7 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
                         .courseName(assignment.getClassSection().getCourse().getName())
                         .studentCode(enrollment.getStudentCode())
                         .studentName(student.getFullName())
+                        .avatar(student.getAvatar())
                         .status(AssignmentSubmission.SubmissionStatus.NOT_SUBMITTED)
                         .assignmentDueDate(assignment.getDueDate())
                         .build());
@@ -369,6 +370,7 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
                             .courseName(enrollment.getClassSection().getCourse().getName())
                             .studentCode(enrollment.getStudentCode())
                             .studentName(enrollment.getStudent().getFullName())
+                            .avatar(enrollment.getStudent().getAvatar())
                             .status(status)
                             .assignmentDueDate(assignment.getDueDate())
                             .referenceUrl(assignment.getReferenceUrl())
@@ -589,6 +591,7 @@ public class AssignmentSubmissionServiceImpl implements AssignmentSubmissionServ
                 .courseName(cs.getCourse().getName())
                 .studentCode(student.getCode())
                 .studentName(student.getFullName())
+                .avatar(student.getAvatar())
                 .fileUrls(fileUrls)
                 .fileNames(fileNames)
                 .note(submission.getNote())

@@ -226,10 +226,10 @@ export const LockedUsersPage: React.FC = () => {
                     checked={users.length > 0 && selectedUsers.length === users.length}
                   />
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Họ và tên</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Mã số</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Trạng thái</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider rounded-tr-lg">Lý do (Mock)</th>
+                <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Họ và tên</th>
+                <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Mã số</th>
+                <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap rounded-tr-lg">Lý do (Mock)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
@@ -337,4 +337,5 @@ export const LockedUsersPage: React.FC = () => {
     </AdminLayout>
   );
 };
+
 

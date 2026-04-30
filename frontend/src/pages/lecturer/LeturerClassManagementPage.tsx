@@ -111,12 +111,12 @@ export const LeturerClassManagementPage: React.FC = () => {
                         <table className="w-full text-left">
                             <thead className="bg-[#f97316] text-white">
                                 <tr>
-                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-center w-20">STT</th>
-                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-center">Học kỳ</th>
-                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-center">Mã môn học</th>
-                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-center">Lớp học</th>
-                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-center">Tên môn học</th>
-                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-center w-40">Trạng thái</th>
+                                    <th className="px-4 py-5 text-center w-20 text-xs font-bold uppercase tracking-widest whitespace-nowrap">STT</th>
+                                    <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Học kỳ</th>
+                                    <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Mã môn học</th>
+                                    <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Lớp học</th>
+                                    <th className="px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tên môn học</th>
+                                    <th className="px-4 py-5 text-center w-40 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50 dark:divide-zinc-800">
@@ -196,4 +196,5 @@ export const LeturerClassManagementPage: React.FC = () => {
         </LecturerLayout>
     );
 };
+
 

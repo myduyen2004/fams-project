@@ -509,13 +509,13 @@ export const ClassSectionManagement: React.FC = () => {
                       className="w-5 h-5 rounded border-white/30 text-fpt-orange focus:ring-0 focus:ring-offset-0 bg-transparent cursor-pointer"
                     />
                   </th>
-                  <th className="px-6 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Mã lớp</th>
-                  <th className="px-6 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Môn học</th>
-                  <th className="px-6 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Học kỳ</th>
-                  <th className="px-6 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Giảng viên</th>
-                  <th className="px-6 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Đăng ký</th>
-                  <th className="px-6 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Số slot</th>
-                  <th className="px-6 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Mã lớp</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Môn học</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Học kỳ</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Giảng viên</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Đăng ký</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Số slot</th>
+                  <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -658,4 +658,5 @@ export const ClassSectionManagement: React.FC = () => {
 };
 
 export default ClassSectionManagement;
+
 

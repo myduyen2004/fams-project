@@ -72,6 +72,34 @@ export const NotificationBell: React.FC = () => {
     return content;
   };
 
+  const parseDateTime = (timestamp: string): Date | null => {
+    if (!timestamp) return null;
+    const date = new Date(timestamp);
+    if (!isNaN(date.getTime())) return date;
+    const isoLikeMatch = timestamp.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})$/);
+    if (isoLikeMatch) {
+      const [_, y, m, d, h, min, s] = isoLikeMatch;
+      return new Date(parseInt(y), parseInt(m) - 1, parseInt(d), parseInt(h), parseInt(min), parseInt(s));
+    }
+    const match = timestamp.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})$/);
+    if (match) {
+      const [_, day, month, year, hours, minutes] = match;
+      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes));
+    }
+    return null;
+  };
+
+  const formatDateTime = (timestamp: string): string => {
+    const date = parseDateTime(timestamp);
+    if (!date) return timestamp;
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${day}/${month}/${year} ${hours}:${minutes}`;
+  };
+
   const username = authService.getUser()?.username || 'anonymous';
 
   // Listen for import job progress
@@ -114,7 +142,15 @@ export const NotificationBell: React.FC = () => {
 
       if (newNotifications.length > 0) {
         console.log('[NotificationBell] Adding', newNotifications.length, 'new notifications');
-        return [...newNotifications, ...prev];
+        const combined = [...newNotifications, ...prev];
+        // Sort entire list newest to oldest
+        combined.sort((a, b) => {
+          const dateA = parseDateTime(a.timestamp);
+          const dateB = parseDateTime(b.timestamp);
+          if (!dateA || !dateB) return 0;
+          return dateB.getTime() - dateA.getTime();
+        });
+        return combined;
       }
 
       console.log('[NotificationBell] No new notifications, keeping existing state');
@@ -213,8 +249,18 @@ export const NotificationBell: React.FC = () => {
       console.log('[NotificationBell] Loading notifications from API...');
       const data = await dashboardService.getNotifications();
       console.log('[NotificationBell] API returned', data.length, 'notifications:', data);
+      
       // Filter out CHAT type notifications
       const nonChatNotifications = data.filter(n => n.type !== 'CHAT');
+      
+      // Sort newest to oldest
+      nonChatNotifications.sort((a, b) => {
+        const dateA = parseDateTime(a.timestamp);
+        const dateB = parseDateTime(b.timestamp);
+        if (!dateA || !dateB) return 0;
+        return dateB.getTime() - dateA.getTime();
+      });
+      
       setNotifications(nonChatNotifications);
     } catch (error) {
       console.error('[NotificationBell] Error loading notifications:', error);
@@ -476,7 +522,9 @@ export const NotificationBell: React.FC = () => {
                             dangerouslySetInnerHTML={{ __html: getFirstLineHtml(n.description) }}
                           />
                             <div className="flex items-center gap-2 mt-1">
-                              <span className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">{n.timestamp}</span>
+                              <span className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">
+                                {formatDateTime(n.timestamp)}
+                              </span>
                             </div>
                         </div>
                       </div>

@@ -299,12 +299,12 @@ export const CourseManagement: React.FC = () => {
                                             checked={courses.length > 0 && selectedIds.length === courses.length}
                                         />
                                     </th>
-                                    <th className="w-28 px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Mã môn</th>
+                                    <th className="px-4 py-5 text-center w-28 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Mã môn</th>
                                     <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tên môn học</th>
-                                    <th className="w-28 px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Số tín chỉ</th>
-                                    <th className="w-36 px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tổng trọng số</th>
-                                    <th className="w-28 px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tính GPA</th>
-                                    <th className="w-40 px-4 py-5 text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                                    <th className="px-4 py-5 text-center w-28 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Số tín chỉ</th>
+                                    <th className="px-4 py-5 text-center w-36 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tổng trọng số</th>
+                                    <th className="px-4 py-5 text-center w-28 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tính GPA</th>
+                                    <th className="px-4 py-5 text-center w-40 text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
@@ -437,4 +437,5 @@ export const CourseManagement: React.FC = () => {
         </AcademicStaffLayout>
     );
 };
+
 

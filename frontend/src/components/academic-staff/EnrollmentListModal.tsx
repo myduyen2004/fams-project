@@ -434,11 +434,11 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
                     />
                   </th>
                 )}
-                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Mã SV</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Họ tên</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Email</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Chuyên ngành</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Trạng thái</th>
+                <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Mã SV</th>
+                <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Họ tên</th>
+                <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Email</th>
+                <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Chuyên ngành</th>
+                <th className="px-4 py-5 text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -508,7 +508,7 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
 
       {/* Add Student Modal */}
       {showAddStudent && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-100 dark:border-zinc-800 overflow-hidden flex flex-col">
             <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800">
               <div>
@@ -642,7 +642,7 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
 
       {/* Transfer Modal */}
       {showTransferModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-lg border border-gray-100 dark:border-zinc-800 overflow-hidden flex flex-col">
             <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800">
               <div>
@@ -729,4 +729,5 @@ export const EnrollmentListModal: React.FC<EnrollmentListModalProps> = ({
     </div>
   );
 };
+
 

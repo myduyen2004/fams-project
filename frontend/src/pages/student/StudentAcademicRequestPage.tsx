@@ -601,10 +601,10 @@ export const StudentAcademicRequestPage: React.FC = () => {
 
                 {/* Filters */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-zinc-800 relative group">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-fpt-orange/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-700" />
+                    {/* <div className="absolute top-0 right-0 w-32 h-32 bg-fpt-orange/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-700" /> */}
 
                     <div className="lg:col-span-6 space-y-2 relative z-10">
-                        <label className="block text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1">
+                        <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-500 uppercase tracking-[0.2em] ml-1">
                             Loại yêu cầu
                         </label>
                         <CustomSelect
@@ -622,7 +622,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                     </div>
 
                     <div className="lg:col-span-4 space-y-2 relative z-10">
-                        <label className="block text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] ml-1">
+                        <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-500 uppercase tracking-[0.2em] ml-1">
                             Trạng thái đơn
                         </label>
                         <CustomSelect
@@ -686,21 +686,21 @@ export const StudentAcademicRequestPage: React.FC = () => {
                         <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead>
-                                    <tr className="bg-gray-50/50 dark:bg-zinc-800/50 border-b border-gray-100 dark:border-zinc-800">
+                                    <tr className="bg-fpt-orange">
                                         <th className="px-6 py-5 text-center w-16">
                                             <input
                                                 type="checkbox"
                                                 checked={requests.length > 0 && requests.filter(r => r.status === 'PENDING').length > 0 && requests.filter(r => r.status === 'PENDING').every(r => selectedIds.includes(r.id))}
                                                 onChange={toggleSelectAll}
                                                 disabled={requests.filter(r => r.status === 'PENDING').length === 0}
-                                                className="w-4 h-4 text-fpt-orange dark:text-fpt-orange border-gray-300 dark:border-zinc-700 rounded-lg focus:ring-fpt-orange/20 cursor-pointer disabled:opacity-30 transition-all"
+                                                className="w-4 h-4 text-fpt-orange dark:text-fpt-orange border-white/30 rounded-lg focus:ring-fpt-orange/20 cursor-pointer disabled:opacity-30 transition-all"
                                             />
                                         </th>
-                                        <th className="px-6 py-5 text-left text-[10px] font-medium text-gray-400 uppercase tracking-[0.2em]">Loại yêu cầu</th>
-                                        <th className="px-6 py-5 text-left text-[10px] font-medium text-gray-400 uppercase tracking-[0.2em]">Tiêu đề (Nhấn đúp để xem)</th>
-                                        <th className="px-6 py-5 text-center text-[10px] font-medium text-gray-400 uppercase tracking-[0.2em]">Trạng thái</th>
-                                        <th className="px-6 py-5 text-center text-[10px] font-medium text-gray-400 uppercase tracking-[0.2em]">Ngày tạo</th>
-                                        <th className="px-6 py-5 text-center text-[10px] font-medium text-gray-400 uppercase tracking-[0.2em]">Hạn nộp</th>
+                                        <th className="px-4 py-5 text-white text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Loại yêu cầu</th>
+                                        <th className="px-4 py-5 text-white text-left text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tiêu đề (Nhấn đúp để xem)</th>
+                                        <th className="px-4 py-5 text-white text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Trạng thái</th>
+                                        <th className="px-4 py-5 text-white text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Ngày tạo</th>
+                                        <th className="px-4 py-5 text-white text-center text-xs font-bold uppercase tracking-widest whitespace-nowrap">Hạn nộp</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50 dark:divide-zinc-800/50">
@@ -763,14 +763,14 @@ export const StudentAcademicRequestPage: React.FC = () => {
 
             {/* Create Request Dialog */}
             {showCreateDialog && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center">
+                <div className="fixed inset-0 z-[500] flex items-center justify-center p-4">
                     <div
                         className="fixed inset-0 bg-black/60 backdrop-blur-md"
                         style={{ width: '100vw', height: '100vh' }}
                         onClick={() => !submitting && setShowCreateDialog(false)}
                     />
-                    <div className="bg-white dark:bg-zinc-900 rounded-[32px] shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto relative z-10 flex flex-col m-4 border border-gray-100 dark:border-zinc-800 transition-all">
-                        <div className="px-8 py-6 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between sticky top-0 z-20 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl">
+                    <div className="bg-white dark:bg-zinc-900 rounded-[32px] shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden relative z-10 flex flex-col border border-gray-100 dark:border-zinc-800 transition-all">
+                        <div className="px-8 py-6 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between shrink-0 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl">
                             <div className="flex items-center gap-4">
                                 <div className="p-2.5 bg-fpt-orange/10 rounded-xl">
                                     <Plus className="w-5 h-5 text-fpt-orange" />
@@ -791,7 +791,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                             </button>
                         </div>
 
-                        <div className="p-8">
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
                             {!selectedType ? (
                                 // Type selection
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -823,7 +823,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                                                 e.stopPropagation();
                                                                 setInfoType(type);
                                                             }}
-                                                            className="text-zinc-400 hover:text-fpt-orange p-1 transition-colors"
+                                                            className="text-fpt-orange hover:text-orange-600 p-1 transition-colors bg-fpt-orange/10 rounded-lg"
                                                             title="Xem thông tin chi tiết"
                                                         >
                                                             <Info className="w-5 h-5" />
@@ -869,7 +869,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                                 type="text"
                                                 value={formData.requestTitle || ''}
                                                 onChange={(e) => handleFieldChange('requestTitle', e.target.value)}
-                                                className="w-full px-3 py-2 bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                className="w-full px-4 h-[52px] bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-zinc-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 font-medium"
                                                 placeholder="Nhập tiêu đề yêu cầu"
                                             />
                                         </div>
@@ -912,7 +912,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                                     }}
                                                     onFocus={() => setShowCourseDropdown(true)}
                                                     onBlur={() => setTimeout(() => setShowCourseDropdown(false), 200)}
-                                                    className="w-full px-3 py-2 bg-white dark:bg-gray-900 border dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-10"
+                                                    className="w-full px-4 h-[52px] bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-zinc-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 pr-10 font-medium"
                                                     placeholder="Tìm kiếm môn học..."
                                                 />
                                                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -1233,36 +1233,39 @@ export const StudentAcademicRequestPage: React.FC = () => {
                                         </div>
                                     )}
 
-                                    {/* Actions */}
-                                    <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-8 mt-4 border-t border-gray-100 dark:border-zinc-800">
-                                        <button
-                                            onClick={() => setSelectedType(null)}
-                                            className="px-8 py-3.5 text-[10px] font-bold text-zinc-400 uppercase tracking-widest hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
-                                        >
-                                            Quay lại danh sách
-                                        </button>
-                                        <button
-                                            onClick={handleSubmit}
-                                            disabled={submitting}
-                                            className="px-10 py-3.5 bg-fpt-orange text-white rounded-[20px] font-bold text-sm hover:bg-orange-600 shadow-xl shadow-orange-500/20 active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2 group"
-                                        >
-                                            {submitting ? (
-                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                            ) : (
-                                                <CheckCircle className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                                            )}
-                                            Gửi yêu cầu ngay
-                                        </button>
-                                    </div>
                                 </div>
                             )}
                         </div>
+
+                        {/* Sticky Footer Actions */}
+                        {selectedType && (
+                            <div className="px-8 py-6 border-t border-gray-100 dark:border-zinc-800 flex flex-col-reverse sm:flex-row justify-end gap-3 shrink-0 bg-gray-50/30 dark:bg-zinc-900/30">
+                                <button
+                                    onClick={() => setSelectedType(null)}
+                                    className="px-8 py-3.5 text-[10px] font-bold text-zinc-400 uppercase tracking-widest hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+                                >
+                                    Quay lại danh sách
+                                </button>
+                                <button
+                                    onClick={handleSubmit}
+                                    disabled={submitting}
+                                    className="px-10 py-3.5 bg-fpt-orange text-white rounded-[20px] font-bold text-sm hover:bg-orange-600 shadow-xl shadow-orange-500/20 active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2 group"
+                                >
+                                    {submitting ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <CheckCircle className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                    )}
+                                    Gửi yêu cầu ngay
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
 
             {showDetailDialog && selectedRequest && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[500] flex items-center justify-center p-4">
                     <div
                         className="absolute inset-0 bg-black/60 backdrop-blur-md"
                         onClick={() => setShowDetailDialog(false)}
@@ -1432,7 +1435,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
                         <div className="px-8 py-6 border-t border-gray-100 dark:border-zinc-800 flex justify-end shrink-0 bg-gray-50/30 dark:bg-zinc-900/30">
                             <button
                                 onClick={() => setShowDetailDialog(false)}
-                                className="px-10 py-3.5 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-[20px] font-bold text-sm hover:opacity-90 transition-all active:scale-95"
+                                className="px-10 py-3.5 bg-fpt-orange text-white rounded-[20px] font-bold text-sm hover:bg-orange-600 shadow-xl shadow-orange-500/20 transition-all active:scale-95"
                             >
                                 Đã xem và đóng
                             </button>
@@ -1444,7 +1447,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
 
             {/* Request Type Info Modal */}
             {infoType && (
-                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[500] flex items-center justify-center p-4">
                     <div
                         className="absolute inset-0 bg-black/60 backdrop-blur-md"
                         onClick={() => setInfoType(null)}
@@ -1492,7 +1495,7 @@ export const StudentAcademicRequestPage: React.FC = () => {
 
             {/* Cancel Confirmation Modal */}
             {requestToCancel.length > 0 && (
-                <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 animate-in fade-in duration-200">
                     <div
                         className="absolute inset-0 bg-black/60 backdrop-blur-md"
                         onClick={() => !cancelling && setRequestToCancel([])}
@@ -1537,4 +1540,5 @@ export const StudentAcademicRequestPage: React.FC = () => {
 };
 
 export default StudentAcademicRequestPage;
+
 

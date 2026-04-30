@@ -389,108 +389,95 @@ export const ProfilePage: React.FC = () => {
             </div>
           </div>
 
-          <form onSubmit={handlePasswordChange} className="space-y-4">
-            {/* Current Password */}
-            <div>
-              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                Mật khẩu hiện tại
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Key className="text-gray-400" size={20} />
+          <form onSubmit={handlePasswordChange} className="space-y-6">
+            <div className="grid grid-cols-1 gap-6">
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider text-gray-500 mb-1.5 ml-1 font-bold">
+                  Mật khẩu hiện tại
+                </label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <Key className="text-gray-400 group-focus-within:text-fpt-orange transition-colors" size={18} />
+                  </div>
+                  <input
+                    type={showPasswords.current ? 'text' : 'password'}
+                    value={passwordData.currentPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                    className="w-full pl-10 pr-10 h-[52px] border-2 border-gray-100 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-900 text-gray-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40"
+                    placeholder="Nhập mật khẩu cũ"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center hover:text-fpt-orange transition-colors text-gray-400"
+                  >
+                    {showPasswords.current ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
-                <input
-                  type={showPasswords.current ? 'text' : 'password'}
-                  value={passwordData.currentPassword}
-                  onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                  className="w-full h-[52px] pl-12 pr-10 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 text-gray-900 dark:text-white font-medium"
-                  placeholder="Nhập mật khẩu hiện tại"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                >
-                  {showPasswords.current ? (
-                    <EyeOff className="text-gray-400" size={20} />
-                  ) : (
-                    <Eye className="text-gray-400" size={20} />
-                  )}
-                </button>
               </div>
-            </div>
 
-            {/* New Password */}
-            <div>
-              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                Mật khẩu mới
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Key className="text-gray-400" size={20} />
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider text-gray-500 mb-1.5 ml-1 font-bold">
+                  Mật khẩu mới
+                </label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <Key className="text-gray-400 group-focus-within:text-fpt-orange transition-colors" size={18} />
+                  </div>
+                  <input
+                    type={showPasswords.new ? 'text' : 'password'}
+                    value={passwordData.newPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                    className="w-full pl-10 pr-10 h-[52px] border-2 border-gray-100 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-900 text-gray-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40"
+                    placeholder="Tối thiểu 8 ký tự"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center hover:text-fpt-orange transition-colors text-gray-400"
+                  >
+                    {showPasswords.new ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
-                <input
-                  type={showPasswords.new ? 'text' : 'password'}
-                  value={passwordData.newPassword}
-                  onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                  className="w-full h-[52px] pl-12 pr-10 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 text-gray-900 dark:text-white font-medium"
-                  placeholder="Nhập mật khẩu mới (tối thiểu 8 ký tự)"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                >
-                  {showPasswords.new ? (
-                    <EyeOff className="text-gray-400" size={20} />
-                  ) : (
-                    <Eye className="text-gray-400" size={20} />
-                  )}
-                </button>
               </div>
-            </div>
 
-            {/* Confirm Password */}
-            <div>
-              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                Xác nhận mật khẩu mới
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Key className="text-gray-400" size={20} />
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider text-gray-500 mb-1.5 ml-1 font-bold">
+                  Xác nhận mật khẩu
+                </label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <Key className="text-gray-400 group-focus-within:text-fpt-orange transition-colors" size={18} />
+                  </div>
+                  <input
+                    type={showPasswords.confirm ? 'text' : 'password'}
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                    className="w-full pl-10 pr-10 h-[52px] border-2 border-gray-100 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-900 text-gray-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40"
+                    placeholder="Nhập lại mật khẩu mới"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center hover:text-fpt-orange transition-colors text-gray-400"
+                  >
+                    {showPasswords.confirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
-                <input
-                  type={showPasswords.confirm ? 'text' : 'password'}
-                  value={passwordData.confirmPassword}
-                  onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                  className="w-full h-[52px] pl-12 pr-10 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-fpt-orange/10 focus:border-fpt-orange transition-all hover:border-fpt-orange/40 text-gray-900 dark:text-white font-medium"
-                  placeholder="Nhập lại mật khẩu mới"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                >
-                  {showPasswords.confirm ? (
-                    <EyeOff className="text-gray-400" size={20} />
-                  ) : (
-                    <Eye className="text-gray-400" size={20} />
-                  )}
-                </button>
               </div>
             </div>
 
             <button
               type="submit"
               disabled={isChangingPassword}
-              className="w-full h-[52px] flex items-center justify-center gap-2 px-4 bg-fpt-orange text-white rounded-2xl hover:bg-orange-600 transition-all font-bold shadow-lg shadow-fpt-orange/20 disabled:opacity-50 active:scale-95"
+              className="flex items-center justify-center gap-2 px-8 h-[52px] bg-fpt-orange text-white rounded-2xl hover:bg-orange-600 transition-all font-bold shadow-lg shadow-fpt-orange/20 disabled:opacity-50 w-full"
             >
               {isChangingPassword ? (
-                <Loader2 size={20} className="animate-spin" />
+                <Loader2 size={18} className="animate-spin" />
               ) : (
-                <Lock size={20} />
+                <Lock size={18} />
               )}
-              {isChangingPassword ? 'Đang cập nhật...' : 'Đổi mật khẩu'}
+              {isChangingPassword ? 'Đang cập nhật...' : 'Xác nhận đổi mật khẩu'}
             </button>
           </form>
         </div>

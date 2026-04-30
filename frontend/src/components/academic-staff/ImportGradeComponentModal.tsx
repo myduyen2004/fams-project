@@ -312,7 +312,7 @@ export const ImportGradeComponentModal: React.FC<ImportGradeComponentModalProps>
     // Render
     // -----------------------------------------------------------------------
     const modal = (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
             <div className={`relative bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl flex flex-col transition-all duration-300 ${hasResult ? 'w-full max-w-md' : hasPreview ? 'w-full max-w-5xl max-h-[92vh]' : 'w-full max-w-lg'}`}>
 
                 {/* ── Header ── */}

@@ -27,6 +27,7 @@ public class AssignmentSubmissionResponse {
     // Student info
     private String studentCode;
     private String studentName;
+    private String avatar;
 
     // Submission info
     private List<String> fileUrls;
